@@ -95,22 +95,45 @@ internal object YifySubs {
         }
     }
 
-    /** Fetches the archive of [hit], takes its first .srt and keeps it in the cache. */
+    /**
+     * Fetches the subtitle of [hit] and keeps it in the cache as a text file. The site answers with a zip (the usual case), a gzip or the plain text itself;
+     * two addresses of the site are tried, and the first .srt / .ass / .vtt inside the archive is taken. Nothing is decoded here: the player reads the bytes with
+     * the encoding detected from them (see decodeSubBytes).
+     */
     suspend fun download(ctx: Context, hit: SubHit): Result<Uri> = withContext(Dispatchers.IO) {
         runCatching {
-            val zip = http("$SITE/subtitle/${hit.slug}.zip", referer = "$SITE/subtitles/${hit.slug}")
-            var srt: ByteArray? = null
-            ZipInputStream(zip.inputStream()).use { z ->
-                while (srt == null) {
-                    val e = z.nextEntry ?: break
-                    if (e.name.endsWith(".srt", ignoreCase = true)) srt = z.readBytes()
-                }
+            var last: Throwable? = null
+            var found: Pair<ByteArray, String>? = null
+            for (base in listOf(SITE, "https://yifysubtitles.ch", "https://yifysubtitles.org")) {
+                try {
+                    val raw = http("$base/subtitle/${hit.slug}.zip", referer = "$base/subtitles/${hit.slug}")
+                    found = unpack(raw) ?: error("no subtitle in the answer")
+                    break
+                } catch (t: Throwable) { last = t }
             }
-            val bytes = srt ?: error("no .srt in archive")
-            val out = File(ctx.cacheDir, "ysub_" + hit.slug.filter { it.isLetterOrDigit() || it == '-' } + ".srt")
+            val (bytes, ext) = found ?: throw (last ?: IllegalStateException("download failed"))
+            val out = File(ctx.cacheDir, "ysub_" + hit.slug.filter { it.isLetterOrDigit() || it == '-' } + "." + ext)
             out.writeBytes(bytes)
             Uri.fromFile(out)
         }
+    }
+
+    /** The subtitle inside [raw]: a zip with one inside, a gzip, or text that already is one. Returns the bytes and the file extension. */
+    internal fun unpack(raw: ByteArray): Pair<ByteArray, String>? {
+        val subExt = setOf("srt", "ass", "ssa", "vtt")
+        if (raw.size > 3 && raw[0] == 'P'.code.toByte() && raw[1] == 'K'.code.toByte()) {
+            ZipInputStream(raw.inputStream()).use { z ->
+                while (true) {
+                    val e = z.nextEntry ?: break
+                    val ext = e.name.substringAfterLast('.', "").lowercase()
+                    if (!e.isDirectory && ext in subExt) return z.readBytes() to ext
+                }
+            }
+            return null
+        }
+        val plain = if (raw.size > 2 && raw[0] == 0x1f.toByte() && raw[1] == 0x8b.toByte()) runCatching { java.util.zip.GZIPInputStream(raw.inputStream()).use { it.readBytes() } }.getOrNull() else raw
+        if (plain != null && String(plain, Charsets.ISO_8859_1).contains("-->")) return plain to "srt"
+        return null
     }
 }
 
@@ -239,11 +262,11 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
             r.onSuccess { uri ->
                 // a file that holds no subtitle (an error page, an empty answer) must not close the window as if it worked
                 val looksRight = withContext(Dispatchers.IO) {
-                    runCatching { java.io.File(uri.path.orEmpty()).readText(Charsets.UTF_8).let { it.contains("-->") || it.contains("WEBVTT") } }.getOrDefault(false)
+                    runCatching { java.io.File(uri.path.orEmpty()).readBytes().let { String(it, Charsets.ISO_8859_1).let { t -> t.contains("-->") || t.contains("Dialogue:") } } }.getOrDefault(false)
                 }
                 if (!looksRight) { fail(tr("That file is not a subtitle. Try another result.", "Bu dosya altyazı değil. Başka bir sonuç deneyin.")); return@onSuccess }
                 busy = false; message = ""
-                onPick(uri, h.release.ifBlank { "subtitle" }.replace('/', '_') + ".srt")
+                onPick(uri, h.release.ifBlank { "subtitle" }.replace('/', '_') + "." + (uri.path.orEmpty().substringAfterLast('.', "srt")))
             }.onFailure { fail(tr("Download failed. Try another result.", "İndirilemedi. Başka bir sonuç deneyin.")) }
         }
     }

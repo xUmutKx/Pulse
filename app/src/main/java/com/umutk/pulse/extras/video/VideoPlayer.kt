@@ -260,6 +260,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var remaining by remember { mutableStateOf(prefs.showRemaining) }
     var subDelay by remember { mutableLongStateOf(0L) }
     var ext by remember { mutableStateOf<Pair<Uri, String>?>(null) }
+    // the lines of the subtitle file picked or downloaded: shown by Pulse itself over the video (see SubCues.kt)
+    var extCues by remember { mutableStateOf<List<SubCue>?>(null) }
+    var subView by remember { mutableStateOf<androidx.media3.ui.SubtitleView?>(null) }
     val sk = skinOf(skinId)
     var zoom by remember { mutableFloatStateOf(1f) }
     var panX by remember { mutableFloatStateOf(0f) } // two-finger pan, only while zoomed
@@ -307,31 +310,37 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     /** Loads the picked subtitle file again with the saved encoding and the delay. */
     fun applySubNow() {
         val e = ext ?: run { android.widget.Toast.makeText(ctx, tr("No subtitle picked", "Altyazı seçilmedi"), android.widget.Toast.LENGTH_SHORT).show(); return }
-        pendingSubLabel[0] = e.second
-        val i = player.currentMediaItemIndex
-        val at = player.currentPosition
-        val item = player.currentMediaItem ?: return
-        val u = prepareSub(ctx, e.first, e.second, prefs.subEnc, subDelay)
-        if (u == null) { android.widget.Toast.makeText(ctx, tr("The subtitle file could not be read", "Altyazı dosyası okunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
-        // a few seconds later the track must be selected; if not, say so instead of leaving the subtitles off without a word
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            if (pendingSubLabel[0] != null) android.widget.Toast.makeText(ctx, tr("The subtitle was added but not shown. Pick it in the Subtitles menu.", "Altyazı eklendi ama gösterilmedi. Altyazı menüsünden seçin."), android.widget.Toast.LENGTH_LONG).show()
-            subReload[0] = false
-        }, 4000)
-        val cfg = MediaItem.SubtitleConfiguration.Builder(u).setMimeType(subMimeOf(e.second)).setLabel(e.second).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
-        val wasPlaying = player.playWhenReady
-        subReload[0] = true
-        textBefore[0] = player.currentTracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
-        player.replaceMediaItem(i, item.buildUpon().setSubtitleConfigurations(siblingSubs(ctx, items[i.coerceIn(items.indices)], prefs) + cfg).build())
-        player.seekTo(i, at)
-        player.playWhenReady = wasPlaying
-        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
+        val bytes = (if (e.first.scheme == "file") java.io.File(e.first.path!!).inputStream() else ctx.contentResolver.openInputStream(e.first))?.use { it.readBytes() }
+        if (bytes == null) { android.widget.Toast.makeText(ctx, tr("The subtitle file could not be read", "Altyazı dosyası okunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
+        val cues = parseCues(decodeSubBytes(bytes, prefs.subEnc), e.second)
+        if (cues.isEmpty()) { android.widget.Toast.makeText(ctx, tr("No subtitle lines found in that file", "Bu dosyada altyazı satırı bulunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
+        extCues = cues
+        // the video's own text tracks stay quiet while this one shows
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı") + " (${cues.size})", android.widget.Toast.LENGTH_SHORT).show()
     }
-
     fun applySub() = runCatching { applySubNow() }.onFailure { t ->
         android.util.Log.e("PulseVideo", "subtitle", t)
         android.widget.Toast.makeText(ctx, tr("The subtitle could not be added: ", "Altyazı eklenemedi: ") + (t.message ?: t.javaClass.simpleName), android.widget.Toast.LENGTH_LONG).show()
     }.let { }
+
+    // the line for the moment goes to the subtitle view ten times a second; it is replaced only when it changes
+    LaunchedEffect(extCues, subDelay, subView) {
+        val cues = extCues
+        val v = subView ?: return@LaunchedEffect
+        if (cues == null) return@LaunchedEffect
+        var last = "\u0000"
+        while (true) {
+            val text = cueAt(cues, player.currentPosition - subDelay)
+            if (text != last) {
+                last = text
+                v.setCues(if (text.isEmpty()) emptyList() else listOf(androidx.media3.common.text.Cue.Builder().setText(text).build()))
+            }
+            kotlinx.coroutines.delay(100)
+        }
+    }
+    // leaving the external subtitle (a new video, or a subtitle picked from the list): its last line is wiped
+    LaunchedEffect(extCues) { if (extCues == null) subView?.setCues(emptyList()) }
 
     DisposableEffect(player) {
         val l = object : Player.Listener {
@@ -375,7 +384,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             override fun onMediaItemTransition(m: MediaItem?, reason: Int) {
                 cur = player.currentMediaItemIndex
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
-                ext = null; subDelay = 0L; abA = -1L; abB = -1L
+                ext = null; extCues = null; subDelay = 0L; abA = -1L; abB = -1L
                 if (sleepEnd && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) { player.pause(); sleepEnd = false }
                 if (!subReload[0] && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) {
                     m?.let { val r = prefs.resume(it.mediaId); if (r > 0) player.seekTo(r) }
@@ -539,7 +548,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
     }
     fun controlOn(id: String): Boolean = when (id) {
-        "cc" -> tracks.isTypeSelected(C.TRACK_TYPE_TEXT)
+        "cc" -> tracks.isTypeSelected(C.TRACK_TYPE_TEXT) || extCues != null
         "repeat" -> rep != 0
         "ab" -> abA >= 0
         "speed" -> speed != 1f
@@ -582,6 +591,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 update = {
                     it.player = player
                     it.resizeMode = when (aspect) { 1, 3, 4 -> AspectRatioFrameLayout.RESIZE_MODE_FILL; 2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM; else -> AspectRatioFrameLayout.RESIZE_MODE_FIT }
+                    if (subView !== it.subtitleView) subView = it.subtitleView
                     rev.let { _ ->
                         it.subtitleView?.apply {
                             applySubPrefs(prefs)
@@ -808,6 +818,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                 },
             ) { i ->
+                extCues = null
                 if (i == 0) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
                 else {
                     // the choice is made on the tracks the player has now: the list above can be from before a subtitle reload, and its groups then match nothing
@@ -908,7 +919,7 @@ private class MoreItem(val key: String, val icon: String, val name: String, val 
 /**
  * The More menu: one column under the three-dot button (top right). Every row has the same height; a state (On / Off) sits at the end.
  */
-/** A skip button whose inside fills like a timeline over [durationMs]; a tap skips, and when it is full the button closes. */
+/** A skip button: white all over, with a thin line along its foot that runs out over [durationMs]; a tap skips, and when the line is gone the button closes. */
 @Composable
 private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout: () -> Unit, modifier: Modifier = Modifier, durationMs: Int = 5000) {
     val fill = remember(startKey) { Animatable(0f) }
@@ -917,14 +928,9 @@ private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout:
         fill.animateTo(1f, tween(durationMs, easing = LinearEasing))
         currentTimeout()
     }
-    Box(
-        modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x66FFFFFF)).clickable { onTap() }
-            .padding(horizontal = 16.dp, vertical = 9.dp)
-    ) {
-        Box(Modifier.matchParentSize()) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value).background(Color(0xE6FFFFFF)))
-        }
-        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Box(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xF2FFFFFF)).clickable { onTap() }) {
+        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 9.dp, bottom = 12.dp))
+        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth(1f - fill.value).height(3.dp).background(Color(0xFF1B1B1B)))
     }
 }
 

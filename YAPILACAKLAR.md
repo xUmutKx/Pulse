@@ -2170,3 +2170,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: yan boşluk en çok 400 dp; ekranda en az 240 dp tuş genişliği kalacak şekilde sınırlanır (derlenmedi)
 
 - Video: hız penceresi kısaltıldı (başlıkta değer, çubuk, "Sonraki videolarda da kalsın" kutusu + 1x düğmesi); altyazı ekleme hatası artık sessiz değil (toast ile neden) (derlenmedi)
+
+- Video: altyazı artık Pulse tarafından okunup (srt/vtt/ass, otomatik kodlama) oynatıcının altyazı görünümüne satır satır verilir (videoyu yeniden yüklemez, iz seçimi yok); indirme zip/gzip/düz metin ve ikinci adres dener; Skip recap/intro düğmesi tamamen beyaz, altında ince süre çizgisi (derlenmedi)
