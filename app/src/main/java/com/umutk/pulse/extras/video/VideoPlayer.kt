@@ -212,7 +212,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), prefs.audioFocus)
             setHandleAudioBecomingNoisy(prefs.pauseNoisy)
             setMediaItems(
-                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(it.name.substringBeforeLast('.')).build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
+                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(if (prefs.smartNames) smartName(it.name) else it.name.substringBeforeLast('.')).build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
                 at, prefs.resume(items[at].key),
             )
             trackSelectionParameters = trackSelectionParameters.buildUpon()
@@ -325,9 +325,10 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     /** Opens the subtitle kept for the video before (and its delay), unless "Off" was chosen for it. */
     fun loadSaved(v: VideoItem?) {
         if (v == null || extCues != null) return
-        if (SubStore.isOff(ctx, v.key)) { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build(); return }
-        val s = SubStore.saved(ctx, v.key) ?: return
-        ext = s; subDelay = SubStore.delay(ctx, v.key)
+        if (SubStore.isOff(ctx, v.subKey)) { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build(); return }
+        // kept under the name and size; one kept by an older version is found under the address and filed again
+        val s = SubStore.saved(ctx, v.subKey) ?: SubStore.saved(ctx, v.key)?.also { old -> SubStore.save(ctx, v, old.first, old.second) } ?: return
+        ext = s; subDelay = SubStore.delay(ctx, v.subKey)
         runCatching { applySubNow(quiet = true) }
     }
     /** A picked or downloaded subtitle: kept on the phone for this video, then shown. */
@@ -811,9 +812,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
         "text" -> {
             val rows = trackRows(tracks, C.TRACK_TYPE_TEXT)
-            val key = items.getOrNull(cur)?.key
+            val key = items.getOrNull(cur)?.subKey
             SubMenu(
-                prefs, rows.map { it.label to it.selected }, off = extCues == null && rows.none { it.selected }, extName = ext?.second.takeIf { extCues != null }, delayMs = subDelay,
+                prefs, rows.map { it.label to it.selected }, off = extCues == null && rows.none { it.selected }, extName = ext?.second.takeIf { extCues != null }?.let { n -> if (key != null && SubStore.saved(ctx, key) != null) n + "  ·  " + tr("saved", "kayıtlı") else n }, delayMs = subDelay,
                 onChoose = { i ->
                     extCues = null; ext = null; key?.let { SubStore.forget(ctx, it) }
                     // the choice is made on the tracks the player has now: the list above can be from before a subtitle reload, and its groups then match nothing
