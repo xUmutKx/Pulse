@@ -46,6 +46,8 @@ class KbState {
     // the "Text and art" page is open: the keys type into its box (the app's text box gets nothing), and the box shows what is typed
     var artOn by mutableStateOf(false)
     var artIn by mutableStateOf("")
+    /** narrow screens: the text-and-art box was tapped, so the emoji page shows the box and the keys under it */
+    var artKeys by mutableStateOf(false)
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())
     /** The e-mail suggestions take the bar: centred for one or two, scrolling to the right for more. */
