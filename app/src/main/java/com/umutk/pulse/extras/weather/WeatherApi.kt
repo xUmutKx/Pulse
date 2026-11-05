@@ -137,12 +137,24 @@ object WeatherApi {
     /** The last network failure in words (HTTP code or the exception), shown beside "could not load" so a failing phone says why. */
     @Volatile var lastError: String = ""
 
+    /** Services that answered 429 (too many requests), with the time until they may be asked again. */
+    private val rateLimitedUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val RATE_PAUSE_MS = 10 * 60_000L
+
+    private fun hostOf(url: String) = url.substringAfter("://").substringBefore('/')
+
+    /** True while the service behind [url] is paused after a 429; it is not asked again then, so its limit does not get worse. */
+    fun pausedFor(url: String): Boolean = (rateLimitedUntil[hostOf(url)] ?: 0L) > System.currentTimeMillis()
+
     internal fun get(url: String): String {
+        val host = hostOf(url)
+        if (pausedFor(url)) { lastError = "HTTP 429 $host (paused)"; throw java.io.IOException("paused: $host") }
         val cn = openHttps(url)
         cn.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)"); cn.setRequestProperty("Accept", "application/json")
         try {
             val code = try { cn.responseCode } catch (e: Exception) { lastError = e.javaClass.simpleName + ": " + (e.message ?: ""); throw e }
-            if (code != 200) lastError = "HTTP $code " + url.substringAfter("://").substringBefore('/')
+            if (code == 429) rateLimitedUntil[host] = System.currentTimeMillis() + RATE_PAUSE_MS
+            if (code != 200) lastError = "HTTP $code $host"
             check(code == 200) { "HTTP $code" }
             return cn.inputStream.bufferedReader().use { it.readText() }
         } finally {

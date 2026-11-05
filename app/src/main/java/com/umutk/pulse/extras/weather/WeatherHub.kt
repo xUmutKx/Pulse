@@ -101,14 +101,17 @@ fun WeatherHub(onBack: () -> Unit) {
                     withContext(Dispatchers.IO) {
                         // three tries, a little longer apart each time; the services in turn are inside forecast()
                         var last: Throwable? = null
-                        repeat(3) { i ->
+                        for (i in 0 until 3) {
                             runCatching {
                                 val raw = WeatherApi.forecast(spot.lat, spot.lon)
                                 val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
                                 val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
                                 WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
                                 WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
-                            }.onSuccess { return@withContext it }.onFailure { last = it; kotlinx.coroutines.delay(2000L * (i + 1)) }
+                            }.onSuccess { return@withContext it }.onFailure { last = it }
+                            // a rate-limited service is paused, not retried: the other services were already tried inside forecast()
+                            if (WeatherApi.pausedFor("https://api.open-meteo.com/")) break
+                            kotlinx.coroutines.delay(2000L * (i + 1))
                         }
                         throw last ?: IllegalStateException("no forecast")
                     }
@@ -119,7 +122,8 @@ fun WeatherHub(onBack: () -> Unit) {
                 }.onFailure {
                     // the last forecast saved for this place stays on the screen, with its time, instead of an error
                     // when no source answers, the last forecast saved is shown with its own time, never an empty screen
-                    val saved = WeatherStore.cached(ctx)
+                    // the screen's own copy (fc) or the saved one, whichever exists; a failed refresh never leaves the screen empty
+                    val saved = WeatherStore.cached(ctx) ?: fc
                     if (saved != null) { fc = saved; place = spot; error = "" }
                     else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
                 }
