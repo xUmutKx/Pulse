@@ -169,6 +169,24 @@ class AlarmReceiver : BroadcastReceiver() {
         snoozeCount: Int,
         snoozeLimit: Int
     ) {
+        // a ring that was skipped on purpose ("Turn back on for Monday") never sounds, even when an old registration of it still fires: the alarm is set again for its real next ring
+        if (snoozeCount == 0 && alarmId >= 0) {
+            val skip = AlarmSkip.get(context, alarmId)
+            if (skip > 0L && kotlin.math.abs(System.currentTimeMillis() - skip) < 3 * 60_000L) {
+                val pendingResult = goAsync()
+                CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                    try {
+                        val alarm = AppDatabase.getDatabase(context).alarmDao().getAlarmById(alarmId)
+                        if (alarm != null && alarm.isEnabled && alarm.daysOfWeek.isNotEmpty()) {
+                            // the skip is still in place, so the scheduling moves past the skipped ring (or clears it once its moment is over)
+                            AlarmScheduler(context).scheduleAlarm(alarm, effectiveUpcomingLead(alarm, SettingsDataStore(context)))
+                            Log.d(TAG, "Skipped ring of alarm $alarmId ignored")
+                        }
+                    } finally { pendingResult.finish() }
+                }
+                return
+            }
+        }
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,

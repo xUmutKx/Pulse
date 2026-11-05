@@ -10,7 +10,7 @@ import java.util.Calendar
 object AlarmSkip {
     private fun sp(c: Context) = c.getSharedPreferences("lucid_alarm_skip", Context.MODE_PRIVATE)
 
-    fun set(c: Context, id: Int, at: Long) { sp(c).edit().putLong("skip_$id", at).apply() }
+    fun set(c: Context, id: Int, at: Long) { sp(c).edit().putLong("skip_$id", at).commit() }
     fun clear(c: Context, id: Int) { sp(c).edit().remove("skip_$id").apply() }
     fun get(c: Context, id: Int): Long = sp(c).getLong("skip_$id", 0L)
 
