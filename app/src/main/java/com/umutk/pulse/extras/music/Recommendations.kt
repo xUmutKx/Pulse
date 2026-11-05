@@ -11,6 +11,14 @@ sealed interface Pick {
     data class Energy(val high: Boolean) : Pick
     /** A personal mix for a mood: energetic, chill, focus, happy, or daily (see [Recommendations.moods]). */
     data class Mood(val mood: String) : Pick
+    /** More variety: what was added lately, songs not heard for a month, favourites, best rated, never played, a decade, a genre. */
+    object Recent : Pick
+    object Forgotten : Pick
+    object Favourites : Pick
+    object Rated : Pick
+    object Discover : Pick
+    data class Decade(val decade: Int) : Pick
+    data class Genre(val name: String) : Pick
 }
 
 data class PickSection(val pick: Pick, val tracks: List<Track>)
@@ -89,6 +97,18 @@ object Recommendations {
                 .sortedByDescending { it.value.size }.filter { it.value.size >= 3 }.take(2)
                 .forEach { (artist, tracks) -> out += PickSection(Pick.Artist(artist), pick(tracks)) }
         }
+        // more kinds of picks, so the page is not the same few rows every day
+        val playedPaths = played.map { it.path }.toSet()
+        val monthAgo = today.dayStartMs - 30L * 86_400_000L
+        library.filter { it.dateAdded > 0 }.sortedByDescending { it.dateAdded }.take(SECTION_SIZE).takeIf { it.size >= 3 }?.let { out += PickSection(Pick.Recent, it) }
+        played.filter { it.lastPlayed in 1 until monthAgo }.sortedByDescending { it.plays }.mapNotNull { byPath[it.path] }.takeIf { it.size >= 3 }?.let { out += PickSection(Pick.Forgotten, pick(it)) }
+        library.filter { it.path in favourites }.takeIf { it.size >= 3 }?.let { out += PickSection(Pick.Favourites, pick(it)) }
+        library.filter { (ratings[it.path] ?: 0) >= 4 }.takeIf { it.size >= 3 }?.let { out += PickSection(Pick.Rated, pick(it)) }
+        library.filter { it.path !in playedPaths }.takeIf { it.size >= 3 }?.let { out += PickSection(Pick.Discover, pick(it)) }
+        library.filter { it.year in 1950..2100 }.groupBy { it.year / 10 * 10 }.entries.filter { it.value.size >= 6 }.sortedByDescending { it.value.size }.take(2)
+            .forEach { (d, l) -> out += PickSection(Pick.Decade(d), pick(l)) }
+        library.filter { !it.genre.isNullOrBlank() }.groupBy { it.genre!!.trim() }.entries.filter { it.value.size >= 5 }.sortedByDescending { it.value.size }.take(2)
+            .forEach { (g, l) -> out += PickSection(Pick.Genre(g), pick(l)) }
         out += moods(library, stats, ratings, favourites, today)
         return out
     }

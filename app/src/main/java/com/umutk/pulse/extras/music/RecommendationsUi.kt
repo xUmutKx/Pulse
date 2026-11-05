@@ -57,6 +57,9 @@ fun RecommendationHome(
     modifier: Modifier = Modifier,
     // a tap on a suggestion makes that group the queue (the album-like row it sits in); without it the track plays from the library
     onQueue: ((List<Track>, Int) -> Unit)? = null,
+    // the Poweramp library keeps the suggestions and the mix maker on pages of their own
+    showSuggestions: Boolean = true,
+    showMix: Boolean = true,
 ) {
     val ctx = LocalContext.current
     val today = remember(library) { Recommendations.today() }
@@ -72,7 +75,7 @@ fun RecommendationHome(
     val tileShape = if (round) CircleShape else RoundedCornerShape(12.dp)
 
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        if (grid.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (showSuggestions && grid.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             grid.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     row.forEach { t ->
@@ -83,7 +86,7 @@ fun RecommendationHome(
             }
         }
         // the mood mixes are the Mix maker's job below: the rows here keep the other picks
-        sections.filter { it.pick !is Pick.Mood }.forEach { s ->
+        if (showSuggestions) sections.filter { it.pick !is Pick.Mood }.forEach { s ->
             Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 androidx.compose.material3.Text(
                     rowTitle(s), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
@@ -101,7 +104,7 @@ fun RecommendationHome(
                 }
             }
         }
-        MixMaker(library, ink, dim, tile, accent) { l -> if (onQueue != null) onQueue(l, 0) else l.firstOrNull()?.let { play(it) } }
+        if (showMix) MixMaker(library, ink, dim, tile, accent) { l -> if (onQueue != null) onQueue(l, 0) else l.firstOrNull()?.let { play(it) } }
     }
 }
 
@@ -121,6 +124,13 @@ private fun title(p: Pick): String = when (p) {
         2 -> tr("Evening picks", "Akşam seçimleri")
         else -> tr("Night picks", "Gece seçimleri")
     }
+    Pick.Recent -> tr("Recently added", "Son eklenenler")
+    Pick.Forgotten -> tr("Forgotten gems", "Unutulan güzel şarkılar")
+    Pick.Favourites -> tr("From your favourites", "Favorilerinden")
+    Pick.Rated -> tr("Best rated", "En yüksek puanlılar")
+    Pick.Discover -> tr("Not played yet", "Henüz dinlemediklerin")
+    is Pick.Decade -> tr("The ${p.decade}s", "${p.decade}'ler")
+    is Pick.Genre -> p.name
     is Pick.Energy -> if (p.high) tr("High energy", "Yüksek enerji") else tr("Calm", "Sakin")
     is Pick.Mood -> when (p.mood) {
         "energetic" -> tr("Energetic mix", "Enerjik mix")
@@ -170,7 +180,7 @@ private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("
 
 /** The mix maker: a compact DJ-set panel: moods, sources and length in one card, and one round play button to make the mix. */
 @Composable
-private fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, accent: Color, onMake: (List<Track>) -> Unit) {
+fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, accent: Color, onMake: (List<Track>) -> Unit) {
     val ctx = LocalContext.current
     var moods by remember { androidx.compose.runtime.mutableStateOf(setOf<String>()) }
     var source by remember { androidx.compose.runtime.mutableStateOf("all") }
@@ -185,11 +195,14 @@ private fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, 
             androidx.compose.material3.Text(tr("Mix maker", "Mix yapıcı"), color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             listOf(15, 30, 60).forEach { n -> Box(Modifier.padding(start = 6.dp)) { chip(count == n, "$n") { count = n } } }
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(MIX_MOODS) { (k, n) -> chip(k in moods, tr(n.first, n.second)) { moods = if (k in moods) moods - k else moods + k } }
+        // every mood at once (ten of them), wrapped over as many lines as they need
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            MIX_MOODS.forEach { (k, n) -> chip(k in moods, tr(n.first, n.second)) { moods = if (k in moods) moods - k else moods + k } }
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(MIX_SOURCES) { (k, n) -> chip(source == k, tr(n.first, n.second)) { source = k } }
+        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            MIX_SOURCES.forEach { (k, n) -> chip(source == k, tr(n.first, n.second)) { source = k } }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.material3.Text(if (note.isNotEmpty()) note else tr("Mood and source: none = any", "Ruh hali ve kaynak: seçme = hepsi"),
