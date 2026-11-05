@@ -69,7 +69,7 @@ object ModuleCore {
         // "every app automatically": whites turn black where the app has no rules of its own. Only the cheap colour lookups are hooked for it (never the drawing hooks below),
         // and never inside a keyboard: hooking every draw call of every app made the phone stutter
         val isKeyboard = pkg.contains("inputmethod", true) || pkg.contains("keyboard", true) || pkg.contains("latin", true)
-        val auto = if (own.isEmpty() && RecolorRules.enabled(sp, pkg) && !isKeyboard && sp.getBoolean("lsp_auto", true) && pkg !in (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet())) Recolor.auto() else emptyList()
+        val auto = if (own.isEmpty() && RecolorRules.enabled(sp, pkg) && !isKeyboard && sp.getBoolean("lsp_auto", false) && pkg !in (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet())) Recolor.auto() else emptyList()
         (own + auto).takeIf { it.isNotEmpty() }?.let { rules ->
             Recolor.install(rules, drawing = own.isNotEmpty())
             // a light color turned fully dark by the user's own rule: apps that paint their page as a picture (Samsung Notes, readers) are not reached by flat-fill rules, so big light pictures, fills and dark text follow the same target color

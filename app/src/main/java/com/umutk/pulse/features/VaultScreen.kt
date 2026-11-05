@@ -54,7 +54,7 @@ import kotlinx.coroutines.withContext
 
 private val KINDS = listOf(1, 2, 3, 4, 5)
 private fun kindName(t: Int) = when (t) { 1 -> tr("Login", "Giriş"); 2 -> tr("Secure note", "Güvenli not"); 3 -> tr("Card", "Kart"); 4 -> tr("Identity", "Kimlik"); else -> tr("SSH key", "SSH anahtarı") }
-private fun kindIcon(t: Int) = when (t) { 1 -> "key"; 2 -> "edit"; 3 -> "storage"; 4 -> "users"; else -> "terminal" }
+private fun kindIcon(t: Int) = when (t) { 1 -> "key"; 2 -> "notes"; 3 -> "coin"; 4 -> "person"; else -> "code" }
 
 /** Names of the stored fields, as shown in an entry. */
 private fun fieldLabel(k: String): String = when (k) {
@@ -122,7 +122,7 @@ fun VaultScreen(back: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PCard {
-                Text(tr("Autofill", "Otomatik doldurma"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Row(verticalAlignment = Alignment.CenterVertically) { PIcon("shieldOk", T.accent, 22.dp, Modifier.padding(end = 10.dp)); Text(tr("Autofill", "Otomatik doldurma"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
                 Text(
                     if (Build.VERSION.SDK_INT < 26) tr("Autofill needs Android 8 or newer.", "Otomatik doldurma Android 8 ve üstünü ister.")
                     else if (autofillOn) tr("An autofill service is on. If it is not Pulse, pick Pulse in the settings: only one can be on at a time.", "Bir otomatik doldurma servisi açık. Pulse değilse ayarlardan Pulse'u seç: aynı anda yalnızca biri açık olur.")
@@ -137,8 +137,12 @@ fun VaultScreen(back: () -> Unit) {
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton(tr("Import Bitwarden JSON", "Bitwarden JSON içe aktar"), Modifier.weight(1f)) { pick.launch(arrayOf("application/json", "text/plain", "*/*")) }
-                PButton(tr("New login", "Yeni giriş"), Modifier.weight(1f)) { editing = VItem(type = 1) }
+                Row(Modifier.weight(1f).clickable { pick.launch(arrayOf("application/json", "text/plain", "*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("upload", T.accent, 22.dp, Modifier.padding(end = 8.dp)); Text("Bitwarden JSON", color = T.text, fontSize = 14.sp)
+                }
+                Row(Modifier.weight(1f).clickable { editing = VItem(type = 1) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("add", T.accent, 22.dp, Modifier.padding(end = 8.dp)); Text(tr("New login", "Yeni giriş"), color = T.text, fontSize = 14.sp)
+                }
             }
             if (msg.isNotEmpty()) Text(msg, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         }
@@ -179,8 +183,8 @@ private fun ItemDialog(v: VItem, onClose: () -> Unit, onEdit: () -> Unit, onDele
                 val hide = secret && key !in shown
                 Text(if (hide) "••••••••" else value, color = T.text, fontSize = 14.sp, fontFamily = if (secret) FontFamily.Monospace else FontFamily.Default, maxLines = if (key == "privateKey") 6 else 3, overflow = TextOverflow.Ellipsis)
             }
-            if (secret) Text(if (key in shown) tr("Hide", "Gizle") else tr("Show", "Göster"), color = T.accent, fontSize = 12.sp, modifier = Modifier.clickable { shown = if (key in shown) shown - key else shown + key }.padding(8.dp))
-            Text(tr("Copy", "Kopyala"), color = T.accent, fontSize = 12.sp, modifier = Modifier.clickable { copy(ctx, value) }.padding(8.dp))
+            if (secret) PIcon(if (key in shown) "eyeOff" else "eyeOn", T.accent, 20.dp, Modifier.clickable { shown = if (key in shown) shown - key else shown + key }.padding(8.dp))
+            PIcon("copy", T.accent, 20.dp, Modifier.clickable { copy(ctx, value) }.padding(8.dp))
         }
     }
     WinAlert(
