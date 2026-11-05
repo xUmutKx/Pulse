@@ -150,50 +150,8 @@ private object StatsCache {
     }
 }
 
-/**
- * The installed apps: their total size and how many there are. With the usage access the size includes each app's data. Apps hidden with `pm hide`
- * (or removed for this user with their data kept) are not in the normal list, so they are read with the "uninstalled too" flag; their size, which the
- * system will not give, comes from their folders through root or Shizuku (program, data, OBB and media).
- */
-private fun installedApps(ctx: Context): Pair<Long, Int> {
-    val pm = ctx.packageManager
-    @Suppress("DEPRECATION")
-    val all = runCatching { pm.getInstalledApplications(android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES) }.getOrDefault(emptyList())
-    val apps = all.ifEmpty { runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList()) }
-    val visible = runCatching { pm.getInstalledApplications(0).map { it.packageName }.toSet() }.getOrDefault(emptySet())
-    val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as? android.app.AppOpsManager
-    @Suppress("DEPRECATION")
-    val usage = ops?.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName) == android.app.AppOpsManager.MODE_ALLOWED
-    val ssm = if (android.os.Build.VERSION.SDK_INT >= 26) ctx.getSystemService(Context.STORAGE_STATS_SERVICE) as? android.app.usage.StorageStatsManager else null
-    fun apkBytes(a: android.content.pm.ApplicationInfo): Long {
-        var n = a.sourceDir?.let { File(it).length() } ?: 0L
-        a.splitSourceDirs?.forEach { n += File(it).length() }
-        return n
-    }
-    var bytes = 0L
-    val hidden = ArrayList<android.content.pm.ApplicationInfo>()
-    for (a in apps) {
-        val st = if (usage && ssm != null && a.packageName in visible) runCatching {
-            ssm.queryStatsForPackage(android.os.storage.StorageManager.UUID_DEFAULT, a.packageName, android.os.Process.myUserHandle())
-        }.getOrNull() else null
-        if (a.packageName !in visible) { hidden += a; continue }
-        bytes += if (st != null) st.appBytes + st.dataBytes + st.cacheBytes else apkBytes(a)
-    }
-    // the hidden ones: their folders measured with root or Shizuku (one run for all of them), else only their program files
-    if (hidden.isNotEmpty()) {
-        val P = com.umutk.pulse.extras.blackout.Privilege
-        if (P.mode == P.Mode.None) runCatching { P.detect() }
-        val sized = if (P.mode != P.Mode.None) runCatching {
-            val script = hidden.joinToString("; ") { a ->
-                val k = a.packageName
-                "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
-            }
-            P.run(script).text.lines().mapNotNull { l -> l.trim().split(' ').takeIf { it.size == 2 }?.let { it[0] to (it[1].toDoubleOrNull()?.toLong() ?: 0L) } }.toMap()
-        }.getOrDefault(emptyMap()) else emptyMap()
-        for (a in hidden) bytes += maxOf(sized[a.packageName] ?: 0L, apkBytes(a))
-    }
-    return bytes to apps.size
-}
+/** The installed apps: their total size and how many there are (hidden ones included, see [measureApps]). */
+private fun installedApps(ctx: Context): Pair<Long, Int> = com.umutk.pulse.features.measureApps(ctx).let { l -> l.sumOf { it.bytes } to l.size }
 
 /** The size and count of the files inside hidden folders (a name starting with a dot) under [top]; symbolic links and unreadable folders are skipped. */
 private fun hiddenBytes(top: File): Pair<Long, Int> {
@@ -365,7 +323,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
-            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = if (p.key == "apps") "apk" else p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable { if (p.key == "apps") onTab("apps") else { FilesHomeNav.kind = p.key; onTab("types") } }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(if (mat) 14.dp else 4.dp)).background(p.color), contentAlignment = Alignment.Center) { PIcon(p.icon, Color.White, 28.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(p.en, p.tr), color = fg, fontSize = 18.sp)
