@@ -344,9 +344,9 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
                 }
             } else Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
-            "clip" -> ClipPanel(th, st, act, keyH)
+            "clip" -> { if (st.numpad) NumPanelClose(th, st); ClipPanel(th, st, act, keyH) }
             "gamepad" -> GamepadPanel(th, act)
-            "auth" -> AuthPanel(th, st, act, keyH)
+            "auth" -> { if (st.numpad) NumPanelClose(th, st); AuthPanel(th, st, act, keyH) }
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -357,6 +357,14 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
                 else -> KeysPanel(th, st, act, keyH)
             }
         }
+    }
+}
+
+/** The number pad has no bar, so the clipboard and the codes opened from it get a close key that brings the digits back. */
+@Composable
+private fun NumPanelClose(th: KbTheme, st: KbState) {
+    Row(Modifier.fillMaxWidth().height(36.dp).background(th.bg), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        BarIcon(th, kbIcon(th, "Close")) { st.panel = "keys" }
     }
 }
 
@@ -933,7 +941,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     else if (!glide && key.alts.isNotEmpty() && big) { long = true; sel = 0; st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback() }
                                     due = Long.MAX_VALUE / 2
                                 }
-                                else -> if (!glide && key.alts.isNotEmpty() && big) {
+                                // the number pad's digits have no pop-up characters, so the hold is read here: 1 opens the clipboard, 2 the authenticator (it runs at once, the release then does nothing)
+                                else -> if (key.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (key.label == "1" || key.label == "2")) {
+                                    long = true; held = true; st.preview = null; a.feedback(); due = Long.MAX_VALUE / 2
+                                    a.menu(if (key.label == "1") "clip" else "auth")
+                                } else if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
                                 } else due = Long.MAX_VALUE / 2
@@ -952,9 +964,6 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 glide && seq.length >= 3 -> a.glide(seq.toString())
                                 glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
                                 glide -> a.type(key.label)
-                                // on the number pad only: holding 1 opens the clipboard, holding 2 the authenticator's codes (the normal keyboard keeps its own characters)
-                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "1" -> a.menu("clip")
-                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "2" -> a.menu("auth")
                                 long && sel >= 0 && key.alts.isNotEmpty() -> a.type(key.alts[sel.coerceIn(0, key.alts.lastIndex)])
                                 spaceDragged -> {}
                                 long && key.kind == KeyKind.SHIFT -> a.edit("capslock")
