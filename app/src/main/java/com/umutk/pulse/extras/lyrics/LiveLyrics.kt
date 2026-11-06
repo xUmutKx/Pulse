@@ -189,11 +189,16 @@ object LiveLyrics {
 
 /** The current line in large text with the neighbours dimmed. The player places it at the bottom of the cover. */
 @Composable
-fun LiveLyricsLine(track: Track?, positionMs: Int, modifier: Modifier = Modifier) {
+fun LiveLyricsLine(track: Track?, positionMs: Int, modifier: Modifier = Modifier, compact: Boolean = false, color: androidx.compose.ui.graphics.Color = T.text) {
     val ctx = LocalContext.current
     if (!LiveLyrics.player(ctx)) return
     val res by produceState<LyricsResult?>(null, track?.path) { value = track?.let { LiveLyrics.resultFor(ctx, it) } }
     val cur = LiveLyrics.lineAt(res, positionMs) ?: return
+    // the compact form: only the line that is sung, on one or two lines, for a small gap in a player page
+    if (compact) {
+        Text(cur.second, color = color, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = modifier)
+        return
+    }
     val size = MusicSettings.lyricsFont(ctx)
     val dim = T.text.copy(alpha = .35f)
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {

@@ -462,7 +462,10 @@ fun NowPlayingScreen(
                 ))
             }
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
-            Spacer(Modifier.height(48.dp))
+            // the gap above the transport shows the line that is sung (the setting "Show in player" of the live lyrics decides)
+            Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                if (!lyricsOpen) com.umutk.pulse.extras.lyrics.LiveLyricsLine(track, positionMs.toInt(), compact = true, color = fg)
+            }
             // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
             BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H + SEEK_EXTRA)) {
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
