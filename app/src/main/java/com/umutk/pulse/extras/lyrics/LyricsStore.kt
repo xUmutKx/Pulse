@@ -91,7 +91,8 @@ suspend fun ovhLyrics(artist: String, title: String): LyricsRecord? = withContex
         c.setRequestProperty("User-Agent", "Pulse/1.0 (Android)")
         c.connectTimeout = 10_000; c.readTimeout = 15_000
         if (c.responseCode !in 200..299) return@withContext null
-        val text = JSONObject(c.inputStream.bufferedReader().use { it.readText() }).optString("lyrics").trim()
+        val jo = JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+        val text = if (jo.isNull("lyrics")) "" else jo.optString("lyrics").trim().let { if (it.equals("null", true)) "" else it }
         if (text.isEmpty()) null else LyricsRecord(0, title, artist, null, false, text, null)
     } finally { c.disconnect() }
 }

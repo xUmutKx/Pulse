@@ -53,8 +53,8 @@ internal object OnlineTags {
                 ?: hits.firstOrNull { val n = it.optString("trackName"); n.isNotBlank() && (n.contains(title, true) || title.contains(n, true)) }
                 ?: return@runCatching null
             Found(
-                hit.optString("artistName").ifBlank { null }, hit.optString("collectionName").ifBlank { null },
-                hit.optString("primaryGenreName").ifBlank { null }, hit.optString("releaseDate").take(4).toIntOrNull() ?: 0,
+                hit.optString("artistName").ifBlank { null }?.takeIf { !it.equals("null", true) }, hit.optString("collectionName").ifBlank { null }?.takeIf { !it.equals("null", true) },
+                hit.optString("primaryGenreName").ifBlank { null }?.takeIf { !it.equals("null", true) }, hit.optString("releaseDate").take(4).toIntOrNull() ?: 0,
             )
         }.getOrNull()
     }
