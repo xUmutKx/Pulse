@@ -2301,3 +2301,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Good Lock: modül güncellemesi artık Samsung mağazasının kendi sürüm servisinden okunur (APKMirror 403 veriyordu), Güncelle Galaxy Store sayfasını açar; ArtCraft: yeni yayın (asset updated_at) kurulu uygulamadan yeniyse "Güncelleme var", eski dosya aynı adla kalmışsa yeniden indirir; Play sürümünde ArtCraft yok (manifest + listeler). derlenmedi
 
 - Kitap okuyucu: kapaklar 100 KB altı küçük JPEG (eski PNG kapaklar bir kez silinir, 25 MB), kapaksız kitaplarda siyah zemin beyaz başlık kapak, beyaz PDF ilk sayfası ters çevrilir; "Kaydırarak oku" modu (sayfa başı haritası, ileri/geri yarım sayfayı önce tam sayfaya getirir). derlenmedi
+
+- 1.0.371 (derlendi): ekran kapağı (StandBy kutucuğu kalktı, 5 sade şarj animasyonu + rastgele, çift dokunuşla kapanır, ekran açıkken/şarjda varsayılan kapalı), spor Sağlık içinde (altta), hava durumu anlık geçiş + harita konum noktası, Good Lock güncellemeleri (Samsung mağaza servisi), ArtCraft güncelleme algısı ve Play sürümünde yok, kitap kapakları küçük JPEG + siyah kapak + kaydırarak okuma.
