@@ -49,6 +49,8 @@ class MonitorService : Service() {
     private var tv: android.widget.LinearLayout? = null
     private var lp: WindowManager.LayoutParams? = null
     private val lastAlert = HashMap<String, Long>()
+    private var lastKey: Pair<Boolean, List<Pair<String, String>>>? = null
+    private var lastText = ""
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -98,8 +100,10 @@ class MonitorService : Service() {
             if (System.currentTimeMillis() - Sampler.lastSample > 2500) Sampler.sample(this)
             val text = line()
             val its = items()
-            withContext(Dispatchers.Main) { showOverlay(its) }
-            if (Opt.notifOn) getSystemService(NotificationManager::class.java).notify(ID, build(text))
+            // the overlay and the notification are redrawn only when what they show has changed (the system UI does not like a new notification every second)
+            val key = Pair(Opt.ovOn, its)
+            if (key != lastKey) { lastKey = key; withContext(Dispatchers.Main) { showOverlay(its) } }
+            if (Opt.notifOn && text != lastText) { lastText = text; getSystemService(NotificationManager::class.java).notify(ID, build(text)) }
             alerts()
             if (!Opt.ovOn && !Opt.notifOn && Opt.alertTemp == 0 && Opt.alertBat == 0 && Opt.alertRam == 0) { stopSelf(); return }
             // the screen is off: nothing is looked at, so the readings and the alert checks come every 5 s instead of every second
