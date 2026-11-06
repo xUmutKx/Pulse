@@ -179,6 +179,10 @@ class BudsService : Service() {
                 android.os.Handler(mainLooper).post { wearChanged(worn) }
                 refreshNote()
             }
+            BudsProto.TOUCHPAD_OTHER_OPTION -> {
+                val side = when (u(0)) { 5 -> "L"; 6 -> "R"; else -> null }
+                if (side != null) BudsActions.run(this, BudsPrefs.hold(this, side))
+            }
             BudsProto.NOISE_CONTROLS_UPDATE -> BudsLink.update { it.copy(noise = u(0).takeIf { v -> v in 0..3 } ?: it.noise) }
         }
     }
