@@ -111,7 +111,10 @@ class WeatherClearWidget : PulseWidget() {
                         ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.lat != 0.0 || it.lon != 0.0 }
                         ?: return@runCatching
                 } else pl
-                prefs(ctx).edit().putString("raw_" + key(pl), WeatherApi.forecast(spot.lat, spot.lon)).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
+                val raw = WeatherApi.forecast(spot.lat, spot.lon)
+                // the same extras as the page (MGM station values, the combined hours), so the widget shows the numbers of the chosen source
+                val ex = WeatherApi.extras(spot.lat, spot.lon, com.umutk.pulse.extras.weather.WeatherStore.source(ctx) == "mgm", com.umutk.pulse.extras.weather.WeatherStore.combine(ctx))
+                prefs(ctx).edit().putString("raw_" + key(pl), raw).putString("ex_" + key(pl), ex).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
             }
         }
         ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
@@ -168,7 +171,7 @@ class WeatherClearWidget : PulseWidget() {
     private fun cachedFor(c: Context, pl: Place): Forecast? {
         val s = prefs(c)
         val raw = s.getString("raw_" + key(pl), null)
-        if (raw != null) runCatching { return WeatherApi.parse(pl.name, raw, s.getLong("at_" + key(pl), 0L)) }
+        if (raw != null) runCatching { return WeatherApi.parse(pl.name, raw, s.getLong("at_" + key(pl), 0L), -1, s.getString("ex_" + key(pl), "").orEmpty()) }
         // the place the weather app shows, until the widget has fetched its own
         return WeatherStore.cached(c)?.takeIf { pl.device || it.place == pl.name }
     }

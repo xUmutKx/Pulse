@@ -577,6 +577,12 @@ object WeatherStore {
         return f to t
     }
 
+    /** The saved copy of a place becomes the last forecast shown (the one the widgets and the alerts read). */
+    fun makeLast(c: Context, lat: Double, lon: Double) {
+        val o = runCatching { JSONObject(p(c).getString(key(lat, lon), null) ?: return) }.getOrNull() ?: return
+        p(c).edit().putString("raw", o.optString("r")).putString("cache_place", o.optString("n")).putInt("aqi", o.optInt("q", -1)).putLong("at", o.optLong("t")).putString("extras", o.optString("e")).apply()
+    }
+
     /** Where the phone was when its place was last found: the page can show the saved forecast of "My location" before a new fix comes. */
     fun lastDevice(c: Context): Pair<Double, Double>? = p(c).takeIf { it.contains("dev_lat") }?.let { it.getFloat("dev_lat", 0f).toDouble() to it.getFloat("dev_lon", 0f).toDouble() }
     fun setLastDevice(c: Context, lat: Double, lon: Double) = p(c).edit().putFloat("dev_lat", lat.toFloat()).putFloat("dev_lon", lon.toFloat()).apply()
