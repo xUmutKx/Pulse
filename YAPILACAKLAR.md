@@ -2267,3 +2267,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Ekran kaydedici: uygulama hatayla cokerse kaydedici durdurulup o ana kadarki video galeriye (Movies/Pulse Recordings) yayinlanir; bir sonraki kayitta onceki yarim kalmis (disaridan oldurulmus) kayitlar bulunur, icinde veri olan yayinlanir, bos olan silinir (derlenmedi, cihazda denenmedi)
 
 - Yuzen klavye: erisilebilirlik klavyesi bir yazi alanina yazarken telefonun kendi klavyesi kapali tutulur (SoftKeyboardController), alan gidince normale doner; pencere degisince alan hala odaktaysa klavye kapanmaz; yazi alani yokken (oyun) oneri cubugu bos kalir ve yaziyor gibi gorunmez; gamepad tuslari SOURCE_GAMEPAD/DPAD kaynagiyla gonderilir (rastgele tus sorunu icin, cihazda denenmedi) (derlenmedi)
+
+- Video: klasorler de toplu secilir (uzun basinca klasorun tum videolari secilir, secimde dokununca ekle/cikar, ustte "N klasor - M video"), cop kutusu secili klasorlerin videolarini siler, "Klasoru gizle" secili klasorlere de uygulanir, "Hepsini sec" klasorleri de kapsar (derlenmedi)
