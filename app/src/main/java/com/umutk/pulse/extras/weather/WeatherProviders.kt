@@ -146,7 +146,17 @@ object WeatherProviders {
             hours += Hr(t, temp, code, rain)
         }
         val n = now ?: error("7Timer sent no readings")
-        return build(n, hours.take(120), lat, lon, zone)
+        // 7Timer gives one point every three hours: the hours between two points are filled in (temperature in a straight line, the sky of the earlier point),
+        // so the hour list does not jump three hours at a time
+        val full = ArrayList<Hr>()
+        for (i in hours.indices) {
+            val a = hours[i]
+            full += a
+            val b = hours.getOrNull(i + 1) ?: break
+            val gap = java.time.Duration.between(a.t, b.t).toHours().toInt()
+            for (k in 1 until gap) full += Hr(a.t.plusHours(k.toLong()), a.temp + (b.temp - a.temp) * k / gap, a.code, a.rain)
+        }
+        return build(n, full.take(120), lat, lon, zone)
     }
 
     // ---- MET Norway: no key -----------------------------------------------------------------------------------------------------------------
