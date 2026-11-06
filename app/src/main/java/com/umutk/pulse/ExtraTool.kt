@@ -190,6 +190,7 @@ open class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
+        taskLook(start)
         val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
         toolLook = store
         enter()
@@ -213,6 +214,42 @@ open class ExtraToolActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /** The recent apps show each tool with its own name and the picture of its launcher entry, not Pulse's logo (all tools are this one activity). */
+    private fun taskLook(route: String) {
+        val (res, label) = when (route) {
+            "music" -> "launch_music" to tr("Music player", "Müzik çalar")
+            "video" -> "launch_video" to tr("Video player", "Video oynatıcı")
+            "whitenoise" -> "launch_noise" to tr("White noise", "Beyaz gürültü")
+            "voice" -> "launch_voice" to tr("Voice recorder", "Ses kaydedici")
+            "notes" -> "launch_notes" to tr("Notes", "Notlar")
+            "weather" -> "launch_weather" to tr("Weather", "Hava durumu")
+            "paint" -> "launch_paint" to "Paint"
+            "browser" -> "launch_browser" to tr("Browser", "Tarayıcı")
+            "office" -> "launch_office" to "Office"
+            "calculator" -> "launch_calc" to tr("Calculator", "Hesap makinesi")
+            "clock" -> "launch_clock" to tr("Clock", "Saat")
+            "tempmail" -> "launch_tempmail" to "TempMail"
+            "ebook" -> "launch_books" to tr("Books", "Kitaplar")
+            "messages" -> "launch_messages" to tr("Messages", "Mesajlar")
+            "screenrec" -> "launch_screenrec" to tr("Screen recorder", "Ekran kaydı")
+            "notifhist" -> "launch_notifhist" to tr("Notification history", "Bildirim geçmişi")
+            "extrastore" -> "launch_store" to tr("Store", "Mağaza")
+            "localsend" -> "launch_localsend" to "LocalSend"
+            "palette" -> "launch_palette" to "Palette"
+            "blackout" -> "launch_blackout" to "BlackOut"
+            "gamehub" -> "launch_gamehub" to "Game Hub"
+            "island" -> "launch_island" to "Island"
+            "keyboard" -> "launch_keyboard" to tr("Keyboard", "Klavye")
+            else -> return
+        }
+        val id = resources.getIdentifier(res, "drawable", packageName)
+        if (id == 0) return
+        runCatching {
+            val bmp = android.graphics.BitmapFactory.decodeResource(resources, id, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
+            @Suppress("DEPRECATION") setTaskDescription(android.app.ActivityManager.TaskDescription(label, bmp))
         }
     }
 

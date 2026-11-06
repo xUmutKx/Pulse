@@ -292,7 +292,7 @@
             </intent-filter>
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
-        <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
         <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
