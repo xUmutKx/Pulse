@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,11 +22,14 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -51,6 +56,7 @@ fun InkBar(
     mode: InkMode, onMode: (InkMode) -> Unit,
     canUndo: Boolean, canRedo: Boolean, onUndo: () -> Unit, onRedo: () -> Unit,
     textOn: Boolean, onText: () -> Unit, onPhoto: () -> Unit, moreOn: Boolean, onMore: () -> Unit,
+    penTint: Color = T.text, markerTint: Color = Color(0xFFFDD835),
 ) {
     Row(
         Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .92f))
@@ -58,15 +64,51 @@ fun InkBar(
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         BarBtn(mode == InkMode.KEYBOARD, tr("Keyboard", "Klavye"), true, { onMode(InkMode.KEYBOARD) }) { PIcon("keyboard", it, 22.dp) }
-        BarBtn(mode == InkMode.PEN, tr("Pen", "Kalem"), true, { onMode(InkMode.PEN) }) { PIcon("paint_pencil", it, 22.dp) }
-        BarBtn(mode == InkMode.MARKER, tr("Marker", "Fosforlu kalem"), true, { onMode(InkMode.MARKER) }) { MarkerGlyph(it) }
-        BarBtn(mode == InkMode.ERASER, tr("Eraser", "Silgi"), true, { onMode(InkMode.ERASER) }) { PIcon("paint_eraser", it, 22.dp) }
+        PenTool3D(0, penTint, mode == InkMode.PEN, tr("Pen", "Kalem")) { onMode(InkMode.PEN) }
+        PenTool3D(1, markerTint, mode == InkMode.MARKER, tr("Marker", "Fosforlu kalem")) { onMode(InkMode.MARKER) }
+        PenTool3D(2, Color(0xFFF48FB1), mode == InkMode.ERASER, tr("Eraser", "Silgi")) { onMode(InkMode.ERASER) }
         BarBtn(mode == InkMode.LASSO, tr("Lasso", "Kement"), true, { onMode(InkMode.LASSO) }) { LassoGlyph(it) }
         BarBtn(false, tr("Undo", "Geri al"), canUndo, onUndo) { PIcon("undo", it, 22.dp) }
         BarBtn(false, tr("Redo", "Yinele"), canRedo, onRedo) { PIcon("redo", it, 22.dp) }
         BarBtn(textOn, tr("Text", "Yazı"), true, onText) { Text("Aa", color = it, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
         BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 22.dp) }
         BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 22.dp) }
+    }
+}
+
+/**
+ * A tool drawn as an upright pen with a round body (shaded across, like a cylinder, with a bright streak) and a coloured tip, as the pen tray of a
+ * notes app shows them: the one that is on stands up out of the bar. [kind]: 0 pen, 1 marker (a chisel tip), 2 eraser (a soft block).
+ */
+@Composable
+private fun PenTool3D(kind: Int, tint: Color, on: Boolean, desc: String, onClick: () -> Unit) {
+    val lift by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, androidx.compose.animation.core.tween(180), label = "penLift")
+    Box(Modifier.width(34.dp).height(58.dp).clickable { onClick() }.semantics { contentDescription = desc }) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val up = lift * 9.dp.toPx()
+            val bw = w * .62f; val x0 = (w - bw) / 2f
+            val top = h * .36f - up
+            val bodyH = h - top + 8.dp.toPx()
+            val shade = Brush.horizontalGradient(listOf(Color(0xFF7C7C82), Color(0xFFF2F2F7), Color(0xFFCFCFD4), Color(0xFF86868C)), startX = x0, endX = x0 + bw)
+            val r = bw * .22f
+            // the body
+            drawRoundRect(shade, Offset(x0, top), Size(bw, bodyH), CornerRadius(r, r))
+            // the bright streak down the round body
+            drawRoundRect(Color.White.copy(alpha = .55f), Offset(x0 + bw * .2f, top + 6.dp.toPx()), Size(bw * .1f, bodyH - 12.dp.toPx()), CornerRadius(bw * .05f, bw * .05f))
+            // the ring between body and tip, and the tip in the colour of the ink
+            val ring = Brush.horizontalGradient(listOf(tint.copy(alpha = .55f), Color.White.copy(alpha = .8f), tint.copy(alpha = .9f)), startX = x0, endX = x0 + bw)
+            drawRect(ring, Offset(x0, top), Size(bw, h * .06f))
+            val tip = Path()
+            when (kind) {
+                0 -> { tip.moveTo(x0 + bw * .1f, top); tip.lineTo(w / 2f, top - h * .27f); tip.lineTo(x0 + bw * .9f, top); tip.close() }
+                1 -> { tip.moveTo(x0 + bw * .08f, top); tip.lineTo(x0 + bw * .24f, top - h * .17f); tip.lineTo(x0 + bw * .76f, top - h * .17f); tip.lineTo(x0 + bw * .92f, top); tip.close() }
+                else -> { tip.moveTo(x0, top); tip.lineTo(x0, top - h * .13f); tip.lineTo(x0 + bw, top - h * .13f); tip.lineTo(x0 + bw, top); tip.close() }
+            }
+            val tipBrush = Brush.horizontalGradient(listOf(tint.copy(alpha = .75f), tint, tint.copy(alpha = .85f)), startX = x0, endX = x0 + bw)
+            drawPath(tip, tipBrush)
+            drawLine(Color.White.copy(alpha = .45f), Offset(x0 + bw * .32f, top - h * .02f), Offset(x0 + bw * .42f, top - if (kind == 0) h * .15f else h * .09f), strokeWidth = bw * .08f, cap = StrokeCap.Round)
+        }
     }
 }
 
