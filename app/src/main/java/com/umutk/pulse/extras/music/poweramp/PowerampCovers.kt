@@ -139,7 +139,14 @@ internal object PowerampCovers {
 
     /** Every service that has covers, one after the other (iTunes, Deezer, MusicBrainz with the Cover Art Archive; none needs a key); the same record from two of them is listed once. */
     fun search(term: String, entity: String): List<Hit> {
-        val all = searchItunes(term, entity) + searchDeezer(term, entity) + (if (entity == "album") searchBrainz(term) else emptyList())
+        // the three services are asked at the same time (not one after the other): the wait is the slowest one, not the three added up
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(3)
+        val all = try {
+            val i = pool.submit(java.util.concurrent.Callable { searchItunes(term, entity) })
+            val d = pool.submit(java.util.concurrent.Callable { searchDeezer(term, entity) })
+            val m = pool.submit(java.util.concurrent.Callable { if (entity == "album") searchBrainz(term) else emptyList() })
+            runCatching { i.get() }.getOrDefault(emptyList()) + runCatching { d.get() }.getOrDefault(emptyList()) + runCatching { m.get() }.getOrDefault(emptyList())
+        } finally { pool.shutdown() }
         fun key(h: Hit) = (h.artist + h.name).lowercase().filter { it.isLetterOrDigit() }
         return all.distinctBy { key(it) }.take(24)
     }
@@ -243,6 +250,7 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
                             scope.launch {
                                 val ok = withContext(Dispatchers.IO) { runCatching { PowerampCovers.save(ctx, track.path, PowerampCovers.fetch(pick.big)) }.isSuccess }
                                 saving = false
+                                PowerampCovers.dropFetched()
                                 if (ok) { onSaved(); onClose() } else Toast.makeText(ctx, tr("Could not download", "İndirilemedi"), Toast.LENGTH_SHORT).show()
                             }
                         }.padding(horizontal = 22.dp, vertical = 9.dp))
