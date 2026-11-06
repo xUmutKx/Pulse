@@ -2293,3 +2293,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Müzik recap: yeni "Fiş" sayfası (krem kağıt, yırtık kenar, monospace şarkı listesi, TOPLAM dakika, gerçek Code 39 barkod); aynı resim PNG olarak kaydedilir. derlenmedi
 
 - Sağlık > Spor (GymMane projesinden, GPL-3.0 / sanat CC BY-SA 4.0): 466 egzersiz + 130 hareketli resim, antrenman kaydı (set/kg/tekrar), dinlenme sayacı (titreşim+bip), programlar ve rutinler, geçmiş, gelişim (1RM, haftalık hacim), vücut ölçüleri, yemek günlüğü (561 yiyecek, kcal hedefi), fiş şeklinde spor özeti (müzik fişiyle aynı çizici). Atlananlar: vücut haritası, Strava/FIT/PDF, AI plan, Wear, rozetler, notlar/yerler. GitHub Pages sitesi docs/index.html. derlenmedi
+
+- Düzeltmeler: sözsüz şarkılarda "null" (JSON null metin olarak okunuyordu); kilit ekranı sözleri yumuşak geçiş + sabit yükseklik + yazı boyutu ayarı (Canlı sözler); kamera açılınca kapak ve kilit sözleri kapanır; app lock balonu: FLAG_BUBBLE ile algı; klavye: birleşik kelime ayırma hızlandı, hızlı yazarken düzeltilemeyen kelime sonradan düzeltilir; klavye: kameradan yeni çekilen foto (HEIC→JPEG) çubukta. derlenmedi
