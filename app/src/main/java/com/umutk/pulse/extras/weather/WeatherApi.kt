@@ -556,6 +556,31 @@ object WeatherStore {
         return runCatching { WeatherApi.parse(s.getString("cache_place", "").orEmpty(), raw, s.getLong("at", 0L), s.getInt("aqi", -1), s.getString("extras", "").orEmpty()) }.getOrNull()
     }
 
+    // ---- a short-lived copy of the forecast of each place, so switching between places shows at once (the newest 12 places are kept)
+    private fun key(lat: Double, lon: Double) = String.format(java.util.Locale.US, "pc_%.2f_%.2f", lat, lon)
+
+    fun saveFor(c: Context, lat: Double, lon: Double, place: String, raw: String, aqi: Int, extras: String?) {
+        val s = p(c)
+        val me = key(lat, lon)
+        val ed = s.edit().putString(me, JSONObject().put("n", place).put("r", raw).put("q", aqi).put("e", extras ?: "").put("t", System.currentTimeMillis()).toString())
+        s.all.keys.filter { it.startsWith("pc_") && it != me }
+            .mapNotNull { k -> runCatching { JSONObject(s.getString(k, "") ?: "").getLong("t") }.getOrNull()?.let { k to it } }
+            .sortedByDescending { it.second }.drop(11).forEach { ed.remove(it.first) }
+        ed.apply()
+    }
+
+    /** The saved forecast of a place with the time it was fetched, or null. */
+    fun cachedFor(c: Context, lat: Double, lon: Double): Pair<Forecast, Long>? {
+        val o = runCatching { JSONObject(p(c).getString(key(lat, lon), null) ?: return null) }.getOrNull() ?: return null
+        val t = o.optLong("t")
+        val f = runCatching { WeatherApi.parse(o.optString("n"), o.getString("r"), t, o.optInt("q", -1), o.optString("e")) }.getOrNull() ?: return null
+        return f to t
+    }
+
+    /** Where the phone was when its place was last found: the page can show the saved forecast of "My location" before a new fix comes. */
+    fun lastDevice(c: Context): Pair<Double, Double>? = p(c).takeIf { it.contains("dev_lat") }?.let { it.getFloat("dev_lat", 0f).toDouble() to it.getFloat("dev_lon", 0f).toDouble() }
+    fun setLastDevice(c: Context, lat: Double, lon: Double) = p(c).edit().putFloat("dev_lat", lat.toFloat()).putFloat("dev_lon", lon.toFloat()).apply()
+
     /** The data source: "om" Open-Meteo alone, "mgm" MGM station values for places in Turkey on top of Open-Meteo. */
     fun source(c: Context): String = p(c).getString("source", "om") ?: "om"
     fun setSource(c: Context, v: String) {

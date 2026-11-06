@@ -232,8 +232,6 @@ private fun HealthMain(onBack: () -> Unit, openGym: (Int) -> Unit) {
             }
             LinearProgressIndicator(progress = { (steps / goalSteps.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
-        // the gym log is part of Health: this week, today's food and what to train next, with a way into each part
-        com.umutk.pulse.features.gym.GymSummary(openGym)
         if (tab == 0) HealthOverview(prefs, log, today ?: HealthStore.today(prefs), bpm, rev) { showGoals = true } else {
         // no step counter on the device: the card is not shown at all
         if (stepSensor != null) PCard {
@@ -322,6 +320,8 @@ private fun HealthMain(onBack: () -> Unit, openGym: (Int) -> Unit) {
             Text("Used for distance and calories.", color = T.sub, fontSize = 12.sp)
         }
         }
+        // the gym log is part of Health, at the bottom of the page: this week, today's food and what to train next, with a way into each part
+        if (tab == 0) com.umutk.pulse.features.gym.GymSummary(openGym)
     }
     if (showGoals) GoalsDialog(prefs, { showGoals = false }) { rev++ }
     if (tab == 0) {
