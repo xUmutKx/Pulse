@@ -37,7 +37,10 @@ object KeyboardDictionary {
     fun touch() { seq++ }
     /** Called where a piece of correction work starts: it belongs to the keystroke that is the latest now. */
     fun begin() { mine.set(seq) }
-    private fun cancelled() = mine.get()?.let { it != seq } == true
+    private val noCancel = ThreadLocal<Boolean>()
+    private fun cancelled() = noCancel.get() != true && mine.get()?.let { it != seq } == true
+    /** Runs [block] to its end whatever is typed meanwhile (a late correction of a word that was already left behind). */
+    fun <T> uncancelled(block: () -> T): T { noCancel.set(true); try { return block() } finally { noCancel.set(false) } }
 
     private val lexes = ConcurrentHashMap<String, Lex>()
     private val user = ConcurrentHashMap<String, Int>()
@@ -321,9 +324,10 @@ object KeyboardDictionary {
         var best: String? = null; var bestScore = -1f
         fun pair(a: String, b: String) {
             if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) return
-            if (!isWord(code, a) || !isWord(code, b)) return
-            // both parts must be common words (a brand or a rare word that happens to split is left alone)
+            // both parts must be common words (a brand or a rare word that happens to split is left alone). The cheap look-up goes first: a word of the list scores
+            // at once, and only then is the (slow) check of inflected Turkish forms asked, so a long run-together word no longer takes a long time
             if (score(code, a) < 8f || score(code, b) < 8f) return
+            if (!isWord(code, a) || !isWord(code, b)) return
             val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
             if (sc > bestScore) { bestScore = sc; best = "$a $b" }
         }
