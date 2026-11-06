@@ -952,9 +952,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 glide && seq.length >= 3 -> a.glide(seq.toString())
                                 glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
                                 glide -> a.type(key.label)
-                                // on the number pad only: holding 1 opens the authenticator's codes, holding 2 the clipboard (the normal keyboard keeps its own characters)
-                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "1" -> a.menu("auth")
-                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "2" -> a.menu("clip")
+                                // on the number pad only: holding 1 opens the clipboard, holding 2 the authenticator's codes (the normal keyboard keeps its own characters)
+                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "1" -> a.menu("clip")
+                                long && (st.numpad || st.forceLayout == "numpad") && key.label == "2" -> a.menu("auth")
                                 long && sel >= 0 && key.alts.isNotEmpty() -> a.type(key.alts[sel.coerceIn(0, key.alts.lastIndex)])
                                 spaceDragged -> {}
                                 long && key.kind == KeyKind.SHIFT -> a.edit("capslock")
