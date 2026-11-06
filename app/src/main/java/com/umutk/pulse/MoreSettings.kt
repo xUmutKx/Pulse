@@ -659,7 +659,8 @@ private fun ExtraAppsCard() {
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
         Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
         Triple("HealthLauncher", R.drawable.ic_ad_health_fg, tr("Health", "Sağlık")),
-    )
+    // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
+    ).filter { it.first != "ArtCraftLauncher" || BuildConfig.APK_INSTALL }
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
