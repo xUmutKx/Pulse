@@ -2289,3 +2289,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Buds yöneticisi: dokunma seçeneği "Özel" (sol=5, sağ=6, GalaxyBudsClient protokolü): kulaklık basılı tutmayı 147 mesajıyla bildirir; telefonda seçilen eylem çalışır (oynat/duraklat, sonraki/önceki, ses, ANC/ortam, gürültü döngüsü, ANC gücü, ekolayzır, konuşma algılama, oyun modu, fener, pil). derlenmedi
 
 - Ayarlar > Uygulamalar: Sağlık/Office/İndirmeler iki kez görünüyordu (araç satırı + sayfa satırı) → tek satır, sol menü yeri araç satırının seçeneği; Sağlık ayrı ana ekran ikonu (HealthLauncher, uyarlanabilir kalp ikonu); uygulamalar kartı yeniden tasarlandı (katlanır kategoriler, 48dp ikon, ikon+yer alt yazısı). derlenmedi
+
+- Müzik recap: yeni "Fiş" sayfası (krem kağıt, yırtık kenar, monospace şarkı listesi, TOPLAM dakika, gerçek Code 39 barkod); aynı resim PNG olarak kaydedilir. derlenmedi
