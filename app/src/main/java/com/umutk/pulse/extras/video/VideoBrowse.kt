@@ -195,6 +195,11 @@ fun VideoHub(onBack: () -> Unit) {
     if (settings) { VideoSettings(prefs, { settings = false }) { skinId = prefs.skin; rev++ }; return }
 
     val toggle: (VideoItem) -> Unit = { v -> sel = if (v.key in sel) sel - v.key else sel + v.key }
+    // a folder is chosen as all of its videos: chosen once more, they all go; deleting or hiding then works on the folders
+    val toggleFolder: (Folder) -> Unit = { f ->
+        val keys = f.vids.map { it.key }
+        sel = if (keys.isNotEmpty() && keys.all { it in sel }) sel - keys.toSet() else sel + keys
+    }
     val deleteVideos: (List<VideoItem>) -> Unit = { vs ->
         val loc = vs.filter { it.local }
         if (loc.isNotEmpty()) {
@@ -254,7 +259,11 @@ fun VideoHub(onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth().background(sk.top).padding(horizontal = 8.dp, vertical = if (sk.bevel) 2.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
             SkinBtn(sk, { if (sel.isNotEmpty()) sel = emptySet() else if (search != null) search = null else if (at != null && !(tree && at == "")) at = if (tree) parentOf(at!!) else null else onBack() }) { PIcon("back", sk.topFg, 24.dp) }
             if (sel.isNotEmpty()) {
-                Text(sel.size.toString(), Modifier.weight(1f).padding(start = 8.dp), color = sk.topFg, fontSize = 18.sp)
+                val chosenFolders = folders.count { f -> f.key != RECENT && f.vids.isNotEmpty() && f.vids.all { it.key in sel } }
+                Text(
+                    if (chosenFolders > 0) tr("$chosenFolders folders · ${sel.size} videos", "$chosenFolders klasör · ${sel.size} video") else sel.size.toString(),
+                    Modifier.weight(1f).padding(start = 8.dp), color = sk.topFg, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             } else if (search != null) {
                 BasicTextField(
                     search.orEmpty(), { search = it }, singleLine = true,
@@ -270,7 +279,7 @@ fun VideoHub(onBack: () -> Unit) {
                     DropdownMenu(selMenu, { selMenu = false }, containerColor = Color(0xF2101010)) {
                         val one = chosen.singleOrNull()
                         val items = buildList<Pair<String, () -> Unit>> {
-                            add(tr("Select all", "Hepsini seç") to { sel = sel + list.map { it.key } })
+                            add(tr("Select all", "Hepsini seç") to { sel = sel + list.map { it.key } + folders.flatMap { f -> f.vids.map { it.key } } })
                             if (one != null) {
                                 add(tr("Play", "Oynat") to { act(0, one) })
                                 add(tr("Info", "Bilgi") to { act(1, one) })
@@ -306,18 +315,26 @@ fun VideoHub(onBack: () -> Unit) {
                 if (e is Folder) { at = e.key; search = null }
                 else if (e is VideoItem) play = Play(list, list.indexOf(e).coerceAtLeast(0))
             }
+            // a video or a folder: a long press chooses it, and while something is chosen a tap chooses or lets go
+            val entryMod: (Any) -> Modifier = { e ->
+                val on = (e is VideoItem && e.key in sel) || (e is Folder && e.key != RECENT && e.vids.isNotEmpty() && e.vids.all { it.key in sel })
+                Modifier.background(if (on) sk.accent.copy(alpha = .28f) else Color.Transparent).combinedClickable(
+                    onClick = { if (sel.isNotEmpty() && e is VideoItem) toggle(e) else if (sel.isNotEmpty() && e is Folder && e.key != RECENT) toggleFolder(e) else onOpen(e) },
+                    onLongClick = { if (e is VideoItem) toggle(e) else if (e is Folder && e.key != RECENT) toggleFolder(e) },
+                )
+            }
             if (entries.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PIcon("folder", sk.sub, 48.dp) }
             } else if (prefs.grid) {
                 LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(entries) { e ->
-                        Entry(e, sk, prefs, shape, true, Modifier.background(if (e is VideoItem && e.key in sel) sk.accent.copy(alpha = .28f) else Color.Transparent).combinedClickable(onClick = { if (sel.isNotEmpty() && e is VideoItem) toggle(e) else onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { toggle(it) } })) { i -> (e as? VideoItem)?.let { act(i, it) } }
+                        Entry(e, sk, prefs, shape, true, entryMod(e)) { i -> (e as? VideoItem)?.let { act(i, it) } }
                     }
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(entries) { e ->
-                        Entry(e, sk, prefs, shape, false, Modifier.background(if (e is VideoItem && e.key in sel) sk.accent.copy(alpha = .28f) else Color.Transparent).combinedClickable(onClick = { if (sel.isNotEmpty() && e is VideoItem) toggle(e) else onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { toggle(it) } })) { i -> (e as? VideoItem)?.let { act(i, it) } }
+                        Entry(e, sk, prefs, shape, false, entryMod(e)) { i -> (e as? VideoItem)?.let { act(i, it) } }
                     }
                 }
             }
