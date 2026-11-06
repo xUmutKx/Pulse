@@ -1,0 +1,34 @@
+fullbody	Full Body	Full Body	1	Barbell Squat:3|Barbell Bench Press:3|Barbell Row:3|Overhead Press:3|Romanian Deadlift:3|Plank:3
+fullbody	Full Body	Full Body	3	Barbell Squat:3|Barbell Bench Press:3|Barbell Row:3|Overhead Press:3|Romanian Deadlift:3|Plank:3
+fullbody	Full Body	Full Body	5	Barbell Squat:3|Barbell Bench Press:3|Barbell Row:3|Overhead Press:3|Romanian Deadlift:3|Plank:3
+ppl	Push Pull Legs	Push	1	Barbell Bench Press:4|Incline Dumbbell Press:3|Overhead Press:3|Lateral Raise:3|Triceps Pushdown:3
+ppl	Push Pull Legs	Pull	3	Pull Up:4|Barbell Row:4|Lat Pulldown:3|Face Pull:3|Barbell Curl:3
+ppl	Push Pull Legs	Legs	5	Barbell Squat:4|Romanian Deadlift:3|Leg Press:3|Leg Curl:3|Standing Calf Raise:4
+arnold	Arnold Split	Chest & Back	1	Barbell Bench Press:4|Incline Dumbbell Press:3|Cable Fly:3|Pull Up:4|Barbell Row:4|Seated Cable Row:3
+arnold	Arnold Split	Shoulders & Arms	2	Overhead Press:4|Lateral Raise:4|Face Pull:3|Barbell Curl:3|Hammer Curl:3|Skull Crushers:3|Triceps Pushdown:3
+arnold	Arnold Split	Legs	3	Barbell Squat:4|Romanian Deadlift:3|Leg Press:3|Leg Extension:3|Leg Curl:3|Standing Calf Raise:4
+arnold	Arnold Split	Chest & Back	4	Barbell Bench Press:4|Incline Dumbbell Press:3|Cable Fly:3|Pull Up:4|Barbell Row:4|Seated Cable Row:3
+arnold	Arnold Split	Shoulders & Arms	5	Overhead Press:4|Lateral Raise:4|Face Pull:3|Barbell Curl:3|Hammer Curl:3|Skull Crushers:3|Triceps Pushdown:3
+arnold	Arnold Split	Legs	6	Barbell Squat:4|Romanian Deadlift:3|Leg Press:3|Leg Extension:3|Leg Curl:3|Standing Calf Raise:4
+upperlower	Upper Lower	Upper	1	Barbell Bench Press:4|Barbell Row:4|Overhead Press:3|Lat Pulldown:3|Barbell Curl:3|Triceps Pushdown:3
+upperlower	Upper Lower	Lower	2	Barbell Squat:4|Romanian Deadlift:3|Leg Press:3|Leg Curl:3|Standing Calf Raise:4
+upperlower	Upper Lower	Upper	4	Incline Dumbbell Press:4|Pull Up:4|Dumbbell Standing Overhead Press:3|Seated Cable Row:3|Hammer Curl:3|Triceps Dip:3
+upperlower	Upper Lower	Lower	5	Deadlift:3|Front Squat:3|Leg Extension:3|Leg Curl:3|Standing Calf Raise:4
+abcd	ABCD Split	A · Chest & Triceps	1	Barbell Bench Press:4|Incline Dumbbell Press:3|Cable Fly:3|Triceps Pushdown:3|Skull Crushers:3
+abcd	ABCD Split	B · Back & Biceps	2	Pull Up:4|Barbell Row:4|Lat Pulldown:3|Barbell Curl:3|Hammer Curl:3
+abcd	ABCD Split	C · Legs	4	Barbell Squat:4|Romanian Deadlift:3|Leg Press:3|Leg Curl:3|Standing Calf Raise:4
+abcd	ABCD Split	D · Shoulders & Abs	5	Overhead Press:4|Lateral Raise:3|Face Pull:3|Hanging Leg Raise:3|Plank:3
+abcde	ABCDE Split	A · Chest	1	Barbell Bench Press:4|Incline Dumbbell Press:4|Cable Fly:3|Triceps Dip:3
+abcde	ABCDE Split	B · Back	2	Deadlift:3|Pull Up:4|Barbell Row:4|Seated Cable Row:3
+abcde	ABCDE Split	C · Legs	3	Barbell Squat:4|Leg Press:4|Leg Extension:3|Leg Curl:3|Standing Calf Raise:4
+abcde	ABCDE Split	D · Shoulders	4	Overhead Press:4|Dumbbell Standing Overhead Press:3|Lateral Raise:4|Face Pull:3
+abcde	ABCDE Split	E · Arms	5	Barbell Curl:4|Skull Crushers:4|Hammer Curl:3|Triceps Pushdown:3
+stronglifts	StrongLifts 5×5	Workout A	1	Barbell Squat:5|Barbell Bench Press:5|Barbell Row:5
+stronglifts	StrongLifts 5×5	Workout B	3	Barbell Squat:5|Overhead Press:5|Deadlift:1
+startingstrength	Starting Strength	Workout A	1	Barbell Squat:3|Barbell Bench Press:3|Deadlift:1
+startingstrength	Starting Strength	Workout B	3	Barbell Squat:3|Overhead Press:3|Barbell Row:3
+rr	Recommended Routine	Recommended Routine	1	Negative Pull-up:3|Bodyweight Squat:3|Negative Dip:3|Bodyweight Romanian Deadlift:3|Incline Row:3|Incline Push-up:3|Plank:3|Banded Pallof Press:3|Reverse Hyperextension:3
+rr	Recommended Routine	Recommended Routine	3	Negative Pull-up:3|Bodyweight Squat:3|Negative Dip:3|Bodyweight Romanian Deadlift:3|Incline Row:3|Incline Push-up:3|Plank:3|Banded Pallof Press:3|Reverse Hyperextension:3
+rr	Recommended Routine	Recommended Routine	5	Negative Pull-up:3|Bodyweight Squat:3|Negative Dip:3|Bodyweight Romanian Deadlift:3|Incline Row:3|Incline Push-up:3|Plank:3|Banded Pallof Press:3|Reverse Hyperextension:3
+home	No Kit	Home A	2	Push Up:3|Pull Up:3|Bodyweight Squat:3|Plank:3
+home	No Kit	Home B	5	Triceps Dip:3|Chin Up:3|Lunge:3|Hanging Leg Raise:3

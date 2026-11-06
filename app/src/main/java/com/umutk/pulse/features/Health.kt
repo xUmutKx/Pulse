@@ -77,6 +77,13 @@ private val EXTRA_SENSOR = Regex("spo2|oxygen|arable", RegexOption.IGNORE_CASE)
 /** Steps, distance and calories from the step counter, a heart rate from the camera flash, an activity timer and location. Estimates only. */
 @Composable
 fun HealthScreen(onBack: () -> Unit) {
+    // the gym log opens inside Health and takes its back button
+    var gym by remember { mutableStateOf(false) }
+    if (gym) com.umutk.pulse.features.gym.GymScreen { gym = false } else HealthMain(onBack) { gym = true }
+}
+
+@Composable
+private fun HealthMain(onBack: () -> Unit, openGym: () -> Unit) {
     val ctx = LocalContext.current
     val sm = remember { ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val stepSensor = remember { sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
@@ -224,6 +231,16 @@ fun HealthScreen(onBack: () -> Unit) {
                 Text(if (bpm > 0) "$bpm" else "-", color = T.text, fontSize = 15.sp)
             }
             LinearProgressIndicator(progress = { (steps / goalSteps.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+        }
+        // the gym log: exercises with pictures, sets, rest timer, history, progress, body numbers, foods and a receipt recap
+        PCard {
+            Row(androidx.compose.ui.Modifier.fillMaxWidth().clickable { openGym() }, verticalAlignment = Alignment.CenterVertically) {
+                Column(androidx.compose.ui.Modifier.weight(1f)) {
+                    Text(tr("Gym", "Spor"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Exercises, sets, progress, food", "Egzersizler, setler, gelişim, beslenme"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PIcon("chevron", T.sub, 20.dp)
+            }
         }
         if (tab == 0) HealthOverview(prefs, log, today ?: HealthStore.today(prefs), bpm, rev) { showGoals = true } else {
         // no step counter on the device: the card is not shown at all

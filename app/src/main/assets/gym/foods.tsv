@@ -1,0 +1,561 @@
+Banana	Muz	89	1.1	22.8	0.3	120
+Apple	Elma	48	0.3	12.8	0.1	180
+Orange	Portakal	47	0.9	11.8	0.1	180
+Strawberry	Çilek	32	0.7	7.7	0.3	12
+Tangerine	Mandalina	53	0.8	13.3	0.3	90
+Clementine	Klementin	47	0.8	12	0.1	75
+Bartlett Pear	Williams armut	63	0.4	15	0.2	180
+Yellow Peach	Şeftali	39	0.9	9.5	0.2	150
+Nectarine	Nektarin	44	1.1	10.6	0.3	140
+Donut Peach	Basık şeftali	39	0.9	9.5	0.2	100
+White Peach	Beyaz şeftali	39	0.9	9.5	0.2	150
+Grapes	Üzüm	69	0.7	18.1	0.2	
+Watermelon	Karpuz	30	0.6	7.5	0.1	
+Melon	Kavun	36	0.5	9.1	0.1	
+Cantaloupe Melon	Kantalup kavun	34	0.8	8.2	0.2	
+Green Kiwifruit	Yeşil kivi	61	1.1	14.7	0.5	75
+Gold Kiwi	Sarı kivi	63	1	15.8	0.3	85
+Pineapple	Ananas	50	0.5	13.1	0.1	
+Mango	Mango	60	0.8	15	0.4	250
+Avocado	Avokado	160	2	8.5	14.7	150
+Lemon	Limon	29	1.1	9.3	0.3	60
+Lime	Misket limonu	30	0.7	10.5	0.2	50
+Sweet Cherry	Kiraz	63	1.1	16	0.2	8
+Plum	Erik	46	0.7	11.4	0.3	65
+Apricot	Kayısı	48	1.4	11.1	0.4	35
+Fig	İncir	74	0.8	19.2	0.3	50
+Pomegranate	Nar	83	1.7	18.7	1.2	200
+Japanese Persimmon	Trabzon hurması	70	0.6	18.6	0.2	170
+Blueberry	Yaban mersini	57	0.7	14.5	0.3	
+Raspberry	Ahududu	52	1.2	11.9	0.7	
+Blackberry	Böğürtlen	43	1.4	9.6	0.5	
+Granny Smith Apple	Granny Smith elma	48	0.3	12.8	0.1	180
+Red Delicious Apple	Red Delicious elma	59	0.3	14.1	0.2	180
+Florida Pink Red Grapefruit	Pembe greyfurt	30	0.6	7.5	0.1	250
+Papaya	Papaya	43	0.5	10.8	0.3	
+Cherimoya	Şerimoya	75	1.6	17.7	0.7	250
+Loquat	Yenidünya	47	0.4	12.1	0.2	30
+Lychee	Liçi	66	0.8	16.5	0.4	10
+Purple Passion-fruit	Çarkıfelek meyvesi	97	2.2	23.4	0.7	18
+Dragon Fruit	Ejder meyvesi	60	1.2	12.9	0.4	250
+Guava	Guava	68	2.5	14.3	0.9	55
+Yellow Plantain	Olgun plantain	122	1.3	31.9	0.3	220
+Coconut	Hindistan cevizi	354	3.3	15.2	33.5	
+Raisins	Kuru üzüm	299	3.3	79.3	0.2	
+Dried Dates	Kuru hurma	282	2.5	75	0.4	8
+Prunes	Kuru erik	240	2.2	63.9	0.4	9
+Dried Apricots	Kuru kayısı	241	3.4	62.6	0.5	7
+Dried Figs	Kuru incir	249	3.3	63.9	0.9	20
+Dried Cranberries	Kuru turna yemişi	308	0.2	82.8	1.1	
+Dried Mango	Kuru mango	319	2.5	78.6	1.2	10
+Frozen Mixed Berries	Dondurulmuş orman meyveleri	35	0.4	9.1	0.1	
+Frozen Blueberries	Dondurulmuş yaban mersini	51	0.4	12.2	0.6	
+Frozen Strawberries	Dondurulmuş çilek	35	0.4	9.1	0.1	
+Lemon Juice	Limon suyu	22.7	0.4	7.1	0.2	
+Honeydew Melon	Kavun	36	0.5	9.1	0.1	
+Quince	Ayva	57	0.4	15.3	0.1	200
+Green Plantain	Yeşil plantain	152	1.2	36.7	0.1	250
+Frozen Mango Chunks	Dondurulmuş mango	60	0.8	15	0.4	
+Tomato	Domates	18	0.9	3.9	0.2	150
+Lettuce	Marul	15	1.4	2.9	0.1	
+Onion	Soğan	40	1.1	9.3	0.1	150
+Potato	Patates	77	2	17.5	0.1	200
+Carrot	Havuç	41	0.9	9.6	0.2	70
+Garlic	Sarımsak	149	6.4	33.1	0.5	4
+Cucumber	Salatalık	15	0.7	3.6	0.1	300
+Red Bell Pepper	Kırmızı biber	26	1	6	0.3	160
+Green Bell Pepper	Yeşil biber	20	0.9	4.6	0.2	160
+Yellow Bell Pepper	Sarı biber	27	1	6.3	0.2	180
+Zucchini	Kabak	17	1.2	3.1	0.3	250
+Broccoli	Brokoli	34	2.8	6.6	0.4	
+Spinach	Ispanak	23	2.9	3.6	0.4	
+Eggplant	Patlıcan	25	1	5.9	0.2	300
+White Mushroom	Beyaz mantar	22	3.1	3.3	0.3	
+Green Bean	Taze fasulye	31	1.8	7	0.2	
+Cabbage	Beyaz lahana	25	1.3	5.8	0.1	
+Cauliflower	Karnabahar	25	1.9	5	0.3	
+Pumpkin	Bal kabağı	26	1	6.5	0.1	
+Butternut Winter Squash	Balkabağı butternut	45	1	11.7	0.1	
+Sweet Potato	Tatlı patates	86	1.6	20.1	0.1	200
+Corn	Mısır	86	3.3	18.7	1.4	100
+Pea	Bezelye	81	5.4	14.4	0.4	
+Cherry Tomato	Çeri domates	18	0.9	3.9	0.2	15
+Leek	Pırasa	61	1.5	14.2	0.3	90
+Celery	Sap kereviz	14	0.7	3	0.2	40
+Asparagus	Kuşkonmaz	20	2.2	3.9	0.1	15
+White Asparagus	Beyaz kuşkonmaz	20	2.2	3.9	0.1	20
+Artichoke	Enginar	47	3.3	10.5	0.1	130
+Beet	Pancar	43	1.6	9.6	0.2	100
+Arugula	Roka	25	2.6	3.6	0.7	
+Iceberg Lettuce	Göbek marul	14	0.9	3	0.1	
+Romaine Lettuce	Romaine marul	17	1.2	3.3	0.3	
+Spring Mix	Karışık yeşillik	15	1.4	2.9	0.1	
+Baby Spinach	Bebek ıspanak	23	2.9	3.6	0.4	
+Mâche	Kuzu kulağı salatası	21	2	3.6	0.4	
+Kale	Kara lahana	35	2.9	4.4	1.5	
+Brussels Sprout	Brüksel lahanası	43	3.4	8.9	0.3	20
+Red Onion	Kırmızı soğan	40	1.1	9.3	0.1	150
+Spring Onion	Taze soğan	32	1.8	7.3	0.2	50
+Green Onion	Yeşil soğan	32	1.8	7.3	0.2	15
+Shallot	Arpacık soğan	72	2.5	16.8	0.1	30
+Red Cabbage	Kırmızı lahana	31	1.4	7.4	0.2	
+Swiss Chard	Pazı	19	1.8	3.7	0.2	
+Escarole	Eskarola	17	1.2	3.4	0.2	
+Belgian Endive	Belçika hindibası	17	0.9	4	0.1	80
+Watercress	Su teresi	11	2.3	1.3	0.1	
+Breakfast Radish	Kırmızı turp	16	0.7	3.4	0.1	5
+Turnip	Şalgam	28	0.9	6.4	0.1	120
+Bulb Fennel	Rezene	31	1.2	7.3	0.2	230
+Portabella Mushroom	Portobello	22	2.1	3.9	0.3	85
+Shiitake Mushroom	Şitake	34	2.2	6.8	0.5	20
+Oyster Mushroom	İstiridye mantarı	33	3.3	6.1	0.4	
+Fresh Porcini	Porçini	26	3.1	4.5	0.3	60
+Ginger Root	Zencefil	80	1.8	17.8	0.8	
+Okra	Bamya	33	1.9	7.5	0.2	12
+Yuca	Manyok	160	1.4	38.1	0.3	
+Jalapeño	Jalapeño	29	0.9	6.5	0.4	15
+Padrón Pepper	Padrón biberi	20	0.9	4.6	0.2	10
+Red Hot Chili Pepper	Kırmızı acı biber	40	1.9	8.8	0.4	10
+Poblano Pepper	Poblano biberi	20	0.9	4.6	0.2	120
+Bean Sprouts	Fasulye filizi	30	3	5.9	0.2	
+Kalamata Olives	Siyah zeytin	116	0.8	6	10.9	4
+Cornichons	Kornişon turşu	14	0.3	2.6	0.2	10
+Marinated Artichokes	Marine enginar	51	2.9	11.4	0.3	20
+Hearts Palm	Palmiye kalbi	28	2.5	4.6	0.6	35
+Roasted Red Peppers	Közlenmiş biber	28	0.9	6.7	0.2	
+Nori	Nori yosunu	35	5.8	5.1	0.3	3
+Wakame Seaweed	Wakame yosunu	45	3	9.1	0.6	
+Frozen Fries	Dondurulmuş patates kızartması	147	2.2	24.8	4.7	
+Frozen Peas	Dondurulmuş bezelye	77	5.2	13.6	0.4	
+Frozen Spinach	Dondurulmuş ıspanak	29	3.6	4.2	0.6	
+Frozen Broccoli	Dondurulmuş brokoli	26	2.8	4.8	0.3	
+Frozen Green Beans	Dondurulmuş taze fasulye	33	1.8	7.5	0.2	
+Frozen Corn	Dondurulmuş mısır	98	3.3	23.5	0.8	
+Frozen Mixed Unprepared Vegetable	Dondurulmuş karışık sebze	72	3.3	13.5	0.5	
+Napa Cabbage	Çin lahanası	16	1.2	3.2	0.2	
+Bok Choy	Bok choy	13	1.5	2.2	0.2	
+Parsnip	Yaban havucu	75	1.2	18	0.3	150
+Baby Corn	Mini mısır	26	2.5	4.7	0.2	10
+Lentils	Mercimek	352	24.6	63.4	1.1	
+Brown Lentils	Yeşil mercimek	352	24.6	63.4	1.1	
+Chickpeas	Nohut	378	20.5	63	6	
+White Beans	Kuru fasulye	337	22.3	60.8	1.5	
+Kidney Bean	Barbunya	337	22.5	61.3	1.1	
+Black Beans	Siyah fasulye	341	21.6	62.4	1.4	
+Butter Bean	Lima fasulyesi	338	21.5	63.4	0.7	
+Canned Chickpeas	Konserve nohut	139	7	22.5	2.8	
+Canned Lentils	Konserve mercimek	116	9	20.1	0.4	
+Canned White Beans	Konserve kuru fasulye	114	7.3	21.2	0.3	
+Canned Kidney Beans	Konserve barbunya	124	8	21.5	1.1	
+Canned Black Beans	Konserve siyah fasulye	91	6	16.6	0.3	
+Fava In Pod Bean	Bakla	88	7.9	17.6	0.7	
+Edamame	Edamame	121	11.9	8.9	5.2	
+Lupini Bean	Termiye	371	36.2	40.4	9.7	
+Yellow Lentils	Sarı mercimek	358	23.9	63.1	2.2	
+Tofu	Tofu	144	17.3	2.8	8.7	
+Silken Tofu	İpeksi tofu	61	7.2	1.2	3.7	
+Tempeh	Tempeh	192	20.3	7.6	10.8	
+Textured Vegetable Protein	Soya kıyması	327	51.5	33.9	1.2	
+Vital Wheat Gluten	Buğday gluteni (seitan)	370	75.2	13.8	1.9	
+Commercial Hummus	Humus	237	7.8	15	17.8	
+Falafel	Falafel	333	13.3	31.8	17.8	17
+Peanut Butter	Fıstık ezmesi	598	22.2	22.3	51.4	
+Mature Seed Pinto Bean	Pinto fasulyesi	347	21.4	62.5	1.2	
+Cannellini Bean	Cannellini fasulyesi	333	23.4	60.3	0.8	
+Almonds	Badem	579	21.1	21.6	49.9	
+Walnuts	Ceviz	654	15.2	13.7	65.2	
+Peanuts	Yer fıstığı	567	25.8	16.1	49.2	
+Pistachio	Antep fıstığı	560	20.2	27.2	45.3	
+Roasted Pistachios	Kavrulmuş Antep fıstığı	572	21.1	28.3	45.8	
+Cashew	Kaju	553	18.2	30.2	43.9	
+Hazelnut	Fındık	628	14.9	16.7	60.8	
+Mixed Nuts	Karışık kuruyemiş	607	19.5	22.4	53.5	
+Trail Mix	Karışık kuruyemiş	462	13.8	44.9	29.4	
+Sunflower Seeds	Ay çekirdeği	584	20.8	20	51.5	
+Pumpkin Seeds (Pepitas)	Kabak çekirdeği içi	559	30.2	10.7	49	
+Chia Seed	Chia tohumu	486	16.5	42.1	30.7	
+Flaxseed	Keten tohumu	534	18.3	28.9	42.2	
+Sesame Seed	Susam	573	17.7	23.4	49.7	
+Pine Nuts (Mediterranean)	Çam fıstığı	673	13.7	13.1	68.4	
+Macadamia Nut	Makademya	718	7.9	13.8	75.8	
+Pecan	Pekan cevizi	691	9.2	13.9	72	
+Chestnut	Kestane	213	2.4	45.5	2.3	10
+Roasted Chestnuts	Kestane kebap	245	3.2	53	2.2	8.4
+Roasted Almonds	Kavrulmuş badem	598	21	21	52.5	
+Tiger Nuts	Yer bademi	457	4.6	53.6	24.9	
+Desiccated Coconut	Hindistan cevizi rendesi	660	6.9	23.6	64.5	
+Almond Butter	Badem ezmesi	614	21	18.8	55.5	
+Sliced Almonds	Dilimlenmiş badem	579	21.1	21.6	49.9	
+Chicken Breast	Tavuk göğsü	120	22.5		2.6	170
+Chicken Thighs	Tavuk but	179	24.8		8.2	116
+Chicken Drumstick	Tavuk baget	118	20.5		4	110
+Chicken Wing	Tavuk kanat	126	22		3.5	35
+Whole Chicken	Bütün tavuk	119	21.4		3.1	
+Rotisserie Chicken	Çevirme tavuk	239	27.3		13.6	
+Chicken Tenders	Tavuk bonfile	165	31		3.6	52
+Ground Chicken	Tavuk kıyma	143	17.4		8.1	
+Turkey Breast	Hindi göğsü	106	14.8	2.2	3.8	
+Ground Turkey	Hindi kıyma	148	19.7		7.7	
+Cooked Ham	Haşlanmış jambon	107	16.9	0.7	4	
+Beef	Dana eti	128	22.2	0.1	4.4	
+Ground Beef	Dana kıyma	198	19.4		12.7	
+Beef Steak	Dana biftek	122	23.3		2.4	150
+Beef Strips	Şerit dana eti	124	23.5		3.3	
+Beef Tenderloin	Dana bonfile	139	21.9		5.7	150
+Ribeye Steak	Antrikot	162	21.4		8.5	300
+Picanha	Picanha	214	19.9		14.3	
+Veal Scallopini	Dana şinitzel	107	21.3		1.8	120
+Ground Meat	Kıyma	134	22.8		4	
+Pork Loin	Domuz fileto	198	19.7		12.6	
+Pork Tenderloin	Domuz bonfile	109	20.9		2.2	
+Pork Chops	Domuz pirzola	127	22		3.7	150
+Pork Ribs	Domuz kaburga	277	15.5		23.4	
+Pork Belly	Domuz göğüs	518	9.3		53	
+Ground Pork	Domuz kıyma	263	16.9		21.2	
+Pork Sausage	Domuz sosis	288	15.4	0.9	24.8	50
+Hot Dog	Sosis	290	10.3	4.2	25.8	45
+Bacon	Bacon	253	13.3	4.8	20	
+Serrano Ham	Serrano jambonu	195	27	0.5	9.5	
+Jamón Ibérico	İberico jambonu	250	31	0.2	14	
+Lonza	Kurutulmuş fileto	170	29		6	
+Chorizo	Chorizo	296	13.6	3.8	25.1	
+Salami	Salam	425	21.7	1.2	37	
+Mortadella	Mortadella	311	16.4	3	25.4	
+Blood Pudding	Kan sucuğu	379	14.6	1.3	34.5	
+Sobrasada	Sobrasada	440	14	2	42	
+Pate	Pate	327	11.2	6.3	28.5	
+Lamb	Kuzu eti	105	18.1		3.7	
+Lamb Chops	Kuzu pirzola	232	18		17.5	60
+Lamb Leg	Kuzu but	128	20.6		4.5	
+Rabbit	Tavşan	136	20.1		5.5	
+Duck Breast	Ördek göğsü	135	18.3	0.9	6	300
+Chicken Liver	Tavuk ciğeri	119	16.9	0.7	4.8	40
+Beef Liver	Dana ciğeri	135	20.4	3.9	3.6	
+Oxtail	Öküz kuyruğu	262	18		20.5	
+Beef Cheeks	Dana yanak	176	20		10.5	150
+Pork Cheek	Domuz yanak	259	25.6		16.6	80
+Pork Shoulder	Domuz kürek	148	19.6		7.1	
+Lamb Shoulder	Kuzu kol	144	19.6		6.8	
+Duck	Ördek	135	18.3	0.9	6	
+Chicken Sausage	Tavuk sosis	172	17	2	11	50
+Salmon	Somon	142	19.8		6.3	150
+Tuna	Ton balığı	109	24.4		0.5	150
+Tuna in Water	Suda ton balığı	56	12.7		0.6	
+Tuna in Oil	Yağda ton balığı	198	29.1		8.2	
+Cod	Morina	82	17.8		0.7	150
+Hake	Berlam balığı	90	18.3		1.3	150
+Bass	Levrek	114	18.9		3.7	150
+Dorade	Çupra	97	18.4		2	150
+Sardines in Oil	Yağda sardalya	208	24.6		11.4	12
+Mackerel	Uskumru	205	18.6		13.9	150
+White Anchovies	Marine hamsi	131	20.4		4.8	
+Preserved Anchovies	Yağda ançüez	210	28.9		9.7	4
+Shrimp	Karides	85	20.1		0.5	
+Mussel	Midye	86	11.9	3.7	2.2	16
+Clam	Akivades	86	14.7	3.6	1	10
+Calamari	Kalamar	92	15.6	3.1	1.4	
+Octopus	Ahtapot	82	14.9	2.2	1	
+Cuttlefish Mixed Specy Mollusk	Mürekkep balığı	79	16.2	0.8	0.7	
+Dover Sole	Dil balığı	70	12.4		1.9	150
+Swordfish	Kılıç balığı	144	19.7		6.7	150
+Trout	Alabalık	119	20.5		3.5	150
+Tilapia	Tilapya	96	20.1		1.7	120
+Monkfish Fish	Fener balığı	76	14.5		1.5	
+Smoked Salmon	Füme somon	117	18.3		4.3	
+Surimi Fish	Surimi	99	15.2	6.8	0.9	15
+Salt Cod	Tuzlu morina	82	17.8		0.7	
+Halibut	Pisi balığı (halibut)	91	18.6		1.3	150
+Alaska Pollock Fish	Alaska mezgiti	76	17.2		0.8	120
+Red Mullet	Barbunya balığı	117	19.4		3.8	100
+Skipjack Tuna Fish	Palamut	103	22		1	150
+Cockles	Kum midyesi	79	13.5	4.7	0.6	
+Razor Clams	Ustura midyesi	73	12.8	2.6	1	
+Scallop	Tarak	69	12.1	3.2	0.5	30
+Oyster	İstiridye	51	5.7	2.7	1.7	14
+Crab	Yengeç	87	18.1		1.1	
+Fish Sticks	Balık kroket	277	11	21.7	16.2	28
+Frozen Salmon Patties	Somon köfte	153	24.6		5.3	110
+Frozen Fish Fillets	Dondurulmuş balık fileto	82	17.8		0.7	120
+Frozen Shrimp	Dondurulmuş karides	85	20.1		0.5	
+Lobster	Istakoz	77	16.5		0.8	
+Langoustine	Kerevit (deniz)	77	16.5		0.8	40
+European Turbot Fish	Kalkan	95	16.1		3	150
+Grouper Mixed Specy Fish	Orfoz	92	19.4		1	150
+Egg	Yumurta	143	12.6	0.7	9.5	50
+Egg White	Yumurta beyazı	52	10.9	0.7	0.2	33
+Egg Yolk	Yumurta sarısı	322	15.9	3.6	26.5	17
+Quail Whole Egg	Bıldırcın yumurtası	158	13.1	0.4	11.1	9
+Whole Milk	Tam yağlı süt	62.9	3.2	5	3.4	
+2% Milk	Yarım yağlı süt	51.6	3.4	5	2	
+Skim Milk	Yağsız süt	35.2	3.5	5.1	0.1	
+Plain Yogurt	Sade yoğurt	61	3.5	4.7	3.2	125
+Greek Yogurt	Süzme yoğurt	73	9.9	3.9	1.9	125
+Plain Skim Milk Yogurt	Yağsız yoğurt	58	5.9	8	0.2	125
+Yogurt	Yoğurt	97	9	4	5	125
+Skyr	Skyr	73	9.9	3.9	1.9	150
+Kefir	Kefir	44.2	3.9	4.9	1	
+Quark	Lor	72	12.4	2.7	1	
+Cottage Cheese	Süzme peynir (cottage)	98	11.1	3.4	4.3	
+Queso Fresco Cheese	Taze Meksika peyniri	299	18.1	3	23.8	
+Ricotta	Ricotta	150	7.5	7.3	10.2	
+Cream Cheese	Krem peynir	350	6.2	5.5	34.4	
+Butter	Tereyağı	717	0.8	0.1	81.1	
+Heavy Cream	Krema	340	2.8	2.8	36.1	
+Whipping Cream	Çırpma kreması	340	2.8	2.8	36.1	
+Whipped Cream	Sprey krema	257	3.2	12.5	22.2	
+Sour Cream	Ekşi krema	198	2.4	4.6	19.4	
+Sliced Cheese	Dilim peynir	366	18.1	4.8	30.7	
+American Cheese	Dilim eritme peynir	371	18.1	3.7	31.8	
+Mozzarella Cheese	Mozzarella	254	24.3	2.8	15.9	125
+Burrata	Burrata	299	22.2	2.4	22.1	125
+Cheddar Cheese	Çedar	410	24.2	2.1	33.8	
+Manchego	Manchego	356	24.9	2.2	27.4	
+Gouda Cheese	Gouda	356	24.9	2.2	27.4	
+Edam Cheese	Edam	357	25	1.4	28.6	
+Swiss Cheese	Emmental	393	27	1.4	31	
+Parmesan Cheese	Parmesan	392	35.8	3.2	25	
+Grated Parmesan Cheese	Rendelenmiş parmesan	420	28.4	13.9	27.8	
+Brie	Brie	334	20.8	0.5	27.7	
+Camembert	Camembert	300	19.8	0.5	24.3	
+Blue Cheese	Rokfor tipi küflü peynir	353	21.4	2.3	28.7	
+Gorgonzola	Gorgonzola	353	21.4	2.3	28.7	
+Feta	Beyaz peynir	265	14.2	3.9	21.5	
+Halloumi	Hellim	321	22	2.5	25	
+Goat Cheese	Keçi peyniri	452	30.5	2.2	35.6	
+Condensed Milk	Şekerli yoğunlaştırılmış süt	321	7.9	54.4	8.7	
+Dulce De Leche	Dulce de leche	315	6.8	55.4	7.3	
+Vanilla Ice Cream	Vanilyalı dondurma	207	3.5	23.6	11	
+Oat Milk	Yulaf sütü	47.7	0.3	9.3	1	
+Soy Milk	Soya sütü	55.5	3.4	6.5	1.8	
+Almond Milk	Badem sütü	16.6	0.4	1.5	1.1	
+Coconut Milk (Beverage)	Hindistan cevizi içeceği	31.4	0.2	3	2.1	
+Mascarpone	Mascarpone	429	4.8	3.5	44	
+Provolone Cheese	Provolone	351	25.6	2.1	26.6	
+Gruyere Cheese	Gruyère	413	29.8	0.4	32.3	
+Pecorino Romano	Pecorino romano	387	31.8	3.6	26.9	
+Ghee	Sade yağ	900			100	
+Frozen Yogurt	Donmuş yoğurt	159	4	24.2	5.6	
+Rice	Pirinç	365	7.1	80	0.7	
+Brown Long-grain Rice	Esmer pirinç	367	7.5	76.2	3.2	
+Parboiled Rice	Haşlanmış pirinç	374	7.5	80.9	1	
+Arborio Rice	Arborio pirinç	360	6.6	79.3	0.6	
+Sushi Rice	Suşi pirinci	358	6.5	79.2	0.5	
+Rolled Oats	Yulaf ezmesi	379	13.2	67.7	6.5	
+Oats	Yulaf	379	13.2	67.7	6.5	
+Oat Bran	Yulaf kepeği	246	17.3	66.2	7	
+Oat Flour	Yulaf unu	404	14.7	65.7	9.1	
+Quinoa	Kinoa	368	14.1	64.2	6.1	
+Dry Couscous	Kuskus	376	12.8	77.4	0.6	
+Bulgur	Bulgur	342	12.3	75.9	1.3	
+Pasta	Makarna	371	13	74.7	1.5	
+Spaghetti	Spagetti	371	13	74.7	1.5	
+Elbow Macaroni	Dirsek makarna	371	13	74.7	1.5	
+Penne	Kalem makarna	371	13	74.7	1.5	
+Fusilli	Burgu makarna	371	13	74.7	1.5	
+Farfalle	Fiyonk makarna	371	13	74.7	1.5	
+Tagliatelle	Tagliatelle	384	14.2	71.3	4.4	
+Egg Noodle	Yumurtalı erişte	384	14.2	71.3	4.4	
+Dry Whole-wheat Pasta	Tam buğday makarna	352	13.9	73.4	2.9	
+Corn Dry Gluten-free Pasta	Glütensiz mısır makarna	357	7.5	79.3	2.1	
+Fresh Egg Pasta	Taze yumurtalı makarna	288	11.3	54.7	2.3	
+Gnocchi	Gnocchi	86	1.7	20	0.1	167
+Ramen Noodles	Ramen eriştesi	384	14.2	71.3	4.4	
+Vermicelli Noodles	Pirinç eriştesi	364	6	80.2	0.6	
+Flour	Buğday unu	364	10.3	76.3	1	
+Whole-grain Wheat Flour	Tam buğday unu	340	13.2	72	2.5	
+Almond Flour	Badem unu	590	21.4	18.7	52.5	
+Cornstarch	Mısır nişastası	381	0.3	91.3	0.1	
+Masa Harina	Masa harina	363	8.5	76.6	3.7	
+Rice Cakes	Pirinç patlağı	387	8.5	80.1	3.5	9
+Puffed Rice	Patlamış pirinç	402	6.3	89.8	0.5	
+Granola	Granola	489	13.7	53.9	24.3	
+Muesli	Müsli	367	9.7	72.2	6.1	
+Buckwheat	Karabuğday	343	13.2	71.5	3.4	
+Spelt	Kızılca buğday	338	14.6	70.2	2.4	
+Polenta	Polenta	362	8.1	73.5	3.6	
+Linguine	Linguine	371	13	74.7	1.5	
+Rigatoni	Rigatoni	371	13	74.7	1.5	
+Udon Noodles	Udon eriştesi	371	13	74.7	1.5	
+Dry Japanese Soba Noodle	Soba eriştesi	336	14.4	74.6	0.7	
+Rice Paper	Pirinç kâğıdı	325	0.8	80.2	0.2	
+Chickpea Flour	Nohut unu	387	22.4	57.8	6.7	
+Semolina Flour	İrmik	360	12.7	72.8	1.1	
+Baguette	Baget	272	10.8	51.9	2.4	
+Bread	Ekmek	252	12.4	42.7	3.5	
+White Bread	Tost ekmeği	266	8.8	49.4	3.3	
+Whole Wheat Bread	Tam buğday ekmeği	252	12.4	42.7	3.5	
+Multigrain Bread	Çok tahıllı ekmek	265	13.4	43.3	4.2	
+Rye Bread	Çavdar ekmeği	259	8.5	48.3	3.3	
+Sourdough Bread	Ekşi mayalı ekmek	272	10.8	51.9	2.4	
+Toast	Kızarmış ekmek	290	9	54.5	4	10
+Toasted Whole-wheat Bread	Tam buğday kızarmış ekmek	306	16.3	51.2	4.1	10
+Breadsticks	Grissini	412	12	68.4	9.5	5
+Dinner Roll	Küçük ekmek	293	8.4	52	5.2	40
+Ciabatta	Ciabatta	259	9.5	48.1	2.7	80
+Hamburger Bun	Hamburger ekmeği	279	9.8	50.1	3.9	55
+Hot Dog Bun	Sosisli ekmeği	279	9.8	50.1	3.9	45
+Tortilla	Tortilla	306	8.2	49.4	8	40
+Pita Bread	Pide	275	9.1	55.7	1.2	60
+Naan	Naan	291	9.6	50.4	5.7	90
+Taco Shells	Taco kabuğu	480	6.5	62	22	13
+Bagel	Bagel	264	10.6	52.4	1.3	100
+Croissant	Kruvasan	406	8.2	45.8	21	55
+Pain au Chocolat	Çikolatalı kruvasan	414	7.5	46	22.5	70
+Muffin	Muffin	375	4.5	53	16.1	30
+Brioche	Brioş	287	9.5	47.8	6	
+Sponge Cake	Pandispanya	290	5.4	61	2.7	
+Waffles	Waffle	291	7.9	32.9	14.1	35
+Crêpes	Krep	225	7.5	30	8.5	40
+Panettone	Panettone	360	7	56	12	
+Water Crackers	Kraker	427	9	73	10	4
+Pizza Dough	Pizza hamuru	266	8.5	52	2.5	
+Puff Pastry	Milföy hamuru	551	7.3	45.1	38.1	47
+Breadcrumbs	Galeta unu	395	13.3	72	5.3	
+Yeast	Maya	325	40.4	41.2	7.6	
+Baking Powder	Kabartma tozu	97	0.1	46.9	0.4	
+Focaccia	Focaccia	280	7.5	44.5	8	
+Olive Oil	Zeytinyağı	884			100	
+Sunflower Oil	Ayçiçek yağı	884			100	
+Vegetable Oil	Bitkisel yağ	884			100	
+Coconut Oil	Hindistan cevizi yağı	892			99.1	
+Avocado Oil	Avokado yağı	884			100	
+Sesame Oil	Susam yağı	884			100	
+MCT Oil	MCT yağı	860			100	
+Sugar	Şeker	387		100		
+Brown Sugar	Esmer şeker	380	0.1	98.1		
+Honey	Bal	304	0.3	82.4		
+Jam	Reçel	278	0.4	68.9	0.1	
+Strawberry Preserves	Çilek reçeli	278	0.4	68.9	0.1	
+Peach Preserves	Şeftali reçeli	250	0.3	65	0.1	
+Orange Marmalade	Portakal marmelatı	246	0.3	66.3		
+Chocolate Hazelnut Spread	Fındık kremalı çikolata	539	5.4	62.4	29.7	
+Dark Chocolate	Bitter çikolata	579	6.1	52.4	38.3	
+Milk Chocolate	Sütlü çikolata	535	7.7	59.4	29.7	
+White Chocolate	Beyaz çikolata	539	5.9	59.2	32.1	
+Cocoa Powder	Kakao	228	19.6	57.9	13.7	
+Sweet Popcorn	Tatlı patlamış mısır	431	3.8	79.1	12.8	
+Tortilla Chips	Tortilla cipsi	472	7.1	67.8	20.7	
+Maple Syrup	Akçaağaç şurubu	260		67	0.1	
+Agave Nectar	Agave şurubu	310	0.1	76.4	0.5	
+Stevia	Stevya			5		
+Erythritol	Eritritol	20		100		
+Jelly	Meyve jölesi	266	0.1	70		
+Tomato Sauce	Domates sosu	24	1.2	5.3	0.3	
+Crushed Tomatoes	Doğranmış domates	38	1.6	9	0.2	
+Canned Tomatoes	Konserve domates	16	0.8	3.5	0.2	
+Tomato Paste	Domates salçası	82	4.3	18.9	0.5	
+Canned Corn	Konserve mısır	67	2.3	14.3	1.2	
+Canned Coconut Milk	Konserve hindistan cevizi sütü	188.2	1.9	2.7	20.4	
+Chicken Broth	Tavuk suyu	6.3	0.7	0.5	0.2	
+Beef Broth	Dana et suyu	7.1	1.2		0.2	
+Stock Cube	Bulyon tablet	198	14.6	23.5	4.7	10
+Vegetable Broth	Sebze suyu	5.6	0.2	0.9	0.1	
+Fish Broth	Balık suyu	16.5	2.1	0.4	0.6	
+Salt	Tuz					
+Pink Himalayan Salt	Pembe Himalaya tuzu					
+Nutritional Yeast	Besin mayası	325	40.4	41.2	7.6	
+Powdered Sugar	Pudra şekeri	389		99.8		
+Water	Su					
+Sparkling Water	Maden suyu					
+Orange Juice	Portakal suyu	47.2	0.7	10.9	0.2	
+Apple Juice	Elma suyu	48.2	0.1	11.8	0.1	
+Pineapple Juice	Ananas suyu	56	0.4	13.6	0.1	
+Tomato Juice	Domates suyu	17.5	0.9	3.6	0.3	
+Espresso	Espresso	9	0.1	1.7	0.2	
+Instant Espresso Powder	Hazır kahve	353	12.2	75.4	0.5	
+Cold Brew Coffee	Cold brew	1	0.1			
+Green Tea	Yeşil çay	1	0.2			
+Black Tea	Siyah çay	1		0.3		
+Chamomile Tea	Papatya çayı	1		0.2		
+Peppermint Tea	Nane çayı	1				
+Matcha	Matcha	324	30.6	38.9	5.3	
+Kombucha	Kombucha	17		3.5		
+Tonic Water	Tonik	35.1		9.1		
+Beer	Bira	43.2	0.5	3.6		
+Red Wine	Kırmızı şarap	84.5	0.1	2.6		
+White Wine	Beyaz şarap	81.5	0.1	2.6		
+Rosé Wine	Roze şarap	82.8	0.1	2.7		
+Vermouth	Vermut	130		10		
+Rum	Rom	217.1				
+Vodka	Votka	217.1				
+Gin	Cin	247.2				
+Whiskey	Viski	235		0.1		
+Brandy	Brendi	231				
+Ketchup	Ketçap	101	1	27.4	0.1	
+Mayonnaise	Mayonez	680	1	0.6	74.8	
+Mustard	Hardal	60	3.7	5.8	3.3	
+Dijon Mustard	Dijon hardalı	60	3.7	5.8	3.3	
+Aioli	Aioli	680	1	2	74	
+Soy Sauce	Soya sosu	53	8.1	4.9	0.6	
+Hot Sauce	Acı sos	11	0.5	1.8	0.4	
+Sriracha	Sriracha	93	1.9	19.2	0.9	
+Barbecue Sauce	Barbekü sos	172	0.8	40.8	0.6	
+Thousand Island Dressing	Thousand Island sos	379	1.1	14.6	35.1	
+Caesar Dressing	Sezar sos	542	2.2	3.3	57.9	
+Honey Mustard Sauce	Ballı hardal sos	260	1.2	22	18	
+Pesto Refrigerated Sauce	Pesto	418	9.8	10.1	37.6	
+Marinara Sauce	Marinara sos	50	1.4	7.4	1.6	
+Salsa	Salsa	29	1.5	6.6	0.2	
+Guacamole	Guacamole	160	2	8.5	14.7	
+Tzatziki	Cacık	56	3.5	4	3	
+Sofrito	Sofrito	55	0.8	6.5	3	
+Chimichurri	Chimichurri	250	1.5	6	24	
+Teriyaki Sauce	Teriyaki sos	89	5.9	15.6		
+Sweet Chili Sauce	Tatlı chili sos	220	0.3	54	0.2	
+Sweet Sour Sauce	Tatlı ekşi sos	154	0.3	38.2		
+Cheese Sauce	Peynir sos	174	6.7	6.8	13.3	
+Vinaigrette	Vinegret	370	0.1	7	38	
+Balsamic Vinegar	Balzamik sirke	88	0.5	17		
+Balsamic Glaze	Balzamik krema	228	0.5	56		
+Apple Cider Vinegar	Elma sirkesi	21		0.9		
+White Wine Vinegar	Beyaz şarap sirkesi	18		0.3		
+Red Wine Vinegar	Kırmızı şarap sirkesi	19.2		0.3		
+Tahini	Tahin	586	18.1	24.1	50.9	
+Capers	Kapari	23	2.4	4.9	0.9	
+Kimchi	Kimçi	15	1.1	2.4	0.5	
+Miso Paste	Miso ezmesi	198	12.8	25.4	6	
+Oyster Sauce	İstiridye sosu	51	1.4	10.9	0.2	
+Worcestershire Sauce	Worcestershire sos	77		19.2		
+Hoisin Sauce	Hoisin sos	220	3.3	44.1	3.4	
+Tartar Sauce	Tartar sos	211	1	13.3	16.7	
+Gochujang	Gochujang	228	5	45	1.6	
+Wasabi Paste	Wasabi	292	2.2	46.1	10.9	
+Ranch Dressing	Ranch sos	430	1.3	5.9	44.5	
+Rice Vinegar	Pirinç sirkesi	18				
+Sherry Vinegar	Şeri sirkesi	20		0.3		
+Romesco Sauce	Romesco sos	210	4	10	17	
+Whole Grain Mustard	Tane hardal	60	3.7	5.8	3.3	
+Sauerkraut	Lahana turşusu	19	0.9	4.3	0.1	
+Pickled Jalapenos	Jalapeño turşusu	21	0.6	3.2	0.6	
+Black Pepper	Karabiber	251	10.4	64	3.3	
+White Pepper	Beyaz biber	296	10.4	68.6	2.1	
+Sweet Paprika	Tatlı toz biber	282	14.1	54	12.9	
+Hot Paprika	Acı toz biber	282	14.1	54	12.9	
+Cayenne Pepper	Kırmızı acı biber tozu	318	12	56.6	17.3	
+Cumin	Kimyon	375	17.8	44.2	22.3	
+Cinnamon	Tarçın	247	4	80.6	1.2	
+Cinnamon Stick	Çubuk tarçın	247	4	80.6	1.2	3
+Oregano	Kekik	265	9	68.9	4.3	
+Garlic Powder	Sarımsak tozu	331	16.6	72.7	0.7	
+Onion Powder	Soğan tozu	341	10.4	79.1	1	
+Curry Powder	Köri	325	14.3	55.8	14	
+Turmeric	Zerdeçal	312	9.7	67.1	3.2	
+Ground Ginger	Toz zencefil	335	9	71.6	4.2	
+Ground Nutmeg	Muskat	525	5.8	49.3	36.3	
+Whole Cloves	Karanfil	274	6	65.5	13	
+Chili Powder	Toz acı biber	282	13.5	49.7	14.3	
+Red Pepper Flakes	Pul biber	314	12	31	17.3	
+Saffron	Safran	310	11.4	65.4	5.8	
+Bay Leaf	Defne yaprağı	313	7.6	75	8.4	
+Parsley	Maydanoz	36	3	6.3	0.8	
+Dried Parsley	Kuru maydanoz	292	26.6	51.7	5.5	
+Basil	Fesleğen	23	3.1	2.6	0.6	
+Cilantro	Kişniş	23	2.1	3.7	0.5	
+Fresh Mint	Nane	44	3.3	8.4	0.7	
+Rosemary	Biberiye	331	4.9	64.1	15.2	
+Thyme	Dağ kekiği	276	9.1	63.9	7.4	
+Dill	Dereotu	253	20	55.8	4.4	
+Chive	Frenk soğanı	30	3.3	4.3	0.7	
+Herbs de Provence	Provence otları	255	8.5	47	6	
+Italian Seasoning	İtalyan baharatı	270	9	50	5.5	
+Vanilla Extract	Vanilya özü	288	0.1	12.7	0.1	

@@ -2291,3 +2291,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Ayarlar > Uygulamalar: Sağlık/Office/İndirmeler iki kez görünüyordu (araç satırı + sayfa satırı) → tek satır, sol menü yeri araç satırının seçeneği; Sağlık ayrı ana ekran ikonu (HealthLauncher, uyarlanabilir kalp ikonu); uygulamalar kartı yeniden tasarlandı (katlanır kategoriler, 48dp ikon, ikon+yer alt yazısı). derlenmedi
 
 - Müzik recap: yeni "Fiş" sayfası (krem kağıt, yırtık kenar, monospace şarkı listesi, TOPLAM dakika, gerçek Code 39 barkod); aynı resim PNG olarak kaydedilir. derlenmedi
+
+- Sağlık > Spor (GymMane projesinden, GPL-3.0 / sanat CC BY-SA 4.0): 466 egzersiz + 130 hareketli resim, antrenman kaydı (set/kg/tekrar), dinlenme sayacı (titreşim+bip), programlar ve rutinler, geçmiş, gelişim (1RM, haftalık hacim), vücut ölçüleri, yemek günlüğü (561 yiyecek, kcal hedefi), fiş şeklinde spor özeti (müzik fişiyle aynı çizici). Atlananlar: vücut haritası, Strava/FIT/PDF, AI plan, Wear, rozetler, notlar/yerler. GitHub Pages sitesi docs/index.html. derlenmedi
