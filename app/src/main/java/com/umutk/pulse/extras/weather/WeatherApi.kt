@@ -271,7 +271,7 @@ object WeatherApi {
             return got
         }
         runCatching { if (addHourly(WeatherProviders.wttr(lat, lon))) sources++ }
-        runCatching { if (addHourly(WeatherProviders.t7(lat, lon))) sources++ }
+        // 7Timer is not in the combined hours: its three-hour points are the coarsest of the services; it is only the last fallback of forecast()
         appCtx?.let { WeatherStore.owmKey(it) }?.takeIf { it.isNotBlank() }?.let { key ->
             runCatching { if (addHourly(WeatherProviders.owm(lat, lon, key))) sources++ }
         }
