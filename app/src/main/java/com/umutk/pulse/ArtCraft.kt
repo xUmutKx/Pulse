@@ -32,7 +32,7 @@ object ArtCraft {
     const val API = "https://api.github.com/repos/MostafaXS1/artcraft-android/releases"
     const val PKG_PREFIX = "ai.storyteller."   // the builder's default package name (see the repo README)
 
-    class Item(val app: String, val file: String, val url: String, val size: Long)
+    class Item(val app: String, val file: String, val url: String, val size: Long, val updated: Long = 0L)
     enum class State { NONE, INSTALL, UPDATE, INSTALLED }
 
     var tag by mutableStateOf("")
@@ -83,7 +83,7 @@ object ArtCraft {
                 // a release can ship two .apk builds of the same app (e.g. a split-ABI build next to a universal one); keep the larger, it is the fuller build
                 val list = (0 until assets.length()).map { assets.getJSONObject(it) }
                     .filter { it.optString("name").endsWith(".apk") }
-                    .map { Item(appName(it.getString("name")), it.getString("name"), it.getString("browser_download_url"), it.optLong("size")) }
+                    .map { Item(appName(it.getString("name")), it.getString("name"), it.getString("browser_download_url"), it.optLong("size"), runCatching { java.time.Instant.parse(it.optString("updated_at")).toEpochMilli() }.getOrDefault(0L)) }
                     .sortedByDescending { it.size }.distinctBy { it.app }
                 ui {
                     items.clear(); items.addAll(list); tag = rel.optString("tag_name"); notes = rel.optString("body"); status = ""
@@ -240,15 +240,24 @@ object ArtCraft {
             .putString("mode", mode).putBoolean("translucent", translucent).apply()
     }
 
-    /** The state of an app: its APK is on the phone and/or the app is installed (found by package name). */
+    /** The APK on the phone is the release's own build, not an older one saved under the same name (a new release often keeps its file names). */
+    private fun fileIsCurrent(f: File, item: Item) = f.exists() && (item.updated <= 0L || f.lastModified() + 120_000L >= item.updated)
+
+    /**
+     * The state of an app: its APK is on the phone and/or the app is installed (found by package name). An installed app is "Update available" when the release was
+     * published after the app was last installed or updated, even if the new APK is not downloaded yet.
+     */
     fun stateOf(c: Context, item: Item): State {
         val pm = c.packageManager
         val f = fileFor(c, item)
+        val fileNew = fileIsCurrent(f, item)
         val pkg = if (f.exists()) (pm.getPackageArchiveInfo(f.path, 0)?.packageName ?: pkgOf(item)) else pkgOf(item)
-        val installed = try { com.umutk.pulse.Compat.longVersion(pm.getPackageInfo(pkg, 0)) } catch (e: Exception) { -1L }
-        if (installed < 0) return if (f.exists()) State.INSTALL else State.NONE
-        val archive = if (f.exists()) pm.getPackageArchiveInfo(f.path, 0)?.let { com.umutk.pulse.Compat.longVersion(it) } ?: installed else installed
-        return if (archive > installed) State.UPDATE else State.INSTALLED
+        val pi = try { pm.getPackageInfo(pkg, 0) } catch (e: Exception) { null }
+        val installed = pi?.let { com.umutk.pulse.Compat.longVersion(it) } ?: -1L
+        if (installed < 0) return if (fileNew) State.INSTALL else State.NONE
+        val archive = if (fileNew) pm.getPackageArchiveInfo(f.path, 0)?.let { com.umutk.pulse.Compat.longVersion(it) } ?: installed else installed
+        if (archive > installed) return State.UPDATE
+        return if (item.updated > 0L && pi != null && item.updated > pi.lastUpdateTime + 120_000L) State.UPDATE else State.INSTALLED
     }
 
     /** Hands the APK to the system installer (the same path Pulse's file manager uses). */
@@ -284,7 +293,9 @@ object ArtCraft {
         val f = fileFor(c, item)
         when (stateOf(c, item)) {
             State.NONE -> download(c, item)
-            State.INSTALL, State.UPDATE -> install(c, f)
+            State.INSTALL -> install(c, f)
+            // an update whose file is the release's own is installed; otherwise the new build is downloaded first (then the same button installs it)
+            State.UPDATE -> if (fileIsCurrent(f, item)) install(c, f) else download(c, item)
             State.INSTALLED -> open(c, item)
         }
     }
