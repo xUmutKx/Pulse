@@ -2253,3 +2253,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Play: APK kurma ve REQUEST_INSTALL_PACKAGES yalnızca foss (APK_INSTALL bayrağı)
 - Hoş geldin: erişilebilirlik servisleri için her biri ayrı anahtarlı satırlar (açıklama + Erişilebilirlik ayarlarına gider)
 - Güncelleme penceresi yalnızca foss; play güncellemeleri Play Store üzerinden
+
+- Notlar düzenleyici: kağıdın içi geri geldi (başlık, gövde, ekler, bağlantılar, sayaçlar; 1e5c6abe commit_i silmisti, "+" ile bos sayfa aciliyordu). Samsung Notes tarzi arac cubugu: klavye, kalem (tukenmez/dolma/firca/kursun, S Pen basinc), fosforlu, silgi (kalemin silgi ucu), kement (sec, tasi, renk, sil), geri al/yinele (yazi ve cizim), parmak cizer anahtari, basili tutunca duz cizgi; cizim yazi ile birlikte kayar, sayfa asagi uzar; ayarlar kalici (derlenmedi, cihazda denenmedi)

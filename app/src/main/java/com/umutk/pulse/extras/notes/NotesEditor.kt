@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -95,20 +96,25 @@ fun NoteEditor(
 
     var preview by remember(note.id) { mutableStateOf(false) }
     var palette by remember(note.id) { mutableStateOf(false) }
-    // the S Pen: on, the picture of the note takes the pen; the colour and the width are the pen's own
-    var inkOn by remember(note.id) { mutableStateOf(false) }
-    var inkColor by remember { mutableStateOf(0xFF1E88E5.toInt()) }
-    // the pen panel: which tool, and how big (an index into INK_SIZES)
-    var inkTool by remember { mutableStateOf(0) }
-    var inkSize by remember { mutableStateOf(2) }
-    val inkTools = listOf(
-        InkTool(Icons.Outlined.Edit, tr("Pen", "Kalem"), 3f, 255),
-        InkTool(Icons.Outlined.Create, tr("Fine pen", "İnce kalem"), 1.5f, 255),
-        InkTool(Icons.Outlined.Brush, tr("Brush", "Fırça"), 7f, 255),
-        InkTool(Icons.Outlined.BorderColor, tr("Marker", "İşaretleyici"), 12f, 0xB3),
-        InkTool(Icons.Outlined.Highlight, tr("Highlighter", "Vurgulayıcı"), 18f, 0x66),
-    )
+    // the pen: the tool that is on (keyboard: only the text; pen, marker, eraser, lasso: the S Pen draws and a finger scrolls), its settings kept between notes
+    var mode by remember(note.id) { mutableStateOf(InkMode.KEYBOARD) }
+    var lastDraw by remember { mutableStateOf(InkMode.PEN) }
+    var panel by remember(note.id) { mutableStateOf(false) }
+    var selected by remember(note.id) { mutableStateOf<Set<Int>>(emptySet()) }
+    var penStyle by remember { mutableStateOf(InkPrefs.penStyle(ctx)) }
+    var penColor by remember { mutableStateOf(InkPrefs.penColor(ctx)) }
+    var penSize by remember { mutableStateOf(InkPrefs.penSize(ctx)) }
+    var markerColor by remember { mutableStateOf(InkPrefs.markerColor(ctx)) }
+    var markerSize by remember { mutableStateOf(InkPrefs.markerSize(ctx)) }
+    var eraserSize by remember { mutableStateOf(InkPrefs.eraserSize(ctx)) }
+    var finger by remember { mutableStateOf(InkPrefs.finger(ctx)) }
+    var snap by remember { mutableStateOf(InkPrefs.snap(ctx)) }
+    val inkUndo = remember(note.id) { mutableStateListOf<String>() }
+    val inkRedo = remember(note.id) { mutableStateListOf<String>() }
+    val textRedo = remember(note.id) { mutableStateListOf<String>() }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
     var more by remember(note.id) { mutableStateOf(false) }
     // the text row: a heading, bold, a bullet or a checklist line, added at the end of the note
@@ -145,9 +151,40 @@ fun NoteEditor(
             undo.add(note.body)
             if (undo.size > 40) undo.removeAt(0)
             lastPush = now
+            textRedo.clear()
         }
         onEdit { it.copy(body = v) }
     }
+    // the ink: every change keeps the earlier picture of the page for undo and redo
+    fun editInk(f: (List<InkStroke>) -> List<InkStroke>) {
+        val next = NotesInk.encode(f(NotesInk.decode(note.ink)))
+        if (next == note.ink) return
+        inkUndo.add(note.ink)
+        if (inkUndo.size > 60) inkUndo.removeAt(0)
+        inkRedo.clear()
+        onEdit { it.copy(ink = next) }
+    }
+    fun undoInk() { val prev = inkUndo.removeLastOrNull() ?: return; inkRedo.add(note.ink); selected = emptySet(); onEdit { it.copy(ink = prev) } }
+    fun redoInk() { val nxt = inkRedo.removeLastOrNull() ?: return; inkUndo.add(note.ink); selected = emptySet(); onEdit { it.copy(ink = nxt) } }
+    fun undoText() { val prev = undo.removeLastOrNull() ?: return; textRedo.add(note.body); onEdit { it.copy(body = prev) } }
+    fun redoText() { val nxt = textRedo.removeLastOrNull() ?: return; undo.add(note.body); onEdit { it.copy(body = nxt) } }
+    // a tool of the bar: the tool that is already on opens its settings; a drawing tool puts the keyboard away
+    fun pick(m: InkMode) {
+        if (m == mode) { panel = m != InkMode.KEYBOARD && !panel; return }
+        mode = m; panel = false; selected = emptySet()
+        if (m == InkMode.PEN || m == InkMode.MARKER) lastDraw = m
+        if (m != InkMode.KEYBOARD) { focus.clearFocus(); keyboard?.hide() }
+    }
+    val inkOn = mode != InkMode.KEYBOARD
+    // what the pen draws now: with the keyboard on, the last pen tool (the S Pen still draws)
+    val drawTool = if (mode == InkMode.KEYBOARD) lastDraw else mode
+    val penType = PEN_STYLES[penStyle.coerceIn(0, PEN_STYLES.lastIndex)]
+    val strokeColor = if (drawTool == InkMode.MARKER) (markerColor and 0x00FFFFFF) or (0x66 shl 24) else if (penColor == 0) ink.toArgb() else penColor
+    val strokeWidth = (if (drawTool == InkMode.MARKER) 14f * markerSize else penType.base * penSize) * density
+    val strokeKind = if (drawTool == InkMode.MARKER) 1 else 0
+    val strokeGain = if (drawTool == InkMode.MARKER) 0f else penType.gain
+    val inkList = remember(note.ink) { NotesInk.decode(note.ink) }
+    val pageMin = maxOf(520f, (NotesInk.bounds(inkList)?.bottom ?: 0f) / density + 320f).dp
     // the body with its selection, so the text row formats the selected words (or the place of the cursor)
     var bodyField by remember(note.id) { mutableStateOf(TextFieldValue(note.body, TextRange(note.body.length))) }
     LaunchedEffect(note.body) { if (bodyField.text != note.body) bodyField = TextFieldValue(note.body, TextRange(note.body.length)) }
@@ -228,33 +265,79 @@ fun NoteEditor(
             NSwatchRow(note.color) { v -> onEdit { it.copy(color = v) }; palette = false }
         }
 
-        // the pen's own bar: colours, width, undo; it shows while the pen is on
-        // the pen panel, shown while the pen is on: the tools, the size, and the five colours
-        if (inkOn) Column(Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .95f)).padding(horizontal = 10.dp, vertical = 6.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                inkTools.forEachIndexed { i, t -> MIcon(t.icon, t.label, if (inkTool == i) T.accent else fg) { inkTool = i } }
-                MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
-                MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
+        // the settings of the tool that is on (the pen's types, its size and colours, the eraser's size, whether a finger draws) and what the lasso chose
+        if (panel && inkOn) InkPanel(
+            mode = mode, style = penStyle, onStyle = { penStyle = it; InkPrefs.setPenStyle(ctx, it) },
+            color = if (mode == InkMode.MARKER) markerColor else penColor,
+            onColor = { c -> if (mode == InkMode.MARKER) { markerColor = c; InkPrefs.setMarkerColor(ctx, c) } else { penColor = c; InkPrefs.setPenColor(ctx, c) } },
+            size = when (mode) { InkMode.MARKER -> markerSize; InkMode.ERASER -> eraserSize; else -> penSize },
+            onSize = { v -> when (mode) { InkMode.MARKER -> { markerSize = v; InkPrefs.setMarkerSize(ctx, v) }; InkMode.ERASER -> { eraserSize = v; InkPrefs.setEraserSize(ctx, v) }; else -> { penSize = v; InkPrefs.setPenSize(ctx, v) } } },
+            finger = finger, onFinger = { finger = it; InkPrefs.setFinger(ctx, it) }, snap = snap, onSnap = { snap = it; InkPrefs.setSnap(ctx, it) },
+            onClearAll = { editInk { emptyList() }; selected = emptySet() }, autoColor = ink,
+        )
+        if (mode == InkMode.LASSO && selected.isNotEmpty()) InkSelection(
+            count = selected.size,
+            onColor = { c ->
+                val col = if (c == 0) ink.toArgb() else c
+                editInk { l -> l.mapIndexed { i, s -> if (i in selected) s.copy(color = if (s.kind == 1) (col and 0x00FFFFFF) or (0x66 shl 24) else col) else s } }
+            },
+            onDelete = { val ids = selected; editInk { l -> l.filterIndexed { i, _ -> i !in ids } }; selected = emptySet() },
+            onDone = { selected = emptySet() }, autoColor = ink,
+        )
+
+        // the paper: title, body, links, attachments and counts scroll together with the ink, which lies over them; the page grows as the pen goes down
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+        Column(
+            Modifier.fillMaxSize().padding(top = 6.dp, bottom = 12.dp)
+                .clip(shape).background(surface, shape).then(edge)
+                .verticalScroll(rememberScrollState()).padding(14.dp),
+        ) {
+            Box(Modifier.fillMaxWidth().heightIn(min = pageMin)) {
+            Column(Modifier.fillMaxWidth()) {
+            NField(note.title, { v -> onEdit { it.copy(title = v) } }, tr("Title", "Başlık"), ink, inkSub, size + 4, true, true, Modifier.fillMaxWidth())
+            if (note.remindAt > 0) Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIconDim("bell", inkSub)
+                Spacer(Modifier.width(6.dp))
+                Text(date.format(Date(note.remindAt)), color = inkSub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                NIcon("close", inkSub, tr("Remove reminder", "Hatırlatmayı kaldır")) { onEdit { it.copy(remindAt = 0L) } }
             }
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                INK_SIZES.indices.forEach { i ->
-                    Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkSize = i }, contentAlignment = Alignment.Center) {
-                        Box(Modifier.size((4 + 3 * i).dp).clip(CircleShape).background(if (inkSize == i) T.accent else fg))
-                    }
+            Spacer(Modifier.height(10.dp))
+            if (preview) NoteBody(note.body, size, ink, T.accent) { changeBody(it) }
+            else NFieldTV(bodyField, { tv -> bodyField = tv; if (tv.text != note.body) changeBody(tv.text) }, tr("Write here", "Buraya yaz"), ink, inkSub, size, Modifier.fillMaxWidth().heightIn(min = 180.dp))
+
+            if (links.isNotEmpty()) {
+                Text(tr("Links", "Bağlantılar"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    links.forEach { l -> Text(l, color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable2 { onOpenTitle(l) }) }
                 }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                INK_COLOURS.forEach { c ->
-                    Box(Modifier.size(30.dp).clip(CircleShape).background(Color(c)).border(if (inkColor == c) 2.dp else 1.dp, if (inkColor == c) T.accent else inkSub, CircleShape).clickable { inkColor = c })
+            if (backlinks.isNotEmpty()) {
+                Text(tr("Linked from", "Bağlantılı notlar"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    backlinks.forEach { b -> Text(NotesStore.titleOf(b).ifBlank { tr("Untitled", "Adsız") }, color = T.accent, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable2 { onOpenTitle(NotesStore.titleOf(b)) }) }
                 }
+            }
+            note.files.forEach { name ->
+                Box(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                    if (name.startsWith(NotesFileLink.PREFIX)) FileLinkRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) } }
+                    else if (name.startsWith("au_")) AudioRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
+                    else ImageRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
+                }
+            }
+            Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+            }
+            InkLayer(
+                modifier = Modifier.matchParentSize(), strokes = inkList, tool = drawTool, penOnly = mode == InkMode.KEYBOARD, finger = finger,
+                color = strokeColor, width = strokeWidth, kind = strokeKind, gain = strokeGain, eraser = 16f * eraserSize * density, snap = snap,
+                accent = T.accent, selected = selected,
+                onStroke = { st -> editInk { it + st } },
+                onErase = { ids -> editInk { l -> l.filterIndexed { i, _ -> i !in ids } }; selected = emptySet() },
+                onSelect = { selected = it },
+                onMove = { ids, d -> editInk { l -> l.mapIndexed { i, s -> if (i in ids) NotesInk.moved(s, d) else s } } },
+                onPenUsed = { if (mode == InkMode.KEYBOARD) pick(lastDraw) },
+            )
             }
         }
-
-        // the chosen tool: its width and its see-through share, in the chosen colour
-        val tool = inkTools[inkTool.coerceIn(0, inkTools.lastIndex)]
-        val penColour = (inkColor and 0x00FFFFFF) or (tool.alpha shl 24)
-        InkLayer(NotesInk.decode(note.ink), inkOn, penColour, tool.width * INK_SIZES[inkSize.coerceIn(0, INK_SIZES.lastIndex)] * density) { st ->
-            onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink) + st)) }
         }
         if (fmt) Row(
             Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
@@ -271,20 +354,12 @@ fun NoteEditor(
                 }
             }
         }
-        Row(
-            Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MIcon(Icons.Outlined.Edit, tr("Pen", "Kalem"), if (inkOn) T.accent else fg) { inkOn = !inkOn }
-            Box(Modifier.size(40.dp).clip(CircleShape).clickable { fmt = !fmt }.semantics { contentDescription = tr("Text", "Yazı") }, contentAlignment = Alignment.Center) {
-                Text("Aa", color = if (fmt) T.accent else fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-            MIcon(Icons.Outlined.Image, tr("Add photo", "Fotoğraf ekle"), fg) { pickImage.launch(arrayOf("image/*")) }
-            MIcon(Icons.Outlined.Check, tr("Checklist line", "Kontrol satırı"), fg) {
-                changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
-            }
-            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More", "Diğer"), if (more) T.accent else fg) { more = !more }
-        }
+        InkBar(
+            mode = mode, onMode = { pick(it) },
+            canUndo = if (inkOn) inkUndo.isNotEmpty() else undo.isNotEmpty(), canRedo = if (inkOn) inkRedo.isNotEmpty() else textRedo.isNotEmpty(),
+            onUndo = { if (inkOn) undoInk() else undoText() }, onRedo = { if (inkOn) redoInk() else redoText() },
+            textOn = fmt, onText = { fmt = !fmt }, onPhoto = { pickImage.launch(arrayOf("image/*")) }, moreOn = more, onMore = { more = !more },
+        )
     }
     }
 }
@@ -316,15 +391,6 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
         NIcon("close", ink, tr("Remove", "Kaldır")) { onRemove() }
     }
 }
-
-/** The pen's tool, drawn in the panel: its name, its width at size 1 and its alpha (255 is solid). */
-private class InkTool(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val width: Float, val alpha: Int)
-
-/** The sizes the size dots choose from (times the tool's width). */
-private val INK_SIZES = listOf(0.5f, 0.75f, 1f, 1.5f, 2f)
-
-/** The five colours of the pen panel. */
-private val INK_COLOURS = listOf(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFFE53935.toInt(), 0xFF1E88E5.toInt(), 0xFFFFD60A.toInt())
 
 /** A named action in the "more" row: the words show what it does, so no icon has to be guessed. */
 @Composable
