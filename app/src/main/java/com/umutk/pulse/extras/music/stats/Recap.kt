@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -281,7 +282,7 @@ fun RecapScreen(back: () -> Unit) {
     var recap by remember { mutableStateOf<Recap?>(null) }
     LaunchedEffect(days) { recap = withContext(Dispatchers.Default) { makeRecap(ctx, days) } }
     val r = recap ?: run { Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { Text("…", color = Color.White, fontSize = 28.sp) }; return }
-    val pager = rememberPagerState { 7 }
+    val pager = rememberPagerState { 8 }
     val scope = rememberCoroutineScope()
     var saved by remember { mutableStateOf("") }
     // the top song's cover: its track is looked up in the library by path
@@ -300,13 +301,13 @@ fun RecapScreen(back: () -> Unit) {
             }
             // the dots of the pages
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Center) {
-                repeat(7) { i -> Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 18.dp else 7.dp, 7.dp).clip(RoundedCornerShape(4.dp)).background(if (pager.currentPage == i) LIME else Color.White.copy(alpha = .25f))) }
+                repeat(8) { i -> Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 18.dp else 7.dp, 7.dp).clip(RoundedCornerShape(4.dp)).background(if (pager.currentPage == i) LIME else Color.White.copy(alpha = .25f))) }
             }
             HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { page ->
                 // each page fades and rises in when it is turned to; the numbers count up with it
                 val enter = remember { Animatable(0f) }
                 LaunchedEffect(pager.currentPage == page) { if (pager.currentPage == page) enter.animateTo(1f, tween(700)) else enter.snapTo(0f) }
-                Column(Modifier.fillMaxSize().then(if (page == 6) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = if (page == 6) Arrangement.Top else Arrangement.Center) {
+                Column(Modifier.fillMaxSize().then(if (page >= 6) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = if (page >= 6) Arrangement.Top else Arrangement.Center) {
                     when (page) {
                         0 -> {
                             Text(label.uppercase(), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
@@ -393,6 +394,24 @@ fun RecapScreen(back: () -> Unit) {
                                         }
                                     }
                                 }
+                            }
+                        }
+                        6 -> {
+                            // the receipt: drawn once for this range, shown at the width of the page and saved as the same picture
+                            val receipt by produceState<Bitmap?>(null, r, days) { value = withContext(Dispatchers.Default) { receiptBitmap(r, label, days) } }
+                            receipt?.let { bmp ->
+                                Image(bmp.asImageBitmap(), null, Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                                Spacer(Modifier.height(18.dp))
+                                Text(tr("Save receipt", "Fişi kaydet"), color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White).clickable {
+                                        scope.launch {
+                                            val bytes = withContext(Dispatchers.Default) { ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray() }
+                                            val n = "pulse-receipt-" + System.currentTimeMillis() / 1000 + ".png"
+                                            saved = runCatching { withContext(Dispatchers.IO) { com.umutk.pulse.docScanSave(ctx, n, "image/png") { it.write(bytes) } }; tr("Saved $n in Download/Pulse", "$n kaydedildi, Download/Pulse içinde") }.getOrElse { tr("Could not save", "Kaydedilemedi") }
+                                        }
+                                    }.padding(horizontal = 22.dp, vertical = 12.dp))
+                                if (saved.isNotEmpty()) Text(saved, color = Color.White.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                                Spacer(Modifier.height(24.dp))
                             }
                         }
                         else -> RecapSummary(r, days, label, since, cover, saved) {
