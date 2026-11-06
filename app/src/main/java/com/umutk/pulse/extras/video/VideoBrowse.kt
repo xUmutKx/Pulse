@@ -146,6 +146,7 @@ fun VideoHub(onBack: () -> Unit) {
     var search by remember { mutableStateOf<String?>(null) }
     var sel by remember { mutableStateOf<Set<String>>(emptySet()) }
     var selMenu by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf<List<VideoItem>?>(null) }
     var infoFor by remember { mutableStateOf<VideoItem?>(null) }
     val netScope = rememberCoroutineScope()
     var renameFor by remember { mutableStateOf<VideoItem?>(null) }
@@ -200,7 +201,7 @@ fun VideoHub(onBack: () -> Unit) {
         val keys = f.vids.map { it.key }
         sel = if (keys.isNotEmpty() && keys.all { it in sel }) sel - keys.toSet() else sel + keys
     }
-    val deleteVideos: (List<VideoItem>) -> Unit = { vs ->
+    val doDelete: (List<VideoItem>) -> Unit = { vs ->
         val loc = vs.filter { it.local }
         if (loc.isNotEmpty()) {
             if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, loc.map { it.uri }).intentSender).build())
@@ -208,6 +209,8 @@ fun VideoHub(onBack: () -> Unit) {
         }
         sel = emptySet(); rev++
     }
+    // nothing is deleted without asking: a question first, then the deletion
+    val deleteVideos: (List<VideoItem>) -> Unit = { vs -> if (vs.isNotEmpty()) confirmDelete = vs }
     // the actions of one video, in the order of [videoActs]
     val act: (Int, VideoItem) -> Unit = { i, v ->
         when (i) {
@@ -341,6 +344,15 @@ fun VideoHub(onBack: () -> Unit) {
         }
     }
 
+    confirmDelete?.let { vs ->
+        com.umutk.pulse.WinAlert(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text(tr("Delete?", "Silinsin mi?"), color = com.umutk.pulse.T.text) },
+            text = { Text(if (vs.size == 1) vs[0].name else tr("${vs.size} videos", "${vs.size} video"), color = com.umutk.pulse.T.text) },
+            confirmButton = { com.umutk.pulse.PButton(tr("Delete", "Sil"), compact = true) { val l = vs; confirmDelete = null; doDelete(l) } },
+            dismissButton = { com.umutk.pulse.PButton(tr("Cancel", "İptal"), compact = true) { confirmDelete = null } },
+        )
+    }
     if (urlDialog) UrlDialog(prefs, onDismiss = { urlDialog = false }) { u ->
         urlDialog = false; prefs.addUrl(u.toString())
         if (u.path?.lowercase()?.let { it.endsWith(".m3u") || it.endsWith(".pls") } == true)

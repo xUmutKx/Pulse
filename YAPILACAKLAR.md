@@ -2269,3 +2269,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Yuzen klavye: erisilebilirlik klavyesi bir yazi alanina yazarken telefonun kendi klavyesi kapali tutulur (SoftKeyboardController), alan gidince normale doner; pencere degisince alan hala odaktaysa klavye kapanmaz; yazi alani yokken (oyun) oneri cubugu bos kalir ve yaziyor gibi gorunmez; gamepad tuslari SOURCE_GAMEPAD/DPAD kaynagiyla gonderilir (rastgele tus sorunu icin, cihazda denenmedi) (derlenmedi)
 
 - Video: klasorler de toplu secilir (uzun basinca klasorun tum videolari secilir, secimde dokununca ekle/cikar, ustte "N klasor - M video"), cop kutusu secili klasorlerin videolarini siler, "Klasoru gizle" secili klasorlere de uygulanir, "Hepsini sec" klasorleri de kapsar (derlenmedi)
+
+- Video oynatici: geri tusu calan videoyu kucuk pencerede surdurur (yuzen pencere, yoksa PiP; ayar: "Geri tusu kucuk pencerede oynatmaya devam eder", varsayilan acik); PiP altyazi boyu %40 kucuk (x0.6); video silme onay sorusu (secim, klasor ve tek video); medya kartinda (bildirim/kilit ekrani) videonun kapak resmi (sistem kucuk resmi, yoksa kare) (derlenmedi, cihazda denenmedi)
