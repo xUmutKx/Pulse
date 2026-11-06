@@ -11,7 +11,7 @@ import java.io.RandomAccessFile
 import java.security.MessageDigest
 
 /** [timeMs] is the start of the line; -1 for lines of unsynced lyrics. */
-data class LyricLine(val timeMs: Long, val text: String)
+data class LyricLine(val timeMs: Long, val text: String, val words: List<LyricWord> = emptyList())
 
 /** [source]: "tag", "lrc", "txt", "saved", "cache", "lrclib", "ovh" or "hit". */
 data class LyricsResult(val lines: List<LyricLine>, val synced: Boolean, val source: String)
@@ -27,9 +27,7 @@ object Lyrics {
         val r = readEmbedded(path) ?: readSidecar(path) ?: return null
         if (r.lines.isEmpty()) return null
         // synced lines go back to [mm:ss.xx] text so the panel parses them the same way as a downloaded .lrc
-        val text = r.lines.joinToString("\n") { l ->
-            if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text
-        }
+        val text = r.lines.joinToString("\n") { l -> lrcLine(l, r.synced) }
         return if (r.synced) LyricsRecord(0, title, artist, null, false, null, text) else LyricsRecord(0, title, artist, null, false, text, null)
     }
 
@@ -50,12 +48,59 @@ object Lyrics {
             val asked = runCatching { smartFind(client, title, artist, album, sec)?.let { it to (if (it.second) "ovh" else "lrclib") }?.let { it.first.first to it.second } }
             // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
             lastError = asked.exceptionOrNull()?.let { "${it.javaClass.simpleName}: ${it.message}" }
-            val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
+            var found = asked.getOrNull()
+            // lyrics the person deleted are not given again: the next likeliest find comes instead
+            if (found != null && fingerprint(found.first) in rejectedSet(app, key)) found = candidates(app, title, artist, album, durationMs).firstOrNull()?.let { it to "lrclib" }
+            // with auto-pick off nothing is taken from the net on its own: the finds are offered, and what is chosen is kept beside the song (found above next time)
+            if (found != null && !autoPick(app)) return@withContext null
+            val rec = found ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
             // the found lyrics are kept with the song, not in the app's data or cache
             localPath?.takeIf { !it.contains("://") }?.let { keep(it, r) }
             r
         }
+
+    // ---- the finds: choose, try against the song, and do not give back what was deleted ----
+
+    private fun livePrefs(c: Context) = c.getSharedPreferences("lyrics_live", Context.MODE_PRIVATE)
+    /** On (the default): the first lyrics found online are taken and kept at once. Off: the finds are offered and the person chooses. */
+    fun autoPick(c: Context) = livePrefs(c).getBoolean("auto_pick", true)
+    fun setAutoPick(c: Context, v: Boolean) = livePrefs(c).edit().putBoolean("auto_pick", v).apply()
+
+    private fun rejPrefs(c: Context) = c.getSharedPreferences("lyrics_rejected", Context.MODE_PRIVATE)
+    private fun rejectedSet(c: Context, key: String): Set<String> = rejPrefs(c).getStringSet(sha(key), emptySet()).orEmpty()
+    /** The text of some lyrics boiled down to its letters, so the same lyrics are known again whichever site they came from. */
+    private fun fingerprint(r: LyricsRecord): String = sha(fold(stripStamps(r.syncedLyrics ?: r.plainLyrics ?: "").replace(Regex("<\\d+:\\d{1,2}(?:[.:]\\d{1,3})?>"), "")))
+
+    /** The finds online for a song, the likeliest first, without the lyrics that were deleted before. Up to eight. */
+    suspend fun candidates(ctx: Context, title: String, artist: String, album: String?, durationMs: Long): List<LyricsRecord> = withContext(Dispatchers.IO) {
+        val app = ctx.applicationContext
+        val client = LrclibClient(LyricsCache(null))
+        val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
+        val titles = listOf(title, cleanTitle(title)).filter { it.isNotBlank() }.distinct()
+        val artists = (listOf(artist) + splitArtists(artist)).filter { it.isNotBlank() }.distinct()
+        val pool = LinkedHashMap<Long, LyricsRecord>()
+        for (t in titles) for (a in artists.take(2)) runCatching { client.get(t, a, album, sec) }.getOrNull()?.takeIf { it.hasLyrics }?.let { pool.putIfAbsent(it.id, it) }
+        val queries = buildList { for (t in titles) { for (a in artists.take(3)) add("$a $t"); add(t) } }.distinct().take(6)
+        for (q in queries) {
+            runCatching { client.search(q.trim()) }.getOrDefault(emptyList()).filter { it.hasLyrics }.forEach { pool.putIfAbsent(it.id, it) }
+            if (pool.size >= 12) break
+        }
+        val rejected = rejectedSet(app, "t|${artist.trim().lowercase()}|${title.trim().lowercase()}")
+        val seen = HashSet<String>()
+        pool.values.filter { fingerprint(it) !in rejected && seen.add(fingerprint(it)) }.map { r ->
+            val ts = titles.maxOf { alike(it, r.trackName) }
+            val ars = if (artists.isEmpty()) .5f else artists.maxOf { a -> maxOf(alike(a, r.artistName), splitArtists(r.artistName).maxOfOrNull { alike(a, it) } ?: 0f) }
+            r to (ts * 0.65f + ars * 0.35f + if (r.syncedLyrics != null) .03f else 0f)
+        }.sortedByDescending { it.second }.map { it.first }.take(8)
+    }
+
+    /** The lyrics the person chose from the finds: kept beside the song like any lyrics found online. */
+    suspend fun choose(ctx: Context, r: LyricsRecord, localPath: String?): LyricsResult? = withContext(Dispatchers.IO) {
+        val res = toResult(r, "lrclib") ?: return@withContext null
+        localPath?.takeIf { !it.contains("://") }?.let { keep(it, res) }
+        res
+    }
 
     /** What the lyrics lookup sees for [path], as a few short lines: the song file, the same-name .lrc / .txt and whether the folder can be read. */
     fun diag(path: String?): String {
@@ -70,9 +115,13 @@ object Lyrics {
     }
 
     /** The lyrics as .lrc text: stamped lines when they are synced, plain lines otherwise. */
-    private fun lrcText(r: LyricsResult) = r.lines.joinToString("\n") { l ->
-        if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text
-    }
+    private fun lrcText(r: LyricsResult) = r.lines.joinToString("\n") { l -> lrcLine(l, r.synced) }
+
+    private fun stampOf(ms: Long) = "%02d:%02d.%02d".format(ms / 60000, ms / 1000 % 60, ms / 10 % 100)
+
+    /** One line as LRC: stamped when synced, with a tag before each word when the words have their own times, plain otherwise. */
+    private fun lrcLine(l: LyricLine, synced: Boolean): String =
+        if (synced && l.timeMs >= 0) "[" + stampOf(l.timeMs) + "]" + (if (l.words.size >= 2) l.words.joinToString("") { "<" + stampOf(it.timeMs) + ">" + it.text } else l.text) else l.text
 
     // ---- fuzzy lookup: spelling, several artists, decorations in the title ----
 
@@ -280,7 +329,7 @@ object Lyrics {
     internal fun fromText(text: String, source: String): LyricsResult? {
         if (text.isBlank()) return null
         val timed = parseLrc(text)
-        if (timed.isNotEmpty()) return LyricsResult(timed.map { LyricLine(it.timeMs, it.text) }, true, source)
+        if (timed.isNotEmpty()) return LyricsResult(timed.map { LyricLine(it.timeMs, it.text, it.words) }, true, source)
         return LyricsResult(text.lines().map { LyricLine(-1, it.trim()) }, false, source)
     }
 
@@ -377,11 +426,16 @@ object Lyrics {
     fun forget(ctx: Context, path: String?, title: String, artist: String) {
         val app = ctx.applicationContext
         val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        // these lyrics are remembered as refused: a new search does not give the same ones back
+        path?.let { p -> runCatching { localRecord(p, title, artist) }.getOrNull() }?.let { r ->
+            rejPrefs(app).edit().putStringSet(sha(key), rejectedSet(app, key) + fingerprint(r)).apply()
+        }
         if (path != null && !path.contains("://")) {
             runCatching { val st = LyricsStore(app); st.load(path, artist, title)?.let { st.delete(it, path) } }
             runCatching { File(path.substringBeforeLast('.') + ".lrc").delete(); File(path.substringBeforeLast('.') + ".txt").delete() }
         }
-        markMiss(app, key)
+        // not marked as a miss any more: the next search gives the next likeliest find (the refused one is left out), or nothing
+        missPrefs(app).edit().remove(sha(key)).apply()
     }
 
     private fun missPrefs(c: Context) = c.getSharedPreferences("lyrics_miss", Context.MODE_PRIVATE)

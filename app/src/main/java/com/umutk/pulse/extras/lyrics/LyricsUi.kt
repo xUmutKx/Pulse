@@ -71,6 +71,7 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
     val state = rememberLazyListState()
     // a size and a weight to read from the other side of the table: the setting's size plus a few, always bold
     val base = com.umutk.pulse.extras.music.MusicSettings.lyricsFont(androidx.compose.ui.platform.LocalContext.current).coerceIn(12, 30) + 4
+    val wordMode = com.umutk.pulse.extras.lyrics.LiveLyrics.wordSync(androidx.compose.ui.platform.LocalContext.current)
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
     // a line must fit the width, also the one being sung (it grows a little): the size shrinks for a long word, and the text keeps a margin for the growth
@@ -90,7 +91,10 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
                 val fs = minOf(base.toFloat(), avail / (longest * 0.64f * 1.1f)).coerceAtLeast(12f)
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        lyricMarked(l.text, mark, hi),
+                        // the words of a line that has their times: the ones sung are lit as the line goes (when the setting is on)
+                        if (on && wordMode && l.words.isNotEmpty() && mark.isBlank()) androidx.compose.ui.text.buildAnnotatedString {
+                            l.words.forEach { w -> withStyle(androidx.compose.ui.text.SpanStyle(color = if (w.timeMs <= positionMs) hi else lo)) { append(w.text) } }
+                        } else lyricMarked(l.text, mark, hi),
                         color = tone,
                         fontSize = fs.sp,
                         lineHeight = (fs * 1.3f).sp,

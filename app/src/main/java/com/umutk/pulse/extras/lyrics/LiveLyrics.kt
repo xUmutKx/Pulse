@@ -73,6 +73,8 @@ object LiveLyrics {
     fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", false)
     /** EXPERIMENTAL, off by default: lyrics with no times are spread over the length of the song, so they follow it like timed ones (the timing is a guess). */
     fun spreadPlain(c: Context) = prefs(c).getBoolean("spread_plain", false)
+    /** Lyrics that carry the time of each word (or syllable) show word by word, the word being sung lit. On by default; lines without word times show whole as before. */
+    fun wordSync(c: Context) = prefs(c).getBoolean("word_sync", true)
     /** The fewest lines a song needs before its lyrics show (1 to 3; the default is 3). */
     fun minLines(c: Context): Int = prefs(c).getInt("min_lines", 3).coerceIn(1, 3)
     fun setMinLines(c: Context, n: Int) { prefs(c).edit().putInt("min_lines", n.coerceIn(1, 3)).apply() }
@@ -342,6 +344,8 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
     var spread by remember { mutableStateOf(LiveLyrics.spreadPlain(c)) }
+    var autoPick by remember { mutableStateOf(Lyrics.autoPick(c)) }
+    var wordSync by remember { mutableStateOf(LiveLyrics.wordSync(c)) }
     var minL by remember { mutableStateOf(LiveLyrics.minLines(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     // where the lock screen window starts (the preview and the slider share it)
@@ -381,6 +385,8 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
                 com.umutk.pulse.PSlider(top, { top = it; LiveLyrics.setLockTop(c, it) }, 0.10f..0.90f, onDone = {})
             }
             SwitchRow(tr("Time plain lyrics by the song's length (experimental)", "Zamansız sözleri şarkı süresine göre zamanla (deneysel)"), spread) { spread = it; LiveLyrics.set(c, "spread_plain", it) }
+            SwitchRow(tr("Take the first lyrics found", "Bulunan ilk sözleri otomatik seç"), autoPick) { autoPick = it; Lyrics.setAutoPick(c, it) }
+            SwitchRow(tr("Word by word lyrics", "Kelime kelime sözler"), wordSync) { wordSync = it; LiveLyrics.set(c, "word_sync", it) }
             SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
                 floating = it; LiveLyrics.set(c, "floating", it)
                 if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
