@@ -357,7 +357,8 @@ class LockService : AccessibilityService() {
             if (r.width().toLong() * r.height() >= b.width().toLong() * b.height() * 8 / 10) return false
             any = true
         }
-        any
+        // the bubble's window can be missing from the list for a moment after it opens: the app has a bubble on the screen and no full-size window, so it is the bubble
+        any || com.umutk.pulse.features.NotifLog.hasBubble(pkg)
     }.getOrDefault(false)
 
     private fun hasWindow(pkg: String): Boolean = runCatching {
