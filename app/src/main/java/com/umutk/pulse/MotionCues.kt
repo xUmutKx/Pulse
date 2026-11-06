@@ -113,6 +113,7 @@ class MotionCueService : Service() {
     private var view: CueView? = null
     private var est: MotionEstimator? = null
     private var strip: View? = null
+    private var type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     private var sensorThread: android.os.HandlerThread? = null
     private var screenReceiver: android.content.BroadcastReceiver? = null
 
@@ -124,10 +125,13 @@ class MotionCueService : Service() {
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(7, n)
         running = true
         loadPrefs(this)
-        wm = getSystemService(WindowManager::class.java)
-        if (!Compat.canOverlay(this)) { stopSelf(); return }
+        // the accessibility layer (Cover) is the topmost there is: above the bars, the keyboard and the lock screen; without it the plain overlay window
+        val acc = com.umutk.pulse.features.CoverAccessibilityService.instance
+        wm = (acc ?: this).getSystemService(WindowManager::class.java)
+        type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        if (acc == null && !Compat.canOverlay(this)) { stopSelf(); return }
         val v = CueView(this).also { view = it }
-        val lp = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        val lp = WindowManager.LayoutParams(-1, -1, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, PixelFormat.TRANSLUCENT)
         // Android 12 treats touches through a window that is more than about 80% opaque as "obscured" and many apps refuse them; just under that, taps reach the app below
         if (Build.VERSION.SDK_INT >= 31) lp.alpha = .79f
@@ -188,7 +192,7 @@ class MotionCueService : Service() {
                 return true
             }
         }
-        val lp = WindowManager.LayoutParams(-1, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        val lp = WindowManager.LayoutParams(-1, h, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
         lp.gravity = android.view.Gravity.TOP
         runCatching { wm.addView(sv, lp); strip = sv }

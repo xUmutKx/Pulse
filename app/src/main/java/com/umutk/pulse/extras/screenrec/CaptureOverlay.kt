@@ -23,7 +23,10 @@ class CaptureOverlay(
     private val c: Context,
     private val onPause: () -> Unit, private val onStop: () -> Unit, private val onGrab: () -> Unit,
 ) {
-    private val wm = c.getSystemService(WindowManager::class.java)
+    // the accessibility layer (Cover) is the topmost there is: above the bars, the keyboard and other overlays; without it the plain overlay window
+    private val acc = com.umutk.pulse.features.CoverAccessibilityService.instance
+    private val wm = (acc ?: c).getSystemService(WindowManager::class.java)
+    private val type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     private var bar: View? = null
     private var penView: PenView? = null
     private var pauseBtn: TextView? = null
@@ -31,7 +34,7 @@ class CaptureOverlay(
 
     fun show(): Boolean {
         if (bar != null) return true
-        if (!com.umutk.pulse.Compat.canOverlay(c)) return false
+        if (acc == null && !com.umutk.pulse.Compat.canOverlay(c)) return false
         val row = LinearLayout(c).apply {
             orientation = LinearLayout.HORIZONTAL
             background = GradientDrawable().apply { setColor(0xE6202020.toInt()); cornerRadius = 28 * d }
@@ -48,7 +51,7 @@ class CaptureOverlay(
         row.addView(btn("✎", Color.WHITE) { b -> togglePen(b) })
         row.addView(btn("◎", Color.WHITE) { onGrab() })
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.TOP or Gravity.START; x = (12 * d).toInt(); y = (120 * d).toInt() }
         // dragging anywhere on the bar's padding moves it; the buttons keep their taps
@@ -72,7 +75,7 @@ class CaptureOverlay(
         if (on != null) { runCatching { wm.removeView(on) }; penView = null; b.setTextColor(Color.WHITE); return }
         val v = PenView(c)
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT,
         )
         if (runCatching { wm.addView(v, lp) }.isSuccess) {

@@ -54,6 +54,7 @@ class ScreenRecService : Service() {
         // startForeground must run on every start that came through startForegroundService, even when it is rejected below
         if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) else startForeground(NOTIF_ID, notification())
         if (state != RecState.IDLE) return START_NOT_STICKY
+        recoverLeftovers()
         val data = i?.let { extraIntent(it) }
         if (i == null || data == null) { stopSelf(); return START_NOT_STICKY }
         val cfg = RecConfig(
@@ -70,6 +71,7 @@ class ScreenRecService : Service() {
             startRecording(mp, cfg, audio)
             runStart = SystemClock.elapsedRealtime(); accum = 0L
             state = RecState.RUNNING
+            guardCrash()
             if (cfg.limitMin > 0) main.postDelayed(autoStop, cfg.limitMin * 60_000L)
             updateNotification()
             if (ScreenRecPrefs.touches(this)) showTouches(true)
@@ -110,6 +112,53 @@ class ScreenRecService : Service() {
         }
         display = mp.createVirtualDisplay("PulseRecording", w, h, dm.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, rec.surface, null, null)
         rec.start()
+    }
+
+    // ---- a crash keeps the recording --------------------------------------------------------------------------------------------------------
+    // The video is only readable once the recorder has been stopped (the file's index is written then). When the app dies with an error while it records, the
+    // recorder is stopped on the way down and the video is published, so what was recorded so far is in the gallery. A kill from outside cannot be caught;
+    // the leftover of such a recording is published at the next start (see [recoverLeftovers]).
+    private var previousHandler: Thread.UncaughtExceptionHandler? = null
+    private fun guardCrash() {
+        if (previousHandler != null) return
+        val before = Thread.getDefaultUncaughtExceptionHandler()
+        previousHandler = before
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching { saveOnCrash() }
+            before?.uncaughtException(t, e)
+        }
+    }
+    private fun unguardCrash() {
+        previousHandler?.let { Thread.setDefaultUncaughtExceptionHandler(it) }
+        previousHandler = null
+    }
+    /** The bare minimum, on the thread that is going down: stop the recorder, close the file, make the video visible. */
+    private fun saveOnCrash() {
+        val u = uri ?: return
+        val wrote = runCatching { recorder?.stop() }.isSuccess
+        runCatching { recorder?.release() }
+        runCatching { pfd?.close() }
+        if (wrote) runCatching { contentResolver.update(u, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null) }
+        else runCatching { contentResolver.delete(u, null, null) }
+        uri = null; recorder = null; pfd = null
+    }
+    /** Recordings an earlier run left unfinished (the app was killed): a file with something in it is published, an empty one is dropped. */
+    private fun recoverLeftovers() {
+        if (Build.VERSION.SDK_INT < 30) return
+        runCatching {
+            val args = android.os.Bundle().apply {
+                putInt(MediaStore.QUERY_ARG_MATCH_PENDING, MediaStore.MATCH_ONLY)
+                putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ?")
+                putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, arrayOf(RecordingList.RELATIVE_PATH + "%"))
+            }
+            contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.SIZE), args, null)?.use { c ->
+                while (c.moveToNext()) {
+                    val row = android.content.ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, c.getLong(0))
+                    if (c.getLong(1) > 1_000_000L) contentResolver.update(row, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
+                    else contentResolver.delete(row, null, null)
+                }
+            }
+        }
     }
 
     private fun pauseRecording() {
@@ -156,6 +205,7 @@ class ScreenRecService : Service() {
         val wasRunning = state != RecState.IDLE
         if (state == RecState.RUNNING) accum += SystemClock.elapsedRealtime() - runStart
         state = RecState.IDLE
+        unguardCrash()
         overlay?.hide(); overlay = null
         if (touchesWas != null) showTouches(false)
         main.removeCallbacks(autoStop)
