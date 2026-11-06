@@ -1579,6 +1579,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * The logins of the Pulse password vault in the bar of a user-name or password box, read inside the app (no system autofill service). One chip for each
      * different login: the same user name with the same password shows once. Only for the app the login belongs to; not offered while the vault is behind the screen lock.
      */
+    /** The logins the bar may offer: those of the app; in a browser the page's address is unknown to a keyboard, so every login that belongs to a web address is offered (the chip shows its name). */
+    private fun loginPool(pkg: String?): List<com.umutk.pulse.features.VItem> {
+        val own = com.umutk.pulse.features.VaultStore.matches(this, pkg, null)
+        val browsers = setOf("com.android.chrome", "com.sec.android.app.sbrowser", "org.mozilla.firefox", "org.mozilla.firefox_beta", "com.brave.browser", "com.microsoft.emmx", "com.opera.browser", "com.opera.mini.native", "com.vivaldi.browser", "com.duckduckgo.mobile.android", "org.chromium.chrome", "com.kiwibrowser.browser", "com.google.android.apps.chrome")
+        if (pkg !in browsers) return own
+        val web = com.umutk.pulse.features.VaultStore.all(this).filter { v -> v.type == 1 && v.pass.isNotEmpty() && v.uris.any { u -> com.umutk.pulse.features.VaultStore.packageOf(u) == null } }.sortedBy { it.name.lowercase() }
+        return own + web
+    }
+
     private fun loginSuggestions(): Boolean {
         vaultTexts = emptyList()
         val info = currentInputEditorInfo ?: return false
@@ -1596,7 +1605,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false
         val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
         val seen = HashSet<String>()
-        val list = com.umutk.pulse.features.VaultStore.matches(this, info.packageName, null)
+        val list = loginPool(info.packageName)
             // a number box offers only the logins whose user name is a number (a student or ID number, a phone number)
             .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
             .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
