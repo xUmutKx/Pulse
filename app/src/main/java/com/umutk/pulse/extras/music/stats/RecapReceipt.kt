@@ -29,7 +29,30 @@ private fun row(left: String, right: String, width: Int): String {
     return l + " ".repeat((width - l.length - right.length).coerceAtLeast(1)) + right
 }
 
-internal fun receiptBitmap(r: Recap, label: String, days: Int): Bitmap {
+/** One item of the receipt: a count at the left, a name, and a small line under it. */
+internal class ReceiptItem(val qty: String, val name: String, val sub: String = "")
+/** A block of "name ... value" rows under a heading. */
+internal class ReceiptSection(val head: String, val rows: List<Pair<String, String>>)
+/** Everything a receipt shows; the music recap and the gym recap both fill one. */
+internal class ReceiptSpec(
+    val label: String, val seed: Long, val qtyHead: String, val items: List<ReceiptItem>, val sections: List<ReceiptSection>, val stats: List<Pair<String, String>>,
+    val totalLabel: String, val totalValue: String, val subTotal: List<Pair<String, String>>, val payLabel: String, val payValue: String, val barcode: String,
+    val title: String = "PULSE", val kind: String = tr("MUSIC RECEIPT", "MÜZİK FİŞİ"), val empty: String = tr("NOTHING BOUGHT YET", "HENÜZ ALIŞVERİŞ YOK"),
+)
+
+internal fun receiptBitmap(r: Recap, label: String, days: Int): Bitmap = renderReceipt(ReceiptSpec(
+    label = label, seed = r.minutes * 31 + r.plays * 17 + r.distinctSongs * 7, qtyHead = tr("QTY  ITEM", "ADET  ŞARKI"),
+    items = r.songs10.map { (title, artist, plays) -> ReceiptItem("%02d".format(plays.coerceAtMost(99)), title, artist) },
+    sections = if (r.artists10.isEmpty()) emptyList() else listOf(ReceiptSection(tr("ARTISTS", "SANATÇILAR"), r.artists10.take(5).map { (a, ms) -> a to "${ms / 60_000L} " + tr("MIN", "DK") })),
+    stats = listOf(tr("ITEMS", "ÇEŞİT") to "${r.distinctSongs}", tr("ARTISTS", "SANATÇI") to "${r.distinctArtists}", tr("PLAYS", "DİNLEME") to "${r.plays}", tr("DAYS", "GÜN") to "${r.activeDays}/$days") +
+        (if (r.minutes > 0) listOf(tr("BUSIEST HOUR", "EN YOĞUN SAAT") to "%02d:00".format(r.busiestHour)) else emptyList()),
+    totalLabel = tr("TOTAL", "TOPLAM"), totalValue = "${r.minutes} " + tr("MIN", "DK"),
+    subTotal = if (r.minutes >= 60) listOf(tr("HOURS", "SAAT") to "%.1f".format(r.minutes / 60f)) else emptyList(),
+    payLabel = tr("PAID WITH", "ÖDEME"), payValue = tr("EARS", "KULAK"), barcode = "PULSE-${r.minutes}-${r.plays}",
+))
+
+/** Draws a [ReceiptSpec] as the receipt picture. */
+internal fun renderReceipt(s: ReceiptSpec): Bitmap {
     val w = 900; val pad = 56f; val tooth = 22f
     val cols = 36
     val ink = 0xFF1B1B1B.toInt(); val soft = 0xFF6B6B6B.toInt()
@@ -37,41 +60,35 @@ internal fun receiptBitmap(r: Recap, label: String, days: Int): Bitmap {
     // every line with its size, weight and colour; measured first so the paper is exactly as tall as the list
     class Ln(val text: String, val size: Float = 31f, val bold: Boolean = false, val center: Boolean = false, val color: Int = ink, val gap: Float = 0f)
     val lines = ArrayList<Ln>()
-    val now = Date()
-    val order = ((r.minutes * 31 + r.plays * 17 + r.distinctSongs * 7) % 90000 + 10000).toString()
+    val order = ((s.seed % 90000 + 90000) % 90000 + 10000).toString()
     val dash = "-".repeat(cols)
-    lines += Ln("PULSE", 64f, true, true)
-    lines += Ln(tr("MUSIC RECEIPT", "MÜZİK FİŞİ"), 34f, true, true, gap = 4f)
-    lines += Ln(label.uppercase(), 28f, false, true, soft, gap = 2f)
+    lines += Ln(s.title, 64f, true, true)
+    lines += Ln(s.kind, 34f, true, true, gap = 4f)
+    lines += Ln(s.label.uppercase(), 28f, false, true, soft, gap = 2f)
     lines += Ln(dash, gap = 14f)
-    lines += Ln(row(tr("ORDER", "FİŞ NO") + " #$order", "", cols), 28f, color = soft)
-    lines += Ln(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(now).uppercase(), 28f, color = soft)
+    lines += Ln(tr("ORDER", "FİŞ NO") + " #$order", 28f, color = soft)
+    lines += Ln(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date()).uppercase(), 28f, color = soft)
     lines += Ln(dash, gap = 8f)
-    lines += Ln(row(tr("QTY  ITEM", "ADET  ŞARKI"), "", cols), 28f, true)
+    lines += Ln(s.qtyHead, 28f, true)
     lines += Ln(dash)
-    if (r.songs10.isEmpty()) lines += Ln(tr("NOTHING BOUGHT YET", "HENÜZ ALIŞVERİŞ YOK"), 30f, false, true, gap = 10f)
-    r.songs10.forEach { (title, artist, plays) ->
-        lines += Ln("%02d".format(plays.coerceAtMost(99)) + "   " + clip(title.uppercase(), cols - 5), gap = 9f)
-        if (artist.isNotBlank()) lines += Ln("     " + clip(artist.uppercase(), cols - 5), 25f, color = soft)
+    if (s.items.isEmpty()) lines += Ln(s.empty, 30f, false, true, gap = 10f)
+    s.items.forEach { it ->
+        lines += Ln(it.qty.padStart(2, '0').take(4) + "   " + clip(it.name.uppercase(), cols - 7), gap = 9f)
+        if (it.sub.isNotBlank()) lines += Ln("     " + clip(it.sub.uppercase(), cols - 5), 25f, color = soft)
     }
     lines += Ln(dash, gap = 12f)
-    if (r.artists10.isNotEmpty()) {
-        lines += Ln(tr("ARTISTS", "SANATÇILAR"), 28f, true, gap = 4f)
-        r.artists10.take(5).forEach { (a, ms) -> lines += Ln(row(clip(a.uppercase(), cols - 9), "${ms / 60_000L} " + tr("MIN", "DK"), cols), 28f, gap = 6f) }
+    s.sections.forEach { sec ->
+        lines += Ln(sec.head, 28f, true, gap = 4f)
+        sec.rows.forEach { (a, v) -> lines += Ln(row(clip(a.uppercase(), cols - v.length - 2), v, cols), 28f, gap = 6f) }
         lines += Ln(dash, gap = 10f)
     }
-    lines += Ln(row(tr("ITEMS", "ÇEŞİT"), "${r.distinctSongs}", cols), gap = 6f)
-    lines += Ln(row(tr("ARTISTS", "SANATÇI"), "${r.distinctArtists}", cols), gap = 6f)
-    lines += Ln(row(tr("PLAYS", "DİNLEME"), "${r.plays}", cols), gap = 6f)
-    lines += Ln(row(tr("DAYS", "GÜN"), "${r.activeDays}/$days", cols), gap = 6f)
-    if (r.minutes > 0) lines += Ln(row(tr("BUSIEST HOUR", "EN YOĞUN SAAT"), "%02d:00".format(r.busiestHour), cols), gap = 6f)
+    s.stats.forEach { (a, v) -> lines += Ln(row(a, v, cols), gap = 6f) }
     lines += Ln(dash, gap = 8f)
-    lines += Ln(row(tr("TOTAL", "TOPLAM"), "${r.minutes} " + tr("MIN", "DK"), 22), 44f, true, gap = 10f)
-    if (r.minutes >= 60) lines += Ln(row(tr("HOURS", "SAAT"), "%.1f".format(r.minutes / 60f), cols), 28f, color = soft, gap = 2f)
-    lines += Ln(row(tr("PAID WITH", "ÖDEME"), tr("EARS", "KULAK"), cols), 28f, color = soft, gap = 2f)
+    lines += Ln(row(s.totalLabel, s.totalValue, 22), 44f, true, gap = 10f)
+    s.subTotal.forEach { (a, v) -> lines += Ln(row(a, v, cols), 28f, color = soft, gap = 2f) }
+    lines += Ln(row(s.payLabel, s.payValue, cols), 28f, color = soft, gap = 2f)
     lines += Ln(dash, gap = 14f)
-    lines += Ln(tr("THANK YOU FOR LISTENING", "DİNLEDİĞİN İÇİN TEŞEKKÜRLER"), 28f, true, true, gap = 8f)
-    // heights
+    lines += Ln(tr("THANK YOU FOR COMING", "GELDİĞİN İÇİN TEŞEKKÜRLER"), 28f, true, true, gap = 8f)
     val barH = 150f
     var h = tooth * 2 + 70f
     lines.forEach { l -> p.textSize = l.size; h += l.size * 1.28f + l.gap }
@@ -88,18 +105,16 @@ internal fun receiptBitmap(r: Recap, label: String, days: Int): Bitmap {
         while (x > 0) { x -= tooth; lineTo(maxOf(x, 0f), if (up) h - tooth else h); up = !up }
         close()
     }
-    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF8F5EC.toInt() }
-    cv.drawPath(paper, fill)
+    cv.drawPath(paper, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF8F5EC.toInt() })
     var y = tooth + 70f
     lines.forEach { l ->
         p.textSize = l.size; p.color = l.color; p.typeface = Typeface.create(Typeface.MONOSPACE, if (l.bold) Typeface.BOLD else Typeface.NORMAL)
         val tw = p.measureText(l.text)
-        val x = if (l.center) (w - tw) / 2f else pad
-        cv.drawText(l.text, x, y, p)
+        cv.drawText(l.text, if (l.center) (w - tw) / 2f else pad, y, p)
         y += l.size * 1.28f + l.gap
     }
     // Code 39: the narrow bar is 3 px, the wide one 8 px; start and stop are the asterisk
-    val code = "PULSE-${r.minutes}-${r.plays}".uppercase().filter { it in CODE39 }
+    val code = s.barcode.uppercase().filter { it in CODE39 }
     val full = "*$code*"
     val narrow = 3f; val wide = 8f
     val total = full.sumOf { ch -> CODE39.getValue(ch).sumOf { e -> if (e == 'w') wide.toDouble() else narrow.toDouble() } + narrow }.toFloat()
@@ -116,7 +131,6 @@ internal fun receiptBitmap(r: Recap, label: String, days: Int): Bitmap {
         bx += narrow * scale
     }
     p.typeface = Typeface.MONOSPACE; p.textSize = 26f; p.color = soft
-    val ct = "*$code*"
-    cv.drawText(ct, (w - p.measureText(ct)) / 2f, by + barH + 36f, p)
+    cv.drawText(full, (w - p.measureText(full)) / 2f, by + barH + 36f, p)
     return bmp
 }
