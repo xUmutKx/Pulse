@@ -247,11 +247,20 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             if (i.action == "com.umutk.pulse.action.GLOBAL") { performGlobalAction(i.getIntExtra("g", 0)); return }
             if (i.action == Intent.ACTION_SCREEN_ON) { lastTouch = android.os.SystemClock.uptimeMillis(); lastTrigger = false }
             autoCheck()
+            // the charger plugged in: the animation of the cover's setting plays over everything (the cover, if it starts, is under it); with the screen off it waits for the screen
+            val now = android.os.SystemClock.uptimeMillis()
+            if (i.action == Intent.ACTION_POWER_CONNECTED) {
+                if ((getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive) ChargeAnim.show(this@CoverAccessibilityService) else chargeAt = now
+            } else if (i.action == Intent.ACTION_SCREEN_ON && chargeAt != 0L) {
+                if (now - chargeAt < 30_000L) ChargeAnim.show(this@CoverAccessibilityService)
+                chargeAt = 0L
+            }
         }
     }
 
     // the idle trigger: a touch anywhere (the system tells this service when a touch starts and ends) restarts the count
     @Volatile private var lastTouch = android.os.SystemClock.uptimeMillis()
+    @Volatile private var chargeAt = 0L
     private val tick = android.os.Handler(android.os.Looper.getMainLooper())
     private val idleCheck = object : Runnable {
         override fun run() {
