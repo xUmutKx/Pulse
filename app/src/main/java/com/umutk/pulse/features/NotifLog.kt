@@ -91,6 +91,9 @@ object NotifLog {
             }.distinctBy { it.pkg + it.title }
     }.getOrDefault(emptyList())
 
+    /** The app has a chat bubble on the screen now (Android 10+: its notification carries FLAG_BUBBLE while it is shown as a bubble). Needs the notification access. */
+    fun hasBubble(pkg: String): Boolean = runCatching { live?.activeNotifications.orEmpty().any { it.packageName == pkg && (it.notification.flags and 0x00001000) != 0 } }.getOrDefault(false)
+
     // Declared in the manifest, see the header comment. Receives every posted notification
     // from the system; Pulse's own notifications are skipped.
     class Listener : NotificationListenerService() {
