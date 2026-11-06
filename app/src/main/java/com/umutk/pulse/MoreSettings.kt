@@ -658,16 +658,17 @@ private fun ExtraAppsCard() {
         Triple("BlackOutLauncher", R.drawable.ic_ad_blackout_fg, "BlackOut"),
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
         Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
+        Triple("HealthLauncher", R.drawable.ic_ad_health_fg, tr("Health", "Sağlık")),
     )
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
-        (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
+        (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "HealthLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
     )
     val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "ebook", "PaintLauncher" to "paint",
-        "CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "GameHubLauncher" to "gamehub", "IslandLauncher" to "island")
+        "CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "GameHubLauncher" to "gamehub", "IslandLauncher" to "island", "HealthLauncher" to "health")
     val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
@@ -682,7 +683,7 @@ private fun ExtraAppsCard() {
         // the app's own launcher picture (the adaptive icon), so every shortcut on the home screen looks like its app, not like Pulse
         val mip = mapOf("FilesLauncher" to "ic_files", "PhotosLauncher" to "ic_photos", "CalendarLauncher" to "ic_calendar", "ContactsLauncher" to "ic_contacts", "MusicLauncher" to "ic_music", "VideoLauncher" to "ic_video",
             "PaintLauncher" to "ic_ad_paint", "ClockLauncher" to "ic_ad_clock", "CalculatorLauncher" to "ic_ad_calc", "ArtCraftLauncher" to "ic_ad_artcraft", "WhiteNoiseLauncher" to "ic_ad_noise", "VoiceLauncher" to "ic_ad_voice", "NotesLauncher" to "ic_ad_notes",
-            "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "KeyboardLauncher" to "ic_ad_keyboard", "ExtraStoreLauncher" to "ic_ad_extras")
+            "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "KeyboardLauncher" to "ic_ad_keyboard", "ExtraStoreLauncher" to "ic_ad_extras", "HealthLauncher" to "ic_ad_health")
         val res = mip[alias]?.let { ctx.resources.getIdentifier(it, "mipmap", ctx.packageName) } ?: 0
         val ic = if (res != 0) android.graphics.drawable.Icon.createWithResource(ctx, res) else android.graphics.drawable.Icon.createWithResource(ctx, icon)
         sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(ic).setIntent(i).build(), null)
@@ -691,7 +692,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
@@ -704,27 +705,38 @@ private fun ExtraAppsCard() {
         lo?.lifecycle?.addObserver(ob)
         onDispose { lo?.lifecycle?.removeObserver(ob) }
     }
+    // the groups fold; each shows how many of its apps have a home-screen icon
+    val closed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     PCard {
-        Text(tr("Apps", "Uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Apps", "Uygulamalar"), color = T.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         catalog.forEach { (heading, members) ->
-        Text(heading, color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-        apps.filter { it.first in members }.forEach { (alias, icon, label) ->
-            // every row of this card has the same height and the same 36 dp icon slot
-            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+        val group = apps.filter { it.first in members }
+        Row(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(10.dp)).clickable { if (heading in closed) closed.remove(heading) else closed.add(heading) }.padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(heading, color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("${group.count { state[it.first] == true }}/${group.size}", color = T.sub, fontSize = 12.sp)
+            PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 8.dp).graphicsLayer { rotationZ = if (heading in closed) 0f else 180f })
+        }
+        (if (heading in closed) emptyList() else group).forEach { (alias, icon, label) ->
+            // every row of this card has the same height and the same 48 dp icon slot
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
                 // the colour Fluent picture of the app (Fluent UI System Icons, colour set); Windows 11 with the Line icon style keeps the thin glyph
                 val colorIcon = if (T.id == "win11" && IconStyle.of(IconCat.APPS) != "line") fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
                 // an app with no Fluent glyph of its own (Game Hub) takes the info glyph; a missing key must not crash the page
-                if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent[alias] ?: "info", FluentFilled.color(fluent[alias] ?: "info"), 24.dp) }
-                else if (colorIcon != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(30.dp)) }
-                else Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
+                if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent[alias] ?: "info", FluentFilled.color(fluent[alias] ?: "info"), 30.dp) }
+                else if (colorIcon != 0) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(40.dp)) }
+                else Box(Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
                     Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
                 }
                 Spacer(Modifier.width(12.dp))
                 // a tap on the name opens the app
-                Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable {
+                Column(Modifier.weight(1f).clickable {
                     if (alias == "ExtraStoreLauncher") openTool("extrastore") else AppPlace.byAlias(alias)?.run(ctx, openTool)
-                }.padding(vertical = 14.dp))
+                }.padding(vertical = 8.dp)) {
+                    Text(label, color = T.text, fontSize = 16.sp)
+                    Text((if (state[alias] == true) tr("Home screen icon on", "Ana ekran ikonu açık") else tr("No home screen icon", "Ana ekran ikonu yok")) + " · " +
+                        when (AppPlace.where(alias)) { "menu" -> tr("⋮ menu", "⋮ menü"); "side" -> tr("Left menu", "Sol menü"); else -> tr("Settings only", "Yalnızca ayarlar") }, color = T.sub, fontSize = 11.sp)
+                }
                 // the pin puts the app on the home screen of the phone
                 PIcon("pin", T.sub, 20.dp, Modifier.clickable { pinToHome(alias, label, icon) }.padding(horizontal = 6.dp))
                 // the chevron folds where the app is listed inside Pulse (top-right menu, left menu, Settings only); the switch is its home-screen icon
@@ -767,16 +779,20 @@ private fun ExtraAppsCard() {
                     PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
                 }
                 // where it shows, one radio per place with the place's icon: the overflow menu, the Apps group, the left menu, nowhere (Settings only)
-                if (open) PlaceChoice(cur, buildList {
-                    add("menu" to "more"); add("extra" to "apps")
-                    // a tool with a page of its own has its switch with the pages below, so the left menu is not offered twice
-                    if (!ToolPlace.hasPage(t)) add("side" to "menu")
+                // a tool with a page of its own (Health, Office, Downloads) is listed here once: its left-menu switch is the "left menu" place of this row
+                if (open) PlaceChoice(if (ToolPlace.hasPage(t) && t.target !in Opt.hidden) "side" else cur, buildList {
+                    add("menu" to "more"); add("extra" to "apps"); add("side" to "menu")
                     add("hidden" to "eyeOff")
-                }) { ToolPlace.set(ctx, t, it); rev++ }
+                }) {
+                    ToolPlace.set(ctx, t, it)
+                    if (ToolPlace.hasPage(t)) { Opt.hidden = if (it == "side") Opt.hidden - t.target else Opt.hidden + t.target; Opt.save(ctx) }
+                    rev++
+                }
             }
         }
         // the app's own pages: shown in the left menu or hidden
-        Pages.filter { it.id !in SecurityOnly }.forEach { p ->
+        // (the pages of Health, Office and Downloads are the left-menu place of their tool rows above, not a second row)
+        Pages.filter { it.id !in SecurityOnly && ToolPlace.all.none { t -> ToolPlace.hasPage(t) && t.target == it.id } }.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
