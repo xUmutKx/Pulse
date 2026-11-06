@@ -2279,3 +2279,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Muzik (Poweramp gorunumu): basligin altindaki bos aralikta su an soylenen soz satiri (Canli sozler > Oynaticida goster ile acilip kapanir); "Tam ekran sozler" ayari zaten var (kapaliyken sozler kapagin ustunde acilir) (derlenmedi)
 
 - Ekran kapagi: yeni yuzler "Pano" (Android Auto tarzi saat/hava/muzik/pil kutulari, renkli) ve "Pano (AMOLED cizgili)" (siyah ekran, beyaz cerceveli kutular), "Kucuk saat + bildirimler" (AOD: duz kucuk dijital saat, altinda uygulama simgeleri ve basliklar; bildirim erisimi gerekir); sarj takilinca 5 animasyon (halka, sivi, simsek, parcacik, hucre; Ayarlar > Tetikleyiciler, 0 kapali, dokununca onizleme); ekran kapaliysa takilinca ekran acilinca oynar; "Sarjdayken kendiliginden basla" artik varsayilan ACIK ve "yalniz yan yatikken" varsayilan KAPALI (yeni anahtarlar, eski ayar yok sayilir); NotifLog.active() anlik bildirimler (derlenmedi, cihazda denenmedi)
+
+- Sayı klavyesi: 1 uzun basış → pano, 2 uzun basış → Quick auth (eskiden ters). derlenmedi
