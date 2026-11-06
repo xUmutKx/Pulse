@@ -98,6 +98,9 @@ object LiveLyrics {
     /** Where the lock screen lyrics window starts, as a share of the screen height from the top. Default: just above the lock screen's bottom line. */
     const val LOCK_UNDER_DATE = 0.56f
     const val LOCK_ABOVE_BOTTOM = 0.74f
+    /** The size of the lock screen lyrics in sp; 0 follows the lyrics size of the music player. */
+    fun lockFont(c: Context): Int = prefs(c).getInt("lock_font", 0).let { if (it <= 0) 0 else it.coerceIn(12, 44) }
+    fun setLockFont(c: Context, v: Int) = prefs(c).edit().putInt("lock_font", v).apply()
     fun lockTop(c: Context): Float = prefs(c).getFloat("lock_top", LOCK_ABOVE_BOTTOM).coerceIn(0.10f, 0.90f)
     fun setLockTop(c: Context, v: Float) = prefs(c).edit().putFloat("lock_top", v.coerceIn(0.10f, 0.90f)).apply()
 
@@ -352,6 +355,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var autoPick by remember { mutableStateOf(Lyrics.autoPick(c)) }
     var wordSync by remember { mutableStateOf(LiveLyrics.wordSync(c)) }
     var minL by remember { mutableStateOf(LiveLyrics.minLines(c)) }
+    var lockFont by remember { mutableStateOf(LiveLyrics.lockFont(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     // where the lock screen window starts (the preview and the slider share it)
     var top by remember { mutableStateOf(LiveLyrics.lockTop(c)) }
@@ -377,6 +381,11 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
                     runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${c.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             if (lock) {
+                Text(tr("Text size", "Yazı boyutu"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(lockFont == 0, tr("Like the player", "Oynatıcı gibi")) { lockFont = 0; LiveLyrics.setLockFont(c, 0) }
+                    listOf(16, 20, 24, 28, 32, 38).forEach { n -> PChip(lockFont == n, "$n") { lockFont = n; LiveLyrics.setLockFont(c, n) } }
+                }
                 Text(tr("Least lines to show", "Gösterilecek en az satır"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(1, 2, 3).forEach { n -> PChip(minL == n, "$n") { minL = n; LiveLyrics.setMinLines(c, n) } }

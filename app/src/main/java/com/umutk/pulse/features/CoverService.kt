@@ -306,6 +306,14 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
     }
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
         lastTouch = android.os.SystemClock.uptimeMillis()
+        // the camera opened (the swipe from the lock screen, or the camera app): the cover and the lock screen lyrics close, they must not stay over the viewfinder
+        if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val p = event.packageName?.toString().orEmpty(); val k = event.className?.toString().orEmpty()
+            if (p != packageName && (p.contains("camera", true) || k.contains("camera", true))) {
+                com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)
+                if (StandBy.showing) StandBy.hide(this)
+            }
+        }
         // a password or text field got the focus (the PIN, the password, an edit): the lock screen lyrics step aside until the screen goes off
         if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED &&
             (event.isPassword || event.className?.contains("EditText") == true)) com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)

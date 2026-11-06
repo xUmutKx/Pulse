@@ -54,6 +54,9 @@ object LockLyricsOverlay {
             runCatching { ((host ?: app).getSystemService(Context.WINDOW_SERVICE) as WindowManager).updateViewLayout(box, lp) }
         }
         // a line is set only when it changed: the window is not laid out again on every tick
+        // the size follows the setting at once, also while the window is up
+        val fs = fontSize(app)
+        if (now != null && kotlin.math.abs(now!!.textSize / (app.resources.displayMetrics.scaledDensity.takeIf { it > 0f } ?: 1f) - fs) > .6f) { now?.textSize = fs; next?.textSize = fs - 4f }
         // a new line fades in instead of jumping in, and the window keeps its height (the views reserve their lines), so nothing shifts on the screen
         if (now?.text?.toString() != current) { now?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = current; v.animate().alpha(1f).setDuration(240).start() } }
         val n = upcoming?.takeIf { it.isNotBlank() }
@@ -62,6 +65,9 @@ object LockLyricsOverlay {
         next?.visibility = View.VISIBLE
         return true
     }
+
+    /** The size of the lines: the setting of the lock screen lyrics, else the lyrics size of the player. */
+    private fun fontSize(app: Context): Float = LiveLyrics.lockFont(app).takeIf { it > 0 }?.toFloat() ?: MusicSettings.lyricsFont(app).coerceIn(12, 30).toFloat()
 
     private fun add(app: Context): Boolean {
         val acc = CoverAccessibilityService.instance
@@ -83,7 +89,7 @@ object LockLyricsOverlay {
         }
         params = lp
         // the size is the lyrics size of the music player (its setting), a little under what the player draws
-        val size = MusicSettings.lyricsFont(app).coerceIn(12, 30).toFloat()
+        val size = fontSize(app)
         val pad = (12 * d.density).toInt()
         val l = LinearLayout(base).apply {
             orientation = LinearLayout.VERTICAL
