@@ -139,3 +139,33 @@ internal fun MedalsCard() {
         }
     }
 }
+
+/**
+ * The gym part of the Health page: workouts and the weight lifted this week, today's food against the goal, the muscle to train next, and a way into the log
+ * (0 train, 5 food, 6 recap).
+ */
+@Composable
+fun GymSummary(open: (Int) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val week = remember { System.currentTimeMillis() - 7 * 86_400_000L }
+    val ss = remember { GymStore.sessions(ctx) }
+    val thisWeek = ss.filter { it.t >= week }
+    val cal = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }
+    val kcal = remember { GymStore.foods(ctx).filter { it.t >= cal.timeInMillis }.sumOf { it.kcal } }
+    val goal = remember { GymStore.kcalGoal(ctx) }
+    val next = remember { GymCoach.suggest(ctx).firstOrNull() }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Gym", "Spor"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            PButton(tr("Start", "Başla"), compact = true) { open(0) }
+        }
+        Text("${thisWeek.size} " + tr("workouts this week", "antrenman bu hafta") + " · %,d kg".format(thisWeek.sumOf { it.volume.toDouble() }.toInt()), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(tr("Food today", "Bugün yenen") + ": $kcal / $goal kcal", color = T.sub, fontSize = 13.sp)
+        next?.let { Text(tr("Next: ", "Sıradaki: ") + GymData.muscleName(it.muscle), color = T.sub, fontSize = 13.sp) }
+        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Food", "Beslenme"), compact = true) { open(5) }
+            PButton(tr("Receipt", "Fiş"), compact = true) { open(6) }
+            PButton(tr("Library", "Egzersizler"), compact = true) { open(1) }
+        }
+    }
+}

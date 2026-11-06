@@ -78,12 +78,12 @@ private val EXTRA_SENSOR = Regex("spo2|oxygen|arable", RegexOption.IGNORE_CASE)
 @Composable
 fun HealthScreen(onBack: () -> Unit) {
     // the gym log opens inside Health and takes its back button
-    var gym by remember { mutableStateOf(false) }
-    if (gym) com.umutk.pulse.features.gym.GymScreen { gym = false } else HealthMain(onBack) { gym = true }
+    var gym by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    if (gym >= 0) com.umutk.pulse.features.gym.GymScreen({ gym = -1 }, gym) else HealthMain(onBack) { gym = it }
 }
 
 @Composable
-private fun HealthMain(onBack: () -> Unit, openGym: () -> Unit) {
+private fun HealthMain(onBack: () -> Unit, openGym: (Int) -> Unit) {
     val ctx = LocalContext.current
     val sm = remember { ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val stepSensor = remember { sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
@@ -232,16 +232,8 @@ private fun HealthMain(onBack: () -> Unit, openGym: () -> Unit) {
             }
             LinearProgressIndicator(progress = { (steps / goalSteps.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
-        // the gym log: exercises with pictures, sets, rest timer, history, progress, body numbers, foods and a receipt recap
-        PCard {
-            Row(androidx.compose.ui.Modifier.fillMaxWidth().clickable { openGym() }, verticalAlignment = Alignment.CenterVertically) {
-                Column(androidx.compose.ui.Modifier.weight(1f)) {
-                    Text(tr("Gym", "Spor"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(tr("Exercises, sets, progress, food", "Egzersizler, setler, gelişim, beslenme"), color = T.sub, fontSize = 12.sp)
-                }
-                com.umutk.pulse.PIcon("chevron", T.sub, 20.dp)
-            }
-        }
+        // the gym log is part of Health: this week, today's food and what to train next, with a way into each part
+        com.umutk.pulse.features.gym.GymSummary(openGym)
         if (tab == 0) HealthOverview(prefs, log, today ?: HealthStore.today(prefs), bpm, rev) { showGoals = true } else {
         // no step counter on the device: the card is not shown at all
         if (stepSensor != null) PCard {

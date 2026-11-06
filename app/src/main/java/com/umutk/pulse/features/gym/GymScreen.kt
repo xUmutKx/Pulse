@@ -66,6 +66,8 @@ import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.WinAlert
+import com.umutk.pulse.features.ActRecord
+import com.umutk.pulse.features.addActRecord
 import com.umutk.pulse.extras.music.stats.ReceiptItem
 import com.umutk.pulse.extras.music.stats.ReceiptSection
 import com.umutk.pulse.extras.music.stats.ReceiptSpec
@@ -89,8 +91,8 @@ private fun hm(sec: Int) = if (sec >= 3600) "%d:%02d:%02d".format(sec / 3600, se
  * foods and a recap as a receipt. Everything stays on the phone.
  */
 @Composable
-fun GymScreen(onBack: () -> Unit) {
-    var tab by remember { mutableIntStateOf(0) }
+fun GymScreen(onBack: () -> Unit, startTab: Int = 0) {
+    var tab by remember { mutableIntStateOf(startTab.coerceIn(0, 6)) }
     var detail by remember { mutableStateOf<GymEx?>(null) }
     BackHandler { if (detail != null) detail = null else onBack() }
     val tabs = listOf(tr("Train", "Antrenman"), tr("Library", "Egzersizler"), tr("History", "Geçmiş"), tr("Progress", "Gelişim"), tr("Body", "Vücut"), tr("Food", "Beslenme"), tr("Recap", "Özet"))
@@ -340,6 +342,8 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                 val prs = done.groupBy { it.first }.count { (id, l) -> val old = GymStore.record(ctx, id); old > 0f && l.maxOf { it.second } > old }
                 val secs = if (start > 0) ((System.currentTimeMillis() - start) / 1000L).toInt() else 0
                 GymStore.addSession(ctx, GSession(start.takeIf { it > 0 } ?: System.currentTimeMillis(), secs, day(System.currentTimeMillis()), done))
+                // the session is also an activity of Health: it counts in the active minutes, the totals and the log there
+                runCatching { addActRecord(ctx.getSharedPreferences("health", Context.MODE_PRIVATE), ActRecord("gym", start.takeIf { it > 0 } ?: System.currentTimeMillis(), secs * 1000L, 0f)) }
                 GymStore.clearDraft(ctx); items.clear(); start = 0L; restEnd = 0L
                 msg = tr("Saved. ${done.size} sets" + (if (prs > 0) ", $prs new record" + (if (prs > 1) "s" else "") else ""), "Kaydedildi. ${done.size} set" + (if (prs > 0) ", $prs yeni rekor" else ""))
             }
