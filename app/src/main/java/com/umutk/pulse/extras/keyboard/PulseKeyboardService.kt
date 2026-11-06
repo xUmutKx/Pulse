@@ -1590,6 +1590,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val user = !pass && cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
             listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })
         if (!pass && !user) return false
+        // a verification code box (SMS, e-mail, authenticator) is no login: nothing from the vault is offered there
+        if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return false
         if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false
         val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
         val seen = HashSet<String>()
