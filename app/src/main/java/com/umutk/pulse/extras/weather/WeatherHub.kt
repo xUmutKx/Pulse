@@ -57,6 +57,7 @@ import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -66,6 +67,22 @@ import java.util.Locale
 
 private fun hasLocation(c: Context) =
     ContextCompat.checkSelfPermission(c, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+/**
+ * Everything the page needs for a place, the three requests at the same time (they used to run one after the other), saved for the place; [asLast] also makes it the last
+ * forecast shown (the widgets and the alerts read that one), which a quiet fetch of another city must not do.
+ */
+private suspend fun fetchPlace(ctx: Context, spot: Place, source: String, asLast: Boolean): Forecast = withContext(Dispatchers.IO) {
+    kotlinx.coroutines.coroutineScope {
+        val raw = async { WeatherApi.forecast(spot.lat, spot.lon) }
+        val aqi = async { WeatherApi.airQuality(spot.lat, spot.lon) }
+        val ex = async { WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx)) }
+        val r = raw.await(); val q = aqi.await(); val e = ex.await()
+        if (asLast) WeatherStore.saveCache(ctx, spot.name, r, q, e)
+        WeatherStore.saveFor(ctx, spot.lat, spot.lon, spot.name, r, q, e)
+        WeatherApi.parse(spot.name, r, System.currentTimeMillis(), q, e)
+    }
+}
 
 /** Weather for the phone's place or saved cities. The last forecast is drawn at once, then refreshed. */
 @Composable
@@ -92,23 +109,23 @@ fun WeatherHub(onBack: () -> Unit) {
 
     fun load(p: Place) {
         scope.launch {
-            busy = true; error = ""
+            error = ""
+            // the place is on the screen at once from the short-lived copy, so a switch costs nothing; only a copy older than ten minutes asks the services again
+            val quick = if (p.device) WeatherStore.lastDevice(ctx)?.let { Place(p.name, it.first, it.second, true) } else p
+            var fresh = false
+            quick?.let { q -> WeatherStore.cachedFor(ctx, q.lat, q.lon)?.let { (f, at) -> fc = f; place = q; WeatherStore.setPlace(ctx, q); fresh = System.currentTimeMillis() - at < 10 * 60_000L } }
+            if (fresh) return@launch
+            busy = true
             val spot = if (p.device) deviceLocation(ctx)?.let { Place(p.name, it.latitude, it.longitude, true) } else p
             if (spot == null) {
-                error = tr("No location fix yet. Search a city.", "Konum henüz alınamadı. Bir şehir arayın.")
+                if (fc == null) error = tr("No location fix yet. Search a city.", "Konum henüz alınamadı. Bir şehir arayın.")
             } else {
                 val res = runCatching {
                     withContext(Dispatchers.IO) {
                         // three tries, a little longer apart each time; the services in turn are inside forecast()
                         var last: Throwable? = null
                         for (i in 0 until 3) {
-                            runCatching {
-                                val raw = WeatherApi.forecast(spot.lat, spot.lon)
-                                val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                                val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
-                                WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
-                                WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
-                            }.onSuccess { return@withContext it }.onFailure { last = it }
+                            runCatching { fetchPlace(ctx, spot, source, true) }.onSuccess { return@withContext it }.onFailure { last = it }
                             // a rate-limited service is paused, not retried: the other services were already tried inside forecast()
                             if (WeatherApi.pausedFor("https://api.open-meteo.com/")) break
                             kotlinx.coroutines.delay(2000L * (i + 1))
@@ -118,12 +135,11 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
                 res.onSuccess {
                     fc = it; place = spot; WeatherStore.setPlace(ctx, spot)
+                    if (spot.device) WeatherStore.setLastDevice(ctx, spot.lat, spot.lon)
                     WeatherWidgets.refreshAll(ctx)
                 }.onFailure {
-                    // the last forecast saved for this place stays on the screen, with its time, instead of an error
-                    // when no source answers, the last forecast saved is shown with its own time, never an empty screen
-                    // the screen's own copy (fc) or the saved one, whichever exists; a failed refresh never leaves the screen empty
-                    val saved = WeatherStore.cached(ctx) ?: fc
+                    // when no source answers, the copy saved for this place is shown with its own time, never an empty screen
+                    val saved = WeatherStore.cachedFor(ctx, spot.lat, spot.lon)?.first ?: WeatherStore.cached(ctx) ?: fc
                     if (saved != null) { fc = saved; place = spot; error = "" }
                     else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
                 }
@@ -161,6 +177,16 @@ fun WeatherHub(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         val p = place
         if (p != null && (!p.device || hasLocation(ctx))) load(p)
+    }
+    // the other places are fetched quietly one after the other, so a switch to any of them is instant
+    LaunchedEffect(cities.size) {
+        kotlinx.coroutines.delay(2500)
+        for (c in cities.take(8)) {
+            val at = WeatherStore.cachedFor(ctx, c.lat, c.lon)?.second ?: 0L
+            if (System.currentTimeMillis() - at < 10 * 60_000L) continue
+            runCatching { fetchPlace(ctx, c, source, false) }
+            kotlinx.coroutines.delay(600)
+        }
     }
 
     val sky = skin != "app"

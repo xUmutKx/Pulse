@@ -46,6 +46,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -472,6 +474,8 @@ private fun WeatherMapScreen(onBack: () -> Unit, at: Place? = null) {
     val homeView = remember(at) {
         (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { MapPos(wx(it.lon), wy(it.lat), 5.0) }
     }
+    // the dot that shows where the place is (none while the phone's place has no fix yet)
+    val homePlace = remember(at) { (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { Place(if (it.device) tr("My location", "Konumum") else it.name, it.lat, it.lon, it.device) } }
     // the map opens on the chosen place (or the phone's place), zoomed in; without a place it shows the world, zoomed so it fills the whole screen
     fun place(sz: Size) {
         if (placed || sz.width <= 0f || sz.height <= 0f) return
@@ -611,6 +615,23 @@ private fun WeatherMapScreen(onBack: () -> Unit, at: Place? = null) {
                 val c = screenOf(pl.lat, pl.lon)
                 if (c.x < -10f || c.x > size.width + 10f || c.y < -10f || c.y > size.height + 10f) return@forEach
                 drawPlane(c, pl.track, 5.dp.toPx(), Color(0xFFFFC107))
+            }
+            // the place the weather page showed (or the phone's place): a clear dot with a halo and its name, on top of every layer
+            homePlace?.let { hp ->
+                val c = screenOf(hp.lat, hp.lon)
+                if (c.x > -60f && c.x < size.width + 60f && c.y > -60f && c.y < size.height + 60f) {
+                    val acc = com.umutk.pulse.Look.accent.copy(alpha = 1f)
+                    drawCircle(acc.copy(alpha = .22f), 22.dp.toPx(), c)
+                    drawCircle(Color.White, 10.dp.toPx(), c)
+                    drawCircle(acc, 6.5.dp.toPx(), c)
+                    drawIntoCanvas { cv ->
+                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.WHITE; textSize = 14.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            textAlign = android.graphics.Paint.Align.CENTER; setShadowLayer(4.dp.toPx(), 0f, 1.dp.toPx(), android.graphics.Color.BLACK)
+                        }
+                        cv.nativeCanvas.drawText(hp.name, c.x, c.y - 16.dp.toPx(), paint)
+                    }
+                }
             }
         }
 
