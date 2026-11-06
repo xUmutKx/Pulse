@@ -17,14 +17,17 @@ data class LyricsRecord(
     val hasLyrics get() = !instrumental && (!syncedLyrics.isNullOrBlank() || !plainLyrics.isNullOrBlank())
 
     companion object {
+        /** A text of the JSON: null for a missing or JSON-null value (org.json would give the text "null" for it, and a song with no lyrics showed "null"). */
+        private fun JSONObject.text(k: String): String? = if (!has(k) || isNull(k)) null else optString(k, "").trim().takeIf { it.isNotEmpty() && !it.equals("null", true) }
+
         fun fromJson(o: JSONObject) = LyricsRecord(
             id = o.optLong("id"),
-            trackName = o.optString("trackName"),
-            artistName = o.optString("artistName"),
-            albumName = o.optString("albumName", "").ifBlank { null },
+            trackName = o.text("trackName").orEmpty(),
+            artistName = o.text("artistName").orEmpty(),
+            albumName = o.text("albumName"),
             instrumental = o.optBoolean("instrumental"),
-            plainLyrics = o.optString("plainLyrics", "").ifBlank { null },
-            syncedLyrics = o.optString("syncedLyrics", "").ifBlank { null },
+            plainLyrics = o.text("plainLyrics"),
+            syncedLyrics = o.text("syncedLyrics"),
         )
     }
 }

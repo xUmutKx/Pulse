@@ -54,11 +54,12 @@ object LockLyricsOverlay {
             runCatching { ((host ?: app).getSystemService(Context.WINDOW_SERVICE) as WindowManager).updateViewLayout(box, lp) }
         }
         // a line is set only when it changed: the window is not laid out again on every tick
-        if (now?.text?.toString() != current) now?.text = current
+        // a new line fades in instead of jumping in, and the window keeps its height (the views reserve their lines), so nothing shifts on the screen
+        if (now?.text?.toString() != current) { now?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = current; v.animate().alpha(1f).setDuration(240).start() } }
         val n = upcoming?.takeIf { it.isNotBlank() }
         val nt = n.orEmpty()
-        if (next?.text?.toString() != nt) next?.text = nt
-        next?.visibility = if (n != null) View.VISIBLE else View.GONE
+        if (next?.text?.toString() != nt) { next?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = nt; v.animate().alpha(1f).setStartDelay(120).setDuration(240).start() } }
+        next?.visibility = View.VISIBLE
         return true
     }
 
@@ -91,11 +92,11 @@ object LockLyricsOverlay {
             background = GradientDrawable().apply { setColor(0x73000000); cornerRadius = 18 * d.density }
         }
         val a = TextView(base).apply {
-            setTextColor(Color.WHITE); textSize = size; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 3
+            setTextColor(Color.WHITE); textSize = size; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 3; minLines = 2
             setShadowLayer(6f, 0f, 2f, 0xE6000000.toInt())
         }
         val b = TextView(base).apply {
-            setTextColor(0x88FFFFFF.toInt()); textSize = size - 4f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 2
+            setTextColor(0x88FFFFFF.toInt()); textSize = size - 4f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 2; minLines = 1
             setShadowLayer(6f, 0f, 2f, 0xE6000000.toInt())
             setPadding(0, (4 * d.density).toInt(), 0, 0)
         }
