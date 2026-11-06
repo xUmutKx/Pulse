@@ -250,7 +250,8 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             // the charger plugged in: the animation of the cover's setting plays over everything (the cover, if it starts, is under it); with the screen off it waits for the screen
             val now = android.os.SystemClock.uptimeMillis()
             if (i.action == Intent.ACTION_POWER_CONNECTED) {
-                if ((getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive) ChargeAnim.show(this@CoverAccessibilityService) else chargeAt = now
+                // with the screen on it only plays when the setting asks for it; with the screen off it waits for the screen
+                if ((getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive) { if (StandByPrefs.chargeScreenOn(this@CoverAccessibilityService)) ChargeAnim.show(this@CoverAccessibilityService) } else chargeAt = now
             } else if (i.action == Intent.ACTION_SCREEN_ON && chargeAt != 0L) {
                 if (now - chargeAt < 30_000L) ChargeAnim.show(this@CoverAccessibilityService)
                 chargeAt = 0L

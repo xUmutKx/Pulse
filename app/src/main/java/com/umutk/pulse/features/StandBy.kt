@@ -153,11 +153,14 @@ object StandByPrefs {
     fun night(c: Context) = p(c).getBoolean("night2", false)
     fun setNight(c: Context, v: Boolean) = p(c).edit().putBoolean("night2", v).apply()
     /** Automatic trigger: start by itself while the phone charges. */
-    fun autoCharge(c: Context) = p(c).getBoolean("autoCharge2", true)
-    fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge2", v).apply()
+    fun autoCharge(c: Context) = p(c).getBoolean("autoCharge3", false)
+    fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge3", v).apply()
     /** The animation that plays when the charger is plugged in: 0 none, 1 to 5 the looks of [ChargeAnim]. */
-    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(0, 5)
+    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(0, 6)
     fun setChargeAnim(c: Context, v: Int) = p(c).edit().putInt("chargeAnim", v).apply()
+    /** The charge animation also plays when the screen is on while the charger is plugged in (off by default: it only greets a phone whose screen is off). */
+    fun chargeScreenOn(c: Context) = p(c).getBoolean("chargeOn", false)
+    fun setChargeScreenOn(c: Context, v: Boolean) = p(c).edit().putBoolean("chargeOn", v).apply()
     /** How big the clock and the widgets are on the cover, in percent. */
     fun size(c: Context) = p(c).getInt("size", 100)
     fun setSize(c: Context, v: Int) = p(c).edit().putInt("size", v).apply()
@@ -169,8 +172,8 @@ object StandByPrefs {
     fun widgetBlack(c: Context) = p(c).getBoolean("widget_black", false)
     fun setWidgetBlack(c: Context, v: Boolean) = p(c).edit().putBoolean("widget_black", v).apply()
     // off unless asked: a cover that starts only when the phone lies sideways never started for a phone put on its charger upright (a new key, the old default was on)
-    fun sideways(c: Context) = p(c).getBoolean("sideways2", false)
-    fun setSideways(c: Context, v: Boolean) = p(c).edit().putBoolean("sideways2", v).apply()
+    fun sideways(c: Context) = p(c).getBoolean("sideways3", true)
+    fun setSideways(c: Context, v: Boolean) = p(c).edit().putBoolean("sideways3", v).apply()
     val COLOURS = listOf(0xFFFFFFFF, 0xFFFF9F0A, 0xFFFF453A, 0xFF30D158, 0xFF0A84FF, 0xFFFF6BD6).map { Color(it) }
 }
 
@@ -239,7 +242,7 @@ object StandBy {
         // the two tiles re-read their state, so a cover closed by a double tap does not stay lit
         val app = ctx.applicationContext
         if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
-        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, StandByTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
     }
 }
 
@@ -543,6 +546,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var auto by remember { mutableStateOf(StandByPrefs.autoCharge(ctx)) }
     var idle by remember { mutableStateOf(StandByPrefs.idleSec(ctx)) }
     var chg by remember { mutableIntStateOf(StandByPrefs.chargeAnim(ctx)) }
+    var chargeOn by remember { mutableStateOf(StandByPrefs.chargeScreenOn(ctx)) }
     var side by remember { mutableStateOf(StandByPrefs.sideways(ctx)) }
     var black by remember { mutableStateOf(StandByPrefs.widgetBlack(ctx)) }
     @Composable fun sw(label: String, on: Boolean, f: (Boolean) -> Unit) = Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -678,37 +682,21 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
             Text(tr("Animation when the charger is plugged in", "Şarj takılınca animasyon"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Particles", "Parçacık"), 5 to tr("Cells", "Hücre"))
+                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Ripple", "Dalga"), 5 to tr("Bar", "Çubuk"), 6 to tr("Random", "Rastgele"))
                     .forEach { (v, n) -> PChip(chg == v, n) { chg = v; StandByPrefs.setChargeAnim(ctx, v); if (v > 0) ChargeAnim.show(ctx, v) } }
             }
+            sw(tr("Also play it while the screen is on", "Ekran açıkken de oynat"), chargeOn) { chargeOn = it; StandByPrefs.setChargeScreenOn(ctx, it) }
             sw(tr("Home screen widgets: black background", "Ana ekran widget'ları: siyah arka plan"), black) { black = it; StandByPrefs.setWidgetBlack(ctx, it) }
             if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
             Text(tr("Start when the screen is not touched", "Ekrana dokunulmayınca başla"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0 to tr("Off", "Kapalı"), 15 to "15 s", 30 to "30 s", 60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (v, n) -> PChip(idle == v, n) { idle = v; StandByPrefs.setIdleSec(ctx, v) } }
             }
-            Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The Quick Settings tile \"StandBy\" starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"StandBy\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
+            Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The \"Screen cover\" tile starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"Ekran kapağı\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
         }
     }
 }
 
-/** Quick Settings tile: starts or closes the advanced cover by hand (the manual trigger). */
-@androidx.annotation.RequiresApi(24)
-class StandByTile : android.service.quicksettings.TileService() {
-    override fun onStartListening() = paint()
-    private fun paint() {
-        qsTile?.apply {
-            label = "StandBy"
-            state = if (StandBy.showing) android.service.quicksettings.Tile.STATE_ACTIVE else android.service.quicksettings.Tile.STATE_INACTIVE
-            updateTile()
-        }
-    }
-    override fun onClick() {
-        if (!StandBy.toggle(this) && !StandBy.showing && !com.umutk.pulse.Compat.canOverlay(this) && CoverAccessibilityService.instance == null) return
-        paint()
-        if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade()
-    }
-}
 
 
 /** A small black screen showing [content] as the full-screen cover draws it: the content is laid out at a phone-sized landscape screen and scaled down to [width]. */
