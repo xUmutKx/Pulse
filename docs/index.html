@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulse — an all-in-one toolbox for Android</title>
+<meta name="description" content="Pulse is a task manager, launcher, keyboard, music player, file manager, password vault and more, in the look of Windows 95, XP, 7, 10, 11, Material or AMOLED. Free, open source, under 50 MB.">
+<meta property="og:title" content="Pulse — an all-in-one toolbox for Android">
+<meta property="og:description" content="Every screen drawn for every look: Windows 95 to 11, Material, AMOLED. Task manager, launcher, keyboard, music player, files, vault, Buds, weather and more.">
+<meta property="og:image" content="screenshots/win11-desktop.jpg">
+<style>
+:root{--bg:#f6f7fb;--fg:#14161c;--sub:#5a6070;--card:#ffffff;--line:#e2e5ee;--accent:#0067c0;--glow:#0067c033}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0b0d12;--fg:#eef0f6;--sub:#9aa2b4;--card:#141824;--line:#232a3a;--accent:#4cc2ff;--glow:#4cc2ff33}}
+:root[data-theme=dark]{--bg:#0b0d12;--fg:#eef0f6;--sub:#9aa2b4;--card:#141824;--line:#232a3a;--accent:#4cc2ff;--glow:#4cc2ff33}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:background .4s,color .4s}
+a{color:var(--accent)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-left))}
+nav{position:sticky;top:0;z-index:5;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:18px;height:56px}
+nav b{font-size:20px;letter-spacing:.5px}
+nav .sp{flex:1}
+nav a.l{color:var(--sub);text-decoration:none;font-size:14px}
+nav a.l:hover{color:var(--fg)}
+.btn{display:inline-block;background:var(--accent);color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;box-shadow:0 6px 24px var(--glow);transition:transform .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.o{background:transparent;color:var(--fg);border:1px solid var(--line);box-shadow:none}
+.tg{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px}
+.hero{padding:72px 0 40px;text-align:center;position:relative;overflow:hidden}
+.hero h1{font-size:clamp(34px,6vw,64px);line-height:1.08;margin:0 0 14px;letter-spacing:-1px}
+.hero h1 span{color:var(--accent);transition:color .6s}
+.hero p{max-width:640px;margin:0 auto 26px;color:var(--sub);font-size:18px}
+.hero .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;animation:float 12s ease-in-out infinite;pointer-events:none}
+.orb.a{width:340px;height:340px;background:var(--accent);left:-80px;top:-60px}
+.orb.b{width:300px;height:300px;background:#a855f7;right:-60px;top:120px;animation-delay:-5s}
+@keyframes float{50%{transform:translate(40px,30px) scale(1.12)}}
+.looks{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:30px 0 8px}
+.look{border:1px solid var(--line);background:var(--card);padding:6px 14px;border-radius:99px;font-size:13px;cursor:pointer;color:var(--sub);transition:.25s}
+.look.on{background:var(--accent);color:#fff;border-color:var(--accent);transform:scale(1.07)}
+.shots{display:flex;gap:16px;overflow:auto;padding:26px 4px 30px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.shots figure{margin:0;flex:0 0 auto;scroll-snap-align:center;text-align:center}
+.shots img{height:420px;max-width:none;border-radius:18px;border:1px solid var(--line);box-shadow:0 14px 40px #0004;transition:transform .35s}
+.shots img:hover{transform:translateY(-6px) rotate(-.6deg)}
+.shots figcaption{font-size:13px;color:var(--sub);margin-top:8px}
+h2{font-size:clamp(26px,4vw,38px);margin:60px 0 6px;letter-spacing:-.5px}
+.lead{color:var(--sub);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;transition:transform .3s,box-shadow .3s,border-color .3s}
+.card:hover{transform:translateY(-4px);box-shadow:0 16px 40px var(--glow);border-color:var(--accent)}
+.card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--glow);color:var(--accent);font-size:22px;margin-bottom:10px}
+.card h3{margin:0 0 6px;font-size:18px}
+.card p{margin:0;color:var(--sub);font-size:14.5px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tags span{font-size:11.5px;border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--sub)}
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s}
+.rv.in{opacity:1;transform:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:40px 0}
+.stat{text-align:center;padding:18px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.stat b{display:block;font-size:34px;color:var(--accent)}
+.stat span{color:var(--sub);font-size:13px}
+.topics{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.topics span{background:var(--glow);color:var(--accent);padding:4px 12px;border-radius:99px;font-size:13px}
+footer{margin:70px 0 40px;padding-top:24px;border-top:1px solid var(--line);color:var(--sub);font-size:14px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<nav><div class="wrap"><b>Pulse</b><span class="sp"></span><a class="l" href="#features">Features</a><a class="l" href="#looks">Looks</a><a class="l" href="https://github.com/xUmutKx/Pulse">GitHub</a><button class="tg" id="tg" aria-label="Switch theme">◐</button></div></nav>
+
+<header class="hero"><div class="orb a"></div><div class="orb b"></div>
+<div class="wrap">
+<h1>One app for <span id="word">everything</span><br>your phone is missing</h1>
+<p>A task manager, launcher, keyboard, music player, file manager, password vault, Buds manager, weather, health and more. Drawn for every look, free, open source and under 50&nbsp;MB.</p>
+<div class="cta"><a class="btn" href="https://github.com/xUmutKx/Pulse/releases/latest">Download the latest APK</a><a class="btn o" href="#features">See everything</a></div>
+<div class="looks" id="looks"></div>
+</div></header>
+
+<main class="wrap">
+<div class="shots rv" aria-label="Screenshots">
+<figure><img src="screenshots/win11-desktop.jpg" alt="Windows 11 look" loading="lazy"><figcaption>Windows 11</figcaption></figure>
+<figure><img src="screenshots/music-player.jpg" alt="Music player" loading="lazy"><figcaption>Music player</figcaption></figure>
+<figure><img src="screenshots/keyboard.jpg" alt="Keyboard" loading="lazy"><figcaption>Keyboard</figcaption></figure>
+<figure><img src="screenshots/buds-manager.jpg" alt="Buds manager" loading="lazy"><figcaption>Buds manager</figcaption></figure>
+<figure><img src="screenshots/blackout.jpg" alt="BlackOut" loading="lazy"><figcaption>BlackOut</figcaption></figure>
+<figure><img src="screenshots/weather.jpg" alt="Weather" loading="lazy"><figcaption>Weather</figcaption></figure>
+<figure><img src="screenshots/files.jpg" alt="Files" loading="lazy"><figcaption>Files</figcaption></figure>
+<figure><img src="screenshots/calculator.jpg" alt="Calculator" loading="lazy"><figcaption>Calculator</figcaption></figure>
+</div>
+
+<div class="stats rv">
+<div class="stat"><b data-n="7">0</b><span>looks, from Windows 95 to AMOLED</span></div>
+<div class="stat"><b data-n="25">0</b><span>extra apps with their own icon</span></div>
+<div class="stat"><b data-n="20">0</b><span>home-screen widgets and more</span></div>
+<div class="stat"><b data-n="50">0</b><span>MB at most</span></div>
+</div>
+
+<h2 id="features" class="rv">Everything in Pulse</h2>
+<p class="lead rv">Each part is built for every look and changes at once, no restart.</p>
+<div class="grid" id="grid"></div>
+
+<h2 class="rv">Built in the open</h2>
+<p class="lead rv">Kotlin and Jetpack Compose, GPL-3.0. Ideas, bugs and pull requests are welcome.</p>
+<div class="topics rv" id="topics"></div>
+<p class="rv"><a class="btn" href="https://github.com/xUmutKx/Pulse">Star Pulse on GitHub</a> &nbsp; <a href="privacy.html">Privacy</a></p>
+</main>
+<footer class="wrap">Pulse · © xUmutKx · GPL-3.0 · Made for people who like their phone to feel like a desktop.</footer>
+
+<script>
+var F=[
+["🪟","Looks","Windows 95, XP, 7, 10 and 11, Material You and AMOLED. Start-up screens, sounds, wallpapers and Fluent icons for each.",["Win 95","XP","7","10","11","Material","AMOLED"]],
+["📊","Task manager","Live CPU, memory, storage, network, GPU, battery and temperature, processes with End task, startup apps and services.",["processes","performance","battery"]],
+["🚀","Launcher","Home screens for every look with folders, widgets, wallpapers, icon packs and open animations.",["home","widgets","folders"]],
+["⌨️","Keyboard","Autocorrect that learns, themes, effects, glide typing, translation bar, clipboard history, number pad and a vault bar for logins.",["autocorrect","themes","clipboard"]],
+["🎵","Music player","Material, Poweramp, Winamp and WMP skins, lyrics word by word, equalizer, mixes, and a recap as a shop receipt with a barcode.",["lyrics","Winamp","recap"]],
+["🎧","Buds manager","Galaxy Buds battery, noise control, touch controls with custom hold actions, equalizer and find my earbuds.",["ANC","gestures","EQ"]],
+["🔐","Passwords and codes","A private vault with Bitwarden import and an authenticator. Suggestions sit on the keyboard bar.",["vault","TOTP","offline"]],
+["📁","Files","File manager with zip, 7z and rar, duplicate and large file finders, downloads and an APK installer.",["archives","installer","downloads"]],
+["🌦️","Weather","Forecast with places, a sun arc, moon phase, alerts and a widget with no background.",["alerts","sun","moon"]],
+["📝","Notes and Paint","Notes with a pen toolbar and ink, voice notes, Paint, ArtCraft, a recorder and a screen recorder.",["ink","voice","record"]],
+["❤️","Health","Steps, heart rate from the camera, battery wear and a workout log with recaps.",["steps","gym","recap"]],
+["🛡️","BlackOut and tools","Greys to true black on AMOLED, motion cues against motion sickness, floating keys, compass, level, timers and a terminal.",["AMOLED","toolkit","terminal"]],
+["🔒","App lock","Lock any app with a pattern, PIN or password and a fingerprint, in the look you picked.",["pattern","PIN","biometric"]],
+["📅","Calendar, contacts, messages","Standalone apps that follow their own look: SMS and MMS, Calendar, Contacts and Photos.",["SMS","calendar","contacts"]],
+["🪄","Screen cover","A dashboard face, always-on clock and charge animations for the desk or the car.",["AOD","charging","dashboard"]],
+["🧩","Widgets","Over 20 widgets drawn live: Windows 7 gadgets, XP classics, Material You, glass, Winamp and more.",["gadgets","tiles","Winamp"]]
+];
+var g=document.getElementById('grid');
+F.forEach(function(f){var d=document.createElement('div');d.className='card rv';d.innerHTML='<div class="ic">'+f[0]+'</div><h3>'+f[1]+'</h3><p>'+f[2]+'</p><div class="tags">'+f[3].map(function(t){return '<span>'+t+'</span>'}).join('')+'</div>';g.appendChild(d)});
+var T=['android','kotlin','jetpack-compose','material-you','windows-11','windows-95','windows-xp','windows-7','task-manager','toolbox','launcher','android-launcher','keyboard','music-player','poweramp','winamp','lyrics','file-manager','password-manager','authenticator','weather','notes','screen-recorder','galaxy-buds','amoled','widgets','debloater','open-source','foss','all-in-one','apk-installer'];
+document.getElementById('topics').innerHTML=T.map(function(t){return '<span>#'+t+'</span>'}).join('');
+var L=[["Windows 95","#008080"],["Windows XP","#2a6fdb"],["Windows 7","#2b88d8"],["Windows 10","#0078d4"],["Windows 11","#0067c0"],["Material You","#6750a4"],["AMOLED","#00e0a0"]];
+var lk=document.getElementById('looks'),root=document.documentElement,w=document.getElementById('word'),W=['everything','your files','your music','your keyboard','your passwords','your battery','your look'];
+function setLook(i){[].forEach.call(lk.children,function(c,k){c.classList.toggle('on',k===i)});root.style.setProperty('--accent',L[i][1]);root.style.setProperty('--glow',L[i][1]+'33');w.textContent=W[i]}
+L.forEach(function(l,i){var b=document.createElement('button');b.className='look';b.textContent=l[0];b.onclick=function(){clearInterval(t);setLook(i)};lk.appendChild(b)});
+var cur=0;setLook(0);var t=setInterval(function(){cur=(cur+1)%L.length;setLook(cur)},2400);
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
+var so=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;var el=e.target,n=+el.dataset.n,s=0,id=setInterval(function(){s+=Math.max(1,Math.ceil(n/30));if(s>=n){s=n;clearInterval(id)}el.textContent=s},30);so.unobserve(el)})},{threshold:.6});
+document.querySelectorAll('[data-n]').forEach(function(e){so.observe(e)});
+document.getElementById('tg').onclick=function(){var d=root.getAttribute('data-theme');root.setAttribute('data-theme',d==='dark'||(!d&&matchMedia('(prefers-color-scheme:dark)').matches)?'light':'dark')};
+</script>
+</body>
+</html>
