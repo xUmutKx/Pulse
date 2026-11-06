@@ -201,7 +201,8 @@ class AccessKeyboardService : AccessibilityService() {
                 val f = focusedField()
                 if (f != null) { runCatching { f.recycle() }; showKeys() } else hideKeys()
             }
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> hideKeys()
+            // a window changed: the keyboard stays while the field in front still has the focus (the system keyboard hiding is such a change), else it goes
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> { val f = focusedField(); if (f != null) runCatching { f.recycle() } else hideKeys() }
         }
     }
 
@@ -268,6 +269,8 @@ class AccessKeyboardService : AccessibilityService() {
         }
         view = v; owner = o
         runCatching { w.addView(v, params) }.onFailure { view = null; o.stop(); owner = null }
+        // the field is written by this keyboard: the phone's own keyboard stays down, so the screen keeps its size and can be used
+        if (view != null) systemKeyboard(hidden = true)
     }
 
     private fun hideKeys() {
@@ -275,6 +278,13 @@ class AccessKeyboardService : AccessibilityService() {
         runCatching { wm?.removeView(v) }
         owner?.stop()
         owner = null; view = null
+        systemKeyboard(hidden = false)
+    }
+
+    /** The phone's own on-screen keyboard: kept down while this one writes into a field, back to normal when it goes. */
+    private fun systemKeyboard(hidden: Boolean) {
+        if (Build.VERSION.SDK_INT < 24) return
+        runCatching { softKeyboardController.setShowMode(if (hidden) AccessibilityService.SHOW_MODE_HIDDEN else AccessibilityService.SHOW_MODE_AUTO) }
     }
 
     /** The focused text field of the window in front, or null when the focus is not on a field. */
