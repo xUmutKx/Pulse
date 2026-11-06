@@ -41,7 +41,26 @@ object WeatherProviders {
         return at(transit - w / 360.0) to at(transit + w / 360.0)
     }
 
-    private fun build(now: Now, hours: List<Hr>, lat: Double, lon: Double, zone: ZoneId): String {
+    /**
+     * Every service gives its points at its own spacing: wttr, OpenWeatherMap and 7Timer every three hours, MET Norway every hour and then every six. The page, the widgets
+     * and the alerts take "the next 24 (or 12) hours" as that many list entries, so a three-hourly service showed three times the span. The list is made hourly here
+     * (the temperature in a straight line between two points, the sky of the nearer point, the chance of rain of the earlier one), whichever service answered.
+     */
+    private fun hourly(list: List<Hr>): List<Hr> {
+        val s = list.sortedBy { it.t }.distinctBy { it.t }
+        val out = ArrayList<Hr>()
+        for (i in s.indices) {
+            val a = s[i]
+            out += a
+            val b = s.getOrNull(i + 1) ?: break
+            val gap = java.time.Duration.between(a.t, b.t).toHours().toInt()
+            if (gap in 2..12) for (k in 1 until gap) out += Hr(a.t.plusHours(k.toLong()), a.temp + (b.temp - a.temp) * k / gap, if (k * 2 > gap) b.code else a.code, a.rain)
+        }
+        return out
+    }
+
+    private fun build(now: Now, hoursIn: List<Hr>, lat: Double, lon: Double, zone: ZoneId): String {
+        val hours = hourly(hoursIn)
         val ht = JSONArray(); val hc = JSONArray(); val hT = JSONArray(); val hp = JSONArray()
         hours.forEach { ht.put(fmt(it.t)); hc.put(it.code); hT.put(it.temp); hp.put(it.rain) }
         // days: the extremes of the hours, the sky of the middle of the day, the highest chance of rain
@@ -128,7 +147,7 @@ object WeatherProviders {
         val start = LocalDateTime.of(init.substring(0, 4).toInt(), init.substring(4, 6).toInt(), init.substring(6, 8).toInt(), init.substring(8, 10).toInt(), 0)
             .atZone(ZoneOffset.UTC).withZoneSameInstant(zone).toLocalDateTime()
         val series = j.getJSONArray("dataseries")
-        val hours = ArrayList<Hr>(); var now: Now? = null
+        val pts = ArrayList<Pair<Hr, Now>>()
         for (i in 0 until series.length()) {
             val e = series.getJSONObject(i)
             val t = start.plusHours(e.optLong("timepoint", 0L))
@@ -142,21 +161,16 @@ object WeatherProviders {
             val wind = e.optJSONObject("wind10m")
             val speed = t7Wind.getOrElse(wind?.optInt("speed", 1) ?: 1) { 0.0 }
             val hum = e.optString("rh2m", "50").replace("%", "").toIntOrNull() ?: 50
-            if (now == null) now = Now(t, temp, temp, hum, code, speed, t7Dir(wind?.optString("direction", "N") ?: "N"), 1013.0, (cloud - 1) * 12, if (prec == "none") 0.0 else amount.toDouble())
-            hours += Hr(t, temp, code, rain)
+            pts += Hr(t, temp, code, rain) to Now(t, temp, temp, hum, code, speed, t7Dir(wind?.optString("direction", "N") ?: "N"), 1013.0, (cloud - 1) * 12, if (prec == "none") 0.0 else amount.toDouble())
         }
-        val n = now ?: error("7Timer sent no readings")
-        // 7Timer gives one point every three hours: the hours between two points are filled in (temperature in a straight line, the sky of the earlier point),
-        // so the hour list does not jump three hours at a time
-        val full = ArrayList<Hr>()
-        for (i in hours.indices) {
-            val a = hours[i]
-            full += a
-            val b = hours.getOrNull(i + 1) ?: break
-            val gap = java.time.Duration.between(a.t, b.t).toHours().toInt()
-            for (k in 1 until gap) full += Hr(a.t.plusHours(k.toLong()), a.temp + (b.temp - a.temp) * k / gap, a.code, a.rain)
-        }
-        return build(n, full.take(120), lat, lon, zone)
+        if (pts.isEmpty()) error("7Timer sent no readings")
+        // the run is some hours old, so its first point lies in the past: "now" is the latest point that is not in the future (at this hour), and the hours start there
+        val nowT = LocalDateTime.now(zone).withMinute(0).withSecond(0).withNano(0)
+        val ix = pts.indexOfLast { !it.first.t.isAfter(nowT) }.coerceAtLeast(0)
+        val c = pts[ix].second
+        val n = Now(nowT, c.temp, c.feels, c.hum, c.code, c.wind, c.dir, c.press, c.cloud, c.precip)
+        // the hours between two points are filled in by build() (it makes every service's list hourly)
+        return build(n, pts.drop(ix).map { it.first }.take(80), lat, lon, zone)
     }
 
     // ---- MET Norway: no key -----------------------------------------------------------------------------------------------------------------

@@ -113,7 +113,7 @@ fun WeatherHub(onBack: () -> Unit) {
             // the place is on the screen at once from the short-lived copy, so a switch costs nothing; only a copy older than ten minutes asks the services again
             val quick = if (p.device) WeatherStore.lastDevice(ctx)?.let { Place(p.name, it.first, it.second, true) } else p
             var fresh = false
-            quick?.let { q -> WeatherStore.cachedFor(ctx, q.lat, q.lon)?.let { (f, at) -> fc = f; place = q; WeatherStore.setPlace(ctx, q); fresh = System.currentTimeMillis() - at < 10 * 60_000L } }
+            quick?.let { q -> WeatherStore.cachedFor(ctx, q.lat, q.lon)?.let { (f, at) -> fc = f; place = q; WeatherStore.setPlace(ctx, q); WeatherStore.makeLast(ctx, q.lat, q.lon); WeatherWidgets.refreshAll(ctx); fresh = System.currentTimeMillis() - at < 10 * 60_000L } }
             if (fresh) return@launch
             busy = true
             val spot = if (p.device) deviceLocation(ctx)?.let { Place(p.name, it.latitude, it.longitude, true) } else p
