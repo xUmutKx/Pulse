@@ -113,6 +113,8 @@ class MotionCueService : Service() {
     private var view: CueView? = null
     private var est: MotionEstimator? = null
     private var strip: View? = null
+    private var sensorThread: android.os.HandlerThread? = null
+    private var screenReceiver: android.content.BroadcastReceiver? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -126,12 +128,23 @@ class MotionCueService : Service() {
         if (!Compat.canOverlay(this)) { stopSelf(); return }
         val v = CueView(this).also { view = it }
         val lp = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, PixelFormat.TRANSLUCENT)
         // Android 12 treats touches through a window that is more than about 80% opaque as "obscured" and many apps refuse them; just under that, taps reach the app below
         if (Build.VERSION.SDK_INT >= 31) lp.alpha = .79f
         wm.addView(v, lp)
         addTopStrip()
-        est = MotionEstimator(this) { m -> view?.setMotion(m) }.also { it.start(android.os.Handler(android.os.Looper.getMainLooper())) }
+        // about 150 sensor events a second: on a thread of their own, so the keyboard and the other screens keep the main thread
+        val th = android.os.HandlerThread("motion-cues").also { it.start(); sensorThread = it }
+        val h = android.os.Handler(th.looper)
+        est = MotionEstimator(this) { m -> view?.setMotion(m) }.also { it.start(h) }
+        // nothing to show while the screen is off: the sensors rest too
+        val rcv = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (i.action == Intent.ACTION_SCREEN_OFF) est?.stop() else if (i.action == Intent.ACTION_SCREEN_ON) est?.start(h)
+            }
+        }
+        screenReceiver = rcv
+        ContextCompat.registerReceiver(this, rcv, android.content.IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     /**
@@ -188,7 +201,9 @@ class MotionCueService : Service() {
         running = false
         // the quick settings tile reads the state again, so it does not stay lit after a close from the top edge
         if (Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, MotionCueTile::class.java)) }
+        screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         est?.stop()
+        sensorThread?.quitSafely()
         view?.let { runCatching { wm.removeView(it) } }
         strip?.let { runCatching { wm.removeView(it) } }
         super.onDestroy()
@@ -244,7 +259,8 @@ class MotionCueService : Service() {
                 cv.drawCircle(x, y, r, dot)
             }
             if (wave) drawWave(cv, width.toFloat(), height.toFloat(), dt, mv)
-            postInvalidateOnAnimation()
+            val calm = !wave && boost < .01f && kotlin.math.abs(gvx) < 1e-4f && kotlin.math.abs(gvy) < 1e-4f && kotlin.math.abs(mv.yawRate) < 1e-3f && kotlin.math.abs(mv.pitchRate) < 1e-3f
+            if (calm) postInvalidateDelayed(100) else postInvalidateOnAnimation()
         }
 
         /** A flat surface, like liquid in a glass: it rises from the bottom every few seconds and fades out. Sideways motion tilts it, forward/back motion lifts it. */
