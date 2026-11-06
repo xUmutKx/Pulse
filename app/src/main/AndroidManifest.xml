@@ -1636,6 +1636,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".HealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_health" android:roundIcon="@mipmap/ic_ad_health" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout" android:roundIcon="@drawable/launch_blackout" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -2287,3 +2287,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Sayı klavyesi: eşleşen kayıtlı giriş/şifre varsa üst çubukta öneri olarak görünür (sayı kutularında yalnızca kullanıcı adı rakam olanlar). Profil README: eski 3 kart kaldırıldı, oled kart seti + yılan eklendi. derlenmedi
 
 - Buds yöneticisi: dokunma seçeneği "Özel" (sol=5, sağ=6, GalaxyBudsClient protokolü): kulaklık basılı tutmayı 147 mesajıyla bildirir; telefonda seçilen eylem çalışır (oynat/duraklat, sonraki/önceki, ses, ANC/ortam, gürültü döngüsü, ANC gücü, ekolayzır, konuşma algılama, oyun modu, fener, pil). derlenmedi
+
+- Ayarlar > Uygulamalar: Sağlık/Office/İndirmeler iki kez görünüyordu (araç satırı + sayfa satırı) → tek satır, sol menü yeri araç satırının seçeneği; Sağlık ayrı ana ekran ikonu (HealthLauncher, uyarlanabilir kalp ikonu); uygulamalar kartı yeniden tasarlandı (katlanır kategoriler, 48dp ikon, ikon+yer alt yazısı). derlenmedi
