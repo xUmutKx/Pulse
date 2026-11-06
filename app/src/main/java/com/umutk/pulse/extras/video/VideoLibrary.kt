@@ -297,6 +297,8 @@ class VideoPrefs(ctx: Context) {
     var showDur by bool(g, "s_dur", true)
     /** a clean name for episodes and films: "Dexter S03E08 · The Damage A Man Can Do" instead of the file name with its release tags */
     var smartNames by bool(g, "smart_names", true)
+    /** Back from a playing video: the video goes on in the small window (the floating one, else picture in picture) instead of stopping. */
+    var backMini by bool(g, "back_mini", true)
     var showExt by bool(g, "s_ext", false)
     var showPath by bool(g, "s_path", false)
     var showSize by bool(g, "s_size", false)
