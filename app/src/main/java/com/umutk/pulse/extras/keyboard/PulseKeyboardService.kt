@@ -252,7 +252,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
     }
 
-    // ---- a screenshot just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
+    // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
     private var shotItem: ClipItem? = null
     private var shotAt = 0L
     private var shotId = -1L
@@ -277,7 +277,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1"))?.use { c ->
                     if (!c.moveToFirst()) return@use null
                     val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
-                    if (System.currentTimeMillis() / 1000 - c.getLong(2) > 8 || !(name.contains("screenshot", true) || path.contains("screenshot", true))) return@use null
+                    // a screenshot (8 s) or a photo just taken with the camera, HEIC too (30 s: the camera app finishes the file a little later)
+                    val age = System.currentTimeMillis() / 1000 - c.getLong(2)
+                    val shot = name.contains("screenshot", true) || path.contains("screenshot", true)
+                    val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
+                    if (!(shot && age <= 8 || cam && age <= 30)) return@use null
                     c.getLong(0)
                 }
             }.getOrNull()
