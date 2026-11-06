@@ -177,8 +177,8 @@ private fun BRow(title: String, desc: String, checked: Boolean, onChange: (Boole
 @Composable
 private fun BudsControls(s: BudsState) {
     val ctx = LocalContext.current
-    var touchL by remember(s.touchL) { mutableStateOf(s.touchL.takeIf { it in 1..4 } ?: BudsPrefs.saved(ctx, "touchL", 2)) }
-    var touchR by remember(s.touchR) { mutableStateOf(s.touchR.takeIf { it in 1..4 } ?: BudsPrefs.saved(ctx, "touchR", 2)) }
+    var touchL by remember(s.touchL) { mutableStateOf(s.touchL.takeIf { it in 1..6 } ?: BudsPrefs.saved(ctx, "touchL", 2)) }
+    var touchR by remember(s.touchR) { mutableStateOf(s.touchR.takeIf { it in 1..6 } ?: BudsPrefs.saved(ctx, "touchR", 2)) }
     var cycle by remember(s.cycle) { mutableStateOf(s.cycle.takeIf { it in 0..2 } ?: BudsPrefs.saved(ctx, "cycle", 0)) }
     var lock by remember(s.lock) { mutableStateOf(s.lock ?: (BudsPrefs.saved(ctx, "lock", 0) == 1)) }
     var eq by remember(s.eq) { mutableStateOf(s.eq.takeIf { it in 0..5 } ?: BudsPrefs.saved(ctx, "eq", 0)) }
@@ -190,14 +190,18 @@ private fun BudsControls(s: BudsState) {
     var game by remember { mutableStateOf(BudsPrefs.saved(ctx, "game", 0) == 1) }
     var spatial by remember(s.spatial) { mutableStateOf(s.spatial ?: (BudsPrefs.saved(ctx, "spatial", 0) == 1)) }
     var find by remember { mutableStateOf(false) }
+    var holdL by remember { mutableStateOf(BudsPrefs.hold(ctx, "L")) }
+    var holdR by remember { mutableStateOf(BudsPrefs.hold(ctx, "R")) }
     fun save(k: String, v: Int) = BudsPrefs.save(ctx, k, v)
     val touchNames = listOf(1 to tr("Voice assistant", "Sesli asistan"), 2 to tr("Noise control", "Gürültü denetimi"), 3 to tr("Volume", "Ses"))
     SettingsSection(tr("Touch controls", "Dokunma denetimi"), startOpen = true) {
         Text(tr("What a touch and hold on each earbud does.", "Her kulaklıkta basılı tutmanın ne yapacağı."), color = T.sub, fontSize = 12.sp)
         Text(tr("Left", "Sol"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { touchNames.forEach { (v, n) -> PChip(touchL == v, n) { touchL = v; save("touchL", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { (touchNames + (5 to tr("Custom", "Özel"))).forEach { (v, n) -> PChip(touchL == v, n) { touchL = v; save("touchL", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        if (touchL == 5) { Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { BudsActions.all().forEach { (id, n) -> PChip(holdL == id, n) { holdL = id; BudsPrefs.setHold(ctx, "L", id) } } } }
         Text(tr("Right", "Sağ"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { touchNames.forEach { (v, n) -> PChip(touchR == v, n) { touchR = v; save("touchR", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { (touchNames + (6 to tr("Custom", "Özel"))).forEach { (v, n) -> PChip(touchR == v, n) { touchR = v; save("touchR", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        if (touchR == 6) { Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { BudsActions.all().forEach { (id, n) -> PChip(holdR == id, n) { holdR = id; BudsPrefs.setHold(ctx, "R", id) } } } }
         Text(tr("When it is set to Noise control, a hold cycles through:", "Gürültü denetimi seçiliyken basılı tutmak şunlar arasında geçer:"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
         val cycles = listOf(tr("ANC and off", "ANC ve kapalı"), tr("Ambient and off", "Ortam ve kapalı"), tr("ANC and ambient", "ANC ve ortam"))
         val bytes = listOf(intArrayOf(1, 0, 1), intArrayOf(0, 1, 1), intArrayOf(1, 1, 0))

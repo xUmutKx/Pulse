@@ -28,6 +28,8 @@ object BudsProto {
     const val GAME_MODE = 135
     const val LOCK_TOUCHPAD = 144
     const val SET_TOUCHPAD_OPTION = 146
+    /** The earbud reports a hold on a touch option set to "Custom": the first payload byte is 5 for the left and 6 for the right earbud. */
+    const val TOUCHPAD_OTHER_OPTION = 147
     const val FIND_START = 160
     const val FIND_STOP = 161
     const val SET_SEAMLESS_CONNECTION = 175

@@ -2285,3 +2285,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Şifre kasası: Pulse otomatik doldurma servisi GERİ geldi (site/uygulama girişini kaydet teklifi, SAVE_ON_ALL_VIEWS_INVISIBLE; öneriler klavye üst çubuğunda InlinePresentation ile); doğrulama kodu (OTP/SMS/captcha) alanları ne doldurulur ne kaydedilir, klavye çubuğunda da öneri yok. derlenmedi
 
 - Sayı klavyesi: eşleşen kayıtlı giriş/şifre varsa üst çubukta öneri olarak görünür (sayı kutularında yalnızca kullanıcı adı rakam olanlar). Profil README: eski 3 kart kaldırıldı, oled kart seti + yılan eklendi. derlenmedi
+
+- Buds yöneticisi: dokunma seçeneği "Özel" (sol=5, sağ=6, GalaxyBudsClient protokolü): kulaklık basılı tutmayı 147 mesajıyla bildirir; telefonda seçilen eylem çalışır (oynat/duraklat, sonraki/önceki, ses, ANC/ortam, gürültü döngüsü, ANC gücü, ekolayzır, konuşma algılama, oyun modu, fener, pil). derlenmedi
