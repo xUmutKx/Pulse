@@ -307,7 +307,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
                 Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
             }
-            if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
+            // the number pad has no bar, except while the password manager has a saved login or password to offer for the field
+            if (!st.numpad || st.emailBar || st.inline.isNotEmpty()) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }

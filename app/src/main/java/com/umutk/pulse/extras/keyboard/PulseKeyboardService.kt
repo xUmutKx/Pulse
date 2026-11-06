@@ -1587,8 +1587,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
             (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
         val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
-        val user = !pass && cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
-            listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })
+        val numeric = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE
+        val user = !pass && ((cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
+            listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })) || numeric)
         if (!pass && !user) return false
         // a verification code box (SMS, e-mail, authenticator) is no login: nothing from the vault is offered there
         if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return false
@@ -1596,6 +1597,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
         val seen = HashSet<String>()
         val list = com.umutk.pulse.features.VaultStore.matches(this, info.packageName, null)
+            // a number box offers only the logins whose user name is a number (a student or ID number, a phone number)
+            .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
             .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
             .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
         if (list.isEmpty()) return false
