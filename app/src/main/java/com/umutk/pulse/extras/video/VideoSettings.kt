@@ -227,6 +227,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("Ignore file styling", "Dosya stilini yok say"), { prefs.subIgnoreStyle }, { prefs.subIgnoreStyle = it }, done)
                 Pick(tr("Font", "Yazı tipi"), subFontNames(), { prefs.subFont }, done) { prefs.subFont = it }
                 Num(tr("Text size", "Yazı boyu"), listOf(24, 28, 32, 36, 38, 40, 44, 48, 56), { prefs.subSize }, { "$it" }, done) { prefs.subSize = it }
+                Sw(tr("Back keeps playing in a small window", "Geri tuşu küçük pencerede oynatmaya devam eder"), { prefs.backMini }, { prefs.backMini = it }, done)
                 Num(tr("Picture-in-picture text size", "Pencere içi yazı boyu"), listOf(12, 14, 16, 18, 20, 22, 24), { prefs.subSizePip }, { "$it" }, done) { prefs.subSizePip = it }
                 Pick(tr("Colour", "Renk"), subColorNames(), { prefs.subColor }, done) { prefs.subColor = it }
                 Sw(tr("Bold", "Kalın"), { prefs.subBold }, { prefs.subBold = it }, done)

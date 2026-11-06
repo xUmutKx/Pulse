@@ -208,11 +208,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             when (prefs.decoder) { 0 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON; 1 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER; else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF },
         ).also { if (prefs.decoder == 1) it.setMediaCodecSelector(softFirst) }
         rf.setEnableDecoderFallback(true); rf.applyDecoder(prefs)
+        // the cover of the video that starts (a video on the phone: the system's own thumbnail, which is quick); the others get theirs when they play
+        val coverAt = items[at].takeIf { it.local }?.let { coverBytes(ctx, it) }
         ExoPlayer.Builder(ctx, rf).net(ctx, prefs, items.any { it.uri.scheme?.startsWith("http") == true }).build().apply {
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), prefs.audioFocus)
             setHandleAudioBecomingNoisy(prefs.pauseNoisy)
             setMediaItems(
-                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(if (prefs.smartNames) smartName(it.name) else it.name.substringBeforeLast('.')).build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
+                items.mapIndexed { n, it ->
+                    val meta = androidx.media3.common.MediaMetadata.Builder().setTitle(if (prefs.smartNames) smartName(it.name) else it.name.substringBeforeLast('.'))
+                    if (n == at) coverAt?.let { b -> meta.setArtworkData(b, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER) }
+                    MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(meta.build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build()
+                },
                 at, prefs.resume(items[at].key),
             )
             trackSelectionParameters = trackSelectionParameters.buildUpon()
@@ -574,7 +580,26 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         if (u != null) adopt(u, displayName(ctx, u))
     }
 
-    BackHandler(enabled = !settings) { if (!locked) onBack() }
+    BackHandler(enabled = !settings) {
+        if (locked) return@BackHandler
+        // a video that plays goes on in a small window (the floating one, else picture in picture) instead of stopping when Back is pressed
+        if (prefs.backMini && playing && !inPip) {
+            if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
+            val pp = pipParams()
+            if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) return@BackHandler
+        }
+        onBack()
+    }
+    // the system's media card (notification, lock screen) shows the picture of the video: the cover goes into the item that plays
+    LaunchedEffect(cur, player) {
+        val v = items.getOrNull(cur) ?: return@LaunchedEffect
+        val now = player.currentMediaItem ?: return@LaunchedEffect
+        if (now.mediaId != v.key || now.mediaMetadata.artworkData != null) return@LaunchedEffect
+        val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { coverBytes(ctx, v) } ?: return@LaunchedEffect
+        val i = player.currentMediaItemIndex
+        val cur2 = player.currentMediaItem ?: return@LaunchedEffect
+        if (cur2.mediaId == v.key) player.replaceMediaItem(i, cur2.buildUpon().setMediaMetadata(cur2.mediaMetadata.buildUpon().setArtworkData(bytes, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER).build()).build())
+    }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val step = prefs.dtapSec * 1000L
@@ -1056,3 +1081,11 @@ private fun EqDialog(prefs: VideoPrefs, eq: Equalizer?, sk: VSkin, apply: () -> 
         confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
     )
 }
+
+/** The picture of a video for the media card: a video on the phone gives the system's own thumbnail, any other one a frame of it. JPEG bytes, or null. */
+internal fun coverBytes(ctx: Context, v: VideoItem): ByteArray? = runCatching {
+    val bmp: android.graphics.Bitmap? =
+        if (v.local && android.os.Build.VERSION.SDK_INT >= 29) ctx.contentResolver.loadThumbnail(v.uri, android.util.Size(512, 512), null)
+        else MediaMetadataRetriever().let { r -> try { r.setDataSource(ctx, v.uri); r.getFrameAtTime(1_000_000) } finally { r.release() } }
+    bmp?.let { b -> java.io.ByteArrayOutputStream().also { o -> b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, o) }.toByteArray() }
+}.getOrNull()

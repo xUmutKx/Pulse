@@ -102,7 +102,8 @@ internal fun subStyle(prefs: VideoPrefs): CaptionStyleCompat = CaptionStyleCompa
 )
 
 /** The subtitle text size in sp: half the chosen size on the full screen, and a smaller share of it in the picture-in-picture window. */
-internal fun subTextSp(p: VideoPrefs, pip: Boolean = false): Float = (if (pip) p.subSizePip else p.subSize).toFloat()
+// the picture-in-picture text is 40 percent smaller than its setting says (its window is small)
+internal fun subTextSp(p: VideoPrefs, pip: Boolean = false): Float = if (pip) p.subSizePip * 0.6f else p.subSize.toFloat()
 
 /** Applies every subtitle option to the player's subtitle view. */
 internal fun SubtitleView.applySubPrefs(p: VideoPrefs, pip: Boolean = false) {
