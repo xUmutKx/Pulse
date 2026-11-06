@@ -237,7 +237,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
             Text(tr("Pick an exercise", "Egzersiz seç"), color = T.text, fontSize = 17.sp, modifier = Modifier.weight(1f))
             PButton(tr("Close", "Kapat"), compact = true) { picking = false }
         }
-        ExerciseList { ex -> ensureStart(); items.add(GItem(ex.id)); save(); picking = false }
+        ExerciseList { ex -> ensureStart(); items.add(GymCoach.newItem(ctx, ex.id, 3)); save(); picking = false }
         return
     }
     if (restEnd > 0L) PCard {
@@ -252,13 +252,14 @@ private fun TrainTab(open: (GymEx) -> Unit) {
             Text(tr("Pick the exercises, or start from a program.", "Egzersizleri seç ya da bir programla başla."), color = T.sub, fontSize = 13.sp)
             PButton(tr("Add an exercise", "Egzersiz ekle")) { picking = true }
         }
+        SuggestCard { exs -> ensureStart(); exs.forEach { items.add(GymCoach.newItem(ctx, it.id, 3)) }; save() }
         val routines = remember(rev) { GymStore.routines(ctx) }
         if (routines.isNotEmpty()) PCard {
             Head(tr("My routines", "Rutinlerim"))
             routines.forEachIndexed { i, (name, list) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     Text(name + " · ${list.size}", color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                    PButton(tr("Start", "Başla"), compact = true) { ensureStart(); list.forEach { (id, n) -> items.add(GItem(id, MutableList(n) { GSet() })) }; save() }
+                    PButton(tr("Start", "Başla"), compact = true) { ensureStart(); list.forEach { (id, n) -> items.add(GymCoach.newItem(ctx, id, n)) }; save() }
                     Text("✕", color = T.sub, fontSize = 18.sp, modifier = Modifier.clickable { GymStore.deleteRoutine(ctx, i); rev++ }.padding(10.dp))
                 }
             }
@@ -278,7 +279,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                         Text(d.day + (if (d.weekday in 1..7) " · " + listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")[d.weekday - 1] else "") + " · ${d.items.size}", color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
                         PButton(tr("Start", "Başla"), compact = true) {
                             ensureStart()
-                            d.items.forEach { (name, n) -> GymData.byName(ctx, name)?.let { ex -> items.add(GItem(ex.id, MutableList(n) { GSet() })) } }
+                            d.items.forEach { (name, n) -> GymData.byName(ctx, name)?.let { ex -> items.add(GymCoach.newItem(ctx, ex.id, n)) } }
                             save()
                         }
                     }
@@ -306,6 +307,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                     Text(ex?.name ?: it0.ex, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 2)
                     val rec = remember(it0.ex) { GymStore.record(ctx, it0.ex) }
                     if (rec > 0f) Text(tr("Record", "Rekor") + ": ${fmtW(rec)} kg", color = T.sub, fontSize = 11.sp)
+                    GymCoach.target(ctx, it0.ex)?.let { tg -> Text(tr("Try", "Dene") + ": " + (if (tg.first > 0f) fmtW(tg.first) + " kg × " else "") + tg.second, color = Look.accent, fontSize = 11.sp) }
                 }
                 Text("✕", color = T.sub, fontSize = 18.sp, modifier = Modifier.clickable { items.removeAt(ii); if (items.isEmpty()) { GymStore.clearDraft(ctx); start = 0L } else save() }.padding(10.dp))
             }
@@ -417,6 +419,7 @@ private fun ProgressTab() {
         Text("${sessions.size} " + tr("sessions", "antrenman") + " · ${sessions.count { it.t >= week }} " + tr("this week", "bu hafta"), color = T.text, fontSize = 15.sp)
         Text("%,d kg ".format(vol.roundToInt()) + tr("lifted in total", "toplam kaldırıldı"), color = T.sub, fontSize = 13.sp)
     }
+    MedalsCard()
     // volume of the last eight weeks
     PCard {
         Head(tr("Weekly volume", "Haftalık hacim"))
