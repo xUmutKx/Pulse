@@ -160,7 +160,7 @@ fun NotesHub(onBack: () -> Unit) {
     }
     fun newNote(title: String = "", body: String = ""): String {
         val now = System.currentTimeMillis()
-        val n = Note(UUID.randomUUID().toString(), title, body, now, now, color = NotesPrefs.defaultColor(ctx))
+        val n = Note(UUID.randomUUID().toString(), title, body, now, now, folder = folder.orEmpty(), color = NotesPrefs.defaultColor(ctx))
         save(notes + n)
         screen = NScreen.Edit(n.id)
         return n.id
@@ -315,7 +315,10 @@ fun NotesHub(onBack: () -> Unit) {
             val only = d.ids.singleOrNull()?.let { id -> notes.firstOrNull { it.id == id }?.folder }.orEmpty()
             val existing = notes.map { it.folder }.filter { it.isNotBlank() }.distinct().sorted()
             NInput(tr("Folder", "Klasör"), tr("Folder name", "Klasör adı"), only, existing, { name ->
-                d.ids.forEach { id -> edit(id, touch = false) { it.copy(folder = name) } }
+                // the path is kept as a folder of its own too, so it stays when its notes are gone (an empty note is dropped on the way out)
+                val path = name.trim().trim('/')
+                if (path.isNotEmpty()) NotesPrefs.addFolder(ctx, path)
+                d.ids.forEach { id -> edit(id, touch = false) { it.copy(folder = path) } }
                 dlg = null
             }, { dlg = null })
         }

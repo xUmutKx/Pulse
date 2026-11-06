@@ -335,6 +335,7 @@ fun NoteEditor(
                 onSelect = { selected = it },
                 onMove = { ids, d -> editInk { l -> l.mapIndexed { i, s -> if (i in ids) NotesInk.moved(s, d) else s } } },
                 onPenUsed = { if (mode == InkMode.KEYBOARD) pick(lastDraw) },
+                onPenMenu = { if (mode == InkMode.KEYBOARD) pick(lastDraw); panel = true },
             )
             }
         }
@@ -359,6 +360,7 @@ fun NoteEditor(
             canUndo = if (inkOn) inkUndo.isNotEmpty() else undo.isNotEmpty(), canRedo = if (inkOn) inkRedo.isNotEmpty() else textRedo.isNotEmpty(),
             onUndo = { if (inkOn) undoInk() else undoText() }, onRedo = { if (inkOn) redoInk() else redoText() },
             textOn = fmt, onText = { fmt = !fmt }, onPhoto = { pickImage.launch(arrayOf("image/*")) }, moreOn = more, onMore = { more = !more },
+            penTint = if (penColor == 0) ink else Color(penColor), markerTint = Color(markerColor),
         )
     }
     }

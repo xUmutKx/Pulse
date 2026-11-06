@@ -179,6 +179,7 @@ fun InkLayer(
     onSelect: (Set<Int>) -> Unit,
     onMove: (Set<Int>, Offset) -> Unit,
     onPenUsed: () -> Unit,
+    onPenMenu: () -> Unit = {},
 ) {
     val live = remember { mutableStateListOf<Offset>() }
     val liveRel = remember { mutableStateListOf<Float>() }
@@ -295,6 +296,7 @@ fun InkLayer(
                             }
                             val rel = if (end == null && kind == 0 && gain > 0f && pts.size == live.size) liveRel.toList() else emptyList()
                             if (!erased) onStroke(InkStroke(color, width, pts, rel, kind))
+                            else if (live.size <= 3) onPenMenu()   // the side button only tapped: the pen's menu
                             else {
                                 // the side button was held: what the pen passed over is erased instead
                                 val hit = HashSet<Int>()
@@ -344,9 +346,17 @@ fun DrawScope.drawInkStroke(st: InkStroke, off: Offset) {
         }
         return
     }
+    // the curve passes through the middle of each pair of points, with the points as its guides: no corners where the pen's samples are
     val path = Path().apply {
         moveTo(pts[0].x + off.x, pts[0].y + off.y)
-        for (i in 1 until pts.size) lineTo(pts[i].x + off.x, pts[i].y + off.y)
+        if (pts.size == 2) lineTo(pts[1].x + off.x, pts[1].y + off.y)
+        else {
+            for (i in 1 until pts.size - 1) {
+                val mx = (pts[i].x + pts[i + 1].x) / 2f + off.x; val my = (pts[i].y + pts[i + 1].y) / 2f + off.y
+                quadraticBezierTo(pts[i].x + off.x, pts[i].y + off.y, mx, my)
+            }
+            lineTo(pts.last().x + off.x, pts.last().y + off.y)
+        }
     }
     drawPath(path, col, style = Stroke(width = st.width, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = blend)
 }

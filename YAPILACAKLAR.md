@@ -2260,3 +2260,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 - Extra uygulama ikonlari: son uygulamalar (recents) ekraninda her arac kendi adi ve launcher ikonuyla gorunur (hepsi ExtraToolActivity oldugu icin Pulse logosu cikiyordu); ArtCraft aktivitesinin ikonu Files ikonuydu, duzeltildi (derlenmedi)
 - Motion Cues performans: sensorler (saniyede ~150 olay) ana thread yerine kendi thread inde; overlay penceresi donanim hizlandirmali (yazilim cizimiydi); telefon sakinken saniyede 10 cizim; ekran kapaliyken sensorler durur. Klavye ve muzikle ayni anda kasmanin ana nedeni buydu (derlenmedi, cihazda olculmedi)
+
+- Notlar: klasor yolu duzeltmeleri: yazilan yol ayri bir klasor olarak saklanir (bos not silinince yol da kayboluyordu), klasor yolu seviyeli (ust klasor alt klasorlerin notlarini da gosterir, chipler seviye seviye, geri chip i), acik klasorde yeni not o klasore girer; arac cubugunda 3 boyutlu dik kalem/fosforlu/silgi (secilen yukari cikar, uc rengi mürekkep rengi); S Pen tusuna kisa basinca kalem menusu (cihaz tusu bildirirse); cizgiler orta noktalardan yumusatilir (derlenmedi, cihazda denenmedi)

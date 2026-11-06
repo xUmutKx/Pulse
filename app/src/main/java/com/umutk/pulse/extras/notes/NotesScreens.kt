@@ -129,7 +129,7 @@ fun HomeView(
     }
     val order = compareByDescending<Note> { it.pinned }.then(if (NotesPrefs.reverse(ctx)) base.reversed() else base)
     val sorted = unlocked
-        .filter { n -> (tag == null || tag in NotesStore.tagsOf(n.body)) && (folder == null || n.folder == folder) && NotesStore.matches(n, query) }
+        .filter { n -> (tag == null || tag in NotesStore.tagsOf(n.body)) && (folder == null || n.folder == folder || n.folder.startsWith("$folder/")) && NotesStore.matches(n, query) }
         .sortedWith(order)
     val sections: List<Pair<String, List<Note>>> = if (!NotesPrefs.groups(ctx) || sort == NotesPrefs.Sort.TITLE) listOf("" to sorted) else {
         val stamp: (Note) -> Long = { if (sort == NotesPrefs.Sort.CREATED) it.created else it.updated }
@@ -199,7 +199,16 @@ fun HomeView(
             Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            folders.forEach { f -> PChip(folder == f, f) { onFolder(f) } }
+            // a folder path is levels: the first names at the top; inside a folder, its own sub-folders and a chip back up
+            val here = folder.orEmpty()
+            if (folder != null) {
+                val parent = here.substringBeforeLast('/', "")
+                PChip(true, "‹ " + here) { onFolder(if (parent.isEmpty()) here else parent) }
+            }
+            folders.filter { f -> here.isEmpty() || f.startsWith("$here/") }
+                .map { f -> (if (here.isEmpty()) "" else "$here/") + (if (here.isEmpty()) f else f.removePrefix("$here/")).substringBefore('/') }
+                .distinct().sorted()
+                .forEach { path -> PChip(false, path.substringAfterLast('/')) { onFolder(path) } }
             tags.forEach { t -> PChip(tag == t, "#$t") { onTag(t) } }
         }
         if (sorted.isEmpty()) Text(tr("No notes", "Not yok"), color = sub, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
