@@ -2265,3 +2265,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 - Motion Cues ve ekran kaydedici yuzen cubugu/kalemi: erisilebilirlik hizmeti (Cover) acikken TYPE_ACCESSIBILITY_OVERLAY ile her seyin ustunde (durum cubugu, klavye, kilit ekrani), kapaliyken eski overlay izniyle; Motion Cues icin "overlay izni" artik zorunlu degil
 - Ekran kaydedici: uygulama hatayla cokerse kaydedici durdurulup o ana kadarki video galeriye (Movies/Pulse Recordings) yayinlanir; bir sonraki kayitta onceki yarim kalmis (disaridan oldurulmus) kayitlar bulunur, icinde veri olan yayinlanir, bos olan silinir (derlenmedi, cihazda denenmedi)
+
+- Yuzen klavye: erisilebilirlik klavyesi bir yazi alanina yazarken telefonun kendi klavyesi kapali tutulur (SoftKeyboardController), alan gidince normale doner; pencere degisince alan hala odaktaysa klavye kapanmaz; yazi alani yokken (oyun) oneri cubugu bos kalir ve yaziyor gibi gorunmez; gamepad tuslari SOURCE_GAMEPAD/DPAD kaynagiyla gonderilir (rastgele tus sorunu icin, cihazda denenmedi) (derlenmedi)

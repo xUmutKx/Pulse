@@ -368,7 +368,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         // a field that asks for no suggestions (many web inputs in Chrome do) still gets the bar; only the automatic correction stays off there
         noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
-        st.plain = (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
+        st.plain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
         emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
@@ -1430,7 +1430,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun padKey(code: Int, down: Boolean) {
         val c = currentInputConnection ?: return
         val t = SystemClock.uptimeMillis()
-        c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0))
+        val src = if (code in 19..22) android.view.InputDevice.SOURCE_DPAD or android.view.InputDevice.SOURCE_GAMEPAD else android.view.InputDevice.SOURCE_GAMEPAD
+        c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0, 0, -1, 0, 0, src))
     }
 
     /** "@gmail.com" (or the domain chosen in the settings) at the cursor. */
@@ -1606,6 +1607,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     private fun updateSuggestions() {
+        // no text field to write in (a game, a screen with no field): the bar has nothing to suggest, and nothing looks like typing
+        if (currentInputConnection == null || currentInputEditorInfo?.inputType == 0) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
         if (loginSuggestions()) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
