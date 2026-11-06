@@ -640,6 +640,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         var out = typed
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
         // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
+        var timedOut = false
+        val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale
         var t = if (typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
         if (t == null && correct && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
@@ -647,7 +649,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
                 val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
-                try { f.get(45, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
+                try { f.get(110, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); timedOut = true; null }
             }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
@@ -706,7 +708,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
+        // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
+        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow)
         return true
+    }
+
+    /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
+    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean) {
+        if (!KeyboardPrefs.autocorrect || !KeyboardPrefs.suggestions) return
+        scope.launch {
+            val fix = withContext(Dispatchers.Default) { KeyboardDictionary.uncancelled { runCatching { compute(code, loc, typed, pw, up, pw2).third }.getOrNull() } } ?: return@launch
+            val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
+            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
+            val c = currentInputConnection ?: return@launch
+            if (word.isNotEmpty() || st.plain) return@launch
+            val key = typed + tail
+            if (c.getTextBeforeCursor(key.length + 40, 0)?.toString()?.endsWith(key) != true) return@launch
+            c.beginBatchEdit(); c.deleteSurroundingText(key.length, 0); c.commitText(fix + tail, 1); c.endBatchEdit()
+            lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis()
+        }
     }
 
     private fun afterText() { updateCaps(); updateSuggestions() }
