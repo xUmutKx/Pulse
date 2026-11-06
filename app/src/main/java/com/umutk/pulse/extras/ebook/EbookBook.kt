@@ -137,58 +137,100 @@ object Ebook {
      * The picture of a book on the shelf: the first page of a PDF, the cover picture of an EPUB. It is drawn once and kept as a PNG
      * in the app's files, named by the book's uri. Null when the book has no picture (the shelf then draws the letter).
      */
-    private fun coverKey(uri: String): String = java.security.MessageDigest.getInstance("MD5").digest((uri + "#v3").toByteArray()).joinToString("") { "%02x".format(it) }
+    private fun coverKey(uri: String): String = java.security.MessageDigest.getInstance("MD5").digest((uri + "#v4").toByteArray()).joinToString("") { "%02x".format(it) }
 
     /** A book leaves the shelf: its picture, favourite, progress and last-opened time go with it. The book file itself stays on the phone. */
     fun forget(c: Context, uri: String) {
         val key = coverKey(uri)
         val dir = File(c.filesDir, "covers")
-        File(dir, "$key.png").delete()
+        File(dir, "$key.jpg").delete()
         File(dir, "$key.none").delete()
         val favs = HashSet(p(c).getStringSet("favs", emptySet()).orEmpty()).apply { remove(uri) }
         p(c).edit().putStringSet("favs", favs).remove("open_$uri").remove("pct_$uri").apply()
     }
 
+    // the covers of the older builds were PNG files of 480 x 720 (a big shelf took 25 MB): they are deleted once, the new ones are small JPEGs
+    @Volatile private var purged = false
+    private fun purgeOld(dir: File) {
+        if (purged) return
+        purged = true
+        dir.listFiles()?.forEach { if (it.name.endsWith(".png")) it.delete() }
+    }
+
+    /** A cover is kept as a JPEG of at most 100 KB: 240 px wide first, then lower quality and smaller until it fits. */
+    private fun saveCover(src: Bitmap, out: File) {
+        var width = 240
+        while (true) {
+            val h = (width * src.height / src.width.toFloat()).toInt().coerceAtLeast(1)
+            val small = Bitmap.createBitmap(width, h, Bitmap.Config.ARGB_8888)
+            val cv = android.graphics.Canvas(small)
+            cv.drawColor(android.graphics.Color.BLACK)   // a picture with see-through parts lies on black
+            cv.drawBitmap(src, null, android.graphics.Rect(0, 0, width, h), android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+            var q = 75
+            do {
+                out.outputStream().use { small.compress(Bitmap.CompressFormat.JPEG, q, it) }
+                q -= 12
+            } while (out.length() > 100_000L && q >= 30)
+            small.recycle()
+            if (out.length() <= 100_000L || width <= 120) return
+            width -= 60
+        }
+    }
+
     fun cover(c: Context, book: Book): File? {
         val key = coverKey(book.uri)
         val dir = File(c.filesDir, "covers").apply { mkdirs() }
-        val png = File(dir, "$key.png")
+        purgeOld(dir)
+        val png = File(dir, "$key.jpg")
         val none = File(dir, "$key.none")
         if (png.exists()) return png
         if (none.exists()) return null
         val ok = runCatching {
             if (book.pdf) pdfFirstPage(c, Uri.parse(book.uri), png)
-            // no picture inside an EPUB (or a TXT): the first page of the text, drawn like a page
+            // no picture inside an EPUB (or a TXT): a cover drawn from the title, white letters on black
             else epubCover(c, Uri.parse(book.uri), png) || Ebook.open(c, Uri.parse(book.uri))?.let { textPage(it, png) } == true
         }.getOrDefault(false)
         if (!ok) none.createNewFile()
         return if (ok) png else null
     }
 
-    /** The first page of the text, drawn on a paper-coloured page: the title, then the first paragraphs. */
+    /** A cover drawn from the book's name: black, the title in big white letters, the author under it, the first line of the book small at the foot. */
     private fun textPage(book: Book, out: File): Boolean {
-        val first = book.chapters.firstOrNull()?.paras?.joinToString("\n\n") { it.text }.orEmpty()
-        if (first.isBlank()) return false
+        if (book.title.isBlank()) return false
         val w = 480
         val h = 720
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
-        canvas.drawColor(android.graphics.Color.rgb(0xF5, 0xF2, 0xEA))
-        val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.rgb(0x1E, 0x1E, 0x1E)
-            textSize = 24f
+        canvas.drawColor(android.graphics.Color.BLACK)
+        val titlePaint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE; typeface = android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD); textSize = 54f
         }
-        val text = book.title + "\n\n" + first
         @Suppress("DEPRECATION")
-        val layout = android.text.StaticLayout(text, paint, w - 56, android.text.Layout.Alignment.ALIGN_NORMAL, 1.25f, 0f, false)
-        canvas.translate(28f, 36f)
-        layout.draw(canvas)
-        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+        var layout = android.text.StaticLayout(book.title, titlePaint, w - 80, android.text.Layout.Alignment.ALIGN_CENTER, 1.1f, 0f, false)
+        // a long title takes smaller letters so it stays inside the cover
+        while (layout.height > h * 0.55f && titlePaint.textSize > 26f) {
+            titlePaint.textSize -= 4f
+            @Suppress("DEPRECATION")
+            layout = android.text.StaticLayout(book.title, titlePaint, w - 80, android.text.Layout.Alignment.ALIGN_CENTER, 1.1f, 0f, false)
+        }
+        canvas.save(); canvas.translate(40f, (h - layout.height) / 2f - 30f); layout.draw(canvas); canvas.restore()
+        // a thin white line, then the author
+        val line = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; alpha = 160; strokeWidth = 2f }
+        val lineY = (h + layout.height) / 2f + 4f
+        canvas.drawLine(w / 2f - 40f, lineY, w / 2f + 40f, lineY, line)
+        val author = book.author.trim()
+        if (author.isNotEmpty()) {
+            val ap = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; alpha = 200; textSize = 28f }
+            @Suppress("DEPRECATION")
+            val al = android.text.StaticLayout(author, ap, w - 80, android.text.Layout.Alignment.ALIGN_CENTER, 1.1f, 0f, false)
+            canvas.save(); canvas.translate(40f, lineY + 22f); al.draw(canvas); canvas.restore()
+        }
+        saveCover(bmp, out)
         bmp.recycle()
         return true
     }
 
-    /** The first page of a PDF, drawn at the width of a cover. */
+    /** The first page of a PDF, drawn at the width of a cover. A mostly white page is turned to white letters on black. */
     private fun pdfFirstPage(c: Context, uri: Uri, out: File): Boolean {
         val fd = c.contentResolver.openFileDescriptor(uri, "r") ?: return false
         try {
@@ -197,17 +239,33 @@ object Ebook {
                 if (r.pageCount == 0) return false
                 val pg = r.openPage(0)
                 try {
-                    val w = 480
+                    val w = 320
                     val h = (w * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
                     val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                     bmp.eraseColor(android.graphics.Color.WHITE)
                     pg.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+                    saveCover(invertIfLight(bmp), out)
                     bmp.recycle()
                 } finally { pg.close() }
             } finally { r.close() }
         } finally { fd.close() }
         return true
+    }
+
+    /** The picture with its colours turned over when it is mostly light (a white page): black ground, light letters. Returned as it is otherwise. */
+    private fun invertIfLight(bmp: Bitmap): Bitmap {
+        var sum = 0L; var n = 0
+        for (x in 0 until bmp.width step 8) for (y in 0 until bmp.height step 8) {
+            val p = bmp.getPixel(x, y)
+            sum += (android.graphics.Color.red(p) * 3 + android.graphics.Color.green(p) * 6 + android.graphics.Color.blue(p)) / 10; n++
+        }
+        if (n == 0 || sum / n < 170) return bmp
+        val inv = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+        val paint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(floatArrayOf(-1f, 0f, 0f, 0f, 255f, 0f, -1f, 0f, 0f, 255f, 0f, 0f, -1f, 0f, 255f, 0f, 0f, 0f, 1f, 0f)))
+        }
+        android.graphics.Canvas(inv).drawBitmap(bmp, 0f, 0f, paint)
+        return inv
     }
 
     /**
@@ -241,7 +299,7 @@ object Ebook {
             val bytes = zipEntry(c, uri) { it.equals(path, true) } ?: continue
             val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
             val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: continue
-            out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+            saveCover(bmp, out)
             bmp.recycle()
             return true
         }

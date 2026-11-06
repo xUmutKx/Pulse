@@ -141,6 +141,24 @@ private fun coverColor(title: String): Color {
     return Color.hsv(hue.toFloat(), .45f, .55f)
 }
 
+/** For each page, the index of the paragraph (of the chapter's own list) that its first piece belongs to: where the page begins when the chapter is read by scrolling. */
+fun pageStarts(paras: List<Para>, pages: List<List<Para>>): IntArray {
+    val out = IntArray(pages.size)
+    var idx = 0
+    fun skipBlank() { while (idx < paras.size && paras[idx].text.isBlank()) idx++ }
+    skipBlank()
+    var rest = paras.getOrNull(idx)?.text.orEmpty().trim()
+    pages.forEachIndexed { pi, pg ->
+        out[pi] = idx.coerceAtMost((paras.size - 1).coerceAtLeast(0))
+        for (piece in pg) {
+            val t = piece.text.trim()
+            if (rest.isEmpty() || t.length >= rest.length - 1) { idx++; skipBlank(); rest = paras.getOrNull(idx)?.text.orEmpty().trim() }
+            else rest = rest.drop(t.length).trimStart()
+        }
+    }
+    return out
+}
+
 /** Lays the paragraphs out in pages of the given size (pixels): a paragraph is cut between two lines when a page is full. */
 fun paginate(measurer: androidx.compose.ui.text.TextMeasurer, paras: List<Para>, w: Int, h: Int, body: TextStyle, head: TextStyle, gap: Float): List<List<Para>> {
     val pages = ArrayList<List<Para>>()
@@ -529,6 +547,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var animStyle by remember { mutableStateOf(EbookPrefs.animStyle(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
+    var scrollMode by remember { mutableStateOf(EbookPrefs.scroll(ctx)) }
     var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
     var autoOn by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -652,41 +671,89 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 LaunchedEffect(autoOn, key) { if (autoOn) { kotlinx.coroutines.delay(autoSec * 1000L); if (autoOn) next() } }
                 LaunchedEffect(speaking, key) { spoken = IntRange.EMPTY; if (speaking) speaker.speak(curText[0]) else speaker.stop() }
                 LaunchedEffect(list) { pageCount = list?.size ?: 0 }
+                if (!scrollMode || list == null) {
                 AnimatedContent(
-                    targetState = key,
-                    transitionSpec = {
-                        when (if (eink) 0 else animStyle) {
-                            1 -> if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
-                                 else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
-                            // the next page feeds in from the top and the old one slides down out of the screen
-                            2 -> (slideInVertically(tween(320)) { -it } + fadeIn(tween(320))) togetherWith (slideOutVertically(tween(320)) { it } + fadeOut(tween(320)))
-                            3 -> (scaleIn(tween(220), initialScale = .9f) + fadeIn(tween(220))) togetherWith (scaleOut(tween(220), targetScale = .9f) + fadeOut(tween(220)))
-                            else -> (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
-                        }
-                    },
-                    label = "page",
-                ) { _ ->
-                    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
-                        // each paragraph; the words being read are highlighted
-                        var off = 0
-                        cur.forEach { p ->
-                            val start = off
-                            off += p.text.length + 1
-                            Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                        targetState = key,
+                        transitionSpec = {
+                            when (if (eink) 0 else animStyle) {
+                                1 -> if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
+                                     else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
+                                // the next page feeds in from the top and the old one slides down out of the screen
+                                2 -> (slideInVertically(tween(320)) { -it } + fadeIn(tween(320))) togetherWith (slideOutVertically(tween(320)) { it } + fadeOut(tween(320)))
+                                3 -> (scaleIn(tween(220), initialScale = .9f) + fadeIn(tween(220))) togetherWith (scaleOut(tween(220), targetScale = .9f) + fadeOut(tween(220)))
+                                else -> (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
+                            }
+                        },
+                        label = "page",
+                    ) { _ ->
+                        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
+                            // each paragraph; the words being read are highlighted
+                            var off = 0
+                            cur.forEach { p ->
+                                val start = off
+                                off += p.text.length + 1
+                                Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                            }
                         }
                     }
-                }
-                // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
-                Box(Modifier.fillMaxSize().pointerInput(chapter, shown, list?.size) {
-                    detectTapGestures(onTap = { o ->
-                        val w = size.width
-                        when {
-                            o.x < w / 3f -> prev()
-                            o.x > w * 2f / 3f -> next()
-                            else -> bars = !bars
-                        }
+                    // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
+                    Box(Modifier.fillMaxSize().pointerInput(chapter, shown, list?.size) {
+                        detectTapGestures(onTap = { o ->
+                            val w = size.width
+                            when {
+                                o.x < w / 3f -> prev()
+                                o.x > w * 2f / 3f -> next()
+                                else -> bars = !bars
+                            }
+                        })
                     })
-                })
+                } else {
+                    // reading by scrolling: the chapter is one long column; a page is where the paged layout would cut it
+                    val paras = chapters.getOrNull(chapter)?.paras.orEmpty()
+                    val starts = remember(list, paras) { pageStarts(paras, list) }
+                    val ls = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val sc = androidx.compose.runtime.rememberCoroutineScope()
+                    // the chapter opens at the saved page
+                    LaunchedEffect(chapter, list.size) { ls.scrollToItem(starts.getOrElse(shown) { 0 }) }
+                    // the page follows what is on the screen, and is saved
+                    LaunchedEffect(ls, starts) {
+                        androidx.compose.runtime.snapshotFlow { ls.firstVisibleItemIndex }.collect { i ->
+                            val pg = starts.indexOfLast { it <= i }.coerceAtLeast(0)
+                            if (pg != page) { page = pg; bookmarked = Ebook.bookmarks(ctx, start.uri).contains("$chapter,$pg"); save() }
+                        }
+                    }
+                    // forward: a page left half way is first brought whole to the top; the next press goes to the next page. Back is the same the other way round.
+                    fun step(dir: Int) {
+                        val i = ls.firstVisibleItemIndex
+                        val cur = starts.indexOfLast { it <= i }.coerceAtLeast(0)
+                        val atStart = starts.getOrElse(cur) { 0 } == i && ls.firstVisibleItemScrollOffset == 0
+                        when {
+                            !atStart -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur) { 0 }) }
+                            dir > 0 && cur < list.size - 1 -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur + 1) { 0 }) }
+                            dir < 0 && cur > 0 -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur - 1) { 0 }) }
+                            dir > 0 && chapter < chapters.size - 1 -> { chapter++; page = 0 }
+                            dir < 0 && chapter > 0 -> { chapter--; page = -1 }
+                        }
+                    }
+                    pageTurner.value = { step(1) }
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        Modifier.fillMaxSize().pointerInput(chapter, list.size) {
+                            detectTapGestures(onTap = { o ->
+                                val w = size.width
+                                when { o.x < w / 3f -> step(-1); o.x > w * 2f / 3f -> step(1); else -> bars = !bars }
+                            })
+                        },
+                        state = ls, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 44.dp),
+                    ) {
+                        var off = 0
+                        val offs = paras.map { p -> val o = off; off += p.text.length + 1; o }
+                        itemsIndexed(paras) { ix, p ->
+                            Text(highlighted(p.text, offs[ix], spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                        }
+                        // room at the end, so the last page can stand at the top too
+                        item { Spacer(Modifier.height((maxHeight - 120.dp).coerceAtLeast(0.dp))) }
+                    }
+                }
                 Text("${shown + 1}/${(list?.size ?: 1).coerceAtLeast(1)}", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
                 if (autoOn) Text(tr("Autoscroll", "Otomatik"), color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
             }
@@ -768,6 +835,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 SettingRow(tr("Use AMOLED dark mode", "AMOLED koyu mod"), th) { PSwitch(amoled, { amoled = it; EbookPrefs.setAmoled(ctx, it) }) }
                 SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
+                SettingRow(tr("Scroll to read", "Kaydırarak oku"), th) { PSwitch(scrollMode, { scrollMode = it; EbookPrefs.setScroll(ctx, it) }) }
             }
         }
         if (panel == "quick" && b != null) {
@@ -830,6 +898,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             StepButton("+", th) { textSize = (textSize + 2).coerceAtMost(34); rp(ctx).edit().putInt("size", textSize).apply() }
                         }
                         SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
+                        SettingRow(tr("Scroll to read", "Kaydırarak oku"), th) { PSwitch(scrollMode, { scrollMode = it; EbookPrefs.setScroll(ctx, it) }) }
                         ReaderRow(tr("Page animation", "Sayfa animasyonu"), th, animName(animStyle)) { animStyle = (animStyle + 1) % 4; EbookPrefs.setAnimStyle(ctx, animStyle) }
                     }
                     "control" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
