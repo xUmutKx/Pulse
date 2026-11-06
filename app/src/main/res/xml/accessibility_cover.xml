@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Screen cover (features/CoverService.kt): draws an overlay window; the touch events only restart the idle count of the advanced cover (no window content is read). -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeTouchInteractionStart|typeTouchInteractionEnd|typeViewScrolled|typeViewFocused"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeTouchInteractionStart|typeTouchInteractionEnd|typeViewFocused"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
-    android:notificationTimeout="0"
+    android:notificationTimeout="200"
     android:canRetrieveWindowContent="false"
     android:canTakeScreenshot="true"
     android:description="@string/cover_service_desc" />

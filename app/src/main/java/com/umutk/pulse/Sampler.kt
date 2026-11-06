@@ -225,7 +225,12 @@ object Sampler {
     private var prevTx = 0L
     private var prevAt = 0L
 
-    private fun readFile(path: String): String = try { File(path).readText() } catch (e: Exception) { if (Shell.root == true) Shell.run("cat $path") else "" }
+    // a file the app cannot read (a GPU counter of another maker) is not asked again through a root shell every second: the empty answer is remembered for a minute
+    private val unreadable = HashMap<String, Long>()
+    private fun readFile(path: String): String = try { File(path).readText() } catch (e: Exception) {
+        val now = System.currentTimeMillis()
+        if (now - (unreadable[path] ?: 0L) < 60_000L) "" else if (Shell.root == true) Shell.run("cat $path").also { if (it.isBlank()) unreadable[path] = now } else "".also { unreadable[path] = now }
+    }
 
     private fun cpuTimes(): List<LongArray> =
         readFile("/proc/stat").lineSequence().filter { it.startsWith("cpu") }.map { l ->
