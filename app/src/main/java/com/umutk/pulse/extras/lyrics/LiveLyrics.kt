@@ -66,11 +66,13 @@ object LiveLyrics {
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     fun player(c: Context) = prefs(c).getBoolean("player", true)
     fun floating(c: Context) = prefs(c).getBoolean("floating", false)
-    // on by default: the current lyric line is the notification text whenever the track has synced lyrics
-    fun notification(c: Context) = prefs(c).getBoolean("notification", true)
+    // EXPERIMENTAL, off by default: the current lyric line is the notification text whenever the track has synced lyrics
+    fun notification(c: Context) = prefs(c).getBoolean("notification", false)
     /** The lyric notification is shown on the lock screen too (its text, not only the title). */
-    // on by default (as the notification's lyrics are): the line shows on the lock screen for a track that has lyrics
-    fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
+    // EXPERIMENTAL, off by default: the line shows on the lock screen for a track that has lyrics
+    fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", false)
+    /** EXPERIMENTAL, off by default: lyrics with no times are spread over the length of the song, so they follow it like timed ones (the timing is a guess). */
+    fun spreadPlain(c: Context) = prefs(c).getBoolean("spread_plain", false)
     /** The fewest lines a song needs before its lyrics show (1 to 3; the default is 3). */
     fun minLines(c: Context): Int = prefs(c).getInt("min_lines", 3).coerceIn(1, 3)
     fun setMinLines(c: Context, n: Int) { prefs(c).edit().putInt("min_lines", n.coerceIn(1, 3)).apply() }
@@ -118,7 +120,11 @@ object LiveLyrics {
         }
         // plain lyrics: the lines are spread over the sounding part of the song (the silences are left out)
         // a track with fewer than three lines (an instrumental, or an .lrc with a stub) shows no lyrics in the notification, the lock screen or the widget
-        val timed = r?.let { if (it.synced) it else spread(it, t.durationSec * 1000L, withContext(Dispatchers.IO) { ActiveSound.of(t.path) }) }
+        val timed = r?.let {
+            if (it.synced) it
+            else if (LiveLyrics.spreadPlain(ctx)) spread(it, t.durationSec * 1000L, withContext(Dispatchers.IO) { ActiveSound.of(t.path) })
+            else null
+        }
             ?.takeIf { res -> res.lines.count { it.text.isNotBlank() } >= LiveLyrics.minLines(ctx) }
         slot = t.path to timed; slotAt = android.os.SystemClock.uptimeMillis()
         return timed
@@ -335,6 +341,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var floating by remember { mutableStateOf(LiveLyrics.floating(c)) }
     var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
+    var spread by remember { mutableStateOf(LiveLyrics.spreadPlain(c)) }
     var minL by remember { mutableStateOf(LiveLyrics.minLines(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     // where the lock screen window starts (the preview and the slider share it)
@@ -353,8 +360,8 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
         LockScreenMock(emph, top)
         SettingsSection(tr("Where", "Nerede"), startOpen = true) {
             SwitchRow(tr("Show in player", "Oynatıcıda göster"), player) { player = it; LiveLyrics.set(c, "player", it) }
-            SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
-            SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) {
+            SwitchRow(tr("Show in notification (experimental)", "Bildirimde göster (deneysel)"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
+            SwitchRow(tr("Show lyrics on the lock screen (experimental)", "Sözleri kilit ekranında göster (deneysel)"), lock) {
                 lock = it; LiveLyrics.set(c, "lock_screen", it)
                 // the lyrics are a small window: the accessibility layer (Cover) or the overlay permission has to be there for it
                 if (it && com.umutk.pulse.features.CoverAccessibilityService.instance == null && !com.umutk.pulse.Compat.canOverlay(c))
@@ -373,6 +380,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
                 Text(tr("Position", "Konum"), color = T.sub, fontSize = 12.sp)
                 com.umutk.pulse.PSlider(top, { top = it; LiveLyrics.setLockTop(c, it) }, 0.10f..0.90f, onDone = {})
             }
+            SwitchRow(tr("Time plain lyrics by the song's length (experimental)", "Zamansız sözleri şarkı süresine göre zamanla (deneysel)"), spread) { spread = it; LiveLyrics.set(c, "spread_plain", it) }
             SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
                 floating = it; LiveLyrics.set(c, "floating", it)
                 if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)

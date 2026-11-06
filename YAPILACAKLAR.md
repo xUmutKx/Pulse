@@ -2255,3 +2255,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Güncelleme penceresi yalnızca foss; play güncellemeleri Play Store üzerinden
 
 - Notlar düzenleyici: kağıdın içi geri geldi (başlık, gövde, ekler, bağlantılar, sayaçlar; 1e5c6abe commit_i silmisti, "+" ile bos sayfa aciliyordu). Samsung Notes tarzi arac cubugu: klavye, kalem (tukenmez/dolma/firca/kursun, S Pen basinc), fosforlu, silgi (kalemin silgi ucu), kement (sec, tasi, renk, sil), geri al/yinele (yazi ve cizim), parmak cizer anahtari, basili tutunca duz cizgi; cizim yazi ile birlikte kayar, sayfa asagi uzar; ayarlar kalici (derlenmedi, cihazda denenmedi)
+
+- Lyrics: oynatici sozlerinde sarki satiri artik ekrana siger (en uzun kelimeye gore kucultme, aktif satir %10 buyur, kenar payi); bildirim ve kilit ekrani sozleri varsayilan KAPALI ve "deneysel"; zamansiz sozleri sarki suresine gore zamanlama yeni ayar (deneysel, varsayilan kapali); kapaliyken bildirim/kilit ekrani sadece zamanli sozleri gosterir (derlenmedi)
