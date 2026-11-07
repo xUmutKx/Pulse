@@ -540,12 +540,14 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            st.shotThumb?.let { Image(it, null, Modifier.size(26.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop) }
-                            Text(s.drop(1), color = th.accent, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                            // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
+                            st.shotThumb?.let { Image(it, null, Modifier.height(32.dp).widthIn(max = 48.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
+                            if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
                             Text(s.drop(1).replace('\n', ' ').take(14) + if (s.length > 15) "…" else "", color = th.sub, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
+                            if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
                         } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // with a hardware keyboard: the function key that picks this word is written small in front of it
                             if (st.hardware && s.isNotEmpty()) Text("F${i + 1}", color = th.sub.copy(alpha = .55f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
@@ -1596,5 +1598,13 @@ private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
         }
     } else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         shown.forEach { (i, s) -> chip(i, s) }
+    }
+}
+
+/** The pin beside the item waiting in the right slot of the bar. */
+@Composable
+private fun QuickPin(st: KbState, th: KbTheme, act: KbActions) {
+    Box(Modifier.size(30.dp).clickable { act.quickPin() }, contentAlignment = Alignment.Center) {
+        Icon(kbIcon(th, "PushPin"), null, tint = if (st.quickPinned) th.accent else th.sub.copy(alpha = .7f), modifier = Modifier.size(16.dp))
     }
 }

@@ -68,6 +68,7 @@ class KbState {
     /** The period (seconds) of each code above, in the same order. */
     var authPeriods by mutableStateOf(listOf<Int>())
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
+    var quickPinned by mutableStateOf(false)
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
@@ -144,6 +145,7 @@ interface KbActions {
     fun extraKey(id: String)
     fun hide()
     fun clipPin(id: Long) {}
+    fun quickPin() {}
     fun clipDelete(ids: Set<Long>) {}
     fun clipClear() {}
     fun pasteClip(item: ClipItem) {}

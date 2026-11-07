@@ -78,9 +78,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var quickClip: String? = null
     private var quickAt = 0L
     private var quickLeft = 0
+    private var quickPinned = false
     // the copied text leaves the bar after two minutes even when nothing is typed: the bar is refreshed then (it only refreshed on a key before)
     private val quickExpiry = android.os.Handler(android.os.Looper.getMainLooper())
-    private val quickExpire = Runnable { if (quickClip != null && SystemClock.uptimeMillis() - quickAt >= 120_000L) { quickClip = null; updateSuggestions() } }
+    private val quickExpire = Runnable { if (quickClip != null && !quickPinned && SystemClock.uptimeMillis() - quickAt >= 120_000L) { quickClip = null; updateSuggestions() } }
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
@@ -118,7 +119,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val t = item.coerceToText(this)?.toString()?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
-            if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -131,6 +132,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (name.isEmpty() || item == null || item.text.isBlank()) return
         KeyShortcuts.put(this, name, item.text)
         android.widget.Toast.makeText(this, com.umutk.pulse.tr("Shortcut saved: $name", "Kısayol kaydedildi: $name"), android.widget.Toast.LENGTH_SHORT).show()
+    }
+    /** The pin of the bar's right slot: the item shown there is pinned in the clipboard and stays in the bar until a newer copy comes. */
+    override fun quickPin() {
+        val s = shotItem
+        if (s != null) { shotPinned = true; st.clipItems = ClipStore.togglePin(this, s.id); st.quickPinned = true; return }
+        val q = quickClip ?: return
+        quickPinned = true
+        val it = ClipStore.load(this).firstOrNull { it.image == null && it.text == q }
+        if (it != null && !it.pinned) st.clipItems = ClipStore.togglePin(this, it.id)
+        st.quickPinned = true
     }
     override fun clipPin(id: Long) { st.clipItems = ClipStore.togglePin(this, id) }
     override fun clipDelete(ids: Set<Long>) { st.clipItems = ClipStore.delete(this, ids) }
@@ -254,6 +265,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
     private var shotItem: ClipItem? = null
+    // a photo or screenshot waits 30 seconds in the bar, then it goes (the bar is refreshed then too)
+    private val shotExpiry = android.os.Handler(android.os.Looper.getMainLooper())
+    private val shotExpire = Runnable { if (shotItem != null && !shotPinned) { shotItem = null; st.shotThumb = null; updateSuggestions() } }
+    private var shotPinned = false
     private var shotAt = 0L
     private var shotId = -1L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
@@ -293,8 +308,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.clipItems = items
         val item = items.filter { it.image != null }.maxByOrNull { it.time } ?: return
         // the newest copy wins the slot: a screenshot takes it from a copied text
-        quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis()
-        st.shotThumb = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() }.getOrNull() }
+        quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        st.shotThumb = withContext(Dispatchers.IO) { runCatching {
+            val bmp = android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
+            // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
+            val deg = when (android.media.ExifInterface(item.image!!).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+            (if (deg == 0f) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true)).asImageBitmap()
+        }.getOrNull() }
+        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
         updateSuggestions()
     }
 
@@ -971,12 +992,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
             shotItem?.let { pasteClip(it) }
-            shotItem = null; st.shotThumb = null; updateSuggestions(); return
+            if (!shotPinned) { shotItem = null; st.shotThumb = null } updateSuggestions(); return
         }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
-            // the copied text stays for two minutes (the time limit below), pasting it does not remove it
+            // pasted twice, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
             quickLeft--
+            if (quickLeft <= 0 && !quickPinned) quickClip = null
             afterText(); return
         }
         val c = currentInputConnection ?: return
@@ -1604,7 +1626,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
         // a screenshot that was just taken takes the right slot for two minutes
-        if (shotItem != null && SystemClock.uptimeMillis() - shotAt > 120_000L) { shotItem = null; st.shotThumb = null }
+        if (shotItem != null && !shotPinned && SystemClock.uptimeMillis() - shotAt > 30_000L) { shotItem = null; st.shotThumb = null }
         if (shotItem != null && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
@@ -1612,7 +1634,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val q = quickClip ?: return
         // the copied text stays in the bar for two minutes; after that it is only in the clipboard (a newer copy replaces it)
-        if (SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
+        if (!quickPinned && SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
         if (word.isNotEmpty() || emailField || st.plain) return
         val label = "\u0001" + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
         slotWords = arrayOf(slotWords[0], slotWords[1], q)
