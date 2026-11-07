@@ -3,7 +3,6 @@ package com.umutk.pulse.extras.athenaeum.ui
 import com.umutk.pulse.R
 
 import android.content.Intent
-import com.umutk.pulse.extras.athenaeum.R
 import com.umutk.pulse.extras.athenaeum.TarotApp
 import android.net.Uri
 import androidx.compose.foundation.background
