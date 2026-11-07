@@ -19,13 +19,9 @@
 | <img src="docs/screenshots/win7-startup.png" width="170" alt="Windows 7 Startup apps"> | <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
 
 
-**An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
+**An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is so many stuff all sticked together actually for my own usage than turned into a general project wich includes a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
-Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `Pulse-<version>-android5.apk` for Android 5 and newer. Both hold the 64-bit ARM (arm64-v8a), 32-bit ARM (armeabi-v7a) and x86_64 libraries, so they install on phones, tablets and emulators of those kinds.
-
-
-
-### Everything in Pulse, by category
+### Everything in Pulse
 
 <details><summary><b>Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
@@ -183,7 +179,7 @@ Pulse can be your home screen, and the looks of the launcher match the app's loo
 
 #### Video player and subtitles
 
-The video player searches subtitles online from its subtitle menu, like VLC does. The search uses yifysubtitles.ch, which needs no account or key. It is mainly movies, so TV episodes may not be found.
+The video player searches subtitles online from its subtitle menu. The search uses yifysubtitles.ch, which needs no account or key. It is mainly movies, so TV episodes may not be found.
 
 #### Updates
 
@@ -191,7 +187,7 @@ Pulse checks GitHub for a newer release at most every 12 hours. When one exists,
 
 #### Tools
 
-- **Toolkit**: 20 tools, including compass (every direction is written round the dial), level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.
+- **Toolkit**: 20 tools, including compass, level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.
 - **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
 - **Network usage**: data use per app, split into mobile and Wi-Fi.
 - **DNS**: Private DNS as Auto, Off or Manual with a host name. Needs root or Shizuku.
@@ -203,25 +199,17 @@ Pulse checks GitHub for a newer release at most every 12 hours. When one exists,
 
 Pulse has these looks, each with its own title bar, buttons and window edge:
 
-- **Windows 11**, with a dark version. Dialogs are see-through, with the accent colour as a 1 px edge. Pages are see-through over the backdrop. Icons come in three styles (Settings > Look): **Fluent** (the coloured Windows 11 pack, default), **Fluent colour** (Fluent UI colour pictures for apps, tools and pages) and **Line** (thin glyphs). Material icons used in code have a pack picture or a Fluent glyph in this look.
-- **Windows 10**, with a dark version
-- **Windows 7**, with an Aero style glass title bar and glossy buttons
-- **Windows XP**, with the Luna blue title bar
-- **Windows 95**, with grey bevelled buttons
-- **Material You**, which uses the wallpaper colours on Android 12 and newer
-- **AMOLED**, pure black
+- **Windows 11**
+- **Windows 10**
+- **Windows 7**
+- **Windows XP**
+- **Windows 95**
+- **Material You**
+- **AMOLED**
 
 You can choose light, dark or the system setting. The Windows 11, Windows 10 and Material looks have an accent colour choice. The sidebar looks have a backdrop effect: None, Mica, Mica Alt, Acrylic or Glass. Pop-up windows, dialogs and menus can use the Windows, Material or AMOLED black look.
 
 Each look can have its own wallpaper. The Settings page shows the picture in the theme's preview, and sliders place it across and up or down.
-
-#### The looks
-
-Pulse can dress up as Windows 95, XP, 7, 10 or 11, or stay plain Material You / AMOLED. Each look draws its own windows, menus, buttons, dialogs and graphs. Settings has a switch to go back to the simpler earlier versions of the old looks.
-
-- **Windows 95**: the Performance tab with the CPU graph in green on black, the CPU details and a status bar at the bottom.
-- **Windows 7**: Startup apps with the Aero frame, so you can stop apps from starting at boot (root).
-- **Windows XP**: the Widgets page. Pick a look from the logo row and the list shows only that look's widgets.
 
 ### Language
 
@@ -248,7 +236,7 @@ Pulse asks for these. Most are optional and only used by the feature named.
 
 Pulse works without root. Root or Shizuku unlock more.
 
-**Root** (the `su` command) unlocks:
+**Root** unlocks:
 
 - the full process list, kernel data and temperature zones
 - services
