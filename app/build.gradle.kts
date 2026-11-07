@@ -3,11 +3,13 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.mozilla.rust-android-gradle.rust-android") // Athenaeum (extras/athenaeum): its Rust core is built into the app
 }
 
 android {
     namespace = "com.umutk.pulse"
     compileSdk = 36
+    ndkVersion = "27.2.12479018" // the Rust core of Athenaeum is built with this NDK
     defaultConfig {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
@@ -94,7 +96,24 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
     // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use
     implementation("com.klinkerapps:android-smsmms:5.2.6") { exclude(group = "com.squareup.okhttp") }
+    implementation("androidx.navigation:navigation-compose:2.8.3") // Athenaeum: its screens
+    implementation("com.google.code.gson:gson:2.11.0") // Athenaeum: the answers of its Rust core
     testImplementation("junit:junit:4.13.2") // JVM tests for extras/music (M3uParserTest)
 }
 
 composeCompiler { includeComposeMappingFile.set(false) }
+
+// Athenaeum (tarot, astrology, spirits, magic; extras/athenaeum): a Rust crate, built for the phones' two ABIs and loaded by TarotCore
+cargo {
+    module = "../native/athenaeum"
+    libname = "tarot_core"
+    targets = listOf("arm64", "arm")
+    apiLevel = 21
+    profile = "release"
+    extraCargoBuildArguments = listOf("--package", "tarot-core")
+}
+
+// every variant takes the compiled libraries in (the plugin makes the cargoBuild task after the project is read)
+afterEvaluate {
+    tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach { dependsOn("cargoBuild") }
+}
