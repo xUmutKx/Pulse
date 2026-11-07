@@ -121,7 +121,8 @@ class MotionCueService : Service() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(QuietChannel("cues", "Motion cues", NotificationManager.IMPORTANCE_LOW))
-        val n = androidx.core.app.NotificationCompat.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true).build()
+        val n = androidx.core.app.NotificationCompat.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true)
+            .addAction(0, com.umutk.pulse.tr("Turn off", "Kapat"), android.app.PendingIntent.getService(this, 7, Intent(this, javaClass).setAction("com.umutk.pulse.CUES_STOP"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(7, n)
         running = true
         loadPrefs(this)
@@ -136,7 +137,7 @@ class MotionCueService : Service() {
         // Android 12 treats touches through a window that is more than about 80% opaque as "obscured" and many apps refuse them; just under that, taps reach the app below
         if (Build.VERSION.SDK_INT >= 31) lp.alpha = .79f
         wm.addView(v, lp)
-        addTopStrip()
+        // no strip along the top edge any more: it took the touches there and the notification panel would not open; the cues are switched off from the tile or the notification
         // about 150 sensor events a second: on a thread of their own, so the keyboard and the other screens keep the main thread
         val th = android.os.HandlerThread("motion-cues").also { it.start(); sensorThread = it }
         val h = android.os.Handler(th.looper)
@@ -198,7 +199,10 @@ class MotionCueService : Service() {
         runCatching { wm.addView(sv, lp); strip = sv }
     }
 
-    override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY
+    override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
+        if (i?.action == "com.umutk.pulse.CUES_STOP") { stopSelf(); return START_NOT_STICKY }
+        return START_STICKY
+    }
     override fun onBind(i: Intent?) = null
 
     override fun onDestroy() {
