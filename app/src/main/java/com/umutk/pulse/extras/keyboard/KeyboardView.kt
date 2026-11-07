@@ -1586,8 +1586,8 @@ private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
 private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
     val shown = st.slots.withIndex().filter { it.value.isNotEmpty() }
     val chip: @Composable (Int, String) -> Unit = { i, s ->
-        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-            Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, softWrap = false)
         }
     }
     // one or two: they share the whole bar, so nothing is left empty and a long address keeps its end in view

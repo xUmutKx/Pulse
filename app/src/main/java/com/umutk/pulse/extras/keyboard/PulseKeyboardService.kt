@@ -1647,7 +1647,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun rankedDomains(): List<String> {
         val counts = getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }
         val mine = counts.sortedByDescending { it.second }.map { "@" + it.first }
-        return (mine + domains).distinct().take(6)
+        return (mine + domains).distinct().take(4)
     }
     private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
 
@@ -1689,7 +1689,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
                 // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
                 val dom = rankedDomains().filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
-                (dom + mine).distinct().take(8)
+                // four domains (the ones you use most) and at most two of your saved addresses: few, so each reads whole
+                (dom.take(4) + mine.take(2)).distinct()
             }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
