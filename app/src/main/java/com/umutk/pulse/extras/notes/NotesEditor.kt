@@ -171,7 +171,8 @@ fun NoteEditor(
     // a tool of the bar: the tool that is already on opens its settings; a drawing tool puts the keyboard away
     fun pick(m: InkMode) {
         if (m == mode) { panel = m != InkMode.KEYBOARD && !panel; return }
-        mode = m; panel = false; selected = emptySet()
+        // a pen or a marker that is picked opens its colours at once, right above the bar
+        mode = m; panel = m == InkMode.PEN || m == InkMode.MARKER; selected = emptySet()
         if (m == InkMode.PEN || m == InkMode.MARKER) lastDraw = m
         if (m != InkMode.KEYBOARD) { focus.clearFocus(); keyboard?.hide() }
     }
@@ -266,7 +267,7 @@ fun NoteEditor(
         }
 
         // the settings of the tool that is on (the pen's types, its size and colours, the eraser's size, whether a finger draws) and what the lasso chose
-        if (panel && inkOn) InkPanel(
+        androidx.compose.animation.AnimatedVisibility(panel && inkOn, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { it / 2 } + androidx.compose.animation.scaleIn(initialScale = .92f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f)), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { it / 2 }) { InkPanel(
             mode = mode, style = penStyle, onStyle = { penStyle = it; InkPrefs.setPenStyle(ctx, it) },
             color = if (mode == InkMode.MARKER) markerColor else penColor,
             onColor = { c -> if (mode == InkMode.MARKER) { markerColor = c; InkPrefs.setMarkerColor(ctx, c) } else { penColor = c; InkPrefs.setPenColor(ctx, c) } },
@@ -274,7 +275,7 @@ fun NoteEditor(
             onSize = { v -> when (mode) { InkMode.MARKER -> { markerSize = v; InkPrefs.setMarkerSize(ctx, v) }; InkMode.ERASER -> { eraserSize = v; InkPrefs.setEraserSize(ctx, v) }; else -> { penSize = v; InkPrefs.setPenSize(ctx, v) } } },
             finger = finger, onFinger = { finger = it; InkPrefs.setFinger(ctx, it) }, snap = snap, onSnap = { snap = it; InkPrefs.setSnap(ctx, it) },
             onClearAll = { editInk { emptyList() }; selected = emptySet() }, autoColor = ink,
-        )
+        ) }
         if (mode == InkMode.LASSO && selected.isNotEmpty()) InkSelection(
             count = selected.size,
             onColor = { c ->
