@@ -102,6 +102,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawWithContent
@@ -1845,9 +1846,28 @@ internal fun exThumb(f: File): ImageBitmap? {
     if (!FilesPrefs.thumbs || !canPreview(f)) return null
     val ctx = LocalContext.current
     // a row reused for another file must not keep the old file's picture: every new path starts from its own cache entry (or a fresh load)
-    return produceState<androidx.compose.ui.graphics.ImageBitmap?>(Thumbs.cached(f), f.path) {
-        value = Thumbs.cached(f) ?: Thumbs.load(ctx, f)
+    // in a dark look a PDF page is shown dark: black paper, white text (a plain colour inversion; the page itself is not touched)
+    val dark = com.umutk.pulse.LocalWindowLook.current.dark && f.extension.equals("pdf", true)
+    return produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, f.path, dark) {
+        val base = Thumbs.cached(f) ?: Thumbs.load(ctx, f)
+        value = if (dark && base != null) withContext(kotlinx.coroutines.Dispatchers.Default) { invertedPage(f.path, base) } else base
     }.value
+}
+
+private val invertedPages = object : android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(6 shl 20) {
+    override fun sizeOf(key: String, value: androidx.compose.ui.graphics.ImageBitmap) = value.width * value.height * 4
+}
+
+/** [src] with its colours inverted (white page to black, black text to white). */
+private fun invertedPage(path: String, src: androidx.compose.ui.graphics.ImageBitmap): androidx.compose.ui.graphics.ImageBitmap {
+    val key = "$path|${src.width}x${src.height}"
+    invertedPages.get(key)?.let { return it }
+    val b = src.asAndroidBitmap()
+    val out = android.graphics.Bitmap.createBitmap(b.width, b.height, android.graphics.Bitmap.Config.ARGB_8888)
+    val p = android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(floatArrayOf(
+        -1f, 0f, 0f, 0f, 255f,  0f, -1f, 0f, 0f, 255f,  0f, 0f, -1f, 0f, 255f,  0f, 0f, 0f, 1f, 0f))) }
+    android.graphics.Canvas(out).drawBitmap(b, 0f, 0f, p)
+    return out.asImageBitmap().also { invertedPages.put(key, it) }
 }
 
 /** Total and free bytes of the shared storage; zeros when the system will not say. */
