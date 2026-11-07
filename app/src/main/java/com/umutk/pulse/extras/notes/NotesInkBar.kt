@@ -22,6 +22,10 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +62,10 @@ fun InkBar(
     textOn: Boolean, onText: () -> Unit, onPhoto: () -> Unit, moreOn: Boolean, onMore: () -> Unit,
     penTint: Color = T.text, markerTint: Color = Color(0xFFFDD835),
 ) {
+    // a floating bar: it does not touch the edges, it has a shadow and a gap under it
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .92f))
+        Modifier.shadow(10.dp, RoundedCornerShape(28.dp)).clip(RoundedCornerShape(28.dp)).background(T.panel)
             .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -74,6 +80,7 @@ fun InkBar(
         BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 22.dp) }
         BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 22.dp) }
     }
+    }
 }
 
 /**
@@ -82,8 +89,13 @@ fun InkBar(
  */
 @Composable
 private fun PenTool3D(kind: Int, tint: Color, on: Boolean, desc: String, onClick: () -> Unit) {
-    val lift by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, androidx.compose.animation.core.tween(180), label = "penLift")
-    Box(Modifier.width(34.dp).height(58.dp).clickable { onClick() }.semantics { contentDescription = desc }) {
+    // the pen that is on springs up out of the bar (a little overshoot), and every pen sinks a little while it is pressed
+    val lift by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .45f, stiffness = 380f), label = "penLift")
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val press by androidx.compose.animation.core.animateFloatAsState(if (pressed) .88f else 1f, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 600f), label = "penPress")
+    Box(Modifier.width(34.dp).height(58.dp).graphicsLayer { scaleX = press; scaleY = press; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
+        .clickable(interactionSource = src, indication = null) { onClick() }.semantics { contentDescription = desc }) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height
             val up = lift * 9.dp.toPx()
@@ -129,7 +141,8 @@ fun InkPanel(
     mode: InkMode, style: Int, onStyle: (Int) -> Unit, color: Int, onColor: (Int) -> Unit, size: Float, onSize: (Float) -> Unit,
     finger: Boolean, onFinger: (Boolean) -> Unit, snap: Boolean, onSnap: (Boolean) -> Unit, onClearAll: () -> Unit, autoColor: Color,
 ) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .95f)).padding(horizontal = 14.dp, vertical = 10.dp)) {
+    // floating right above the bar, like a menu that opens out of the pen
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 8.dp).shadow(10.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(T.panel).padding(horizontal = 14.dp, vertical = 10.dp)) {
         if (mode == InkMode.PEN) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PEN_STYLES.forEach { s -> PanelChip(tr(s.en, s.tr), style == s.id) { onStyle(s.id) } }
