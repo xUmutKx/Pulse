@@ -116,7 +116,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /** One tile of the Toolkit: its English and Turkish label, icon and the screen it opens. */
-private class Tool(val label: String, val trLabel: String, val icon: String, val body: @Composable () -> Unit)
+private class Tool(val label: String, val trLabel: String, val icon: String, val wide: Boolean = false, val body: @Composable () -> Unit)
 
 /** The tool a Quick Settings tile asked for ("toolkit:<tool>"); ToolkitPage opens it and clears this. */
 object ToolkitOpen { var tool by mutableStateOf("") }
@@ -154,6 +154,14 @@ private val tools = listOf(
     Tool("Floating timer", "Yüzen sayaç", "pin") { FloatingTimerTool() },
     Tool("Big text", "Büyük yazı", "document") { BigTextTool() },
 )
+
+/** The photo tools: their own group in the Toolkit, in a wide window (a picture, its settings and Save to the gallery). */
+private val photoTools = listOf(
+    Tool("ASCII art", "ASCII sanatı", "document", wide = true) { AsciiArtTool() },
+    Tool("Halftone QR", "Yarım ton QR", "gridView", wide = true) { HalftoneQrTool() },
+    Tool("Tilt-shift", "Tilt-shift", "image", wide = true) { TiltShiftTool() },
+)
+private val allTools get() = tools + photoTools
 
 /**
  * The floating keyboard, as a Toolkit tile: a preview in the keyboard's own colours, a button that shows it (the same as the quick settings tile)
@@ -212,17 +220,17 @@ private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: (
 @Composable
 fun ToolkitPage() {
     var open by rememberSaveable { mutableStateOf(-1) }
-    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = tools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
+    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = allTools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
     com.umutk.pulse.InnerBackStep(open >= 0) { open = -1 }
     // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
-        val t = tools[open]
+        val t = allTools[open]
         // the window grows out of the middle and fades in when it opens
         val enter = remember { androidx.compose.animation.core.Animatable(0f) }
         LaunchedEffect(open) { enter.animateTo(1f, androidx.compose.animation.core.tween(220)) }
         androidx.compose.ui.window.Dialog(onDismissRequest = { open = -1 }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
             Column(
-                Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp)
+                (if (t.wide) Modifier.fillMaxWidth(.98f).fillMaxHeight(.94f) else Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp))
                     .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
                     .clip(RoundedCornerShape(T.radius)).background(T.panel)
                     .verticalScroll(rememberScrollState()).padding(16.dp),
@@ -239,6 +247,15 @@ fun ToolkitPage() {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEachIndexed { c, t ->
                     ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = r * 3 + c }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        PHead(tr("Photo tools", "Fotoğraf araçları"))
+        photoTools.chunked(3).forEachIndexed { r, row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEachIndexed { c, t ->
+                    ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = tools.size + r * 3 + c }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
