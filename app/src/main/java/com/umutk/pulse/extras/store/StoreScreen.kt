@@ -441,7 +441,9 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
-    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL } +
+    // YTXTube (YouTube and YouTube Music): carried in the open-source build, installed from here once, then it is an app of its own with its own icon
+    (if (com.umutk.pulse.extras.ytx.YtxApp.bundled(ctx)) listOf(BuiltinRow("YTXTube", if (com.umutk.pulse.extras.ytx.YtxApp.installed(ctx)) tr("YouTube and YouTube Music, ad-free: open", "YouTube ve YouTube Music, reklamsız: aç") else tr("YouTube and YouTube Music, ad-free: install (3 MB)", "YouTube ve YouTube Music, reklamsız: kur (3 MB)"), "play", null) { com.umutk.pulse.extras.ytx.YtxApp.openOrInstall(ctx) }) else emptyList())
     // every app stays listed here, with or without its launcher icon; a long press hides a row, the eye shows the hidden ones
     // a tool switched off in Settings > Extra apps is not listed here either
     // the Tools / Apps / ⋮ menu placements only decide where a tool is listed outside this page; here it stays listed, even when it is set to hidden there

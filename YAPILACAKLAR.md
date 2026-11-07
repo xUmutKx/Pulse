@@ -2309,3 +2309,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.372 (derlendi): hava durumu saatlik normalleştirme (7Timer/wttr/OWM/met.no 3 kat süre), 7Timer şimdi, widget ek verileri, anlık geçişte widget aynı yer.
 
 - 1.0.373 (derlendi): hava durumu (7Timer/met.no kalktı, Bright Sky/WeatherAPI/Pirate Weather, widget dakikalık güncelleme ve boş kalmaz), klavye (sayı alanı geç tür, fotoğraf yönü/30 sn, metin 2 yapıştırma, sabitleme tuşu), sayı boyutu ayarı (detay hava), WMP Blob widget, kök yetkisiz işlemler (bugün ekran süresi), video küçük resim karışması, müzik kütüphane çipleri kalktı, kulaklık ses 0 bekler, ses tuşları (medya çalarken ses, Files sekme döngüsü), APK kurucu hızı + indirme bildirimi, indirme silme, Files PDF/Office önizleme koyu, PDF araması + Word araması, 365 üst blok alt oku.
+
+- 1.0.374 (derlendi): YTXTube (YouTube ve YouTube Music istemcisi) Ekstra uygulamalardan kurulan, kendi ikonu olan uygulama (Shorts yok, AMOLED yok, kendi güncelleyicisi kapalı; yalnızca foss), önceki tüm değişiklikler.
