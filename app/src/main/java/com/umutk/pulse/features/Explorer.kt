@@ -1089,6 +1089,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             !f.isDirectory && (showSizes || detailNow) -> (if (detailNow) f.extension.uppercase().takeIf { it.isNotEmpty() }?.let { "$it  ·  " } ?: "" else "") + exInfoParts(false, 0, f.length(), f.lastModified(), all = detailNow)
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
                             // outside the standalone app — now the embedded Files tab gets it too
+                            // a folder listed through root: the date (its size and its count are not read, so they are left out)
+                            f is RootFile && f.isDirectory && (showSizes || detailNow) -> exInfoParts(true, 0, null, f.lastModified(), false, all = detailNow)
                             f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified(), countNow || detailNow, all = detailNow)
                             else -> ""
                         }
@@ -1559,16 +1561,16 @@ private fun ExDrawerDivider() = if (FilesPrefs.cards) Spacer(Modifier.height(8.d
     else Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).height(1.dp).background(T.line.copy(alpha = .6f)))
 
 /** An entry listed through su: the app itself cannot stat it, so the folder flag comes from the "/" that ls -p adds. */
-private class RootFile(path: String, private val dir: Boolean) : File(path) {
+private class RootFile(path: String, private val dir: Boolean, private val size: Long = 0L, private val mtime: Long = 0L) : File(path) {
     override fun isDirectory() = dir
     override fun isFile() = !dir
     override fun exists() = true
-    override fun length() = 0L
-    override fun lastModified() = 0L
+    override fun length() = size
+    override fun lastModified() = mtime
 }
 
 private fun exRootList(dir: File, onError: (String) -> Unit = {}): List<File> = when (val r = RootFs.list(dir)) {
-    is RootFs.Result.Ok -> r.entries.map { RootFile(File(dir, it.name).path, it.dir) }
+    is RootFs.Result.Ok -> r.entries.map { RootFile(File(dir, it.name).path, it.dir, it.size, it.mtime) }
     is RootFs.Result.Failed -> { onError(r.msg); emptyList() }
     RootFs.Result.NoRoot -> emptyList()
 }

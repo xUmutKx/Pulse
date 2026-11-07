@@ -293,6 +293,14 @@
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
         <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <!-- YTXTube (YouTube client, carried in the open-source build): this icon installs it once and opens it afterwards, then it hides itself -->
+        <activity android:name=".extras.ytx.YtxLaunchActivity" android:exported="true" android:label="YTXTube" android:icon="@drawable/ytx_icon" android:roundIcon="@drawable/ytx_icon"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
