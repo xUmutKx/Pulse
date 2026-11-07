@@ -304,6 +304,7 @@ fun KeyboardSettings(back: () -> Unit) {
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Look.accent else T.panel).clickable { KeyboardPrefs.clipHours = h; save() }.padding(vertical = 8.dp, horizontal = 2.dp))
                 }
             }
+            Switch(tr("Pin button in the bar", "Çubukta sabitleme tuşu"), tr("The copied item or photo in the bar gets a pin: pinned ones stay in the clipboard and in the bar", "Çubuktaki kopyalanan öğe ya da fotoğrafta sabitleme tuşu olur: sabitlenenler panoda ve çubukta kalır"), KeyboardPrefs.quickPinBtn) { KeyboardPrefs.quickPinBtn = it; save() }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }
             Switch(tr("Quick period", "Hızlı nokta"), tr("Double tap on space puts in a period", "Boşluğa çift dokunuş nokta koyar"), KeyboardPrefs.quickPeriod) { KeyboardPrefs.quickPeriod = it; save() }
             Switch(tr("Auto capitalise", "Otomatik büyük harf"), tr("Capital letter at the start of a sentence", "Cümle başında büyük harf"), KeyboardPrefs.autoCap) { KeyboardPrefs.autoCap = it; save() }
