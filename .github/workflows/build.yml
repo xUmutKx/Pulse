@@ -38,11 +38,7 @@ jobs:
         run: |
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           yes | "$SDKMANAGER" --licenses > /dev/null
-          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0" "ndk;27.2.12479018"
-      - name: Rust for Athenaeum (the phones' ABIs)
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi
+          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0"
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9
