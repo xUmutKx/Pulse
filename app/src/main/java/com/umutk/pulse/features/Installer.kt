@@ -456,7 +456,7 @@ object Installer {
         if (InstallShow.srcPkg == "com.android.vending" && Build.VERSION.SDK_INT >= 33) runCatching { sp.setPackageSource(PackageInstaller.PACKAGE_SOURCE_STORE) }
         val id = inst.createSession(sp)
         inst.openSession(id).use { s ->
-            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyCapped(o); s.fsync(o) } }
+            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyTo(o, 1 shl 20); s.fsync(o) } }
             val cb = PendingIntent.getBroadcast(c, id, Intent(c, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             s.commit(cb.intentSender)
         }
