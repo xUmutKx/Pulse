@@ -18,7 +18,8 @@ object RootFs {
         class Failed(val msg: String) : Result()
     }
 
-    class Entry(val name: String, val dir: Boolean)
+    /** [size] in bytes and [mtime] in milliseconds when the long listing gave them (0 when it did not). */
+    class Entry(val name: String, val dir: Boolean, val size: Long = 0L, val mtime: Long = 0L)
 
     /** Folders the app cannot list by itself: they only show up through root. */
     fun needsRoot(path: String) = path.startsWith("/data") || path.contains("/Android/data") || path.contains("/Android/obb")
@@ -32,7 +33,8 @@ object RootFs {
         if (!available()) return Result.NoRoot
         val q = dir.path.replace("'", "'\\''")
         // the exit code is echoed last, so an su refusal or a missing folder is not mistaken for an empty one
-        val cmd = "ls -1Ap -- '$q' 2>&1; echo __rc=\$?"
+        // the names first (safe with any characters), then the long listing for the size and the date of each
+        val cmd = "ls -1Ap -- '$q' 2>&1; echo __rc=\$?; ls -lAp -- '$q' 2>/dev/null"
         var mode = -1
         var out: String
         if (Shell.root == true && needsRoot(dir.path)) {
@@ -42,10 +44,26 @@ object RootFs {
             mode = seen.first
             out = Shell.runRoot(cmd.replace(q, seen.second.replace("'", "'\\''")), mode)
         } else out = Shell.run(cmd)
-        val lines = out.lines().filter { it.isNotBlank() }
-        val rc = lines.lastOrNull()?.removePrefix("__rc=")?.toIntOrNull() ?: return Result.Failed("no answer from su")
-        val body = lines.dropLast(1)
+        val all = out.lines().filter { it.isNotBlank() }
+        val at = all.indexOfFirst { it.startsWith("__rc=") }
+        if (at < 0) return Result.Failed("no answer from su")
+        val rc = all[at].removePrefix("__rc=").toIntOrNull() ?: return Result.Failed("no answer from su")
+        val body = all.subList(0, at)
         if (rc != 0) return Result.Failed(body.lastOrNull() ?: "ls exit $rc")
-        return Result.Ok(body.map { if (it.endsWith("/")) Entry(it.dropLast(1), true) else Entry(it, false) })
+        // the long lines: "drwxrwx--x 4 u0_a1 u0_a1 4096 2026-11-07 21:30 name/" -> name to (size, date)
+        val info = HashMap<String, Pair<Long, Long>>()
+        val re = Regex("^[\\-dlcbps][rwxsStT\\-]{9}\\S*\\s+\\d+\\s+\\S+\\s+\\S+\\s+(\\d+)(?:,\\s*\\d+)?\\s+(\\d{4}-\\d{2}-\\d{2})\\s+(\\d{2}:\\d{2})\\s+(.*)$")
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US)
+        for (l in all.subList(at + 1, all.size)) {
+            val m = re.find(l) ?: continue
+            val name = m.groupValues[4].substringBefore(" -> ").removeSuffix("/")
+            val ms = runCatching { fmt.parse(m.groupValues[2] + " " + m.groupValues[3])?.time }.getOrNull() ?: 0L
+            info[name] = (m.groupValues[1].toLongOrNull() ?: 0L) to ms
+        }
+        return Result.Ok(body.map { n ->
+            val dir = n.endsWith("/"); val name = if (dir) n.dropLast(1) else n
+            val i = info[name]
+            Entry(name, dir, if (dir) 0L else i?.first ?: 0L, i?.second ?: 0L)
+        })
     }
 }
