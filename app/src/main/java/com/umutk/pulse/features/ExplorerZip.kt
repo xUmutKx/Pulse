@@ -142,13 +142,15 @@ private fun splitVolumes(archive: File, size: Long, cancelled: () -> Boolean) {
 /** Writes the zip entry by entry, the same layout the old Compress button made: each file or folder under its parent's name. */
 private fun zipWrite(job: ZipJob) {
     if (job.kind == "7z") return sevenZWrite(job)
-    val buf = ByteArray(64 * 1024)
-    ZipOutputStream(job.target.outputStream().buffered(256 * 1024)).use { zos ->
+    val buf = ByteArray(256 * 1024)
+    ZipOutputStream(job.target.outputStream().buffered(1 shl 20)).use { zos ->
         for (f in job.files) {
             val root = f.parentFile ?: job.target.absoluteFile.parentFile
             f.walkTopDown().forEach { e ->
                 if (job.cancelled) throw ZipCancelled()
                 val rel = e.relativeTo(root).path.replace(File.separatorChar, '/')
+                // pictures, video, music and archives are compressed already: they are only stored (a lot faster); the rest takes a quick level
+                zos.setLevel(if (e.extension.lowercase() in ZIP_PACKED) java.util.zip.Deflater.NO_COMPRESSION else 3)
                 if (e.isDirectory) zos.putNextEntry(ZipEntry("$rel/")) else zos.putNextEntry(ZipEntry(rel))
                 if (e.isFile) e.inputStream().use { ins ->
                     while (true) {
@@ -167,8 +169,10 @@ private fun zipWrite(job: ZipJob) {
 
 /** The 7z twin of [zipWrite]: same entries and names, written through commons-compress (rar cannot be written). */
 private fun sevenZWrite(job: ZipJob) {
-    val buf = ByteArray(64 * 1024)
+    val buf = ByteArray(256 * 1024)
     org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(job.target).use { z ->
+        // LZMA2 at a quick preset: far faster than the default, a little bigger
+        z.setContentMethods(listOf(org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration(org.apache.commons.compress.archivers.sevenz.SevenZMethod.LZMA2, org.tukaani.xz.LZMA2Options().apply { setPreset(3) })))
         for (f in job.files) {
             val root = f.parentFile ?: job.target.absoluteFile.parentFile
             f.walkTopDown().forEach { e ->
@@ -189,6 +193,9 @@ private fun sevenZWrite(job: ZipJob) {
         }
     }
 }
+
+/** Extensions of files that are already compressed: the zip stores them as they are. */
+private val ZIP_PACKED = setOf("jpg", "jpeg", "png", "webp", "heic", "heif", "gif", "mp4", "mkv", "webm", "mov", "avi", "m4v", "3gp", "mp3", "m4a", "aac", "ogg", "opus", "flac", "zip", "rar", "7z", "gz", "bz2", "xz", "apk", "aab", "jar", "docx", "xlsx", "pptx", "odt", "ods", "odp", "pdf")
 
 private fun zipTarget(dir: File, name: String, ext: String): File {
     var target = File(dir, "$name.$ext")

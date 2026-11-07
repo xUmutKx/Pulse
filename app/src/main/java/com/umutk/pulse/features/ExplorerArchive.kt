@@ -256,7 +256,7 @@ internal fun archiveExtract(f: File, dest: File, job: FileJob? = null): String =
         if (e.dir) out.mkdirs() else {
             out.parentFile?.mkdirs()
             // copied in blocks, so the bar of the job moves and a cross stops it between blocks
-            open().use { i -> out.outputStream().use { o -> val buf = ByteArray(128 * 1024); while (job?.cancelled != true) { val k = i.read(buf); if (k < 0) break; o.write(buf, 0, k); job?.done?.addAndGet(k.toLong()) } } }
+            open().use { i -> out.outputStream().use { o -> val buf = ByteArray(256 * 1024); while (job?.cancelled != true) { val k = i.read(buf); if (k < 0) break; o.write(buf, 0, k); job?.done?.addAndGet(k.toLong()) } } }
             if (e.time > 0) out.setLastModified(e.time)
             n++
         }
@@ -271,14 +271,27 @@ internal fun archiveExtract(f: File, dest: File, job: FileJob? = null): String =
 internal fun archiveExtractSel(f: File, sel: Set<String>, all: List<AEntry>, dest: File): List<File> {
     val out = ArrayList<File>()
     val parents = sel.associateWith { it.substringBeforeLast('/', "") }
+    // the targets are fixed first, then the archive is read once for all of them (a tar or 7z was read again from the start for every file)
+    val targets = HashMap<String, File>()
     all.filter { !it.dir }.forEach { e ->
         val pick = sel.firstOrNull { e.path == it || e.path.startsWith("$it/") } ?: return@forEach
         val want = File(dest, e.path.removePrefix(parents.getValue(pick)).trimStart('/'))
         val parentDir = want.parentFile ?: dest
         parentDir.mkdirs()
-        val target = uniqueFile(parentDir, want.name)
-        if (archiveExtractOne(f, e.path, target)) out += target
+        targets[e.path] = uniqueFile(parentDir, want.name).also { t -> t.parentFile?.mkdirs() }
     }
+    if (targets.isEmpty()) return out
+    var left = targets.size
+    try {
+        walk(f) { e, open ->
+            val t = targets[e.path]
+            if (t != null && !e.dir) {
+                open().use { i -> t.outputStream().buffered(256 * 1024).use { o -> i.copyTo(o, 256 * 1024) } }
+                out += t
+                if (--left <= 0) throw Stop
+            }
+        }
+    } catch (s: Stop) { }
     return out
 }
 
