@@ -56,13 +56,33 @@ jobs:
           mkdir -p ../../app/src/foss/assets/extras
           cp app/build/outputs/apk/release/app-release.apk ../../app/src/foss/assets/extras/ytxtube.apk
           ls -l ../../app/src/foss/assets/extras/ytxtube.apk
+      - name: Rust for Athenaeum (the phones' targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+      - name: Athenaeum (tarot, astrology, spirits, magic; extras/athenaeum) built on its own and carried inside the open-source build
+        shell: bash
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
+          "$SDKMANAGER" "ndk;27.2.12479018" "platforms;android-35" "build-tools;35.0.0" || true
+          cd extras/athenaeum
+          # signed with Pulse's key: the file the app's build reads
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=pulse\nkeyPassword=%s\n' "$PULSE_KEYSTORE" "$PULSE_STORE_PASSWORD" "$PULSE_KEY_PASSWORD" > keystore.properties
+          GV=$(grep -oP 'gradle-\K[0-9.]+(?=-bin)' gradle/wrapper/gradle-wrapper.properties)
+          curl -fsSL "https://services.gradle.org/distributions/gradle-$GV-bin.zip" -o "$RUNNER_TEMP/g2.zip"
+          unzip -q "$RUNNER_TEMP/g2.zip" -d "$RUNNER_TEMP/gradle-athena"
+          set -o pipefail; "$RUNNER_TEMP/gradle-athena/gradle-$GV/bin/gradle" assembleRelease -Dorg.gradle.jvmargs='-Xmx3g -Dfile.encoding=UTF-8' --no-daemon 2>&1 | tee ../../athena-build.log
+          mkdir -p ../../app/src/foss/assets/extras
+          cp app/build/outputs/apk/release/app-release.apk ../../app/src/foss/assets/extras/athenaeum.apk
+          rm -f keystore.properties
+          ls -l ../../app/src/foss/assets/extras/athenaeum.apk
       - name: Build release APK
         shell: bash
         run: set -o pipefail; gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon 2>&1 | tee build.log
       - name: Compile errors as annotations
         if: failure()
         run: |
-          cat ytx-build.log build.log 2>/dev/null | grep -E '^e: |What went wrong|error:|AAPT|FAILED|Execution failed|Manifest merger' -A3 | grep -v '^--$' | head -45 | while IFS= read -r line; do echo "::error::${line}"; done
+          cat ytx-build.log athena-build.log build.log 2>/dev/null | grep -E '^e: |What went wrong|error:|AAPT|FAILED|Execution failed|Manifest merger' -A3 | grep -v '^--$' | head -45 | while IFS= read -r line; do echo "::error::${line}"; done
       - uses: actions/upload-artifact@v5
         with:
           name: pulse-release-apk

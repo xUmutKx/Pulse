@@ -301,6 +301,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Athenaeum (tarot, astrology, spirits, magic; offline): the same, with its own icon -->
+        <activity android:name=".extras.ytx.AthenaLaunchActivity" android:exported="true" android:label="Athenaeum" android:icon="@drawable/athena_icon" android:roundIcon="@drawable/athena_icon"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
