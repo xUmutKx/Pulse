@@ -1642,12 +1642,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
-    private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com")
+    private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com", "@live.com", "@proton.me", "@msn.com", "@me.com")
     /** The domains of the addresses typed before, the most used first, then the usual ones: a short list that reads on the bar. */
     private fun rankedDomains(): List<String> {
         val counts = getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }
         val mine = counts.sortedByDescending { it.second }.map { "@" + it.first }
-        return (mine + domains).distinct().take(4)
+        return (mine + domains).distinct().take(8)
     }
     private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
 
@@ -1689,8 +1689,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
                 // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
                 val dom = rankedDomains().filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
-                // four domains (the ones you use most) and at most two of your saved addresses: few, so each reads whole
-                (dom.take(4) + mine.take(2)).distinct()
+                // an address you saved that fits what is typed comes first (a tap writes it whole), then the domains, the ones used most first: four show, four more are a swipe away
+                (mine.take(2) + dom.take(8)).distinct()
             }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
