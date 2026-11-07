@@ -1,0 +1,1156 @@
+package com.tensei.ytxtube
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.text.HtmlCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.schabi.newpipe.extractor.Image
+import org.schabi.newpipe.extractor.MediaFormat
+import org.schabi.newpipe.extractor.Page
+import org.schabi.newpipe.extractor.channel.ChannelInfo
+import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
+import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
+import org.schabi.newpipe.extractor.kiosk.KioskInfo
+import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler
+import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
+import org.schabi.newpipe.extractor.exceptions.GeographicRestrictionException
+import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
+import org.schabi.newpipe.extractor.search.SearchInfo
+import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
+import org.schabi.newpipe.extractor.stream.AudioStream
+import org.schabi.newpipe.extractor.stream.AudioTrackType
+import org.schabi.newpipe.extractor.stream.DeliveryMethod
+import org.schabi.newpipe.extractor.stream.Description
+import org.schabi.newpipe.extractor.stream.StreamInfo
+import org.schabi.newpipe.extractor.stream.StreamInfoItem
+import org.schabi.newpipe.extractor.stream.StreamType
+import org.schabi.newpipe.extractor.stream.SubtitlesStream
+import org.schabi.newpipe.extractor.stream.VideoStream
+import org.schabi.newpipe.extractor.localization.DateWrapper
+import java.io.IOException
+import java.time.Duration
+import java.time.Instant
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import kotlin.math.abs
+
+@Immutable
+data class VideoItem(
+    val id: String,
+    val title: String,
+    val channel: String,
+    val channelUrl: String?,
+    val thumbnail: String?,
+    val avatar: String?,
+    val durationSec: Long,
+    val views: Long,
+    val uploaded: String?,
+
+    val localUri: String? = null,
+    val isLive: Boolean = false,
+)
+
+
+fun VideoItem.channelId(): String? =
+    channelUrl?.substringAfter("/channel/", "")?.substringBefore('?')?.takeIf { it.startsWith("UC") && it.length > 2 }
+
+fun VideoItem.fromChannel(ref: ChannelRef): Boolean =
+    channelId() == ref.id || channel.equals(ref.name, ignoreCase = true)
+
+
+fun VideoItem.feedAvatar(): String? =
+    avatar?.let(::normalizeChannelAvatarUrl)
+        ?: channelId()?.let { ChannelAvatars.known[it] }
+
+@Immutable
+data class CommunityPost(
+    val id: String,
+    val author: String,
+    val avatar: String?,
+    val text: String,
+    val image: String?,
+    val published: String?,
+    val likes: String?,
+)
+
+@Immutable
+data class CommunityPage(
+    val posts: List<CommunityPost>,
+    val next: String?,
+)
+
+@Immutable
+data class VideoDetails(
+    val item: VideoItem,
+    val description: String,
+    val likes: Long,
+    val dislikes: Long = -1L,
+    val subscribers: Long,
+    val related: List<VideoItem>,
+    val playable: Boolean,
+
+    val quality: String?,
+
+    val qualities: List<Int>,
+
+    val hdrQualities: List<Int> = emptyList(),
+
+    val aspect: Float? = null,
+)
+
+@Immutable
+data class ChannelDetails(
+    val url: String,
+    val id: String,
+    val name: String,
+    val avatar: String?,
+    val banner: String?,
+    val subscribers: Long,
+
+    val videoCount: Long = -1,
+
+    val handle: String? = null,
+    val verified: Boolean = false,
+    val description: String,
+    val videosTab: ListLinkHandler?,
+    val liveTab: ListLinkHandler? = null,
+)
+
+fun ChannelDetails.withHeader(header: ChannelHeaderMeta): ChannelDetails = copy(
+    handle = header.handle ?: handle,
+    subscribers = if (header.subscribers > 0) header.subscribers else subscribers,
+    videoCount = if (header.videoCount > 0) header.videoCount else videoCount,
+    verified = header.verified || verified,
+)
+
+@Immutable
+data class Comment(
+    val id: String,
+
+    val author: String,
+
+    val channelId: String?,
+
+    val name: String? = null,
+    val avatar: String?,
+    val text: String,
+    val likes: Int,
+    val ago: String?,
+    val pinned: Boolean,
+    val hearted: Boolean,
+    val replyCount: Int,
+
+    val repliesToken: String?,
+
+    val liked: Boolean = false,
+)
+
+@Immutable
+data class CommentsPage(val comments: List<Comment>, val total: Int, val disabled: Boolean, val next: String?)
+
+
+object YouTube {
+    private val service get() = ServiceList.YouTube
+
+    fun watchUrl(id: String) = "https://www.youtube.com/watch?v=$id"
+
+    
+
+
+
+
+
+
+
+
+    suspend fun trending(next: String? = null): FeedPage = withContext(Dispatchers.IO) {
+
+
+        val extractor = service.kioskList.getExtractorById("Trending", null)
+        val items: List<StreamInfoItem>
+        val nextPage: String?
+        if (next == null) {
+            val info = KioskInfo.getInfo(service, extractor.url)
+            items = info.relatedItems.filterIsInstance<StreamInfoItem>()
+            nextPage = if (info.hasNextPage()) info.nextPage.url else null
+        } else {
+            val more = KioskInfo.getMoreItems(service, extractor.url, Page(next))
+            items = more.items.filterIsInstance<StreamInfoItem>()
+            nextPage = more.nextPage?.url
+        }
+
+
+        val videos = items.mapNotNull { it.toVideoItem() }.filter { !it.isLive }
+        FeedPage(videos, nextPage)
+    }
+
+    suspend fun search(query: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        val handler = service.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
+        SearchInfo.getInfo(service, handler).relatedItems
+            .filterIsInstance<StreamInfoItem>()
+            .mapNotNull { it.toVideoItem() }
+    }
+
+    suspend fun searchPage(query: String, pageUrl: String? = null): FeedPage = withContext(Dispatchers.IO) {
+        val handler = service.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
+        if (pageUrl.isNullOrBlank()) {
+            val info = SearchInfo.getInfo(service, handler)
+            val items = info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull { it.toVideoItem() }.filter { !it.isLive }
+            val next = if (info.hasNextPage()) info.nextPage?.url else null
+            FeedPage(items, next)
+        } else {
+            val more = SearchInfo.getMoreItems(service, handler, Page(pageUrl))
+            val items = more.items.filterIsInstance<StreamInfoItem>().mapNotNull { it.toVideoItem() }.filter { !it.isLive }
+            val next = more.nextPage?.url
+            FeedPage(items, next)
+        }
+    }
+
+    suspend fun searchMusic(query: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        val q = query.trim()
+        val musicQuery = if (q.contains("song", ignoreCase = true) || q.contains("music", ignoreCase = true) || q.contains("audio", ignoreCase = true) || q.contains("lyrics", ignoreCase = true)) {
+            q
+        } else {
+            "$q official audio"
+        }
+        search(musicQuery).filter { video ->
+            video.durationSec in 45..720 || video.durationSec == 0L
+        }
+    }
+
+    suspend fun searchSuggestions(query: String): List<String> = withContext(Dispatchers.IO) {
+        val q = query.trim()
+        if (q.isEmpty()) emptyList()
+        else service.suggestionExtractor.suggestionList(q)
+    }
+
+    suspend fun details(id: String): VideoDetails = withContext(Dispatchers.IO) {
+        HdrFormats.prefetch(id)
+        val info = StreamCache.getOrLoad(id)
+        HdrFormats.install(id, info)
+        val picked = StreamSelection.pick(info)
+        val isLive = info.streamType == StreamType.LIVE_STREAM
+        VideoDetails(
+            item = VideoItem(
+                id = id,
+                title = info.name,
+                channel = info.uploaderName.orEmpty(),
+                channelUrl = info.uploaderUrl,
+                thumbnail = sharpenFeedThumbnail(info.thumbnails.bestUrl(), id),
+                avatar = info.uploaderAvatars.bestUrl(targetWidth = 96),
+                durationSec = if (isLive) 0L else info.duration,
+                views = info.viewCount,
+                uploaded = if (isLive) "Live" else uploadedText(info.textualUploadDate, info.uploadDate),
+                isLive = isLive,
+            ),
+            description = info.description?.let { d ->
+                if (d.type == Description.HTML) HtmlCompat.fromHtml(d.content, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+                else d.content.trim()
+            }.orEmpty(),
+            likes = info.likeCount,
+            subscribers = info.uploaderSubscriberCount,
+            related = info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull { it.toVideoItem() }.let { list ->
+                if (list.isNotEmpty()) list else fetchFallbackRelated(id, info.name)
+            },
+            playable = picked.isPlayable,
+            quality = picked.playedHeight?.let { "${it}p${if (picked.hdr) " HDR" else ""}" }
+                ?: if (isLive) "Live" else null,
+            qualities = StreamSelection.heights(info),
+            hdrQualities = StreamSelection.hdrHeights(info),
+            aspect = (if (picked.usesSeparate) picked.video else picked.muxed)
+                ?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height },
+        )
+    }
+
+    private suspend fun fetchFallbackRelated(id: String, title: String): List<VideoItem> {
+        val parsed = runCatching {
+            val next = InnerTube.postAny("next", org.json.JSONObject().put("videoId", id))
+            val list = mutableListOf<VideoItem>()
+            next.walk { key, obj ->
+                if (key == "compactVideoRenderer" || key == "videoRenderer") {
+                    val vid = obj.optString("videoId")
+                    if (vid.isNotBlank() && vid != id && list.none { it.id == vid }) {
+                        val videoTitle = obj.optJSONObject("title")?.let { t ->
+                            t.optString("simpleText").ifBlank {
+                                t.optJSONArray("runs")?.optJSONObject(0)?.optString("text")
+                            }
+                        }.orEmpty()
+                        val channel = obj.optJSONObject("shortBylineText")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text")
+                            ?: obj.optJSONObject("longBylineText")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text").orEmpty()
+                        val thumb = obj.optJSONObject("thumbnail")?.optJSONArray("thumbnails")?.let { arr ->
+                            arr.optJSONObject(arr.length() - 1)?.optString("url")
+                        }
+                        if (videoTitle.isNotBlank()) {
+                            list.add(
+                                VideoItem(
+                                    id = vid,
+                                    title = videoTitle,
+                                    channel = channel,
+                                    channelUrl = null,
+                                    thumbnail = thumb,
+                                    avatar = null,
+                                    views = -1,
+                                    durationSec = 0,
+                                    uploaded = null,
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            list
+        }.getOrNull()
+
+        if (!parsed.isNullOrEmpty()) return parsed
+
+        return runCatching {
+            search(title).filter { it.id != id }
+        }.getOrDefault(emptyList())
+    }
+
+
+
+    suspend fun channel(url: String): ChannelDetails = withContext(Dispatchers.IO) {
+        val info = ChannelInfo.getInfo(service, url)
+        val videosTab = info.tabs.firstOrNull { it.contentFilters.contains(ChannelTabs.VIDEOS) }
+        val liveTab = info.tabs.firstOrNull { it.contentFilters.contains("streams") || it.contentFilters.contains("live") }
+        ChannelDetails(
+            url = url,
+            id = info.id,
+            name = info.name,
+            avatar = info.avatars.bestUrl(targetWidth = 176),
+            banner = info.banners.bestUrl(targetWidth = 1080),
+            subscribers = info.subscriberCount,
+            handle = handleFromChannelUrl(url),
+            description = info.description.orEmpty(),
+            videosTab = videosTab,
+            liveTab = liveTab,
+        )
+    }
+
+    private fun handleFromChannelUrl(url: String): String? {
+        val path = url.substringAfter("youtube.com", url).trimStart('/')
+        if (!path.startsWith("@")) return null
+        return path.removePrefix("@").substringBefore('/').substringBefore('?').ifBlank { null }
+    }
+
+    
+
+
+
+    suspend fun channelVideos(channel: ChannelDetails, token: String?): FeedPage {
+        val page = InnerTube.channelVideos(channel.id, token)
+
+        return page.copy(videos = page.videos.map {
+            it.copy(channel = it.channel.ifBlank { channel.name }, avatar = it.avatar ?: channel.avatar, channelUrl = it.channelUrl ?: channel.url)
+        })
+    }
+
+    suspend fun channelLive(channel: ChannelDetails, token: String?): FeedPage {
+        val page = InnerTube.channelLive(channel.id, token)
+        return page.copy(videos = page.videos.map {
+            it.copy(channel = it.channel.ifBlank { channel.name }, avatar = it.avatar ?: channel.avatar, channelUrl = it.channelUrl ?: channel.url)
+        })
+    }
+
+    suspend fun channelShorts(channel: ChannelDetails, token: String?): FeedPage {
+        val page = InnerTube.channelShorts(channel.id, token)
+        return page.copy(videos = page.videos.map {
+            it.copy(channel = it.channel.ifBlank { channel.name }, avatar = it.avatar ?: channel.avatar, channelUrl = it.channelUrl ?: channel.url)
+        })
+    }
+
+    suspend fun channelCommunity(channel: ChannelDetails, token: String?): CommunityPage {
+        return InnerTube.channelCommunity(channel.id, token)
+    }
+
+    private fun StreamInfoItem.toVideoItem(): VideoItem? {
+        if (streamType != StreamType.VIDEO_STREAM && streamType != StreamType.LIVE_STREAM) return null
+        val id = runCatching { service.streamLHFactory.getId(url) }.getOrNull() ?: return null
+        val live = streamType == StreamType.LIVE_STREAM
+        return VideoItem(
+            id = id,
+            title = name,
+            channel = uploaderName.orEmpty(),
+            channelUrl = uploaderUrl,
+            thumbnail = sharpenFeedThumbnail(thumbnails.bestUrl(), id),
+            avatar = uploaderAvatars.bestUrl(targetWidth = 96),
+            durationSec = if (live) 0L else duration,
+            views = viewCount,
+            uploaded = if (live) "Live" else uploadedText(textualUploadDate, uploadDate),
+            isLive = live,
+        )
+    }
+
+
+    private fun List<Image>.bestUrl(targetWidth: Int = 1080): String? =
+        filter { it.width > 0 }.minByOrNull { abs(it.width - targetWidth) }?.url ?: firstOrNull()?.url
+
+    
+
+
+
+    private fun uploadedText(textual: String?, date: DateWrapper?): String? {
+        val then = date?.offsetDateTime()?.toInstant()
+        if (then != null) return relativeTime(then)
+        if (textual != null) {
+            if (ISO_DATE.containsMatchIn(textual)) return textual.substringBefore('T')
+            return I18n.translateTimeAgo(textual)
+        }
+        return null
+    }
+
+    private val ISO_DATE = Regex("^\\d{4}-\\d{2}-\\d{2}T")
+
+    fun relativeTime(then: Instant, now: Instant = Instant.now()): String {
+        val s = Duration.between(then, now).seconds.coerceAtLeast(0)
+        return when {
+            s < 60 -> I18n.t("just_now", "just now")
+            s < 3_600 -> I18n.timeAgo(s / 60, "minute")
+            s < 86_400 -> I18n.timeAgo(s / 3_600, "hour")
+            s < 7 * 86_400 -> I18n.timeAgo(s / 86_400, "day")
+            s < 30 * 86_400 -> I18n.timeAgo(s / (7 * 86_400), "week")
+            s < 365 * 86_400 -> I18n.timeAgo(s / (30 * 86_400), "month")
+            else -> I18n.timeAgo(s / (365 * 86_400), "year")
+        }
+    }
+
+
+    fun friendlyError(t: Throwable): String = when (t) {
+        is AgeRestrictedContentException -> "This video is age-restricted and needs a YouTube account to watch."
+        is GeographicRestrictionException -> "This video isn't available in your country."
+        is org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException ->
+
+
+            "YouTube is blocking this video for a moment. Try again in a minute, or switch networks."
+        is org.schabi.newpipe.extractor.exceptions.PrivateContentException -> "This video is private."
+
+
+        is ContentNotAvailableException ->
+            if (t.message.orEmpty().contains("member", ignoreCase = true) || t is org.schabi.newpipe.extractor.exceptions.PaidContentException)
+                "This is a members-only video. YTXTube can't play members-only videos yet."
+            else "This video isn't available."
+        is ReCaptchaException -> "YouTube is rate-limiting requests right now. Try again in a minute."
+        is IOException -> "Couldn't reach YouTube. Check your connection."
+        else -> "Something went wrong loading this. Try again."
+    }
+}
+
+
+
+
+
+
+object StreamCache {
+    private const val MAX_AGE_MS = 4 * 60 * 60 * 1000L
+    private class Entry(val info: StreamInfo, val loadedAt: Long)
+    private val entries = ConcurrentHashMap<String, Entry>()
+
+    
+
+
+
+    fun invalidate(id: String) { entries.remove(id) }
+
+
+    fun invalidateAll() = entries.clear()
+
+    fun get(id: String): StreamInfo? =
+        entries[id]?.takeIf { System.currentTimeMillis() - it.loadedAt < MAX_AGE_MS }?.info
+
+    
+
+
+
+    private val inflight = ConcurrentHashMap<String, FutureTask<StreamInfo>>()
+
+    fun getOrLoad(id: String): StreamInfo {
+        get(id)?.let { return it }
+        val mine = FutureTask {
+            try {
+                StreamInfo.getInfo(ServiceList.YouTube, YouTube.watchUrl(id)).also {
+                    entries[id] = Entry(it, System.currentTimeMillis())
+                    Net.noteMediaHost(StreamSelection.pick(it).let { p -> (p.video ?: p.muxed)?.content })
+                    CaptionTracks.put(id, CaptionTracks.fromStreamInfo(it))
+                    if (it.subtitles.isEmpty()) runCatching { CaptionTracks.load(id) }
+                }
+            } catch (t: Throwable) {
+                if (t is org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException) {
+
+                    entries.remove(id)
+                    StreamInfo.getInfo(ServiceList.YouTube, YouTube.watchUrl(id)).also {
+                        entries[id] = Entry(it, System.currentTimeMillis())
+                        Net.noteMediaHost(StreamSelection.pick(it).let { p -> (p.video ?: p.muxed)?.content })
+                        CaptionTracks.put(id, CaptionTracks.fromStreamInfo(it))
+                        if (it.subtitles.isEmpty()) runCatching { CaptionTracks.load(id) }
+                    }
+                } else throw t
+            }
+        }
+        val running = inflight.putIfAbsent(id, mine)
+        val task = running ?: mine.also { it.run() }
+        try {
+            return task.get()
+        } catch (e: ExecutionException) {
+            throw e.cause ?: e
+        } finally {
+            if (running == null) inflight.remove(id, mine)
+        }
+    }
+
+
+    /**
+     * Shorts and the next-up queue can resolve several videos at once; a single prefetch thread
+     * used to make the tapped video wait behind an unrelated prefetch. Four lanes keep the
+     * critical one moving without hammering YouTube.
+     */
+    private val prefetcher = Executors.newFixedThreadPool(4)
+
+    fun prefetch(id: String) {
+        if (get(id) != null || inflight.containsKey(id)) return
+        prefetcher.execute { runCatching { getOrLoad(id) } }
+    }
+
+    fun prefetchAll(ids: Iterable<String>) {
+        ids.forEach(::prefetch)
+    }
+}
+
+
+
+
+
+enum class PlaybackQualityMode(val label: String, val subtitle: String) {
+    AUTO("Auto (Recommended)", "Optimal quality based on your network speed"),
+    HIGH("High Quality", "Play in highest available quality"),
+    DATA_SAVER("Data Saver", "Play in lowest quality to save data"),
+    SPECIFIC("Specific Quality", "Play in chosen fixed resolution");
+
+    val displayLabel: String get() = when (this) {
+        AUTO -> I18n.t("quality_auto", "Auto (Recommended)")
+        HIGH -> I18n.t("quality_high", "High Quality")
+        DATA_SAVER -> I18n.t("quality_data_saver", "Data Saver")
+        SPECIFIC -> I18n.t("quality_specific", "Specific Quality")
+    }
+
+    val displaySubtitle: String get() = when (this) {
+        AUTO -> I18n.t("quality_auto_sub", "Optimal quality based on your network speed")
+        HIGH -> I18n.t("quality_high_sub", "Play in highest available quality")
+        DATA_SAVER -> I18n.t("quality_data_saver_sub", "Play in lowest quality to save data")
+        SPECIFIC -> I18n.t("quality_specific_sub", "Play in chosen fixed resolution")
+    }
+
+    companion object {
+        fun fromKey(key: String?): PlaybackQualityMode = when (key?.uppercase()) {
+            "HIGH" -> HIGH
+            "DATA_SAVER" -> DATA_SAVER
+            "SPECIFIC" -> SPECIFIC
+            else -> AUTO
+        }
+    }
+}
+
+object QualityPreference {
+    private const val KEY = "quality_height"
+    private const val KEY_HDR = "quality_hdr"
+    private const val KEY_VIDEO_MODE = "video_quality_mode"
+    private const val KEY_SHORTS_MODE = "shorts_quality_mode"
+    private const val KEY_SPECIFIC_VIDEO = "specific_video_height"
+    private const val KEY_SPECIFIC_SHORTS = "specific_shorts_height"
+    private var prefs: SharedPreferences? = null
+
+    @Volatile
+    var height: Int? = null
+        private set
+
+    /** Prefer HDR when the screen and a decoder both support it. */
+    var hdr by mutableStateOf(false)
+        private set
+
+    var videoQualityMode by mutableStateOf(PlaybackQualityMode.AUTO)
+        private set
+
+    var shortsQualityMode by mutableStateOf(PlaybackQualityMode.AUTO)
+        private set
+
+    var specificVideoHeight by mutableStateOf<Int?>(null)
+        private set
+
+    var specificShortsHeight by mutableStateOf<Int?>(null)
+        private set
+
+    val videoQualityDisplay: String
+        get() = when (videoQualityMode) {
+            PlaybackQualityMode.SPECIFIC -> specificVideoHeight?.let { "${it}p (${I18n.t("always", "Always")})" } ?: I18n.t("specific", "Specific")
+            else -> videoQualityMode.displayLabel
+        }
+
+    val shortsQualityDisplay: String
+        get() = when (shortsQualityMode) {
+            PlaybackQualityMode.SPECIFIC -> specificShortsHeight?.let { "${it}p (${I18n.t("always", "Always")})" } ?: I18n.t("specific", "Specific")
+            else -> shortsQualityMode.displayLabel
+        }
+
+    fun init(context: Context) {
+        prefs = context.getSharedPreferences("playback", Context.MODE_PRIVATE)
+        height = prefs?.getInt(KEY, 0)?.takeIf { it > 0 }?.takeIf { it in QUALITY_LADDER }
+        hdr = prefs?.getBoolean(KEY_HDR, HdrSupport.isSupported) ?: HdrSupport.isSupported
+        videoQualityMode = PlaybackQualityMode.fromKey(prefs?.getString(KEY_VIDEO_MODE, "AUTO"))
+        shortsQualityMode = PlaybackQualityMode.fromKey(prefs?.getString(KEY_SHORTS_MODE, "AUTO"))
+        specificVideoHeight = prefs?.getInt(KEY_SPECIFIC_VIDEO, 0)?.takeIf { it > 0 }
+        specificShortsHeight = prefs?.getInt(KEY_SPECIFIC_SHORTS, 0)?.takeIf { it > 0 }
+    }
+
+    fun set(value: Int?, preferHdr: Boolean = hdr) {
+        height = value
+        hdr = preferHdr
+        prefs?.edit()?.putInt(KEY, value ?: 0)?.putBoolean(KEY_HDR, preferHdr)?.apply()
+    }
+
+    fun updateVideoQualityMode(mode: PlaybackQualityMode) {
+        videoQualityMode = mode
+        prefs?.edit()?.putString(KEY_VIDEO_MODE, mode.name)?.apply()
+    }
+
+    fun updateShortsQualityMode(mode: PlaybackQualityMode) {
+        shortsQualityMode = mode
+        prefs?.edit()?.putString(KEY_SHORTS_MODE, mode.name)?.apply()
+    }
+
+    fun setSpecificVideoQuality(height: Int) {
+        specificVideoHeight = height
+        videoQualityMode = PlaybackQualityMode.SPECIFIC
+        prefs?.edit()
+            ?.putString(KEY_VIDEO_MODE, PlaybackQualityMode.SPECIFIC.name)
+            ?.putInt(KEY_SPECIFIC_VIDEO, height)
+            ?.apply()
+    }
+
+    fun setSpecificShortsQuality(height: Int) {
+        specificShortsHeight = height
+        shortsQualityMode = PlaybackQualityMode.SPECIFIC
+        prefs?.edit()
+            ?.putString(KEY_SHORTS_MODE, PlaybackQualityMode.SPECIFIC.name)
+            ?.putInt(KEY_SPECIFIC_SHORTS, height)
+            ?.apply()
+    }
+}
+
+
+val QUALITY_LADDER = intArrayOf(144, 240, 360, 480, 720, 1080, 1440, 2160, 4320)
+
+
+
+
+
+fun qualityTier(width: Int, height: Int): Int {
+    if (height <= 0) return 0
+    // Portrait video (Shorts) is sized by its short side: a 1080x1920 short is 1080p, not 2160p.
+    val basis = when {
+        width <= 0 -> height
+        width < height -> width
+        width.toFloat() / height > 16f / 9f + 0.02f -> width * 9 / 16
+        else -> height
+    }
+    return QUALITY_LADDER.minByOrNull { kotlin.math.abs(it - basis) } ?: basis
+}
+
+private fun VideoStream.tier() = qualityTier(width, height)
+
+/** Whether this rendition's real (or typical) bitrate fits the sustainable budget. */
+private fun VideoStream.fitsKbps(budgetKbps: Int): Boolean {
+    val bits = bitrate
+    val needed = if (bits > 0) bits / 1000 else NetworkSpeed.typicalKbps(tier())
+    return needed <= budgetKbps
+}
+
+private fun videoOrder(hdr: Boolean, formatRank: (MediaFormat?) -> Int): Comparator<VideoStream> =
+    compareBy<VideoStream> { it.tier() }
+        .thenBy { if (hdr && HdrSupport.isHdr(it)) 1 else 0 }
+        .thenBy { it.fps }
+        .thenBy { it.bitrate }
+        .thenBy { -formatRank(it.format) }
+
+private fun lowestFirst(formatRank: (MediaFormat?) -> Int): Comparator<VideoStream> =
+    compareBy<VideoStream> { it.tier() }
+        .thenBy { it.fps }
+        .thenBy { it.bitrate }
+        .thenBy { formatRank(it.format) }
+
+
+object StreamSelection {
+
+    private const val MAX_TIER = 2160
+
+    data class Picked(val video: VideoStream?, val audio: AudioStream?, val muxed: VideoStream?, val hlsUrl: String? = null) {
+        val isPlayable get() = (video != null && audio != null) || muxed != null || !hlsUrl.isNullOrBlank()
+
+        val usesSeparate get() = video != null && audio != null
+
+        val playedHeight: Int? get() = (if (usesSeparate) video?.tier() else muxed?.tier())?.takeIf { it > 0 }
+
+        val hdr: Boolean get() = (if (usesSeparate) video else muxed)?.let(HdrSupport::isHdrCodec) == true
+    }
+
+    /**
+     * HDR renditions are only used when the viewer asked for HDR and the device can show it.
+     * If HDR is unavailable at the chosen height, the same height in SDR is the fallback.
+     */
+    private fun usableVideos(info: StreamInfo, allowHdr: Boolean): List<VideoStream> {
+        val all = info.videoOnlyStreams
+            .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.height > 0 }
+        if (allowHdr) return all
+        val sdr = all.filterNot(HdrSupport::isHdrCodec)
+        return sdr.ifEmpty { all }
+    }
+
+    fun pick(info: StreamInfo): Picked {
+        val hls = info.hlsUrl?.ifBlank { null }
+
+        fun formatRank(format: MediaFormat?) = when (format) {
+            MediaFormat.MPEG_4 -> 0
+            MediaFormat.WEBM -> 1
+            else -> 2
+        }
+        val chosen = QualityPreference.height
+
+        // Auto uses the measured throughput, not the link speed: a Wi-Fi link can report
+        // hundreds of megabits while the connection behind it cannot feed 4K. A manual
+        // choice still wins and is honoured as the closest rendition at or below it.
+        val hdr = QualityPreference.hdr && HdrSupport.isSupported
+        val videoMode = QualityPreference.videoQualityMode
+        val candidates = usableVideos(info, hdr)
+        val video = when {
+            chosen != null -> {
+                candidates
+                    .filter { it.tier() <= chosen }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: candidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.SPECIFIC -> {
+                val target = QualityPreference.specificVideoHeight ?: 1080
+                candidates
+                    .filter { it.tier() <= target }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: candidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: candidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.HIGH -> {
+                candidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: candidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.DATA_SAVER -> {
+                candidates.minWithOrNull(lowestFirst(::formatRank))
+                    ?: candidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+            }
+            else -> {
+                val budget = NetworkSpeed.sustainableKbps()
+                candidates
+                    .filter { it.fitsKbps(budget) }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: candidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+        }
+
+
+
+        val audio = selectAudio(info)
+        val muxedCandidates = info.videoStreams
+            .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+        val muxed = when {
+            chosen != null -> {
+                muxedCandidates.filter { it.tier() <= chosen }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: muxedCandidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.SPECIFIC -> {
+                val target = QualityPreference.specificVideoHeight ?: 1080
+                muxedCandidates.filter { it.tier() <= target }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: muxedCandidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: muxedCandidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.HIGH -> {
+                muxedCandidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: muxedCandidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+            videoMode == PlaybackQualityMode.DATA_SAVER -> {
+                muxedCandidates.minWithOrNull(lowestFirst(::formatRank))
+                    ?: muxedCandidates.maxWithOrNull(videoOrder(hdr, ::formatRank))
+            }
+            else -> {
+                val budget = NetworkSpeed.sustainableKbps()
+                muxedCandidates.filter { it.fitsKbps(budget) }
+                    .maxWithOrNull(videoOrder(hdr, ::formatRank))
+                    ?: muxedCandidates.minWithOrNull(lowestFirst(::formatRank))
+            }
+        }
+        return Picked(video, audio, muxed, hls)
+    }
+
+    /**
+     * Every logical audio track the extractor can actually serve, Original first. One row per
+     * track (highest bitrate encoding), never one per itag; untagged entries are dropped once the
+     * response names real tracks, because that bucket is the same default audio arriving twice.
+     */
+    fun audioTracks(info: StreamInfo): List<AudioTrackOption> {
+        val usable = info.audioStreams.filter {
+            it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP
+        }
+        if (usable.isEmpty()) return emptyList()
+        val named = usable.any {
+            !it.audioTrackId.isNullOrBlank() || !it.audioTrackName.isNullOrBlank() || it.audioLocale != null
+        }
+        val byKey = LinkedHashMap<String, AudioStream>()
+        usable.sortedByDescending { it.averageBitrate }.forEach { stream ->
+            val key = audioTrackKey(stream)
+            if (named && key == "default") return@forEach
+            byKey.putIfAbsent(key, stream)
+        }
+        return byKey.values
+            .sortedWith(
+                compareBy<AudioStream> { if (it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL) 0 else 1 }
+                    .thenBy { if (it.format == MediaFormat.M4A) 0 else 1 }
+                    .thenByDescending { it.averageBitrate },
+            )
+            .map { stream ->
+                val original = stream.audioTrackType == null || stream.audioTrackType == AudioTrackType.ORIGINAL
+                AudioTrackOption(
+                    key = audioTrackKey(stream),
+                    label = audioTrackLabel(stream, original),
+                    detail = audioTrackDetail(stream, original),
+                    stream = stream,
+                )
+            }
+    }
+
+    /** The alternate languages shown in the sheet; Original is its own fixed first row. */
+    fun audioOptions(info: StreamInfo): List<AudioTrackOption> =
+        audioTracks(info).filterNot { it.isOriginal }
+
+    /**
+     * Audio selection. Original is the default on a fresh install and stays selected until the
+     * viewer explicitly chooses another track; a stale preference falls back to Original rather
+     * than leaving the video silent.
+     */
+    fun selectAudio(info: StreamInfo): AudioStream? {
+        val tracks = audioTracks(info)
+        if (tracks.isEmpty()) return null
+        val wanted = AudioTrackPreference.key
+        if (wanted != null) {
+            tracks.firstOrNull { it.key == wanted }?.let { return it.stream }
+            // Preferences written by the old key format carried the itag as a suffix.
+            tracks.firstOrNull { wanted.startsWith(it.key) }?.let { return it.stream }
+        }
+        return tracks.firstOrNull { it.isOriginal }?.stream ?: tracks.first().stream
+    }
+
+    /**
+     * Shorts use the original audio and the best rendition the measured connection can
+     * sustain. A muxed stream is only the fallback when the video has no separable
+     * adaptive pair; it is usually capped at 360p/720p.
+     */
+    fun pickShorts(info: StreamInfo): Picked {
+        val chosen = QualityPreference.height
+        val hdr = QualityPreference.hdr && HdrSupport.isSupported
+        fun order(): Comparator<VideoStream> =
+            compareBy<VideoStream> { it.tier() }
+                .thenBy { if (hdr && HdrSupport.isHdr(it)) 1 else 0 }
+                .thenBy { it.fps }
+                .thenBy { if (it.format == MediaFormat.WEBM) 1 else 0 }
+                .thenBy { it.bitrate }
+
+        fun lowest(): Comparator<VideoStream> =
+            compareBy<VideoStream> { it.tier() }
+                .thenBy { it.fps }
+                .thenBy { it.bitrate }
+
+        fun muxedOrder(): Comparator<VideoStream> =
+            compareBy<VideoStream> { it.tier() }
+                .thenBy { if (hdr && HdrSupport.isHdr(it)) 1 else 0 }
+                .thenBy { it.fps }
+                .thenBy { it.bitrate }
+
+        val candidates = usableVideos(info, hdr).filter { it.tier() <= 2160 }
+        val shortsMode = QualityPreference.shortsQualityMode
+        val video = when {
+            chosen != null -> {
+                candidates.filter { it.tier() <= chosen }.maxWithOrNull(order())
+                    ?: candidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.SPECIFIC -> {
+                val target = QualityPreference.specificShortsHeight ?: 1080
+                candidates.filter { it.tier() <= target }.maxWithOrNull(order())
+                    ?: candidates.maxWithOrNull(order())
+                    ?: candidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.HIGH -> {
+                candidates.maxWithOrNull(order())
+                    ?: candidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.DATA_SAVER -> {
+                candidates.minWithOrNull(lowest())
+                    ?: candidates.maxWithOrNull(order())
+            }
+            else -> {
+                val budget = NetworkSpeed.sustainableKbps()
+                candidates.filter { it.fitsKbps(budget) }.maxWithOrNull(order())
+                    ?: candidates.minWithOrNull(lowest())
+            }
+        }
+        val audio = audioTracks(info).firstOrNull { it.isOriginal }?.stream
+            ?: info.audioStreams.filter { it.isUrl }
+                .maxByOrNull { kotlin.math.max(it.averageBitrate, it.bitrate) }
+        if (video != null && audio != null) return Picked(video, audio, null)
+
+        val muxedCandidates = info.videoStreams.filter { it.isUrl && it.height > 0 }
+        val muxed = when {
+            chosen != null -> {
+                muxedCandidates.filter { it.tier() <= chosen }.maxWithOrNull(muxedOrder())
+                    ?: muxedCandidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.SPECIFIC -> {
+                val target = QualityPreference.specificShortsHeight ?: 1080
+                muxedCandidates.filter { it.tier() <= target }.maxWithOrNull(muxedOrder())
+                    ?: muxedCandidates.maxWithOrNull(muxedOrder())
+                    ?: muxedCandidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.HIGH -> {
+                muxedCandidates.maxWithOrNull(muxedOrder())
+                    ?: muxedCandidates.minWithOrNull(lowest())
+            }
+            shortsMode == PlaybackQualityMode.DATA_SAVER -> {
+                muxedCandidates.minWithOrNull(lowest())
+                    ?: muxedCandidates.maxWithOrNull(muxedOrder())
+            }
+            else -> {
+                val budget = NetworkSpeed.sustainableKbps()
+                muxedCandidates.filter { it.fitsKbps(budget) }.maxWithOrNull(muxedOrder())
+                    ?: muxedCandidates.minWithOrNull(lowest())
+            }
+        }
+        return Picked(null, null, muxed)
+    }
+
+    /** The best side-loadable caption track for the current caption language. */
+    fun subtitleFor(info: StreamInfo): SubtitlesStream? {
+        val usable = info.subtitles.filter {
+            it.isUrl && it.content.isNotBlank() && subtitleMimeType(it) != null
+        }
+        if (usable.isEmpty()) return null
+        val wanted = CaptionPreference.languageTag.lowercase(Locale.US)
+        return usable.firstOrNull { it.languageTag.lowercase(Locale.US).startsWith(wanted) && !it.isAutoGenerated }
+            ?: usable.firstOrNull { it.languageTag.lowercase(Locale.US).startsWith(wanted) }
+            ?: usable.firstOrNull { !it.isAutoGenerated }
+            ?: usable.first()
+    }
+
+    fun hasCaptions(info: StreamInfo): Boolean = info.subtitles.any {
+        it.isUrl && it.content.isNotBlank() && subtitleMimeType(it) != null
+    }
+
+    
+
+
+
+
+
+    fun autoLadder(info: StreamInfo, maxTier: Int = MAX_TIER): List<VideoStream> {
+        val hdr = QualityPreference.hdr && HdrSupport.isSupported
+        val usable = usableVideos(info, hdr).filter {
+            it.tier() in 1..maxTier && it.itagItem != null
+        }
+        return usable.groupBy { it.tier() }
+            .map { (_, sameTier) ->
+                sameTier.maxWith(
+                    compareBy<VideoStream> { if (hdr && HdrSupport.isHdr(it)) 2 else 0 }
+                        .thenBy { it.fps * 100_000L + it.bitrate },
+                )
+            }
+            .sortedBy { it.tier() }
+    }
+
+    fun hdrHeights(info: StreamInfo): List<Int> = HdrFormats.hdrHeights(info)
+
+    fun heights(info: StreamInfo): List<Int> {
+        val allProgressive = info.videoOnlyStreams
+            .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.height > 0 }
+        // HDR has its own rows; these are the SDR renditions at the same heights.
+        val progressive = allProgressive.filterNot(HdrSupport::isHdrCodec).map { it.tier() }
+            .ifEmpty { allProgressive.map { it.tier() } }
+        if (progressive.isNotEmpty()) {
+            return progressive.distinct().sortedDescending()
+        }
+        val muxed = info.videoStreams
+            .filter { it.isUrl && it.height > 0 }
+            .map { it.tier() }
+        if (muxed.isNotEmpty()) {
+            return muxed.distinct().sortedDescending()
+        }
+        if (info.streamType == StreamType.LIVE_STREAM || !info.hlsUrl.isNullOrBlank()) {
+            return listOf(1080, 720, 480, 360, 240, 144)
+        }
+        return emptyList()
+    }
+}
+
+
+
+
+
+private val YT_VIDEO_ID_IN_THUMB = Regex("""i\.ytimg\.com/vi/([\w-]{11})/""")
+
+fun ytVideoIdFromThumbUrl(url: String): String? = YT_VIDEO_ID_IN_THUMB.find(url)?.groupValues?.getOrNull(1)
+
+fun isLowRungYtimgUrl(url: String): Boolean {
+    val path = url.substringBefore('?')
+    return "/hqdefault" in path || "/mqdefault" in path || "/default.jpg" in path
+}
+
+fun ytimgThumbnailWidth(url: String): Int {
+    Regex("=w(\\d+)").find(url)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { return it }
+    return when {
+        "maxresdefault" in url -> 1280
+        "sddefault" in url -> 640
+        "hqdefault" in url -> 480
+        "mqdefault" in url -> 320
+        else -> 0
+    }
+}
+
+
+fun feedThumbnailUrl(videoId: String): String = "https://i.ytimg.com/vi/$videoId/hq720.jpg"
+
+
+fun sharpenFeedThumbnail(apiUrl: String?, videoId: String): String {
+    val api = apiUrl?.trim()?.ifBlank { null }
+
+    if (api != null && isLowRungYtimgUrl(api)) return feedThumbnailUrl(videoId)
+    if (api != null && ytimgThumbnailWidth(api) >= 720) return api
+    if (api != null && ("googleusercontent.com" in api || "ggpht.com" in api)) {
+        return upscaleGgphtThumbnail(api, 1280)
+    }
+    return feedThumbnailUrl(videoId)
+}
+
+
+fun channelAvatarEdgePx(url: String): Int =
+    Regex("=s(\\d+)").find(url)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
+
+
+fun normalizeChannelAvatarUrl(url: String): String {
+    if ("/ytc/" !in url || "googleusercontent.com" in url) return url
+    val id = url.substringAfter("/ytc/").substringBefore("=").substringBefore("?").ifBlank { return url }
+    return "https://yt3.googleusercontent.com/ytc/$id=s88-c-k-c0x00ffffff-no-rj"
+}
+
+
+fun sharpenChannelAvatarUrl(url: String, minEdgePx: Int): String {
+    val normalized = normalizeChannelAvatarUrl(url)
+    val m = Regex("=s(\\d+)").find(normalized) ?: return normalized
+    val current = m.groupValues[1].toIntOrNull() ?: return normalized
+    if ("/ytc/" in normalized && current > 96 && "googleusercontent.com" !in normalized) {
+        return normalized.replace(Regex("=s\\d+"), "=s96")
+    }
+    if (current >= minEdgePx) return normalized
+
+    val ceiling = if ("/ytc/" in normalized && "googleusercontent.com" !in normalized) 96 else 800
+    val edge = minOf(minEdgePx, ceiling).coerceAtLeast(current)
+    return normalized.replace(Regex("=s\\d+"), "=s$edge")
+}
+
+internal fun upscaleGgphtThumbnail(url: String, targetWidth: Int): String {
+    val current = ytimgThumbnailWidth(url)
+    if (current >= targetWidth) return url
+    val height = targetWidth * 9 / 16
+    return if ("=w" in url) {
+        url.replace(Regex("=w\\d+-h\\d+"), "=w$targetWidth-h$height")
+    } else {
+        "$url=w$targetWidth-h$height"
+    }
+}
+
+
+
+
+
+
+
+fun fetchDislikeCount(videoId: String): Long {
+    return runCatching {
+        val req = okhttp3.Request.Builder()
+            .url("https://returnyoutubedislikeapi.com/votes?videoId=$videoId")
+            .header("User-Agent", Net.USER_AGENT)
+            .build()
+        Net.client.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) return@runCatching -1L
+            org.json.JSONObject(r.body?.string().orEmpty()).optLong("dislikes", -1L)
+        }
+    }.getOrElse { -1L }
+}
+
+object SeenShorts {
+    private const val PREFS_NAME = "seen_shorts_prefs"
+    private const val KEY_SEEN = "seen_ids"
+    private const val MAX_SEEN = 5000
+    private val memorySeen = LinkedHashSet<String>()
+    private var initialized = false
+
+    fun init(context: Context) {
+        if (initialized) return
+        initialized = true
+        runCatching {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val saved = prefs.getString(KEY_SEEN, "") ?: ""
+            if (saved.isNotEmpty()) {
+                saved.split(",").filter { it.isNotBlank() }.forEach { memorySeen.add(it) }
+            }
+        }
+    }
+
+    fun markSeen(context: Context, videoId: String) {
+        if (videoId.isBlank()) return
+        init(context)
+        synchronized(memorySeen) {
+            memorySeen.remove(videoId)
+            memorySeen.add(videoId)
+            while (memorySeen.size > MAX_SEEN) {
+                val oldest = memorySeen.firstOrNull() ?: break
+                memorySeen.remove(oldest)
+            }
+            runCatching {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().putString(KEY_SEEN, memorySeen.joinToString(",")).apply()
+            }
+        }
+    }
+
+    fun isSeen(videoId: String): Boolean {
+        synchronized(memorySeen) {
+            return memorySeen.contains(videoId)
+        }
+    }
+
+    fun allSeen(): Set<String> {
+        synchronized(memorySeen) {
+            return memorySeen.toSet()
+        }
+    }
+
+    fun filterUnseen(videos: List<VideoItem>): List<VideoItem> {
+        synchronized(memorySeen) {
+            if (memorySeen.isEmpty()) return videos
+            return videos.filter { it.id !in memorySeen }
+        }
+    }
+}
