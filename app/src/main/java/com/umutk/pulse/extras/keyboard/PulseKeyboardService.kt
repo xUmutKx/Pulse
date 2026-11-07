@@ -488,7 +488,30 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
     override fun onWindowShown() { super.onWindowShown(); backToKeys() }
 
+    /**
+     * The login the keyboard sees being typed: a user name box (e-mail, a label that says user / login, a number box) is remembered, and when a password box is left or sent
+     * the keyboard offers to save the pair (a notification, so it still shows when the keyboard closes with the page). Independent of the phone's autofill.
+     */
+    private fun trackLogin() {
+        if (st.incognito) return
+        val info = currentInputEditorInfo ?: return
+        val ic = currentInputConnection ?: return
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
+        if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return
+        val text = (ic.getTextBeforeCursor(200, 0)?.toString().orEmpty() + ic.getTextAfterCursor(200, 0)?.toString().orEmpty()).trim()
+        if (text.isEmpty()) return
+        if (pass) { LoginSaver.offer(this, info.packageName, text); return }
+        val userLike = (cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)) ||
+            cls == InputType.TYPE_CLASS_NUMBER || listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail", "öğrenci", "ogrenci", "numara").any { label.contains(it) }
+        if (userLike) LoginSaver.rememberUser(info.packageName, text)
+    }
+
     override fun onFinishInput() {
+        runCatching { trackLogin() }
         super.onFinishInput()
         st.inline = emptyList()
         lastEmail?.let { e -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(e) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != e }).take(5).joinToString("\n")).apply() } }
@@ -828,6 +851,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
         captureEmail(c)
+        runCatching { trackLogin() }
         finishWord("\n", true)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
@@ -1697,12 +1721,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
             .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
             .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
-        // a password box of an app with no login of its own in the vault: every saved login is offered (a tap writes its password), so the bar is not left empty
-        val shownList = if (list.isEmpty() && pass) com.umutk.pulse.features.VaultStore.all(this).filter { it.type == 1 && it.pass.isNotEmpty() }.sortedBy { it.name.lowercase() }
-            .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6) else list
-        if (shownList.isEmpty()) return false
-        vaultTexts = shownList.map { if (pass) it.pass else it.user }
-        val shown = shownList.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
+        if (list.isEmpty()) return false
+        vaultTexts = list.map { if (pass) it.pass else it.user }
+        val shown = list.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
         val n = maxOf(3, shown.size)
         slotWords = Array(n) { "" }
         st.slots = (shown + listOf("", "", "")).take(n)
