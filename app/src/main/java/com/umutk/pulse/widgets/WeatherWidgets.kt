@@ -38,7 +38,8 @@ abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: 
         val tile = if (f == null) {
             Tile(big = "--", sub = listOf(tr("No data yet", "Henüz veri yok")), defScale = if (detail) .65f else 1f)
         } else {
-            val today = f.days.firstOrNull()
+            val todayKey = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            val today = f.days.firstOrNull { it.date == todayKey } ?: f.days.firstOrNull()
             val range = today?.let { "${WeatherFmt.temp(it.max, imp)} / ${WeatherFmt.temp(it.min, imp)}" }
             val sub = listOfNotNull(f.place.ifBlank { null }, WeatherApi.condition(f.code) + (range?.let { " · $it" } ?: ""))
             val line = if (wide) f.hours.take(12).map { (if (imp) it.temp * 9 / 5 + 32 else it.temp).toFloat() } else emptyList()
@@ -71,7 +72,9 @@ abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: 
         com.umutk.pulse.extras.weather.WeatherAuto.ensure(ctx)
         val place = WeatherStore.savedPlace(ctx) ?: return
         val old = WeatherStore.cached(ctx)
-        if (old != null && System.currentTimeMillis() - old.at < MAX_AGE_MS) return
+        // a copy from before midnight is read again at once (its first day is yesterday), even when it is under an hour old
+        val sameDay = old != null && java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).let { it.format(java.util.Date(old.at)) == it.format(java.util.Date()) }
+        if (old != null && sameDay && System.currentTimeMillis() - old.at < MAX_AGE_MS) return
         val pending = goAsync()
         Thread {
             try {
