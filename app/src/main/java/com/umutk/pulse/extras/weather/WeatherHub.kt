@@ -562,7 +562,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                             onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
-    val sources = listOf("all" to tr("All sources, combined", "Hepsi, birleştirilmiş"), "om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "t7" to tr("7Timer (no key)", "7Timer (anahtarsız)"), "owm" to "OpenWeatherMap")
+    val sources = listOf("all" to tr("All sources, combined", "Hepsi, birleştirilmiş"), "om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "wttr" to tr("wttr.in (no key)", "wttr.in (anahtarsız)"), "brightsky" to tr("Bright Sky, DWD (no key)", "Bright Sky, DWD (anahtarsız)"), "owm" to "OpenWeatherMap", "wapi" to "WeatherAPI.com", "pirate" to "Pirate Weather")
     val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -581,11 +581,17 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         var key by remember { mutableStateOf(WeatherStore.owmKey(wctx)) }
         Text(tr("OpenWeatherMap key (optional)", "OpenWeatherMap anahtarı (isteğe bağlı)"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
         PField(key, { key = it; WeatherStore.setOwmKey(wctx, it) }, tr("API key", "API anahtarı"), Modifier.fillMaxWidth())
+        var keyW by remember { mutableStateOf(WeatherStore.apiKey(wctx, "wapi")) }
+        Text(tr("WeatherAPI.com key (optional)", "WeatherAPI.com anahtarı (isteğe bağlı)"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        PField(keyW, { keyW = it; WeatherStore.setApiKey(wctx, "wapi", it) }, tr("API key", "API anahtarı"), Modifier.fillMaxWidth())
+        var keyP by remember { mutableStateOf(WeatherStore.apiKey(wctx, "pirate")) }
+        Text(tr("Pirate Weather key (optional)", "Pirate Weather anahtarı (isteğe bağlı)"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        PField(keyP, { keyP = it; WeatherStore.setApiKey(wctx, "pirate", it) }, tr("API key", "API anahtarı"), Modifier.fillMaxWidth())
         var comb by remember { mutableStateOf(combine) }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Combine several forecasts", "Birden fazla tahmini birleştir"), color = fg, fontSize = 16.sp)
-                Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON), met.no, wttr.in and 7Timer, plus OpenWeatherMap when its key is set, and MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on. A service that fails is left out.", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON), met.no, wttr.in ve 7Timer, anahtar girildiyse OpenWeatherMap, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü. Hata veren servis atlanır."), color = sub, fontSize = 12.sp)
+                Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON), wttr.in and Bright Sky (DWD), which need no key, plus OpenWeatherMap, WeatherAPI.com and Pirate Weather when their keys are set, and MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on. A service that fails is left out.", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON), anahtar gerektirmeyen wttr.in ve Bright Sky (DWD), anahtar girildiyse OpenWeatherMap, WeatherAPI.com ve Pirate Weather, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü. Hata veren servis atlanır."), color = sub, fontSize = 12.sp)
             }
             PSwitch(comb, { comb = it; onCombine(it) })
         }
