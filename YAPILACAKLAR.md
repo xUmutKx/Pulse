@@ -2312,4 +2312,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 - 1.0.374 (derlendi): YTXTube (YouTube ve YouTube Music istemcisi) Ekstra uygulamalardan kurulan, kendi ikonu olan uygulama (Shorts yok, AMOLED yok, kendi güncelleyicisi kapalı; yalnızca foss), önceki tüm değişiklikler.
 
-- 1.0.375 (derlenmedi): Island bildirim ışığı (AODLed benzeri; kamera çevresinde halka/nokta/parıltı, nabız/dönüş/sabit, uygulama rengi, sessizleri de seçeneği), Music player içinde YouTube Music araması.
+- 1.0.375 (derlenmedi): Island bildirim ışığı (AODLed benzeri; kamera çevresinde halka/nokta/parıltı, nabız/dönüş/sabit, uygulama rengi, sessizleri de seçeneği), YouTube istemcisi tamamen kaldırıldı; Athenaeum: Pulse görünümleri (Windows, AMOLED) ve Türkçe menüler, destek/yapımcı yazıları çıkarıldı.

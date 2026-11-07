@@ -34,6 +34,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.umutk.pulse.tr
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -114,13 +116,35 @@ private val AppLightScheme = lightColorScheme(
     scrim = Color(0xFF000000)
 )
 
+/** The colours of a Pulse look (Windows 95 ... 11, AMOLED) as a Material scheme. */
+private fun lookScheme(th: com.umutk.pulse.PTheme): androidx.compose.material3.ColorScheme {
+    val a = th.accent
+    val onA = if (a.luminance() > 0.5f) Color.Black else Color.White
+    val pc = androidx.compose.ui.graphics.lerp(th.panel, a, if (th.dark) 0.30f else 0.18f)
+    val sc = androidx.compose.ui.graphics.lerp(th.panel, a, 0.12f)
+    return if (th.dark) darkColorScheme(primary = a, onPrimary = onA, primaryContainer = pc, onPrimaryContainer = th.text, secondary = th.sub, secondaryContainer = sc, onSecondaryContainer = th.text,
+        tertiary = a, tertiaryContainer = pc, onTertiaryContainer = th.text, background = th.bg, onBackground = th.text, surface = th.bg, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line, outlineVariant = th.line, surfaceTint = a)
+    else lightColorScheme(primary = a, onPrimary = onA, primaryContainer = pc, onPrimaryContainer = th.text, secondary = th.sub, secondaryContainer = sc, onSecondaryContainer = th.text,
+        tertiary = a, tertiaryContainer = pc, onTertiaryContainer = th.text, background = th.bg, onBackground = th.text, surface = th.bg, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line, outlineVariant = th.line, surfaceTint = a)
+}
+
+private fun navLabel(l: String): String = when (l) {
+    "Home" -> tr("Home", "Ana sayfa"); "Astrology" -> tr("Astrology", "Astroloji"); "Spirits" -> tr("Spirits", "Ruhlar"); "Magic" -> tr("Magic", "Büyü"); "Settings" -> tr("Settings", "Ayarlar"); else -> l
+}
+
 @Composable
 fun TarotTheme(
+    look: com.umutk.pulse.PTheme? = null,
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    // a Windows look or AMOLED: its own colours (Material keeps Athenaeum's wine and gold)
+    if (look != null && look.id != "material") {
+        MaterialTheme(colorScheme = lookScheme(look), typography = MaterialTheme.typography, content = content)
+        return
+    }
 
     val dynamicVersion = FeatureSettings.version.value
     val useDynamicColor = remember(dynamicVersion) { FeatureSettings.isDynamicColorEnabled(context) }
@@ -173,6 +197,7 @@ class AthenaeumActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TarotApp.init(this)
+        FeatureSettings.loadLook(this)
         enableEdgeToEdge()
         openMoonCalendar.value = intent?.getBooleanExtra("open_moon_calendar", false) ?: false
         val appContext = applicationContext
@@ -185,7 +210,8 @@ class AthenaeumActivity : ComponentActivity() {
         }
 
         setContent {
-            TarotTheme {
+            com.umutk.pulse.LookHost(lookId = FeatureSettings.look.value) { th ->
+            TarotTheme(look = th) {
                 val navController = rememberNavController()
                 val currentBackStack by navController.currentBackStackEntryAsState()
                 val currentDestination = currentBackStack?.destination
@@ -214,7 +240,7 @@ class AthenaeumActivity : ComponentActivity() {
                                         icon = screen.icon,
                                         label = {
                                             Text(
-                                                screen.label,
+                                                navLabel(screen.label),
                                                 maxLines = 1,
                                                 softWrap = false,
                                                 style = MaterialTheme.typography.labelSmall
@@ -373,6 +399,7 @@ class AthenaeumActivity : ComponentActivity() {
                          }
                       }
                  }
+             }
              }
          }
      }
