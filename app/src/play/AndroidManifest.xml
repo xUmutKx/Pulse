@@ -16,6 +16,7 @@
         <activity android:name="com.umutk.pulse.ArtCraftActivity" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.ArtCraftLauncher" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.ytx.YtxLaunchActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.ytx.AthenaLaunchActivity" tools:node="remove" />
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />
     </application>
 </manifest>
