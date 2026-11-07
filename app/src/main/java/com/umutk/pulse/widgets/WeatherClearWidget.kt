@@ -107,7 +107,9 @@ class WeatherClearWidget : PulseWidget() {
                 // the device's place: the current fix, else the last saved one, else the place the weather page uses; no place means no fetch
                 val spot = if (pl.device) {
                     val here = kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) }
-                    here ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device }
+                    // a background fetch has no fix of its own: the place where the phone was when the weather page last found it comes next
+                    here ?: com.umutk.pulse.extras.weather.WeatherStore.lastDevice(ctx)?.let { Place(pl.name, it.first, it.second, true) }
+                        ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device && (it.lat != 0.0 || it.lon != 0.0) }
                         ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.lat != 0.0 || it.lon != 0.0 }
                         ?: return@runCatching
                 } else pl
