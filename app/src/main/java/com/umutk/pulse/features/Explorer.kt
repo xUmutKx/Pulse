@@ -1061,7 +1061,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     ExBadged(f, isz.dp) {
                         // one rounded square for every file: the picture when there is one, the type icon on the panel colour otherwise
                         val square = RoundedCornerShape(percent = 22)
-                        if (thumb != null) Image(thumb, null, Modifier.size(isz.dp).clip(square), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
+                        if (thumb != null) Image(thumb, null, Modifier.size(isz.dp).clip(square), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium)
                         else Box(Modifier.size(isz.dp).clip(square).background(T.panel), contentAlignment = Alignment.Center) {
                             ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
                         }
@@ -1078,7 +1078,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, maxOf(isz, 40).dp) {
-                        if (thumb != null) Image(thumb, null, Modifier.size(maxOf(isz, 40).dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
+                        if (thumb != null) Image(thumb, null, Modifier.size(maxOf(isz, 40).dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium)
                         else ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
                     }
                     Spacer(Modifier.width(10.dp))

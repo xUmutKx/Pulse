@@ -21,8 +21,8 @@ import java.security.MessageDigest
 
 /** Small picture previews for the file list: memory cache, then a disk cache in cacheDir/thumbs, then a sampled decode. */
 object Thumbs {
-    // 480 px keeps the grid icons sharp when they are enlarged (the viewer itself decodes the original)
-    private const val PX = 480
+    // 320 px: sharp enough for the list and the grid, a little over twice cheaper to decode, store and draw than 480 (the viewer itself decodes the original)
+    private const val PX = 320
     // a byte budget, not a count: 480 px previews are ~0.9 MB each in memory
     private val mem = object : LruCache<String, ImageBitmap>((Runtime.getRuntime().maxMemory() / 10).toInt().coerceAtLeast(8 shl 20)) {
         override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
@@ -30,7 +30,7 @@ object Thumbs {
 
     // a few decodes at a time, so a folder like DCIM/Camera does not swamp the IO pool
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val io = Dispatchers.IO.limitedParallelism(3)
+    private val io = Dispatchers.IO.limitedParallelism(4)
 
     @Volatile private var trimmed = false
     private const val MAX_BYTES = 96L shl 20
@@ -43,7 +43,7 @@ object Thumbs {
     }
 
     private fun key(f: File): String {
-        val raw = "v2|${f.path}|${f.lastModified()}|${f.length()}"
+        val raw = "v3|${f.path}|${f.lastModified()}|${f.length()}"
         return MessageDigest.getInstance("MD5").digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 
@@ -61,7 +61,7 @@ object Thumbs {
             ?: runCatching {
                 // keeps the aspect ratio and reads the EXIF rotation; HEIC included
                 (previewOf(ctx, f) ?: if (f.extension.lowercase() !in PV_IMAGE) throw java.io.IOException("no preview") else if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
-                    runCatching { disk.outputStream().use { b.compress(if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP, 92, it) } }
+                    runCatching { disk.outputStream().use { b.compress(if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP, 80, it) } }
                 }
             }.getOrNull()
         bmp?.asImageBitmap()?.also { mem.put(k, it) }
@@ -93,7 +93,7 @@ private fun previewOf(ctx: Context, f: File): Bitmap? {
             android.os.ParcelFileDescriptor.open(f, android.os.ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 android.graphics.pdf.PdfRenderer(fd).use { r ->
                     r.openPage(0).use { pg ->
-                        val w = 480; val h = (w * pg.height / pg.width.toFloat()).toInt().coerceIn(120, 960)
+                        val w = 320; val h = (w * pg.height / pg.width.toFloat()).toInt().coerceIn(120, 960)
                         Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { b -> b.eraseColor(android.graphics.Color.WHITE); pg.render(b, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
                     }
                 }
@@ -101,7 +101,7 @@ private fun previewOf(ctx: Context, f: File): Bitmap? {
         }.getOrNull()
         e in PV_VIDEO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
-            try { m.setDataSource(f.path); (m.getFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(0L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(-1L))?.let { Bitmap.createScaledBitmap(it, 480, (480 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
+            try { m.setDataSource(f.path); (m.getFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(0L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(-1L))?.let { Bitmap.createScaledBitmap(it, 320, (320 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
         }.getOrNull()
         e in PV_AUDIO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
