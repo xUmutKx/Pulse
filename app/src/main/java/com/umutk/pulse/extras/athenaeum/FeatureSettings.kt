@@ -31,6 +31,11 @@ object FeatureSettings {
 
     val version: MutableState<Int> = mutableStateOf(0)
 
+    /** The Pulse look Athenaeum is drawn in: "material" (default), the Windows looks, or "amoled" (pure black). Its own setting, never Pulse's. */
+    val look: MutableState<String> = mutableStateOf("material")
+    fun loadLook(context: Context) { look.value = prefs(context).getString("look", "material") ?: "material" }
+    fun setLook(context: Context, id: String) { prefs(context).edit().putString("look", id).apply(); look.value = id }
+
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

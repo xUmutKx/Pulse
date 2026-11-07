@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.athenaeum.ui
 
+import com.umutk.pulse.tr
 import com.umutk.pulse.R
 
 import android.content.Intent
@@ -44,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-private const val ONBOARDING_PAGES = 5
+private const val ONBOARDING_PAGES = 4
 private val lastPageIndex = ONBOARDING_PAGES - 1
 
 @Composable
@@ -71,7 +72,7 @@ fun OnboardingScreen(
                     .align(Alignment.TopEnd)
                     .padding(top = 16.dp, end = 16.dp)
             ) {
-                Text("Skip")
+                Text(tr("Skip", "Geç"))
             }
         }
 
@@ -94,14 +95,7 @@ fun OnboardingScreen(
                     0 -> WelcomeSlide(name) { name = it }
                     1 -> TourSlide()
                     2 -> CustomizeSlide()
-                    3 -> PrivacySlide()
-                    else -> SupportSlide(
-                        onKoFi = {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/zad1ag"))
-                            )
-                        }
-                    )
+                    else -> PrivacySlide()
                 }
             }
 
@@ -131,7 +125,7 @@ fun OnboardingScreen(
             ) {
                 if (page > 0) {
                     TextButton(onClick = { page-- }) {
-                        Text("Back")
+                        Text(tr("Back", "Geri"))
                     }
                 } else {
                     Spacer(modifier = Modifier.width(72.dp))
@@ -146,7 +140,7 @@ fun OnboardingScreen(
                         }
                     }
                 ) {
-                    Text(if (page < lastPageIndex) "Next" else "Begin")
+                    Text(if (page < lastPageIndex) tr("Next", "İleri") else tr("Begin", "Başla"))
                 }
             }
         }
@@ -175,13 +169,7 @@ private fun WelcomeSlide(name: String, onNameChange: (String) -> Unit) {
             modifier = Modifier.padding(top = 8.dp)
         )
         Text(
-            text = "made by zad1ag with love in Iceland",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 6.dp)
-        )
-        Text(
-            text = "Your companion for tarot, astrology, runes, spirits, and more.",
+            text = tr("Your companion for tarot, astrology, runes, spirits, and more.", "Tarot, astroloji, rünler, ruhlar ve daha fazlası için yol arkadaşın."),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -191,14 +179,14 @@ private fun WelcomeSlide(name: String, onNameChange: (String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(32.dp))
         Text(
-            text = "What should we call you?",
+            text = tr("What should we call you?", "Sana ne diyelim?"),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
         OutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            placeholder = { Text("A name, a nickname, a craft-name\u2026") },
+            placeholder = { Text(tr("A name, a nickname, a craft-name\u2026", "Bir ad, bir takma ad, bir sanat adı…")) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,19 +199,19 @@ private fun WelcomeSlide(name: String, onNameChange: (String) -> Unit) {
 private fun TourSlide() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "What's inside",
+            text = tr("What's inside", "İçinde neler var"),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(24.dp))
-        TourRow(R.drawable.ic_onboarding_tarot_fool, "Tarot", "Draws, spreads, and every card's meanings - all editable.")
-        TourRow(R.drawable.ic_moon_first_quarter, "Astrology", "Today's sun and moon signs, planetary days, the zodiac.")
-        TourRow(R.drawable.ic_onboarding_magic, "Magic", "Spells, Icelandic staves, and the Elder Futhark runes.")
-        TourRow(R.drawable.ic_skull, "Spirits", "Entities, angels, and deities of many pantheons.")
+        TourRow(R.drawable.ic_onboarding_tarot_fool, "Tarot", tr("Draws, spreads, and every card's meanings - all editable.", "Çekilişler, açılımlar ve her kartın anlamları; hepsi düzenlenebilir."))
+        TourRow(R.drawable.ic_moon_first_quarter, tr("Astrology", "Astroloji"), tr("Today's sun and moon signs, planetary days, the zodiac.", "Bugünün güneş ve ay burçları, gezegen günleri, zodyak."))
+        TourRow(R.drawable.ic_onboarding_magic, tr("Magic", "Büyü"), tr("Spells, Icelandic staves, and the Elder Futhark runes.", "Büyüler, İzlanda asaları ve Elder Futhark rünleri."))
+        TourRow(R.drawable.ic_skull, tr("Spirits", "Ruhlar"), tr("Entities, angels, and deities of many pantheons.", "Pek çok panteondan varlıklar, melekler ve tanrılar."))
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Trim or disable anything in Settings.",
+            text = tr("Trim or disable anything in Settings.", "Her şeyi Ayarlar'dan kısabilir ya da kapatabilirsin."),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -265,19 +253,19 @@ private fun TourRow(iconRes: Int, title: String, body: String) {
 private fun CustomizeSlide() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Make it yours",
+            text = tr("Make it yours", "Kendine göre yap"),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Bullet("Everything is editable - card meanings, rune entries, spirit profiles.")
-        Bullet("Add your own spells, spirits, and deities from the + buttons.")
-        Bullet("Don't use a section? Turn it off in Settings \u2192 Visible sections.")
-        Bullet("Back everything up - one file, any app or drive you like.")
+        Bullet(tr("Everything is editable - card meanings, rune entries, spirit profiles.", "Her şey düzenlenebilir: kart anlamları, rün girdileri, ruh profilleri."))
+        Bullet(tr("Add your own spells, spirits, and deities from the + buttons.", "+ düğmeleriyle kendi büyülerini, ruhlarını ve tanrılarını ekle."))
+        Bullet(tr("Don't use a section? Turn it off in Settings \u2192 Visible sections.", "Bir bölümü kullanmıyor musun? Ayarlar → Görünen bölümler'den kapat."))
+        Bullet(tr("Back everything up - one file, any app or drive you like.", "Her şeyi yedekle: tek dosya, istediğin uygulama ya da sürücü."))
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "The built-in content is a starting point, not gospel.",
+            text = tr("The built-in content is a starting point, not gospel.", "Hazır içerik bir başlangıçtır, kesin doğru değildir."),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -317,60 +305,16 @@ private fun PrivacySlide() {
             modifier = Modifier.size(72.dp)
         )
         Text(
-            text = "Yours alone",
+            text = tr("Yours alone", "Yalnızca senin"),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(top = 12.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Bullet("Everything stays on this device.")
-        Bullet("No account. No analytics. No tracking. Ever.")
-        Bullet("For reflection and tradition - not medical, legal, or financial advice.")
+        Bullet(tr("Everything stays on this device.", "Her şey bu cihazda kalır."))
+        Bullet(tr("No account. No analytics. No tracking. Ever.", "Hesap yok. Analiz yok. İzleme yok. Asla."))
+        Bullet(tr("For reflection and tradition - not medical, legal, or financial advice.", "Düşünmek ve gelenek içindir; tıbbi, hukuki ya da mali tavsiye değildir."))
     }
 }
 
-@Composable
-private fun SupportSlide(onKoFi: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Icon(
-            painter = painterResource(R.drawable.ic_kofi_coffee),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(72.dp)
-        )
-        Text(
-            text = "End up enjoying it?",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(top = 12.dp)
-        )
-        Text(
-            text = "This app is a labour of love by one independent developer. If it earns its keep, a coffee keeps the candle lit.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .padding(horizontal = 8.dp)
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        Button(
-            onClick = onKoFi,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Support on Ko-fi")
-        }
-        Text(
-            text = "There's no paywall and feature-locked nagging - just a small ask, if and when you feel like it.",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .padding(horizontal = 8.dp)
-        )
-    }
-}

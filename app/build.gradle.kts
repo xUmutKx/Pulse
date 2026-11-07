@@ -96,7 +96,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
     // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use
     implementation("com.klinkerapps:android-smsmms:5.2.6") { exclude(group = "com.squareup.okhttp") }
-    add("fossImplementation", "com.github.TeamNewPipe:NewPipeExtractor:v0.26.5") // the YouTube client (extras/youtube), GPL v3, the open-source build only
     implementation("androidx.navigation:navigation-compose:2.8.3") // Athenaeum: its screens
     implementation("com.google.code.gson:gson:2.11.0") // Athenaeum: the answers of its Rust core
     testImplementation("junit:junit:4.13.2") // JVM tests for extras/music (M3uParserTest)
