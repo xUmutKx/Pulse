@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.widgets
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import com.umutk.pulse.extras.music.artistFor
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -55,8 +57,8 @@ class PowerampWidget : AppWidgetProvider() {
             A_NEXT -> e.next()
             A_REW -> e.player.seekTo((e.player.currentPosition - 10_000L).coerceAtLeast(0L))
             A_FF -> e.player.let { it.seekTo(if (it.duration > 0) (it.currentPosition + 10_000L).coerceAtMost(it.duration) else it.currentPosition) }
-            A_SHUF -> e.player.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-            A_LOOP -> e.player.let { it.repeatMode = when (it.repeatMode) { 0 -> 2; 2 -> 1; else -> 0 } }
+            A_SHUF -> PlayModes.cycleShuffle(c)
+            A_LOOP -> PlayModes.cycleRepeat(c)
             else -> return super.onReceive(c, i)
         }
         refresh(c)
@@ -101,7 +103,7 @@ class PowerampWidget : AppWidgetProvider() {
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
                 style, title, st.current?.artistFor(c).orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
-                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c), WidgetOpts.look(c),
+                st.index, st.queue.size, PlayModes.shuffle != ShuffleKind.OFF, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c), WidgetOpts.look(c),
             )
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {

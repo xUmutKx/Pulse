@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.cassette
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -105,7 +107,8 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var volume by remember { mutableFloatStateOf(engine.player.volume) }
-    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
+    val ctxPm = androidx.compose.ui.platform.LocalContext.current
+    var shuffle by remember { mutableStateOf(PlayModes.shuffle != ShuffleKind.OFF) }
     var repeat by remember { mutableStateOf(engine.player.repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) }
     LaunchedEffect(st.current, st.isPlaying) {
         while (true) { pos = engine.positionMs; dur = engine.durationMs; delay(if (st.isPlaying) 200L else 800L) }
@@ -147,8 +150,8 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
                 DeckKey("eject", Modifier.weight(1f), onClick = { shelf = true })
             }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Toggle("shuffle", shuffle) { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }
-                Toggle("repeat", repeat) { repeat = !repeat; engine.player.repeatMode = if (repeat) androidx.media3.common.Player.REPEAT_MODE_ALL else androidx.media3.common.Player.REPEAT_MODE_OFF }
+                Toggle("shuffle", shuffle) { PlayModes.cycleShuffle(ctxPm); shuffle = PlayModes.shuffle != ShuffleKind.OFF }
+                Toggle("repeat", repeat) { repeat = PlayModes.cycleRepeat(ctxPm) != androidx.media3.common.Player.REPEAT_MODE_OFF }
                 Spacer(Modifier.weight(1f))
                 androidx.compose.material3.Icon(deckVec("volume"), null, Modifier.size(20.dp), tint = cas.ink)
                 Box(Modifier.width(140.dp).height(34.dp).pointerInput(Unit) { detectTapGestures { o -> volume = (o.x / size.width).coerceIn(0f, 1f); engine.player.volume = volume } }

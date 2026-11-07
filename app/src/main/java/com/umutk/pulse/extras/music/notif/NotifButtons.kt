@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.notif
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -50,7 +52,7 @@ object NotifLayout {
     fun custom(ctx: Context, b: NotifBtn, p: Player): CommandButton {
         val e = MusicPlayerEngine.get(ctx)
         val (icon, name) = when (b) {
-            NotifBtn.SHUFFLE -> (if (p.shuffleModeEnabled) R.drawable.ic_notif_shuffle else R.drawable.ic_notif_shuffle_off) to b.label
+            NotifBtn.SHUFFLE -> (if (PlayModes.shuffle != ShuffleKind.OFF) R.drawable.ic_notif_shuffle else R.drawable.ic_notif_shuffle_off) to b.label
             NotifBtn.REPEAT -> when (p.repeatMode) {
                 Player.REPEAT_MODE_ALL -> R.drawable.ic_notif_repeat
                 Player.REPEAT_MODE_ONE -> R.drawable.ic_notif_repeat_one

@@ -109,12 +109,8 @@ class MusicPlaybackService : MediaSessionService() {
     private fun run(b: NotifBtn) {
         val p = engine.player
         when (b) {
-            NotifBtn.SHUFFLE -> p.shuffleModeEnabled = !p.shuffleModeEnabled
-            NotifBtn.REPEAT -> p.repeatMode = when (p.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                else -> Player.REPEAT_MODE_OFF
-            }
+            NotifBtn.SHUFFLE -> PlayModes.cycleShuffle(this)
+            NotifBtn.REPEAT -> PlayModes.cycleRepeat(this)
             NotifBtn.FAV -> p.currentMediaItem?.mediaId?.let { MusicStats.toggleFavourite(this, it) }
             NotifBtn.CLOSE -> {
                 engine.saveResume()

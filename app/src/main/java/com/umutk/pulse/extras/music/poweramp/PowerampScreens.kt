@@ -62,6 +62,11 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.RepeatOn
+import androidx.compose.material.icons.rounded.RepeatOneOn
+import androidx.compose.material.icons.rounded.ShuffleOn
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.foundation.layout.fillMaxHeight
 import com.umutk.pulse.Icon
 import androidx.compose.material3.Slider
@@ -449,16 +454,23 @@ fun NowPlayingScreen(
                         modifier = Modifier.clip(CircleShape).background(style.panel).padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
-                ModeMenuBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat, items = listOf(
+                val modesCtx = androidx.compose.ui.platform.LocalContext.current
+                PlayModes.load(modesCtx)
+                ModeMenuBtn(if (repeatMode == Player.REPEAT_MODE_ONE) androidx.compose.material.icons.Icons.Rounded.RepeatOneOn else if (repeatMode == Player.REPEAT_MODE_ALL) androidx.compose.material.icons.Icons.Rounded.RepeatOn else IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat, items = listOf(
                     ModeItem(tr("Repeat off", "Tekrar kapalı"), repeatMode == Player.REPEAT_MODE_OFF) { onRepeatMode?.invoke(Player.REPEAT_MODE_OFF) },
                     ModeItem(tr("Repeat all", "Tümünü tekrarla"), repeatMode == Player.REPEAT_MODE_ALL) { onRepeatMode?.invoke(Player.REPEAT_MODE_ALL) },
                     ModeItem(tr("Repeat one", "Tek parçayı tekrarla"), repeatMode == Player.REPEAT_MODE_ONE) { onRepeatMode?.invoke(Player.REPEAT_MODE_ONE) },
                 ))
                 Spacer(Modifier.width(4.5.dp))
-                ModeMenuBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onClick = onShuffle, items = listOf(
+                // the shuffle button goes round the kinds (off, queue, all songs, albums); its list also has a new order for the one that is on
+                val sk = PlayModes.shuffle
+                ModeMenuBtn(if (sk == ShuffleKind.OFF) IV("shuffle") else androidx.compose.material.icons.Icons.Rounded.ShuffleOn, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, badge = PlayModes.badge(sk), onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
+                    ModeItem(tr("Shuffle off", "Karıştırma kapalı"), sk == ShuffleKind.OFF) { PlayModes.setShuffle(modesCtx, ShuffleKind.OFF) },
+                    ModeItem(tr("Shuffle the queue", "Sırayı karıştır"), sk == ShuffleKind.QUEUE) { PlayModes.setShuffle(modesCtx, ShuffleKind.QUEUE) },
+                    ModeItem(tr("Shuffle all songs", "Tüm şarkıları karıştır"), sk == ShuffleKind.ALL) { PlayModes.setShuffle(modesCtx, ShuffleKind.ALL) },
+                    ModeItem(tr("Shuffle albums", "Albümleri karıştır"), sk == ShuffleKind.ALBUMS) { PlayModes.setShuffle(modesCtx, ShuffleKind.ALBUMS) },
+                    if (sk != ShuffleKind.OFF) ModeItem(tr("Shuffle again", "Yeniden karıştır"), false) { PlayModes.reshuffle(modesCtx) } else null,
                     ModeItem(tr("Play all", "Hepsini çal"), false) { onPlayAll?.invoke(false) },
-                    ModeItem(tr("Play all shuffled", "Hepsini karışık çal"), false) { onPlayAll?.invoke(true) },
-                    ModeItem(tr("Shuffle on", "Karıştır açık"), shuffle, onShuffle),
                 ))
             }
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
@@ -813,7 +825,7 @@ private class ModeItem(val label: String, val checked: Boolean, val action: () -
 /** Tap runs [onClick]; hold opens [items] in a menu that animates open. A checked item shows a tick. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit, items: List<ModeItem>) {
+private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit, items: List<ModeItem>, badge: String? = null) {
     var open by remember { mutableStateOf(false) }
     Box {
         Box(
@@ -821,11 +833,15 @@ private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style
                 .semantics { contentDescription = label; role = Role.Button }
                 .combinedClickable(onClick = onClick, onLongClick = { open = true }),
             contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp)) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                ) {
+            Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp))
+            badge?.let { Text(it, color = style.accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 9.dp, bottom = 3.dp)) }
+        }
+        // the list has a black background in every skin
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.background(Color.Black)) {
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text((if (item.checked) "✓  " else "    ") + item.label, color = if (item.checked) style.accent else style.text) },
+                    text = { Text((if (item.checked) "✓  " else "    ") + item.label, color = if (item.checked) style.accent else Color.White) },
                     onClick = { open = false; item.action() },
                 )
             }
