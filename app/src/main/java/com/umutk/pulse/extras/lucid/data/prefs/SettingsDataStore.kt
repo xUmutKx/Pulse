@@ -110,6 +110,20 @@ enum class AppFontStyle(val label: String) {
     SYSTEM_DEFAULT("System Modern"),
     SERIF("Editorial Serif"),
     CURSIVE("Minimalist Cursive"),
+    BODONI("Bodoni Moda"),
+    DM_SERIF("DM Serif Display"),
+    MONTAGU("Montagu Slab"),
+    JULIETT("Juliett"),
+    NEONDERTHAW("Neonderthaw"),
+    EDU("Edu Beginner"),
+    KODE_MONO("Kode Mono"),
+    JERSEY("Jersey 10"),
+    LEAGUE_GOTHIC("League Gothic"),
+    TOURNEY("Tourney"),
+    SUPER_POWER("Super Power"),
+    TILT_NEON("Tilt Neon"),
+    STICK("Stick No Bills"),
+    SEGMENTS("Segments"),
     CUSTOM_FILE("Custom File (.ttf/.otf/.apk)")
 }
 
@@ -147,7 +161,11 @@ enum class RingingClockStyle(val label: String) {
     BOLD_HORIZONTAL("Bold Horizontal"),
     BOLD_VERTICAL("Bold Vertical"),
     COMPACT_ANALOG("Compact Analog"),
-    NUMBERED_ANALOG("Numbered Analog");
+    NUMBERED_ANALOG("Numbered Analog"),
+    WIN95_CLOCK("Windows 95"),
+    WINXP_CLOCK("Windows XP"),
+    WIN7_CLOCK("Windows 7"),
+    WIN11_CLOCK("Windows 11");
 
     val isVertical: Boolean
         get() = this == VERTICAL_DIGITAL || this == BOLD_VERTICAL
@@ -156,7 +174,8 @@ enum class RingingClockStyle(val label: String) {
         get() = this == BOLD_HORIZONTAL || this == BOLD_VERTICAL
 
     val isAnalog: Boolean
-        get() = this == COMPACT_ANALOG || this == NUMBERED_ANALOG
+        get() = this == COMPACT_ANALOG || this == NUMBERED_ANALOG || this == WIN95_CLOCK ||
+            this == WINXP_CLOCK || this == WIN7_CLOCK || this == WIN11_CLOCK
 
     val isDigital: Boolean
         get() = !isAnalog
@@ -166,6 +185,20 @@ enum class RingingClockFont(val label: String) {
     SYSTEM_DEFAULT("System Modern"),
     SERIF("Editorial Serif"),
     CURSIVE("Minimalist Cursive"),
+    BODONI("Bodoni Moda"),
+    DM_SERIF("DM Serif Display"),
+    MONTAGU("Montagu Slab"),
+    JULIETT("Juliett"),
+    NEONDERTHAW("Neonderthaw"),
+    EDU("Edu Beginner"),
+    KODE_MONO("Kode Mono"),
+    JERSEY("Jersey 10"),
+    LEAGUE_GOTHIC("League Gothic"),
+    TOURNEY("Tourney"),
+    SUPER_POWER("Super Power"),
+    TILT_NEON("Tilt Neon"),
+    STICK("Stick No Bills"),
+    SEGMENTS("Segments"),
     CUSTOM_FILE("Custom File (.ttf/.otf/.apk)")
 }
 
@@ -457,10 +490,15 @@ class SettingsDataStore(private val context: Context) {
         (prefs[KEY_UNIFIED_VOLUME] ?: 0.85f).coerceIn(0f, 1f)
     }
 
+    /** The volume of the final "Are you awake?" ring (0 to 1). */
+    val awakeEmergencyVolumeFlow: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+        (prefs[KEY_AWAKE_EMERGENCY_VOLUME] ?: 1f).coerceIn(0f, 1f)
+    }
+
     val ringingBackgroundFlow: Flow<RingingBackgroundStyle> = context.settingsDataStore.data.map { prefs ->
-        val raw = prefs[KEY_RINGING_BACKGROUND] ?: RingingBackgroundStyle.STARFIELD.name
+        val raw = prefs[KEY_RINGING_BACKGROUND] ?: RingingBackgroundStyle.AMOLED_BLACK.name
         runCatching { RingingBackgroundStyle.valueOf(raw) }
-            .getOrDefault(RingingBackgroundStyle.STARFIELD)
+            .getOrDefault(RingingBackgroundStyle.AMOLED_BLACK)
     }
 
     val ringingBackgroundImageUriFlow: Flow<String> = context.settingsDataStore.data.map { prefs ->
@@ -742,6 +780,18 @@ class SettingsDataStore(private val context: Context) {
             .getOrDefault(TimerVibrationPattern.TICK_TICK)
     }
 
+    /** Alarm task: the alarm is stopped by solving a sum (off by default). Level 0 easy, 1 medium, 2 hard. */
+    val alarmTaskEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { prefs -> prefs[KEY_ALARM_TASK_ENABLED] ?: false }
+    val alarmTaskLevelFlow: Flow<Int> = context.settingsDataStore.data.map { prefs -> (prefs[KEY_ALARM_TASK_LEVEL] ?: 0).coerceIn(0, 2) }
+
+    suspend fun setAlarmTaskEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[KEY_ALARM_TASK_ENABLED] = enabled }
+    }
+
+    suspend fun setAlarmTaskLevel(level: Int) {
+        context.settingsDataStore.edit { it[KEY_ALARM_TASK_LEVEL] = level.coerceIn(0, 2) }
+    }
+
     val awakeCheckEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
         prefs[KEY_AWAKE_CHECK_ENABLED] ?: false
     }
@@ -918,6 +968,10 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun setUnifiedVolume(volume: Float) {
         context.settingsDataStore.edit { it[KEY_UNIFIED_VOLUME] = volume.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setAwakeEmergencyVolume(volume: Float) {
+        context.settingsDataStore.edit { it[KEY_AWAKE_EMERGENCY_VOLUME] = volume.coerceIn(0f, 1f) }
     }
 
     suspend fun setRingingBackground(style: RingingBackgroundStyle) {
@@ -1487,6 +1541,7 @@ class SettingsDataStore(private val context: Context) {
 
         private val KEY_VOLUME_POLICY = stringPreferencesKey("volume_policy")
         private val KEY_UNIFIED_VOLUME = floatPreferencesKey("unified_volume")
+        private val KEY_AWAKE_EMERGENCY_VOLUME = floatPreferencesKey("awake_emergency_volume")
 
         private val KEY_RINGING_BACKGROUND = stringPreferencesKey("ringing_background")
         private val KEY_RINGING_BACKGROUND_IMAGE_URI =
@@ -1566,6 +1621,8 @@ private val KEY_WORLD_CLOCK_CARD_COLOR = longPreferencesKey("world_clock_card_co
         private val KEY_TIMER_VIBRATION_PATTERN = stringPreferencesKey("timer_vibration_pattern")
 
         private val KEY_AWAKE_CHECK_ENABLED = booleanPreferencesKey("awake_check_enabled")
+        private val KEY_ALARM_TASK_ENABLED = booleanPreferencesKey("alarm_task_enabled")
+        private val KEY_ALARM_TASK_LEVEL = intPreferencesKey("alarm_task_level")
         private val KEY_AWAKE_CHECK_MINUTES = intPreferencesKey("awake_check_minutes")
 
         private val KEY_WORLD_CLOCK_ZONES = stringPreferencesKey("world_clock_zones")

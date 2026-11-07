@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import com.umutk.pulse.extras.ui.FlatSection
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
@@ -13,12 +17,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
+import com.umutk.pulse.extras.music.stats.MusicStats
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -30,10 +37,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.umutk.pulse.PButton
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
@@ -44,6 +53,7 @@ import com.umutk.pulse.extras.music.poweramp.PowerampLineAction
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
 import com.umutk.pulse.extras.ui.SwitchRow
+import com.umutk.pulse.WinAlert
 import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 
@@ -78,13 +88,13 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var bass by remember { mutableIntStateOf(engine.equalizer.bassBoost) }
     var virt by remember { mutableIntStateOf(engine.equalizer.virtualizer) }
 
-    if (cat == "audio") SettingsSection(tr("Sound", "Ses")) {
+    if (cat == "audio") FlatSection(tr("Sound", "Ses")) {
         SliderRow("${tr("Pre-amp", "Ön yükseltici")}  ${if (preamp > 0) "+" else ""}$preamp dB", preamp.toFloat(), -12f..12f) { preamp = it.toInt(); MusicSettings.setPreamp(c, preamp); push() }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(tr("Off", "Kapalı"), "ReplayGain", tr("Album", "Albüm")).forEachIndexed { i, l -> PChip(rg == i, l) { rg = i; MusicSettings.setReplayGain(c, i); push() } }
         }
         if (rg > 0) SliderRow("${tr("Untagged files", "Etiketsiz dosyalar")}  $rgFb dB", rgFb.toFloat(), -15f..0f) { rgFb = it.toInt(); MusicSettings.setRgFallback(c, rgFb); push() }
-        SliderRow("${tr("Fade between tracks", "Parçalar arası geçiş")}  ${if (xfade == 0) tr("off", "kapalı") else "$xfade s"}", xfade.toFloat(), 0f..12f) { xfade = it.toInt(); MusicSettings.setCrossfade(c, xfade); push() }
+        FadeCurve(xfade) { xfade = it; MusicSettings.setCrossfade(c, it); push() }
         SwitchRow(tr("Skip silence", "Sessizliği atla"), skipSil) { skipSil = it; MusicSettings.setSkipSilence(c, it); push() }
         SliderRow("${tr("Speed", "Hız")}  ${"%.2f".format(speed)}x", speed, .5f..2f) { speed = (Math.round(it * 20) / 20f); MusicSettings.setSpeed(c, speed); push() }
         SwitchRow(tr("Pitch follows speed", "Ton hızı izler"), pitch) { pitch = it; MusicSettings.setPitchFollows(c, it); push() }
@@ -96,7 +106,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var hidden by remember { mutableStateOf(MusicSettings.showHidden(c)) }
     var excluded by remember { mutableStateOf(MusicSettings.excluded(c).sorted()) }
     var newDir by remember { mutableStateOf("") }
-    if (cat == "library") SettingsSection(tr("Library", "Kütüphane")) {
+    if (cat == "library") FlatSection(tr("Library", "Kütüphane")) {
         SliderRow("${tr("Shortest track", "En kısa parça")}  $minSec s", minSec.toFloat(), 0f..120f) { minSec = it.toInt(); MusicSettings.setMinSeconds(c, minSec) }
         SwitchRow(tr("Hidden folders", "Gizli klasörler"), hidden) { hidden = it; MusicSettings.setShowHidden(c, it) }
         excluded.forEach { d ->
@@ -145,21 +155,57 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 ?: (tr("The pictures could not be read", "Resimler okunamadı") + (r.exceptionOrNull()?.let { ": " + (it.message ?: it.javaClass.simpleName) } ?: ""))
         }
     }
-    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
+    val pickBackup = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
     // the backup files found on the phone: the system picker does not always show a file of this unknown kind
     val found by androidx.compose.runtime.produceState(emptyList<java.io.File>(), cat) {
         value = if (cat != "library") emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             (java.io.File(c.filesDir, "pa_backups").listFiles()?.filter { it.isFile }.orEmpty()) + runCatching { android.os.Environment.getExternalStorageDirectory().walkTopDown().maxDepth(4).onEnter { !it.name.startsWith(".") || it.name == ".poweramp" }.filter { it.isFile && it.name.endsWith(".poweramp-backup") }.sortedByDescending { it.lastModified() }.take(8).toList() }.getOrDefault(emptyList())
         }
     }
-    val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+    val exportBackup = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) scope.launch {
             importNote = tr("Writing the backup…", "Yedek yazılıyor…")
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.export(c, uri) } }
             importNote = r.getOrNull()?.let { (l, n) -> tr("Saved: $l playlists, $n songs with a rating or plays", "Kaydedildi: $l çalma listesi, puanlı ya da dinlenmiş $n şarkı") } ?: tr("The backup could not be written", "Yedek yazılamadı")
         }
     }
-    if (cat == "library") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
+    // Pulse's own backup: the favourites and the stars; loading one asks before they are added
+    var pulseAsk by remember { mutableStateOf<String?>(null) }
+    val savePulse = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openOutputStream(uri)?.use { it.write(MusicStats.backupJson(c).toByteArray()) } } }
+            importNote = if (r.isSuccess) tr("Pulse backup saved", "Pulse yedeği kaydedildi") else tr("The backup could not be written", "Yedek yazılamadı")
+        }
+    }
+    val loadPulse = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val text = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } } }.getOrNull()
+            if (text == null || !text.contains("pulse_backup")) importNote = tr("This is not a Pulse backup", "Bu bir Pulse yedeği değil")
+            else pulseAsk = text
+        }
+    }
+    pulseAsk?.let { json ->
+        val (fv, rt) = MusicStats.backupCounts(json)
+        WinAlert(
+            onDismissRequest = { pulseAsk = null },
+            title = { Text(tr("Add them back?", "Geri eklensin mi?"), color = T.text) },
+            text = { Text(tr("The backup has $fv favourites and $rt stars. Add them to this phone? What is already set stays.",
+                "Yedekte $fv favori ve $rt yıldız var. Bu telefona eklensin mi? Zaten ayarlı olanlar kalır."), color = T.text, fontSize = 14.sp) },
+            confirmButton = { PButton(tr("Add", "Ekle"), onClick = { MusicStats.restoreJson(c, json); importNote = tr("Added from the backup", "Yedekten eklendi"); pulseAsk = null }) },
+            dismissButton = { PButton(tr("No", "Hayır"), onClick = { pulseAsk = null }) },
+        )
+    }
+    if (cat == "library") FlatSection(tr("Pulse backup", "Pulse yedeği")) {
+        Row(Modifier.fillMaxWidth().clickable { savePulse.launch("Pulse-favourites-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".json") }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("save", T.text, 22.dp)
+            Text(tr("Save favourites and stars", "Favoriler ve yıldızları kaydet"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        Row(Modifier.fillMaxWidth().clickable { loadPulse.launch(arrayOf("application/json", "*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("download", T.text, 22.dp)
+            Text(tr("Load a Pulse backup", "Pulse yedeğini yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+    }
+    if (cat == "library") FlatSection(tr("Poweramp backup", "Poweramp yedeği")) {
         SwitchRow(tr("Write covers into the songs too (MP3)", "Kapakları şarkıların kendisine de yaz (MP3)"), embedCovers) { embedCovers = it }
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
@@ -210,7 +256,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
     val askBt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    if (cat in setOf("library", "look", "art", "bt", "misc", "audio")) SettingsSection(tr("Playback", "Çalma")) {
+    if (cat in setOf("library", "look", "art", "bt", "misc", "audio")) FlatSection(tr("Playback", "Çalma")) {
         if (cat == "library") SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
         if (cat == "look") SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
         if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
@@ -260,6 +306,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 PChip(false, l) { if (m < 0) engine.setSleep(0, true) else engine.setSleep(m) }
             }
         }
+        if (cat == "audio") { var fin by remember { mutableStateOf(MusicSettings.sleepFinishTrack(c)) }
+            SwitchRow(tr("Finish the track when the timer runs out", "Süre dolunca parçayı bitir"), fin) { fin = it; MusicSettings.setSleepFinishTrack(c, it) } }
         if (cat == "art") Row(Modifier.clickable {
             val n = com.umutk.pulse.extras.music.poweramp.PowerampCovers.clearAll(c)
             android.widget.Toast.makeText(c, tr("$n covers cleared", "$n kapak silindi"), android.widget.Toast.LENGTH_SHORT).show()
@@ -272,11 +320,11 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     }
 
     if (cat == "notif") {
-        SettingsSection(tr("Cover", "Kapak"), startOpen = true) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
+        FlatSection(tr("Cover", "Kapak")) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
         com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
     }
     if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
-    if (cat == "misc") SettingsSection(tr("Widgets", "Widget'lar")) {
+    if (cat == "misc") FlatSection(tr("Widgets", "Widget'lar")) {
         var bgMode by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.bg(c)) }
         var artPct by remember { mutableFloatStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artPct(c).toFloat()) }
         Text(tr("Widget background", "Widget arka planı"), color = T.sub, fontSize = 12.sp)
@@ -303,7 +351,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         SwitchRow(tr("Round cover", "Yuvarlak kapak"), circle) { circle = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtCircle(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
     }
 
-    if (which == SettingsFor.POWERAMP && cat == "background") SettingsSection("Poweramp") {
+    if (which == SettingsFor.POWERAMP && cat == "background") FlatSection("Poweramp") {
         // the skin gallery (families on top) lives in the music theme picker of MusicHub
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
@@ -367,4 +415,47 @@ private fun PowerampLineRow(c: Context) {
         Text(cur.label(), color = T.sub, fontSize = 14.sp)
     }
     if (open) SetPickDialog(title, LineChoice.entries.map { it to it.label() }, cur, { cur = it; PowerampLineAction.setLongPress(c, it) }, { open = false })
+}
+
+/**
+ * The crossfade setting as a graph, and the control itself: drag across it to set the seconds (0 to 12). The old track falls to silence
+ * while the new one rises; the band in the middle is as wide as the fade is long, 0 is a plain cut.
+ */
+@Composable
+private fun FadeCurve(seconds: Int, onChange: (Int) -> Unit) {
+    val set by androidx.compose.runtime.rememberUpdatedState(onChange)
+    fun secAt(x: Float, w: Float): Int = Math.round(x / w * 12f).coerceIn(0, 12)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Text(tr("Fade between tracks", "Parçalar arası geçiş") + "  " + (if (seconds == 0) tr("off", "kapalı") else "$seconds s"), color = T.text, fontSize = 15.sp)
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxWidth().height(72.dp)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val d = awaitFirstDown(requireUnconsumed = false)
+                        set(secAt(d.position.x, size.width.toFloat()))
+                        drag(d.id) { c -> c.consume(); set(secAt(c.position.x, size.width.toFloat())) }
+                    }
+                },
+        ) {
+            val w = size.width; val h = size.height
+            val mid = w / 2f
+            // the band: the fade is as long as the seconds say, out to the left of the middle and in to the right
+            val half = (w / 2f) * seconds / 12f
+            val top = h * .12f; val bottom = h * .88f
+            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(T.sub.copy(alpha = .35f), androidx.compose.ui.geometry.Offset(mid, 0f), androidx.compose.ui.geometry.Offset(mid, h), strokeWidth = 1.dp.toPx())
+            // full volume before and after the fade
+            drawLine(T.sub.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(0f, top), androidx.compose.ui.geometry.Offset(mid - half, top), strokeWidth = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(T.sub.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(mid + half, top), androidx.compose.ui.geometry.Offset(w, top), strokeWidth = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            val out = androidx.compose.ui.graphics.Path().apply { moveTo(mid - half, top); lineTo(mid, bottom) }
+            val inn = androidx.compose.ui.graphics.Path().apply { moveTo(mid, bottom); lineTo(mid + half, top) }
+            drawPath(out, T.sub, style = stroke)
+            drawPath(inn, T.text, style = stroke)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(tr("Out", "Çıkış"), color = T.sub, fontSize = 12.sp)
+            Text(tr("In", "Giriş"), color = T.sub, fontSize = 12.sp)
+        }
+    }
 }

@@ -47,7 +47,7 @@ internal fun PdfTab() {
     var to by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { l -> if (l.isNotEmpty()) { files = l; note = "" } }
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { l -> if (l.isNotEmpty()) { files = l; note = "" } }
     PCard {
         Text(tr("Join or cut PDFs", "PDF birleştir veya kes"), color = T.text, fontSize = 16.sp)
         PButton(tr("Choose PDFs", "PDF seç"), compact = true) { pick.launch(arrayOf("application/pdf")) }

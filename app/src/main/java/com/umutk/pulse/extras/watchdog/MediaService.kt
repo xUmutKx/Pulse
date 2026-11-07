@@ -54,8 +54,12 @@ abstract class MediaService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_LOW)) else Unit
+        // the keep-alive notification is the least important one: no icon in the status bar, no sound, no pop-up. A channel's
+        // importance cannot change once made, so the new channel has a new id and the old one is removed.
+        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).apply {
+            deleteNotificationChannel("pulse_playback")
+            createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_MIN))
+        }
         // Keeps the CPU awake while the service runs; released in onDestroy. Needs WAKE_LOCK (already in the manifest).
         wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pulse:${javaClass.simpleName}")
             .apply { setReferenceCounted(false); acquire() }
@@ -87,13 +91,19 @@ abstract class MediaService : Service() {
         return START_STICKY
     }
 
+    /** Shows the current [notification] again (the title, the cover or the play state changed). */
+    protected fun refreshNotification() {
+        runCatching { getSystemService(NotificationManager::class.java).notify(notifId, notification()) }
+    }
+
     override fun onDestroy() {
         handler.removeCallbacks(beatTask)
         wake?.let { if (it.isHeld) it.release() }
         super.onDestroy()
     }
 
-    private fun notification(): Notification {
+    /** Builds the foreground notification; a service with a richer one (the video player: cover, previous, play or pause, next) overrides it. */
+    protected open fun notification(): Notification {
         val open = PendingIntent.getActivity(this, 0, openIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         val b = NotificationCompat.Builder(this, CH)
             .setSmallIcon(android.R.drawable.ic_media_play)
@@ -110,7 +120,7 @@ abstract class MediaService : Service() {
     }
 
     companion object {
-        private const val CH = "pulse_playback"
+        const val CH = "pulse_playback2"
         const val ACTION_STOP = "com.umutk.pulse.action.MEDIA_STOP"
         private const val BEAT_MS = 60_000L
 
@@ -156,6 +166,87 @@ class MusicPlaybackService : MediaService() {
 class VideoPlaybackService : MediaService() {
     override val title: String get() = tr("Playing video", "Video oynatılıyor")
     override val notifId = 9302
+
+    private var bound: androidx.media3.common.Player? = null
+    private var thumb: android.graphics.Bitmap? = null
+    private var thumbKey: String? = null
+
+    // the notification follows the video: another video, play or pause, new title
+    private val listener = object : androidx.media3.common.Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) = refreshNotification()
+        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) = refreshNotification()
+        override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) = refreshNotification()
+    }
+
+    private fun attach() {
+        val p = com.umutk.pulse.extras.video.VideoSessionService.player ?: return
+        if (bound === p) return
+        bound?.removeListener(listener)
+        p.addListener(listener); bound = p
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val p = com.umutk.pulse.extras.video.VideoSessionService.player
+        when (intent?.action) {
+            ACT_PREV -> { p?.seekToPreviousMediaItem(); return START_STICKY }
+            ACT_NEXT -> { p?.seekToNextMediaItem(); return START_STICKY }
+            ACT_TOGGLE -> { if (p?.isPlaying == true) p.pause() else p?.play(); refreshNotification(); return START_STICKY }
+        }
+        attach()
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onDestroy() {
+        bound?.removeListener(listener); bound = null
+        super.onDestroy()
+    }
+
+    /** The cover of the video that is playing: the picture the system keeps for it, loaded once per video. */
+    private fun loadThumb(key: String) {
+        if (key == thumbKey) return
+        thumbKey = key; thumb = null
+        Thread {
+            val bmp = runCatching {
+                val uri = android.net.Uri.parse(key)
+                if (android.os.Build.VERSION.SDK_INT >= 29) contentResolver.loadThumbnail(uri, android.util.Size(512, 512), null)
+                else android.media.MediaMetadataRetriever().let { r -> try { r.setDataSource(this, uri); r.getFrameAtTime(1_000_000) } finally { r.release() } }
+            }.getOrNull()
+            if (bmp != null && key == thumbKey) { thumb = bmp; android.os.Handler(Looper.getMainLooper()).post { refreshNotification() } }
+        }.start()
+    }
+
+    override fun notification(): Notification {
+        val p = com.umutk.pulse.extras.video.VideoSessionService.player
+        val item = p?.currentMediaItem
+        val name = item?.mediaMetadata?.title?.toString() ?: p?.mediaMetadata?.title?.toString() ?: title
+        item?.mediaId?.takeIf { it.isNotBlank() }?.let { loadThumb(it) }
+        val open = PendingIntent.getActivity(this, 0, openIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        fun act(code: Int, action: String) = PendingIntent.getService(this, code, Intent(this, VideoPlaybackService::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val playing = p?.isPlaying == true
+        val b = NotificationCompat.Builder(this, CH)
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentTitle(name)
+            .setContentText(if (playing) tr("Playing", "Oynatılıyor") else tr("Paused", "Duraklatıldı"))
+            .setOngoing(playing)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(open)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(android.R.drawable.ic_media_previous, tr("Previous", "Önceki"), act(11, ACT_PREV))
+            .addAction(if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, if (playing) tr("Pause", "Duraklat") else tr("Play", "Oynat"), act(12, ACT_TOGGLE))
+            .addAction(android.R.drawable.ic_media_next, tr("Next", "Sonraki"), act(13, ACT_NEXT))
+        thumb?.let { b.setLargeIcon(it) }
+        // the media card: the system draws the cover, the title and the three buttons (also on the lock screen)
+        com.umutk.pulse.extras.video.VideoSessionService.session?.let {
+            b.setStyle(androidx.media3.session.MediaStyleNotificationHelper.MediaStyle(it).setShowActionsInCompactView(0, 1, 2))
+        }
+        return b.build()
+    }
+
+    companion object {
+        const val ACT_PREV = "com.umutk.pulse.action.VIDEO_PREV"
+        const val ACT_NEXT = "com.umutk.pulse.action.VIDEO_NEXT"
+        const val ACT_TOGGLE = "com.umutk.pulse.action.VIDEO_TOGGLE"
+    }
 }
 
 class AmbientPlaybackService : MediaService() {

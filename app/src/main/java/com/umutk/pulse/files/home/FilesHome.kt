@@ -59,6 +59,10 @@ import java.io.File
 
 /** Where the bottom bar of the standalone Files app and the home page send the app. */
 object FilesHomeNav {
+    /** Set by the home page's three lines: the Browse tab opens its side drawer. */
+    var openDrawer by mutableStateOf(false)
+    /** A folder picked in the home page's folder list: the Browse tab opens it (the home page stays put until then). */
+    var pendingDir by mutableStateOf<String?>(null)
     /** Set by the bottom bar's Search: the explorer opens its search field when it appears. */
     var openSearch by mutableStateOf(false)
     /** The Search tab searches the whole phone, not only the folder it is in. */
@@ -69,6 +73,9 @@ object FilesHomeNav {
     var pendingFile by mutableStateOf<File?>(null)
     /** A type tapped on the home page ("images", "videos", ...): the types page opens straight on that list. */
     var kind by mutableStateOf<String?>(null)
+    /** The volume keys: each press counts [tabKick] up and leaves its direction (+1 / -1) in [tabDelta]; the bottom tabs follow. */
+    var tabKick by mutableStateOf(0)
+    var tabDelta = 1
 }
 
 /** The folders opened lately (newest first), kept next to the recent files. */
@@ -90,8 +97,31 @@ private val PARTS = listOf(
     Part("audio", "Audio", "Ses", "music", Color(0xFF12A594)),
     Part("docs", "Documents", "Belgeler", "document", Color(0xFF3E63DD)),
     Part("archives", "Archives", "Arşivler", "zip", Color(0xFFD6409F)),
+    // APK files (installers lying in folders) and the installed apps are two different things: this one counts the files...
+    Part("apk", "APK", "APK", "download", Color(0xFFF76808)),
+    // ...this one the apps that are installed (their size on the phone)
     Part("apps", "Apps", "Uygulamalar", "apps", Color(0xFF46A758)),
+    // files inside folders whose name starts with a dot: the media index leaves them out, so they are measured on their own
+    Part("hidden", "Hidden", "Gizli", "folder", Color(0xFFC9A227)),
 )
+
+/** The newest files on the phone, when the app may read them: the recent list is filled up with these. */
+private fun newestFiles(ctx: Context): List<File> {
+    val fromStore = runCatching {
+        val out = ArrayList<File>()
+        ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns.DATA),
+            "${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT 30")?.use { c ->
+            while (c.moveToNext()) c.getString(0)?.let { out += File(it) }
+        }
+        out.filter { it.isFile && it.length() >= 0 }
+    }.getOrDefault(emptyList())
+    if (fromStore.isNotEmpty()) return fromStore
+    // without the media index (no access): the newest files of the download and camera folders
+    val root = Environment.getExternalStorageDirectory()
+    return listOf(Environment.DIRECTORY_DOWNLOADS, Environment.DIRECTORY_DCIM, Environment.DIRECTORY_DOCUMENTS)
+        .flatMap { d -> File(root, d).listFiles()?.filter { it.isFile }?.toList().orEmpty() }
+        .sortedByDescending { it.lastModified() }
+}
 
 private class Stats(val total: Long, val free: Long, val parts: List<Part>, val other: Long)
 
@@ -101,7 +131,6 @@ private fun partOf(media: Int, mime: String?): String? {
         media == 1 || m.startsWith("image/") -> "images"
         media == 3 || m.startsWith("video/") -> "videos"
         media == 2 || m.startsWith("audio/") -> "audio"
-        m == "application/vnd.android.package-archive" -> "apps"
         m in setOf("application/zip", "application/x-rar-compressed", "application/vnd.rar", "application/x-7z-compressed", "application/gzip", "application/x-tar", "application/x-bzip2", "application/x-xz") -> "archives"
         m == "application/pdf" || m.startsWith("text/") || m.startsWith("application/msword") || m.contains("officedocument") || m.contains("ms-excel") || m.contains("ms-powerpoint") || m == "application/rtf" -> "docs"
         else -> null
@@ -124,6 +153,27 @@ private object StatsCache {
     }
 }
 
+/** The installed apps: their total size and how many there are (hidden ones included, see [measureApps]). */
+private fun installedApps(ctx: Context): Pair<Long, Int> = com.umutk.pulse.features.measureApps(ctx).let { l -> l.sumOf { it.bytes } to l.size }
+
+/** The size and count of the files inside hidden folders (a name starting with a dot) under [top]; symbolic links and unreadable folders are skipped. */
+private fun hiddenBytes(top: File): Pair<Long, Int> {
+    var bytes = 0L
+    var count = 0
+    fun walk(d: File, inHidden: Boolean, depth: Int) {
+        if (depth > 16) return
+        val list = d.listFiles() ?: return
+        for (f in list) {
+            if (com.umutk.pulse.Compat.isLink(f)) continue
+            val hidden = inHidden || f.name.startsWith(".")
+            if (f.isDirectory) walk(f, hidden, depth + 1)
+            else if (hidden && f.isFile) { bytes += f.length(); count++ }
+        }
+    }
+    walk(top, false, 0)
+    return bytes to count
+}
+
 private fun loadStats(ctx: Context): Stats {
     val top = Environment.getExternalStorageDirectory()
     val st = runCatching { StatFs(top.path) }.getOrNull()
@@ -131,17 +181,27 @@ private fun loadStats(ctx: Context): Stats {
     val parts = PARTS.map { Part(it.key, it.en, it.tr, it.icon, it.color) }
     if (RecentStore.canListAll(ctx)) runCatching {
         ctx.contentResolver.query(MediaStore.Files.getContentUri("external"),
-            arrayOf(MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.MEDIA_TYPE, MediaStore.Files.FileColumns.MIME_TYPE), null, null, null)?.use { c ->
+            arrayOf(MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.MEDIA_TYPE, MediaStore.Files.FileColumns.MIME_TYPE, MediaStore.Files.FileColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             while (c.moveToNext()) {
-                val k = partOf(c.getInt(1), c.getString(2)) ?: continue
+                val ext = c.getString(3).orEmpty().substringAfterLast('.', "").lowercase()
+                val k = (if (ext in setOf("apk", "apks", "xapk", "apkm") || c.getString(2) == "application/vnd.android.package-archive") "apk" else partOf(c.getInt(1), c.getString(2))) ?: continue
                 val p = parts.first { it.key == k }
                 p.bytes += c.getLong(0); p.count++
             }
         }
     }
+    // Apps: every installed app's size (its program, and its data when the usage access is on); the APK files are not apps
+    val apps = installedApps(ctx)
+    parts.first { it.key == "apps" }.also { it.bytes = apps.first; it.count = apps.second }
+    hiddenBytes(top).let { (hb, hc) -> parts.first { it.key == "hidden" }.also { it.bytes = hb; it.count = hc } }
     val other = (total - free - parts.sumOf { it.bytes }).coerceAtLeast(0L)
     return Stats(total, free, parts, other)
 }
+
+/** True when the Files window is see-through: Windows 11 with the glass option on, or with a background picture chosen. */
+@Composable
+private fun filesSeeThrough(): Boolean =
+    com.umutk.pulse.FilesGlass.on || (T.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off" && com.umutk.pulse.features.Backdrop.image != null)
 
 /**
  * The first page of the Files app: free space, what takes the room, recent files and folders, and the file types. Black in the Material looks, with the look's own accent colour;
@@ -151,7 +211,9 @@ private fun loadStats(ctx: Context): Stats {
 fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: (File) -> Unit, onSettings: () -> Unit) {
     val ctx = LocalContext.current
     val mat = T.material
-    val bg = if (mat) Color.Black else T.bg
+    // Windows 11 with the glass option or a background picture: the page is see-through, so the picture or the wallpaper shows behind it (AMOLED and Material stay black)
+    val glass = filesSeeThrough()
+    val bg = if (glass) Color.Transparent else if (mat) Color.Black else T.bg
     val fg = if (mat) Color.White else T.text
     val sub = if (mat) Color(0xFF8E8E93) else T.sub
     val tile = if (mat) Color(0xFF161616) else T.panel
@@ -160,7 +222,8 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
     // the last numbers show at once; the fresh ones come in behind them
     var stats by remember { mutableStateOf(StatsCache.get(ctx)) }
     androidx.compose.runtime.LaunchedEffect(Unit) { val n = withContext(Dispatchers.IO) { loadStats(ctx) }; StatsCache.put(ctx, n); stats = n }
-    val recentFiles = remember { RecentStore.list(ctx).map { File(it) }.filter { it.isFile }.take(12) }
+    // the newest files on the phone first (a download shows at once), then the app's own recent list
+    val recentFiles = remember { (newestFiles(ctx) + RecentStore.list(ctx).map { File(it) }.filter { it.isFile }).distinctBy { it.path }.take(12) }
     var dirs by remember { mutableStateOf(RecentDirs.list(ctx).filter { File(it).isDirectory }) }
     fun box(m: Modifier): Modifier = if (mat) m.clip(RoundedCornerShape(14.dp)).background(tile) else m.background(tile).frame(T)
 
@@ -173,7 +236,9 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
 
     LazyColumn(Modifier.fillMaxSize().background(bg).padding(horizontal = 18.dp)) {
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                // the three lines open the Browse tab's side menu (the same one, with the same ad, everywhere)
+                Box(Modifier.size(44.dp).clickable { FilesHomeNav.openDrawer = true; onTab("files") }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
                     Text(tr("Files", "Dosyalar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                     Text(".", color = accent, fontSize = 34.sp, fontWeight = FontWeight.Bold)
@@ -182,7 +247,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             }
         }
         item {
-            Caption(tr("Storage", "Depolama"), tr("Clean up", "Temizle")) { onTab("cache") }
+            Caption(tr("Storage", "Depolama"))
             val s = stats
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 val freeGb = s?.free?.let { it / 1_073_741_824.0 }
@@ -210,10 +275,13 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                 }
                 Spacer(Modifier.height(14.dp))
                 val legend = s.parts.filter { it.bytes > 0 }.map { Triple(it.color, tr(it.en, it.tr), exSize(it.bytes)) } + Triple(Color(0xFF8B8D98), tr("Other", "Diğer"), exSize(s.other)) + Triple(if (mat) Color(0xFF2A2A2A) else T.line, tr("Free", "Boş"), exSize(s.free))
-                legend.chunked(3).forEach { row ->
+                // each kind opens its own list; Other opens the files that are in no kind; Free opens nothing
+                val keys = s.parts.filter { it.bytes > 0 }.map { if (it.key == "apps") "" else it.key } + listOf("other", "")
+                legend.mapIndexed { i, x -> i to x }.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        row.forEach { (c, n, v) ->
-                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        row.forEach { (i, x) ->
+                            val (c, n, v) = x
+                            Row(Modifier.weight(1f).clickable(enabled = keys[i].isNotEmpty()) { FilesHomeNav.kind = keys[i]; onTab("types") }, verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(c))
                                 Text(" $n", color = fg, fontSize = 14.sp, maxLines = 1)
                                 Text(" $v", color = sub, fontSize = 12.sp, fontFamily = mono, maxLines = 1)
@@ -258,7 +326,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
-            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable { if (p.key == "apps") onTab("apps") else { FilesHomeNav.kind = p.key; onTab("types") } }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(if (mat) 14.dp else 4.dp)).background(p.color), contentAlignment = Alignment.Center) { PIcon(p.icon, Color.White, 28.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(p.en, p.tr), color = fg, fontSize = 18.sp)
@@ -284,7 +352,7 @@ fun openFileWithSystem(ctx: Context, f: File) {
 @Composable
 fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     val mat = T.material
-    val bg = if (mat) Color.Black else T.panel
+    val bg = if (filesSeeThrough()) T.panel.copy(alpha = .55f) else if (mat) Color.Black else T.panel
     val fg = if (mat) Color(0xFF9A9A9F) else T.sub
     val accent = T.accent
     var menu by remember { mutableStateOf(false) }

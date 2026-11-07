@@ -1,5 +1,11 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.tr
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.FontCards
+import com.umutk.pulse.extras.lucid.data.prefs.RingingClockFont
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -53,6 +59,7 @@ import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -135,9 +142,11 @@ fun SettingsScreen(
         initial = AccentColor.DEFAULT.argb
     )
     val appFontStyle by settingsDataStore.appFontStyleFlow.collectAsState(initial = AppFontStyle.SYSTEM_DEFAULT)
+    val ringingClockFont by settingsDataStore.ringingClockFontFlow.collectAsState(initial = RingingClockFont.SYSTEM_DEFAULT)
 
     val volumePolicy by settingsDataStore.volumePolicyFlow.collectAsState(initial = VolumePolicy.UNIFIED)
     val unifiedVolume by settingsDataStore.unifiedVolumeFlow.collectAsState(initial = 0.85f)
+    val awakeEmergencyVolume by settingsDataStore.awakeEmergencyVolumeFlow.collectAsState(initial = 1f)
     val vibrateAlarmsAndTimers by settingsDataStore.vibrateAlarmsAndTimersFlow.collectAsState(initial = true)
     val defaultAlarmRingtoneUri by settingsDataStore.defaultAlarmRingtoneUriFlow.collectAsState(initial = "")
     val defaultAlarmRingtoneTitle by settingsDataStore.defaultAlarmRingtoneTitleFlow.collectAsState(
@@ -148,6 +157,8 @@ fun SettingsScreen(
     val upcomingEnabled by settingsDataStore.upcomingAlarmEnabledFlow.collectAsState(initial = false)
     val upcomingMinutesRaw by settingsDataStore.rawUpcomingAlarmMinutesFlow.collectAsState(initial = 15)
     val awakeCheckEnabled by settingsDataStore.awakeCheckEnabledFlow.collectAsState(initial = false)
+    val alarmTaskOn by settingsDataStore.alarmTaskEnabledFlow.collectAsState(initial = false)
+    val alarmTaskLevel by settingsDataStore.alarmTaskLevelFlow.collectAsState(initial = 0)
     val awakeCheckMinutes by settingsDataStore.awakeCheckMinutesFlow.collectAsState(
         initial = SettingsDataStore.DEFAULT_AWAKE_CHECK_MINUTES
     )
@@ -167,7 +178,7 @@ fun SettingsScreen(
     var showAppFontMenu by remember { mutableStateOf(false) }
 
     val appFontFilePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -244,7 +255,7 @@ fun SettingsScreen(
     )
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = com.umutk.pulse.PulsePick.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -260,7 +271,7 @@ fun SettingsScreen(
     }
 
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -748,56 +759,22 @@ fun SettingsScreen(
                                 onDismissRequest = { showAppFontMenu = false },
                                 modifier = Modifier.widthIn(min = 290.dp, max = 330.dp)
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    AppFontStyle.entries.forEach { style ->
-                                        val isSelected = appFontStyle == style
-                                        val interactionSource = remember { MutableInteractionSource() }
-                                        val isPressed by interactionSource.collectIsPressedAsState()
-                                        val itemBg = when {
-                                            isSelected -> accentColor.copy(alpha = 0.14f)
-                                            isPressed -> if (isLight) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f)
-                                            else -> Color.Transparent
-                                        }
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(itemBg)
-                                                .clickable(
-                                                    interactionSource = interactionSource,
-                                                    indication = null
-                                                ) {
-                                                    showAppFontMenu = false
-                                                    if (style == AppFontStyle.CUSTOM_FILE) {
-                                                        appFontFilePickerLauncher.launch(FontManager.FONT_MIME_TYPES)
-                                                    } else {
-                                                        scope.launch { settingsDataStore.setAppFontStyle(style) }
-                                                    }
-                                                }
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = style.label,
-                                                fontSize = 15.sp,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                color = if (isSelected) accentColor else (if (isLight) Color(0xFF111318) else Color.White)
-                                            )
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Check,
-                                                    contentDescription = null,
-                                                    tint = accentColor,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(8.dp)) {
+                                    Text(tr("App font", "Uygulama yazı tipi"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                                    FontCards(AppFontStyle.entries, appFontStyle, { it.label }, { appFontFamilyOf(it) }) { style ->
+                                        if (style == AppFontStyle.CUSTOM_FILE) {
+                                            showAppFontMenu = false
+                                            appFontFilePickerLauncher.launch(FontManager.FONT_MIME_TYPES)
+                                        } else {
+                                            scope.launch { settingsDataStore.setAppFontStyle(style) }
                                         }
                                     }
-                                }
+                                    Text(tr("Alarm clock font", "Alarm saati yazı tipi"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                                    FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, ringingClockFont, { it.label }, { clockFontFamilyOf(it) }) { font ->
+                                        scope.launch { settingsDataStore.setRingingClockFont(font) }
+                                    }
+                                }                                }
                             }
-                        }
 
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
@@ -968,6 +945,37 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+
+                        // the final "Are you awake?" ring: its own level, always shown
+                        var tempEmergency by remember { mutableFloatStateOf(awakeEmergencyVolume) }
+                        LaunchedEffect(awakeEmergencyVolume) { tempEmergency = awakeEmergencyVolume }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Final \"Are you awake?\" volume",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${(tempEmergency * 100).roundToInt()}%",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = accentColor
+                            )
+                        }
+                        Slider(
+                            value = tempEmergency,
+                            onValueChange = { tempEmergency = it },
+                            onValueChangeFinished = {
+                                scope.launch { settingsDataStore.setAwakeEmergencyVolume(tempEmergency) }
+                            },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
@@ -1165,6 +1173,33 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                         )
 
+                        // the alarm task: solve a sum to stop the alarm (off by default)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Alarm task", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Solve a sum to stop the alarm", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(
+                                checked = alarmTaskOn,
+                                onCheckedChange = { checked -> scope.launch { settingsDataStore.setAlarmTaskEnabled(checked) } }
+                            )
+                        }
+                        if (alarmTaskOn) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(0 to "Easy", 1 to "Medium", 2 to "Hard").forEach { (lv, label) ->
+                                    Button(
+                                        onClick = { scope.launch { settingsDataStore.setAlarmTaskLevel(lv) } },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (alarmTaskLevel == lv) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) { Text(label) }
+                                }
+                            }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

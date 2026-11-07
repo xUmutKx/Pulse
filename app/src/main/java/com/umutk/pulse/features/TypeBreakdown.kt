@@ -79,7 +79,7 @@ enum class FileKind(val label: String, val exts: Set<String>) {
         setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "odt", "ods", "odp", "rtf", "csv", "epub", "md"),
     ),
     ARCHIVES("Archives", setOf("zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz")),
-    APPS("Apps", setOf("apk", "apks", "xapk", "aab")),
+    APPS("APK", setOf("apk", "apks", "xapk", "apkm", "aab")),
     OTHER("Other", emptySet()),
 }
 
@@ -99,7 +99,7 @@ internal class KindAcc {
 fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     // a type tapped on the Files home page opens its list at once (one tap)
     var selected by remember(root) { mutableStateOf<FileKind?>(when (com.umutk.pulse.files.home.FilesHomeNav.kind) {
-        "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apps" -> FileKind.APPS; else -> null
+        "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apk" -> FileKind.APPS; "other" -> FileKind.OTHER; else -> null
     }.also { com.umutk.pulse.files.home.FilesHomeNav.kind = null }) }
     // a list opened from the Files home goes straight back there; only a list opened from the overview goes back to the overview
     val openedDirect = remember(root) { selected != null }
@@ -348,6 +348,6 @@ private fun tbFormatBytes(b: Long): String = when {
 /** The name of a file kind in the language of the app. */
 internal fun kindLabel(k: FileKind): String = when (k) {
     FileKind.IMAGES -> com.umutk.pulse.tr("Images", "Resimler"); FileKind.VIDEO -> com.umutk.pulse.tr("Video", "Videolar"); FileKind.AUDIO -> com.umutk.pulse.tr("Audio", "Ses")
-    FileKind.DOCUMENTS -> com.umutk.pulse.tr("Documents", "Belgeler"); FileKind.ARCHIVES -> com.umutk.pulse.tr("Archives", "Arşivler"); FileKind.APPS -> com.umutk.pulse.tr("Apps", "Uygulamalar")
+    FileKind.DOCUMENTS -> com.umutk.pulse.tr("Documents", "Belgeler"); FileKind.ARCHIVES -> com.umutk.pulse.tr("Archives", "Arşivler"); FileKind.APPS -> "APK"
     FileKind.OTHER -> com.umutk.pulse.tr("Other", "Diğer")
 }

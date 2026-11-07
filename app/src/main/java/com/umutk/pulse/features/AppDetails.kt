@@ -186,6 +186,30 @@ object ApkExtract {
     fun set(c: Context, p: String) { prefs(c).edit().putString("apkExtractDir", p).apply() }
 }
 
+/** The app's icon as a 512 px PNG in Pictures/Pulse; returns what to tell the person. */
+internal fun extractIcon(ctx: Context, pkg: String): String = try {
+    val pm = ctx.packageManager
+    val label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString().replace(Regex("[^\\p{L}\\p{N} .-]"), "_").ifBlank { pkg }
+    val bmp = pm.getApplicationIcon(pkg).let { androidx.core.graphics.drawable.DrawableCompat.wrap(it) }.let { d ->
+        val b = android.graphics.Bitmap.createBitmap(512, 512, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(b); d.setBounds(0, 0, 512, 512); d.draw(c); b
+    }
+    val name = "$label.png"
+    if (android.os.Build.VERSION.SDK_INT >= 29) {
+        val cv = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name); put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Pulse")
+        }
+        val uri = ctx.contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv)!!
+        ctx.contentResolver.openOutputStream(uri)!!.use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        tr("Icon saved: Pictures/Pulse/$name", "Simge kaydedildi: Pictures/Pulse/$name")
+    } else {
+        val dir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES), "Pulse").apply { mkdirs() }
+        File(dir, name).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        tr("Icon saved: ${File(dir, name).path}", "Simge kaydedildi: ${File(dir, name).path}")
+    }
+} catch (e: Exception) { tr("The icon could not be saved: ", "Simge kaydedilemedi: ") + (e.message ?: e.javaClass.simpleName) }
+
 internal fun extractApp(ctx: Context, pkg: String): String {
     val pm = ctx.packageManager
     val pi = pm.getPackageInfo(pkg, 0)
@@ -241,12 +265,35 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     BackHandler { onBack() }
 
     val d = details
+    // a tap on an activity, service, receiver or intent action runs it; the result is said in the note under the buttons
+    fun kindOf(name: String): String = when {
+        d?.services?.any { it.name == name } == true -> "service"
+        d?.receivers?.any { it.name == name } == true -> "receiver"
+        else -> "activity"
+    }
+    fun runComp(name: String, action: String?) {
+        val kind = kindOf(name)
+        val intent = (if (action != null) Intent(action) else Intent()).setComponent(android.content.ComponentName(pkg, name))
+        note = runCatching {
+            when (kind) {
+                "service" -> ctx.startService(intent)
+                "receiver" -> ctx.sendBroadcast(intent)
+                else -> ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            when (kind) {
+                "receiver" -> tr("Sent to ${name.substringAfterLast('.')} (it may ignore it)", "${name.substringAfterLast('.')} alıcısına gönderildi (yoksayabilir)")
+                else -> tr("Started ${name.substringAfterLast('.')}", "${name.substringAfterLast('.')} başlatıldı")
+            }
+        }.getOrElse { tr("Could not start it: ", "Başlatılamadı: ") + (it.message ?: it.javaClass.simpleName) }
+    }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
-            // the app's own icon with its name, and the actions as icons (a long press on none is needed: the note below says what was done)
+            // top left: the way back and the app's icon; a tap on the icon saves it as a picture (Pictures/Pulse)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                com.umutk.pulse.AppIcon(pkg, 52.dp)
+                Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
+                Box(Modifier.padding(start = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable { scope.launch { note = withContext(Dispatchers.IO) { extractIcon(ctx, pkg) } } }) {
+                    com.umutk.pulse.AppIcon(pkg, 52.dp)
+                }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) { PHead(d?.label ?: pkg, d?.version ?: "") }
             }
             Text(pkg, color = T.sub, fontSize = 12.sp)
@@ -267,11 +314,11 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 }
-                act("block", tr("Force stop", "Durmaya zorla")) {
+                act("forceStop", tr("Force stop", "Durmaya zorla")) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                act("archive", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
+                act("apkPackage", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
                 if (d != null && !d.isSystem) act("delete", tr("Uninstall", "Kaldır"), danger = true) { confirmUninstall = true }
             }
             if (note.isNotEmpty()) Text(note, color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp)
@@ -286,17 +333,17 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
             }
 
             section("Activities (${d.activities.size})", Icons.Filled.Web)
-            components(d.activities, Icons.Filled.Web)
+            components(d.activities, Icons.Filled.Web) { runComp(it.name, null) }
             section("Services (${d.services.size})", Icons.Filled.Build)
-            components(d.services, Icons.Filled.Build)
+            components(d.services, Icons.Filled.Build) { runComp(it.name, null) }
             section("Receivers (${d.receivers.size})", Icons.Filled.Sensors)
-            components(d.receivers, Icons.Filled.Sensors)
+            components(d.receivers, Icons.Filled.Sensors) { runComp(it.name, null) }
 
             section("Intent actions (${d.actions.size})", Icons.Filled.Share)
             if (d.actionsNote != null) item { Text(d.actionsNote, color = T.sub, fontSize = 12.sp) }
             else if (d.actions.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
             items(d.actions, key = { it.action + "|" + it.component }) { a ->
-                IconCard(fnFor(a.action).icon, a.action, a.component)
+                IconCard(fnFor(a.action).icon, a.action, a.component, onClick = { runComp(a.component, a.action) })
             }
 
             section("Permissions (${d.permissions.size})", Icons.Filled.Lock)
@@ -326,8 +373,8 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun IconCard(icon: ImageVector, title: String, subtitle: String, bold: Boolean = false) {
-    PCard {
+private fun IconCard(icon: ImageVector, title: String, subtitle: String, bold: Boolean = false, onClick: (() -> Unit)? = null) {
+    PCard(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, Modifier.size(20.dp), Look.accent)
             Spacer(Modifier.width(10.dp))
@@ -349,9 +396,9 @@ private fun LazyListScope.section(title: String, icon: ImageVector) {
     }
 }
 
-private fun LazyListScope.components(list: List<CompRow>, icon: ImageVector) {
+private fun LazyListScope.components(list: List<CompRow>, icon: ImageVector, onRun: (CompRow) -> Unit) {
     if (list.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
     items(list, key = { "c|" + it.name }) { c ->
-        IconCard(icon, c.name.substringAfterLast('.'), c.name + (if (c.exported) " · exported" else " · not exported"))
+        IconCard(icon, c.name.substringAfterLast('.'), c.name + (if (c.exported) " · exported" else " · not exported"), onClick = { onRun(c) })
     }
 }

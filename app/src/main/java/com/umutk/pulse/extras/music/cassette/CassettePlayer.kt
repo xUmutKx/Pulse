@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.cassette
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -48,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -55,6 +58,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -103,7 +107,8 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var volume by remember { mutableFloatStateOf(engine.player.volume) }
-    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
+    val ctxPm = androidx.compose.ui.platform.LocalContext.current
+    var shuffle by remember { mutableStateOf(PlayModes.shuffle != ShuffleKind.OFF) }
     var repeat by remember { mutableStateOf(engine.player.repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) }
     LaunchedEffect(st.current, st.isPlaying) {
         while (true) { pos = engine.positionMs; dur = engine.durationMs; delay(if (st.isPlaying) 200L else 800L) }
@@ -111,7 +116,8 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
     val turn by rememberInfiniteTransition(label = "reel").animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "turn")
     val spin = if (st.isPlaying) turn else 0f
     val progress = if (dur > 0) (pos / dur.toFloat()).coerceIn(0f, 1f) else 0f
-    Box(modifier.background(cas.main)) {
+    val leather = rememberTexture(Tex.LEATHER)
+    Box(modifier.background(cas.main).drawBehind { drawRect(leather, alpha = .10f) }) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
             Text("PULSE TAPE", color = cas.ink, fontSize = 30.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, letterSpacing = (-1).sp)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -137,15 +143,15 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
             }
             Spacer(Modifier.height(10.dp))
             // the keys of the deck
-            Row(Modifier.fillMaxWidth().background(cas.deck, RoundedCornerShape(14.dp)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cas.deck).drawBehind { drawRect(leather, alpha = .30f) }.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 DeckKey("prev", Modifier.weight(1f), onClick = { engine.previous() })
                 DeckKey(if (st.isPlaying) "pause" else "play", Modifier.weight(1.3f), red = st.isPlaying, onClick = { if (st.queue.isEmpty()) shelf = true else engine.togglePlayPause() })
                 DeckKey("next", Modifier.weight(1f), onClick = { engine.next() })
                 DeckKey("eject", Modifier.weight(1f), onClick = { shelf = true })
             }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Toggle("shuffle", shuffle) { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }
-                Toggle("repeat", repeat) { repeat = !repeat; engine.player.repeatMode = if (repeat) androidx.media3.common.Player.REPEAT_MODE_ALL else androidx.media3.common.Player.REPEAT_MODE_OFF }
+                Toggle("shuffle", shuffle) { PlayModes.cycleShuffle(ctxPm); shuffle = PlayModes.shuffle != ShuffleKind.OFF }
+                Toggle("repeat", repeat) { repeat = PlayModes.cycleRepeat(ctxPm) != androidx.media3.common.Player.REPEAT_MODE_OFF }
                 Spacer(Modifier.weight(1f))
                 androidx.compose.material3.Icon(deckVec("volume"), null, Modifier.size(20.dp), tint = cas.ink)
                 Box(Modifier.width(140.dp).height(34.dp).pointerInput(Unit) { detectTapGestures { o -> volume = (o.x / size.width).coerceIn(0f, 1f); engine.player.volume = volume } }
@@ -196,27 +202,73 @@ private fun Toggle(icon: String, on: Boolean, onClick: () -> Unit) {
 @Composable
 private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modifier) {
     val cas = LocalCas.current
+    val steel = rememberTexture(Tex.STEEL)
     BoxWithConstraints(modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height
-            // body
-            drawRoundRect(cas.paper, Offset.Zero, size, CornerRadius(h * .08f))
-            drawRoundRect(cas.ink, Offset.Zero, size, CornerRadius(h * .08f), style = Stroke(h * .012f))
-            // the yellow stripe and the dark stripe on the label
-            drawRect(cas.main, Offset(w * .0f, h * .06f), Size(w, h * .05f))
-            drawRect(cas.ink, Offset(0f, h * .12f), Size(w, h * .018f))
-            // the window with the reels
-            val wx = w * .20f; val wy = h * .40f; val ww = w * .60f; val wh = h * .34f
-            drawRoundRect(Color(0xFF6C6A4C), Offset(wx, wy), Size(ww, wh), CornerRadius(wh * .25f))
-            val rl = Offset(wx + ww * .25f, wy + wh / 2f); val rr = Offset(wx + ww * .75f, wy + wh / 2f)
-            // the tape: much on the left reel at the start, much on the right at the end
-            val full = wh * .46f; val empty = wh * .22f
+            val dark = cas.ink.luminance() > .5f
+            val plastic = if (dark) cas.paper else cas.paper
+            val edge = cas.ink.copy(alpha = .85f)
+            // the soft contact shadow under the tape
+            drawRoundRect(Color.Black.copy(alpha = .22f), Offset(w * .012f, h * .03f), Size(w, h), CornerRadius(h * .07f))
+            // the shell: plastic with a faint top light, an outline and an inner bevel
+            drawRoundRect(Brush.verticalGradient(listOf(plastic, Color.Black.copy(alpha = .07f).compositeOver(plastic)), 0f, h), Offset.Zero, size, CornerRadius(h * .07f))
+            drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent, Color.Black.copy(alpha = .12f))), Offset.Zero, size, CornerRadius(h * .07f))
+            drawRoundRect(edge, Offset.Zero, size, CornerRadius(h * .07f), style = Stroke(h * .012f))
+            drawRoundRect(Color.Black.copy(alpha = .18f), Offset(h * .02f, h * .02f), Size(w - h * .04f, h - h * .04f), CornerRadius(h * .06f), style = Stroke(h * .006f))
+            // the label sheet: paper with ruled lines, a colour band on top (the deck colour), a thin dark rule
+            val lx = w * .045f; val ly = h * .05f; val lw = w * .91f; val lh = h * .40f
+            drawRoundRect(Color(0xFFFBF7E8), Offset(lx, ly), Size(lw, lh), CornerRadius(h * .025f))
+            drawRoundRect(Color.Black.copy(alpha = .22f), Offset(lx, ly), Size(lw, lh), CornerRadius(h * .025f), style = Stroke(h * .006f))
+            drawRect(cas.main, Offset(lx, ly), Size(lw, lh * .20f))
+            drawRect(cas.ink, Offset(lx, ly + lh * .20f), Size(lw, lh * .028f))
+            for (i in 1..2) { val y = ly + lh * (.50f + i * .17f); drawLine(Color(0xFF6E8BC7).copy(alpha = .55f), Offset(lx + lw * .04f, y), Offset(lx + lw * .96f, y), h * .005f) }
+            // the window: a smoked plastic opening with a lip, over the dark tape shell
+            val wx = w * .17f; val wy = h * .50f; val ww = w * .66f; val wh = h * .30f
+            drawRoundRect(Color(0xFF16150F), Offset(wx - h * .015f, wy - h * .015f), Size(ww + h * .03f, wh + h * .03f), CornerRadius(wh * .30f))
+            drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF5C5A44), Color(0xFF3A3829), Color(0xFF5C5A44)), wy, wy + wh), Offset(wx, wy), Size(ww, wh), CornerRadius(wh * .28f))
+            // tick marks of the tape counter along the lower edge of the window
+            for (i in 0..12) drawLine(Color.White.copy(alpha = .35f), Offset(wx + ww * (.08f + i * .07f), wy + wh * .93f), Offset(wx + ww * (.08f + i * .07f), wy + wh * (if (i % 3 == 0) .80f else .86f)), h * .004f)
+            val rl = Offset(wx + ww * .26f, wy + wh / 2f); val rr = Offset(wx + ww * .74f, wy + wh / 2f)
+            val full = wh * .47f; val empty = wh * .30f
             val leftR = empty + (full - empty) * (1f - progress); val rightR = empty + (full - empty) * progress
-            drawCircle(Color(0xFF7A4A2A), leftR, rl); drawCircle(Color(0xFF7A4A2A), rightR, rr)
+            // the packs: brown tape with a gloss ring
+            for ((c, r) in listOf(rl to leftR, rr to rightR)) {
+                drawCircle(Brush.radialGradient(listOf(Color(0xFF8A5A33), Color(0xFF4B2E19)), c, r), r, c)
+                drawCircle(Color.White.copy(alpha = .14f), r * .86f, c, style = Stroke(r * .08f))
+                drawCircle(Color.Black.copy(alpha = .35f), r, c, style = Stroke(r * .04f))
+            }
+            // the tape: it leaves the left pack where a straight line to the first guide post touches it, runs along the foot to the second post, and reaches the right pack the same way
+            val post1 = Offset(wx + ww * .36f, wy + wh * .98f); val post2 = Offset(wx + ww * .64f, wy + wh * .98f)
+            fun touch(c: Offset, r: Float, p: Offset): Offset {
+                val dx = p.x - c.x; val dy = p.y - c.y
+                val d = kotlin.math.hypot(dx, dy).coerceAtLeast(r + 1f)
+                val base = kotlin.math.atan2(dy, dx); val ang = kotlin.math.acos((r / d).coerceIn(0f, 1f))
+                val t1 = Offset(c.x + r * kotlin.math.cos(base + ang), c.y + r * kotlin.math.sin(base + ang))
+                val t2 = Offset(c.x + r * kotlin.math.cos(base - ang), c.y + r * kotlin.math.sin(base - ang))
+                return if (t1.y > t2.y) t1 else t2
+            }
+            val tapeC = Color(0xFF3B2412)
+            val tw = h * .014f
+            drawLine(tapeC, touch(rl, leftR, post1), post1, tw)
+            drawLine(tapeC, post1, post2, tw)
+            drawLine(tapeC, post2, touch(rr, rightR, post2), tw)
             reel(rl, wh * .20f, spin, cas.ink); reel(rr, wh * .20f, spin, cas.ink)
-            // the lower edge with its two holes
-            drawRoundRect(cas.ink.copy(alpha = .85f), Offset(w * .30f, h * .82f), Size(w * .40f, h * .10f), CornerRadius(h * .03f))
-            drawCircle(cas.paper, h * .018f, Offset(w * .36f, h * .87f)); drawCircle(cas.paper, h * .018f, Offset(w * .64f, h * .87f))
+            // two guide posts
+            for (gx in listOf(wx + ww * .36f, wx + ww * .64f)) { drawCircle(Color(0xFFB8B8B0), h * .014f, Offset(gx, wy + wh * .98f)); drawCircle(Color.Black.copy(alpha = .4f), h * .014f, Offset(gx, wy + wh * .98f), style = Stroke(h * .003f)) }
+            // glass shine over the window
+            drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent), Offset(wx, wy), Offset(wx + ww * .5f, wy + wh)), Offset(wx, wy), Size(ww, wh), CornerRadius(wh * .28f))
+            // the lower trapezoid with the head openings, two capstan holes and the guide notches
+            val tp = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * .20f, h * .84f); lineTo(w * .80f, h * .84f); lineTo(w * .86f, h * .97f); lineTo(w * .14f, h * .97f); close()
+            }
+            drawPath(tp, Brush.verticalGradient(listOf(Color(0xFF8C887A), Color(0xFF55534A)), h * .84f, h * .97f))
+            drawPath(tp, steel, alpha = .4f)
+            drawPath(tp, edge, style = Stroke(h * .006f))
+            for (hx in listOf(.30f, .40f, .50f, .60f, .70f)) drawRoundRect(Color(0xFF14130E), Offset(w * hx - w * .016f, h * .875f), Size(w * .032f, h * .07f), CornerRadius(h * .01f))
+            drawCircle(Color(0xFF14130E), h * .026f, Offset(w * .24f, h * .905f)); drawCircle(Color(0xFF14130E), h * .026f, Offset(w * .76f, h * .905f))
+            // five screws: the four corners and the one under the label
+            for (sc in listOf(Offset(w * .028f, h * .06f), Offset(w * .972f, h * .06f), Offset(w * .028f, h * .94f), Offset(w * .972f, h * .94f), Offset(w * .5f, h * .47f))) screw(sc, h * .022f)
         }
         // the label: song and artist, in a hand-written looking face
         Column(Modifier.align(Alignment.TopStart).padding(start = maxWidth * .06f, top = maxHeight * .17f).width(maxWidth * .88f)) {
@@ -224,9 +276,17 @@ private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modi
                 color = cas.ink, fontSize = 22.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text((track?.artist ?: tr("Press eject", "Eject'e bas")).uppercase(), color = cas.ink.copy(alpha = .75f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text("D-C90", color = Color(0xFFD9392B), fontSize = 14.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.BottomStart).padding(start = maxWidth * .05f, bottom = maxHeight * .05f))
-        Text("TYPE I · NORMAL", color = cas.ink.copy(alpha = .6f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.BottomEnd).padding(end = maxWidth * .05f, bottom = maxHeight * .06f))
+        Text("D-C90", color = Color(0xFFD9392B), fontSize = 11.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(start = maxWidth * .03f, bottom = maxHeight * .015f))
+        Text("TYPE I", color = cas.ink.copy(alpha = .6f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.align(Alignment.BottomEnd).padding(end = maxWidth * .03f, bottom = maxHeight * .02f))
     }
+}
+
+/** A cross-head screw: a metal disc with a slot and a rim shadow. */
+private fun DrawScope.screw(c: Offset, r: Float) {
+    drawCircle(Brush.radialGradient(listOf(Color(0xFFE6E4DC), Color(0xFF9B988C)), c, r), r, c)
+    drawCircle(Color.Black.copy(alpha = .45f), r, c, style = Stroke(r * .16f))
+    drawLine(Color.Black.copy(alpha = .6f), Offset(c.x - r * .6f, c.y), Offset(c.x + r * .6f, c.y), r * .22f)
+    drawLine(Color.Black.copy(alpha = .6f), Offset(c.x, c.y - r * .6f), Offset(c.x, c.y + r * .6f), r * .22f)
 }
 
 /** A reel: a white ring with six teeth around a dark hub, turned by [angle]. */

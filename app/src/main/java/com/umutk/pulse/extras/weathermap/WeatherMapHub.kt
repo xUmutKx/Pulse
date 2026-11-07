@@ -46,6 +46,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -62,9 +64,9 @@ import com.umutk.pulse.extras.weather.Place
 import com.umutk.pulse.extras.weather.WeatherStore
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -136,13 +138,27 @@ private fun get(url: String): String? {
     } catch (e: Exception) { null } finally { c.disconnect() }
 }
 
-private fun fetchTile(url: String): ImageBitmap? {
+/** A tile from the disk cache when it is there, else downloaded and kept (a map opened again shows its tiles at once). */
+private fun fetchTile(url: String, dir: File): ImageBitmap? {
+    val name = java.security.MessageDigest.getInstance("MD5").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }
+    val f = File(dir, name)
+    if (f.isFile && f.length() > 0L) BitmapFactory.decodeFile(f.path)?.let { return it.asImageBitmap() }
     val c = URL(url).openConnection() as HttpURLConnection
     return try {
         c.connectTimeout = 10_000; c.readTimeout = 20_000
         c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)")
-        if (c.responseCode !in 200..299) null else c.inputStream.use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+        if (c.responseCode !in 200..299) null else {
+            val bytes = c.inputStream.use { it.readBytes() }
+            runCatching { dir.mkdirs(); f.writeBytes(bytes) }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }
     } catch (e: Exception) { null } finally { c.disconnect() }
+}
+
+/** Tiles older than three days are removed from the cache (the satellite picture of each day has its own tiles). */
+private fun pruneTiles(dir: File) {
+    val old = System.currentTimeMillis() - 3L * 86_400_000L
+    dir.listFiles()?.forEach { if (it.lastModified() < old) it.delete() }
 }
 
 /** The tiles of the zoom level that cover the screen, as (zoom, column, row); the column is not wrapped, so the drawing stays in place. */
@@ -413,6 +429,22 @@ private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: Ma
 
 @Composable
 fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
+    // the whole map opens after a rewarded ad (play build; each opening asks again; the foss build and Premium open it at once)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var unlocked by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(!com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)) }
+    val mapGate = com.umutk.pulse.ads.rememberAdGate(com.umutk.pulse.tr("Weather map", "Hava haritası"), com.umutk.pulse.tr("Watch a short ad to open the map.", "Haritayı açmak için kısa bir reklam izle."), pass = false)
+    if (!unlocked) {
+        androidx.activity.compose.BackHandler { onBack() }
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            com.umutk.pulse.PButton(com.umutk.pulse.tr("Watch an ad to open the map", "Haritayı açmak için reklam izle"), onClick = { mapGate { unlocked = true } })
+        }
+        return
+    }
+    WeatherMapScreen(onBack, at)
+}
+
+@Composable
+private fun WeatherMapScreen(onBack: () -> Unit, at: Place? = null) {
     val ctx = LocalContext.current
     val density = LocalDensity.current.density
     val prefs = remember { ctx.getSharedPreferences("weathermap", Context.MODE_PRIVATE) }
@@ -425,6 +457,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val grids = remember { mutableStateMapOf<MapLayer, List<Sample>>() }
     val stamps = remember { mutableStateMapOf<MapLayer, Long>() }
     val baseTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
+    val tileDir = remember { File(ctx.cacheDir, "weather_tiles").also { pruneTiles(it) } }
     val overTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
     // the aircraft of the last load stay until the next one: a map closed and opened again shows them at once
     var planes by remember { mutableStateOf<List<Plane>?>(lastPlanes) }
@@ -441,6 +474,8 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val homeView = remember(at) {
         (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { MapPos(wx(it.lon), wy(it.lat), 5.0) }
     }
+    // the dot that shows where the place is (none while the phone's place has no fix yet)
+    val homePlace = remember(at) { (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { Place(if (it.device) tr("My location", "Konumum") else it.name, it.lat, it.lon, it.device) } }
     // the map opens on the chosen place (or the phone's place), zoomed in; without a place it shows the world, zoomed so it fills the whole screen
     fun place(sz: Size) {
         if (placed || sz.width <= 0f || sz.height <= 0f) return
@@ -484,11 +519,11 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val baseKeys = base.map { (z, x, y) -> tileKey(z, x, y) }
     LaunchedEffect(baseKeys) {
         val missing = baseKeys.filter { it !in baseTiles }
-        if (missing.isNotEmpty()) {
-            missing.map { k -> async(Dispatchers.IO) { k to fetchTile("https://tile.openstreetmap.org/$k.png") } }
-                .awaitAll().forEach { (k, img) -> if (img != null) baseTiles[k] = img }
+        // each tile is shown the moment it has loaded, the slowest one does not hold the others back
+        coroutineScope {
+            missing.forEach { k -> launch { withContext(Dispatchers.IO) { fetchTile("https://tile.openstreetmap.org/$k.png", tileDir) }?.let { baseTiles[k] = it } } }
         }
-        if (baseTiles.size > 160) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
+        if (baseTiles.size > 700) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
     }
     val overMax = when (layer) { MapLayer.RADAR -> RADAR_MAX_ZOOM; MapLayer.SATELLITE -> SAT_MAX_ZOOM; else -> -1 }
     val overKeys = if (overMax < 0 || canvasSize.width <= 0f) emptyList()
@@ -496,11 +531,13 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     LaunchedEffect(layer, radar, overKeys) {
         if (overKeys.isEmpty()) return@LaunchedEffect
         val missing = overKeys.filter { it !in overTiles }
-        if (missing.isNotEmpty()) {
-            missing.map { k -> async(Dispatchers.IO) { k to overlayUrl(layer, radar, k.substringAfter('/'))?.let { fetchTile(it) } } }
-                .awaitAll().forEach { (k, img) -> if (img != null) overTiles[k] = img }
+        coroutineScope {
+            missing.forEach { k -> launch {
+                val img = withContext(Dispatchers.IO) { overlayUrl(layer, radar, k.substringAfter('/'))?.let { fetchTile(it, tileDir) } }
+                if (img != null) overTiles[k] = img
+            } }
         }
-        if (overTiles.size > 160) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
+        if (overTiles.size > 700) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -578,6 +615,23 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
                 val c = screenOf(pl.lat, pl.lon)
                 if (c.x < -10f || c.x > size.width + 10f || c.y < -10f || c.y > size.height + 10f) return@forEach
                 drawPlane(c, pl.track, 5.dp.toPx(), Color(0xFFFFC107))
+            }
+            // the place the weather page showed (or the phone's place): a clear dot with a halo and its name, on top of every layer
+            homePlace?.let { hp ->
+                val c = screenOf(hp.lat, hp.lon)
+                if (c.x > -60f && c.x < size.width + 60f && c.y > -60f && c.y < size.height + 60f) {
+                    val acc = com.umutk.pulse.Look.accent.copy(alpha = 1f)
+                    drawCircle(acc.copy(alpha = .22f), 22.dp.toPx(), c)
+                    drawCircle(Color.White, 10.dp.toPx(), c)
+                    drawCircle(acc, 6.5.dp.toPx(), c)
+                    drawIntoCanvas { cv ->
+                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.WHITE; textSize = 14.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            textAlign = android.graphics.Paint.Align.CENTER; setShadowLayer(4.dp.toPx(), 0f, 1.dp.toPx(), android.graphics.Color.BLACK)
+                        }
+                        cv.nativeCanvas.drawText(hp.name, c.x, c.y - 16.dp.toPx(), paint)
+                    }
+                }
             }
         }
 

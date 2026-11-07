@@ -61,8 +61,8 @@ fun StudioTab(st: PaletteState) {
     var selected by remember { mutableStateOf(-1) }
     var saveName by remember { mutableStateOf<String?>(null) }
     var gridOrder by remember { mutableStateOf(PaletteExtractor.GridOrder.READING) }
-    val gridPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromGrid(uri, order = gridOrder) }
-    val imgPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromImage(uri) }
+    val gridPicker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromGrid(uri, order = gridOrder) }
+    val imgPicker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromImage(uri) }
     val image = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

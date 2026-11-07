@@ -23,7 +23,24 @@ object KeyboardDictionary {
             words.forEachIndexed { i, w -> if (w.length <= 28) lists[w.length].add(i) }
             Array(29) { lists[it].toIntArray() }
         }
+        // by length and by the accent-free first letter, and by length and accent-free second letter: a correction only reads the words that can start like the typed one
+        val byFirst: Array<HashMap<Char, IntArray>> = Array(29) { len -> HashMap<Char, IntArray>().also { m ->
+            byLen[len].groupBy { foldc(words[it][0]) }.forEach { (ch, l) -> m[ch] = l.toIntArray() } } }
+        val bySecond: Array<HashMap<Char, IntArray>> = Array(29) { len -> HashMap<Char, IntArray>().also { m ->
+            byLen[len].filter { words[it].length > 1 }.groupBy { foldc(words[it][1]) }.forEach { (ch, l) -> m[ch] = l.toIntArray() } } }
     }
+
+    // ---- work that a newer keystroke makes useless stops by itself ----------------------------------------------------------------------------------
+    @Volatile private var seq = 0L
+    private val mine = ThreadLocal<Long>()
+    /** Called at every keystroke: the correction work still running for an older word stops at its next check. */
+    fun touch() { seq++ }
+    /** Called where a piece of correction work starts: it belongs to the keystroke that is the latest now. */
+    fun begin() { mine.set(seq) }
+    private val noCancel = ThreadLocal<Boolean>()
+    private fun cancelled() = noCancel.get() != true && mine.get()?.let { it != seq } == true
+    /** Runs [block] to its end whatever is typed meanwhile (a late correction of a word that was already left behind). */
+    fun <T> uncancelled(block: () -> T): T { noCancel.set(true); try { return block() } finally { noCancel.set(false) } }
 
     private val lexes = ConcurrentHashMap<String, Lex>()
     private val user = ConcurrentHashMap<String, Int>()
@@ -44,10 +61,22 @@ object KeyboardDictionary {
 
     fun emoji(word: String): String? = emojiFor[word.lowercase(Locale.ROOT)]
 
+    /** Names of people and places (Turkish): a Turkish ending on one of them takes its apostrophe (Adana'da, Pelin'den). */
+    val properNouns = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    /** English first names and places (kbd/proper_en.txt): a typed one is written with its capital, as Turkish names are. */
+    val properNamesEn = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
+    /** Names that are also ordinary words (Güzel = beautiful, İpek = silk): never capitalised or given an apostrophe by the keyboard. */
+    val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek")
+
     /** Reads the word list of [lang] (and the learned words once). Call from a background thread. */
     fun load(c: Context, code: String) {
         val lang = d(code)
+        if (lang == "en") runCatching { c.assets.open("kbd/proper_en.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNamesEn += it.trim().lowercase(Locale.ENGLISH) } } }
+        if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) it.trim().lowercase(Locale("tr", "TR")).let { n -> if (n !in commonNames) properNouns += n } } } }
         if (!userLoaded) loadUser(c)
+        // a capital learned earlier for an ordinary word (Güzel) is dropped: the word is written as typed
+        commonNames.forEach { forms.remove(it) }
         if (lexes.containsKey(lang)) return
         val ws = ArrayList<String>(); val sc = ArrayList<Float>()
         // a list downloaded in the settings first, else the one inside the app
@@ -130,6 +159,10 @@ object KeyboardDictionary {
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
         // the slips of one person's everyday writing that no near-word rule mends (two or three letters wrong in the same word): a small list inside the app, under what is learned
         runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
+        // the slips the owner's typing showed (typed -> fixed), the corrections the owner undid, and the words the owner types as they are: bundled, so a new install has them too
+        runCatching { c.assets.open("kbd/habits_user_add.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos.putIfAbsent(p[0], p[1]) } } }
+        runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
+        runCatching { c.assets.open("kbd/kbd_keep.txt").bufferedReader().useLines { it.forEach { l -> if (l.isNotBlank()) kept += l.trim().lowercase(Locale.ROOT) } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_forms.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) forms[p[0]] = p[1] } }
@@ -142,9 +175,16 @@ object KeyboardDictionary {
     /** Numbers for the statistics page: learned words, learned typos, undone corrections, word pairs, letters typed. */
     fun stats(): List<Pair<String, Int>> = listOf("words" to user.size, "typos" to typos.size, "rejects" to rejects.size, "pairs" to pairs.values.sumOf { it.size }, "letters" to keyCounts.values.sum())
 
+    private val saver = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "kbd-save").apply { priority = Thread.MIN_PRIORITY; isDaemon = true } }
+
+    /** Writes what was learned. The five files are sorted and written on a thread of their own (this is called from the typing path every 25 words: on the main thread it stopped the keys); [force] writes at once. */
     fun saveUser(c: Context, force: Boolean = false) {
         if (dirty == 0 && !force) return
         dirty = 0
+        if (force) writeUser(c) else saver.execute { writeUser(c) }
+    }
+
+    private fun writeUser(c: Context) {
         runCatching {
             File(c.filesDir, "kbd_keys.txt").writeText(keyCounts.entries.joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })
@@ -194,7 +234,7 @@ object KeyboardDictionary {
         val w = word.lowercase(Locale.ROOT)
         if (w.length < 2 || w.any { it.isDigit() }) return
         // behind another word and still capitalised: a name, so the suggestions give it its capital again
-        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() }) forms[w] = word
+        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() } && w !in commonNames) forms[w] = word
         // the learning mode: words (the vocabulary and the names), sentences (which word follows which), both, or nothing
         if (KeyboardPrefs.learnWords || (user[w] ?: 0) > 0) user[w] = (user[w] ?: 0) + 1
         if (KeyboardPrefs.learnPairs && !prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
@@ -284,9 +324,10 @@ object KeyboardDictionary {
         var best: String? = null; var bestScore = -1f
         fun pair(a: String, b: String) {
             if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) return
-            if (!isWord(code, a) || !isWord(code, b)) return
-            // both parts must be common words (a brand or a rare word that happens to split is left alone)
+            // both parts must be common words (a brand or a rare word that happens to split is left alone). The cheap look-up goes first: a word of the list scores
+            // at once, and only then is the (slow) check of inflected Turkish forms asked, so a long run-together word no longer takes a long time
             if (score(code, a) < 8f || score(code, b) < 8f) return
+            if (!isWord(code, a) || !isWord(code, b)) return
             val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
             if (sc > bestScore) { bestScore = sc; best = "$a $b" }
         }
@@ -371,7 +412,16 @@ object KeyboardDictionary {
             best += Cand(w, base - 4f * cost, cost)
         }
         // only the words one or two letters longer or shorter than the typed one can be within reach
-        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i])
+        var n = 0
+        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) {
+            if (t.length < 3) { for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i]); continue }
+            // the first letter of a word within reach: the typed one (accent-free), the second one (a letter was dropped before it), or a key next to the first
+            val firsts = HashSet<Char>(); firsts += f0; firsts += f1
+            for (ch in "abcdefghijklmnopqrstuvwxyzçğıöşü") if (near(ch, t[0])) firsts += foldc(ch)
+            for (ch in firsts) lx.byFirst[len][ch]?.let { ids -> for (i in ids) { if ((++n and 1023) == 0 && cancelled()) return emptyList(); consider(lx.words[i], lx.score[i]) } }
+            // a word that has one more letter at the start ("ello" for "hello"): its second letter is the typed first one
+            lx.bySecond[len][f0]?.let { ids -> for (i in ids) { if (foldc(lx.words[i][0]) in firsts) continue; if ((++n and 1023) == 0 && cancelled()) return emptyList(); consider(lx.words[i], lx.score[i]) } }
+        }
         user.forEach { (w, _) -> if (best.none { it.word == w }) consider(w, score(lang, w)) }
         return best.sortedByDescending { it.score }.take(n)
     }
@@ -443,12 +493,18 @@ object KeyboardDictionary {
         if (typed.length < 5 || typed.length > 26) return emptyList()
         val out = ArrayList<Cand>()
         val a = FloatArray(32); val b = FloatArray(32); val c = FloatArray(32)
-        for (k in typed.length - 1 downTo maxOf(3, typed.length - 9)) {
+        for (k in typed.length - 1 downTo maxOf(3, typed.length - 6)) {
+            if (cancelled()) return emptyList()
             val stemT = typed.substring(0, k); val tailT = typed.substring(k)
             // the nearest ending chains
             var bestTail: String? = null; var bestCost = .65f
             val ties = ArrayList<String>()   // endings as near as the best one (micam and micem for "micsm"): the one that agrees with the base's vowel wins below
             for (len in maxOf(0, tailT.length - 1)..minOf(9, tailT.length + 1)) for (tail in chains[len]) {
+                // an ending that starts nothing like the typed one (not the same letter, not a neighbour key, not with a letter dropped) is far away: no need to measure it
+                if (tail.isNotEmpty() && tailT.isNotEmpty() && tail != tailT) {
+                    val t0 = foldc(tailT[0]); val e0 = foldc(tail[0])
+                    if (e0 != t0 && !near(tail[0], tailT[0]) && !(tailT.length > 1 && e0 == foldc(tailT[1])) && !(tail.length > 1 && foldc(tail[1]) == t0)) continue
+                }
                 val cst = if (tail == tailT) 0f else distance(tailT, tail, bestCost, a, b, c)
                 if (cst < bestCost) { bestCost = cst; bestTail = tail; ties.clear(); ties += tail }
                 else if (cst == bestCost && bestTail != null && cst > 0f) ties += tail
@@ -475,6 +531,10 @@ object KeyboardDictionary {
     // corrections the person undid: "typed>corrected" -> how often. A correction undone once is not made again; twice, the typed word counts as one of their words.
     private val rejects = ConcurrentHashMap<String, Int>()
     fun isRejected(typed: String, corrected: String) = (rejects["$typed>$corrected"] ?: 0) > 0
+
+    /** Words the keyboard never corrects (the common ones the owner types as they are: ya, da, ben, falan ...). */
+    private val kept: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    fun isKept(typed: String): Boolean = typed.lowercase(Locale.ROOT) in kept
     fun reject(c: Context, typed: String, corrected: String) {
         if (!userLoaded) loadUser(c)
         val k = typed.lowercase(Locale.ROOT) + ">" + corrected.lowercase(Locale.ROOT)

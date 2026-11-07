@@ -112,26 +112,29 @@ private fun lin(x0: Float, y0: Float, x1: Float, y1: Float, a: Int, b: Int) = Pa
 
 /** A grey oval player with a green display and a round pad of buttons. */
 object BlobSkin : ImgSkin("skin1", "Blob", 444, 216, listOf(
-    Hit("vis", rect(96f, 52f, 262f, 122f)), Hit("seek", rect(102f, 124f, 236f, 138f)),
-    Hit("open", circ(312f, 73f, 13f)), Hit("prev", circ(299f, 127f, 14f)), Hit("play", circ(334f, 112f, 16f)), Hit("next", circ(368f, 103f, 14f)), Hit("stop", circ(359f, 147f, 13f)),
+    // the keys measured on the picture (the pad sits a few pixels left of where they used to be, so the taps missed all but the middle one)
+    Hit("vis", rect(90f, 60f, 232f, 132f)), Hit("seek", rect(109f, 100f, 227f, 142f)),
+    Hit("open", circ(303f, 76f, 14f)), Hit("prev", circ(293f, 129f, 14f)), Hit("play", circ(328f, 115f, 16f)), Hit("next", circ(361f, 105f, 14f)), Hit("stop", circ(352f, 147f, 14f)),
 )) {
     override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        // the glass is tilted: its text, time and bar are drawn in a frame tilted the same way, around the middle of the glass
         c.save()
-        c.clipPath(Path().apply { addOval(RectF(70f, 50f, 264f, 136f), Path.Direction.CW); transform(Matrix().apply { setRotate(-11f, 167f, 93f) }) })
+        c.translate(160f, 96f); c.rotate(-18f)
+        c.clipPath(Path().apply { addOval(RectF(-92f, -34f, 92f, 34f), Path.Direction.CW) })
         val lv = st.levels
-        if (lv != null) bars(c, rect(92f, 58f, 252f, 116f), lv, 0xFF4F7A3F.toInt())
+        if (lv != null) bars(c, rect(-70f, -26f, 70f, 14f), lv, 0xFF4F7A3F.toInt())
         else {
-            marquee(c, st.title, pt(0xFF557549.toInt(), 15f, true), rect(90f, 55f, 258f, 82f), 96f, 76f, st.clock)
-            marquee(c, st.artist, pt(0xFF6A8A5C.toInt(), 12f), rect(90f, 82f, 258f, 100f), 96f, 95f, st.clock)
-            c.drawText("${fmt(st.posMs)} / ${fmt(st.durMs)}", 132f, 121f, pt(0xFF6A8A5C.toInt(), 11f))
+            marquee(c, st.title, pt(0xFF3F5E34.toInt(), 15f, true), rect(-72f, -30f, 72f, -9f), -72f, -14f, st.clock)
+            marquee(c, st.artist, pt(0xFF557549.toInt(), 12f), rect(-72f, -8f, 72f, 7f), -72f, 3f, st.clock)
+            c.drawText("${fmt(st.posMs)} / ${fmt(st.durMs)}", 0f, 19f, pt(0xFF557549.toInt(), 11f, align = Paint.Align.CENTER))
         }
         val f = frac(st)
-        c.drawRoundRect(rect(106f, 128f, 234f, 131f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33224422 })
-        c.drawRoundRect(rect(106f, 128f, 106f + 128f * f, 131f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4B7A3A.toInt() })
-        c.drawCircle(106f + 128f * f, 129.5f, 3.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF3F6B30.toInt() })
+        c.drawRoundRect(rect(-62f, 24f, 62f, 27f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33224422 })
+        c.drawRoundRect(rect(-62f, 24f, -62f + 124f * f, 27f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4B7A3A.toInt() })
+        c.drawCircle(-62f + 124f * f, 25.5f, 3.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF3F6B30.toInt() })
         c.restore()
         // the play key shows what it will do
-        glyph(c, 334f, 112f, 7f, 0xFFF4FFEA.toInt(), st.playing)
+        glyph(c, 328f, 115f, 7f, 0xFFF4FFEA.toInt(), st.playing)
     }
 }
 

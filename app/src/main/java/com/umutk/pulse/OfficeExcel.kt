@@ -288,7 +288,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
         if (pc.anchor < 0) sh.pics.remove(pc) else pc.deleted = true
         st.pic = null; sh.picsDirty = true; doc.dirty = true; st.ver++
     }
-    val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) insertPic(uri) }
+    val pickImg = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri -> if (uri != null) insertPic(uri) }
 
     fun commit(text: String) {
         val old = sh.cells[xKey(st.r, st.c)]; val os = old?.st ?: 0
@@ -644,8 +644,12 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
     val covered = remember(sh, st.ver) { HashSet<Long>().also { s -> for (m in sh.merges) { if ((m[2] - m[0] + 1).toLong() * (m[3] - m[1] + 1) > 10000) continue; for (r in m[0]..m[2]) for (c in m[1]..m[3]) if (r != m[0] || c != m[1]) s.add(xKey(r, c)) } } }
     var vp by remember { mutableStateOf(IntSize.Zero) }
     val rowH = 20f * d * z; val hdrW = if (ro) 0f else 34f * d; val hdrH = if (ro) 0f else 20f * d
+    // where each row starts: a row takes the height the file gives it (points, the default 15 is the 20 units of this screen)
+    val rowY = remember(sh, st.ver, z, d, nRows) { FloatArray(nRows + 1).also { for (i in 0 until nRows) it[i + 1] = it[i] + (sh.rowHt[i]?.let { h -> h * 20f / 15f } ?: 20f) * d * z } }
+    fun ry(r: Int): Float = rowY[r.coerceIn(0, nRows)]
+    fun rowAt(y: Float): Int { var lo = 0; var hi = nRows - 1; while (lo < hi) { val md = (lo + hi + 1) / 2; if (rowY[md] <= y) lo = md else hi = md - 1 }; return lo }
     val lim = remember { FloatArray(2) }
-    lim[0] = (colX[nCols] - (vp.width - hdrW)).coerceAtLeast(0f); lim[1] = (nRows * rowH - (vp.height - hdrH)).coerceAtLeast(0f)
+    lim[0] = (colX[nCols] - (vp.width - hdrW)).coerceAtLeast(0f); lim[1] = (ry(nRows) - (vp.height - hdrH)).coerceAtLeast(0f)
     val tp = remember { Paint(Paint.ANTI_ALIAS_FLAG) }; val fp = remember { Paint() }
     val faces = remember { arrayOf(Typeface.DEFAULT, Typeface.DEFAULT_BOLD, Typeface.create(Typeface.DEFAULT, Typeface.ITALIC), Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC)) }
     fun colAt(x: Float): Int { var lo = 0; var hi = nCols - 1; while (lo < hi) { val m = (lo + hi + 1) / 2; if (colX[m] <= x) lo = m else hi = m - 1 }; return lo }
@@ -653,7 +657,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
     val u = d * z / 9525f
     val pp = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
     /** Picture rectangle in grid space (zoomed pixels). */
-    fun picRect(p: XPic) = floatArrayOf(colX[p.c1.coerceIn(0, nCols)] + p.co1 * u, p.r1 * rowH + p.ro1 * u, colX[p.c2.coerceIn(0, nCols)] + p.co2 * u, p.r2 * rowH + p.ro2 * u)
+    fun picRect(p: XPic) = floatArrayOf(colX[p.c1.coerceIn(0, nCols)] + p.co1 * u, ry(p.r1) + p.ro1 * u, colX[p.c2.coerceIn(0, nCols)] + p.co2 * u, ry(p.r2) + p.ro2 * u)
     fun hitPic(o: Offset): XPic? {
         if (o.x < hdrW || o.y < hdrH) return null
         val gx = o.x - hdrW + st.gx; val gy = o.y - hdrH + st.gy
@@ -661,14 +665,14 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
     }
     fun applyRect(p: XPic, a: FloatArray) {
         val x0 = a[0].coerceAtLeast(0f); val y0 = a[1].coerceAtLeast(0f); val x1 = maxOf(a[2], x0 + 12f * d * z); val y1 = maxOf(a[3], y0 + 12f * d * z)
-        p.c1 = colAt(x0); p.co1 = ((x0 - colX[p.c1]) / u).toInt(); p.r1 = (y0 / rowH).toInt(); p.ro1 = ((y0 - p.r1 * rowH) / u).toInt()
-        p.c2 = colAt(x1); p.co2 = ((x1 - colX[p.c2]) / u).toInt(); p.r2 = (y1 / rowH).toInt(); p.ro2 = ((y1 - p.r2 * rowH) / u).toInt()
+        p.c1 = colAt(x0); p.co1 = ((x0 - colX[p.c1]) / u).toInt(); p.r1 = rowAt(y0); p.ro1 = ((y0 - ry(p.r1)) / u).toInt()
+        p.c2 = colAt(x1); p.co2 = ((x1 - colX[p.c2]) / u).toInt(); p.r2 = rowAt(y1); p.ro2 = ((y1 - ry(p.r2)) / u).toInt()
     }
-    fun cellOf(o: Offset) = ((o.y - hdrH + st.gy) / rowH).toInt().coerceIn(0, nRows - 1) to colAt(o.x - hdrW + st.gx).coerceIn(0, nCols - 1)
+    fun cellOf(o: Offset) = rowAt(o.y - hdrH + st.gy).coerceIn(0, nRows - 1) to colAt(o.x - hdrW + st.gx).coerceIn(0, nCols - 1)
 
     Canvas(Modifier.fillMaxSize().clipToBounds().onSizeChanged { vp = it }
         .ofPinch { f -> val n = (st.zoom * f).coerceIn(.4f, 3f); val k = n / st.zoom; st.zoom = n; st.gx = (st.gx * k).coerceIn(0f, lim[0] * k); st.gy = (st.gy * k).coerceIn(0f, lim[1] * k) }
-        .then(if (ro) Modifier else Modifier.pointerInput(colX, rowH) {
+        .then(if (ro) Modifier else Modifier.pointerInput(colX, rowY) {
             fun tap(o: Offset) {
                 if (o.x >= hdrW && o.y >= hdrH) { val hp = hitPic(o); st.pic = hp; if (hp != null) return } else st.pic = null
                 val (r, c) = cellOf(o)
@@ -688,7 +692,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                 }
             })
         })
-        .pointerInput(colX, rowH, ro) {
+        .pointerInput(colX, rowY, ro) {
             var mode = 0   // 0 scroll, 1 move picture, 2 resize picture, 3 select range
             val da = FloatArray(4); var pic: XPic? = null
             detectDragGestures(
@@ -702,7 +706,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                             if (mode != 0) { pic = sp; r.copyInto(da) }
                         }
                         if (mode == 0 && o.x > hdrW && o.y > hdrH) {
-                            val near = Math.abs(o.x - (hdrW - st.gx + colX[(st.cb + 1).coerceAtMost(nCols)])) < 28f * d && Math.abs(o.y - (hdrH - st.gy + (st.rb + 1) * rowH)) < 28f * d
+                            val near = Math.abs(o.x - (hdrW - st.gx + colX[(st.cb + 1).coerceAtMost(nCols)])) < 28f * d && Math.abs(o.y - (hdrH - st.gy + ry(st.rb + 1))) < 28f * d
                             if (near || st.extend) { mode = 3; if (!near) { val (r, c) = cellOf(o); st.pick(r, c) } }
                         }
                     }
@@ -725,7 +729,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
         val gx = st.gx; val gy = st.gy; val W = size.width; val H = size.height
         val ox = hdrW - gx; val oy = hdrH - gy
         val c0 = colAt(gx); var c1 = c0; while (c1 < nCols - 1 && colX[c1 + 1] - gx < W - hdrW) c1++
-        val r0 = (gy / rowH).toInt().coerceAtLeast(0); val r1 = (((gy + H - hdrH) / rowH).toInt() + 1).coerceAtMost(nRows - 1)
+        val r0 = rowAt(gy).coerceAtLeast(0); val r1 = (rowAt(gy + H - hdrH) + 1).coerceAtMost(nRows - 1)
         val m365 = t.base == "365"
         val acc = (if (m365) ofBrand(t) else pal.accent).toArgb(); val ink = (if (m365) Color(0xFFEDEDED) else pal.ink).toArgb(); val line = (if (m365) Color(0xFF5A5A5A) else pal.line).toArgb()
         drawIntoCanvas { cv ->
@@ -736,17 +740,17 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             fp.style = Paint.Style.FILL
             if (st.lines) { fp.color = if (dk) 0xFF3A3A3A.toInt() else 0xFFD4D4D4.toInt(); fp.strokeWidth = 1f
                 for (c in c0..c1 + 1) { val x = ox + colX[c.coerceAtMost(nCols)]; n.drawLine(x, hdrH, x, H, fp) }
-                for (r in r0..r1 + 1) { val y = oy + r * rowH; n.drawLine(hdrW, y, W, y, fp) } }
+                for (r in r0..r1 + 1) { val y = oy + ry(r); n.drawLine(hdrW, y, W, y, fp) } }
             tp.textSize = (13f * d * z).coerceIn(6f * d, 40f * d)
             val base = tp.textSize * .35f
             val ah = 14f * d * z
             for (tb in sh.tables) {
                 if (tb.r1 > r1 || tb.r2 < r0 || tb.c1 > c1 || tb.c2 < c0) continue
                 val x0 = ox + colX[tb.c1]; val x1 = ox + colX[(tb.c2 + 1).coerceAtMost(nCols)]
-                for (r in maxOf(tb.r1, r0)..minOf(tb.r2, r1)) { val col = tb.rowFill(r); if (col != 0) { fp.color = col; n.drawRect(x0, oy + r * rowH, x1, oy + (r + 1) * rowH, fp) } }
+                for (r in maxOf(tb.r1, r0)..minOf(tb.r2, r1)) { val col = tb.rowFill(r); if (col != 0) { fp.color = col; n.drawRect(x0, oy + ry(r), x1, oy + ry(r + 1), fp) } }
                 fp.color = tb.look.line; fp.style = Paint.Style.STROKE; fp.strokeWidth = 1f * d
-                if (tb.look.grid) for (r in maxOf(tb.r1, r0)..minOf(tb.r2, r1) + 1) { val y = oy + r * rowH; n.drawLine(x0, y, x1, y, fp) }
-                n.drawRect(x0, oy + tb.r1 * rowH, x1, oy + (tb.r2 + 1) * rowH, fp); fp.style = Paint.Style.FILL
+                if (tb.look.grid) for (r in maxOf(tb.r1, r0)..minOf(tb.r2, r1) + 1) { val y = oy + ry(r); n.drawLine(x0, y, x1, y, fp) }
+                n.drawRect(x0, oy + ry(tb.r1), x1, oy + ry(tb.r2 + 1), fp); fp.style = Paint.Style.FILL
             }
             fun drawCell(x: XCell?, x0: Float, y0: Float, x1: Float, y1: Float, r: Int, c: Int, mergedEndC: Int) {
                 var s = book.style(x?.st ?: 0)
@@ -766,6 +770,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                 val (txt, num) = xShow(book, ev, x, r, c)
                 if (txt.isEmpty()) return
                 tp.typeface = faces[(if (s.bold) 1 else 0) + (if (s.italic) 2 else 0)]; tp.color = if (s.color != 0) (if (dk && s.fill == 0 && Color(s.color).luminance() < .3f) OfficePrefs.pageFg else s.color) else if (hd && tb!!.look.head != 0) tb.look.headInk else if (dk && s.fill == 0) OfficePrefs.pageFg else Color.Black.toArgb()
+                tp.color = inkOn(tp.color, if (s.fill != 0) s.fill else if (OfficePrefs.darkPages) OfficePrefs.pageBgC.toArgb() else Color.White.toArgb())
                 tp.textSize = (13f * d * z * ((s.fsz.toFloatOrNull() ?: 11f) / 11f)).coerceIn(6f * d, 90f * d); tp.isUnderlineText = s.underline; tp.isStrikeThruText = s.strike
                 val base = tp.textSize * .35f
                 val w = tp.measureText(txt); val pad = 3f * d
@@ -790,11 +795,11 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                 val k = xKey(r, c)
                 if (k in covered) continue
                 val x = sh.cells[k] ?: continue
-                drawCell(x, ox + colX[c], oy + r * rowH, ox + colX[c + 1], oy + (r + 1) * rowH, r, c, -1)
+                drawCell(x, ox + colX[c], oy + ry(r), ox + colX[c + 1], oy + ry(r + 1), r, c, -1)
             }
             for (tb in sh.tables) {
                 if (!tb.filter || tb.r1 < r0 || tb.r1 > r1) continue
-                val y0 = oy + tb.r1 * rowH; val a = minOf(ah, rowH - 2f * d)
+                val y0 = oy + ry(tb.r1); val a = minOf(ah, rowH - 2f * d)
                 for (c in maxOf(tb.c1, c0)..minOf(tb.c2, c1)) {
                     val bx = ox + colX[c + 1] - a - d; val by = y0 + (rowH - a) / 2
                     fp.color = 0xFFF2F2F2.toInt(); n.drawRect(bx, by, bx + a, by + a, fp)
@@ -803,8 +808,8 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             }
             for (m in sh.merges) {
                 if (m[0] > r1 || m[2] < r0 || m[1] > c1 || m[3] < c0) continue
-                val x0 = ox + colX[m[1].coerceAtMost(nCols)]; val x1 = ox + colX[(m[3] + 1).coerceAtMost(nCols)]; val y0 = oy + m[0] * rowH; val y1 = oy + (m[2] + 1) * rowH
-                fp.color = Color.White.toArgb(); n.drawRect(x0, y0, x1, y1, fp)
+                val x0 = ox + colX[m[1].coerceAtMost(nCols)]; val x1 = ox + colX[(m[3] + 1).coerceAtMost(nCols)]; val y0 = oy + ry(m[0]); val y1 = oy + ry(m[2] + 1)
+                fp.color = if (OfficePrefs.darkPages) OfficePrefs.pageBgC.toArgb() else Color.White.toArgb(); n.drawRect(x0, y0, x1, y1, fp)
                 drawCell(sh.cells[xKey(m[0], m[1])], x0, y0, x1, y1, m[0], m[1], m[3])
                 fp.color = 0xFFD4D4D4.toInt(); fp.style = Paint.Style.STROKE; n.drawRect(x0, y0, x1, y1, fp); fp.style = Paint.Style.FILL
             }
@@ -821,7 +826,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             }
             // selection
             if (!ro) {
-            val sx0 = ox + colX[st.c1.coerceAtMost(nCols)]; val sx1 = ox + colX[(st.cb + 1).coerceAtMost(nCols)]; val sy0 = oy + st.r1 * rowH; val sy1 = oy + (st.rb + 1) * rowH
+            val sx0 = ox + colX[st.c1.coerceAtMost(nCols)]; val sx1 = ox + colX[(st.cb + 1).coerceAtMost(nCols)]; val sy0 = oy + ry(st.r1); val sy1 = oy + ry(st.rb + 1)
             fp.color = acc; fp.alpha = 40; n.drawRect(sx0, sy0, sx1, sy1, fp)
             fp.alpha = 255; fp.style = Paint.Style.STROKE; fp.strokeWidth = 2f * d; n.drawRect(sx0, sy0, sx1, sy1, fp); fp.style = Paint.Style.FILL
             n.drawRect(sx1 - 5f * d, sy1 - 5f * d, sx1 + 5f * d, sy1 + 5f * d, fp)
@@ -841,7 +846,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             n.restore()
             n.save(); n.clipRect(0f, hdrH, hdrW, H); fp.color = hb; n.drawRect(0f, hdrH, hdrW, H, fp)
             for (r in r0..r1) {
-                val y0 = oy + r * rowH; val y1 = y0 + rowH; val sel = r in st.r1..st.rb
+                val y0 = oy + ry(r); val y1 = oy + ry(r + 1); val sel = r in st.r1..st.rb
                 if (sel) { fp.color = acc; fp.alpha = 70; n.drawRect(0f, y0, hdrW, y1, fp); fp.alpha = 255 }
                 fp.color = line; n.drawLine(0f, y1, hdrW, y1, fp)
                 tp.color = ink; tp.isFakeBoldText = sel; n.drawText((r + 1).toString(), hdrW / 2, (y0 + y1) / 2 + tp.textSize * .35f, tp)
@@ -852,4 +857,11 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             }
         }
     }
+}
+
+/** The ink, or black / white when the ink would sit too close to its ground (white on white, black on black). */
+private fun inkOn(ink: Int, ground: Int): Int {
+    val a = Color(ink).luminance(); val b = Color(ground).luminance()
+    val hi = maxOf(a, b); val lo = minOf(a, b)
+    return if ((hi + .05f) / (lo + .05f) >= 3f) ink else if (b > .5f) Color.Black.toArgb() else Color.White.toArgb()
 }

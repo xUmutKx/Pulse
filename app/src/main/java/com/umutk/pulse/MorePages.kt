@@ -93,20 +93,24 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val ramPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // every detail page of the overview needs its own short ad (play build; the foss build opens at once)
+        val detailGate = com.umutk.pulse.ads.rememberAdGate(tr("Open details", "Ayrıntıları aç"), tr("Watch a short ad to open this.", "Bunu açmak için kısa bir reklam izle."), pass = false)
+        val openGated: (String) -> Unit = { k -> detailGate { onOpen(k) } }
         PHead("Overview", if (s.root) "root" else "")
+        com.umutk.pulse.features.DeviceHeader()
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
-            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
+            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { openGated("cpu") }
+            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { openGated("memory") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { onOpen("thermal") }
-            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { onOpen("battery") }
+            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { openGated("thermal") }
+            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { openGated("battery") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { onOpen("storage") }
+            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { openGated("storage") }
             Tile("Graphics", if (s.gpu >= 0) "%${s.gpu}" else "—", resColor("gpu"), s.gpu.coerceAtLeast(0) / 100f, Modifier.weight(1f))
         }
-        PCard(Modifier.clickable { onOpen("network") }) {
+        PCard(Modifier.clickable { openGated("network") }) {
             Text("Network", color = T.sub, fontSize = 12.sp)
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
@@ -115,8 +119,12 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
         val secRows by androidx.compose.runtime.produceState<List<Pair<String, String>>?>(null) {
             value = withContext(Dispatchers.IO) { runCatching { Hw.system(ctx).firstOrNull { it.title == "Security" }?.rows.orEmpty() }.getOrDefault(emptyList()) }
         }
-        PCard(Modifier.fillMaxWidth().clickable { onOpen("security") }) {
-            Text(tr("Security", "Güvenlik"), color = T.sub, fontSize = 12.sp)
+        PCard(Modifier.fillMaxWidth().clickable { openGated("security") }) {
+            // the title with its shield, drawn for the look like the other icons of the page
+            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                PIcon("shieldOk", T.sub, 16.dp)
+                Text(tr("Security", "Güvenlik"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+            }
             val rows = secRows
             if (rows == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, fontSize = 13.sp)
             else rows.filter { it.first in setOf("SELinux", "Verified boot", "Encryption", "Bootloader lock", "Root") }.chunked(2).forEach { pair ->
@@ -196,6 +204,7 @@ fun SecurityPage() {
                 listOf(
                     Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
                     Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
+                    Triple("key", tr("Passwords", "Şifreler"), { openTool("vault") }),
                     Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
                 ).forEach { (icon, label, go) ->
                     Column(Modifier.weight(1f).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -234,9 +243,18 @@ fun NetworkPage() {
     var busy by remember { mutableStateOf(false) }
     LiveSections("Network", 4000, top = {
         // the graph opens the two network tools: they are reached from here only
+        com.umutk.pulse.features.NetAccessCard()
         PCard(Modifier.clickable { openTool("netusage") }) {
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 80.dp)
             Text("Orange: download · Blue: upload", color = T.sub, fontSize = 11.sp)
+        // the internet speed of the last tests (the average of up to five), so the page shows it without running one
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val tests = remember { com.umutk.pulse.extras.speedtest.SpeedHistory.all(ctx).take(5) }
+        if (tests.isNotEmpty()) Text(
+            tr("Internet speed (average of ${tests.size} tests): ", "İnternet hızı (${tests.size} testin ortalaması): ") +
+                "↓ %.1f  ↑ %.1f Mbit/s · %.0f ms".format(tests.map { it.down }.average(), tests.map { it.up }.average(), tests.map { it.pingMs }.average()),
+            color = T.text, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp),
+        )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
             PButton(tr("Internet speed test", "İnternet hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
@@ -423,7 +441,11 @@ fun AppsPage() {
         hasDetail = sel.isNotEmpty(), listWidth = 380.dp,
         list = { AppManagerScreen(onOpen = { sel = it }) },
         detail = { if (sel.isNotEmpty()) key(sel) { com.umutk.pulse.features.AppDetailsScreen(sel, { sel = "" }) } })
-    else com.umutk.pulse.ui.MaxWidthBox { AppManagerScreen(onOpen = { open("app:$it") }) }
+    else com.umutk.pulse.ui.MaxWidthBox {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { AppManagerScreen(onOpen = { open("app:$it") }) }
+        }
+    }
 }
 
 // ---------------------------------------------------------------- searchable lists

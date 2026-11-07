@@ -79,9 +79,26 @@ object NotifLog {
     fun isGranted(ctx: Context): Boolean =
         NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
 
+    @Volatile private var live: Listener? = null
+
+    /** The notifications on the phone now (the log above also holds the ones that went), newest first, one per app and title; empty without the access. */
+    fun active(): List<Entry> = runCatching {
+        live?.activeNotifications.orEmpty().filter { it.packageName != live?.packageName && it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+            .sortedByDescending { it.postTime }.mapNotNull { sbn ->
+                val ex = sbn.notification.extras ?: return@mapNotNull null
+                val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.takeIf { it.isNotBlank() } ?: ex.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                Entry(sbn.packageName, sbn.packageName, title, sbn.postTime)
+            }.distinctBy { it.pkg + it.title }
+    }.getOrDefault(emptyList())
+
+    /** The app has a chat bubble on the screen now (Android 10+: its notification carries FLAG_BUBBLE while it is shown as a bubble). Needs the notification access. */
+    fun hasBubble(pkg: String): Boolean = runCatching { live?.activeNotifications.orEmpty().any { it.packageName == pkg && (it.notification.flags and 0x00001000) != 0 } }.getOrDefault(false)
+
     // Declared in the manifest, see the header comment. Receives every posted notification
     // from the system; Pulse's own notifications are skipped.
     class Listener : NotificationListenerService() {
+        override fun onListenerConnected() { live = this }
+        override fun onListenerDisconnected() { if (live === this) live = null }
         override fun onNotificationPosted(sbn: StatusBarNotification) {
             if (sbn.packageName == packageName) return
             val extras = sbn.notification.extras ?: return

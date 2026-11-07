@@ -39,20 +39,23 @@ object WeatherApi {
 
     /** The context the stores were last opened with, so the plain calls below know which provider is chosen. */
     @Volatile var appCtx: android.content.Context? = null
-    /** "om" and "mgm" read Open-Meteo; "metno" is MET Norway and "owm" OpenWeatherMap (with the user's key). */
-    private fun provider(): String = appCtx?.let { WeatherStore.source(it) } ?: "om"
+    /** "om" and "mgm" read Open-Meteo; "wttr" and "brightsky" need no key; "owm", "wapi" (WeatherAPI.com) and "pirate" (Pirate Weather) use the user's key. */
+    // "all" is the combined forecast: its first service is Open-Meteo, the others join through the combine setting
+    private fun provider(): String = appCtx?.let { WeatherStore.source(it) }?.let { if (it == "all") "om" else it } ?: "om"
     private fun openMeteo() = provider().let { it == "om" || it == "mgm" }
 
     fun forecast(lat: Double, lon: Double): String {
         // the chosen service first; when it does not answer, the others in turn, so the card still gets the data of one that does
         val first = provider()
-        val order = listOf(first) + listOf("om", "metno", "wttr").filter { it != first }
+        val order = listOf(first) + listOf("om", "wttr", "brightsky").filter { it != first }
         var last: Throwable? = null
         for (p in order) {
             val r = runCatching {
                 when (p) {
-                    "metno" -> WeatherProviders.metno(lat, lon)
                     "wttr" -> WeatherProviders.wttr(lat, lon)
+                    "brightsky" -> WeatherProviders.brightsky(lat, lon)
+                    "wapi" -> WeatherProviders.wapi(lat, lon, appCtx?.let { WeatherStore.apiKey(it, "wapi") }.orEmpty())
+                    "pirate" -> WeatherProviders.pirate(lat, lon, appCtx?.let { WeatherStore.apiKey(it, "pirate") }.orEmpty())
                     "owm" -> WeatherProviders.owm(lat, lon, appCtx?.let { WeatherStore.owmKey(it) }.orEmpty())
                     else -> forecastOm(lat, lon)
                 }
@@ -135,12 +138,24 @@ object WeatherApi {
     /** The last network failure in words (HTTP code or the exception), shown beside "could not load" so a failing phone says why. */
     @Volatile var lastError: String = ""
 
+    /** Services that answered 429 (too many requests), with the time until they may be asked again. */
+    private val rateLimitedUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val RATE_PAUSE_MS = 10 * 60_000L
+
+    private fun hostOf(url: String) = url.substringAfter("://").substringBefore('/')
+
+    /** True while the service behind [url] is paused after a 429; it is not asked again then, so its limit does not get worse. */
+    fun pausedFor(url: String): Boolean = (rateLimitedUntil[hostOf(url)] ?: 0L) > System.currentTimeMillis()
+
     internal fun get(url: String): String {
+        val host = hostOf(url)
+        if (pausedFor(url)) { lastError = "HTTP 429 $host (paused)"; throw java.io.IOException("paused: $host") }
         val cn = openHttps(url)
         cn.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)"); cn.setRequestProperty("Accept", "application/json")
         try {
             val code = try { cn.responseCode } catch (e: Exception) { lastError = e.javaClass.simpleName + ": " + (e.message ?: ""); throw e }
-            if (code != 200) lastError = "HTTP $code " + url.substringAfter("://").substringBefore('/')
+            if (code == 429) rateLimitedUntil[host] = System.currentTimeMillis() + RATE_PAUSE_MS
+            if (code != 200) lastError = "HTTP $code $host"
             check(code == 200) { "HTTP $code" }
             return cn.inputStream.bufferedReader().use { it.readText() }
         } finally {
@@ -224,24 +239,26 @@ object WeatherApi {
                 for (k in keys.filter { it.startsWith("precipitation_probability") }) j.optJSONArray(k)?.takeIf { !it.isNull(i) }?.let { sl.rain += it.getInt(i) }
             }
         }
-        runCatching {
-            val cn = openHttps("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f".format(java.util.Locale.US, lat, lon))
-            cn.setRequestProperty("User-Agent", "Pulse/1.0 github.com/xUmutKx/Pulse")
-            val body = try { check(cn.responseCode == 200) { "HTTP ${cn.responseCode}" }; cn.inputStream.bufferedReader().use { it.readText() } } finally { cn.disconnect() }
-            val ts = JSONObject(body).getJSONObject("properties").getJSONArray("timeseries")
+        // the other services, each read in the Open-Meteo shape; one that fails or has nothing is left out and the rest still count
+        fun addHourly(raw: String): Boolean {
+            val h = JSONObject(raw).optJSONObject("hourly") ?: return false
+            val times = h.optJSONArray("time") ?: return false
+            val temps = h.optJSONArray("temperature_2m"); val codes = h.optJSONArray("weather_code"); val rains = h.optJSONArray("precipitation_probability")
             var got = false
-            for (i in 0 until ts.length()) {
-                val e = ts.getJSONObject(i)
-                val local = java.time.Instant.parse(e.getString("time")).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
-                if (local.minute != 0) continue
-                val key = local.toString().take(13) + ":00"
-                val sl = slots[key] ?: continue
-                val d = e.getJSONObject("data")
-                d.getJSONObject("instant").getJSONObject("details").optDouble("air_temperature", Double.NaN).takeIf { !it.isNaN() }?.let { sl.temps += it; got = true }
-                d.optJSONObject("next_1_hours")?.optJSONObject("summary")?.optString("symbol_code")?.let { noaaSky(it) }?.takeIf { it >= 0 }?.let { sl.codes += it }
+            for (i in 0 until times.length()) {
+                val sl = slots[times.getString(i)] ?: continue
+                temps?.optDouble(i, Double.NaN)?.takeIf { !it.isNaN() }?.let { sl.temps += it; got = true }
+                codes?.optInt(i, -1)?.takeIf { it >= 0 }?.let { sl.codes += it }
+                rains?.optInt(i, -1)?.takeIf { it >= 0 }?.let { sl.rain += it }
             }
-            if (got) sources++
+            return got
         }
+        runCatching { if (addHourly(WeatherProviders.wttr(lat, lon))) sources++ }
+        // Bright Sky (DWD) needs no key; the services with a key join when the key is set
+        runCatching { if (addHourly(WeatherProviders.brightsky(lat, lon))) sources++ }
+        appCtx?.let { WeatherStore.owmKey(it) }?.takeIf { it.isNotBlank() }?.let { key -> runCatching { if (addHourly(WeatherProviders.owm(lat, lon, key))) sources++ } }
+        appCtx?.let { WeatherStore.apiKey(it, "wapi") }?.takeIf { it.isNotBlank() }?.let { key -> runCatching { if (addHourly(WeatherProviders.wapi(lat, lon, key))) sources++ } }
+        appCtx?.let { WeatherStore.apiKey(it, "pirate") }?.takeIf { it.isNotBlank() }?.let { key -> runCatching { if (addHourly(WeatherProviders.pirate(lat, lon, key))) sources++ } }
         // MGM's own hours, for a place in Turkey when the MGM source is chosen
         mgm?.optJSONArray("hours")?.let { a ->
             var got = false
@@ -389,10 +406,19 @@ object WeatherApi {
     }
 
     /** Vector drawable for the home-screen widgets, same three looks as [icon]. */
-    fun drawable(code: Int): Int = when (code) {
-        0, 1 -> com.umutk.pulse.R.drawable.wi_weather_sun
+    fun drawable(code: Int, day: Boolean = true): Int = when (code) {
+        // clear sky: the sun by day, the moon at night
+        0, 1 -> if (day) com.umutk.pulse.R.drawable.wi_weather_sun else com.umutk.pulse.R.drawable.wi_weather_moon
         95, 96, 99 -> com.umutk.pulse.R.drawable.wi_weather_bolt
         else -> com.umutk.pulse.R.drawable.wi_weather_cloud
+    }
+
+    /** Whether the hour [time] ("yyyy-MM-ddTHH:mm") of [f] is between that day's sunrise and sunset; without them 6:00 to 19:59 counts as day. */
+    fun isDayAt(f: Forecast, time: String): Boolean {
+        val d = f.days.firstOrNull { time.startsWith(it.date) }
+        if (d != null && d.sunrise.length >= 16 && d.sunset.length >= 16 && d.sunrise != d.sunset) return time.take(16) >= d.sunrise.take(16) && time.take(16) < d.sunset.take(16)
+        val h = time.substringAfter('T', "12").take(2).toIntOrNull() ?: 12
+        return h in 6..19
     }
 
     /** Codes that count as severe for the alert: thunderstorm, heavy snow or heavy rain. */
@@ -474,6 +500,9 @@ object WeatherStore {
     /** The OpenWeatherMap key the user typed (the free one is enough). */
     fun owmKey(c: Context): String = p(c).getString("owm_key", "") ?: ""
     fun setOwmKey(c: Context, v: String) = p(c).edit().putString("owm_key", v.trim()).apply()
+    /** The key of a service that needs one: "wapi" (WeatherAPI.com) or "pirate" (Pirate Weather). */
+    fun apiKey(c: Context, id: String): String = p(c).getString("key_$id", "") ?: ""
+    fun setApiKey(c: Context, id: String, v: String) = p(c).edit().putString("key_$id", v.trim()).apply()
 
     fun savedPlace(c: Context): Place? {
         val s = p(c)
@@ -523,9 +552,45 @@ object WeatherStore {
         return runCatching { WeatherApi.parse(s.getString("cache_place", "").orEmpty(), raw, s.getLong("at", 0L), s.getInt("aqi", -1), s.getString("extras", "").orEmpty()) }.getOrNull()
     }
 
+    // ---- a short-lived copy of the forecast of each place, so switching between places shows at once (the newest 12 places are kept)
+    private fun key(lat: Double, lon: Double) = String.format(java.util.Locale.US, "pc_%.2f_%.2f", lat, lon)
+
+    fun saveFor(c: Context, lat: Double, lon: Double, place: String, raw: String, aqi: Int, extras: String?) {
+        val s = p(c)
+        val me = key(lat, lon)
+        val ed = s.edit().putString(me, JSONObject().put("n", place).put("r", raw).put("q", aqi).put("e", extras ?: "").put("t", System.currentTimeMillis()).toString())
+        s.all.keys.filter { it.startsWith("pc_") && it != me }
+            .mapNotNull { k -> runCatching { JSONObject(s.getString(k, "") ?: "").getLong("t") }.getOrNull()?.let { k to it } }
+            .sortedByDescending { it.second }.drop(11).forEach { ed.remove(it.first) }
+        ed.apply()
+    }
+
+    /** The saved forecast of a place with the time it was fetched, or null. */
+    fun cachedFor(c: Context, lat: Double, lon: Double): Pair<Forecast, Long>? {
+        val o = runCatching { JSONObject(p(c).getString(key(lat, lon), null) ?: return null) }.getOrNull() ?: return null
+        val t = o.optLong("t")
+        val f = runCatching { WeatherApi.parse(o.optString("n"), o.getString("r"), t, o.optInt("q", -1), o.optString("e")) }.getOrNull() ?: return null
+        return f to t
+    }
+
+    /** The saved copy of a place becomes the last forecast shown (the one the widgets and the alerts read). */
+    fun makeLast(c: Context, lat: Double, lon: Double) {
+        val o = runCatching { JSONObject(p(c).getString(key(lat, lon), null) ?: return) }.getOrNull() ?: return
+        p(c).edit().putString("raw", o.optString("r")).putString("cache_place", o.optString("n")).putInt("aqi", o.optInt("q", -1)).putLong("at", o.optLong("t")).putString("extras", o.optString("e")).apply()
+    }
+
+    /** Where the phone was when its place was last found: the page can show the saved forecast of "My location" before a new fix comes. */
+    fun lastDevice(c: Context): Pair<Double, Double>? = p(c).takeIf { it.contains("dev_lat") }?.let { it.getFloat("dev_lat", 0f).toDouble() to it.getFloat("dev_lon", 0f).toDouble() }
+    fun setLastDevice(c: Context, lat: Double, lon: Double) = p(c).edit().putFloat("dev_lat", lat.toFloat()).putFloat("dev_lon", lon.toFloat()).apply()
+
     /** The data source: "om" Open-Meteo alone, "mgm" MGM station values for places in Turkey on top of Open-Meteo. */
-    fun source(c: Context): String = p(c).getString("source", "om") ?: "om"
-    fun setSource(c: Context, v: String) = p(c).edit().putString("source", v).apply()
+    // MET Norway and 7Timer are gone (a source saved as one of them becomes the combined forecast)
+    fun source(c: Context): String = (p(c).getString("source", "om") ?: "om").let { if (it == "metno" || it == "t7") "all" else it }
+    fun setSource(c: Context, v: String) {
+        // "all" uses every service at once: the combined forecast is switched on with it
+        p(c).edit().putString("source", v).apply()
+        if (v == "all") setCombine(c, true)
+    }
 
     /** Combine several forecasts (models and met.no) for the next 24 hours; on by default. */
     fun combine(c: Context): Boolean = p(c).getBoolean("combine", true)

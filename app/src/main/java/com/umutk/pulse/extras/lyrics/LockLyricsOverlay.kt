@@ -1,0 +1,121 @@
+package com.umutk.pulse.extras.lyrics
+
+import android.content.Context
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.umutk.pulse.Compat
+import com.umutk.pulse.extras.music.MusicSettings
+import com.umutk.pulse.features.CoverAccessibilityService
+
+/**
+ * The lyrics on the lock screen: the line being sung and the next one in a small window of plain views, with a soft dark
+ * backdrop so white letters stay readable over a bright wallpaper. It is a window, not an activity: the lock screen keeps
+ * its clock, its notifications and the unlock swipe (every touch goes through), and nothing freezes when the screen turns
+ * off, because the line is set from the lyrics ticker and not from a screen that has to be drawn first.
+ *
+ * With the accessibility layer on (the Cover service) the window is drawn above the lock screen itself; without it the
+ * normal overlay window is used, which Android may hide behind the lock screen on some phones.
+ */
+object LockLyricsOverlay {
+    private var box: LinearLayout? = null
+    private var now: TextView? = null
+    private var next: TextView? = null
+    private var host: Context? = null
+    private var params: WindowManager.LayoutParams? = null
+
+    val showing get() = box != null
+
+    /** Set while a password, PIN or text field has the focus on the lock screen: the lyrics then stay away. Cleared when the screen goes off. */
+    @Volatile var suppressed = false
+
+    /** A password or text field took the focus on the lock screen: the window goes at once and stays away until the screen goes off. */
+    fun suppress(ctx: Context) {
+        suppressed = true
+        hide(ctx)
+    }
+
+    /** Shows the window (or updates its two lines). Returns false when no window can be drawn (no accessibility layer, no overlay permission). */
+    fun show(ctx: Context, current: String, upcoming: String?): Boolean {
+        val app = ctx.applicationContext
+        if (box == null && !add(app)) return false
+        // the place follows the setting at once, also while the window is up
+        val lp = params
+        val h = (host ?: app).resources.displayMetrics.heightPixels
+        val y = (h * LiveLyrics.lockTop(app)).toInt()
+        if (lp != null && lp.y != y) {
+            lp.y = y
+            runCatching { ((host ?: app).getSystemService(Context.WINDOW_SERVICE) as WindowManager).updateViewLayout(box, lp) }
+        }
+        // a line is set only when it changed: the window is not laid out again on every tick
+        // the size follows the setting at once, also while the window is up
+        val fs = fontSize(app)
+        if (now != null && kotlin.math.abs(now!!.textSize / (app.resources.displayMetrics.scaledDensity.takeIf { it > 0f } ?: 1f) - fs) > .6f) { now?.textSize = fs; next?.textSize = fs - 4f }
+        // a new line fades in instead of jumping in, and the window keeps its height (the views reserve their lines), so nothing shifts on the screen
+        if (now?.text?.toString() != current) { now?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = current; v.animate().alpha(1f).setDuration(240).start() } }
+        val n = upcoming?.takeIf { it.isNotBlank() }
+        val nt = n.orEmpty()
+        if (next?.text?.toString() != nt) { next?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = nt; v.animate().alpha(1f).setStartDelay(120).setDuration(240).start() } }
+        next?.visibility = View.VISIBLE
+        return true
+    }
+
+    /** The size of the lines: the setting of the lock screen lyrics, else the lyrics size of the player. */
+    private fun fontSize(app: Context): Float = LiveLyrics.lockFont(app).takeIf { it > 0 }?.toFloat() ?: MusicSettings.lyricsFont(app).coerceIn(12, 30).toFloat()
+
+    private fun add(app: Context): Boolean {
+        val acc = CoverAccessibilityService.instance
+        if (acc == null && !Compat.canOverlay(app)) return false
+        val base: Context = acc ?: app
+        val wm = base.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val d = base.resources.displayMetrics
+        val type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        val lp = WindowManager.LayoutParams(
+            (d.widthPixels * 0.86f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT, type,
+            // never takes the keys or a touch: the lock screen under it works as if it was not there
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            // its top edge sits at the place the user chose (under the date, or just above the lock screen's bottom line)
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = (d.heightPixels * LiveLyrics.lockTop(app)).toInt()
+        }
+        params = lp
+        // the size is the lyrics size of the music player (its setting), a little under what the player draws
+        val size = fontSize(app)
+        val pad = (12 * d.density).toInt()
+        val l = LinearLayout(base).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(pad, pad, pad, pad)
+            background = GradientDrawable().apply { setColor(0x73000000); cornerRadius = 18 * d.density }
+        }
+        val a = TextView(base).apply {
+            setTextColor(Color.WHITE); textSize = size; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 3; minLines = 2
+            setShadowLayer(6f, 0f, 2f, 0xE6000000.toInt())
+        }
+        val b = TextView(base).apply {
+            setTextColor(0x88FFFFFF.toInt()); textSize = size - 4f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; maxLines = 2; minLines = 1
+            setShadowLayer(6f, 0f, 2f, 0xE6000000.toInt())
+            setPadding(0, (4 * d.density).toInt(), 0, 0)
+        }
+        l.addView(a, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        l.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        if (runCatching { wm.addView(l, lp) }.isFailure) return false
+        box = l; now = a; next = b; host = base
+        return true
+    }
+
+    fun hide(ctx: Context) {
+        val v = box ?: return
+        runCatching { ((host ?: ctx.applicationContext).getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(v) }
+        box = null; now = null; next = null; host = null; params = null
+    }
+}

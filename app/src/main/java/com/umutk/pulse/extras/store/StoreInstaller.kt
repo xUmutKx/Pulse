@@ -103,7 +103,10 @@ object StoreInstaller {
         val busy = progress.value.keys
         var n = 0L
         File(c.cacheDir, "installer").listFiles()?.forEach { f ->
-            if (busy.none { f.name.startsWith("store-$it.") }) { n += f.length(); f.delete() }
+            // a file the owner chose to keep ("Keep downloaded file") stays; the cache clear must not take it
+            val id = Regex("^store-(.+)\\.(apk|zip)$").find(f.name)?.groupValues?.get(1)
+            val kept = id != null && keepFile(c, id)
+            if (!kept && busy.none { f.name.startsWith("store-$it.") }) { n += f.length(); f.delete() }
         }
         return n
     }
@@ -304,6 +307,7 @@ object StoreInstaller {
 
     /** Checks the package name and certificate before the system installer gets the file. */
     private fun installApk(c: Context, m: ExtraModule, apk: File) {
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) throw IOException(tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"))
         val info = c.packageManager.getPackageArchiveInfo(apk.path, PackageManager.GET_SIGNING_CERTIFICATES)
             ?: throw IOException(tr("Not a readable package", "Paket okunamadı"))
         if (info.packageName != m.paket) throw IOException(tr("Package name differs", "Paket adı farklı"))
@@ -311,9 +315,16 @@ object StoreInstaller {
         if (m.imzaSha256 !in digests) throw IOException(tr("Signature differs", "İmza farklı"))
         if (packageVersion(c, info.packageName) == null) markStorePkg(c, info.packageName) // an app the owner already had stays listed
         val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", apk)
-        c.startActivity(
-            Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, "application/vnd.android.package-archive")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+        val go = Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        // the screen of the system installer cannot open from the background (the phone drops it without a word): a notification that does the same is always posted
+        runCatching {
+            val nm = c.getSystemService(android.app.NotificationManager::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("store_ready", "Store", android.app.NotificationManager.IMPORTANCE_HIGH)) else Unit
+            val pi = android.app.PendingIntent.getActivity(c, m.id.hashCode(), go, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+            nm.notify(m.id.hashCode(), androidx.core.app.NotificationCompat.Builder(c, "store_ready").setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle(m.name()).setContentText(tr("Downloaded. Tap to install.", "İndirildi. Kurmak için dokun.")).setAutoCancel(true).setContentIntent(pi).addAction(0, tr("Install", "Kur"), pi).build())
+        }
+        runCatching { c.startActivity(go) }
     }
 }

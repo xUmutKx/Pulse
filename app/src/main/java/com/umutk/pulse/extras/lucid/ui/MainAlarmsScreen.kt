@@ -615,7 +615,7 @@ fun MainAlarmsScreen(
                                 alarm.id in recentlyDisabledRepeating &&
                                 !alarm.isEnabled &&
                                 alarm.daysOfWeek.isNotEmpty(),
-                            onReenable = { viewModel.toggleAlarm(alarm, true) },
+                            onReenable = { viewModel.toggleAlarm(alarm, true, skipNext = true) },
                             cardShape = cardShape,
                             cardPadding = cardPadding,
                             showBottomDivider = showBottomDivider,
@@ -829,6 +829,7 @@ fun MainAlarmsScreen(
             showVolumeSlider = volumePolicy == VolumePolicy.PER_ALARM,
             is24Hour = timeFormat.is24Hour,
             settingsDataStore = settingsDataStore,
+            recentAlarm = if (editingAlarm == null) alarms.filter { !it.isTrashed && System.currentTimeMillis() - it.createdAt in 0..300_000L }.maxByOrNull { it.createdAt } else null,
             onDismiss = { showEditSheet = false },
             onSave = { updatedAlarm ->
                 if (editingAlarm == null) {
@@ -1010,10 +1011,11 @@ private fun NextAlarmHeader(
         }
     }
 
+    val skipCtx = androidx.compose.ui.platform.LocalContext.current
     val now = remember(nowTick) { Calendar.getInstance() }
     val upcoming = alarms
         .filter { it.isEnabled }
-        .minByOrNull { nextTriggerMillis(it, now) }
+        .minByOrNull { nextTriggerMillis(skipCtx, it, now) }
 
     val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val titleColor = if (isLight) Color(0xFF0B0C10) else Color.White
@@ -1046,7 +1048,7 @@ private fun NextAlarmHeader(
                 maxLines = 1
             )
         } else {
-            val triggerMillis = nextTriggerMillis(upcoming, now)
+            val triggerMillis = nextTriggerMillis(skipCtx, upcoming, now)
             Text(
                 text = formatCountdownLines(triggerMillis - nowTick),
                 fontSize = 36.sp,
@@ -1071,7 +1073,7 @@ private fun NextAlarmHeader(
     }
 }
 
-private fun nextTriggerMillis(alarm: AlarmEntity, now: Calendar): Long {
+private fun nextTriggerMillis(ctx: android.content.Context, alarm: AlarmEntity, now: Calendar): Long {
     val target = (now.clone() as Calendar).apply {
         set(Calendar.HOUR_OF_DAY, alarm.hour.coerceIn(0, 23))
         set(Calendar.MINUTE, alarm.minute.coerceIn(0, 59))
@@ -1087,7 +1089,7 @@ private fun nextTriggerMillis(alarm: AlarmEntity, now: Calendar): Long {
             guard++
         }
     }
-    return target.timeInMillis
+    return com.umutk.pulse.extras.lucid.receiver.AlarmSkip.adjust(ctx, alarm.id, alarm.hour, alarm.minute, days, target.timeInMillis, clearOld = false)
 }
 
 private fun formatCountdownLines(diffMillis: Long): String {
@@ -1484,10 +1486,21 @@ private fun SelectionActionBar(
     onUngroup: () -> Unit,
     onDelete: () -> Unit
 ) {
+    // Delete asks first: the chosen alarms go to the recycle bin only after the confirm
+    var askDelete by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (askDelete) {
+            AlertDialog(
+                onDismissRequest = { askDelete = false },
+                title = { Text("Delete the selected alarms?") },
+                text = { Text("They go to the recycle bin.") },
+                confirmButton = { TextButton(onClick = { askDelete = false; onDelete() }) { Text("Delete") } },
+                dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } }
+            )
+        }
         val lightMode = MaterialTheme.colorScheme.background.luminance() > 0.5f
 
         Surface(
@@ -1544,13 +1557,13 @@ private fun SelectionActionBar(
                     groupsOnly -> {
                         SelectionAction(Icons.Outlined.NotificationsOff, "Turn Off", onTurnOff)
                         SelectionAction(Icons.Outlined.FolderOff, "Ungroup", onUngroup)
-                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete", onDelete)
+                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete") { askDelete = true }
                     }
 
                     mixedSelection -> {
                         SelectionAction(Icons.Outlined.NotificationsActive, "Turn On", onTurnOn)
                         SelectionAction(Icons.Outlined.NotificationsOff, "Turn Off", onTurnOff)
-                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete", onDelete)
+                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete") { askDelete = true }
                     }
 
                     else -> {
@@ -1562,7 +1575,7 @@ private fun SelectionActionBar(
                         SelectionAction(Icons.Outlined.CreateNewFolder, "Group", onMoveToGroup)
                         SelectionAction(Icons.Outlined.ContentCopy, "Copy", onCopy)
                         SelectionAction(Icons.Outlined.PowerSettingsNew, "Toggle", onToggle)
-                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete", onDelete)
+                        SelectionAction(Icons.Outlined.DeleteOutline, "Delete") { askDelete = true }
                     }
                 }
             }
@@ -1584,7 +1597,9 @@ private fun SelectionAction(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // the dark bar wears white buttons; the light bar keeps the accent
-        val actionColor = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) MaterialTheme.colorScheme.primary else Color.White
+        val actionColor = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) MaterialTheme.colorScheme.primary
+            else if (com.umutk.pulse.extras.lucid.ui.theme.LucidLookState.current == com.umutk.pulse.extras.lucid.ui.theme.LucidLook.ONE_UI) Color(0xFFD4D4D8)
+            else Color.White
         Icon(
             imageVector = icon,
             contentDescription = label,

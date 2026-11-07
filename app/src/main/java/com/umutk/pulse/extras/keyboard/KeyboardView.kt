@@ -80,6 +80,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -93,6 +94,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -211,20 +213,65 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
 @Composable
 private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier: Modifier) {
     // turned sideways the keyboard would fill the screen: the keys are lower there (about 60%)
-    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val scale = KeyboardPrefs.heightPct / 100f * (if (land) .6f else 1f)
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // a phone turned sideways takes a much smaller keyboard (a tablet keeps its size)
+    val phoneLand = land && cfg.screenWidthDp < 600
+    val scale = KeyboardPrefs.heightPct / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
     val pull = remember { Animatable(0f) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val dens = LocalDensity.current.density
+    // a hardware keyboard is attached: only the suggestion bar shows, at the foot of the screen
+    // (its other pages, the clipboard, the lock and the rest, open in full as on the screen keyboard, without the letter keys; the translation bar takes the height it needs and sits clear of the screen's foot)
+    if (st.hardware && !st.hwOpen && st.panel == "keys") {
+        Column(modifier.fillMaxWidth().background(th.bg).padding(bottom = if (st.trans) 18.dp else 0.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).then(if (st.trans) Modifier else Modifier.fillMaxHeight())) { TopBar(th, st, act, onPull = { }, onRelease = { }) }
+                // the keyboard button: opens the full keyboard (for typing with the screen, and the clipboard and the rest of its keys)
+                BarIcon(th, kbIcon(th, "Keyboard")) { st.hwOpen = true }
+            }
+        }
+        return
+    }
     var rootH by remember { mutableStateOf(0f) }
+    // the floating keyboard: its own height, and the handle's place in the window (the drag is read on the window, which stays still)
+    val float = KeyboardPrefs.floatNow
+    var kbH by remember { mutableStateOf(0f) }
+    // the bar that stays when the keyboard slides down out of the window
+    val barPx = with(LocalDensity.current) { kbBarHeight().toPx() }
+    var handleRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
-    Box(modifier.fillMaxWidth().then(if (st.panel == "gamepad") Modifier else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
-        .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
-        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
+    Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
+        .then(if (!float && KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
+        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float, barPx) {
+        // the floating keyboard moves by its handle: the finger is followed on the window (which stays still), so the drag is smooth wherever the keyboard goes
+        if (!float) return@pointerInput
+        awaitEachGesture {
+            val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val hr = handleRect
+            if (hr == null || !hr.contains(d.position)) return@awaitEachGesture
+            d.consume()
+            var last = d.position
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val c = ev.changes.firstOrNull { it.id == d.id } ?: break
+                if (!c.pressed) break
+                val dx = c.position.x - last.x; val dy = c.position.y - last.y
+                last = c.position
+                c.consume()
+                // down: the keyboard may slide out until only its top bar is left in the window; up: to the top
+                val minY = -((kbH - barPx) / (rootH - kbH).coerceAtLeast(1f)).coerceAtLeast(0f)
+                KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(minY, 1f)
+                // the keyboard is 70 percent wide: its free room is the other 30, from the left edge to the right one
+                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+            }
+            KeyboardPrefs.saveFloat()
+        }
+    }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -235,7 +282,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (st.panel == "keys" && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                if (!float && st.panel == "keys" && !st.cursorDrag && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
@@ -243,15 +290,25 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), 0) }
+            (if (float) Modifier.fillMaxWidth(.7f).align(Alignment.BottomStart)
+                .offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
+                .onSizeChanged { kbH = it.height.toFloat() }
+                .onGloballyPositioned { c ->
+                    // the keyboard's place tells the system which part of the window takes touches; the rest of the window belongs to the app
+                    val bnd = c.boundsInRoot()
+                    val r = intArrayOf(bnd.left.roundToInt(), bnd.top.roundToInt(), bnd.right.roundToInt(), bnd.bottom.roundToInt())
+                    if (!r.contentEquals(st.floatRect)) { st.floatRect = r; st.refreshInsets?.invoke() }
+                }
+                .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
-            // the floating keyboard is narrower and slides sideways by its handle
-            if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(20.dp).pointerInput(Unit) {
-                detectHorizontalDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, dx -> c.consume(); KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f) }
-            }, contentAlignment = Alignment.Center) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .6f))) }
-            if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
+            // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
+            if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
+                Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
+            }
+            // the number pad has no bar, except while the password manager has a saved login or password to offer for the field
+            if (!st.numpad || st.emailBar || st.inline.isNotEmpty()) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
@@ -260,11 +317,16 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             else Panel(st.panel, th, st, act, keyH)
         }
         // the brightness: a black veil over the keys (the pop-up above stays bright)
-        if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
+        if (!float && KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
         Preview(th, st)
         // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
-        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
+        // private typing: a big faint hat behind the keys, only on the keys page; it shows for a moment after every key and fades out
+        if (st.incognito && st.panel == "keys") {
+            val hat = remember { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(st.keyTick) { if (st.keyTick > 0) { hat.snapTo(.2f); hat.animateTo(0f, androidx.compose.animation.core.tween(1400)) } }
+            com.umutk.pulse.extras.IncognitoGlyph(th.sub, 96.dp, Modifier.align(Alignment.Center).graphicsLayer { alpha = hat.value })
+        }
     }
 }
 
@@ -273,11 +335,19 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             // the emoji page is opaque: what is behind it (the gamepad, the arrows of the bar) does not show through
-            "emoji" -> Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
+            "emoji" -> if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) {
+                // a wide screen shows two pages side by side: the emoji (or symbols, or text and art) on the left, the keys on the right
+                // the keys are rows that stack in a column of their own (a Box would lay them on top of each other, and only the last row would show)
+                val emoji: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Box(Modifier.weight(1f)) { EmojiPanel(th, st, act, keyH, split = true) } }
+                val keys: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Column(Modifier.weight(1f)) { KeysPanel(th, st, act, keyH) } }
+                Row(Modifier.fillMaxWidth().background(th.bg)) {
+                    if (KeyboardPrefs.emojiRight) { keys(); emoji() } else { emoji(); keys() }
+                }
+            } else Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
-            "clip" -> ClipPanel(th, st, act, keyH)
+            "clip" -> { if (st.numpad) NumPanelClose(th, st); ClipPanel(th, st, act, keyH) }
             "gamepad" -> GamepadPanel(th, act)
-            "auth" -> AuthPanel(th, st, act, keyH)
+            "auth" -> { if (st.numpad) NumPanelClose(th, st); AuthPanel(th, st, act, keyH) }
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -291,6 +361,14 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     }
 }
 
+/** The number pad has no bar, so the clipboard and the codes opened from it get a close key that brings the digits back. */
+@Composable
+private fun NumPanelClose(th: KbTheme, st: KbState) {
+    Row(Modifier.fillMaxWidth().height(36.dp).background(th.bg), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        BarIcon(th, kbIcon(th, "Close")) { st.panel = "keys" }
+    }
+}
+
 /** The number pad of number, phone, date and numeric-password fields: big digits and nothing else. */
 @Composable
 private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
@@ -299,14 +377,16 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
         Row(Modifier.fillMaxWidth()) { line.forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, 1f), h) } }
     }
     Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey(".", KeyKind.CHAR, 1f), h)
+        Key(th, st, act, KbKey("+", KeyKind.CHAR, 1f), h)
         Key(th, st, act, KbKey("0", KeyKind.CHAR, 1f), h)
         Key(th, st, act, KbKey("", KeyKind.DELETE, 1f), h)
     }
     Row(Modifier.fillMaxWidth()) {
         Key(th, st, act, KbKey("*", KeyKind.CHAR, 1f), h * .8f)
         Key(th, st, act, KbKey("#", KeyKind.CHAR, 1f), h * .8f)
-        Key(th, st, act, KbKey("", KeyKind.ENTER, 1f), h * .8f)
+        // the bottom right key: the field's action, or the character chosen in Settings > Keyboard > Number pad
+        val ek = KeyboardPrefs.numEnter
+        Key(th, st, act, if (ek == "enter") KbKey("", KeyKind.ENTER, 1f) else KbKey(ek, KeyKind.CHAR, 1f), h * .8f)
     }
 }
 
@@ -324,7 +404,7 @@ private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
                 Modifier.fillMaxWidth().clickable { if (v == "gamepad") st.panel = "gamepad" else { st.forceLayout = v; st.panel = "keys" } }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
+                Icon(if (icon == "SportsEsports") Icons.Rounded.SportsEsports else kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
                 Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f).padding(start = 12.dp))
                 if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
             }
@@ -376,14 +456,32 @@ private fun Trail(th: KbTheme, st: KbState) {
 
 // ---- the bar ---------------------------------------------------------------------------------------------------------------------------------------
 
+/** The height of the suggestion bar: a third lower on a phone turned sideways. */
+@Composable
+private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    // the floating keyboard keeps its bar slim, so its keys get the room
+    if (KeyboardPrefs.floatNow) return 31.dp
+    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 30.dp else 44.dp
+}
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
+    val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
+    // no suggestions: no container, only a rounded, thick handle line at the top of the keys. The slot keeps the bar's full height,
+    // so the keyboard does not grow or shrink when a panel (quick auth, emoji, clipboard) opens or closes
+    if (!barHasContent) {
+        Box(Modifier.fillMaxWidth().height(kbBarHeight()), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
+        }
+        return
+    }
     Row(
-        Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(kbBarHeight()).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
             detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
@@ -429,6 +527,8 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) { chips() }
                 if (!one) Box(Modifier.size(32.dp).clickable { sc.launch { scroll.animateScrollBy(260f) } }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.ChevronRight, null, tint = th.sub, modifier = Modifier.size(22.dp)) }
             }
+        } else if (st.emailBar) {
+            EmailChips(st, th, act)
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
@@ -436,17 +536,24 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
                 st.slots.forEachIndexed { i, s0 ->
                     val s = if (crowded && i == 2) "" else s0
-                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else (s.length / 9f).coerceIn(1f, 2.2f)
+                    // the copied item and the photo in the right slot get a wider place to tap
+                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else if (s.startsWith("\u0001") || s.startsWith("\u0002")) 1.8f else (s.length / 9f).coerceIn(1f, 2.2f)
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            st.shotThumb?.let { Image(it, null, Modifier.size(26.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop) }
-                            Text(s.drop(1), color = th.accent, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                            // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
+                            st.shotThumb?.let { Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
+                            if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
                             Text(s.drop(1).replace('\n', ' ').take(14) + if (s.length > 15) "…" else "", color = th.sub, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
-                        } else Text(s, color = if (i == 1) th.text else th.sub, fontSize = 20.sp, fontWeight = if (i == 1) FontWeight.Medium else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                            if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
+                        } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            // with a hardware keyboard: the function key that picks this word is written small in front of it
+                            if (st.hardware && s.isNotEmpty()) Text("F${i + 1}", color = th.sub.copy(alpha = .55f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
+                            Text(s, color = if (i == 1) th.text else th.sub, fontSize = 20.sp, fontWeight = if (i == 1) FontWeight.Medium else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                        }
                     }
                 }
             }
@@ -593,6 +700,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             "1234567890".forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, n1 / 10f, KeyboardLayouts.symbolAlts[d].orEmpty()), keyH, small = true) }
         }
         // split keys (for a tablet): a gap in the middle of each row, so both thumbs reach their half
+        // the keys are split only when the "Split keys" setting is on, tablet or phone: so the screen matches the setting (joined by default)
         val gapW = if (KeyboardPrefs.split) 2f else 0f
         Row(Modifier.fillMaxWidth()) { rows[0].forEachIndexed { i, k -> if (gapW > 0 && i == rows[0].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) } }
         Row(Modifier.fillMaxWidth()) {
@@ -726,7 +834,7 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
                 }
                 down = false
             }
-        }.padding(KeyboardPrefs.keyGap.dp / 2),
+        }.padding(KeyboardPrefs.gap.dp / 2),
     ) {
         val on = level > 0
         Box(Modifier.fillMaxSize().keyLook(th, if (on) th.accent else if (down) lerp(th.special, th.text, .2f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
@@ -762,7 +870,7 @@ private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon
                     }
                 } finally { down = false }
             }
-        }.padding(KeyboardPrefs.keyGap.dp / 2),
+        }.padding(KeyboardPrefs.gap.dp / 2),
     ) {
         Box(Modifier.fillMaxSize().keyLook(th, if (down) lerp(th.special, th.text, .2f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.specialText, modifier = Modifier.size(20.dp)) }
     }
@@ -784,7 +892,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
-        Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[k.label.lowercase()] = rect }
+        Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
             // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
             .pointerInput(k.kind) {
                 awaitEachGesture {
@@ -805,6 +913,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     var quick = false
                     var delRepeats = 0
                     var startX = d.position.x
+                    var startY = d.position.y
+                    var lastLine = 0
                     var curX = d.position.x
                     // the long press and the repeats fall due at a fixed time: the finger's small moves must not push them back
                     var due = android.os.SystemClock.uptimeMillis() + longMs
@@ -826,7 +936,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     // held long enough: a whole word per repeat instead of a letter, with a tick under the finger each time
                                     if (!quick) { delRepeats++; a.deleteWord(); view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); due = now + maxOf(55L, 230L - delRepeats * 22L) } else due = now + 55L
                                 }
-                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
+                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; st.cursorDrag = true; startX = curX; startY = d.position.y; lastStep = 0; lastLine = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
                                 // the comma, the period and the key beside ?123 run the action chosen for them in Settings; "none" leaves the key's own pop-up characters
                                 KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> {
@@ -835,7 +945,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     else if (!glide && key.alts.isNotEmpty() && big) { long = true; sel = 0; st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback() }
                                     due = Long.MAX_VALUE / 2
                                 }
-                                else -> if (!glide && key.alts.isNotEmpty() && big) {
+                                // the number pad's digits have no pop-up characters, so the hold is read here: 1 opens the clipboard, 2 the authenticator (it runs at once, the release then does nothing)
+                                else -> if (key.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (key.label == "1" || key.label == "2")) {
+                                    long = true; held = true; st.preview = null; a.feedback(); due = Long.MAX_VALUE / 2
+                                    a.menu(if (key.label == "1") "clip" else "auth")
+                                } else if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
                                 } else due = Long.MAX_VALUE / 2
@@ -880,17 +994,24 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         when {
                             // a swipe over the letters: the keys it passes spell the word
                             canGlide && !long && (glide || (curRoot - startRoot).getDistance() > 30.dp.toPx()) -> {
-                                if (!glide) { glide = true; st.preview = null; seq.append(key.label.lowercase()); st.trail = listOf(startRoot) }
+                                if (!glide) { glide = true; st.preview = null; seq.append(KeyboardLayouts.lower(key.label, st.lang)); st.trail = listOf(startRoot) }
                                 st.letterRects.entries.firstOrNull { it.value.contains(curRoot) }?.key?.let { l -> if (seq.isEmpty() || seq.last().toString() != l) seq.append(l) }
                                 if (st.trail.size < 400) st.trail = st.trail + curRoot
                             }
                             key.kind == KeyKind.DELETE && KeyboardPrefs.quickDelete && !quick && dx < -28.dp.toPx() -> { quick = true; a.quickDeleteStart(); startX = c.position.x }
                             key.kind == KeyKind.DELETE && quick -> a.quickDelete((-dx / 14.dp.toPx()).toInt().coerceAtLeast(0))
                             // sliding along the space key moves the cursor, held first or not
-                            key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && abs(dx) > 18.dp.toPx() -> { spaceDragged = true; long = true; startX = c.position.x; lastStep = 0; a.feedback() }
+                            key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && abs(dx) > 18.dp.toPx() -> { spaceDragged = true; st.cursorDrag = true; long = true; startX = c.position.x; startY = c.position.y; lastStep = 0; lastLine = 0; a.feedback() }
                             spaceDragged && key.kind == KeyKind.SPACE -> {
-                                val step = (dx / 12.dp.toPx()).toInt()
-                                if (step != lastStep) { a.moveCursor(step - lastStep); lastStep = step }
+                                // across: a letter per unit of slide, and the slide speeds up the longer it goes, so one swipe crosses a line of text
+                                val unit = 12.dp.toPx() * 100f / KeyboardPrefs.cursorSens
+                                val n = dx / unit
+                                val chars = (n + n * kotlin.math.abs(n) / 10f).toInt()
+                                if (chars != lastStep) { a.moveCursor(chars - lastStep); lastStep = chars }
+                                // up and down: the cursor goes to the line above or below, at the same column
+                                val lineUnit = 26.dp.toPx() * 100f / KeyboardPrefs.cursorSens
+                                val lines = ((c.position.y - startY) / lineUnit).toInt()
+                                if (lines != lastLine) { a.moveLine(lines - lastLine); lastLine = lines }
                             }
                             long && !held && key.alts.isNotEmpty() -> {
                                 val count = key.alts.size
@@ -903,11 +1024,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     }
                     } finally {
                         down = false
+                        st.cursorDrag = false
                         st.preview = null
                         st.trail = emptyList()
                     }
                 }
-            }.padding(horizontal = KeyboardPrefs.keyGap.dp * .75f, vertical = KeyboardPrefs.keyGap.dp / 2),
+            }.padding(horizontal = KeyboardPrefs.gap.dp * .75f, vertical = KeyboardPrefs.gap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
         val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
@@ -988,8 +1110,9 @@ private fun Preview(th: KbTheme, st: KbState) {
 // ---- panels ----------------------------------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp, split: Boolean = false) {
     val ctx = LocalContext.current
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { st.artKeys = false } }
     // every emoji of Unicode and the kaomoji, read once from the app
     val all by androidx.compose.runtime.produceState(emptyList<EmojiItem>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { EmojiData.load(ctx) } }
     // 0 recent, 1..9 the nine groups, 10 kaomoji
@@ -1005,6 +1128,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     var toneBase by remember { mutableStateOf<String?>(null) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
+    if (st.artKeys && !split && q == null && tab == 11) { ArtKeysMode(th, st, act, keyH); return }
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
     Column(Modifier.fillMaxWidth().then(fixed)) {
         // on the symbol page the families sit above the search, where the thumb reaches them
@@ -1046,7 +1170,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
                 items(found) { it2 -> EmojiCell(it2, th, act) }
             }
-            KeysPanel(th, st, act, keyH)
+            if (!split) KeysPanel(th, st, act, keyH)
         } else {
             val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = EMOJI_ORDER.indexOf(tab).coerceAtLeast(0)) { 12 }
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
@@ -1054,7 +1178,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LaunchedEffect(pager.settledPage) { st.emojiTab = EMOJI_ORDER[pager.settledPage] }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { pg ->
                 val page = EMOJI_ORDER[pg]
-                if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
+                if (page == 11) { SymbolPage(th, act, st, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
@@ -1084,19 +1208,27 @@ private fun familyIcon(id: String): ImageVector = when (id) {
  * tool, and the ASCII pictures, each drawn whole.
  */
 @Composable
-private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
+private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, st: KbState) {
     val ctx = LocalContext.current
-    var typed by remember { mutableStateOf("") }
+    // the keys of this keyboard write the text (the app's field is not touched), so the box only shows it
+    val typed = st.artIn
+    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
     val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
+    // the last thing copied is named for a moment, so a tap is seen
+    var copied by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(copied) { if (copied != null) { delay(1200); copied = null } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        androidx.compose.foundation.text.BasicTextField(
-            value = typed, onValueChange = { typed = it }, singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = th.text, fontSize = 15.sp),
-            decorationBox = { inner -> if (typed.isEmpty()) Text(tr("Type your text", "Metninizi yazın"), color = th.sub, fontSize = 14.sp); inner() },
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).padding(10.dp),
+        Text(
+            if (typed.isEmpty()) tr("Type your text", "Metninizi yazın") else typed + "▏",
+            color = if (typed.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special)
+                .clickable(enabled = narrow) { st.artKeys = true }.padding(10.dp),
         )
+        Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+            if (copied != null) Text(tr("Copied", "Kopyalandı"), color = th.sub, fontSize = 12.sp)
+        }
         styles.forEach { (name, s) ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(s) }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { copyArt(ctx, s); copied = s }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Clip, modifier = Modifier.weight(1f))
                 Text(name, color = th.sub, fontSize = 10.sp, maxLines = 1)
             }
@@ -1108,8 +1240,47 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
                 .clickable { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.extras.keyboard.AsciiMakerActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 .padding(10.dp),
         )
-        entries.filter { it.name.startsWith("ascii art") }.forEach { sg -> AsciiArtCell(sg.ch.replace("⏎", "\n"), th, act) }
+        // the ASCII pictures: two to a line, each drawn whole, with no box around it
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val half = (maxWidth - 6.dp) / 2
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                entries.filter { it.name.startsWith("ascii art") }.forEach { sg ->
+                    val art = sg.ch.replace("⏎", "\n")
+                    AsciiArtCell(art, th, Modifier.width(half)) { copyArt(ctx, art); copied = art }
+                }
+            }
+        }
     }
+}
+
+/** The text-and-art page with the keys: the box on top, the styles of the text as one line to scroll, and the keys, which write into the box. */
+@Composable
+private fun ArtKeysMode(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val ctx = LocalContext.current
+    androidx.compose.runtime.DisposableEffect(Unit) { st.artOn = true; onDispose { st.artOn = false } }
+    val typed = st.artIn
+    val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { st.artKeys = false }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+            Text(
+                if (typed.isEmpty()) tr("Type your text", "Metninizi yazın") else typed + "▏",
+                color = if (typed.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(end = 8.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp, vertical = 9.dp),
+            )
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            styles.forEach { (_, s) ->
+                Text(s, color = th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(th.special).clickable { copyArt(ctx, s) }.padding(horizontal = 10.dp, vertical = 7.dp))
+            }
+        }
+        KeysPanel(th, st, act, keyH)
+    }
+}
+
+/** Puts [s] on the clipboard, so it can be pasted into any app. */
+private fun copyArt(ctx: android.content.Context, s: String) {
+    runCatching { (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Pulse", s)) }
 }
 
 /**
@@ -1117,14 +1288,12 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
  * picture keeps its shape and is never cut off. A tap copies the picture.
  */
 @Composable
-private fun AsciiArtCell(text: String, th: KbTheme, act: KbActions) {
+private fun AsciiArtCell(text: String, th: KbTheme, modifier: Modifier, onCopy: () -> Unit) {
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = androidx.compose.ui.platform.LocalDensity.current
     val base = 12f
     val lines = text.count { it == '\n' } + 1
-    androidx.compose.foundation.layout.BoxWithConstraints(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(text) }.padding(6.dp)
-    ) {
+    BoxWithConstraints(modifier.clickable { onCopy() }.padding(2.dp)) {
         val style = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = base.sp, lineHeight = (base * 1.1f).sp, color = th.text)
         val widthPx = measurer.measure(text, style).size.width.toFloat()
         val maxPx = with(density) { maxWidth.toPx() }
@@ -1142,7 +1311,7 @@ private fun AsciiArtCell(text: String, th: KbTheme, act: KbActions) {
 
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
 @Composable
-private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
+private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)
     Column(Modifier.fillMaxSize()) {
         val subs = fam?.subs.orEmpty()
@@ -1156,7 +1325,12 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
         val wide = fam?.id == "Patterns"
         val textArt = wide && subs.getOrNull(sub)?.first == "Text and art"
         // the text and art page: your own text in every style, the picture-to-ASCII tool, then the ASCII pictures
-        if (textArt) TextAndArtPage(subs.getOrNull(sub)?.second.orEmpty(), th, act)
+        // the keys type into the text box only while this page is the one on screen (a neighbouring page is composed too)
+        androidx.compose.runtime.DisposableEffect(textArt, st.emojiTab, st.panel) {
+            st.artOn = textArt && st.emojiTab == 11 && st.panel == "emoji"
+            onDispose { st.artOn = false }
+        }
+        if (textArt) TextAndArtPage(subs.getOrNull(sub)?.second.orEmpty(), th, st)
         else if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             // a long preset is shrunk to the width of the keyboard, so every one shows whole
             val room = maxWidth - 12.dp
@@ -1246,9 +1420,12 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(kbIcon(th, "PushPin"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                if (m.image == null) Icon(kbIcon(th, "Bolt"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
+                // the row's actions: Fluent glyphs (the same set as the rest of Pulse), in a 42 dp touch target each
+                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("pin", if (m.pinned) th.accent else th.text, 22.dp) }
+                if (m.image == null) Box(Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("bolt", th.text, 22.dp) }
+                Box(Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("check", th.text, 22.dp) }
+                // delete this one item (the same as the swipe, but with a button)
+                Box(Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("trash", th.text, 22.dp) }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
             }
@@ -1334,10 +1511,10 @@ private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
         Column { KeysPanel(th, st, NoKbActions, keyH) }
         // the handles sit inside the keys' own size (the window around the keyboard is taller: nothing here may grow to it)
         Box(Modifier.matchParentSize()) {
-        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 170f); KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
+        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 250f); KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> b = (b - dy / dens).coerceIn(0f, 60f); KeyboardPrefs.bottomPad = b.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
-        Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd + dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
-        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd - dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
+        Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd + dx / dens).coerceIn(0f, 400f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
+        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd - dx / dens).coerceIn(0f, 400f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
         Box(Modifier.align(Alignment.Center).clip(RoundedCornerShape(24.dp)).background(th.accent).clickable { KeyboardPrefs.save(ctx); st.panel = "keys" }.padding(horizontal = 26.dp, vertical = 12.dp)) {
             Icon(kbIcon(th, "Check"), null, tint = th.onAccent, modifier = Modifier.size(24.dp))
         }
@@ -1401,5 +1578,34 @@ private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
         Icon(Icons.Rounded.Mic, null, tint = if (st.listening) th.accent else th.sub, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(12.dp))
         Text(st.voiceText.ifEmpty { tr("Listening… tap to stop", "Dinliyor… durdurmak için dokun") }, color = th.text, fontSize = 18.sp, textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** The e-mail suggestions on the bar: the addresses used most, first. One or two sit in the middle; more scroll to the right. */
+@Composable
+private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
+    val shown = st.slots.withIndex().filter { it.value.isNotEmpty() }
+    val chip: @Composable (Int, String) -> Unit = { i, s ->
+        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, softWrap = false)
+        }
+    }
+    // one or two: they share the whole bar, so nothing is left empty and a long address keeps its end in view
+    if (shown.size <= 2) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        shown.forEach { (i, s) ->
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    } else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        shown.forEach { (i, s) -> chip(i, s) }
+    }
+}
+
+/** The pin beside the item waiting in the right slot of the bar. */
+@Composable
+private fun QuickPin(st: KbState, th: KbTheme, act: KbActions) {
+    Box(Modifier.size(44.dp).clickable { act.quickPin() }, contentAlignment = Alignment.Center) {
+        Icon(kbIcon(th, "PushPin"), null, tint = if (st.quickPinned) th.accent else th.sub.copy(alpha = .7f), modifier = Modifier.size(16.dp))
     }
 }

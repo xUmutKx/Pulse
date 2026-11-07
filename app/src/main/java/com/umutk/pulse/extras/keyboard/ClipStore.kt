@@ -71,7 +71,17 @@ object ClipStore {
             c.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } } ?: return load(c)
             if (f.length() == 0L || f.length() > 12_000_000L) { f.delete(); return load(c) }
             // a real picture file, not an ".img" no viewer opens: PNG or JPEG by the first bytes
-            val head = ByteArray(4).also { b -> f.inputStream().use { it.read(b) } }
+            val head = ByteArray(12).also { b -> f.inputStream().use { it.read(b) } }
+            // a HEIC / HEIF / AVIF photo (the camera's own format on many phones) is turned into a JPEG, so every app takes it
+            val heif = String(head, 4, 4, Charsets.ISO_8859_1) == "ftyp" && String(head, 8, 4, Charsets.ISO_8859_1).lowercase().let { it.startsWith("hei") || it.startsWith("mif") || it.startsWith("avi") }
+            if (heif) {
+                val jpg = File(dir(c), "$now.jpg")
+                val ok = runCatching {
+                    val bmp = android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
+                    bmp != null && jpg.outputStream().use { o -> bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, o) }
+                }.getOrDefault(false)
+                if (ok) { f.delete(); items = items + ClipItem(now, "", jpg.path, now, false); trim(c); write(c); return load(c) }
+            }
             val real = File(dir(c), "$now." + if (head[0] == 0x89.toByte() && head[1] == 'P'.code.toByte()) "png" else "jpg")
             val path = if (f.renameTo(real)) real.path else f.path
             items = items + ClipItem(now, "", path, now, false)

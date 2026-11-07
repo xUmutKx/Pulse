@@ -87,7 +87,7 @@ private fun AsciiMakerScreen(onBack: () -> Unit) {
     var picture by remember { mutableStateOf<Bitmap?>(null) }
     var columns by remember { mutableIntStateOf(60) }
     var invert by remember { mutableStateOf(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val picker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) picture = AsciiMaker.load(ctx, uri)
     }
     val art = remember(picture, columns, invert) { picture?.let { AsciiMaker.convert(it, columns, invert) }.orEmpty() }

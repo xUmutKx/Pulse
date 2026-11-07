@@ -87,6 +87,10 @@ fun PowerampApp(
     // the page the user was on last: a downward swipe on the cover goes back to it
     var lastTab by remember { mutableStateOf<PowerampTab?>(null) }
     LaunchedEffect(tab) { tab?.let { lastTab = it } }
+    // an artist asked from the player: the library page shows that artist
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
+        if (com.umutk.pulse.extras.music.MusicNav.artist != null) tab = PowerampTab.LIBRARY
+    }
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
@@ -142,8 +146,8 @@ fun PowerampApp(
     // the list pages; also drawn under the now playing page while it is pulled down, so the page it lands on is already there (no jump at the hand-over)
     val tabBody: @Composable (PowerampTab) -> Unit = { t ->
         when (t) {
-            PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
-            PowerampTab.SEARCH -> SearchScreen(library, track, style, onPlay = { engine.playQueue(library, it) })
+            PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it); tab = null }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i); tab = null })
+            PowerampTab.SEARCH -> SearchGated(library, track, style, onPlay = { engine.playQueue(library, it); tab = null })
             PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
             PowerampTab.QUEUE -> QueueScreen(
                 tracks = st.queue,
@@ -259,6 +263,22 @@ fun PowerampApp(
                     }
                 }
             }
+        }
+    }
+}
+
+/** Search is an ad-gated feature in the play build: one short ad opens it for 30 minutes. The foss build and Premium open it at once. */
+@Composable
+private fun SearchGated(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    val free = !com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)
+    var unlocked by remember { mutableStateOf(free || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, "search")) }
+    val gate = com.umutk.pulse.ads.rememberAdGate(tr("Search", "Arama"), tr("Watch a short ad to search your music.", "Müziğinde arama yapmak için kısa bir reklam izle."), key = "search", minutes = 30)
+    if (unlocked) {
+        SearchScreen(library, current, style, onPlay = onPlay)
+    } else {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            com.umutk.pulse.PButton(tr("Watch an ad to search", "Aramak için reklam izle"), onClick = { gate { unlocked = true } })
         }
     }
 }

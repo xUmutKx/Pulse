@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -93,6 +94,8 @@ open class MainActivity : ComponentActivity() {
         // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)
         if (savedInstanceState == null) File(cacheDir, "installer").deleteRecursively()
         disableExtraAppsOnFreshInstall(this)
+        // a force-stopped Pulse Keyboard is set back as the default when Pulse opens (root or Shizuku)
+        Thread { runCatching { com.umutk.pulse.extras.keyboard.KeyboardDefault.restore(applicationContext) } }.start()
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         // a fresh start plays the opening screen again, even when the process was still alive (back out, then open)
@@ -137,6 +140,10 @@ open class MainActivity : ComponentActivity() {
 
     // no sound plays on these screens: volume up opens the left panel, volume down the ⋮ menu, and the system volume stays untouched
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        // a physical keyboard: Esc, or Alt + Left, is Back in every screen
+        if (keyCode == android.view.KeyEvent.KEYCODE_ESCAPE || (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.isAltPressed == true)) { onBackPressedDispatcher.onBackPressed(); return true }
+        // something is playing: the volume keys are the volume keys (they only open the panels when it is quiet)
+        if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && mediaPlaying()) return super.onKeyDown(keyCode, event)
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
             if ((event?.repeatCount ?: 0) == 0) { if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) ChromeKeys.leftTick++ else ChromeKeys.moreTick++ }
             return true
@@ -144,9 +151,11 @@ open class MainActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) return true
+        if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && !mediaPlaying()) return true
         return super.onKeyUp(keyCode, event)
     }
+    /** True while any app (this one too) is playing sound on the media stream. */
+    protected fun mediaPlaying() = (getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager)?.isMusicActive == true
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -194,7 +203,7 @@ open class MainActivity : ComponentActivity() {
             com.umutk.pulse.features.FilesLaunch.full = true; com.umutk.pulse.widgets.WidgetOpen.page = "files"; return
         }
         if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
-        if (i?.type == "application/vnd.android.package-archive") {
+        if (i?.type == "application/vnd.android.package-archive" && BuildConfig.APK_INSTALL) {
             val uri = IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
             if (uri != null) handleApk(uri)
             return
@@ -281,7 +290,10 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
-        var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
+        com.umutk.pulse.TabletLayout.load(wctx)
+        // the welcome shows on the first start and again after every update (its "What's new" card is the update notes)
+        var setupDone by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("setup_done", false)) }
+        var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).let { it.getBoolean("welcomed", false) && it.getString("seen_version", "") == com.umutk.pulse.appVersionName(wctx) }) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
         var appPage by rememberSaveable { mutableStateOf(if (wctx is FilesActivity) "files" else if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
         var appSub by rememberSaveable { mutableStateOf("") }
@@ -293,7 +305,9 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         androidx.compose.runtime.LaunchedEffect(Unit) {
             if (Opt.startSound && !SplashGate.soundDone && wctx !is FilesActivity && th.id in loginLooks) { SplashGate.soundDone = true; com.umutk.pulse.extras.launcher.LauncherSounds.play(wctx, th.id) }
         }
-        if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
+        // the setup (terms, root and Shizuku) comes first, once; the Files app has none of it
+        if (!setupDone && wctx !is FilesActivity) SetupScreen { setupDone = true }
+        else if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) {
             // tablets and landscape: the pages are phone lists, so on a wide screen they keep a readable width in the middle instead of stretching edge to edge
@@ -303,15 +317,39 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             val dens0 = androidx.compose.ui.platform.LocalDensity.current
             val zoom = if (tablet) 1.2f else 1f
             val wdp = (cfgW.screenWidthDp / zoom).toInt()
+            // the ad banner sits at the bottom of the pages (play build only); the pages keep clear of it
+            // the native ad: a small, see-through card at the very bottom of the home page (play build only); the page keeps clear of it
+            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED && !com.umutk.pulse.ads.PulseAds.off(wctx)) 78.dp else 0.dp
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
-                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-                    androidx.compose.foundation.layout.Box(if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()) {
+                // the tablet layout (Settings > General): centred, left, right, or the full width of the screen
+                val tabletMode = com.umutk.pulse.TabletLayout.mode
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = when (tabletMode) {
+                    "left" -> androidx.compose.ui.Alignment.TopStart
+                    "right" -> androidx.compose.ui.Alignment.TopEnd
+                    else -> androidx.compose.ui.Alignment.TopCenter
+                }) {
+                    androidx.compose.foundation.layout.Box((if (wdp > 900 && tabletMode != "full") Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()).padding(bottom = adPad)) {
                         App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
+                    }
+                    // the ad strip at the foot of every page (play build): see-through, with its own transparency button on top
+                    if (com.umutk.pulse.ads.PulseAds.ENABLED && !com.umutk.pulse.ads.PulseAds.off(wctx)) {
+                        androidx.compose.foundation.layout.Box(Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().graphicsLayer { alpha = com.umutk.pulse.ads.AdBar.alpha }) {
+                                com.umutk.pulse.ads.PulseAds.NativeCard(
+                                    Modifier.fillMaxWidth(),
+                                    bg = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f),
+                                    text = androidx.compose.ui.graphics.Color.White,
+                                    sub = androidx.compose.ui.graphics.Color.White.copy(alpha = .7f),
+                                    accent = androidx.compose.ui.graphics.Color.White,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-        if (SplashGate.splashed && welcomed && wctx !is FilesActivity) UpdatePrompt()
+        // the GitHub update window only in the foss build: the play build gets its updates from Google Play
+        if (SplashGate.splashed && welcomed && wctx !is FilesActivity && BuildConfig.APK_INSTALL) UpdatePrompt()
     }
 }
 
@@ -455,7 +493,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page
-    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide", "cover", "authenticator") || InnerBack.steps.isNotEmpty()
+    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide", "cover", "authenticator", "vault") || InnerBack.steps.isNotEmpty()
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
         if (bar) Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -483,7 +521,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
 private val SUB_TITLES = mapOf(
     "toolkit" to ("Toolkit" to "Araç kutusu"), "cover" to ("Screen cover" to "Ekran kapağı"), "installer" to ("Installer" to "Yükleyici"), "installer_settings" to ("Installer" to "Yükleyici"),
     "files_settings" to ("Files" to "Dosyalar"), "ram" to ("RAM" to "RAM"), "dns" to ("DNS" to "DNS"), "fonts" to ("System font" to "Sistem yazı tipi"),
-    "guide" to ("Guide" to "Kılavuz"), "authenticator" to ("Authenticator" to "Kimlik doğrulayıcı"),
+    "guide" to ("Guide" to "Kılavuz"), "authenticator" to ("Authenticator" to "Kimlik doğrulayıcı"), "vault" to ("Passwords" to "Şifreler"),
 )
 
 // ---------------------------------------------------------------- Windows 11 / 10, Material, AMOLED: a sidebar on the left

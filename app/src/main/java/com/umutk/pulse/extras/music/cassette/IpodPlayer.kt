@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -79,21 +80,28 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
         if (menu) sel = (sel + n).coerceIn(0, (library.size - 1).coerceAtLeast(0))
         else { vol = (vol + n * 0.03f).coerceIn(0f, 1f); engine.player.volume = vol; volShown = System.currentTimeMillis() }
     }
+    val plastic = rememberTexture(Tex.PLASTIC)
+    val steel = rememberTexture(Tex.STEEL)
     Column(modifier.background(Color(0xFF101010)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // the body
-        Column(Modifier.weight(1f).fillMaxWidth().shadow(10.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(th.body, th.body.copy(alpha = .94f)))).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.weight(1f).fillMaxWidth().shadow(10.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(th.body, th.body.copy(alpha = .94f), th.body.copy(alpha = .86f)))).drawBehind { drawRect(plastic, alpha = .22f) }.border(1.5.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .75f), Color.Black.copy(alpha = .25f))), RoundedCornerShape(26.dp)).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // the screen
-            Column(Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFE4EBE0)).border(3.dp, th.wheelInk.copy(alpha = .5f), RoundedCornerShape(8.dp))) {
-                Row(Modifier.fillMaxWidth().background(Color(0xFFB9C7B4)).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(8.dp)).background(Brush.verticalGradient(listOf(Color(0xFFF1F6EE), Color(0xFFD9E3D4)))).border(5.dp, Color(0xFF1A1A1C), RoundedCornerShape(8.dp)).border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(8.dp))) {
+                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFFE3E9E0), Color(0xFFA9B8A5)))).border(0.5.dp, Color(0xFF6E7C6B)).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (menu) tr("Songs", "Şarkılar") else "iPod", color = Color(0xFF1B1B1B), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Text(if (st.isPlaying) "▶" else "❚❚", color = Color(0xFF1B1B1B), fontSize = 11.sp)
+                    // the battery: a small outline with its cap and the charge bars
+                    Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.border(1.dp, Color(0xFF1B1B1B), RoundedCornerShape(2.dp)).padding(1.dp), horizontalArrangement = Arrangement.spacedBy(1.dp)) { repeat(4) { Box(Modifier.size(width = 3.dp, height = 7.dp).background(Color(0xFF1B1B1B))) } }
+                        Box(Modifier.size(width = 2.dp, height = 4.dp).background(Color(0xFF1B1B1B)))
+                    }
                 }
                 if (menu) {
                     val scroll = rememberScrollState()
                     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
                         library.forEachIndexed { i, t ->
                             Text(t.title?.ifBlank { null } ?: t.path.substringAfterLast('/').substringBeforeLast('.'), color = if (i == sel) Color.White else Color(0xFF1B1B1B), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth().background(if (i == sel) Color(0xFF3B7BD8) else Color.Transparent).padding(horizontal = 8.dp, vertical = 4.dp))
+                                modifier = Modifier.fillMaxWidth().background(if (i == sel) Brush.verticalGradient(listOf(Color(0xFF5B9BEA), Color(0xFF2E68C4))) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))).padding(horizontal = 8.dp, vertical = 4.dp))
                         }
                     }
                     LaunchedEffect(sel) { scroll.animateScrollTo((sel * 27 - 60).coerceAtLeast(0)) }
@@ -108,7 +116,7 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
                             Text(tr("Volume", "Ses") + " ${(vol * 100).toInt()}%", color = Color(0xFF1B1B1B), fontSize = 11.sp)
                         }
                         Box(Modifier.fillMaxWidth().height(10.dp).border(1.dp, Color(0xFF1B1B1B)).padding(1.dp)) {
-                            Box(Modifier.fillMaxWidth(if (dur > 0) (pos / dur.toFloat()).coerceIn(0f, 1f) else 0f).fillMaxSize().background(Color(0xFF3B7BD8)))
+                            Box(Modifier.fillMaxWidth(if (dur > 0) (pos / dur.toFloat()).coerceIn(0f, 1f) else 0f).fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF6BA6F0), Color(0xFF2E68C4)))))
                         }
                         Row(Modifier.fillMaxWidth()) {
                             Text(clk(pos), color = Color(0xFF1B1B1B), fontSize = 11.sp, modifier = Modifier.weight(1f))
@@ -123,7 +131,7 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
                 val side = minOf(maxWidth, 300.dp)
                 var lastAngle by remember { mutableStateOf<Float?>(null) }
                 var acc by remember { mutableStateOf(0f) }
-                Box(Modifier.size(side).clip(CircleShape).background(th.wheel).pointerInput(menu, library.size) {
+                Box(Modifier.size(side).shadow(3.dp, CircleShape).clip(CircleShape).drawBehind { drawRect(steel, alpha = .0f) }.background(Brush.radialGradient(listOf(th.wheel, th.wheel.copy(alpha = .9f), th.wheel.copy(alpha = .78f)))).border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .6f), Color.Black.copy(alpha = .2f))), CircleShape).pointerInput(menu, library.size) {
                     detectDragGestures(onDragStart = { lastAngle = null; acc = 0f }, onDragEnd = { lastAngle = null }) { c, _ ->
                         val ctr = Offset(size.width / 2f, size.height / 2f)
                         val d = c.position - ctr
@@ -154,7 +162,7 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
                     Text("⏮", color = th.wheelInk, fontSize = 20.sp, modifier = Modifier.align(Alignment.CenterStart).padding(start = side * .08f))
                     Text("⏭", color = th.wheelInk, fontSize = 20.sp, modifier = Modifier.align(Alignment.CenterEnd).padding(end = side * .08f))
                     Text("▶❚❚", color = th.wheelInk, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = side * .08f))
-                    Box(Modifier.size(side * .38f).clip(CircleShape).background(th.body).border(1.dp, th.wheelInk.copy(alpha = .25f), CircleShape))
+                    Box(Modifier.size(side * .40f).shadow(2.dp, CircleShape).clip(CircleShape).background(Brush.radialGradient(listOf(th.body, th.body.copy(alpha = .9f)))).border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .7f), th.wheelInk.copy(alpha = .3f))), CircleShape))
                 }
             }
         }

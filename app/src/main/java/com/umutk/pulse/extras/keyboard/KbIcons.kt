@@ -8,6 +8,11 @@ import androidx.compose.material.icons.filled.ArrowForward as FArrowForward
 import androidx.compose.material.icons.filled.ArrowUpward as FArrowUpward
 import androidx.compose.material.icons.filled.Backspace as FBackspace
 import androidx.compose.material.icons.filled.Check as FCheck
+import androidx.compose.material.icons.filled.Delete as FDelete
+import androidx.compose.material.icons.rounded.Delete as RDelete
+import androidx.compose.material.icons.sharp.Delete as SDelete
+import androidx.compose.material.icons.outlined.Delete as ODelete
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.material.icons.filled.Close as FClose
 import androidx.compose.material.icons.filled.ContentCopy as FContentCopy
 import androidx.compose.material.icons.filled.ContentCut as FContentCut
@@ -153,6 +158,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Filled.FArrowForward
         "ArrowUpward" -> Icons.Filled.FArrowUpward
         "Backspace" -> Icons.Filled.FBackspace
+        "Delete" -> Icons.Filled.FDelete
         "Check" -> Icons.Filled.FCheck
         "Close" -> Icons.Filled.FClose
         "ContentCopy" -> Icons.Filled.FContentCopy
@@ -191,6 +197,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Rounded.RArrowForward
         "ArrowUpward" -> Icons.Rounded.RArrowUpward
         "Backspace" -> Icons.Rounded.RBackspace
+        "Delete" -> Icons.Rounded.RDelete
         "Check" -> Icons.Rounded.RCheck
         "Close" -> Icons.Rounded.RClose
         "ContentCopy" -> Icons.Rounded.RContentCopy
@@ -216,7 +223,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "OpenWith" -> Icons.Rounded.ROpenWith
         "Palette" -> Icons.Rounded.RPalette
         "Pin" -> Icons.Rounded.RPin
-        "PushPin" -> Icons.Rounded.RPushPin
+        "PushPin" -> ThumbTack
         "Bolt" -> Icons.Rounded.RBolt
         "Settings" -> Icons.Rounded.RSettings
         "Spellcheck" -> Icons.Rounded.RSpellcheck
@@ -231,6 +238,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Sharp.SArrowForward
         "ArrowUpward" -> Icons.Sharp.SArrowUpward
         "Backspace" -> Icons.Sharp.SBackspace
+        "Delete" -> Icons.Sharp.SDelete
         "Check" -> Icons.Sharp.SCheck
         "Close" -> Icons.Sharp.SClose
         "ContentCopy" -> Icons.Sharp.SContentCopy
@@ -269,6 +277,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Outlined.OArrowForward
         "ArrowUpward" -> Icons.Outlined.OArrowUpward
         "Backspace" -> Icons.Outlined.OBackspace
+        "Delete" -> Icons.Outlined.ODelete
         "Check" -> Icons.Outlined.OCheck
         "Close" -> Icons.Outlined.OClose
         "ContentCopy" -> Icons.Outlined.OContentCopy
@@ -301,4 +310,19 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "KeyboardCapslock" -> Icons.Outlined.OKeyboardCapslock
         else -> Icons.Outlined.OArrowBack
     }
+}
+
+/** A real thumbtack (a round head, a flat brim, a needle), for the pin of the clipboard. */
+private val ThumbTack: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder("thumbtack", androidx.compose.ui.unit.Dp(24f), androidx.compose.ui.unit.Dp(24f), 24f, 24f).apply {
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(7.5f, 2f); lineTo(16.5f, 2f); lineTo(17f, 3.5f); lineTo(15.5f, 9f); lineTo(8.5f, 9f); lineTo(7f, 3.5f); close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(5f, 9f); lineTo(19f, 9f); lineTo(19f, 11f); lineTo(5f, 11f); close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(11f, 11f); lineTo(13f, 11f); lineTo(12.5f, 22f); lineTo(11.5f, 22f); close()
+        }
+    }.build()
 }

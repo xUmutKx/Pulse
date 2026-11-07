@@ -1,5 +1,10 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.FontCards
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.items
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -11,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +42,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
@@ -139,7 +146,7 @@ fun AlarmCustomizationScreen(
 
     var isInitialized by remember { mutableStateOf(false) }
 
-    var background by remember { mutableStateOf(RingingBackgroundStyle.STARFIELD) }
+    var background by remember { mutableStateOf(RingingBackgroundStyle.AMOLED_BLACK) }
     var backgroundImageUri by remember { mutableStateOf("") }
     var backgroundVideoUri by remember { mutableStateOf("") }
     var clockStyle by remember { mutableStateOf(RingingClockStyle.HORIZONTAL_DIGITAL) }
@@ -356,7 +363,7 @@ fun AlarmCustomizationScreen(
     }
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri ->
         if (uri != null) {
             runCatching {
@@ -371,7 +378,7 @@ fun AlarmCustomizationScreen(
     }
 
     val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri ->
         if (uri != null) {
             runCatching {
@@ -813,6 +820,14 @@ fun AlarmCustomizationScreen(
                 }
             }
 
+            // the back arrow at the top left: leaves the customisation, the same as the system back
+            androidx.compose.material3.IconButton(
+                onClick = onDone,
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp)
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+
             if (alarmLabelVisible) {
                 Text(
                     text = "Alarm",
@@ -879,7 +894,9 @@ fun AlarmCustomizationScreen(
     if (showBackgroundSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBackgroundSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
 
             val consumeVerticalFlingConnection = remember {
@@ -899,29 +916,58 @@ fun AlarmCustomizationScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .nestedScroll(consumeVerticalFlingConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                     Text("Background Style", style = MaterialTheme.typography.titleLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // every style as a live preview card: the real background drawn small, so the choice is seen before it is picked
+                    // a plain row that scrolls sideways: a lazy row inside the sheet's scrolling column moved and clipped the cards
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         RingingBackgroundStyle.entries.forEach { style ->
-                            FilterChip(
-                                selected = background == style,
-                                colors = selectedChipColors(),
-                                shape = SelectionChipShape,
-                                onClick = {
-                                    background = style
-                                    if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
-                                        style != RingingBackgroundStyle.VIDEO &&
-                                        style != RingingBackgroundStyle.SOLID_COLOR
-                                    ) {
-                                        showBackgroundSheet = false
+                            val selected = background == style
+                            val cardShape = RoundedCornerShape(16.dp)
+                            val select: () -> Unit = {
+                                background = style
+                                if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
+                                    style != RingingBackgroundStyle.VIDEO &&
+                                    style != RingingBackgroundStyle.SOLID_COLOR
+                                ) {
+                                    showBackgroundSheet = false
+                                }
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .width(112.dp)
+                                    .clip(cardShape)
+                                    .border(
+                                        if (selected) 2.dp else 1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        cardShape
+                                    )
+                                    .clickable(onClick = select)
+                            ) {
+                                Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                                    if (style == RingingBackgroundStyle.CUSTOM_IMAGE || style == RingingBackgroundStyle.VIDEO) {
+                                        Text("Your file", style = MaterialTheme.typography.labelMedium)
+                                    } else {
+                                        AlarmLockBackground(
+                                            style = style,
+                                            imageUri = null,
+                                            dark = true,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {}
                                     }
-                                },
-                                label = { Text(style.label) }
-                            )
+                                    // a clear layer on top takes the tap, so the live picture under it can never swallow it
+                                    Box(Modifier.matchParentSize().clickable(onClick = select))
+                                }
+                                Text(
+                                    style.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 2,
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                                )
+                            }
                         }
                     }
                     if (background == RingingBackgroundStyle.SOLID_COLOR) {
@@ -1006,7 +1052,9 @@ fun AlarmCustomizationScreen(
     if (showClockSheet) {
         ModalBottomSheet(
             onDismissRequest = { showClockSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
@@ -1043,17 +1091,7 @@ fun AlarmCustomizationScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = clockFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { clockFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, clockFont, { it.label }, { clockFontFamilyOf(it) }) { clockFont = it }
                 if (clockFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickClockFont() },
@@ -1233,7 +1271,9 @@ fun AlarmCustomizationScreen(
     if (showDismissSheet) {
         ModalBottomSheet(
             onDismissRequest = { showDismissSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
@@ -1244,17 +1284,7 @@ fun AlarmCustomizationScreen(
             ) {
                 Text("Dismiss Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = dismissFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { dismissFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, dismissFont, { it.label }, { clockFontFamilyOf(it) }) { dismissFont = it }
                 if (dismissFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickDismissFont() },
@@ -1293,7 +1323,9 @@ fun AlarmCustomizationScreen(
     if (showSnoozeSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSnoozeSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
@@ -1304,17 +1336,7 @@ fun AlarmCustomizationScreen(
             ) {
                 Text("Snooze Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = snoozeFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { snoozeFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, snoozeFont, { it.label }, { clockFontFamilyOf(it) }) { snoozeFont = it }
                 if (snoozeFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickSnoozeFont() },

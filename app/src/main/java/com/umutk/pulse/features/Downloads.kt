@@ -344,7 +344,24 @@ object Downloads {
         app?.getSystemService(NotificationManager::class.java)?.cancel(t.nid)
         // after the writer has stopped, so it cannot bring the file back
         val running = t.job
-        scope.launch { running?.join(); t.file.delete() }
+        scope.launch {
+            runCatching { running?.join() }
+            if (!eraseFile(t.file)) {
+                // the file is still there (the phone refused the delete): the row goes, so the file is said to stay
+                val c = app ?: return@launch
+                android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(c, com.umutk.pulse.tr("Could not delete ${t.file.name}", "${t.file.name} silinemedi"), android.widget.Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    /** Deletes [f]: the plain way first, then through MediaStore (a file in the shared Downloads folder that this app may not remove directly). True when it is gone. */
+    private fun eraseFile(f: File): Boolean {
+        if (!f.exists()) return true
+        runCatching { f.delete() }
+        if (!f.exists()) return true
+        val c = app ?: return false
+        runCatching { c.contentResolver.delete(android.provider.MediaStore.Files.getContentUri("external"), "_data=?", arrayOf(f.path)) }
+        return !f.exists()
     }
 
     /** A finished download whose file is gone (deleted in a file manager, an unmounted card) leaves the list: the list shows what is really there. */
@@ -927,7 +944,9 @@ private fun DownloadsContent() {
     val ctx = LocalContext.current
     val list by Downloads.tasks.collectAsState()
     var link by remember { mutableStateOf("") }
-    var finding by remember { mutableStateOf(false) }
+    // links being looked at in the background: each one shows as a row of its own, and the field is free for the next link at once
+    val pending = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    val foundQueue = remember { androidx.compose.runtime.mutableStateListOf<List<String>>() }
     var findNote by remember { mutableStateOf("") }
     // set only on LinkFinder.Result.None: the page itself (not a download) is worth just looking at, not re-trying as a download
     var noLinkUrl by remember { mutableStateOf("") }
@@ -964,7 +983,7 @@ private fun DownloadsContent() {
         if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
             title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
             text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
-            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { Downloads.remove(it) }
+            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { runCatching { Downloads.remove(it) } }
                 findScope.launch { kotlinx.coroutines.delay(1500); val left = n.count { it.file.exists() }; if (left > 0) android.widget.Toast.makeText(ctx, tr("$left files could not be deleted", "$left dosya silinemedi"), android.widget.Toast.LENGTH_LONG).show() } } },
             dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { bulkAsk = false } })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -998,22 +1017,35 @@ private fun DownloadsContent() {
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
-                Box(Modifier.padding(start = 8.dp).clickable(enabled = !finding) {
+                Box(Modifier.padding(start = 8.dp).clickable {
                     if (link.startsWith("http")) {
-                        val u = link.trim(); finding = true; findNote = ""; noLinkUrl = ""
+                        // the link leaves the field at once and is looked at in the background, so the next one can be pasted straight away
+                        val u = link.trim(); link = ""; findNote = ""; noLinkUrl = ""
+                        pending.add(u)
                         findScope.launch {
                             // a file starts at once; a web page is read for its download links
                             when (val r = LinkFinder.find(u)) {
-                                is LinkFinder.Result.Direct -> { Downloads.add(ctx, u); link = "" }
-                                is LinkFinder.Result.Found -> found = r.links
+                                is LinkFinder.Result.Direct -> Downloads.add(ctx, u)
+                                is LinkFinder.Result.Found -> { if (found == null) found = r.links else foundQueue.add(r.links) }
                                 is LinkFinder.Result.None -> { findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"); noLinkUrl = u }
-                                is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u); link = "" }
+                                is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u) }
                             }
-                            finding = false
+                            pending.remove(u)
                         }
                     }
                 }) {
-                    if (finding) androidx.compose.material3.CircularProgressIndicator(Modifier.size(22.dp), color = T.text, strokeWidth = 2.dp) else PIcon("download", T.text, 24.dp)
+                    PIcon("download", T.text, 24.dp)
+                }
+            }
+        }
+        // a link still being looked at: a row with a small spinner, until its download starts (then its own row with the bar takes over)
+        pending.forEach { u ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = T.text, strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(Uri.decode(u.substringBefore('?').substringAfterLast('/')).ifBlank { Uri.parse(u).host.orEmpty() }, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr("Looking for the file…", "Dosya aranıyor…"), color = T.sub, fontSize = 11.sp)
                 }
             }
         }
@@ -1029,17 +1061,17 @@ private fun DownloadsContent() {
             Text(tr("Open in Browser instead", "Bunun yerine Browser'da aç"), color = Look.accent, fontSize = 13.sp)
         }
         found?.let { links ->
-            WinAlert(onDismissRequest = { found = null },
+            WinAlert(onDismissRequest = { found = foundQueue.removeFirstOrNull() },
                 title = { Text(tr("Download links", "İndirme bağlantıları")) },
                 text = { androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 360.dp)) {
                     items(links, key = { it }) { l ->
-                        Column(Modifier.fillMaxWidth().clickable { found = null; link = ""; Downloads.add(ctx, l) }.padding(vertical = 8.dp)) {
+                        Column(Modifier.fillMaxWidth().clickable { found = foundQueue.removeFirstOrNull(); Downloads.add(ctx, l) }.padding(vertical = 8.dp)) {
                             Text(Uri.decode(l.substringBefore('?').substringAfterLast('/')).ifBlank { l }, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(Uri.parse(l).host.orEmpty(), color = T.sub, fontSize = 11.sp, maxLines = 1)
                         }
                     }
                 } },
-                confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { found = null } })
+                confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { found = foundQueue.removeFirstOrNull() } })
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
         list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { t -> DownloadRow(t, t in chosen, chosen.isNotEmpty()) { chosen = if (t in chosen) chosen - t else chosen + t } }

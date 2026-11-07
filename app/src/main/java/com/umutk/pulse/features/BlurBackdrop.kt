@@ -27,17 +27,53 @@ object BlurBackdrop {
         return out
     }
 
-    /** Blur [src] in place of its size by halving and doubling (cheap, no RenderEffect), then lay [tint] over it. */
+    /**
+     * A real blur: the picture is made small, blurred with three passes of a box blur (horizontal and vertical), and stretched back to full size with a
+     * smooth filter, so no block edges show. The old halving and doubling made large square pixels.
+     */
     fun blur(src: Bitmap, radiusDp: Float, tint: Int): Bitmap {
-        var b = src
-        val full = b.width to b.height
-        val steps = (radiusDp / 6f).toInt().coerceIn(0, 5)
-        repeat(steps) { b = Bitmap.createScaledBitmap(b, (b.width / 2).coerceAtLeast(4), (b.height / 2).coerceAtLeast(4), true) }
-        repeat(steps) { b = Bitmap.createScaledBitmap(b, b.width * 2, b.height * 2, true) }
-        if (steps > 0 && b.width != full.first) b = Bitmap.createScaledBitmap(b, full.first, full.second, true)
-        val out = b.copy(Bitmap.Config.ARGB_8888, true)
+        val targetW = 270
+        val sw = targetW.coerceAtMost(src.width).coerceAtLeast(1)
+        val sh = (src.height.toFloat() * sw / src.width).toInt().coerceAtLeast(1)
+        val small = Bitmap.createScaledBitmap(src, sw, sh, true)
+        val px = IntArray(sw * sh)
+        small.getPixels(px, 0, sw, 0, 0, sw, sh)
+        if (radiusDp > 0f) {
+            val r = (radiusDp / 40f * 8f + 1f).toInt().coerceIn(1, 12)
+            val tmp = IntArray(px.size)
+            repeat(3) {
+                boxPass(px, tmp, sw, sh, r, horizontal = true)
+                boxPass(tmp, px, sw, sh, r, horizontal = false)
+            }
+        }
+        val blurredSmall = Bitmap.createBitmap(px, sw, sh, Bitmap.Config.ARGB_8888)
+        val out = Bitmap.createScaledBitmap(blurredSmall, src.width, src.height, true).copy(Bitmap.Config.ARGB_8888, true)
         Canvas(out).drawColor(tint)
         return out
+    }
+
+    /** One box blur pass along a row (horizontal) or a column, each channel averaged over 2r+1 pixels, the edges repeated. */
+    private fun boxPass(src: IntArray, dst: IntArray, w: Int, h: Int, r: Int, horizontal: Boolean) {
+        val lines = if (horizontal) h else w
+        val len = if (horizontal) w else h
+        val d = 2 * r + 1
+        for (line in 0 until lines) {
+            fun at(i: Int): Int {
+                val k = i.coerceIn(0, len - 1)
+                return if (horizontal) src[line * w + k] else src[k * w + line]
+            }
+            var sa = 0; var sr = 0; var sg = 0; var sb = 0
+            for (i in -r..r) { val c = at(i); sa += c ushr 24; sr += (c shr 16) and 255; sg += (c shr 8) and 255; sb += c and 255 }
+            for (i in 0 until len) {
+                val v = ((sa / d) shl 24) or ((sr / d) shl 16) or ((sg / d) shl 8) or (sb / d)
+                if (horizontal) dst[line * w + i] = v else dst[i * w + line] = v
+                val add = at(i + r + 1); val rem = at(i - r)
+                sa += (add ushr 24) - (rem ushr 24)
+                sr += ((add shr 16) and 255) - ((rem shr 16) and 255)
+                sg += ((add shr 8) and 255) - ((rem shr 8) and 255)
+                sb += (add and 255) - (rem and 255)
+            }
+        }
     }
 }
 

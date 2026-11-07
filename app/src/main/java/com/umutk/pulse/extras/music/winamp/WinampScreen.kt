@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.winamp
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -28,6 +30,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -66,6 +82,8 @@ fun WinampScreen(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
     onGetSkins: (() -> Unit)? = null,
+    startLyrics: Boolean = false,
+    onSettings: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val prefs = remember { ctx.getSharedPreferences("winamp_look", android.content.Context.MODE_PRIVATE) }
@@ -91,21 +109,34 @@ fun WinampScreen(
     val wave by com.umutk.pulse.extras.music.rememberWave()
     var visScope by remember { mutableStateOf(prefs.getBoolean("vis_scope", false)) }
 
-    var lyricsOn by remember { mutableStateOf(false) }
+    // the Lyrics page of the Winamp look opens with the lyrics window already up (the same window as its own LYRICS button)
+    var lyricsOn by remember { mutableStateOf(startLyrics) }
+    // the background behind the windows: black, the playing track's cover, or the skin, filling the whole screen
+    var bgMode by remember { mutableStateOf(prefs.getString("bg", "black") ?: "black") }
+    var showSpec by remember { mutableStateOf(prefs.getBoolean("spec", true)) }
+    val art = com.umutk.pulse.extras.music.rememberTrackArt(st.current)
     var showPl by remember { mutableStateOf(true) }
+    var showLib by remember { mutableStateOf(false) }
     var showEq by remember { mutableStateOf(false) }
     var shade by remember { mutableStateOf(false) }
     var volume by remember { mutableStateOf(engine.player.volume) }
-    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
+    val ctxPm = androidx.compose.ui.platform.LocalContext.current
+    var shuffle by remember { mutableStateOf(PlayModes.shuffle != ShuffleKind.OFF) }
     var repeat by remember { mutableStateOf(engine.player.repeatMode != Player.REPEAT_MODE_OFF) }
     val eq = engine.equalizer
     var eqEnabled by remember { mutableStateOf(eq.enabled) }
     var bands by remember { mutableStateOf(eq.bandLevels) }
 
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
+        val bgImg: ImageBitmap? = when (bgMode) { "art" -> art; "skin" -> skin.main; else -> null }
+        if (bgImg != null) Image(bgImg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = .35f)
         // windows fill the width inside an 8 dp gutter on each side
         val s = ((maxWidth.value - 16f) / WINAMP_W).coerceIn(1f, 3f)
-        Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
+        // the full layout: two columns side by side when the screen is wide enough (player, EQ and list left; analyzer and cover right)
+        // turned sideways (wide screen): two columns, each window at its own size, never one long strip scaled up
+        val fullWide = maxWidth.value >= WINAMP_W * 2f + 24f
+        val sEff = if (fullWide) ((maxWidth.value - 24f) / 2f / WINAMP_W).coerceIn(1f, 3f) else s
+        val mainStack: @Composable () -> Unit = {
             WinampClassic(
                 skin = skin, track = st.current, playing = st.isPlaying, positionMs = pos, durationMs = dur,
                 levels = levels, volume = volume, wave = wave, scope = visScope,
@@ -117,27 +148,40 @@ fun WinampScreen(
                 onTogglePlaylist = { showPl = !showPl },
                 lyricsOn = lyricsOn, onLyrics = { lyricsOn = !lyricsOn },
                 onToggleEq = { showEq = !showEq; bands = eq.bandLevels },
-                scaleDp = s, shuffle = shuffle, repeat = repeat, eqOn = showEq, plOn = showPl, shade = shade,
-                onShuffle = { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle },
-                onRepeat = {
-                    repeat = !repeat
-                    engine.player.repeatMode = if (repeat) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
-                },
+                scaleDp = sEff, shuffle = shuffle, repeat = repeat, eqOn = showEq, plOn = showPl, shade = shade,
+                onShuffle = { PlayModes.cycleShuffle(ctxPm); shuffle = PlayModes.shuffle != ShuffleKind.OFF },
+                onRepeat = { repeat = PlayModes.cycleRepeat(ctxPm) != Player.REPEAT_MODE_OFF },
                 onShade = { shade = !shade },
             )
-            if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, s)
+            // the media library (library and internet radio) opens under the playlist, from its own button
+            if (showLib) WinampLibraryWindow(skin, engine, { showLib = false }, sEff)
+            WinampTextButton(skin, tr("MEDIA LIBRARY", "MEDYA KÜTÜPHANESİ"), showLib, sEff) { showLib = !showLib }
+            if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, sEff)
             if (showEq) WinampEqWindow(
                 skin = skin, enabled = eqEnabled, bandHz = eq.centerFrequenciesHz, range = eq.levelRange, levels = bands,
                 presets = eq.presetNames,
                 onEnabled = { eqEnabled = it; eq.setEnabled(it) },
                 onBand = { b, mb -> eq.setBandLevel(b, mb); bands = eq.bandLevels },
                 onPreset = { eq.usePreset(it); bands = eq.bandLevels },
-                onClose = { showEq = false }, scaleDp = s,
+                onClose = { showEq = false }, scaleDp = sEff,
             )
             if (showPl) WinampPlaylistWindow(
-                skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = s,
-                onAdd = onAdd, onRemove = { engine.removeFromQueue(it) },
+                skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = sEff,
+                onAdd = onAdd, onRemove = { engine.removeFromQueue(it) }, onOptions = onSettings,
             )
+            // closed with its X: only its title bar stays, and a tap on it opens the playlist again
+            else PlaylistTitleBar(sEff) { showPl = true }
+        }
+        val sideWins: @Composable () -> Unit = {
+            if (showSpec) WinampSpectrum(levels, sEff, skin.vis)
+            WinampArt(art, sEff)
+        }
+        if (fullWide) Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { mainStack() }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { sideWins() }
+        } else Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
+            mainStack()
+            sideWins()
         }
     }
 }
@@ -190,4 +234,64 @@ fun WinampSkinSettings() {
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
     SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+}
+
+/** The playlist window when it is closed: its title bar alone, a tap opens the window again. */
+@Composable
+private fun PlaylistTitleBar(scaleDp: Float, onOpen: () -> Unit) {
+    val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
+    Box(
+        Modifier.width((WINAMP_W * scaleDp).dp).height((14 * scaleDp).dp).border(1.dp, Color(0xFF5A6070))
+            .background(Brush.verticalGradient(listOf(Color(0xFF8A93A8), Color(0xFF3E4556), Color(0xFF8A93A8))))
+            .clickable(onClick = onOpen),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(tr("WINAMP PLAYLIST", "WINAMP ÇALMA LİSTESİ"), color = Color(0xFFE8ECF5), fontSize = (10 * scaleDp).sp, fontFamily = pixel, maxLines = 1)
+    }
+}
+
+/** A Winamp-style window frame: a grey bevelled title bar with the title in the pixel font, and a dark body. */
+@Composable
+private fun WinampPanel(title: String, scaleDp: Float, content: @Composable () -> Unit) {
+    val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: androidx.compose.ui.text.font.FontFamily.Monospace
+    Column(Modifier.width((WINAMP_W * scaleDp).dp).border(1.dp, Color(0xFF5A6070))) {
+        Box(Modifier.fillMaxWidth().height((14 * scaleDp).dp).background(Brush.verticalGradient(listOf(Color(0xFF8A93A8), Color(0xFF3E4556), Color(0xFF8A93A8)))), contentAlignment = Alignment.Center) {
+            Text(title, color = Color(0xFFE8ECF5), fontSize = (10 * scaleDp).sp, fontFamily = pixel, maxLines = 1)
+        }
+        Box(Modifier.fillMaxWidth().background(Color(0xFF0C0E13)).padding((4 * scaleDp).dp)) { content() }
+    }
+}
+
+/** The spectrum analyzer: one bar per band, green rising to yellow and red at the top. */
+@Composable
+private fun WinampSpectrum(levels: List<Float>, scaleDp: Float, vis: List<Color>) {
+    WinampPanel(tr("SPECTRUM ANALYZER", "SPEKTRUM ANALİZÖR"), scaleDp) {
+        Canvas(Modifier.fillMaxWidth().height((100 * scaleDp).dp)) {
+            val n = levels.size.coerceAtLeast(1)
+            val bw = size.width / n
+            val barBrush = Brush.verticalGradient(vis.subList(2, 18), startY = 0f, endY = size.height)
+            levels.forEachIndexed { i, v ->
+                val h = size.height * v.coerceIn(0f, 1f)
+                // the skin's own bar colours (viscolor.txt rows 2 to 17, top to bottom); the default skin has the classic red-yellow-green
+                drawRect(barBrush,
+                    topLeft = Offset(i * bw + 1f, size.height - h), size = Size((bw - 2f).coerceAtLeast(1f), h))
+            }
+        }
+    }
+}
+
+/** The album cover of the track playing, fitted in its window (a black square when there is none). */
+@Composable
+private fun WinampArt(art: ImageBitmap?, scaleDp: Float) {
+    WinampPanel(tr("ALBUM ART", "ALBÜM KAPAĞI"), scaleDp) {
+        Box(Modifier.fillMaxWidth().height((100 * scaleDp).dp), contentAlignment = Alignment.Center) {
+            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+    }
+}
+
+/** The media library button: the playlist window's own top bar, with the title on it. */
+@Composable
+private fun WinampTextButton(skin: com.umutk.pulse.extras.music.skin.WinampSkin, label: String, on: Boolean, scaleDp: Float, onClick: () -> Unit) {
+    WinampTitleStrip(skin, label, scaleDp, onClick = onClick)
 }

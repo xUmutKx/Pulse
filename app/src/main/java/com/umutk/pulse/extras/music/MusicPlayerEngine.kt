@@ -129,23 +129,96 @@ class MusicPlayerEngine private constructor(context: Context) {
         _sleep.value = if (endOfTrack) -1L else if (minutes > 0) minutes * 60_000L else 0L
     }
 
+    // ---- crossfade: the next track starts on a second player a few seconds before this one ends, and the two swap over ----
+    private var xp: ExoPlayer? = null
+    private var crossing = false
+    private var crossIdx = -1
+    private var crossX = 1L
+    private val HANDOVER_MS = 150L
+
+    private fun crossPlayer(): ExoPlayer = xp ?: ExoPlayer.Builder(app)
+        .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false)
+        .setHandleAudioBecomingNoisy(false)
+        .setWakeMode(C.WAKE_MODE_NONE)
+        .build().also { xp = it }
+
+    private fun startCrossfade(x: Long) {
+        val idx = player.nextMediaItemIndex
+        if (idx == C.INDEX_UNSET) return
+        val nx = crossPlayer()
+        nx.setMediaItem(player.getMediaItemAt(idx))
+        nx.playbackParameters = player.playbackParameters
+        nx.volume = 0f
+        nx.prepare()
+        nx.play()
+        crossing = true; crossIdx = idx; crossX = x
+        main2.removeCallbacks(xTick)
+        main2.post(xTick)
+    }
+
+    /** Ramps the two players against each other; at the end of this track the next one takes over at the same place. */
+    private val xTick = object : Runnable {
+        override fun run() {
+            if (!crossing) return
+            val d = player.duration
+            if (d <= 0 || !player.isPlaying) { cancelCrossfade(); return }
+            val left = d - player.currentPosition
+            if (left <= HANDOVER_MS) { handover(); return }
+            val k = (left.toFloat() / crossX).coerceIn(0f, 1f)
+            player.volume = k
+            crossPlayer().volume = 1f - k
+            main2.postDelayed(this, 40L)
+        }
+    }
+
+    private fun handover() {
+        val at = crossPlayer().currentPosition
+        crossing = false
+        main2.removeCallbacks(xTick)
+        xp?.stop()
+        xp?.clearMediaItems()
+        player.volume = 1f
+        player.seekTo(crossIdx, at)
+    }
+
+    /** Stops a crossfade in progress (pause, skip, a seek): this track carries on alone at full volume. */
+    private fun cancelCrossfade() {
+        if (!crossing) return
+        crossing = false
+        main2.removeCallbacks(xTick)
+        xp?.stop()
+        xp?.clearMediaItems()
+        player.volume = 1f
+    }
+
     private val ticker = object : Runnable {
         override fun run() {
             if (player.isPlaying) {
-                // fade at the start and end of every track
+                // the track's start fades in; its end is the crossfade: the next track starts while this one falls silent
                 val d = player.duration
+                val p = player.currentPosition
                 val x = minOf(xfadeSec * 1000L, if (d > 0) d / 3 else 0L)
-                AudioGain.fade = if (x <= 0 || d <= 0) 1f else {
-                    val p = player.currentPosition
-                    minOf(1f, minOf((p + 300L).toFloat() / x, (d - p).toFloat() / x)).coerceIn(0f, 1f)
-                }
+                AudioGain.fade = if (x <= 0 || d <= 0) 1f else minOf(1f, (p + 300L).toFloat() / x).coerceIn(0f, 1f)
+                if (!crossing && x > 0 && d > 0 && d - p <= x && d - p > HANDOVER_MS && player.hasNextMediaItem() &&
+                    player.repeatMode != Player.REPEAT_MODE_ONE && !player.pauseAtEndOfMediaItems) startCrossfade(x)
                 if (sleepEndAt > 0) {
                     val left = sleepEndAt - System.currentTimeMillis()
+                    val finish = MusicSettings.sleepFinishTrack(app)
                     _sleep.value = left.coerceAtLeast(0L)
-                    AudioGain.sleepFade = (left / 10_000f).coerceIn(0f, 1f)
-                    if (left <= 0) { sleepEndAt = 0; _sleep.value = 0; pause(); AudioGain.sleepFade = 1f }
+                    // the last ten seconds fade out, unless the timer waits for the track to end (then the music plays on at full volume)
+                    AudioGain.sleepFade = if (finish) 1f else (left / 10_000f).coerceIn(0f, 1f)
+                    if (left <= 0) {
+                        sleepEndAt = 0
+                        AudioGain.sleepFade = 1f
+                        if (finish) { player.pauseAtEndOfMediaItems = true; _sleep.value = -1L }
+                        else { _sleep.value = 0; pause() }
+                    }
                 }
-            } else AudioGain.fade = 1f
+            } else {
+                AudioGain.fade = 1f
+                // the track ended and the player paused itself at its end: the sleep timer is done
+                if (player.pauseAtEndOfMediaItems && _sleep.value < 0) { player.pauseAtEndOfMediaItems = false; _sleep.value = 0 }
+            }
             main2.postDelayed(this, 200L)
         }
     }
@@ -155,7 +228,8 @@ class MusicPlayerEngine private constructor(context: Context) {
         reloadSettings()
         // shuffle and repeat survive a restart and an update: restored here, saved on every change
         val modes = app.getSharedPreferences("music_modes", Context.MODE_PRIVATE)
-        player.shuffleModeEnabled = modes.getBoolean("shuffle", false)
+        // the player's own random mode is no longer used (PlayModes makes a fixed order); an older saved "on" is dropped
+        player.shuffleModeEnabled = false
         player.repeatMode = modes.getInt("repeat", Player.REPEAT_MODE_OFF)
         player.addListener(object : Player.Listener {
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { modes.edit().putBoolean("shuffle", shuffleModeEnabled).apply(); if (shuffleModeEnabled) applySmartShuffle() }
@@ -173,10 +247,15 @@ class MusicPlayerEngine private constructor(context: Context) {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { publish(); if (!isPlaying) saveResume(); watch(isPlaying) }
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                cancelCrossfade()
                 if (MusicSettings.autoEq(app)) mediaItem?.mediaId?.let { id ->
-                    // the equalizer follows the genre of the new song
+                    // the equalizer follows the genre of the new song; a song without a genre tag is measured while it plays
                     val genre = MusicLibrary.tracks.value.firstOrNull { it.path == id }?.genre
                     runCatching { equalizer.usePresetForGenre(genre) }
+                    main.removeCallbacks(soundCheck)
+                    specSum.fill(0.0); specN = 0
+                    specNoGenre = genre.isNullOrBlank()
+                    if (specNoGenre) main.postDelayed(soundCheck, 250L)
                 }
                 mediaItem?.toTrack()?.let { t ->
                     // the Quick panel "last played" tile and ACTION_RESUME read this
@@ -202,8 +281,9 @@ class MusicPlayerEngine private constructor(context: Context) {
 
     /** Replaces the queue and starts playing [startIndex]. */
     fun playQueue(list: List<Track>, startIndex: Int = 0) {
+        cancelCrossfade()
         player.setMediaItems(list.map { it.toMediaItem() }, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)), C.TIME_UNSET)
-        applySmartShuffle(list, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)))
+        PlayModes.onQueueSet(app)
         player.prepare()
         player.play()
     }
@@ -231,20 +311,22 @@ class MusicPlayerEngine private constructor(context: Context) {
         player.play()
     }
 
-    fun pause() = player.pause()
+    fun pause() { cancelCrossfade(); player.pause() }
 
     fun togglePlayPause() = if (player.playWhenReady) pause() else play()
 
     fun next() {
+        cancelCrossfade()
         if (player.hasNextMediaItem()) player.seekToNextMediaItem()
     }
 
     /** Restarts the track when more than 3 seconds in, otherwise goes to the previous one. */
-    fun previous() = player.seekToPrevious()
+    fun previous() { cancelCrossfade(); player.seekToPrevious() }
 
-    fun seekTo(ms: Int) = player.seekTo(ms.toLong())
+    fun seekTo(ms: Int) { cancelCrossfade(); player.seekTo(ms.toLong()) }
 
     fun playAt(index: Int) {
+        cancelCrossfade()
         if (index !in 0 until player.mediaItemCount) return
         player.seekToDefaultPosition(index)
         play()
@@ -255,6 +337,16 @@ class MusicPlayerEngine private constructor(context: Context) {
     fun moveInQueue(from: Int, to: Int) = player.moveMediaItem(from, to)
 
     fun removeFromQueue(index: Int) = player.removeMediaItem(index)
+
+    /** Replaces everything after the playing song; the playing song is not touched, so nothing stops or jumps. */
+    fun replaceUpcoming(items: List<MediaItem>) {
+        val cur = player.currentMediaItemIndex
+        if (cur < 0 || player.mediaItemCount == 0) return
+        if (player.mediaItemCount > cur + 1) player.removeMediaItems(cur + 1, player.mediaItemCount)
+        player.addMediaItems(items)
+    }
+
+    fun replaceUpcomingTracks(tracks: List<Track>) = replaceUpcoming(tracks.map { it.toMediaItem() })
 
     fun queue(): List<Track> = List(player.mediaItemCount) { player.getMediaItemAt(it).toTrack() }
 
@@ -268,6 +360,7 @@ class MusicPlayerEngine private constructor(context: Context) {
         equalizer.save(app)
         MediaController.releaseFuture(binding)
         player.release()
+        xp?.release()
         equalizer.release()
     }
 
@@ -279,6 +372,31 @@ class MusicPlayerEngine private constructor(context: Context) {
         override fun run() {
             com.umutk.pulse.extras.watchdog.ServiceHealth.beat(app, anchor)
             main.postDelayed(this, 60_000L)
+        }
+    }
+
+    // the sound of a song without a genre tag: the band levels are added up for its first 25 seconds, then the preset is chosen
+    private val specSum = DoubleArray(3)
+    private var specN = 0
+    private var specNoGenre = false
+    private val soundCheck = object : Runnable {
+        override fun run() {
+            if (!specNoGenre || !MusicSettings.autoEq(app)) return
+            if (player.isPlaying) {
+                val b = MusicLevels.snapshot()
+                if (b.any { it > 0f }) {
+                    for (i in 0 until 8) specSum[0] += b[i]
+                    for (i in 8 until 17) specSum[1] += b[i]
+                    for (i in 17 until 24) specSum[2] += b[i]
+                    specN++
+                }
+            }
+            if (specN >= 100) {
+                val n = specN.toDouble()
+                val low = specSum[0] / (n * 8); val mid = specSum[1] / (n * 9); val high = specSum[2] / (n * 7)
+                specNoGenre = false
+                runCatching { equalizer.usePresetForSound(low, mid, high) }
+            } else main.postDelayed(this, 250L)
         }
     }
 

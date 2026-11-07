@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.widgets
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import com.umutk.pulse.extras.music.artistFor
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -55,8 +57,8 @@ class PowerampWidget : AppWidgetProvider() {
             A_NEXT -> e.next()
             A_REW -> e.player.seekTo((e.player.currentPosition - 10_000L).coerceAtLeast(0L))
             A_FF -> e.player.let { it.seekTo(if (it.duration > 0) (it.currentPosition + 10_000L).coerceAtMost(it.duration) else it.currentPosition) }
-            A_SHUF -> e.player.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-            A_LOOP -> e.player.let { it.repeatMode = when (it.repeatMode) { 0 -> 2; 2 -> 1; else -> 0 } }
+            A_SHUF -> PlayModes.cycleShuffle(c)
+            A_LOOP -> PlayModes.cycleRepeat(c)
             else -> return super.onReceive(c, i)
         }
         refresh(c)
@@ -101,7 +103,7 @@ class PowerampWidget : AppWidgetProvider() {
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
                 style, title, st.current?.artistFor(c).orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
-                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c),
+                st.index, st.queue.size, PlayModes.shuffle != ShuffleKind.OFF, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c), WidgetOpts.look(c),
             )
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
@@ -113,7 +115,10 @@ class PowerampWidget : AppWidgetProvider() {
                     ((f.x + 0.075f * f.w) * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w + 0.075f * f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
                 )
                 // a tap anywhere else opens the player, straight on the now playing page and without an opening animation
-                setOnClickPendingIntent(R.id.pa_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 72, "route" to "music", "notif_open" to "player"))
+                // straight to the activity, like the music widget (the no-display trampoline is dropped by some launchers); each widget has its own request code
+                setOnClickPendingIntent(R.id.pa_img, android.app.PendingIntent.getActivity(c, 74000 + id,
+                    Intent().setClassName(c, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
                 // loop and shuffle sit at the left of the counter line, between the text and the seek line
                 setViewPadding(
                     R.id.pa_mid,
@@ -131,7 +136,8 @@ class PowerampWidget : AppWidgetProvider() {
 
         /** Whole-window fit: the largest scale at which W x H fits the box, centred. */
         fun fit(bw: Int, bh: Int): Fit {
-            val s = minOf(bw / W.toFloat(), bh / H.toFloat())
+            // the window never grows past MAX_DP of the screen for each unit: a widget pulled wider or taller keeps the window about the size of a normal one, centred, with empty space around it
+            val s = minOf(bw / W.toFloat(), bh / H.toFloat(), lastCap)
             val w = (W * s).toInt(); val h = (H * s).toInt()
             return Fit(s, (bw - w) / 2, (bh - h) / 2, w, h)
         }
@@ -141,6 +147,10 @@ class PowerampWidget : AppWidgetProvider() {
         /** The widget's box in pixels from its options: portrait uses the narrow width and the tall height, landscape the reverse. */
         /** How much smaller the bitmap is than the widget on screen (set by [boxPx]); the touch padding is in screen pixels. */
         private var lastShrink = 1f
+        /** The most the window may be scaled in bitmap pixels per unit (set by [boxPx] from [MAX_DP] and the screen's density). */
+        private var lastCap = Float.MAX_VALUE
+        /** The window is at most this many dp per unit: 320 x 200 dp, about a tenth more than the first size of the widget. */
+        private const val MAX_DP = 1.0f
 
         private fun boxPx(c: Context, id: Int): Pair<Int, Int> {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
@@ -154,6 +164,7 @@ class PowerampWidget : AppWidgetProvider() {
             // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
             val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
             lastShrink = shrink
+            lastCap = MAX_DP * d / shrink
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
         }
 
@@ -168,6 +179,7 @@ class PowerampWidget : AppWidgetProvider() {
             style: PowerampStyle, title: String, artist: String, album: String, frac: Float, playing: Boolean,
             posMs: Long, durMs: Long, cover: Bitmap?, index: Int, total: Int, shuffle: Boolean, repeat: Int, bw: Int, bh: Int, stars: Boolean = true,
             bg: String = if (stars) "stars" else "black", artPct: Int = 100, corners: Int = 1, artShadow: Boolean = false, artCircle: Boolean = false,
+            look: WidgetLook = WidgetLook(),
         ): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
@@ -179,8 +191,12 @@ class PowerampWidget : AppWidgetProvider() {
             }
             cv.translate(f.x.toFloat(), f.y.toFloat()); cv.scale(f.scale, f.scale)
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
-            val dim = 0xFFA8A8A8.toInt()
-            val accent = style.accent.toArgb()
+            val dim = look.sub
+            val accent = if (look.accent != 0) look.accent else style.accent.toArgb()
+            // the typeface of the text: the family chosen on the settings page, bold for the title
+            val family = WIDGET_FONTS.firstOrNull { it.first == look.font }?.third ?: "sans-serif"
+            val titleFace = Typeface.create(family, if (look.font == "casual" || look.font == "cursive" || look.font == "light") Typeface.NORMAL else Typeface.BOLD)
+            val textFace = Typeface.create(family, Typeface.NORMAL)
 
             // starfield: fixed seed, so the sky does not flicker between redraws
             val rnd = java.util.Random(11)
@@ -213,40 +229,48 @@ class PowerampWidget : AppWidgetProvider() {
 
             val x0 = 152f
             val maxW = W - x0 - 12f
-            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = 21f; typeface = Typeface.DEFAULT_BOLD }
+            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = look.title; textSize = 21f; typeface = titleFace }
             val lay = if (android.os.Build.VERSION.SDK_INT >= 23) android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
                 .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build()
             else @Suppress("DEPRECATION") android.text.StaticLayout(TextUtils.ellipsize(title, tp, maxW * 1.9f, TextUtils.TruncateAt.END), tp, maxW.toInt(), android.text.Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
             cv.save(); cv.translate(x0, 12f); lay.draw(cv); cv.restore()
             var y = 12f + lay.height + 17f
-            val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f }
+            val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f; typeface = textFace }
             cv.drawText(TextUtils.ellipsize(artist, ap, maxW, TextUtils.TruncateAt.END).toString(), x0, y, ap)
             y += 18f
             ap.textSize = 13f
-            cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), x0, y, ap)
+            if (look.album) cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), x0, y, ap)
 
             // loop, shuffle and the counter, on one line above the buttons
             val iy = 124f
             // the two marks are a third bigger, and their touch areas (pa_mid, below) a good deal larger
-            cv.save(); cv.scale(1.38f, 1.38f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
-            cv.save(); cv.scale(1.38f, 1.38f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
-            val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 14f; textAlign = Paint.Align.RIGHT }
-            cv.drawText(if (total > 0) "${index + 1}/$total" else "", W - 12f, iy + 5f, cp)
+            if (look.marks) {
+                cv.save(); cv.scale(1.38f, 1.38f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
+                cv.save(); cv.scale(1.38f, 1.38f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
+            }
+            val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 14f; textAlign = Paint.Align.RIGHT; typeface = textFace }
+            if (look.counter) cv.drawText(if (total > 0) "${index + 1}/$total" else "", W - 12f, iy + 5f, cp)
 
             // thin seek line
-            p.color = dim; p.alpha = 70; cv.drawRect(12f, 146f, W - 12f, 148f, p); p.alpha = 255
-            p.color = accent; cv.drawRect(12f, 146f, 12f + (W - 24f) * frac, 148f, p)
+            if (look.seek) {
+                p.color = dim; p.alpha = 70; cv.drawRect(12f, 146f, W - 12f, 148f, p); p.alpha = 255
+                p.color = accent; cv.drawRect(12f, 146f, 12f + (W - 24f) * frac, 148f, p)
+            }
 
             // transport: five buttons on the fifths of the window (the overlay views sit on these)
             val cy = 174f
-            val c = GREY
-            glyphSkip(cv, p, W * 0.16f, cy, c, back = true)
-            glyphSeek(cv, p, W * 0.33f, cy, c, back = true)
-            cv.save(); cv.scale(0.9f, 0.9f, W * 0.5f, cy)
-            if (playing) glyphPause(cv, p, W * 0.5f, cy, c) else glyphPlay(cv, p, W * 0.5f, cy, c)
-            cv.restore()
-            glyphSeek(cv, p, W * 0.67f, cy, c, back = false)
-            glyphSkip(cv, p, W * 0.84f, cy, c, back = false)
+            val c = look.button
+            // filled buttons, or only their outlines; every button has the size chosen on the settings page
+            p.style = if (look.outline) Paint.Style.STROKE else Paint.Style.FILL
+            p.strokeWidth = 2.2f; p.strokeJoin = Paint.Join.ROUND
+            val k = look.btnPct / 100f
+            fun big(x: Float, scale: Float = 1f, draw: () -> Unit) { cv.save(); cv.scale(k * scale, k * scale, x, cy); draw(); cv.restore() }
+            big(W * 0.16f) { glyphSkip(cv, p, W * 0.16f, cy, c, back = true) }
+            big(W * 0.33f) { glyphSeek(cv, p, W * 0.33f, cy, c, back = true) }
+            big(W * 0.5f, 0.9f) { if (playing) glyphPause(cv, p, W * 0.5f, cy, c) else glyphPlay(cv, p, W * 0.5f, cy, c) }
+            big(W * 0.67f) { glyphSeek(cv, p, W * 0.67f, cy, c, back = false) }
+            big(W * 0.84f) { glyphSkip(cv, p, W * 0.84f, cy, c, back = false) }
+            p.style = Paint.Style.FILL
             return out
         }
 

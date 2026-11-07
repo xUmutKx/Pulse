@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -140,6 +141,24 @@ private fun coverColor(title: String): Color {
     return Color.hsv(hue.toFloat(), .45f, .55f)
 }
 
+/** For each page, the index of the paragraph (of the chapter's own list) that its first piece belongs to: where the page begins when the chapter is read by scrolling. */
+fun pageStarts(paras: List<Para>, pages: List<List<Para>>): IntArray {
+    val out = IntArray(pages.size)
+    var idx = 0
+    fun skipBlank() { while (idx < paras.size && paras[idx].text.isBlank()) idx++ }
+    skipBlank()
+    var rest = paras.getOrNull(idx)?.text.orEmpty().trim()
+    pages.forEachIndexed { pi, pg ->
+        out[pi] = idx.coerceAtMost((paras.size - 1).coerceAtLeast(0))
+        for (piece in pg) {
+            val t = piece.text.trim()
+            if (rest.isEmpty() || t.length >= rest.length - 1) { idx++; skipBlank(); rest = paras.getOrNull(idx)?.text.orEmpty().trim() }
+            else rest = rest.drop(t.length).trimStart()
+        }
+    }
+    return out
+}
+
 /** Lays the paragraphs out in pages of the given size (pixels): a paragraph is cut between two lines when a page is full. */
 fun paginate(measurer: androidx.compose.ui.text.TextMeasurer, paras: List<Para>, w: Int, h: Int, body: TextStyle, head: TextStyle, gap: Float): List<List<Para>> {
     val pages = ArrayList<List<Para>>()
@@ -173,10 +192,12 @@ fun paginate(measurer: androidx.compose.ui.text.TextMeasurer, paras: List<Para>,
 @Composable
 fun EbookHub(onBack: () -> Unit) {
     var open by remember { mutableStateOf<Book?>(null) }
-    if (open != null) {
-        ReaderScreen(open!!) { open = null }
-    } else {
-        Shelf(onBack = onBack, onOpen = { open = it })
+    val rt = READER_THEMES.getOrElse(autoIndex()) { READER_THEMES.first() }
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (open != null) ReaderScreen(open!!) { open = null } else Shelf(onBack = onBack, onOpen = { open = it })
+        }
+        // the ad strip under the shelf and the reader (play build): see-through, in the reader's own colours
     }
 }
 
@@ -193,10 +214,12 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     val ctx = LocalContext.current
     var shelf by remember { mutableStateOf(shelfLoad(ctx)) }
     var note by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
     // books whose file was deleted outside Pulse leave the shelf
     LaunchedEffect(Unit) {
         val gone = withContext(Dispatchers.IO) { shelf.filter { !bookExists(ctx, it) } }
         if (gone.isNotEmpty()) {
+            gone.forEach { Ebook.forget(ctx, it.uri) }
             shelf = shelf.filter { b -> gone.none { it.uri == b.uri } }.also { shelfSave(ctx, it) }
             note = tr("Books deleted outside Pulse were removed from the shelf", "Pulse dışında silinen kitaplar raftan kaldırıldı")
         }
@@ -204,10 +227,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     // "" the shelf, "options" the options page
     var screen by remember { mutableStateOf("") }
     var drawer by remember { mutableStateOf(false) }
-    // a long press on a book asks whether it leaves the shelf (the file itself stays on the phone)
+    // the removal of one book asks first (the file itself stays on the phone)
     var askRemove by remember { mutableStateOf<Book?>(null) }
-    // a long press on a book: its favourite and removal (favourites are set here, on the shelf)
-    var askPick by remember { mutableStateOf<Book?>(null) }
+    // the ⋮ menu of one book: favourite, select, remove
+    var menuFor by remember { mutableStateOf<Book?>(null) }
+    // the books picked for a bulk action: a long press starts the picking, a tap adds or removes one
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var askBulk by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -230,19 +256,23 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     BackHandler {
         when {
             drawer -> drawer = false
+            picked.isNotEmpty() -> picked = emptySet()
             screen.isNotEmpty() -> screen = ""
             searching -> { searching = false; query = "" }
             else -> onBack()
         }
     }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        val book = Ebook.open(ctx, uri)
-        if (book == null) note = tr("This file cannot be read", "Bu dosya okunamıyor")
-        else {
-            shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
-            note = ""
+        // reading a file (a PDF's text too) takes time: it is done off the main thread, then the shelf is updated
+        scope.launch {
+            val book = withContext(Dispatchers.IO) { runCatching { Ebook.open(ctx, uri) }.getOrNull() }
+            if (book == null) note = tr("This file cannot be read", "Bu dosya okunamıyor")
+            else {
+                shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
+                note = ""
+            }
         }
     }
     val th = shelfTheme(dayNight == DAY_THEME, amoled)
@@ -251,7 +281,18 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         val shelfWood = wood && !amoled
         if (shelfWood) WoodBackground(Modifier.matchParentSize())
         Column(Modifier.fillMaxSize().then(if (shelfWood) Modifier else Modifier.background(th.bg)).padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // while books are picked, the top bar acts on them: close, all, favourite, remove
+            if (picked.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("close", th.ink, 22.dp) }
+                Text(tr("${picked.size} selected", "${picked.size} seçildi"), color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Text(tr("All", "Tümü"), color = th.ink, fontSize = 14.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { picked = listed.map { it.uri }.toSet() }.padding(horizontal = 8.dp, vertical = 8.dp))
+                Box(Modifier.size(40.dp).clickable {
+                    // all favourites go off when every picked book is one; otherwise the rest become favourites
+                    val allFav = picked.all { Ebook.isFavorite(ctx, it) }
+                    picked.forEach { if (Ebook.isFavorite(ctx, it) == allFav) Ebook.toggleFavorite(ctx, it) }
+                }, contentAlignment = Alignment.Center) { PIcon("heart", th.ink, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { askBulk = true }, contentAlignment = Alignment.Center) { PIcon("recycle", th.ink, 22.dp) }
+            } else Row(verticalAlignment = Alignment.CenterVertically) {
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", th.ink, 24.dp) }
                 } else {
@@ -290,7 +331,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                                 shelf = (shelf + found).also { shelfSave(ctx, it) }
                                 note = if (found.isEmpty()) tr("No new books in Books or Download", "Books ve Download'da yeni kitap yok") else ""
                             }
-                            PButton(tr("Empty shelf", "Rafı boşalt"), compact = true) { shelf = emptyList(); shelfSave(ctx, emptyList()); note = "" }
+                            PButton(tr("Empty shelf", "Rafı boşalt"), compact = true) { shelf.forEach { Ebook.forget(ctx, it.uri) }; shelf = emptyList(); shelfSave(ctx, emptyList()); note = "" }
                         }
                     }
                     item { SectionTitle(tr("Color", "Renk"), th) }
@@ -323,17 +364,25 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
                     LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
-                            Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askPick = b }), horizontalAlignment = Alignment.CenterHorizontally) {
+                            val sel = b.uri in picked
+                            // a tap opens the book, or picks it while books are picked; a long press picks it
+                            Column(Modifier.combinedClickable(onClick = { if (picked.isNotEmpty()) picked = if (sel) picked - b.uri else picked + b.uri else onOpen(b) }, onLongClick = { picked = picked + b.uri }), horizontalAlignment = Alignment.CenterHorizontally) {
                                 // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
                                 val pic by produceState<ImageBitmap?>(null, b.uri) {
                                     value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
                                 }
-                                Box(Modifier.size(cw, cw * 1.4f).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(cw, cw * 1.4f)) {
+                                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
                                     val shown = pic
                                     // the whole cover is shown (no cropping into a zoomed part); the card colour fills the rest
                                     if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                     else Text(b.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp))
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+                                }
+                                // a picked book is dimmed with a check; any other book has its ⋮ at the bottom-right corner
+                                if (sel) Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .35f)))
+                                if (sel) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape).background(th.ink), contentAlignment = Alignment.Center) { PIcon("check", th.bg, 16.dp) }
+                                if (!sel) Box(Modifier.align(Alignment.BottomEnd).padding(4.dp).size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { menuFor = b }, contentAlignment = Alignment.Center) { PIcon("more", Color.White, 18.dp) }
                                 }
                                 Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else th.ink, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
                             }
@@ -358,21 +407,30 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onExit = onBack,
             onClose = { drawer = false },
         )
-        askPick?.let { bk ->
-            com.umutk.pulse.extras.video.PickDialog(bk.title, listOf(tr("Favorite", "Favori") to Ebook.isFavorite(ctx, bk.uri), tr("Remove from shelf", "Raftan kaldır") to false), { askPick = null }) { i ->
-                if (i == 0) Ebook.toggleFavorite(ctx, bk.uri) else askRemove = bk
-                askPick = null
-            }
+        menuFor?.let { bk ->
+            val fav = Ebook.isFavorite(ctx, bk.uri)
+            ShelfMenu(th, bk.title, listOf(
+                Triple("heart", if (fav) tr("Remove from favorites", "Favorilerden çıkar") else tr("Add to favorites", "Favorilere ekle"), { Ebook.toggleFavorite(ctx, bk.uri) }),
+                Triple("check", tr("Select", "Seç"), { picked = picked + bk.uri }),
+                Triple("recycle", tr("Remove from shelf", "Raftan kaldır"), { askRemove = bk }),
+            ), onDismiss = { menuFor = null })
         }
         askRemove?.let { bk ->
             PDialog(
                 title = bk.title,
                 text = tr("Remove this book from the shelf? The file stays on the phone.", "Bu kitap raftan kaldırılsın mı? Dosya telefonda kalır."),
                 confirm = tr("Remove", "Kaldır"),
-                onConfirm = { shelf = shelf.filter { it.uri != bk.uri }.also { shelfSave(ctx, it) }; askRemove = null },
+                onConfirm = { Ebook.forget(ctx, bk.uri); shelf = shelf.filter { it.uri != bk.uri }.also { shelfSave(ctx, it) }; askRemove = null },
                 onDismiss = { askRemove = null },
             )
         }
+        if (askBulk) PDialog(
+            title = tr("${picked.size} books", "${picked.size} kitap"),
+            text = tr("Remove the selected books from the shelf? The files stay on the phone.", "Seçili kitaplar raftan kaldırılsın mı? Dosyalar telefonda kalır."),
+            confirm = tr("Remove", "Kaldır"),
+            onConfirm = { picked.forEach { Ebook.forget(ctx, it) }; shelf = shelf.filter { it.uri !in picked }.also { shelfSave(ctx, it) }; picked = emptySet(); askBulk = false },
+            onDismiss = { askBulk = false },
+        )
         if (about) PDialog(
             title = tr("Books", "Kitaplar"),
             text = tr("Your EPUB, TXT and PDF books, read on this phone. Nothing is uploaded.", "EPUB, TXT ve PDF kitaplarınız, bu telefonda okunur. Hiçbir şey yüklenmez."),
@@ -381,6 +439,23 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onDismiss = { about = false },
             info = true,
         )
+    }
+}
+
+/** The ⋮ menu of one book: plain rows, a tap does the action (no radio buttons, no OK). */
+@Composable
+private fun ShelfMenu(th: Theme, title: String, items: List<Triple<String, String, () -> Unit>>, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onDismiss() }, contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(horizontal = 32.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(th.bg).clickable { }.padding(vertical = 8.dp)) {
+            Text(title, color = th.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
+            items.forEach { (icon, label, act) ->
+                Row(Modifier.fillMaxWidth().clickable { act(); onDismiss() }.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(icon, th.ink, 22.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Text(label, color = th.ink, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }
 
@@ -472,6 +547,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var animStyle by remember { mutableStateOf(EbookPrefs.animStyle(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
+    var scrollMode by remember { mutableStateOf(EbookPrefs.scroll(ctx)) }
     var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
     var autoOn by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -595,41 +671,89 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 LaunchedEffect(autoOn, key) { if (autoOn) { kotlinx.coroutines.delay(autoSec * 1000L); if (autoOn) next() } }
                 LaunchedEffect(speaking, key) { spoken = IntRange.EMPTY; if (speaking) speaker.speak(curText[0]) else speaker.stop() }
                 LaunchedEffect(list) { pageCount = list?.size ?: 0 }
+                if (!scrollMode || list == null) {
                 AnimatedContent(
-                    targetState = key,
-                    transitionSpec = {
-                        when (if (eink) 0 else animStyle) {
-                            1 -> if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
-                                 else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
-                            // the next page feeds in from the top and the old one slides down out of the screen
-                            2 -> (slideInVertically(tween(320)) { -it } + fadeIn(tween(320))) togetherWith (slideOutVertically(tween(320)) { it } + fadeOut(tween(320)))
-                            3 -> (scaleIn(tween(220), initialScale = .9f) + fadeIn(tween(220))) togetherWith (scaleOut(tween(220), targetScale = .9f) + fadeOut(tween(220)))
-                            else -> (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
-                        }
-                    },
-                    label = "page",
-                ) { _ ->
-                    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
-                        // each paragraph; the words being read are highlighted
-                        var off = 0
-                        cur.forEach { p ->
-                            val start = off
-                            off += p.text.length + 1
-                            Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                        targetState = key,
+                        transitionSpec = {
+                            when (if (eink) 0 else animStyle) {
+                                1 -> if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
+                                     else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
+                                // the next page feeds in from the top and the old one slides down out of the screen
+                                2 -> (slideInVertically(tween(320)) { -it } + fadeIn(tween(320))) togetherWith (slideOutVertically(tween(320)) { it } + fadeOut(tween(320)))
+                                3 -> (scaleIn(tween(220), initialScale = .9f) + fadeIn(tween(220))) togetherWith (scaleOut(tween(220), targetScale = .9f) + fadeOut(tween(220)))
+                                else -> (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
+                            }
+                        },
+                        label = "page",
+                    ) { _ ->
+                        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
+                            // each paragraph; the words being read are highlighted
+                            var off = 0
+                            cur.forEach { p ->
+                                val start = off
+                                off += p.text.length + 1
+                                Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                            }
                         }
                     }
-                }
-                // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
-                Box(Modifier.fillMaxSize().pointerInput(chapter, shown, list?.size) {
-                    detectTapGestures(onTap = { o ->
-                        val w = size.width
-                        when {
-                            o.x < w / 3f -> prev()
-                            o.x > w * 2f / 3f -> next()
-                            else -> bars = !bars
-                        }
+                    // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
+                    Box(Modifier.fillMaxSize().pointerInput(chapter, shown, list?.size) {
+                        detectTapGestures(onTap = { o ->
+                            val w = size.width
+                            when {
+                                o.x < w / 3f -> prev()
+                                o.x > w * 2f / 3f -> next()
+                                else -> bars = !bars
+                            }
+                        })
                     })
-                })
+                } else {
+                    // reading by scrolling: the chapter is one long column; a page is where the paged layout would cut it
+                    val paras = chapters.getOrNull(chapter)?.paras.orEmpty()
+                    val starts = remember(list, paras) { pageStarts(paras, list) }
+                    val ls = androidx.compose.foundation.lazy.rememberLazyListState()
+                    val sc = androidx.compose.runtime.rememberCoroutineScope()
+                    // the chapter opens at the saved page
+                    LaunchedEffect(chapter, list.size) { ls.scrollToItem(starts.getOrElse(shown) { 0 }) }
+                    // the page follows what is on the screen, and is saved
+                    LaunchedEffect(ls, starts) {
+                        androidx.compose.runtime.snapshotFlow { ls.firstVisibleItemIndex }.collect { i ->
+                            val pg = starts.indexOfLast { it <= i }.coerceAtLeast(0)
+                            if (pg != page) { page = pg; bookmarked = Ebook.bookmarks(ctx, start.uri).contains("$chapter,$pg"); save() }
+                        }
+                    }
+                    // forward: a page left half way is first brought whole to the top; the next press goes to the next page. Back is the same the other way round.
+                    fun step(dir: Int) {
+                        val i = ls.firstVisibleItemIndex
+                        val cur = starts.indexOfLast { it <= i }.coerceAtLeast(0)
+                        val atStart = starts.getOrElse(cur) { 0 } == i && ls.firstVisibleItemScrollOffset == 0
+                        when {
+                            !atStart -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur) { 0 }) }
+                            dir > 0 && cur < list.size - 1 -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur + 1) { 0 }) }
+                            dir < 0 && cur > 0 -> sc.launch { ls.animateScrollToItem(starts.getOrElse(cur - 1) { 0 }) }
+                            dir > 0 && chapter < chapters.size - 1 -> { chapter++; page = 0 }
+                            dir < 0 && chapter > 0 -> { chapter--; page = -1 }
+                        }
+                    }
+                    pageTurner.value = { step(1) }
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        Modifier.fillMaxSize().pointerInput(chapter, list.size) {
+                            detectTapGestures(onTap = { o ->
+                                val w = size.width
+                                when { o.x < w / 3f -> step(-1); o.x > w * 2f / 3f -> step(1); else -> bars = !bars }
+                            })
+                        },
+                        state = ls, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 44.dp),
+                    ) {
+                        var off = 0
+                        val offs = paras.map { p -> val o = off; off += p.text.length + 1; o }
+                        itemsIndexed(paras) { ix, p ->
+                            Text(highlighted(p.text, offs[ix], spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                        }
+                        // room at the end, so the last page can stand at the top too
+                        item { Spacer(Modifier.height((maxHeight - 120.dp).coerceAtLeast(0.dp))) }
+                    }
+                }
                 Text("${shown + 1}/${(list?.size ?: 1).coerceAtLeast(1)}", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
                 if (autoOn) Text(tr("Autoscroll", "Otomatik"), color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
             }
@@ -711,6 +835,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 SettingRow(tr("Use AMOLED dark mode", "AMOLED koyu mod"), th) { PSwitch(amoled, { amoled = it; EbookPrefs.setAmoled(ctx, it) }) }
                 SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
+                SettingRow(tr("Scroll to read", "Kaydırarak oku"), th) { PSwitch(scrollMode, { scrollMode = it; EbookPrefs.setScroll(ctx, it) }) }
             }
         }
         if (panel == "quick" && b != null) {
@@ -773,6 +898,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             StepButton("+", th) { textSize = (textSize + 2).coerceAtMost(34); rp(ctx).edit().putInt("size", textSize).apply() }
                         }
                         SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
+                        SettingRow(tr("Scroll to read", "Kaydırarak oku"), th) { PSwitch(scrollMode, { scrollMode = it; EbookPrefs.setScroll(ctx, it) }) }
                         ReaderRow(tr("Page animation", "Sayfa animasyonu"), th, animName(animStyle)) { animStyle = (animStyle + 1) % 4; EbookPrefs.setAnimStyle(ctx, animStyle) }
                     }
                     "control" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -1132,20 +1258,28 @@ private fun PdfPages(ctx: Context, uri: Uri, page: Int, th: Theme, forward: Bool
     val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
         val wPx = with(density) { maxWidth.roundToPx() }
-        val count = r?.pageCount ?: 0
+        // a renderer that was closed (the page turned away) or a damaged file must not stop the screen: no pages then
+        val count = runCatching { r?.pageCount ?: 0 }.getOrDefault(0)
         val idx = page.coerceIn(0, (count - 1).coerceAtLeast(0))
         val bmp by produceState<Bitmap?>(null, idx, wPx, r) {
             value = null
-            value = if (r == null || count == 0) null else withContext(Dispatchers.IO) {
-                synchronized(r) {
-                    val pg = r.openPage(idx)
-                    val h = (wPx * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
-                    val out = Bitmap.createBitmap(wPx, h, Bitmap.Config.ARGB_8888)
-                    out.eraseColor(android.graphics.Color.WHITE)
-                    pg.render(out, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    pg.close()
-                    out
-                }
+            // a page that cannot be drawn (a damaged file, memory, a renderer closed meanwhile) shows as blank, it does not close the app
+            value = if (r == null || count == 0 || wPx <= 0) null else withContext(Dispatchers.IO) {
+                runCatching {
+                    synchronized(r) {
+                        val pg = r.openPage(idx)
+                        try {
+                            val h = (wPx * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
+                            val out = Bitmap.createBitmap(wPx, h, Bitmap.Config.ARGB_8888)
+                            out.eraseColor(android.graphics.Color.WHITE)
+                            pg.render(out, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            out
+                        } finally {
+                            // the page is always closed, or the next page cannot be opened
+                            pg.close()
+                        }
+                    }
+                }.getOrNull()
             }
         }
         AnimatedContent(targetState = idx, transitionSpec = {

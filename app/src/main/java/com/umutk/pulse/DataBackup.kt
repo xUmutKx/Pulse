@@ -26,7 +26,7 @@ object DataBackup {
     private val DROP = setOf("covers", "artist_art", "lyrics-cache", "lyrics-hits", "lyrics_index.gz", "music_library.tsv", "widget_blur_bg.jpg", "store", "kbd", "restore", "extras/ambient", "extras/skins")
     private const val MAX_FILE = 100L * 1024 * 1024
     private fun keepFile(rel: String, size: Long) =
-        size <= MAX_FILE && DROP.none { rel == it || rel.startsWith("$it/") } && !rel.endsWith(".tmp") && !rel.endsWith(".bad") && !rel.startsWith("autobackup.")
+        size <= MAX_FILE && DROP.none { rel == it || rel.startsWith("$it/") } && !rel.endsWith(".tmp") && !rel.endsWith(".bad") && !rel.startsWith("autobackup.") && !rel.startsWith("gamehub/icon_")
 
     /** What a restore put back, for the message shown after import. */
     class Restored(val files: Int, val prefs: List<String>, val folders: List<String>)

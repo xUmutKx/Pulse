@@ -49,6 +49,8 @@ class MonitorService : Service() {
     private var tv: android.widget.LinearLayout? = null
     private var lp: WindowManager.LayoutParams? = null
     private val lastAlert = HashMap<String, Long>()
+    private var lastKey: Pair<Boolean, List<Pair<String, String>>>? = null
+    private var lastText = ""
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -98,8 +100,10 @@ class MonitorService : Service() {
             if (System.currentTimeMillis() - Sampler.lastSample > 2500) Sampler.sample(this)
             val text = line()
             val its = items()
-            withContext(Dispatchers.Main) { showOverlay(its) }
-            if (Opt.notifOn) getSystemService(NotificationManager::class.java).notify(ID, build(text))
+            // the overlay and the notification are redrawn only when what they show has changed (the system UI does not like a new notification every second)
+            val key = Pair(Opt.ovOn, its)
+            if (key != lastKey) { lastKey = key; withContext(Dispatchers.Main) { showOverlay(its) } }
+            if (Opt.notifOn && text != lastText) { lastText = text; getSystemService(NotificationManager::class.java).notify(ID, build(text)) }
             alerts()
             if (!Opt.ovOn && !Opt.notifOn && Opt.alertTemp == 0 && Opt.alertBat == 0 && Opt.alertRam == 0) { stopSelf(); return }
             // the screen is off: nothing is looked at, so the readings and the alert checks come every 5 s instead of every second
@@ -183,7 +187,7 @@ fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
     "PulseTile" -> "settings"
     "DnsTile" -> "toolkit:wifi"   // the DNS tool of the Toolkit
     "RotationTile" -> "toolkit:rotate"
-    "CoverTile", "StandByTile" -> "cover"
+    "CoverTile" -> "cover"
     "FlashlightTile" -> "toolkit:flash"
     "StopwatchTile" -> "toolkit:stopwatch"
     "ToolkitTile" -> "toolkit"
@@ -311,9 +315,14 @@ class DiceTile : ToolkitTile() {
     // a tap rolls in the panel; the tile shows the face that came up
     override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
-    override fun flicker(): List<Int> = List(7) { DICE_FACES.random() }
+    // the die tumbles (eight frames, turning and changing face), then settles on the face that came up
+    override fun flicker(): List<Int> = DICE_SPIN.toList() + listOfNotNull(picture)
 }
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
+private val DICE_SPIN = intArrayOf(R.drawable.ic_dice_spin_0, R.drawable.ic_dice_spin_1, R.drawable.ic_dice_spin_2, R.drawable.ic_dice_spin_3,
+    R.drawable.ic_dice_spin_4, R.drawable.ic_dice_spin_5, R.drawable.ic_dice_spin_6, R.drawable.ic_dice_spin_7)
+private val COIN_SPIN = intArrayOf(R.drawable.ic_coin_spin_0, R.drawable.ic_coin_spin_1, R.drawable.ic_coin_spin_2, R.drawable.ic_coin_spin_3,
+    R.drawable.ic_coin_spin_4, R.drawable.ic_coin_spin_5, R.drawable.ic_coin_spin_6, R.drawable.ic_coin_spin_7)
 @androidx.annotation.RequiresApi(24)
 class CoinTile : ToolkitTile() {
     override val start: String get() = "toolkit:coin"
@@ -323,7 +332,8 @@ class CoinTile : ToolkitTile() {
     override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
     // the side that came up; before the first toss the tile shows heads
     override val picture: Int? get() = if (prefs.getString("coin_last", "Heads") == "Tails") R.drawable.ic_coin_tails else R.drawable.ic_coin_heads
-    override fun flicker(): List<Int> = List(7) { if (it % 2 == 0) R.drawable.ic_coin_heads else R.drawable.ic_coin_tails }
+    // the coin turns over (its width goes to the edge and back), then lands on the side that came up
+    override fun flicker(): List<Int> = COIN_SPIN.toList() + listOfNotNull(picture)
 }
 @androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {

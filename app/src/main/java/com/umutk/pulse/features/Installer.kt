@@ -182,9 +182,9 @@ object Installer {
 
     val cur: Profile get() = profiles.firstOrNull { it.name == active } ?: profiles[0]
 
-    /** root only when Shell really has root; otherwise the system installer. */
+    /** root whenever Shell really has root (the profile's "none" keeps the system screen); otherwise the system installer. */
     fun engine(p: Profile) = when {
-        p.auth == "root" && Shell.root == true -> "root"
+        Shell.root == true && p.auth != "none" -> "root"
         p.auth == "shizuku" && Shell.shizuku == 2 -> "shizuku"
         p.auth == "none" -> "none"
         else -> "system"
@@ -235,6 +235,7 @@ object Installer {
 
     /** Reads every picked file; returns the packages and a message for the ones that failed. */
     fun inspectAll(c: Context, uris: List<Uri>): Pair<List<Picked>, String> {
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return Pair(emptyList(), com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"))
         File(c.cacheDir, "installer").deleteRecursively()
         val ok = ArrayList<Picked>()
         val bad = ArrayList<String>()
@@ -455,7 +456,7 @@ object Installer {
         if (InstallShow.srcPkg == "com.android.vending" && Build.VERSION.SDK_INT >= 33) runCatching { sp.setPackageSource(PackageInstaller.PACKAGE_SOURCE_STORE) }
         val id = inst.createSession(sp)
         inst.openSession(id).use { s ->
-            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyCapped(o); s.fsync(o) } }
+            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyTo(o, 1 shl 20); s.fsync(o) } }
             val cb = PendingIntent.getBroadcast(c, id, Intent(c, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             s.commit(cb.intentSender)
         }
@@ -662,7 +663,8 @@ fun InstallerPage() {
             val e = Installer.engine(p)
             val m = Installer.modeOf(p, e)
             if (m != p.mode) Installer.status = "Silent needs root; using the system installer"
-            if (m == "background" && !uninst) {
+            // root installs run in the install service, so leaving the window does not stop them
+            if ((m == "background" || e == "root") && !uninst) {
                 Installer.startBackground(ctx, items); win = null; busy = false
                 return@launch
             }
@@ -741,7 +743,7 @@ fun InstallerPage() {
             if (Installer.cur.mode == "auto" && uris.size == 1) start(items)
         }
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> loadUris(uris) }
+    val picker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris -> loadUris(uris) }
     // several APKs picked in Files arrive here as paths: they are read like a pick, and shown as one multi install
     androidx.compose.runtime.LaunchedEffect(Unit) {
         val ps = InstallerPreload.paths

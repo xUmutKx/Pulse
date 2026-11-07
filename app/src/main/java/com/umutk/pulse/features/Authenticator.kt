@@ -146,6 +146,12 @@ internal object AuthStore {
         }
     }
 
+    /** The saved file cannot be opened with this phone's key (key lost after a reinstall, restore or lock-screen change): it is set aside, not deleted, so adding works again. */
+    fun quarantine(ctx: Context): Boolean {
+        val f = File(ctx.filesDir, FILE)
+        return f.exists() && f.renameTo(File(ctx.filesDir, "$FILE.unreadable-${System.currentTimeMillis()}"))
+    }
+
     fun save(ctx: Context, list: List<Acct>) {
         val arr = JSONArray()
         list.forEach { a ->
@@ -212,7 +218,7 @@ internal object AuthBackup {
 }
 
 /** The system prompt (fingerprint, face, or the screen lock when no biometrics are set) before the codes show. Nothing is asked when the phone has no lock at all. */
-private fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
+internal fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
     if (android.os.Build.VERSION.SDK_INT < 30) { onOk(); return }
     val auth = android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
     val bm = ctx.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
@@ -290,7 +296,11 @@ fun AuthenticatorScreen(back: () -> Unit) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { runCatching { AuthStore.load(ctx) } }.fold(
             onSuccess = { accounts = it },
-            onFailure = { loadErr = "Saved accounts could not be opened: ${it.message}" }
+            onFailure = {
+                // usually the Keystore key no longer matches the file (reinstall or restore): keep the old file aside and let new accounts be added
+                if (withContext(Dispatchers.IO) { runCatching { AuthStore.quarantine(ctx) }.getOrDefault(false) }) msg = "Earlier accounts could not be decrypted with this phone's key (${it.javaClass.simpleName}). Add them again or restore a backup."
+                else loadErr = "Saved accounts could not be opened: ${it.javaClass.simpleName} ${it.message}"
+            }
         )
     }
     // Wake at each whole second so the codes change right at the period boundary.
@@ -319,7 +329,7 @@ fun AuthenticatorScreen(back: () -> Unit) {
             parseOtpauth(text)?.let { a -> if (issuer.isBlank()) issuer = a.issuer; if (name.isBlank()) name = a.name }
         } else msg = tr("No authenticator QR code found", "Doğrulayıcı QR kodu bulunamadı")
     }
-    val pickQr = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickQr = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch { useQr(withContext(Dispatchers.IO) { decodeQr(ctx, uri) }) }
     }

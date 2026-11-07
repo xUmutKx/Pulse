@@ -17,23 +17,34 @@ data class LyricsRecord(
     val hasLyrics get() = !instrumental && (!syncedLyrics.isNullOrBlank() || !plainLyrics.isNullOrBlank())
 
     companion object {
+        /** A text of the JSON: null for a missing or JSON-null value (org.json would give the text "null" for it, and a song with no lyrics showed "null"). */
+        private fun JSONObject.text(k: String): String? = if (!has(k) || isNull(k)) null else optString(k, "").trim().takeIf { it.isNotEmpty() && !it.equals("null", true) }
+
         fun fromJson(o: JSONObject) = LyricsRecord(
             id = o.optLong("id"),
-            trackName = o.optString("trackName"),
-            artistName = o.optString("artistName"),
-            albumName = o.optString("albumName", "").ifBlank { null },
+            trackName = o.text("trackName").orEmpty(),
+            artistName = o.text("artistName").orEmpty(),
+            albumName = o.text("albumName"),
             instrumental = o.optBoolean("instrumental"),
-            plainLyrics = o.optString("plainLyrics", "").ifBlank { null },
-            syncedLyrics = o.optString("syncedLyrics", "").ifBlank { null },
+            plainLyrics = o.text("plainLyrics"),
+            syncedLyrics = o.text("syncedLyrics"),
         )
     }
 }
 
-data class LrcLine(val timeMs: Long, val text: String)
+/** A word (or syllable) of a line and the moment it starts: from the word tags of an enhanced LRC (`<00:12.30>word`). */
+data class LyricWord(val timeMs: Long, val text: String)
+
+data class LrcLine(val timeMs: Long, val text: String, val words: List<LyricWord> = emptyList())
 
 private val wordTag = Regex("""<\d+:\d{1,2}(?:[.:]\d{1,3})?>""")
 private val onlyNumbers = Regex("""[\d:.,\s\-–>\[\]]+""")
 private val stamp = Regex("""\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?]""")
+
+private fun tagMs(t: String): Long {
+    val m = Regex("""(\d+):(\d{1,2})(?:[.:](\d{1,3}))?""").matchEntire(t) ?: return 0L
+    return m.groupValues[1].toLong() * 60_000 + m.groupValues[2].toLong() * 1_000 + m.groupValues[3].padEnd(3, '0').toLong()
+}
 
 /** Timed lines sorted by time. A line with several stamps is repeated for each one. Header tags like `[ti:...]` are skipped. */
 fun parseLrc(lrc: String): List<LrcLine> {
@@ -42,12 +53,19 @@ fun parseLrc(lrc: String): List<LrcLine> {
         val stamps = stamp.findAll(raw).toList()
         if (stamps.isEmpty()) continue
         // word-by-word tags <00:12.30>, stray stamps in the text, and lines that are only numbers (a broken file shows seconds) are not lyrics
-        val text = raw.substring(stamps.last().range.last + 1).replace(wordTag, "").replace(stamp, "").trim()
+        val body = raw.substring(stamps.last().range.last + 1)
+        val text = body.replace(wordTag, "").replace(stamp, "").trim()
         if (text.isNotEmpty() && onlyNumbers.matches(text)) continue
+        // the word tags give the moment each word (or syllable) starts
+        val tags = wordTag.findAll(body).toList()
+        val words = tags.mapIndexedNotNull { i, t ->
+            val seg = body.substring(t.range.last + 1, if (i + 1 < tags.size) tags[i + 1].range.first else body.length)
+            if (seg.isBlank()) null else LyricWord(tagMs(t.value.trim('<', '>')), seg)
+        }
         for (m in stamps) {
             val fraction = m.groupValues[3].padEnd(3, '0').toLong() // "05" is 50 ms, "5" is 500 ms
             val ms = m.groupValues[1].toLong() * 60_000 + m.groupValues[2].toLong() * 1_000 + fraction
-            out += LrcLine(ms, text)
+            out += LrcLine(ms, text, if (stamps.size == 1 && words.size >= 2) words else emptyList())
         }
     }
     return out.sortedBy { it.timeMs }

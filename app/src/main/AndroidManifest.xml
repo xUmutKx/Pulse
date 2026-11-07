@@ -4,6 +4,8 @@
     <!-- LocalSend: the multicast announcement of nearby devices -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Files > Apps: the picked apps are uninstalled (the system asks for each one) -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Pulse Contacts -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
@@ -85,8 +87,8 @@
         android:name=".PulseApp"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_pulse_logo"
+        android:roundIcon="@mipmap/ic_pulse_logo"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pulse">
         <activity android:name=".MainActivity" android:exported="true" android:supportsPictureInPicture="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode">
@@ -113,7 +115,7 @@
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".IconDefault" android:targetActivity=".MainActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_ti_default" android:roundIcon="@mipmap/ic_ti_default" android:label="@string/app_name">
+        <activity-alias android:name=".IconDefault" android:targetActivity=".MainActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_pulse_logo" android:roundIcon="@mipmap/ic_pulse_logo" android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -180,7 +182,7 @@
                 <data android:pathPattern=".*\\..*\\.zip" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".FilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:label="@string/files_name">
+        <activity-alias android:name=".FilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@drawable/launch_files" android:roundIcon="@drawable/launch_files" android:label="@string/files_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -219,7 +221,7 @@
                 <data android:mimeType="vnd.android.cursor.item/event" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".CalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@mipmap/ic_calendar" android:roundIcon="@mipmap/ic_calendar" android:label="Calendar">
+        <activity-alias android:name=".CalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@drawable/launch_calendar" android:roundIcon="@drawable/launch_calendar" android:label="Calendar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -283,15 +285,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".ContactsLauncher" android:enabled="false" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@mipmap/ic_contacts" android:roundIcon="@mipmap/ic_contacts" android:label="@string/contacts_name">
+        <activity-alias android:name=".ContactsLauncher" android:enabled="false" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@drawable/launch_contacts" android:roundIcon="@drawable/launch_contacts" android:label="@string/contacts_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
-        <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
-        <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@mipmap/ic_ad_artcraft" android:roundIcon="@mipmap/ic_ad_artcraft" android:label="ArtCraft">
+        <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -328,7 +330,7 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".PhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@mipmap/ic_photos" android:roundIcon="@mipmap/ic_photos" android:label="@string/photos_name">
+        <activity-alias android:name=".PhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@drawable/launch_photos" android:roundIcon="@drawable/launch_photos" android:label="@string/photos_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -405,7 +407,6 @@
         <!-- the Clock = Lucid Alarm (extras/lucid, GPL-3.0, DarkAspect1): ring screen, receivers and services -->
         <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" android:exported="false" android:theme="@style/Theme.Lucid" android:windowSoftInputMode="adjustResize" android:label="Clock" />
         <!-- lyrics over the lock screen (the full-screen notification of the lyrics ticker opens it while locked) -->
-        <activity android:name="com.umutk.pulse.extras.lyrics.LyricsLockActivity" android:exported="false" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.LyricsLock" />
         <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" android:exported="true" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showOnLockScreen="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.Lucid.Ringing" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" android:exported="false" />
@@ -643,6 +644,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- a video stream opened with "open with" from an app (as Free Download Manager does): the same window, to download or to play it outside -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" android:mimeType="video/*" />
+                <data android:scheme="https" android:mimeType="video/*" />
+                <data android:scheme="http" android:mimeType="application/x-mpegURL" />
+                <data android:scheme="https" android:mimeType="application/x-mpegURL" />
+                <data android:scheme="http" android:mimeType="application/vnd.apple.mpegurl" />
+                <data android:scheme="https" android:mimeType="application/vnd.apple.mpegurl" />
+            </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
@@ -683,7 +696,7 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
-        <service android:name="com.umutk.pulse.FloatingKeysTile" android:exported="true" android:label="Floating keys" android:icon="@drawable/ic_qs_keys"
+        <service android:name="com.umutk.pulse.extras.keyboard.KeyboardTile" android:exported="true" android:label="Keyboard" android:icon="@drawable/ic_qs_keys"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
@@ -697,6 +710,10 @@
         <service android:name="com.umutk.pulse.extras.watchdog.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name="com.umutk.pulse.extras.watchdog.VideoPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name="com.umutk.pulse.extras.watchdog.AmbientPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <!-- Media3 session service for the video screen: the system media controls drive the video, not the music -->
+        <service android:name="com.umutk.pulse.extras.video.VideoSessionService" android:exported="false" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
+        </service>
         <!-- Media3 session service the player binds to (MusicPlayerEngine) -->
         <service android:name="com.umutk.pulse.extras.music.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback">
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
@@ -725,15 +742,12 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
         <!-- opens a tool page, bringing the one that is already open to the front instead of starting another (notifications and widgets use it) -->
+        <!-- the ad offer before a tile's screen (the play build): a transparent window, started from the tile -->
+        <activity android:name="com.umutk.pulse.ads.AdGateActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
+        <activity android:name="com.umutk.pulse.extras.keyboard.KeyboardFloatActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <activity android:name=".ToolOpenActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <!-- screen cover tile (features/CoverTile): needs the overlay permission, the tile opens that page until it is granted -->
         <service android:name="com.umutk.pulse.features.CoverTile" android:exported="true" android:label="Screen cover" android:icon="@drawable/ic_qs_cover"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
-            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
-        </service>
-        <!-- the advanced screen cover (features/StandBy): the manual trigger -->
-        <service android:name="com.umutk.pulse.features.StandByTile" android:exported="true" android:label="StandBy" android:icon="@drawable/ic_qs_cover"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
@@ -840,9 +854,6 @@
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
-        <service android:name=".FloatingKeysService" android:exported="false" android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a floating key button over other apps with a small panel of keys (Esc, arrows, F keys)" />
-        </service>
         <!-- Island (extras/island): a pill at the top of the screen that shows the song, notifications, charger, headset, volume, torch, removed apps and screenshots -->
         <service android:name="com.umutk.pulse.extras.island.IslandService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a pill over the camera that shows what is going on" />
@@ -854,7 +865,7 @@
         <receiver android:name="com.umutk.pulse.extras.island.IslandBoot" android:exported="true">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
-        <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_island" android:roundIcon="@mipmap/ic_ad_island" android:label="Island">
+        <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_island" android:roundIcon="@drawable/launch_island" android:label="Island">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1011,6 +1022,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_17" />
         </receiver>
         <!-- App Lock: sees which app is in front and shows the lock card (see applock/LockService.kt); the user switches it on in Accessibility settings -->
+        <receiver android:name="com.umutk.pulse.extras.keyboard.LoginSaveReceiver" android:exported="false" />
         <service android:name="com.umutk.pulse.features.CoverAccessibilityService" android:exported="true" android:label="Pulse · Screen cover layer"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
@@ -1433,6 +1445,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
         <!-- Music player (white noise and playlists inside it), video: one activity, one launcher entry each (the entry's name picks the page) -->
+        <!-- Pulse's own file picker, used wherever the system document picker used to open -->
+        <!-- the home-screen shortcut of a game (Game Hub): starts it, also when it is hidden -->
+        <activity android:name=".extras.gamehub.GameLaunch" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" />
+        <activity android:name=".PulsePickActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
         <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.tools"
             android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
 
@@ -1481,135 +1497,147 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <activity android:name=".KeyboardSettingsActivity" android:exported="true" android:theme="@style/Theme.Pulse" android:label="Pulse Keyboard" android:taskAffinity="com.umutk.pulse.tools"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
-        <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" android:label="Pulse Keyboard" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
+        <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" android:label="Pulse Keyboard" android:exported="true" android:directBootAware="true" android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
                 <action android:name="android.view.InputMethod" />
             </intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/method" />
         </service>
-        <activity-alias android:name=".MusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Music Player">
+        <activity-alias android:name=".MusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_music" android:roundIcon="@drawable/launch_music" android:label="Music Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".VideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_video" android:roundIcon="@mipmap/ic_video" android:label="Video Player">
+        <activity-alias android:name=".VideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_video" android:roundIcon="@drawable/launch_video" android:label="Video Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:mimeType="video/*"/></intent-filter>
         </activity-alias>
-        <activity-alias android:name=".WhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_noise" android:roundIcon="@mipmap/ic_ad_noise" android:label="White Noise">
+        <activity-alias android:name=".WhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_noise" android:roundIcon="@drawable/launch_noise" android:label="White Noise">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".VoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_voice" android:roundIcon="@mipmap/ic_ad_voice" android:label="Voice Recorder">
+        <activity-alias android:name=".VoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_voice" android:roundIcon="@drawable/launch_voice" android:label="Voice Recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".NotesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Notes">
+        <activity-alias android:name=".NotesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notes" android:roundIcon="@drawable/launch_notes" android:label="Notes">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_paint" android:roundIcon="@mipmap/ic_ad_paint" android:label="Paint">
+        <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_paint" android:roundIcon="@drawable/launch_paint" android:label="Paint">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".BrowserLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_browser" android:roundIcon="@mipmap/ic_ad_browser" android:label="Browser">
+        <activity-alias android:name=".BrowserLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_browser" android:roundIcon="@drawable/launch_browser" android:label="Browser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_office" android:roundIcon="@mipmap/ic_ad_office" android:label="Office">
+        <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_office" android:roundIcon="@drawable/launch_office" android:label="Office">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_calc" android:roundIcon="@mipmap/ic_ad_calc" android:label="Calculator">
+        <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_calc" android:roundIcon="@drawable/launch_calc" android:label="Calculator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_clock" android:roundIcon="@mipmap/ic_ad_clock" android:label="Clock">
+        <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_clock" android:roundIcon="@drawable/launch_clock" android:label="Clock">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Books">
+        <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_books" android:roundIcon="@drawable/launch_books" android:label="Books">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_tempmail" android:roundIcon="@mipmap/ic_ad_tempmail" android:label="TempMail">
+        <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_tempmail" android:roundIcon="@drawable/launch_tempmail" android:label="TempMail">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_keyboard" android:roundIcon="@mipmap/ic_ad_keyboard" android:label="Keyboard">
+        <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_keyboard" android:roundIcon="@drawable/launch_keyboard" android:label="Keyboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_weather" android:roundIcon="@mipmap/ic_ad_weather" android:label="Weather">
+        <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_weather" android:roundIcon="@drawable/launch_weather" android:label="Weather">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
         <!-- standalone entries for the in-app tools (the route is picked by the alias name in ExtraToolActivity.routeOf) -->
-        <activity-alias android:name=".MessagesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_messages" android:roundIcon="@mipmap/ic_ad_messages" android:label="Messages">
+        <activity-alias android:name=".MessagesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_messages" android:roundIcon="@drawable/launch_messages" android:label="Messages">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_record" android:roundIcon="@mipmap/ic_ad_record" android:label="Screen recorder">
+        <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_screenrec" android:roundIcon="@drawable/launch_screenrec" android:label="Screen recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".NotifHistLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notif" android:roundIcon="@mipmap/ic_ad_notif" android:label="Notification history">
+        <activity-alias android:name=".NotifHistLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notifhist" android:roundIcon="@drawable/launch_notifhist" android:label="Notification history">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_extras" android:roundIcon="@mipmap/ic_ad_extras" android:label="Store">
+        <activity-alias android:name=".ExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_store" android:roundIcon="@drawable/launch_store" android:label="Store">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".LocalSendLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_localsend" android:roundIcon="@mipmap/ic_ad_localsend" android:label="LocalSend">
+        <activity-alias android:name=".LocalSendLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_localsend" android:roundIcon="@drawable/launch_localsend" android:label="LocalSend">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_localsend" android:roundIcon="@mipmap/ic_ad_localsend" android:label="Palette">
+        <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_palette" android:roundIcon="@drawable/launch_palette" android:label="Palette">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_blackout" android:roundIcon="@mipmap/ic_ad_blackout" android:label="BlackOut">
+        <activity-alias android:name=".GameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_gamehub" android:roundIcon="@drawable/launch_gamehub" android:label="Game Hub">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".HealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_health" android:roundIcon="@mipmap/ic_ad_health" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout" android:roundIcon="@drawable/launch_blackout" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1704,11 +1732,36 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDetailWidget" android:label="Pulse · Weather, detail" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_detail" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.widgets.WeatherWideWidget" android:label="Pulse · Weather, wide" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_wide" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.CoverWidget" android:label="Pulse · Screen cover" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.umutk.pulse.action.COVER_TOGGLE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cover" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.CoverWideWidget" android:label="Pulse · Screen cover, wide" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cover_wide" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.CoverTallWidget" android:label="Pulse · Screen cover, tall" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cover_tall" />
         </receiver>
         <receiver android:name="com.umutk.pulse.widgets.WeatherClearWidget" android:label="Pulse · Weather and clock, no background" android:exported="false">
             <intent-filter>
@@ -1716,6 +1769,42 @@
                 <action android:name="com.umutk.pulse.action.WEATHER_NEXT" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_clear" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDailyWidget" android:label="Pulse · Weather, daily forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_daily" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherHourlyWidget" android:label="Pulse · Weather, hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherNowDailyWidget" android:label="Pulse · Weather and daily forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_now_daily" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherNowHourlyWidget" android:label="Pulse · Weather and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_now_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDailyHourlyWidget" android:label="Pulse · Daily and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_daily_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherAllWidget" android:label="Pulse · Weather, daily and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_all" />
         </receiver>
 
         <!-- BlackOut (extras/blackout): Pulse is also an LSPosed / Vector module (legacy entry, assets/xposed_init); the module turns dark greys black inside the apps ticked in LSPosed -->
@@ -1734,6 +1823,12 @@
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/blackout_watch" />
+        </service>
+        <!-- the accessibility keyboard: a keyboard window over any app while a text field is focused (extras/keyboard/AccessKeyboard.kt); switched on in Settings > Keyboard -->
+        <service android:name="com.umutk.pulse.extras.keyboard.AccessKeyboardService" android:exported="true" android:label="Pulse · Floating keyboard"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_keyboard" />
         </service>
         <!-- the keyboard's "Picture to ASCII" tool: opened from the keyboard, copies its text picture to the clipboard -->
         <activity android:name="com.umutk.pulse.extras.keyboard.AsciiMakerActivity" android:exported="false" android:label="Picture to ASCII" android:taskAffinity="" android:excludeFromRecents="true" />

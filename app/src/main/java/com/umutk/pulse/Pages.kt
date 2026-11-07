@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.outlined.Crop
 import com.umutk.pulse.features.themeWallpaper
 import com.umutk.pulse.features.builtinWall
+import android.content.Context
 import android.content.Intent
 import com.umutk.pulse.features.ThemeWallPicture
 import com.umutk.pulse.features.setThemeWallPos
@@ -425,7 +426,20 @@ fun SettingsPage() {
                 var q by remember { mutableStateOf("") }
                 PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
                 // the categories as a plain list: the icon, the name and what is inside (the way Poweramp's settings list its groups)
+                // a search finds the settings rows too (by their text), each one opens its category
+                if (q.isNotBlank()) {
+                    val rows = SETTINGS_ROWS.filter { (_, en, tu) -> en.contains(q, true) || tu.contains(q, true) }
+                    rows.forEach { (catId, en, tu) ->
+                        val catName = cats.firstOrNull { it.id == catId }?.title.orEmpty()
+                        Row(Modifier.fillMaxWidth().clickable { cat = catId }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text(tr(en, tu), color = T.text, fontSize = 15.sp); Text(catName, color = T.sub, fontSize = 12.sp) }
+                            Text("›", color = T.sub, fontSize = 22.sp)
+                        }
+                    }
+                }
                 cats.filter { q.isBlank() || it.title.contains(q, true) || it.sub.contains(q, true) }.forEach { c ->
+                    // the ad credit and Premium sit between Monitor and About (play build only)
+                    if (c.id == "about") AdPassCard()
                     Row(Modifier.fillMaxWidth().clickable { cat = c.id }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(c.icon, T.accent, 26.dp) }
                         Spacer(Modifier.width(14.dp))
@@ -473,13 +487,22 @@ fun SettingsPage() {
                 }
                 }
                 Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                // theme locks: a look other than the one in use is locked until one ad opens them all for 2 minutes
+                val themeGate = com.umutk.pulse.ads.rememberAdGate(tr("Unlock themes", "Temaları aç"), tr("Watch a short ad to pick any theme for 2 minutes.", "2 dakika boyunca istediğin temayı seçmek için kısa bir reklam izle."), key = com.umutk.pulse.ads.ThemeLock.KEY, minutes = com.umutk.pulse.ads.ThemeLock.MINUTES, pass = false)
+                // the lock state is read again every few seconds, so the padlocks close when the 2 minutes run out
+                val lockTick by produceState(0L) { while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(5000) } }
                 @Composable fun ThemeRow(pair: List<PTheme>, center: Boolean = false) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, if (center) Alignment.CenterHorizontally else Alignment.Start)) {
-                        pair.forEach { th -> Column((if (center) Modifier.fillMaxWidth(.5f) else Modifier.weight(1f)).semantics { contentDescription = th.name }.clickable { Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
-                            ThemePreview(th)
-                            Text(th.name, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
-                        } }
-                        if (pair.size == 1 && !center) Spacer(Modifier.weight(1f))
+                        pair.forEach { th ->
+                            val locked = remember(th.id, lockTick) { com.umutk.pulse.ads.ThemeLock.isLocked(ctx, th.id) }
+                            Column((if (center) Modifier.fillMaxWidth(.5f) else Modifier.weight(1f)).semantics { contentDescription = th.name }.clickable { if (locked) themeGate { Cfg.setTheme(ctx, th.id) } else Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
+                                Box(Modifier.fillMaxWidth()) {
+                                    Box(Modifier.fillMaxWidth().alpha(if (locked) .45f else 1f)) { ThemePreview(th) }
+                                    if (locked) PIcon("lock", T.text, 26.dp, Modifier.align(Alignment.Center))
+                                }
+                                Text(th.name, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
                     }
                 }
                 fun byId(vararg ids: String) = ids.map { id -> Themes.first { it.id == id } }
@@ -715,4 +738,126 @@ private suspend fun exportUsage(ctx: android.content.Context, rows: List<UsageRo
     val name = "pulse-usage-${days}d-" + System.currentTimeMillis() / 1000 + ".csv"
     docScanSave(ctx, name, "text/csv") { it.write(sb.toString().toByteArray()) }
     return tr("Saved $name in Download/Pulse", "$name kaydedildi, Download/Pulse içinde")
+}
+
+/** The ad credit: one 60-second rewarded ad opens every ad-gated feature for an hour (the play build; nothing in the foss build). */
+@Composable
+fun AdPassCard() {
+    if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
+    val ctx = LocalContext.current
+    var left by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            left = com.umutk.pulse.ads.AdUnlocks.until(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) - System.currentTimeMillis()
+            delay(15_000L)
+        }
+    }
+    val gate = com.umutk.pulse.ads.rememberAdGate(
+        tr("Ad credit", "Reklam kredisi"),
+        tr("Watch the ad to open the apps for 5 minutes.", "Uygulamaları 5 dakika açmak için reklamı izle."),
+        key = com.umutk.pulse.ads.AdUnlocks.PASS,
+        minutes = com.umutk.pulse.ads.AdUnlocks.PASS_MINUTES,
+    )
+    val mins = (left / 60_000L).coerceAtLeast(0L)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tr("Ad credit", "Reklam kredisi"), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(
+                if (mins > 0) tr("Open: $mins min left", "Açık: $mins dk kaldı") else tr("One ad = 5 minutes open", "Bir reklam = 5 dakika açık"),
+                color = T.sub, fontSize = 12.sp,
+            )
+        }
+        CardButton("video", tr("Watch", "İzle")) { gate { } }
+    }
+    PremiumCard()
+}
+
+/** Premium: one purchase, no ads, every feature. The purchase is Google Play's one-time product, made inside Pulse (play build). */
+@Composable
+fun PremiumCard() {
+    if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
+    val ctx = LocalContext.current
+    var owned by remember { mutableStateOf(com.umutk.pulse.ads.Premium.on(ctx)) }
+    var note by remember { mutableStateOf("") }
+    var features by remember { mutableStateOf(false) }
+    // the purchase sheet of Google Play, opened inside Pulse; the card shows the result
+    val buy: () -> Unit = {
+        val act = ctx.findActivity()
+        if (act != null) {
+            note = tr("Opening Google Play…", "Google Play açılıyor…")
+            com.umutk.pulse.ads.PulseAds.buyPremium(act) { ok ->
+                owned = com.umutk.pulse.ads.Premium.on(ctx)
+                note = if (ok || owned) tr("Thank you. Pulse Premium is active.", "Teşekkürler. Pulse Premium açık.")
+                    else tr("The purchase did not finish. Nothing was charged.", "Satın alma tamamlanmadı. Ücret alınmadı.")
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon("star", T.accent, 22.dp)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            val msg = note.ifEmpty { if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık") else "" }
+            if (msg.isNotEmpty()) Text(msg, color = T.sub, fontSize = 12.sp)
+        }
+        CardButton("info", tr("Features", "Özellikler")) { features = true }
+        if (!owned) {
+            Spacer(Modifier.width(6.dp))
+            CardButton("apps", tr("Get", "Al")) { buy() }
+        }
+    }
+    if (features) PremiumFeatures(owned, onBuy = buy) { features = false }
+}
+
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/** What Premium unlocks: each line with its own icon (the look's icon set). */
+@Composable
+private fun PremiumFeatures(owned: Boolean, onBuy: () -> Unit, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val rows = listOf(
+        "apps" to tr("Every feature, no waiting for an ad", "Her özellik, reklam beklemeden"),
+        "video" to tr("No ads anywhere", "Hiçbir yerde reklam yok"),
+        "lock" to tr("Every theme open, all the time", "Her tema her zaman açık"),
+        "music" to tr("Music recap, Game Hub, Poweramp and lyrics share", "Müzik özeti, Game Hub, Poweramp ve şarkı sözü paylaşımı"),
+        "folder" to tr("Files, Office and Photos without limits", "Dosyalar, Office ve Fotoğraflar sınırsız"),
+        "performance" to tr("Monitor and alerts", "Monitör ve uyarılar"),
+        "star" to tr("One payment, one account, one device", "Tek ödeme, bir hesap, bir cihaz"),
+    )
+    WinAlert(
+        onDismissRequest = onClose,
+        title = { Text("Premium", color = T.text) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                rows.forEach { (icon, label) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon(icon, T.accent, 20.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(label, color = T.text, fontSize = 13.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (!owned) com.umutk.pulse.PButton(tr("Get", "Al")) {
+                onBuy()
+                onClose()
+            }
+        },
+        dismissButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { onClose() } },
+    )
+}
+
+/** A small bordered button with a Fluent-style icon (the look's own icon set through PIcon). */
+@Composable
+private fun CardButton(icon: String, label: String, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(8.dp)).border(1.dp, T.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon(icon, T.text, 16.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = T.text, fontSize = 13.sp)
+    }
 }

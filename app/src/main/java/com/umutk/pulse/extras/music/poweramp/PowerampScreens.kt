@@ -62,6 +62,11 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.RepeatOn
+import androidx.compose.material.icons.rounded.RepeatOneOn
+import androidx.compose.material.icons.rounded.ShuffleOn
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.foundation.layout.fillMaxHeight
 import com.umutk.pulse.Icon
 import androidx.compose.material3.Slider
@@ -270,8 +275,20 @@ fun NowPlayingScreen(
     var drag by remember { mutableStateOf<Float?>(null) }
     val shownMs = drag?.let { (it * durationMs).roundToInt() } ?: positionMs
     val rawProgress = if (durationMs > 0) (shownMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-    // eases the bar between the position polls; a drag follows the finger directly
-    val animProgress by animateFloatAsState(rawProgress, label = "seek")
+    // the bar moves every display frame (120 Hz on a 120 Hz screen): the last polled position is carried on by the frame clock while
+    // playing. Read only in the draw phase (SeekBar's progress lambda), so the page itself does not recompose every frame.
+    var frameNs by remember { mutableStateOf(0L) }
+    var anchorMs by remember { mutableStateOf(positionMs) }
+    var anchorNs by remember { mutableStateOf(0L) }
+    LaunchedEffect(positionMs) { anchorMs = positionMs; anchorNs = System.nanoTime() }
+    LaunchedEffect(playing) { while (playing) androidx.compose.runtime.withFrameNanos { frameNs = it } }
+    val liveFrac: () -> Float = {
+        val now = frameNs
+        if (drag == null && playing && durationMs > 0 && now > 0L && anchorNs > 0L) {
+            val ms = (anchorMs + (now - anchorNs) / 1_000_000L).coerceIn(0L, durationMs.toLong())
+            ms.toFloat() / durationMs
+        } else rawProgress
+    }
     val ctx = LocalContext.current
     // the lyrics button shows only when the track has lyrics on the device, unless the player setting keeps it always
     val hasLyrics by produceState(false, track?.path) {
@@ -316,7 +333,7 @@ fun NowPlayingScreen(
             val view = LocalView.current
             DisposableEffect(view) { onDispose { if (android.os.Build.VERSION.SDK_INT >= 29) view.systemGestureExclusionRects = emptyList() } }
             // the cover settles a little smaller when the music is paused and springs back when it plays
-            val coverScale by animateFloatAsState(if (playing) 1f else .9f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
+            val coverScale by animateFloatAsState(if (playing) 1f else .97f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
             Box(
                 // not clipped here: each cover is clipped itself, so one pulled up or down can leave the square
                 // the cover reaches out over the page margin on both sides, so it sits close to the screen edges
@@ -361,7 +378,7 @@ fun NowPlayingScreen(
                 if (track != null) {
                     RatingStar(rating, onRate, favourite, onFavourite, style, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = 2.dp))
                     TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
-                    if (onLyrics != null && !lyricsOpen) LyricsIcon(track, onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
+                    if (onLyrics != null && !lyricsOpen) LyricsIcon(track, onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 46.dp, bottom = 2.dp))
                 }
                 // the lyrics lie over the cover square, above the star, the menu and the lyrics button
                 Box(Modifier.fillMaxSize().zIndex(10f)) {
@@ -393,11 +410,10 @@ fun NowPlayingScreen(
                                 .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                         // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
-                        val sub = listOfNotNull(track.shownArtist(), track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
-                        if (sub.isNotEmpty()) Text(
-                            sub,
-                            color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp)
+                        val artistLine = track.shownArtist()
+                        val albumLine = track.album?.takeIf { it.isNotBlank() }
+                        if (artistLine.isNotEmpty() || albumLine != null) Row(
+                            Modifier.clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp)
                                 .pointerInput(Unit) {
                                     detectTapGestures(onLongPress = {
                                         when (PowerampLineAction.longPress(ctx)) {
@@ -408,14 +424,26 @@ fun NowPlayingScreen(
                                         }
                                     })
                                 },
-                        )
+                        ) {
+                            // the artist opens that artist's page in the library; the album is only shown
+                            if (artistLine.isNotEmpty()) Text(
+                                artistLine,
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false).clickable { com.umutk.pulse.extras.music.MusicNav.artist = artistLine },
+                            )
+                            if (albumLine != null) Text(
+                                if (artistLine.isNotEmpty()) " - $albumLine" else albumLine,
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
                     }
                 }
             }
             Spacer(Modifier.height(19.dp))
             // mode row as pills: equalizer, sleep timer, track count centred, repeat and shuffle at the ends
             Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                LiveBarsBtn(playing, tr("Equalizer", "Ekolayzır"), style, 65.dp, onOpenEffects)
+                LiveBarsBtn(playing, tr("Equalizer", "Ekolayzır"), style, 65.dp, track, onOpenEffects)
                 Spacer(Modifier.width(4.5.dp))
                 FlatBtn(Icons.Rounded.Timer, tr("Sleep timer", "Uyku zamanlayıcı"), sleepMinutes != 0, style) { sleepOpen = true }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -426,24 +454,34 @@ fun NowPlayingScreen(
                         modifier = Modifier.clip(CircleShape).background(style.panel).padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
-                ModeMenuBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat, items = listOf(
+                val modesCtx = androidx.compose.ui.platform.LocalContext.current
+                PlayModes.load(modesCtx)
+                ModeMenuBtn(if (repeatMode == Player.REPEAT_MODE_ONE) androidx.compose.material.icons.Icons.Rounded.RepeatOneOn else if (repeatMode == Player.REPEAT_MODE_ALL) androidx.compose.material.icons.Icons.Rounded.RepeatOn else IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat, items = listOf(
                     ModeItem(tr("Repeat off", "Tekrar kapalı"), repeatMode == Player.REPEAT_MODE_OFF) { onRepeatMode?.invoke(Player.REPEAT_MODE_OFF) },
                     ModeItem(tr("Repeat all", "Tümünü tekrarla"), repeatMode == Player.REPEAT_MODE_ALL) { onRepeatMode?.invoke(Player.REPEAT_MODE_ALL) },
                     ModeItem(tr("Repeat one", "Tek parçayı tekrarla"), repeatMode == Player.REPEAT_MODE_ONE) { onRepeatMode?.invoke(Player.REPEAT_MODE_ONE) },
                 ))
                 Spacer(Modifier.width(4.5.dp))
-                ModeMenuBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onClick = onShuffle, items = listOf(
+                // the shuffle button goes round the kinds (off, queue, all songs, albums); its list also has a new order for the one that is on
+                val sk = PlayModes.shuffle
+                ModeMenuBtn(if (sk == ShuffleKind.OFF) IV("shuffle") else androidx.compose.material.icons.Icons.Rounded.ShuffleOn, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, badge = PlayModes.badge(sk), onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
+                    ModeItem(tr("Shuffle off", "Karıştırma kapalı"), sk == ShuffleKind.OFF) { PlayModes.setShuffle(modesCtx, ShuffleKind.OFF) },
+                    ModeItem(tr("Shuffle the queue", "Sırayı karıştır"), sk == ShuffleKind.QUEUE) { PlayModes.setShuffle(modesCtx, ShuffleKind.QUEUE) },
+                    ModeItem(tr("Shuffle all songs", "Tüm şarkıları karıştır"), sk == ShuffleKind.ALL) { PlayModes.setShuffle(modesCtx, ShuffleKind.ALL) },
+                    ModeItem(tr("Shuffle albums", "Albümleri karıştır"), sk == ShuffleKind.ALBUMS) { PlayModes.setShuffle(modesCtx, ShuffleKind.ALBUMS) },
+                    if (sk != ShuffleKind.OFF) ModeItem(tr("Shuffle again", "Yeniden karıştır"), false) { PlayModes.reshuffle(modesCtx) } else null,
                     ModeItem(tr("Play all", "Hepsini çal"), false) { onPlayAll?.invoke(false) },
-                    ModeItem(tr("Play all shuffled", "Hepsini karışık çal"), false) { onPlayAll?.invoke(true) },
-                    ModeItem(tr("Shuffle on", "Karıştır açık"), shuffle, onShuffle),
                 ))
             }
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
-            Spacer(Modifier.height(48.dp))
+            // the gap above the transport shows the line that is sung (the setting "Show in player" of the live lyrics decides)
+            Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                if (!lyricsOpen) com.umutk.pulse.extras.lyrics.LiveLyricsLine(track, positionMs.toInt(), compact = true, color = fg)
+            }
             // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
             BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H + SEEK_EXTRA)) {
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
-                val seekAt: () -> Float = { if (drag != null) rawProgress else animProgress }
+                val seekAt: () -> Float = liveFrac
                 val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).fillMaxHeight()
                 SeekBar(
                     progress = seekAt,
@@ -637,13 +675,13 @@ private val SEEK_EXTRA = 56.dp
 /** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, onClick: () -> Unit) {
+private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, track: Track?, onClick: () -> Unit) {
     val n = 12
     var big by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val vctx = LocalContext.current
     var visMode by remember { mutableIntStateOf(vctx.getSharedPreferences("poweramp_vis", android.content.Context.MODE_PRIVATE).getInt("mode", 0).coerceIn(0, VIS_MODES.lastIndex)) }
-    if (big) FullVisualizer(playing, style, visMode) { big = false }
+    if (big) FullVisualizer(playing, style, visMode, track) { big = false }
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
         while (playing) {
@@ -657,11 +695,12 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     Box(
         Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
             .semantics { contentDescription = label; role = Role.Button }
-            .combinedClickable(onClick = onClick, onLongClick = { menu = true }),
+            .combinedClickable(onClick = { big = true }, onLongClick = { menu = true }),
         contentAlignment = Alignment.Center,
     ) {
-        // hold: the visualisations to pick from, the default on top; the pick opens full screen and is remembered
+        // hold: the equalizer and the visualisations to pick from; a pick opens the visualisation full screen and is remembered
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text(label, color = Color.Unspecified) }, onClick = { menu = false; onClick() })
             VIS_MODES.forEachIndexed { i, (e1, t1) ->
                 DropdownMenuItem(
                     text = { Text(tr(e1, t1), color = if (i == visMode) style.accent else Color.Unspecified) },
@@ -693,14 +732,19 @@ private val VIS_MODES = listOf(
 
 /** Full-screen visualisation: live bands drawn in the picked style on the dark player backdrop; a tap closes it. */
 @Composable
-private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, onDismiss: () -> Unit) {
+private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, track: Track?, onDismiss: () -> Unit) {
     val n = 48
     var levels by remember { mutableStateOf(List(n) { 0f }) }
-    LaunchedEffect(playing) {
+    // the tempo is heard from the bass of each frame; a new song starts a new estimate
+    val est = remember(track?.path) { com.umutk.pulse.extras.music.BpmEstimator() }
+    var bpmNow by remember(track?.path) { mutableIntStateOf(0) }
+    LaunchedEffect(playing, est) {
         while (playing) {
             val s = MusicLevels.snapshot()
             val prev = levels
             levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, ((g + 1) * MusicLevels.BANDS / n).coerceAtLeast(g * MusicLevels.BANDS / n + 1)).average().toFloat().let { v -> maxOf(v, prev[g] * .86f) } }
+            est.feed(s.take(6).average().toFloat(), System.currentTimeMillis())
+            bpmNow = est.bpm
             delay(33)
         }
         levels = List(n) { 0f }
@@ -710,6 +754,7 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, on
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Canvas(Modifier.fillMaxWidth().height(if (mode == 3) 340.dp else 300.dp).padding(horizontal = 16.dp)) {
                 val slot = size.width / n
                 fun tint(v: Float) = androidx.compose.ui.graphics.lerp(style.accent, Color.White, v.coerceIn(0f, 1f) * .6f)
@@ -763,6 +808,14 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, on
                     }
                 }
             }
+            // a few lines under the bands: the song, and the bass level (the first bands of the spectrum)
+            val bass = (MusicLevels.snapshot().take(6).average() * 100).toInt().coerceIn(0, 100)
+            Spacer(Modifier.height(18.dp))
+            Text(track?.title ?: "", color = style.onBackdrop, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(track?.artist, track?.album).joinToString(" · "), color = style.textDim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr("Bass $bass%", "Bas %$bass"), color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+            Text(if (bpmNow > 0) "BPM ≈ $bpmNow" else "BPM —", color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+          }
         }
     }
 }
@@ -772,7 +825,7 @@ private class ModeItem(val label: String, val checked: Boolean, val action: () -
 /** Tap runs [onClick]; hold opens [items] in a menu that animates open. A checked item shows a tick. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit, items: List<ModeItem>) {
+private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit, items: List<ModeItem>, badge: String? = null) {
     var open by remember { mutableStateOf(false) }
     Box {
         Box(
@@ -780,11 +833,15 @@ private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style
                 .semantics { contentDescription = label; role = Role.Button }
                 .combinedClickable(onClick = onClick, onLongClick = { open = true }),
             contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp)) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                ) {
+            Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp))
+            badge?.let { Text(it, color = style.accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 9.dp, bottom = 3.dp)) }
+        }
+        // the list has a black background in every skin
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.background(Color.Black)) {
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text((if (item.checked) "✓  " else "    ") + item.label, color = if (item.checked) style.accent else style.text) },
+                    text = { Text((if (item.checked) "✓  " else "    ") + item.label, color = if (item.checked) style.accent else Color.White) },
                     onClick = { open = false; item.action() },
                 )
             }
@@ -1002,15 +1059,15 @@ private fun AudioInfoDialog(track: Track, style: PowerampStyle, onEdit: (() -> U
 private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean, onFavourite: (() -> Unit)?, style: PowerampStyle, modifier: Modifier) {
     var picking by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Int?>(null) }
-    val cellPx = with(LocalDensity.current) { 34.dp.toPx() }
+    val cellPx = with(LocalDensity.current) { 28.dp.toPx() }
     val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
     // the pill grows sideways, the stars slide in from the left and the star slides out to the right
     // a rated song keeps its stars on show (filled, as many as it was given); an unrated one is the single favourite star
-    val width by animateDpAsState(if (picking) 182.dp else if (rating > 0) (rating * 20 + 18).dp else 44.dp, label = "ratingWidth")
+    val width by animateDpAsState(if (picking) 156.dp else if (rating > 0) (rating * 16 + 12).dp else 36.dp, label = "ratingWidth")
     Box(
-        modifier.height(44.dp).width(width)
-            .clip(RoundedCornerShape(22.dp)).background(Color.Black.copy(alpha = .5f))
+        modifier.height(36.dp).width(width)
+            .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
             // no wait: the five stars open on touch and a slide along them picks the rating; a tap without a slide toggles the favourite
             .pointerInput(onRate, onFavourite) {
                 awaitEachGesture {
@@ -1037,7 +1094,7 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 repeat(5) { i ->
-                    Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(34.dp))
+                    Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -1046,8 +1103,8 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
             enter = slideInHorizontally { it / 2 } + fadeIn(),
             exit = slideOutHorizontally { it / 2 } + fadeOut(),
         ) {
-            if (rating > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(rating.coerceAtMost(5)) { Icon(Icons.Rounded.Star, null, tint = style.accent, modifier = Modifier.size(20.dp)) } }
-            else Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(23.dp))
+            if (rating > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(rating.coerceAtMost(5)) { Icon(Icons.Rounded.Star, null, tint = style.accent, modifier = Modifier.size(16.dp)) } }
+            else Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -1068,6 +1125,11 @@ private fun SleepDialog(current: Int, style: PowerampStyle, onSet: (Int, Boolean
             Spacer(Modifier.height(14.dp))
             SleepKnob(value, style, Modifier.size(168.dp)) { value = it }
             Spacer(Modifier.height(14.dp))
+            // the timer can wait for the track that is playing to end, instead of stopping in the middle of it
+            val ctx = LocalContext.current
+            var finish by remember { mutableStateOf(com.umutk.pulse.extras.music.MusicSettings.sleepFinishTrack(ctx)) }
+            SleepChip(tr("Finish the track first", "Önce parçayı bitir"), finish, style) { finish = !finish; com.umutk.pulse.extras.music.MusicSettings.setSleepFinishTrack(ctx, finish) }
+            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SleepChip(tr("Off", "Kapalı"), false, style) { onSet(0, false); onClose() }
                 SleepChip(tr("End of track", "Parça sonu"), false, style) { onSet(0, true); onClose() }

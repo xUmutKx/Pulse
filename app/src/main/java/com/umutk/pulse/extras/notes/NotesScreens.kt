@@ -7,11 +7,18 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import com.umutk.pulse.PRadio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -43,6 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.ArrowDownward
 import com.umutk.pulse.ExtraLookIcon
 import com.umutk.pulse.ExtraLookRow
 import com.umutk.pulse.PChip
@@ -55,6 +65,33 @@ import com.umutk.pulse.tr
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+/** Nine squares of the last notes; the bottom middle square is the "Notes" tile that starts a new note. */
+@Composable
+private fun RecentNotes(recent: List<Note>, onOpen: (String) -> Unit, onNew: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (row in 0 until 3) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (col in 0 until 3) {
+                val idx = row * 3 + col
+                val isNew = idx == 7
+                // the squares before the new-note one take notes 0..6, the one after it takes note 7
+                val note = if (isNew) null else recent.getOrNull(if (idx < 7) idx else idx - 1)
+                Box(
+                    Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (isNew) T.accent.copy(alpha = .22f) else T.panel)
+                        .clickable { if (isNew) onNew() else note?.let { onOpen(it.id) } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isNew) Text(tr("Notes", "Notlar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    else if (note != null) Column(Modifier.fillMaxSize().padding(10.dp)) {
+                        Text(NotesStore.titleOf(note).ifBlank { tr("Untitled", "Adsız") }, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(note.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.drop(1).joinToString(" ").take(120), color = T.sub, fontSize = 11.sp, maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
 
 /** The list of notes: search, folder and tag filters, pinned and date groups, grid or list. */
 @Composable
@@ -69,12 +106,22 @@ fun HomeView(
     val fg = T.text
     val sub = T.sub
     val sort = NotesPrefs.sort(ctx)
-    val grid = NotesPrefs.grid(ctx)
+    val view = NotesPrefs.view(ctx)
+    val grid = view != "list"
     val showDates = NotesPrefs.dates(ctx)
+    var drawer by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
+    // the search is an icon at the top: the field opens with it, and stays open while a search is typed
+    var searchOpen by remember { mutableStateOf(false) }
+    var newFolder by remember { mutableStateOf(false) }
+    // a folder of the phone, picked in Pulse's own file picker: its .md / .txt files become notes and stay in that folder
+    val linkFolder = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickFolder()) { path ->
+        if (path != null) { NotesLink.add(ctx, path); onChanged() }
+    }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
     // tags and folders come only from notes that are open, so a locked note leaks nothing
     val tags = unlocked.flatMap { NotesStore.tagsOf(it.body) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(8).map { it.key }
-    val folders = unlocked.map { it.folder }.filter { it.isNotBlank() }.distinct().sorted()
+    val folders = (unlocked.map { it.folder } + NotesPrefs.extraFolders(ctx)).filter { it.isNotBlank() }.distinct().sorted()
     val base: Comparator<Note> = when (sort) {
         NotesPrefs.Sort.UPDATED -> compareByDescending<Note> { it.updated }
         NotesPrefs.Sort.CREATED -> compareByDescending<Note> { it.created }
@@ -82,7 +129,7 @@ fun HomeView(
     }
     val order = compareByDescending<Note> { it.pinned }.then(if (NotesPrefs.reverse(ctx)) base.reversed() else base)
     val sorted = unlocked
-        .filter { n -> (tag == null || tag in NotesStore.tagsOf(n.body)) && (folder == null || n.folder == folder) && NotesStore.matches(n, query) }
+        .filter { n -> (tag == null || tag in NotesStore.tagsOf(n.body)) && (folder == null || n.folder == folder || n.folder.startsWith("$folder/")) && NotesStore.matches(n, query) }
         .sortedWith(order)
     val sections: List<Pair<String, List<Note>>> = if (!NotesPrefs.groups(ctx) || sort == NotesPrefs.Sort.TITLE) listOf("" to sorted) else {
         val stamp: (Note) -> Long = { if (sort == NotesPrefs.Sort.CREATED) it.created else it.updated }
@@ -93,13 +140,33 @@ fun HomeView(
         }
     }
 
+    if (drawer) NotesSidePanel(
+        all = unlocked.size,
+        pinned = unlocked.count { it.pinned },
+        locked = notes.count { it.locked && it.trashedAt == 0L },
+        trash = notes.count { it.trashedAt != 0L },
+        folders = folders,
+        counts = unlocked.groupingBy { it.folder }.eachCount(),
+        current = folder,
+        expanded = expanded,
+        onToggle = { path -> expanded = if (path in expanded) expanded - path else expanded + path },
+        onAll = { folder?.let { onFolder(it) }; drawer = false },
+        onFolder = { onFolder(it); drawer = false },
+        onPinned = { drawer = false },
+        onLocked = { drawer = false },
+        onTrash = { drawer = false; onOpenTrash() },
+        onClose = { drawer = false },
+    )
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             if (selected.isEmpty()) {
-                NIcon("back", fg, tr("Back", "Geri")) { onBack() }
-                Text(tr("Notes", "Notlar"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                // the list's icons: folders at the left, then the settings and the new note at the right
+                NIcon("menu", fg, tr("Folders", "Klasörler")) { drawer = true }
+                Spacer(Modifier.weight(1f))
+                NIcon("search", fg, tr("Search", "Ara")) { searchOpen = !searchOpen }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
+                NIcon("folder", fg, tr("Link a folder", "Klasör bağla")) { linkFolder.launch(Unit) }
             } else {
                 NIcon("close", fg, tr("Cancel", "İptal")) { onSelect(emptySet()) }
                 Text(tr("${selected.size} selected", "${selected.size} seçili"), color = fg, fontSize = 17.sp, modifier = Modifier.weight(1f))
@@ -111,17 +178,50 @@ fun HomeView(
                 NIcon("delete", fg, tr("Move to trash", "Çöpe taşı")) { onTrash() }
             }
         }
-        PField(query, onQuery, tr("Search", "Ara"), Modifier.fillMaxWidth())
+        if (searchOpen || query.isNotBlank()) PField(query, onQuery, tr("Search", "Ara"), Modifier.fillMaxWidth())
+        if (newFolder) NInput(tr("New folder", "Yeni klasör"), tr("Folder path, e.g. School/Math", "Klasör yolu, ör. Okul/Matematik"), "", folders, { path ->
+            NotesPrefs.addFolder(ctx, path); newFolder = false; onChanged()
+        }, { newFolder = false })
+        // the sort: what the list is ordered by, and the arrow that turns it round
+        val sortLabel = when (sort) {
+            NotesPrefs.Sort.UPDATED -> tr("Date modified", "Tarih değiştirildi")
+            NotesPrefs.Sort.CREATED -> tr("Date created", "Oluşturulma tarihi")
+            NotesPrefs.Sort.TITLE -> tr("Title", "Başlık")
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(sortLabel, color = sub, fontSize = 14.sp)
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.size(34.dp).clip(CircleShape).clickable { NotesPrefs.setReverse(ctx, !NotesPrefs.reverse(ctx)); onChanged() }, contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(if (NotesPrefs.reverse(ctx)) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward, sortLabel, tint = sub, modifier = Modifier.size(18.dp))
+            }
+        }
         if (folders.isNotEmpty() || tags.isNotEmpty()) Row(
             Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            folders.forEach { f -> PChip(folder == f, f) { onFolder(f) } }
+            // a folder path is levels: the first names at the top; inside a folder, its own sub-folders and a chip back up
+            val here = folder.orEmpty()
+            if (folder != null) {
+                val parent = here.substringBeforeLast('/', "")
+                PChip(true, "‹ " + here) { onFolder(if (parent.isEmpty()) here else parent) }
+            }
+            folders.filter { f -> here.isEmpty() || f.startsWith("$here/") }
+                .map { f -> (if (here.isEmpty()) "" else "$here/") + (if (here.isEmpty()) f else f.removePrefix("$here/")).substringBefore('/') }
+                .distinct().sorted()
+                .forEach { path -> PChip(false, path.substringAfterLast('/')) { onFolder(path) } }
             tags.forEach { t -> PChip(tag == t, "#$t") { onTag(t) } }
         }
         if (sorted.isEmpty()) Text(tr("No notes", "Not yok"), color = sub, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
+        // the start page, as the Samsung notes: a large title and the number of notes above the list
+        if (query.isBlank() && tag == null && folder == null) {
+            Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(tr("All notes", "Tüm notlar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                Text(tr("${unlocked.size} notes", "${unlocked.size} not"), color = sub, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(if (grid) 2 else 1),
+            // as many columns as the screen takes: two notes across on a phone, more on a tablet (the list gets wider rows there too)
+            columns = if (grid) GridCells.Adaptive(118.dp) else GridCells.Adaptive(340.dp),
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 8.dp else 2.dp),
@@ -132,7 +232,10 @@ fun HomeView(
                     Text(label, color = sub, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
                 }
                 gridItems(items, key = { it.id }) { n ->
-                    NoteCard(n, query, grid, showDates, n.id in selected,
+                    if (view == "book") NoteBookCard(n, n.id in selected,
+                        onTap = { if (selected.isNotEmpty()) onSelect(if (n.id in selected) selected - n.id else selected + n.id) else onOpen(n.id) },
+                        onLong = { onSelect(if (n.id in selected) selected - n.id else selected + n.id) })
+                    else NoteCard(n, query, grid, showDates, n.id in selected,
                         onTap = { if (selected.isNotEmpty()) onSelect(if (n.id in selected) selected - n.id else selected + n.id) else onOpen(n.id) },
                         onLong = { onSelect(if (n.id in selected) selected - n.id else selected + n.id) },
                         onSwipe = { onSwipe(it) })
@@ -215,7 +318,7 @@ fun TrashView(notes: List<Note>, onBack: () -> Unit, onRestore: (String) -> Unit
     val sub = T.sub
     val now = System.currentTimeMillis()
     val trashed = notes.filter { it.trashedAt > 0 }.sortedByDescending { it.trashedAt }
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", fg, tr("Back", "Geri")) { onBack() }
@@ -277,7 +380,7 @@ fun SettingsView(
     fun toggle(k: String) { open = if (k in open) open - k else open + k }
     val paper = NotesPrefs.paper(ctx)
     val defColor = NotesPrefs.defaultColor(ctx)
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", T.text, tr("Back", "Geri")) { onBack() }
@@ -286,10 +389,14 @@ fun SettingsView(
         }
         item { ExtraLookRow() }
         item { NRow("view", tr("Transparent background", "Şeffaf arka plan"), trailing = { PSwitch(NotesPrefs.transparent(ctx), { NotesPrefs.setTransparent(ctx, it); com.umutk.pulse.PageBg.transparent = it; onChanged() }) }) }
+        item { NRow("view", tr("Black background", "Siyah arka plan"), trailing = { PSwitch(NotesPrefs.black(ctx), { NotesPrefs.setBlack(ctx, it); onChanged() }) }) }
         item {
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
-                NRow("view", tr("Grid", "Izgara"), trailing = { PSwitch(NotesPrefs.grid(ctx), { NotesPrefs.setGrid(ctx, it); onChanged() }) })
+                // the three ways of showing the notes: a list, a grid of cards, or pages like a book
+                listOf("list" to tr("List", "Liste"), "grid" to tr("Grid", "Izgara"), "book" to tr("Book", "Kitap")).forEach { (v, label) ->
+                    NRow("view", label, trailing = { PRadio(NotesPrefs.view(ctx) == v, { NotesPrefs.setView(ctx, v); onChanged() }) })
+                }
                 NRow("add", tr("New from a template", "Şablondan yeni not"), onClick = { onDlg(NDlg.Template) })
                 NRow("recycle", tr("Trash", "Çöp kutusu"), onClick = { onTrash() })
                 NRow("sort", tr("Reverse order", "Ters sırala"), trailing = { PSwitch(NotesPrefs.reverse(ctx), { NotesPrefs.setReverse(ctx, it); onChanged() }) })
@@ -350,7 +457,7 @@ fun StatsView(notes: List<Note>, onBack: () -> Unit) {
         tr("Voice notes", "Ses notları") to live.sumOf { n -> n.files.count { it.startsWith("au_") } }.toString(),
         tr("In the trash", "Çöp kutusunda") to notes.count { it.trashedAt > 0 }.toString(),
     )
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", T.text, tr("Back", "Geri")) { onBack() }
@@ -363,6 +470,113 @@ fun StatsView(notes: List<Note>, onBack: () -> Unit) {
                 Text(value, color = T.sub, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
+        }
+    }
+}
+
+/**
+ * The side panel of the notes: the groups of notes (all, favourites, locked, trash) with their icons, then the folders as a tree
+ * (a folder named "Ders/Matematik" sits under "Ders"). Picking a row shows its notes; the panel closes.
+ */
+@Composable
+private fun NotesSidePanel(
+    all: Int, pinned: Int, locked: Int, trash: Int, folders: List<String>, counts: Map<String, Int>, current: String?,
+    onAll: () -> Unit, onFolder: (String) -> Unit, onPinned: () -> Unit, onLocked: () -> Unit, onTrash: () -> Unit, onClose: () -> Unit,
+    expanded: Set<String> = emptySet(), onToggle: (String) -> Unit = {},
+) {
+    val fg = T.text
+    val sub = T.sub
+    val bg = T.panel
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Row(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .45f)).clickable(onClick = onClose)) {
+            Column(
+                Modifier.fillMaxHeight().width(290.dp).background(bg).padding(vertical = 16.dp).verticalScroll(rememberScrollState()).clickable(enabled = false) {},
+            ) {
+                Text(tr("Notes", "Notlar"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp))
+                NoteSideRow("document", tr("All notes", "Tüm notlar"), all, current == null, fg, sub, onAll)
+                NoteSideRow("star", tr("Favourites", "Favoriler"), pinned, false, fg, sub, onPinned)
+                NoteSideRow("lock", tr("Locked notes", "Kilitli notlar"), locked, false, fg, sub, onLocked)
+                NoteSideRow("delete", tr("Trash", "Çöp kutusu"), trash, false, fg, sub, onTrash)
+                Text(tr("Folders", "Klasörler"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(start = 18.dp, top = 14.dp, bottom = 4.dp))
+                // each folder with its depth as indentation, the sub folders right under their parent
+                // a folder shows when all its parents are open; a folder with sub folders has an arrow that opens them (as in Windows)
+                folders.sorted().filter { path -> path.split('/').dropLast(1).indices.all { k -> path.split('/').take(k + 1).joinToString("/") in expanded } }.forEach { path ->
+                    val depth = path.count { it == '/' }
+                    val hasKids = folders.any { it.startsWith("$path/") }
+                    val open = path in expanded
+                    NoteSideRow("folder", path.substringAfterLast('/'), counts[path] ?: 0, current == path, fg, sub,
+                        onClick = { if (hasKids) onToggle(path) else onFolder(path) }, indent = depth * 14,
+                        arrow = if (hasKids) open else null)
+                }
+                if (folders.isEmpty()) Text(tr("No folders yet. Move a note into one from its menu.", "Henüz klasör yok. Bir notu menüsünden klasöre taşıyın."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteSideRow(icon: String, label: String, count: Int, selected: Boolean, fg: androidx.compose.ui.graphics.Color, sub: androidx.compose.ui.graphics.Color, onClick: () -> Unit, indent: Int = 0, arrow: Boolean? = null) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 8.dp + indent.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) sub.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (arrow != null) PIcon("chevron", sub, 16.dp, Modifier.graphicsLayer { rotationZ = if (arrow) 0f else -90f })
+        else Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(6.dp))
+        PIcon(icon, if (selected) fg else sub, 20.dp)
+        Spacer(Modifier.width(12.dp))
+        Text(label, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(count.toString(), color = sub, fontSize = 13.sp)
+    }
+}
+
+/** One note as a page: the title on top, the first lines of the text under it, the date at the foot. Locked notes show no text. */
+@Composable
+private fun NoteBookCard(n: Note, selected: Boolean, onTap: () -> Unit, onLong: () -> Unit) {
+    val ctx = LocalContext.current
+    val fg = T.text
+    val sub = T.sub
+    val date = remember { SimpleDateFormat("d MMM", Locale.getDefault()) }
+    val hidden = n.locked
+    val title = if (hidden) tr("Locked note", "Kilitli not") else NotesStore.titleOf(n).ifBlank { tr("Untitled", "Adsız") }
+    val lines = if (hidden) emptyList() else n.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+    val text = (if (n.title.isBlank()) lines.drop(1) else lines).take(8).joinToString("\n")
+    // a page in 3D: pressed, it leans towards the finger and lifts a little less; the spine on its left edge stays dark
+    var pressed by remember(n.id) { mutableStateOf(false) }
+    var tx by remember(n.id) { mutableFloatStateOf(0f) }
+    var ty by remember(n.id) { mutableFloatStateOf(0f) }
+    val rx by androidx.compose.animation.core.animateFloatAsState(if (pressed) ty * 9f else 0f, androidx.compose.animation.core.spring(dampingRatio = .6f, stiffness = 400f), label = "noteRx")
+    val ry by androidx.compose.animation.core.animateFloatAsState(if (pressed) tx * -9f else 0f, androidx.compose.animation.core.spring(dampingRatio = .6f, stiffness = 400f), label = "noteRy")
+    val lift by androidx.compose.animation.core.animateDpAsState(if (pressed) 2.dp else 8.dp, label = "noteLift")
+    val dens = LocalDensity.current.density
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(0.72f)
+            .graphicsLayer {
+                rotationX = rx; rotationY = ry; cameraDistance = 14f * dens
+                shadowElevation = lift.toPx(); shape = RoundedCornerShape(10.dp); clip = false
+            }
+            .background(if (selected) T.accent.copy(alpha = .22f) else T.panel, RoundedCornerShape(10.dp))
+            .pointerInput(n, selected) {
+                detectTapGestures(
+                    onPress = { p ->
+                        tx = (p.x / size.width) * 2f - 1f; ty = (p.y / size.height) * 2f - 1f
+                        pressed = true
+                        tryAwaitRelease()
+                        pressed = false
+                    },
+                    onTap = { onTap() }, onLongPress = { onLong() },
+                )
+            },
+    ) {
+        Box(Modifier.align(Alignment.CenterStart).fillMaxSize().width(7.dp).background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .35f), Color.Transparent))))
+        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
+            Text(title, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            Text(if (hidden) "" else text, color = sub, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 9, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(date.format(Date(n.updated)), color = sub, fontSize = 11.sp)
         }
     }
 }

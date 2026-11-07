@@ -27,6 +27,8 @@ class BluetoothAutoplayReceiver : BroadcastReceiver() {
         if (runCatching { device.bluetoothClass?.hasService(BluetoothClass.Service.AUDIO) }.getOrNull() != true) return
         // the receiver is declared in the manifest as well, so it also runs when the player is not: the playback service is started first
         runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, Intent(ctx, MusicPlaybackService::class.java)) }
+        // the media volume at zero: nothing starts (it would play to nobody, or burst out when the volume is raised)
+        if ((ctx.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager)?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) return
         val engine = MusicPlayerEngine.get(ctx)
         Playlists.restore(ctx, engine) // empty queue: nothing to play, the restore only fills it when a last queue exists
         engine.play()

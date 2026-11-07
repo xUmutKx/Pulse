@@ -146,6 +146,21 @@ fun RecolorCard(pkg: String, sp: SharedPreferences) {
             }
             Box(Modifier.padding(start = 8.dp)) { PSwitch(on, { setOn(it) }) }
         }
+        // the automatic black (big white surfaces) of "every app automatically": on by default, shown and switched per app here
+        val autoAll = sp.getBoolean("lsp_auto", true)
+        var autoOn by remember(pkg) { mutableStateOf(autoAll && pkg !in (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet())) }
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Automatic black", "Otomatik siyah"), color = T.text, fontSize = 14.sp)
+                BoText(if (!autoAll) tr("Off for every app in the module settings", "Modül ayarlarında tüm uygulamalar için kapalı") else tr("Big white surfaces turn black; text, icons and small shapes keep their colour", "Büyük beyaz zeminler siyah olur; yazı, simge ve küçük şekiller kendi renginde kalır"), 12)
+            }
+            PSwitch(autoOn, { v ->
+                autoOn = v
+                val set = (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet()).toMutableSet()
+                if (v) set.remove(pkg) else set.add(pkg)
+                sp.edit().putStringSet("lsp_auto_off", set).apply()
+            }, enabled = autoAll)
+        }
         BoText(if (on) tr("Colour changes are on for this app", "Bu uygulamada renk değişiklikleri açık") else tr("Off: this app keeps its own colours", "Kapalı: bu uygulama kendi renklerini korur"), 12)
         BoBtn(tr("Pick on screen", "Ekrandan seç"), modifier = Modifier.padding(top = 6.dp)) { openColourBar(ctx, pkg) }
         if (open) {
@@ -208,7 +223,29 @@ fun ColorsPage(apps: List<AppRow>, sp: SharedPreferences) {
 // ---- every colour of an app ----------------------------------------------------------------------------------------------------------------------
 
 private fun lumOf(c: Int): Float = (.299f * ((c shr 16) and 255) + .587f * ((c shr 8) and 255) + .114f * (c and 255)) / 255f
-private fun isBg(name: String) = name.contains("bg", true) || name.contains("background", true) || name.contains("backdrop", true)
+private fun isBg(name: String): Boolean {
+    val n = name.lowercase()
+    // text, icon and tint colours are never touched, whatever else their name says
+    if (listOf("text", "icon", "ic_", "_ic", "glyph", "symbol", "logo", "foreground", "label", "title", "hint", "tint", "stroke", "border", "divider", "ripple", "on_").any { n.contains(it) }) return false
+    return n.contains("bg") || n.contains("background") || n.contains("backdrop") || n.contains("surface") || n.contains("window")
+}
+
+/** Takes back what the automatic first-open black made: in every app that got it, the black background overlays are removed; colours the user set by hand stay. Returns how many apps changed. */
+internal fun undoAutoBlacks(sp: SharedPreferences): Int {
+    var apps = 0
+    val pkgs = sp.all.keys.filter { it.startsWith("auto_done_") }.map { it.removePrefix("auto_done_") }
+    for (pkg in pkgs) {
+        val all = Overlays.overrides(sp, pkg)
+        val auto = all.filter { (n, c) -> (c and 0xFFFFFF) == 0 && isBg(n) }.keys
+        if (auto.isEmpty()) continue
+        Overlays.remove(pkg)
+        auto.forEach { Overlays.saveOverride(sp, pkg, it, null) }
+        val rest = Overlays.overrides(sp, pkg)
+        if (rest.isNotEmpty()) Overlays.apply(pkg, rest.toList())
+        apps++
+    }
+    return apps
+}
 private fun isGreyish(c: Int): Boolean { val r = (c shr 16) and 255; val g = (c shr 8) and 255; val b = c and 255; return maxOf(r, g, b) - minOf(r, g, b) <= 60 }
 private fun isText(name: String) = name.contains("text", true) || name.contains("title", true) || name.contains("label", true) || name.contains("hint", true)
 
@@ -227,8 +264,8 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
     var editing by remember(app.pkg) { mutableStateOf<Candidate?>(null) }
     var made by remember(app.pkg) { mutableStateOf(Overlays.overrides(sp, app.pkg)) }
     var query by remember(app.pkg) { mutableStateOf("") }
-    var open by remember(app.pkg) { mutableStateOf(false) }
-    var onlyDark by remember(app.pkg) { mutableStateOf(true) }
+    var open by remember(app.pkg) { mutableStateOf(mode != Privilege.Mode.None) }
+    var onlyDark by remember(app.pkg) { mutableStateOf(false) }
     var pickedFrom by remember(app.pkg) { mutableStateOf("FFFFFF") }
     var showAll by remember(app.pkg) { mutableStateOf(false) }
     val canOv = !Overlays.refused(app.pkg)
@@ -277,6 +314,17 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
                 msg = if (ok) "$label (${cands.size}). " + tr("Reopen the app. If nothing changes, the app does not use these colours.", "Uygulamayı yeniden açın. Değişmezse uygulama bu renkleri kullanmıyordur.") else text
                 busy = false
             }
+        }
+        // with root or Shizuku everything is on by default: the colours are read when the card opens, and the first time the app's light
+        // backgrounds go black and its grey text goes white (kept per app; "Restore original" turns it off, Apply again turns it back on)
+        LaunchedEffect(app.pkg, mode, canOv) {
+            if (mode == Privilege.Mode.None || !canOv) return@LaunchedEffect
+            val list = all ?: withContext(Dispatchers.IO) { runCatching { Arsc.scan(app.sourceDir, all = true).candidates }.getOrDefault(emptyList()) }.also { scanned[app.pkg to app.sourceDir] = it; all = it }
+            // the automatic first-open black is an option now, off unless the switch in the module settings is on
+            if (!sp.getBoolean("ov_auto", false)) return@LaunchedEffect
+            if (sp.getBoolean("auto_done_${app.pkg}", false) || made.isNotEmpty()) return@LaunchedEffect
+            sp.edit().putBoolean("auto_done_${app.pkg}", true).apply()
+            quick(list.filter { isBg(it.name) && lumOf(it.color) > .8f }, 0xFF000000.toInt(), "Backgrounds made black")
         }
         if (open && canOv) all?.let { list ->
             PNameField(query, { query = it }, tr("Search colours", "Renklerde ara"), Modifier.fillMaxWidth().padding(top = 6.dp))

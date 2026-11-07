@@ -169,6 +169,24 @@ class AlarmReceiver : BroadcastReceiver() {
         snoozeCount: Int,
         snoozeLimit: Int
     ) {
+        // a ring that was skipped on purpose ("Turn back on for Monday") never sounds, even when an old registration of it still fires: the alarm is set again for its real next ring
+        if (snoozeCount == 0 && alarmId >= 0) {
+            val skip = AlarmSkip.get(context, alarmId)
+            if (skip > 0L && kotlin.math.abs(System.currentTimeMillis() - skip) < 3 * 60_000L) {
+                val pendingResult = goAsync()
+                CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                    try {
+                        val alarm = AppDatabase.getDatabase(context).alarmDao().getAlarmById(alarmId)
+                        if (alarm != null && alarm.isEnabled && alarm.daysOfWeek.isNotEmpty()) {
+                            // the skip is still in place, so the scheduling moves past the skipped ring (or clears it once its moment is over)
+                            AlarmScheduler(context).scheduleAlarm(alarm, effectiveUpcomingLead(alarm, SettingsDataStore(context)))
+                            Log.d(TAG, "Skipped ring of alarm $alarmId ignored")
+                        }
+                    } finally { pendingResult.finish() }
+                }
+                return
+            }
+        }
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
@@ -486,6 +504,8 @@ class AlarmReceiver : BroadcastReceiver() {
         const val EXTRA_SNOOZE_COUNT = "extra_snooze_count"
         const val EXTRA_SNOOZE_LIMIT = "extra_snooze_limit"
         const val EXTRA_FORCE_MAX_VOLUME = "extra_force_max_volume"
+        /** A volume for this ring alone (0 to 1), used instead of the unified or per-alarm volume; -1 when not set. */
+        const val EXTRA_FIXED_VOLUME = "extra_fixed_volume"
         const val EXTRA_ALARM_IS_24_HOUR = "extra_alarm_is_24_hour"
         const val EXTRA_IS_AWAKE_CHECK_ACTIVE = "extra_is_awake_check_active"
         const val EXTRA_ENSURE_RINGING = "com.umutk.pulse.extras.lucid.extra.EXTRA_ENSURE_RINGING"

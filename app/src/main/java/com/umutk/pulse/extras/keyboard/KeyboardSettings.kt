@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,13 +85,13 @@ fun KeyboardSettings(back: () -> Unit) {
     // the live keyboard at the bottom is shown only when asked for (the button at the top), so it does not take the room of the settings
     var showKb by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var dataNote by remember { mutableStateOf("") }
-    val exportData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val exportData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.export(ctx, uri) }.getOrDefault(-1) }
             dataNote = if (n >= 0) tr("Saved ($n files)", "Kaydedildi ($n dosya)") else tr("Could not save", "Kaydedilemedi")
         }
     }
-    val importData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+    val importData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.import(ctx, uri) }.getOrDefault(-1) }
             dataNote = if (n >= 0) tr("Loaded ($n files)", "Yüklendi ($n dosya)") else tr("This is not a keyboard backup", "Bu bir klavye yedeği değil")
@@ -115,6 +116,19 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             PField(test, { test = it }, tr("Try it here", "Burada dene"), Modifier.fillMaxWidth())
+            // keeps Pulse Keyboard the default after Pulse is force-stopped (set back through root or Shizuku when Pulse opens)
+            var keepDefault by remember { mutableStateOf(KeyboardDefault.keep(ctx)) }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Keep Pulse as the keyboard", "Pulse'u klavye olarak tut"), color = T.text, fontSize = 15.sp)
+                    Text(tr("Needs root or Shizuku", "Root ya da Shizuku gerekir"), color = T.sub, fontSize = 12.sp)
+                }
+                PSwitch(keepDefault, { on ->
+                    keepDefault = on
+                    KeyboardDefault.setKeep(ctx, on)
+                    if (on) Thread { runCatching { KeyboardDefault.restore(ctx.applicationContext) } }.start()
+                })
+            }
         }
 
         // themes
@@ -178,7 +192,15 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
             Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
-            Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A narrower keyboard that slides sideways by the handle on top", "Üstteki tutamakla yana kayan, daha dar klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
+            Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A keyboard you move anywhere on the screen by the handle on top", "Üstteki tutamakla ekranın her yerine taşınan klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
+            // the accessibility keyboard: over any app, switched on here; turning it on sends the phone to its accessibility settings when Pulse is not on there yet
+            val accCtx = LocalContext.current
+            var accOn by remember { mutableStateOf(AccessKeyboard.on(accCtx)) }
+            Switch(tr("Floating keyboard (accessibility)", "Yüzen klavye (erişilebilirlik)"), tr("Over any app where you type. Pulse's accessibility keyboard must be on in the accessibility settings", "Yazdığınız her uygulamanın üstünde. Erişilebilirlik ayarlarında Pulse klavyesi açık olmalı"), accOn) {
+                accOn = it
+                AccessKeyboard.setOn(accCtx, it)
+                if (it && !AccessKeyboard.serviceEnabled(accCtx)) accCtx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
             Switch(tr("Long-press symbols", "Uzun basınca semboller"), tr("Accents and digits", "Aksanlar ve rakamlar"), KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }
@@ -186,6 +208,31 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // swipes, extra keys and the toolbar
+        KbSection("numpad", tr("Number pad", "Sayı paneli")) {
+            Title(tr("Bottom right key", "Sağ alt tuş"))
+            val opts = listOf("enter", "=", ",", "/", "%", "-", "*")
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                opts.forEach { o ->
+                    val on = KeyboardPrefs.numEnter == o
+                    Box(Modifier.size(56.dp, 48.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (on) T.accent else T.sub.copy(alpha = .12f))
+                        .clickable { KeyboardPrefs.numEnter = o; save() },
+                        contentAlignment = Alignment.Center) {
+                        Text(if (o == "enter") "↵" else o, color = if (on) T.bg else T.text, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            // the preview: the bottom row of the number pad as it will look
+            Title(tr("Preview", "Önizleme"))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("*", "#", KeyboardPrefs.numEnter).forEach { k ->
+                    Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(T.sub.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+                        Text(if (k == "enter") "↵" else k, color = T.text, fontSize = 18.sp)
+                    }
+                }
+            }
+        }
         KbSection("keyboard", tr("Swipes and keys", "Kaydırma ve tuşlar")) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
@@ -207,7 +254,7 @@ fun KeyboardSettings(back: () -> Unit) {
         // size
         KbSection("height", tr("Size", "Boyut")) {
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
-            PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
+            PSlider((KeyboardPrefs.heightPct - 70) / 180f, { KeyboardPrefs.heightPct = 70 + (it * 180).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.bottomPad / 60f, { KeyboardPrefs.bottomPad = (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Gamepad size", "Gamepad boyutu")}: ${KeyboardPrefs.padScale}%", color = T.sub, fontSize = 12.sp)
@@ -217,7 +264,14 @@ fun KeyboardSettings(back: () -> Unit) {
             Text("${tr("Gamepad sticks height", "Gamepad joystick yüksekliği")}: ${KeyboardPrefs.padLift}", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.padLift / 40f, { KeyboardPrefs.padLift = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Side space", "Yan boşluk")}: ${KeyboardPrefs.sidePad} dp", color = T.sub, fontSize = 12.sp)
-            PSlider(KeyboardPrefs.sidePad / 40f, { KeyboardPrefs.sidePad = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            PSlider(KeyboardPrefs.sidePad / 400f, { KeyboardPrefs.sidePad = (it * 400).roundToInt() }, 0f..1f, onDone = { save() })
+            Switch(tr("Compact layout", "Derli toplu düzen"), tr("Keys close together, the keyboard narrower and in the middle, like a tablet's own keyboard", "Tuşlar bitişik, klavye daha dar ve ortada (tabletin kendi klavyesi gibi)"), KeyboardPrefs.compact) { KeyboardPrefs.compact = it; save() }
+            if (KeyboardPrefs.compact) {
+                Text("${tr("Keyboard width", "Klavye genişliği")}: ${KeyboardPrefs.compactPct}%", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.compactPct - 40) / 60f, { KeyboardPrefs.compactPct = 40 + (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
+            }
+            Switch(tr("Emoji page uses the full width", "Emoji sayfası tüm genişliği kullanır"), tr("The side space only narrows the keys; the emoji page, the symbols and text art fill the screen", "Yan boşluk yalnızca tuşları daraltır; emoji, sembol ve metin sanatı sayfası ekranı doldurur"), KeyboardPrefs.emojiFull) { KeyboardPrefs.emojiFull = it; save() }
+            Switch(tr("Keys on the left, emoji on the right", "Tuşlar solda, emoji sağda"), tr("On a wide screen the emoji page and the keys sit side by side: off puts the emoji on the left, on puts them on the right", "Geniş ekranda emoji sayfası ve tuşlar yan yana durur: kapalıyken emoji solda, açıkken sağda olur"), KeyboardPrefs.emojiRight) { KeyboardPrefs.emojiRight = it; save() }
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)
@@ -250,11 +304,16 @@ fun KeyboardSettings(back: () -> Unit) {
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Look.accent else T.panel).clickable { KeyboardPrefs.clipHours = h; save() }.padding(vertical = 8.dp, horizontal = 2.dp))
                 }
             }
+            Switch(tr("Pin button in the bar", "Çubukta sabitleme tuşu"), tr("The copied item or photo in the bar gets a pin: pinned ones stay in the clipboard and in the bar", "Çubuktaki kopyalanan öğe ya da fotoğrafta sabitleme tuşu olur: sabitlenenler panoda ve çubukta kalır"), KeyboardPrefs.quickPinBtn) { KeyboardPrefs.quickPinBtn = it; save() }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }
             Switch(tr("Quick period", "Hızlı nokta"), tr("Double tap on space puts in a period", "Boşluğa çift dokunuş nokta koyar"), KeyboardPrefs.quickPeriod) { KeyboardPrefs.quickPeriod = it; save() }
             Switch(tr("Auto capitalise", "Otomatik büyük harf"), tr("Capital letter at the start of a sentence", "Cümle başında büyük harf"), KeyboardPrefs.autoCap) { KeyboardPrefs.autoCap = it; save() }
             Switch(tr("Auto space", "Otomatik boşluk"), tr("A space after , ; : ! ?", "Virgül, noktalı virgül, iki nokta, ünlem ve sorudan sonra boşluk"), KeyboardPrefs.autoSpace) { KeyboardPrefs.autoSpace = it; save() }
             Switch(tr("Cursor control", "İmleç denetimi"), tr("Hold space and slide to move the cursor", "Boşluğa basılı tutup kaydırınca imleç gider"), KeyboardPrefs.cursorControl) { KeyboardPrefs.cursorControl = it; save() }
+            if (KeyboardPrefs.cursorControl) {
+                Text("${tr("Cursor sensitivity", "İmleç hassasiyeti")}: ${KeyboardPrefs.cursorSens}%", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.cursorSens - 50) / 150f, { KeyboardPrefs.cursorSens = 50 + (it * 150).roundToInt() }, 0f..1f, onDone = { save() })
+            }
             Switch(tr("Quick delete", "Hızlı silme"), tr("Slide from the delete key to select and delete text", "Silme tuşundan kaydırarak seç ve sil"), KeyboardPrefs.quickDelete) { KeyboardPrefs.quickDelete = it; save() }
             Switch(tr("Emoji predictions", "Emoji tahminleri"), tr("Emoji on the suggestion bar", "Öneri çubuğunda emoji"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
             Switch(tr("Detect the language of a sentence", "Cümlenin dilini algıla"), tr("The words of the sentence decide: a single English word does not switch the keyboard", "Cümlenin kelimeleri belirler: tek bir İngilizce kelime klavyeyi değiştirmez"), KeyboardPrefs.autoLang) { KeyboardPrefs.autoLang = it; save() }
@@ -293,6 +352,7 @@ fun KeyboardSettings(back: () -> Unit) {
             if (KeyboardPrefs.haptic) {
                 Text("${tr("Vibration strength", "Titreşim gücü")}: ${KeyboardPrefs.hapticMs}", color = T.sub, fontSize = 12.sp)
                 PSlider((KeyboardPrefs.hapticMs - 1) / 39f, { KeyboardPrefs.hapticMs = 1 + (it * 39).roundToInt() }, 0f..1f, onDone = { save() })
+                VibeTestButton()
             }
             Text("${tr("Brightness", "Parlaklık")}: ${KeyboardPrefs.bright}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider((KeyboardPrefs.bright - 5) / 95f, { KeyboardPrefs.bright = 5 + (it * 95).roundToInt() }, 0f..1f, onDone = { save() })
@@ -576,3 +636,38 @@ private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (
 
 /** The keyboard's theme as the settings draw it: the one the keyboard uses now. */
 private fun keyboardThemeNow(): KbTheme = KeyboardThemes.of(KeyboardPrefs.theme, true)
+
+/** Hold to feel the vibration at the chosen strength; it stops when the finger leaves the button. */
+@Composable
+private fun VibeTestButton() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(
+        Modifier.padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).background(T.panel)
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    vibeStart(ctx, KeyboardPrefs.hapticMs)
+                    try { awaitRelease() } finally { vibeStop(ctx) }
+                })
+            }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(tr("Hold to test the vibration", "Titreşimi denemek için basılı tut"), color = T.text, fontSize = 13.sp)
+    }
+}
+
+/** Keeps the phone vibrating until stopped: the chosen strength where the phone can set it, else the default strength. */
+private fun vibeStart(c: Context, ms: Int) {
+    val vib = c.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+    if (!vib.hasVibrator()) return
+    if (android.os.Build.VERSION.SDK_INT >= 26) {
+        val amp = if (vib.hasAmplitudeControl()) (12 + ms * 5).coerceAtMost(255) else android.os.VibrationEffect.DEFAULT_AMPLITUDE
+        vib.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0L, 60_000L), intArrayOf(0, amp), -1))
+    } else {
+        @Suppress("DEPRECATION") vib.vibrate(60_000L)
+    }
+}
+
+private fun vibeStop(c: Context) {
+    (c.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.cancel()
+}

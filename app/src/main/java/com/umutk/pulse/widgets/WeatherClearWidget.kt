@@ -56,7 +56,11 @@ class WeatherClearWidget : PulseWidget() {
             val mgr = AppWidgetManager.getInstance(ctx)
             val ids = mgr.getAppWidgetIds(ComponentName(ctx, WeatherClearWidget::class.java))
             if (ids.isEmpty()) ctx.getSystemService(AlarmManager::class.java)?.cancel(minutePending(ctx))
-            else ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+            else {
+                ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+                // and the numbers are read again every minute (a minute-old copy is kept as it is)
+                refresh(ctx, goAsync())
+            }
             return
         }
         if (intent.action == ACTION_NEXT) {
@@ -88,7 +92,7 @@ class WeatherClearWidget : PulseWidget() {
         am.setRepeating(AlarmManager.RTC, next, 60_000L, minutePending(ctx))
     }
 
-    /** Fetches the places the placed widgets show when their saved copy is over 25 minutes old (the system asks every 30), then redraws them. */
+    /** Fetches the places the placed widgets show when their saved copy is over a minute old (the minute alarm asks), then redraws them. */
     private fun refresh(ctx: Context, pending: android.content.BroadcastReceiver.PendingResult) {
         com.umutk.pulse.extras.weather.WeatherAuto.ensure(ctx)
         Thread { try { fetchAll(ctx) } finally { pending.finish() } }.start()
@@ -102,16 +106,40 @@ class WeatherClearWidget : PulseWidget() {
         val places = placesOf(ctx)
         ids.map { places[indexOf(ctx, it).coerceIn(0, places.lastIndex)] }.distinct().forEach { pl ->
             val at = prefs(ctx).getLong("at_" + key(pl), 0L)
-            if (System.currentTimeMillis() - at < 25 * 60_000L) return@forEach
+            if (System.currentTimeMillis() - at < 55_000L && prefs(ctx).getString("raw_" + key(pl), null) != null) return@forEach
             runCatching {
-                val spot = if (pl.device) kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) } ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device } ?: return@runCatching else pl
-                prefs(ctx).edit().putString("raw_" + key(pl), WeatherApi.forecast(spot.lat, spot.lon)).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
+                // the device's place: the current fix, else the last saved one, else the place the weather page uses; no place means no fetch
+                val spot = if (pl.device) {
+                    val here = kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) }
+                    // a background fetch has no fix of its own: the place where the phone was when the weather page last found it comes next
+                    here ?: com.umutk.pulse.extras.weather.WeatherStore.lastDevice(ctx)?.let { Place(pl.name, it.first, it.second, true) }
+                        ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device && (it.lat != 0.0 || it.lon != 0.0) }
+                        ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.lat != 0.0 || it.lon != 0.0 }
+                        ?: com.umutk.pulse.extras.weather.WeatherStore.cities(ctx).firstOrNull()
+                        // nothing known at all (the weather page was never opened, no location permission): the place is read from the network address
+                        ?: ipPlace(pl.name)
+                        ?: return@runCatching
+                } else pl
+                if (pl.device && here0(ctx, spot)) com.umutk.pulse.extras.weather.WeatherStore.setLastDevice(ctx, spot.lat, spot.lon)
+                val raw = WeatherApi.forecast(spot.lat, spot.lon)
+                // the same extras as the page (MGM station values, the combined hours), so the widget shows the numbers of the chosen source
+                val ex = WeatherApi.extras(spot.lat, spot.lon, com.umutk.pulse.extras.weather.WeatherStore.source(ctx) == "mgm", com.umutk.pulse.extras.weather.WeatherStore.combine(ctx))
+                prefs(ctx).edit().putString("raw_" + key(pl), raw).putString("ex_" + key(pl), ex).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
             }
         }
         ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
     }
 
-    private fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
+    private fun here0(ctx: Context, p: Place) = (p.lat != 0.0 || p.lon != 0.0) && com.umutk.pulse.extras.weather.WeatherStore.lastDevice(ctx) == null
+
+    /** A rough place (city level) from the network address: only used when no better place exists. */
+    private fun ipPlace(name: String): Place? = runCatching {
+        val o = org.json.JSONObject(WeatherApi.get("https://ipwho.is/"))
+        if (!o.optBoolean("success", false)) return@runCatching null
+        Place(name, o.getDouble("latitude"), o.getDouble("longitude"), true)
+    }.getOrNull()
+
+    fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val imp = WeatherFmt.imperial(ctx)
@@ -143,7 +171,7 @@ class WeatherClearWidget : PulseWidget() {
         val today = f?.days?.firstOrNull()
         if (today != null) { val rt = "↑${WeatherFmt.temp(today.max, imp)} / ↓${WeatherFmt.temp(today.min, imp)}"; val rp = paint(.062f); c.drawText(rt, left(rp, rt), h * .88f, rp) }
         // right: the sky, the date and the time
-        val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
+        val icon = f?.let { WeatherApi.drawable(it.code, it.isDay) } ?: 0
         if (icon != 0) ContextCompat.getDrawable(ctx, icon)?.let { d ->
             val s = (h * .34f).toInt(); val right = (w - padR).toInt(); val top = (h * .08f).toInt()
             d.setBounds(right - s, top, right, top + s); d.draw(c)
@@ -162,7 +190,7 @@ class WeatherClearWidget : PulseWidget() {
     private fun cachedFor(c: Context, pl: Place): Forecast? {
         val s = prefs(c)
         val raw = s.getString("raw_" + key(pl), null)
-        if (raw != null) runCatching { return WeatherApi.parse(pl.name, raw, s.getLong("at_" + key(pl), 0L)) }
+        if (raw != null) runCatching { return WeatherApi.parse(pl.name, raw, s.getLong("at_" + key(pl), 0L), -1, s.getString("ex_" + key(pl), "").orEmpty()) }
         // the place the weather app shows, until the widget has fetched its own
         return WeatherStore.cached(c)?.takeIf { pl.device || it.place == pl.name }
     }

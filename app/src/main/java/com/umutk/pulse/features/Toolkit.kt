@@ -11,6 +11,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -126,6 +127,7 @@ private val tools = listOf(
     Tool("Flashlight", "El feneri", "flash") { Flashlight() },
     Tool("Lux meter", "Işık ölçer", "light") { LuxMeter() },
     Tool("Dice", "Zar", "dice") { Dice() },
+    Tool("Floating keyboard", "Yüzen klavye", "keyboard") { FloatingKeyboardTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
@@ -145,7 +147,6 @@ private val tools = listOf(
     Tool("Show touches", "Dokunma noktaları", "touch") { FlagTool("show_touches", tr("Show a dot under every finger", "Her parmağın altında nokta göster")) },
     Tool("Pointer location", "Dokunma çizgileri", "pointer") { FlagTool("pointer_location", tr("Show touch lines and coordinates", "Dokunma çizgilerini ve koordinatları göster")) },
     Tool("Motion cues", "Hareket noktaları", "motion") { MotionCueTool() },
-    Tool("Floating keys", "Yüzen tuşlar", "keyboard") { FloatingKeysTool() },
     Tool("Power menu", "Güç menüsü", "power") { PowerMenuTool() },
     Tool("Dink", "Dink", "dink") { Dink() },
     Tool("DNS", "DNS", "wifi") { DnsSettings() },
@@ -154,30 +155,90 @@ private val tools = listOf(
     Tool("Big text", "Büyük yazı", "document") { BigTextTool() },
 )
 
+/**
+ * The floating keyboard, as a Toolkit tile: a preview in the keyboard's own colours, a button that shows it (the same as the quick settings tile)
+ * and one that opens its settings, where it is edited.
+ */
+@Composable
+private fun FloatingKeyboardTool() {
+    val ctx = LocalContext.current
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    val th = com.umutk.pulse.extras.keyboard.KeyboardThemes.of(com.umutk.pulse.extras.keyboard.KeyboardPrefs.theme, true)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // the preview: a handle and three rows of keys, in the keyboard's colours
+        Column(Modifier.fillMaxWidth(.9f).align(Alignment.CenterHorizontally).clip(RoundedCornerShape(16.dp)).background(th.bg).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.align(Alignment.CenterHorizontally).width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
+            repeat(3) { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    repeat(if (r == 2) 7 else 10) { Box(Modifier.weight(1f).height(30.dp).clip(RoundedCornerShape(th.radius.dp)).background(th.key)) }
+                }
+            }
+        }
+        PButton(tr("Show the floating keyboard", "Yüzen klavyeyi göster"), Modifier.fillMaxWidth()) {
+            // a failure here is shown, never a crash of the whole app
+            runCatching {
+                com.umutk.pulse.extras.keyboard.KeyboardPrefs.load(ctx)
+                com.umutk.pulse.extras.keyboard.KeyboardPrefs.floatSession = true
+                ctx.startActivity(Intent(ctx, com.umutk.pulse.extras.keyboard.KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.onFailure { Toast.makeText(ctx, tr("Could not show the keyboard: ${it.message ?: it.javaClass.simpleName}", "Klavye gösterilemedi: ${it.message ?: it.javaClass.simpleName}"), Toast.LENGTH_LONG).show() }
+        }
+        PButton(tr("Edit the keyboard", "Klavyeyi düzenle"), Modifier.fillMaxWidth()) { openTool("keyboard") }
+    }
+}
+
+/** A Toolkit tile: it sinks a little while it is pressed and springs back on release, then opens its tool. */
+@Composable
+private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: () -> Unit) {
+    val press = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    PCard(modifier.clip(RoundedCornerShape(T.radius))
+        .graphicsLayer { scaleX = press.value; scaleY = press.value }
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = {
+                    scope.launch { press.animateTo(.92f, androidx.compose.animation.core.tween(90)) }
+                    val released = tryAwaitRelease()
+                    scope.launch { press.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .45f, stiffness = 500f)) }
+                },
+                onTap = { onClick() },
+            )
+        }) {
+        PIcon(icon, Look.accent, 28.dp, Modifier.align(Alignment.CenterHorizontally))
+        Text(label, Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2, minLines = 2)
+    }
+}
+
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
 @Composable
 fun ToolkitPage() {
     var open by rememberSaveable { mutableStateOf(-1) }
     LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = tools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
     com.umutk.pulse.InnerBackStep(open >= 0) { open = -1 }
+    // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
         val t = tools[open]
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PHead(tr(t.label, t.trLabel))
-            t.body()
-            Spacer(Modifier.height(12.dp))
+        // the window grows out of the middle and fades in when it opens
+        val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(open) { enter.animateTo(1f, androidx.compose.animation.core.tween(220)) }
+        androidx.compose.ui.window.Dialog(onDismissRequest = { open = -1 }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Column(
+                Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp)
+                    .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
+                    .clip(RoundedCornerShape(T.radius)).background(T.panel)
+                    .verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PHead(tr(t.label, t.trLabel))
+                t.body()
+            }
         }
-        return
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(tr("Toolkit", "Araç kutusu"), guide = "toolkit")
         tools.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEachIndexed { c, t ->
-                    PCard(Modifier.weight(1f).clip(RoundedCornerShape(T.radius)).clickable { open = r * 3 + c }) {
-                        PIcon(t.icon, Look.accent, 28.dp, Modifier.align(Alignment.CenterHorizontally))
-                        Text(tr(t.label, t.trLabel), Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2, minLines = 2)
-                    }
+                    ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = r * 3 + c }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -419,7 +480,8 @@ private fun Dice() {
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).padding(12.dp).size(140.dp)
             .graphicsLayer { rotationX = tiltX.value; rotationY = turnY.value; rotationZ = spinZ.value; translationY = -lift.value * density; cameraDistance = 16f * density }
-            .background(T.panel, RoundedCornerShape(22.dp)).border(2.dp, T.sub, RoundedCornerShape(22.dp))) {
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(T.panel, Color.White, .22f), T.panel, androidx.compose.ui.graphics.lerp(T.panel, Color.Black, .3f))), RoundedCornerShape(22.dp))
+            .border(2.dp, T.sub, RoundedCornerShape(22.dp))) {
             Canvas(Modifier.fillMaxSize().padding(22.dp)) {
                 PIPS[shown - 1].forEach { s -> drawCircle(pip, size.width * .11f, Offset(size.width * (s % 3) / 2f, size.height * (s / 3) / 2f)) }
             }
@@ -460,7 +522,8 @@ private fun CoinFlip() {
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).padding(8.dp).size(160.dp)
             .graphicsLayer { rotationX = turn.value; translationY = -lift.value * density; cameraDistance = 14f * density }
-            .background(Look.accent, CircleShape).border(4.dp, Color.White.copy(alpha = .35f), CircleShape), contentAlignment = Alignment.Center) {
+            .background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(androidx.compose.ui.graphics.lerp(Look.accent, Color.White, .45f), Look.accent, androidx.compose.ui.graphics.lerp(Look.accent, Color.Black, .35f)), center = Offset(60f, 50f), radius = 260f), CircleShape)
+            .border(4.dp, androidx.compose.ui.graphics.lerp(Look.accent, Color.Black, .5f), CircleShape), contentAlignment = Alignment.Center) {
             // the letter turns with the back of the coin, so it reads the right way round
             Text(if (showHeads) tr("H", "T") else tr("T", "Y"), Modifier.graphicsLayer { rotationX = if (showHeads) 0f else 180f },
                 color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
@@ -1063,21 +1126,6 @@ private fun MotionCueTool() {
         }
     }
     if (!canDraw) AccessNeededCard(tr("Motion cues", "Hareket noktaları"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
-}
-
-@Composable
-private fun FloatingKeysTool() {
-    val ctx = LocalContext.current
-    val on = polled(500) { com.umutk.pulse.FloatingKeysService.running }
-    val canDraw = polled(1000) { com.umutk.pulse.Compat.canOverlay(ctx) }
-    PCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("A key button over every app: tap for the keyboard, hold for a small floating panel with Esc, Tab, Ctrl, arrows and the F keys (slide sideways for more)", "Her uygulamanın üstünde tuş düğmesi: dokununca klavye, basılı tutunca Esc, Tab, Ctrl, oklar ve F tuşlarının olduğu küçük yüzen panel (yana kaydırınca yenisi)"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            PSwitch(on, { com.umutk.pulse.FloatingKeysService.toggle(ctx) })
-        }
-    }
-    if (!canDraw) AccessNeededCard(tr("Floating keys", "Yüzen tuşlar"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
-    Text(tr("The keys are sent with the input command: they need root or Shizuku. Opening the keyboard needs the App Lock accessibility service.", "Tuşlar input komutuyla gönderilir: root veya Shizuku gerekir. Klavyeyi açmak için Uygulama Kilidi erişilebilirlik hizmeti gerekir."), color = T.sub, fontSize = 12.sp)
 }
 
 @Composable

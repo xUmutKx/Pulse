@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,10 +106,18 @@ fun AlarmEditSheet(
     is24Hour: Boolean,
     settingsDataStore: SettingsDataStore,
     onDismiss: () -> Unit,
-    onSave: (AlarmEntity) -> Unit
+    onSave: (AlarmEntity) -> Unit,
+    recentAlarm: AlarmEntity? = null
 ) {
-    // a new alarm starts at the phone's current time, not at a fixed 08:00
-    val nowCal = remember { Calendar.getInstance() }
+    // a new alarm starts at the phone's current time, not at a fixed 08:00; when another alarm was made in the last five minutes, five minutes after that one
+    val nowCal = remember {
+        Calendar.getInstance().also { c ->
+            if (initialAlarm == null && recentAlarm != null) {
+                c.set(Calendar.HOUR_OF_DAY, recentAlarm.hour.coerceIn(0, 23)); c.set(Calendar.MINUTE, recentAlarm.minute.coerceIn(0, 59))
+                c.add(Calendar.MINUTE, 5)
+            }
+        }
+    }
     var hour by remember { mutableIntStateOf(initialAlarm?.hour ?: nowCal.get(Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableIntStateOf(initialAlarm?.minute ?: nowCal.get(Calendar.MINUTE)) }
     var label by remember { mutableStateOf(initialAlarm?.label ?: "") }
@@ -343,7 +352,6 @@ fun AlarmEditSheet(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .nestedScroll(consumeVerticalFlingConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
                 // tighter gaps, so the editor's options fit the screen with less scrolling
@@ -409,12 +417,6 @@ fun AlarmEditSheet(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
-                        FilledIconButton(onClick = {
-                            newGroupName = ""
-                            showNewGroupDialog = true
-                        }) {
-                            Icon(Icons.Filled.Add, contentDescription = "New group")
-                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -463,19 +465,8 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Vibrate", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it })
-                }
-                if (vibrationEnabled) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                run {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         AlarmVibrationPreset.entries.forEach { preset ->
                              FilterChip(
                                  selected = vibrationPattern == preset.name,
@@ -488,45 +479,34 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Snooze", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = snoozeEnabled, onCheckedChange = { snoozeEnabled = it })
-                }
-                if (snoozeEnabled) {
+                run {
                     Text(
                         text = "Interval",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        SNOOZE_INTERVAL_OPTIONS.forEach { minutes ->
-                             FilterChip(
-                                 selected = snoozeMinutes == minutes,
-                                 onClick = { snoozeMinutes = minutes },
-                                 shape = SelectionChipShape,
-                                 colors = selectedChipColors(),
-                                 label = {
-                                     Text(if (minutes == 0) "Default" else "${minutes}m")
-                                 }
-                             )
-                        }
+                                        val intervals = SNOOZE_INTERVAL_OPTIONS
+                    val at = intervals.indexOf(snoozeMinutes).coerceAtLeast(0)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Slider(
+                            value = at.toFloat(),
+                            onValueChange = { snoozeMinutes = intervals[it.roundToInt().coerceIn(0, intervals.lastIndex)] },
+                            valueRange = 0f..intervals.lastIndex.toFloat(),
+                            steps = intervals.size - 2,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            if (snoozeMinutes == 0) "Default" else "${snoozeMinutes}m",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.width(64.dp).padding(start = 8.dp)
+                        )
                     }
                     Text(
                         text = "Repeat limit",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         SNOOZE_LIMIT_OPTIONS.forEach { (limit, text) ->
                              FilterChip(
                                  selected = snoozeLimit == limit,
@@ -548,19 +528,6 @@ fun AlarmEditSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Alert Options", style = MaterialTheme.typography.bodyLarge)
-                        Icon(
-                            imageVector = if (advancedNotificationsExpanded) {
-                                Icons.Outlined.ExpandLess
-                            } else {
-                                Icons.Outlined.ExpandMore
-                            },
-                            contentDescription = if (advancedNotificationsExpanded) {
-                                "Collapse"
-                            } else {
-                                "Expand"
-                            },
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                     if (advancedNotificationsExpanded) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -797,13 +764,18 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = {
+
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
                         val repeatDays = selectedDays.sorted().joinToString(",")
                         val resolvedGroup = groupName.ifBlank { AlarmEntity.DEFAULT_GROUP }
                         val resolvedAppearance =
@@ -896,11 +868,8 @@ fun AlarmEditSheet(
                         )
                         onSave(newAlarm)
                     }) {
-                        Text("Save")
-                    }
+                    Text("Save")
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

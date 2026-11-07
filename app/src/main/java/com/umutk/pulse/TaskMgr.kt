@@ -3,6 +3,8 @@ package com.umutk.pulse
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +36,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.features.AccessNeededCard
 import com.umutk.pulse.features.ownProcesses
+import com.umutk.pulse.features.visibleApps
+import com.umutk.pulse.features.ProcCache
 import com.umutk.pulse.features.ProcStats
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +73,7 @@ fun ProcessesPage() {
     val openTool = LocalOpenTool.current
     val s by Sampler.snap.collectAsState()
     ColW.load(ctx)
+    // the last list that was read shows at once, and stays when a read fails
     var rows by remember { mutableStateOf<List<PRow>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(-1) }
@@ -82,13 +87,22 @@ fun ProcessesPage() {
     var sizes by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }   // uid -> app + data bytes
     var own by remember { mutableStateOf(false) }      // no root/Shizuku: only this app's own processes, CPU and virtual size unknown
     var usage by remember { mutableStateOf(false) }    // usage access: needed for network speed and app size
+    var fg by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }   // package -> time on screen today (ms): the only per-app figure a phone gives without root
     LaunchedEffect(Unit) {
         while (true) {
+            if (rows.isEmpty()) rows = withContext(Dispatchers.IO) { ProcCache.load(ctx).map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
             val raw = withContext(Dispatchers.IO) { Sampler.processes() }
             own = raw.isEmpty()
-            rows = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+            val fresh = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) + visibleApps(ctx).filter { v -> ownProcesses(ctx).none { o -> o.name.substringBefore(':') == v.name } } } }
+            if (fresh.isNotEmpty()) {
+                rows = withContext(Dispatchers.IO) { fresh.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+                withContext(Dispatchers.IO) { ProcCache.save(ctx, fresh) }
+            }
             loaded = true
             usage = withContext(Dispatchers.IO) { Extra.usageGranted(ctx) }
+            fg = if (own && usage) withContext(Dispatchers.IO) { todayOnScreen(ctx) } else emptyMap()
+            // no memory figures without root: the apps are ordered by the time they were used today (or by their size without usage access)
+            if (own && sort == "mem") sort = if (usage) "use" else "disk"
             net = withContext(Dispatchers.IO) { ProcStats.netRates(ctx) }
             sizes = withContext(Dispatchers.IO) { rows.map { it.uid }.distinct().mapNotNull { u -> ProcStats.size(ctx, u)?.let { u to it } }.toMap() }
             delay(3000)
@@ -101,9 +115,10 @@ fun ProcessesPage() {
     val groups = shown.groupBy { it.p.name.substringBefore(':') }.values.map { PGroup(it) }
         .let { l -> when (sort) {
             "cpu" -> l.sortedByDescending { it.cpu }; "name" -> l.sortedBy { it.title.lowercase() }; "pid" -> l.sortedBy { it.head.p.pid }
+"use" -> l.sortedByDescending { fg[it.key] ?: 0L }
             "net" -> l.sortedByDescending { net[it.uid] ?: 0f }; "disk" -> l.sortedByDescending { sizes[it.uid] ?: 0L }
             else -> l.sortedByDescending { it.mem } } }
-    val selRow = rows.firstOrNull { it.p.pid == sel }
+    val selRow = rows.firstOrNull { it.p.pid > 0 && it.p.pid == sel }
     val hs = rememberScrollState()
     fun end(r: PRow) { scope.launch { withContext(Dispatchers.IO) { Sampler.kill(r.p) }; ask = null; sel = -1 } }
     ask?.let { r -> PDialog("End ${r.label}?", "Unsaved data in this process will be lost. (PID ${r.p.pid})", "End process", { end(r) }, { ask = null }) }
@@ -132,21 +147,30 @@ fun ProcessesPage() {
                 ColHandle("name", Modifier.align(Alignment.CenterEnd))
             }
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
-                HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
-                HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
-                HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", sort == "net", resColor("net").copy(alpha = .25f)) {
-                    sort = "net"
+                // the columns in the order the person chose (hold a head and drag it sideways to move it)
+                ColW.order.toList().forEach { id ->
+                    when (id) {
+                        "cpu" -> HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
+                        "gpu" -> HeadCell(if (s.gpu >= 0) "${s.gpu}%" else "", "GPU", "gpu", false, if (s.gpu >= 0) heatBg(s.gpu / 100f) else Color.Transparent) { }
+                        "mem" -> HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
+                        "net" -> HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", sort == "net", resColor("net").copy(alpha = .25f)) { sort = "net" }
+                        "disk" -> HeadCell("$diskPct%", "Storage", "disk", sort == "disk", resColor("disk").copy(alpha = .25f)) { sort = "disk" }
+                        "status" -> if (own && usage) HeadCell(durText(fg.values.sum()), tr("Today", "Bugün"), "status", sort == "use", resColor("disk").copy(alpha = .25f)) { sort = "use" }
+                            else HeadCell("", "Status", "status", false, Color.Transparent) {}
+                        "pid" -> HeadCell("", "PID", "pid", sort == "pid", Color.Transparent) { sort = "pid" }
+                        "user" -> HeadCell("", "User", "user", false, Color.Transparent) {}
+                        "virt" -> HeadCell("", "Virtual", "virt", false, Color.Transparent) {}
+                        "prio" -> HeadCell("", "Priority", "prio", false, Color.Transparent) {}
+                        "ppid" -> HeadCell("", "Parent", "ppid", false, Color.Transparent) {}
+                    }
                 }
-                HeadCell("$diskPct%", "Storage", "disk", sort == "disk", resColor("disk").copy(alpha = .25f)) { sort = "disk" }
-                HeadCell("", "Status", "status", false, Color.Transparent) {}
-                HeadCell("", "PID", "pid", sort == "pid", Color.Transparent) { sort = "pid" }
-                HeadCell("", "User", "user", false, Color.Transparent) {}
-                HeadCell("", "Virtual", "virt", false, Color.Transparent) {}
-                HeadCell("", "Priority", "prio", false, Color.Transparent) {}
-                HeadCell("", "Parent", "ppid", false, Color.Transparent) {}
             }
         }
         AccessNeededCard(tr("Processes", "İşlemler"), tr("Showing this app's own processes only. Other apps' processes, CPU and virtual size need root or Shizuku.", "Yalnızca bu uygulamanın kendi işlemleri gösteriliyor. Diğer uygulamaların işlemleri, CPU ve sanal bellek için root veya Shizuku gerekir."), Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+        if (own && !usage) com.umutk.pulse.PCard(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Text(tr("Time on screen, network and size of each app need usage access.", "Her uygulamanın ekran süresi, ağ ve boyutu için kullanım erişimi gerekir."), color = T.sub, fontSize = 13.sp)
+            PButton(tr("Allow usage access", "Kullanım erişimine izin ver")) { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
         if (loaded && rows.isEmpty()) Center(tr("No processes could be read", "İşlemler okunamadı"))
         else LazyColumn(Modifier.fillMaxSize().then(if (win95Authentic) Modifier.padding(horizontal = 2.dp).background(Color.White).bevel(false).padding(2.dp) else Modifier)) {
             fun section(id: String, title: String, list: List<PGroup>) {
@@ -164,7 +188,7 @@ fun ProcessesPage() {
                     val isOpen = g.key in expanded
                     item(key = "g${g.key}") {
                         val on = !many && sel == g.head.p.pid
-                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else if (g.head.p.pid > 0) sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (many) (if (isOpen) "⌄" else "›") else "", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(26.dp).padding(start = 8.dp))
                                 AppIcon(g.head.p.name, 22.dp); Spacer(Modifier.width(8.dp))
@@ -172,7 +196,7 @@ fun ProcessesPage() {
                                 if (win95Authentic) Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on) Color.White else Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.background(if (on) Color(0xFF000080) else Color.Transparent).padding(horizontal = 2.dp))
                                 else Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on && xpAuthentic) Color.White else T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text, net[g.uid], sizes[g.uid]) }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text, net[g.uid], sizes[g.uid], if (own && usage) (fg[g.key] ?: 0L) else null) }
                         }
                     }
                     if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
@@ -206,7 +230,23 @@ private class PGroup(val rows: List<PRow>) {
 @Composable
 private fun HeadCell(top: String, name: String, key: String, active: Boolean, bg: Color, onClick: () -> Unit) {
     val w = ColW.w(key)
-    Box(Modifier.width(w).fillMaxHeight()) {
+    val ctx = LocalContext.current
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    var shift by remember(key) { mutableStateOf(0f) }
+    Box(Modifier.width(w).fillMaxHeight().graphicsLayer { translationX = shift; alpha = if (shift != 0f) .75f else 1f }.pointerInput(key) {
+        // hold the head, then drag it sideways over the other columns: it lands where it is let go
+        detectDragGesturesAfterLongPress(
+            onDrag = { ch, d -> ch.consume(); shift += d.x },
+            onDragEnd = {
+                var left = shift / dens; var idx = ColW.order.indexOf(key)
+                // each column passed over is as wide as that column
+                while (left > 0 && idx < ColW.order.lastIndex) { val nw = ColW.w(ColW.order[idx + 1]).value; if (left < nw / 2) break; left -= nw; idx++ }
+                while (left < 0 && idx > 0) { val nw = ColW.w(ColW.order[idx - 1]).value; if (-left < nw / 2) break; left += nw; idx-- }
+                shift = 0f; ColW.move(ctx, key, idx)
+            },
+            onDragCancel = { shift = 0f },
+        )
+    }) {
         HeadCellBody(top, name, w, active, bg, onClick)
         ColHandle(key, Modifier.align(Alignment.CenterEnd))
     }
@@ -228,33 +268,63 @@ private fun HeadCellBody(top: String, name: String, w: Dp, active: Boolean, bg: 
 }
 
 @Composable
-private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text, net: Float? = null, size: Long? = null) {
-    HeatCell("%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
-    HeatCell(mb(mem), mem / 1500f, ColW.w("mem"), ink = ink)
-    // speed right now (0 shows as "0 KB/s" so a quiet app reads as measured, not missing); heat from 1 MB/s
-    HeatCell(net?.let { rate(it) } ?: "", (net ?: 0f) / 1048576f, ColW.w("net"), ink = ink)
-    HeatCell(size?.let { sizeText(it) } ?: "", 0f, ColW.w("disk"), ink = ink)
-    HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
-    HeatCell(p?.pid?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
-    HeatCell(p?.user ?: "", 0f, ColW.w("user"), ink = ink)
-    HeatCell(if (p == null) "" else mb(p.vszMb), 0f, ColW.w("virt"), ink = ink)
-    HeatCell(p?.nice?.toString() ?: "", 0f, ColW.w("prio"), ink = ink)
-    HeatCell(p?.ppid?.toString() ?: "", 0f, ColW.w("ppid"), ink = ink)
+private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text, net: Float? = null, size: Long? = null, onScreen: Long? = null) {
+    val seen = p == null || p.pid > 0 // an app listed without root has no memory or CPU figure
+    ColW.order.toList().forEach { id ->
+        when (id) {
+            "cpu" -> HeatCell(if (!seen) "" else "%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
+            // the GPU of one process cannot be read on a phone (only the whole GPU, in the head): the cell stays empty
+            "gpu" -> HeatCell("", 0f, ColW.w("gpu"), ink = ink)
+            "mem" -> HeatCell(if (seen) mb(mem) else "", mem / 1500f, ColW.w("mem"), ink = ink)
+            // speed right now (0 shows as "0 KB/s" so a quiet app reads as measured, not missing); heat from 1 MB/s
+            "net" -> HeatCell(net?.let { rate(it) } ?: "", (net ?: 0f) / 1048576f, ColW.w("net"), ink = ink)
+            "disk" -> HeatCell(size?.let { sizeText(it) } ?: "", 0f, ColW.w("disk"), ink = ink)
+            "status" -> HeatCell(if (onScreen != null) (if (onScreen > 0) durText(onScreen) else "") else if (p == null || p.pid <= 0) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
+            "pid" -> HeatCell(p?.pid?.takeIf { it > 0 }?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
+            "user" -> HeatCell(p?.user ?: "", 0f, ColW.w("user"), ink = ink)
+            "virt" -> HeatCell(if (p == null || p.pid <= 0) "" else mb(p.vszMb), 0f, ColW.w("virt"), ink = ink)
+            "prio" -> HeatCell(p?.nice?.toString() ?: "", 0f, ColW.w("prio"), ink = ink)
+            "ppid" -> HeatCell(p?.ppid?.toString() ?: "", 0f, ColW.w("ppid"), ink = ink)
+        }
+    }
 }
+
+/** The time each app was on screen since midnight (ms), by package; empty without usage access. */
+private fun todayOnScreen(ctx: android.content.Context): Map<String, Long> = runCatching {
+    val um = ctx.getSystemService(android.content.Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+    val start = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }.timeInMillis
+    um.queryAndAggregateUsageStats(start, System.currentTimeMillis()).mapValues { it.value.totalTimeInForeground }.filterValues { it > 0 }
+}.getOrDefault(emptyMap())
+
+private fun durText(ms: Long): String { val m = ms / 60_000; return if (m >= 60) "${m / 60}h ${m % 60}m" else if (m >= 1) "${m}m" else "<1m" }
 
 private fun sizeText(b: Long) = if (b >= 1L shl 30) "%.1f GB".format(b / 1073741824.0) else "%.0f MB".format(b / 1048576.0)
 
 /** Shared, persisted column widths of the Processes table (header and rows read the same state). */
 private object ColW {
     // the name keeps its width; CPU, Memory and Network are narrow, so the three fit beside it
-    private val def = mapOf("name" to 170, "cpu" to 48, "mem" to 64, "net" to 72, "disk" to 64, "status" to 76, "pid" to 60, "user" to 84, "virt" to 84, "prio" to 64, "ppid" to 64)
+    private val def = mapOf("name" to 170, "cpu" to 48, "gpu" to 48, "mem" to 64, "net" to 72, "disk" to 64, "status" to 76, "pid" to 60, "user" to 84, "virt" to 84, "prio" to 64, "ppid" to 64)
     private val map = mutableStateMapOf<String, Float>()
+    private val defOrder = listOf("cpu", "gpu", "mem", "net", "disk", "status", "pid", "user", "virt", "prio", "ppid")
+    /** The columns left to right; a head held and dragged sideways moves its column. */
+    val order = androidx.compose.runtime.mutableStateListOf<String>().also { it.addAll(defOrder) }
     private var loaded = false
     fun load(ctx: android.content.Context) {
         if (loaded) return
         loaded = true
         val sp = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
         def.keys.forEach { k -> if (sp.contains("proc_col_$k")) map[k] = sp.getFloat("proc_col_$k", def[k]!!.toFloat()) }
+        // the saved order, with any column that came later (GPU) put in its place and any unknown name dropped
+        val saved = sp.getString("proc_col_order", "").orEmpty().split(',').filter { it in defOrder }.distinct()
+        if (saved.isNotEmpty()) { val full = saved.toMutableList(); defOrder.forEachIndexed { i, id -> if (id !in full) full.add(minOf(i, full.size), id) }; order.clear(); order.addAll(full) }
+    }
+    /** Moves column [id] to place [to] and keeps the order. */
+    fun move(ctx: android.content.Context, id: String, to: Int) {
+        val from = order.indexOf(id); if (from < 0) return
+        val t = to.coerceIn(0, order.lastIndex)
+        if (t == from) return
+        order.removeAt(from); order.add(t, id)
+        ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("proc_col_order", order.joinToString(",")).apply()
     }
     fun w(k: String): Dp = (map[k] ?: def[k]!!.toFloat()).dp
     fun set(k: String, v: Float) { map[k] = v.coerceIn(48f, 360f) }

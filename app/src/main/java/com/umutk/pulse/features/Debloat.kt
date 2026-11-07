@@ -73,6 +73,25 @@ import java.net.URL
 // Downloaded on demand and kept in the app's own storage; the licence of that list does not limit how Pulse uses it here.
 private const val LIST_URL = "https://raw.githubusercontent.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation/main/resources/assets/uad_lists.json"
 private const val PREF_REMOVED = "debloat_removed"
+// the names of the apps the phone had (kept after they are gone, so the reinstall list shows them), and the packages seen on this phone
+private const val PREF_NAMES = "debloat_names"
+private const val PREF_SEEN = "debloat_seen"
+
+private fun savedNames(c: Context): Map<String, String> =
+    c.getSharedPreferences("p", Context.MODE_PRIVATE).getString(PREF_NAMES, "").orEmpty().lines().mapNotNull { l -> l.split('\t', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
+
+private fun rememberNames(c: Context, labels: Map<String, String>) {
+    val merged = savedNames(c) + labels
+    c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(PREF_NAMES, merged.entries.joinToString("\n") { "${it.key}\t${it.value.replace('\n', ' ')}" }).apply()
+}
+
+private fun seenPkgs(c: Context): Set<String> = c.getSharedPreferences("p", Context.MODE_PRIVATE).getStringSet(PREF_SEEN, emptySet()).orEmpty()
+
+private fun rememberSeen(c: Context, installed: Set<String>) {
+    val all = seenPkgs(c) + installed
+    c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet(PREF_SEEN, all).apply()
+}
+private const val PREF_PICKED = "debloat_picked"
 
 /** One package from the list: how safe it is to remove, and a short text about it. */
 class DebloatInfo(
@@ -133,6 +152,13 @@ fun safetyOf(removal: String): String = when (removal) {
 private fun removedOf(ctx: Context): List<String> =
     ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString(PREF_REMOVED, "").orEmpty().split('\n').filter { it.isNotBlank() }
 
+private fun pickedOf(ctx: Context): Set<String> =
+    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString(PREF_PICKED, "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+
+private fun savePicked(ctx: Context, set: Set<String>) {
+    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(PREF_PICKED, set.joinToString("\n")).apply()
+}
+
 private fun saveRemoved(ctx: Context, list: List<String>) {
     ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(PREF_REMOVED, list.joinToString("\n")).apply()
 }
@@ -169,7 +195,8 @@ fun DebloatScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var list by remember { mutableStateOf(debloatList(ctx)) }
-    val labels = remember { installedLabels(ctx) }
+    // the names of the apps that are gone are kept too, so the reinstall list still shows them
+    val labels = remember { savedNames(ctx) + installedLabels(ctx).also { rememberNames(ctx, it) } }
     var removed by remember { mutableStateOf(removedOf(ctx)) }
     var tab by remember { mutableStateOf("uninstall") }
     var ask by remember { mutableStateOf<String?>(null) }
@@ -183,14 +210,17 @@ fun DebloatScreen(onBack: () -> Unit) {
     var levels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var flags by remember { mutableStateOf<Set<String>>(emptySet()) }
     var filterOpen by remember { mutableStateOf(false) }
-    var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // the selection survives leaving the page or closing the app until it is removed or cleared
+    var picked by remember { mutableStateOf(pickedOf(ctx)) }
+    LaunchedEffect(picked) { savePicked(ctx, picked) }
     var askBatch by remember { mutableStateOf(false) }
     // search: by app name or package, on both the uninstall and the reinstall lists
     var query by remember { mutableStateOf("") }
     var sys by remember { mutableStateOf<Set<String>>(emptySet()) }
     // the reinstall list also holds the system apps of the catalog that are gone from the phone, removed by Canta or another tool (root needed to tell)
-    val removedShown = remember(removed, installed, list) {
-        removed + (installed?.let { inst -> list.keys.filter { it !in inst && it !in removed } } ?: emptyList())
+    // only the apps this phone has had (seen on it) and that are gone now, plus the ones removed here
+    val removedShown = remember(removed, installed) {
+        removed + (installed?.let { inst -> seenPkgs(ctx).filter { it !in inst && it !in removed } } ?: emptyList())
     }
     LaunchedEffect(Unit) {
         // no list yet (first open, or never downloaded): fetch it once, so each app shows why it can go
@@ -199,6 +229,7 @@ fun DebloatScreen(onBack: () -> Unit) {
             list = debloatList(ctx)
         }
         installed = withContext(Dispatchers.IO) { installedPkgs() }
+        installed?.let { rememberSeen(ctx, it) }
         sys = withContext(Dispatchers.IO) { systemPkgs(ctx) }
     }
 

@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import com.umutk.pulse.Look
@@ -98,12 +100,28 @@ private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
 
+/** The cassette, iPod and turntable players have no bar of their own: this frame gives each a settings button at the top right, over the player. */
+@Composable
+private fun ExtraPlayerFrame(onSettings: () -> Unit, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        content()
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 8.dp).size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = .38f)).clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) { PIcon("settings", Color.White, 22.dp) }
+    }
+}
+
 /**
  * Music host page: look switcher, library from MediaStore (permission asked once, picker as fallback), playlists with
  * M3U import/export, resume of the last queue. Playback lives in [MusicPlayerEngine] / [MusicPlaybackService].
  */
 /** What a notification asks the open music page to show: "player" (the full player) or "lyrics". The page takes it and clears it. */
-object MusicNav { var request by androidx.compose.runtime.mutableStateOf<String?>(null) }
+object MusicNav {
+    var request by androidx.compose.runtime.mutableStateOf<String?>(null)
+    /** An artist whose page the library opens (the player's artist line asks for it). The library takes it and clears it. */
+    var artist by androidx.compose.runtime.mutableStateOf<String?>(null)
+}
 
 @Composable
 fun MusicHub(onBack: () -> Unit) = com.umutk.pulse.WithPlayerFont { MusicHubBody(onBack) }
@@ -128,6 +146,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     var noiseOpen by remember { mutableStateOf(false) }
     var radioOpen by remember { mutableStateOf(false) }
     var recapOpen by remember { mutableStateOf(false) }
+    val recapGate = com.umutk.pulse.ads.rememberAdGate(tr("Music recap", "Müzik özeti"), tr("Watch a short ad to open the recap.", "Özeti açmak için kısa bir reklam izle."), key = "recap", minutes = 30)
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
@@ -161,7 +180,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
         onDispose { hostView.keepScreenOn = false }
     }
 
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) engine.playQueue(uris.map { Track(it.toString()) })
     }
     // registered last so it takes priority: back closes the open lyrics first, and leaves the hub only when they are closed
@@ -177,30 +196,17 @@ private fun MusicHubBody(onBack: () -> Unit) {
         // the Material now-playing screen and Poweramp take the whole window: no header, no inset
         val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL)
         Column(Modifier.fillMaxSize().padding(horizontal = if (fullNow) 0.dp else 12.dp, vertical = if (fullNow) 0.dp else 8.dp)) {
-            if (!fullNow) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
-                    Spacer(Modifier.weight(1f))
-                    // white noise opens from here; playlists sit in the library
-                    // Poweramp carries its own settings button at the right end of its tab bar
-                    Box(Modifier.size(40.dp).clickable { noiseOpen = true }, contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
-                    // radio is reached from the player only (no Extra apps row)
-                    Box(Modifier.size(40.dp).clickable { radioOpen = true }, contentAlignment = Alignment.Center) { PIcon("radio", Color.White, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { recapOpen = true }, contentAlignment = Alignment.Center) { PIcon("heart", Color.White, 22.dp) }
-                    if (look != MusicLook.POWERAMP && look != MusicLook.MATERIAL) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
+            // the Winamp look has no bar: its window starts at the top and its SET button sits in the window
             Box(Modifier.weight(1f).fillMaxWidth()) {
               androidx.compose.runtime.key(rev) {
                 when {
-                    lyrics -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
-                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it })
+                    lyrics && look != MusicLook.WINAMP -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
+                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it }, onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapGate { recapOpen = true } }, onSettings = { settingsOpen = true })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
-                    look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
-                    look == MusicLook.CASSETTE -> com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
-                    look == MusicLook.IPOD -> com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
-                    look == MusicLook.TURNTABLE -> com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
+                    look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") }, startLyrics = lyrics, onSettings = { settingsOpen = true })
+                    look == MusicLook.CASSETTE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
+                    look == MusicLook.IPOD -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
+                    look == MusicLook.TURNTABLE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
@@ -403,7 +409,9 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
     var skinPick by remember { mutableIntStateOf(prefs(ctx).getInt("img_skin", 0)) }
     var family by remember { mutableStateOf(ThemeFamily.values().firstOrNull { it.look == look } ?: ThemeFamily.EXTRA) }
     val scheme = MaterialTheme.colorScheme
-    fun pick(f: ThemeFamily) { family = f; if (f.look != look && !(f == ThemeFamily.EXTRA && (look == MusicLook.IPOD || look == MusicLook.TURNTABLE))) onLook(f.look) }
+    // the extra themes are three players: the one the saved extra theme names (an iPod chosen before stays an iPod, it does not turn into a cassette)
+    fun extraLook() = when (ExtraThemes.kind) { ExtraThemes.Kind.IPOD -> MusicLook.IPOD; ExtraThemes.Kind.TURNTABLE -> MusicLook.TURNTABLE; else -> MusicLook.CASSETTE }
+    fun pick(f: ThemeFamily) { family = f; val target = if (f == ThemeFamily.EXTRA) extraLook() else f.look; if (target != look) onLook(target) }
     Text(tr("Look", "Görünüm"), color = Look.accent, fontSize = 12.sp)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Bottom) {
         ThemeFamily.values().forEach { f ->
@@ -415,7 +423,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
                         .border(if (on) BorderStroke(2.dp, Look.accent) else BorderStroke(1.dp, ink.copy(alpha = .3f)), shape))
                 }
                 // a long name goes on to a second line instead of stretching the one line of the row
-                Text(tr(f.en, f.turkish), modifier = Modifier.widthIn(max = 96.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 2,
+                Text(tr(f.en, f.turkish), modifier = Modifier.widthIn(max = 96.dp), minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 2,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
@@ -517,10 +525,10 @@ private fun PlaylistsDialog(engine: MusicPlayerEngine, queue: List<Track>, onClo
     val ctx = LocalContext.current
     var names by remember { mutableStateOf(Playlists.names(ctx)) }
     var name by remember { mutableStateOf("") }
-    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val import = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) Playlists.import(ctx, uri).takeIf { it.isNotEmpty() }?.let { engine.playQueue(it); onClose() }
     }
-    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+    val export = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("audio/x-mpegurl")) { uri ->
         if (uri != null) runCatching { Playlists.export(ctx, uri, queue) }
     }
     WinAlert(
@@ -550,3 +558,4 @@ private fun PlaylistsDialog(engine: MusicPlayerEngine, queue: List<Track>, onClo
         confirmButton = { PButton("OK", onClick = onClose) },
     )
 }
+

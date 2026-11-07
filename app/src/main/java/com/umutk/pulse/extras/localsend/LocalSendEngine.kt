@@ -154,23 +154,32 @@ object LocalSendEngine {
      * neighbour the phone has already talked to (the ARP table, read with root or the shell). The ones that answer are listed.
      */
     fun scan() {
+        // the spinner runs while the probes are running, and stops when the last address has answered or timed out
         scanning = true
-        pool.execute { runCatching { Thread.sleep(7000) }; scanning = false }
         pool.execute {
-            val own = locals()
-            val seen = HashSet<String>()
-            val targets = ArrayList<String>()
-            own.forEach { base ->
-                val prefix = base.substringBeforeLast('.')
-                for (i in 1..254) "$prefix.$i".let { if (it != base && seen.add(it)) targets += it }
-            }
-            // neighbours on any interface, also on subnets that are not a /24 of ours (USB tethering is often a /28 or /30)
             runCatching {
-                com.umutk.pulse.Shell.run("ip neigh show 2>/dev/null; cat /proc/net/arp 2>/dev/null").lines().forEach { l ->
-                    Regex("""\b(\d{1,3}(?:\.\d{1,3}){3})\b""").find(l)?.value?.let { ip -> if (ip !in own && !ip.endsWith(".0") && seen.add(ip)) targets += ip }
+                val own = locals()
+                val seen = HashSet<String>()
+                val targets = ArrayList<String>()
+                own.forEach { base ->
+                    val prefix = base.substringBeforeLast('.')
+                    for (i in 1..254) "$prefix.$i".let { if (it != base && seen.add(it)) targets += it }
                 }
-            }
-            targets.forEach { ip -> pool.execute { if (running) probe(ip) } }
+                // neighbours on any interface, also on subnets that are not a /24 of ours (USB tethering is often a /28 or /30)
+                runCatching {
+                    com.umutk.pulse.Shell.run("ip neigh show 2>/dev/null; cat /proc/net/arp 2>/dev/null").lines().forEach { l ->
+                        Regex("""\b(\d{1,3}(?:\.\d{1,3}){3})\b""").find(l)?.value?.let { ip -> if (ip !in own && !ip.endsWith(".0") && seen.add(ip)) targets += ip }
+                    }
+                }
+                if (targets.isEmpty() || !running) { scanning = false; return@runCatching }
+                val left = java.util.concurrent.atomic.AtomicInteger(targets.size)
+                targets.forEach { ip ->
+                    pool.execute {
+                        try { if (running) probe(ip) } catch (_: Exception) { }
+                        finally { if (left.decrementAndGet() == 0) scanning = false }
+                    }
+                }
+            }.onFailure { scanning = false }
         }
     }
 

@@ -78,6 +78,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var quickClip: String? = null
     private var quickAt = 0L
     private var quickLeft = 0
+    private var quickPinned = false
+    // the copied text leaves the bar after two minutes even when nothing is typed: the bar is refreshed then (it only refreshed on a key before)
+    private val quickExpiry = android.os.Handler(android.os.Looper.getMainLooper())
+    private val quickExpire = Runnable { if (quickClip != null && !quickPinned && SystemClock.uptimeMillis() - quickAt >= 120_000L) { quickClip = null; updateSuggestions() } }
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
@@ -91,7 +95,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var corrAt = 0L
     private var selStart = 0
     private var selEnd = 0
-    private var shiftTap = 0L
     private var spaceTap = 0L
     private var lastWasSpace = false
     private var punctTyped = false
@@ -115,7 +118,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
-            if (!t.isNullOrEmpty()) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
+            if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -129,9 +133,34 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyShortcuts.put(this, name, item.text)
         android.widget.Toast.makeText(this, com.umutk.pulse.tr("Shortcut saved: $name", "Kısayol kaydedildi: $name"), android.widget.Toast.LENGTH_SHORT).show()
     }
+    /** The pin of the bar's right slot: the item shown there is pinned in the clipboard and stays in the bar until a newer copy comes. */
+    override fun quickPin() {
+        val s = shotItem
+        if (s != null) { shotPinned = true; st.clipItems = ClipStore.togglePin(this, s.id); st.quickPinned = true; return }
+        val q = quickClip ?: return
+        quickPinned = true
+        val it = ClipStore.load(this).firstOrNull { it.image == null && it.text == q }
+        if (it != null && !it.pinned) st.clipItems = ClipStore.togglePin(this, it.id)
+        st.quickPinned = true
+    }
     override fun clipPin(id: Long) { st.clipItems = ClipStore.togglePin(this, id) }
-    override fun clipDelete(ids: Set<Long>) { st.clipItems = ClipStore.delete(this, ids) }
-    override fun clipClear() { st.clipItems = ClipStore.clear(this) }
+    override fun clipDelete(ids: Set<Long>) {
+        val gone = st.clipItems.filter { it.id in ids }
+        st.clipItems = ClipStore.delete(this, ids)
+        // an item deleted from the clipboard leaves the right slot of the bar at once
+        if (shotItem?.id in ids) { shotItem = null; st.shotThumb = null }
+        val q = quickClip
+        if (q != null && gone.any { it.image == null && it.text == q }) quickClip = null
+        updateSuggestions()
+    }
+    override fun clipClear() {
+        val before = st.clipItems.filter { !it.pinned }
+        st.clipItems = ClipStore.clear(this)
+        if (shotItem != null && before.any { it.id == shotItem?.id }) { shotItem = null; st.shotThumb = null }
+        val q = quickClip
+        if (q != null && before.any { it.image == null && it.text == q }) quickClip = null
+        updateSuggestions()
+    }
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
     override fun authPick(code: String) {
@@ -225,11 +254,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onCreate() {
         super.onCreate()
+        runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).registerInputDeviceListener(deviceListener, null) }
         KeyboardPrefs.load(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
         scope.launch(Dispatchers.IO) { runCatching { EmojiData.index(this@PulseKeyboardService) } }
-        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() } ?: emptyList()
+        // the vault is read once off the main thread, so the first login box has its suggestions at once
+        scope.launch(Dispatchers.IO) { runCatching { com.umutk.pulse.features.VaultStore.all(this@PulseKeyboardService) } }
+        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() && !isArt(it) } ?: emptyList()
         scope.launch(Dispatchers.IO) {
             KeyboardPrefs.langList().forEach { code ->
                 // a language without a word list fetches its own (when there is a connection)
@@ -246,8 +278,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
     }
 
-    // ---- a screenshot just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
+    // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
     private var shotItem: ClipItem? = null
+    // a photo or screenshot waits 30 seconds in the bar, then it goes (the bar is refreshed then too)
+    private val shotExpiry = android.os.Handler(android.os.Looper.getMainLooper())
+    private val shotExpire = Runnable { if (shotItem != null && !shotPinned) { shotItem = null; st.shotThumb = null; updateSuggestions() } }
+    private var shotPinned = false
     private var shotAt = 0L
     private var shotId = -1L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
@@ -271,7 +307,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1"))?.use { c ->
                     if (!c.moveToFirst()) return@use null
                     val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
-                    if (System.currentTimeMillis() / 1000 - c.getLong(2) > 8 || !(name.contains("screenshot", true) || path.contains("screenshot", true))) return@use null
+                    // a screenshot (8 s) or a photo just taken with the camera, HEIC too (30 s: the camera app finishes the file a little later)
+                    val age = System.currentTimeMillis() / 1000 - c.getLong(2)
+                    val shot = name.contains("screenshot", true) || path.contains("screenshot", true)
+                    val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
+                    if (!(shot && age <= 8 || cam && age <= 30)) return@use null
                     c.getLong(0)
                 }
             }.getOrNull()
@@ -282,8 +322,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val items = withContext(Dispatchers.IO) { ClipStore.addImage(this@PulseKeyboardService, uri) }
         st.clipItems = items
         val item = items.filter { it.image != null }.maxByOrNull { it.time } ?: return
-        shotItem = item; shotAt = SystemClock.uptimeMillis()
-        st.shotThumb = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() }.getOrNull() }
+        // the newest copy wins the slot: a screenshot takes it from a copied text
+        quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        st.shotThumb = withContext(Dispatchers.IO) { runCatching {
+            val bmp = android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
+            // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
+            val deg = when (android.media.ExifInterface(item.image!!).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+            (if (deg == 0f) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true)).asImageBitmap()
+        }.getOrNull() }
+        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
         updateSuggestions()
     }
 
@@ -292,17 +339,48 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         clipboard?.removePrimaryClipChangedListener(clipListener)
         runCatching { contentResolver.unregisterContentObserver(shotObserver) }
         KeyboardDictionary.saveUser(this)
+        runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).unregisterInputDeviceListener(deviceListener) }
         owner?.stop(); scope.cancel()
         super.onDestroy()
     }
 
     override fun onEvaluateFullscreenMode() = false
 
+    private var kbRoot: View? = null
+
+    /**
+     * The floating keyboard: the window is tall (the keyboard sits at the bottom of it and moves up inside it), so only the keyboard's own part takes touches and
+     * the app does not make room for it; everything else in the window is the app's. The normal keyboard keeps the system's own insets.
+     */
+    override fun onComputeInsets(outInsets: android.inputmethodservice.InputMethodService.Insets) {
+        super.onComputeInsets(outInsets)
+        val r = st.floatRect
+        val root = kbRoot
+        if (!KeyboardPrefs.floatNow) return
+        // until the keyboard has been measured, nothing in the tall window takes touches: otherwise the empty window would block the screen behind it
+        if (r == null || root == null) {
+            outInsets.contentTopInsets = window.window?.decorView?.height ?: 0
+            outInsets.visibleTopInsets = outInsets.contentTopInsets
+            outInsets.touchableInsets = android.inputmethodservice.InputMethodService.Insets.TOUCHABLE_INSETS_REGION
+            outInsets.touchableRegion.setEmpty()
+            return
+        }
+        val h = window.window?.decorView?.height ?: return
+        val loc = IntArray(2); root.getLocationInWindow(loc)
+        outInsets.contentTopInsets = h
+        outInsets.visibleTopInsets = h
+        outInsets.touchableInsets = android.inputmethodservice.InputMethodService.Insets.TOUCHABLE_INSETS_REGION
+        outInsets.touchableRegion.set(r[0] + loc[0], r[1] + loc[1], r[2] + loc[0], r[3] + loc[1])
+    }
+
     override fun onCreateInputView(): View {
         val o = owner ?: StandByOwner().also { it.start(); owner = it }
         // Compose finds its lifecycle on the root of the window, which for a keyboard is the window's decor view
         window.window?.decorView?.let { it.setViewTreeLifecycleOwner(o); it.setViewTreeSavedStateRegistryOwner(o) }
         return ComposeView(this).apply {
+            kbRoot = this
+            // the floating keyboard moved: the system is asked again which part of the window takes touches
+            st.refreshInsets = { post { this@PulseKeyboardService.window.window?.decorView?.requestLayout() } }
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
             setContent { KeyboardView(st, this@PulseKeyboardService) }
             // the bottom keys sit where the system's home swipe starts: the whole keyboard keeps its touches (Android 10+)
@@ -310,9 +388,59 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    override fun onEvaluateInputViewShown(): Boolean = true
+
+    /**
+     * Some apps (web pages, Flutter and React Native fields) give the field's real kind a moment after the keyboard came up, or restart the input without the keyboard
+     * being started again: the keyboard opened as the text keys in a number field and turned into the number pad only with the first key. The kind is looked at again
+     * at those moments (a new input, a moment after the start, the first selection change) and the number pad follows without a key.
+     */
+    private fun syncKind(info: EditorInfo?) {
+        info ?: return
+        if (st.forceLayout != null || st.panel != "keys") return
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val num = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
+        // the kind of the text field itself (a password box without suggestions, an address box, a plain one) is read again too: a field that first said "password"
+        // or "no input" and then became a normal one kept the plain keys, with no suggestion bar, until the first key
+        val kindChanged = applyKind(info)
+        val numChanged = num != st.numpad
+        if (!kindChanged && !numChanged) return
+        if (numChanged) { st.numpad = num; st.page = if (num) 1 else 0 }
+        updateSuggestions()
+        androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        st.refreshInsets?.invoke()
+        kbRoot?.requestLayout()
+    }
+
+    /** Takes the kind of the field from [info] (plain keys, address, web address, name, no automatic correction); true when any of them changed. */
+    private fun applyKind(info: EditorInfo): Boolean {
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val nAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
+        val nPlain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
+            v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
+        val nEmail = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
+        val nUri = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
+        val nName = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+        val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
+        noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
+        return changed
+    }
+
+    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        // a restart of the input with the keyboard already up: the new kind is taken at once
+        if (restarting) syncKind(attribute)
+    }
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
+        st.hardware = hardwareAttached()
+        st.hwOpen = false
         st.inline = emptyList(); st.emojiQuery = null
+        st.forceLayout = null; st.panel = "keys"
         st.clipItems = ClipStore.load(this)
         // the settings may have changed the language since the last field
         KeyboardPrefs.load(this)
@@ -323,16 +451,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         // a field that asks for no suggestions (many web inputs in Chrome do) still gets the bar; only the automatic correction stays off there
-        noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
-        st.plain = (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
-            v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_FILTER)
-        emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
-        uriField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
-        nameField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+        applyKind(info); lastEmail = null
+        st.emailBar = false
         st.numpad = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
         st.panel = "keys"; st.toolbar = false
+        // a new field: the keyboard is laid out again (a number field and a text field differ in size), so its touch area and page follow the field at once
+        st.refreshInsets?.invoke()
         st.enter = when {
             (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0 -> "newline"
             else -> when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {
@@ -343,6 +468,33 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         word.clear(); touchPts.clear(); lastCorrection = null; prevWord = null; prevWord2 = null; lastWasSpace = false; punctTyped = false
         st.shift = 0
         updateCaps(); updateSuggestions()
+        // the new field's layout (number pad, bar only for a hardware keyboard) is handed to the window now, not with the next key: state changes are applied at once and the window is measured again
+        androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        kbRoot?.let { v -> v.post { st.refreshInsets?.invoke(); v.requestLayout() } }
+        // the app may still change the field's kind a moment after the start: it is looked at twice more
+        kbRoot?.let { v -> v.postDelayed({ syncKind(currentInputEditorInfo) }, 120); v.postDelayed({ syncKind(currentInputEditorInfo) }, 450) }
+    }
+
+    /**
+     * Is a physical keyboard attached? The configuration alone is not enough: a Bluetooth or USB keyboard connected after the service started may not show in it yet,
+     * so the input devices are asked too (a real keyboard with letter keys, not the phone's own virtual one).
+     */
+    private fun hardwareAttached(): Boolean {
+        if (resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS) return true
+        return runCatching {
+            android.view.InputDevice.getDeviceIds().any { id ->
+                val d = android.view.InputDevice.getDevice(id) ?: return@any false
+                !d.isVirtual && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
+                    d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
+            }
+        }.getOrDefault(false)
+    }
+
+    // a keyboard plugged in or paired while a field is open: the screen keyboard follows at once (no key press needed)
+    private val deviceListener = object : android.hardware.input.InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) { st.hardware = hardwareAttached() }
+        override fun onInputDeviceRemoved(deviceId: Int) { st.hardware = hardwareAttached(); if (!st.hardware) st.hwOpen = false }
+        override fun onInputDeviceChanged(deviceId: Int) { st.hardware = hardwareAttached() }
     }
 
     // a keyboard that is closed with the emoji (or clipboard, or tool) page up comes back as the plain keys, whichever way it is shown again
@@ -351,19 +503,58 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
     override fun onWindowShown() { super.onWindowShown(); backToKeys() }
 
+    /**
+     * The login the keyboard sees being typed: a user name box (e-mail, a label that says user / login, a number box) is remembered, and when a password box is left or sent
+     * the keyboard offers to save the pair (a notification, so it still shows when the keyboard closes with the page). Independent of the phone's autofill.
+     */
+    private fun trackLogin() {
+        if (st.incognito) return
+        val info = currentInputEditorInfo ?: return
+        val ic = currentInputConnection ?: return
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
+        if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return
+        val text = (ic.getTextBeforeCursor(200, 0)?.toString().orEmpty() + ic.getTextAfterCursor(200, 0)?.toString().orEmpty()).trim()
+        if (text.isEmpty()) return
+        if (pass) { LoginSaver.offer(this, info.packageName, text); return }
+        val userLike = (cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)) ||
+            cls == InputType.TYPE_CLASS_NUMBER || listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail", "öğrenci", "ogrenci", "numara").any { label.contains(it) }
+        if (userLike) LoginSaver.rememberUser(info.packageName, text)
+    }
+
+    /** A name field left with "Umut Kıvanç Şahin" in it: the whole name is kept, so its first letters offer it in any field. */
+    private fun learnFullName() {
+        if (st.incognito) return
+        val hint = (currentInputEditorInfo?.hintText?.toString().orEmpty() + " " + currentInputEditorInfo?.label?.toString().orEmpty()).lowercase()
+        if (!nameField && listOf("ad soyad", "adınız", "adiniz", "full name", "your name", "isim soyisim", "ad-soyad").none { hint.contains(it) }) return
+        val ic = currentInputConnection ?: return
+        val t = (ic.getTextBeforeCursor(80, 0)?.toString().orEmpty() + ic.getTextAfterCursor(80, 0)?.toString().orEmpty()).trim()
+        val parts = t.split(' ').filter { it.isNotBlank() }
+        if (parts.size !in 2..4 || !parts.all { p -> p.all { it.isLetter() || it == '\'' || it == '-' } }) return
+        getSharedPreferences("pulse_kb_fullnames", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(t) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != t }).take(5).joinToString("\n")).apply() }
+    }
+
     override fun onFinishInput() {
+        runCatching { trackLogin() }
         super.onFinishInput()
         st.inline = emptyList()
         lastEmail?.let { e -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(e) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != e }).take(5).joinToString("\n")).apply() } }
         lastEmail = null
         word.clear(); lastCorrection = null
+        runCatching { learnFullName() }
         KeyboardDictionary.saveUser(this)
         Thread { runCatching { com.umutk.pulse.AutoBackup.maybeRun(applicationContext) } }.start()
     }
 
     private var editAt = 0L
+    private var shiftDropAt = 0L
+    private val corrExec = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        if (st.numpad != (currentInputEditorInfo?.inputType?.and(InputType.TYPE_MASK_CLASS).let { it == InputType.TYPE_CLASS_NUMBER || it == InputType.TYPE_CLASS_PHONE || it == InputType.TYPE_CLASS_DATETIME })) syncKind(currentInputEditorInfo)
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
         // the field was emptied (a message was sent: the app clears it after the Enter) or the cursor jumped: the capital letter is worked out again from what is there now
@@ -395,25 +586,96 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         editAt = SystemClock.uptimeMillis()
         c.setComposingRegion(newStart - w.length, newStart)
         word.append(w); touchPts.clear(); target = null; peak = null; lastCorrection = null
-        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.lowercase().ifEmpty { null }
+        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.let { KeyboardLayouts.lower(it, st.lang) }.ifEmpty { null }
         updateSuggestions()
     }
 
     // ---- typing ------------------------------------------------------------------------------------------------------------------------------------
 
+    // ---- the physical keyboard, Turkish: with an English (US) keyboard layout, the Turkish letters sit on the Turkish Q positions
+    // (the same as a Turkish Q keyboard). Only when Turkish is the keyboard's language and the device layout is plain ASCII.
+    private val turkishDown = HashSet<Int>()
+
+    private fun turkishQ(keyCode: Int, shift: Boolean): String? = when (keyCode) {
+        KeyEvent.KEYCODE_LEFT_BRACKET -> if (shift) "Ğ" else "ğ"
+        KeyEvent.KEYCODE_RIGHT_BRACKET -> if (shift) "Ü" else "ü"
+        KeyEvent.KEYCODE_SEMICOLON -> if (shift) "Ş" else "ş"
+        KeyEvent.KEYCODE_APOSTROPHE -> if (shift) "İ" else "i"
+        KeyEvent.KEYCODE_I -> if (shift) null else "ı"
+        KeyEvent.KEYCODE_COMMA -> if (shift) "Ö" else "ö"
+        KeyEvent.KEYCODE_PERIOD -> if (shift) "Ç" else "ç"
+        else -> null
+    }
+
+    /**
+     * A hardware keyboard is attached: its letters go through the same typing as the screen keys, so the suggestion bar follows the word, the automatic correction works
+     * (a Turkish word typed with plain letters is fixed), and the function keys F1, F2 and F3 pick the left, the middle and the right suggestion. The Turkish letters sit on the Turkish Q positions.
+     * Shortcuts (Ctrl, Alt, Win) and keys that are not text are left to the system.
+     */
+    private fun hardwareKey(keyCode: Int, e: KeyEvent): Boolean {
+        if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed) return false
+        if (currentInputConnection == null) return false
+        val fn = keyCode - KeyEvent.KEYCODE_F1
+        if (fn in 0..2) { turkishDown.add(keyCode); slot(fn); return true }
+        // the translation bar is open: Tab puts the translation in, Enter puts it in and sends
+        if (st.trans && !st.plain && st.panel == "keys") when (keyCode) {
+            KeyEvent.KEYCODE_TAB -> { turkishDown.add(keyCode); transOp("apply"); return true }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); val had = st.transOut.isNotBlank(); transOp("apply"); if (had) enter(); return true }
+        }
+        if (st.plain || st.panel != "keys") return false
+        when (keyCode) {
+            KeyEvent.KEYCODE_SPACE -> { turkishDown.add(keyCode); space(); return true }
+            KeyEvent.KEYCODE_DEL -> { turkishDown.add(keyCode); backspace(); return true }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); enter(); return true }
+        }
+        val asciiDevice = e.getUnicodeChar(0) in 1..127
+        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed) else null
+        val ch = tr ?: e.getUnicodeChar(e.metaState).takeIf { it >= 32 }?.let { String(Character.toChars(it)) } ?: return false
+        turkishDown.add(keyCode)
+        type(ch)
+        return true
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val e = event ?: return super.onKeyDown(keyCode, event)
+        // a key from a real keyboard: one is attached, whatever the configuration said (its letters then go through the keyboard's own typing: suggestions and automatic correction)
+        if (!st.hardware && e.device?.let { d -> !d.isVirtual && d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC } == true) st.hardware = true
+        if (st.hardware && hardwareKey(keyCode, e)) return true
+        if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return super.onKeyDown(keyCode, event)
+        if (KeyboardPrefs.langList().firstOrNull() != "tr") return super.onKeyDown(keyCode, event)
+        // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
+        val device = e.getUnicodeChar(0)
+        if (device !in 1..127) return super.onKeyDown(keyCode, event)
+        val ch = turkishQ(keyCode, e.isShiftPressed) ?: return super.onKeyDown(keyCode, event)
+        val c = currentInputConnection ?: return super.onKeyDown(keyCode, event)
+        turkishDown.add(keyCode)
+        c.commitText(ch, 1)
+        return true
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        // the key's release goes with its press: the field does not see a stray key up
+        if (turkishDown.remove(keyCode)) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun type(s: String) {
+        st.keyTick++
         val c = currentInputConnection ?: return
         if (s.isEmpty()) return
         // the emoji search is open: the keys type into its box
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
         st.clipName?.let { if (st.panel == "clip") { if (s.all { ch -> ch.isLetterOrDigit() }) st.clipName = it + s; return } }
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
+        if (st.artOn) { st.artIn += s; return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         commaSpace = false
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
+        // fast typing: the keys are redrawn a moment after the automatic capital is used, so the next letters can still arrive as capitals; inside the word they stay small
+        if (letter && ch.isUpperCase() && st.shift == 0 && word.isNotEmpty() && !st.plain && SystemClock.uptimeMillis() - shiftDropAt < 700) ch = ch.toString().lowercase(lang.locale).first()
         if (letter) {
             // a comma right before a letter, behind a word: a slip of the finger; the comma goes and the word is reopened
             if (punctTyped && ch.isLetter() && KeyboardPrefs.commaSlip && !st.plain && word.isEmpty()) {
@@ -425,11 +687,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     c.deleteSurroundingText(n, 0); word.append(stem); punctTyped = false
                 }
             }
-            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) {
+            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter() && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1)
-                // behind a full stop, ! or ? the next sentence starts with a capital
-                if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty()) ch = ch.toString().uppercase(lang.locale).first()
             }
+            // behind a full stop, ! or ? the next sentence starts with a capital (the space is already there)
+            if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty() && ch.isLetter() && !st.plain) ch = ch.toString().uppercase(lang.locale).first()
             dotEnd = false
             dotFix = false
             if (word.isEmpty() && !punctTyped && ch.isLetter() && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace) {
@@ -452,10 +714,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
             val tp = st.touch; st.touch = null
             touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
-            if (tp != null) st.letterRects[ch.lowercase()]?.let { r -> KeyboardDictionary.learnTouch(ch.lowercaseChar(), tp, r.center, r.width) }
+            if (tp != null) st.letterRects[KeyboardLayouts.lower(ch.toString(), st.lang)]?.let { r -> KeyboardDictionary.learnTouch(KeyboardLayouts.lower(ch.toString(), st.lang).first(), tp, r.center, r.width) }
+            if (lang.code == "tr") apostropheAfterName(c)
             c.setComposingText(word, 1)
             lastCorrection = null
-            if (st.shift == 1) st.shift = 0
+            if (st.shift == 1) { st.shift = 0; shiftDropAt = SystemClock.uptimeMillis() }
             updateSuggestions()
         } else {
             // a second comma right behind a comma (or the comma and its space) is dropped: one comma stays
@@ -467,8 +730,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
-            // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
-            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
+            // a mark behind a word (, ; : ! ? or a full stop after a known word) is followed by a space at once (not in numbers, addresses, passwords or web addresses)
+            if ((ch == ',' || ch in ";:!?" || dotOk) && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1); commaSpace = true; punctTyped = false
             }
             lastWasSpace = false
@@ -488,16 +751,37 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return false
         }
         var out = typed
+        // a word that is part of an address (after an "@") is never corrected: "gmail" and "com" stay as typed
+        val inAddr = c.getTextBeforeCursor(80, 0)?.toString().orEmpty().takeLastWhile { !it.isWhitespace() }.contains('@')
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
-        val t = target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
+        // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
+        var timedOut = false
+        val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale
+        var t = if (inAddr || typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
+        // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
+        if (t == null && correct && !inAddr && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
+            t = runCatching {
+                // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
+                val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
+                val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
+                try { f.get(110, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); timedOut = true; null }
+            }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
         if (dotFix) {
             dotFix = false
             val lw = typed.lowercase(lang.locale)
-            if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
+            if (!inAddr && sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
+        // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
+        if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
+            out = typed.replaceFirstChar { it.titlecase(lang.locale) }
+        // English grammar on the word just ended: a lone "i" and its contractions, and the common contractions typed without the apostrophe
+        if (lang.code == "en" && out == typed) EN_GRAMMAR[typed.lowercase(Locale.ENGLISH)]?.let { out = it }
+        // an English first name or place typed in lower case is written with its capital (wendy -> Wendy, london -> London)
+        if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn)
+            out = typed.replaceFirstChar { it.titlecase(Locale.ENGLISH) }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
@@ -539,7 +823,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
+        // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
+        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow)
         return true
+    }
+
+    /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
+    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean) {
+        if (!KeyboardPrefs.autocorrect || !KeyboardPrefs.suggestions) return
+        scope.launch {
+            val fix = withContext(Dispatchers.Default) { KeyboardDictionary.uncancelled { runCatching { compute(code, loc, typed, pw, up, pw2).third }.getOrNull() } } ?: return@launch
+            val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
+            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
+            val c = currentInputConnection ?: return@launch
+            if (word.isNotEmpty() || st.plain) return@launch
+            val key = typed + tail
+            if (c.getTextBeforeCursor(key.length + 40, 0)?.toString()?.endsWith(key) != true) return@launch
+            c.beginBatchEdit(); c.deleteSurroundingText(key.length, 0); c.commitText(fix + tail, 1); c.endBatchEdit()
+            lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis()
+        }
     }
 
     private fun afterText() { updateCaps(); updateSuggestions() }
@@ -550,6 +852,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
         if (st.trans) { if (st.transIn.isNotEmpty() && !st.transIn.endsWith(" ")) st.transIn += " "; return }
+        if (st.artOn) { st.artIn += " "; return }
         val now = SystemClock.uptimeMillis()
         if (word.isEmpty() && lastWasSpace && KeyboardPrefs.quickPeriod && !st.plain && now - spaceTap < 600) {
             val before = c.getTextBeforeCursor(2, 0)
@@ -578,6 +881,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
         captureEmail(c)
+        runCatching { trackLogin() }
         finishWord("\n", true)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
@@ -592,6 +896,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
         if (st.trans && st.transIn.isNotEmpty()) { st.transIn = st.transIn.dropLast(1); scheduleTrans(); return }
+        if (st.artOn) { if (st.artIn.isNotEmpty()) st.artIn = st.artIn.dropLast(1); return }
         lastWasSpace = false
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
@@ -630,11 +935,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val before = tb.dropLast(1 + w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }
                 c.beginBatchEdit(); c.deleteSurroundingText(w.length + 1, 0); c.setComposingText(w, 1); c.endBatchEdit()
                 word.setLength(0); word.append(w); touchPts.clear(); target = null; lastCorrection = null
-                prevWord = before.ifEmpty { null }?.lowercase()
+                prevWord = before.ifEmpty { null }?.let { KeyboardLayouts.lower(it, st.lang) }
                 updateCaps(); updateSuggestions(); return
             }
         }
-        if (commaSpace && tb.endsWith(", ") && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
+        if (commaSpace && tb.length >= 2 && tb.last() == ' ' && tb[tb.length - 2] in ",;:!?." && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
         else if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
         prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
@@ -643,9 +948,27 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     // ---- keys of the keyboard ----------------------------------------------------------------------------------------------------------------------
 
+    private var lastShiftTap = 0L
+    /** the shift is on only because a sentence began (not pressed); the tap that turns it off then counts as the first of a caps-lock double tap */
+    private var autoShift = false
+    private var autoOffTap = false
+
     override fun shift() {
-        val now = SystemClock.uptimeMillis()
-        st.shift = when (st.shift) { 0 -> { shiftTap = now; 1 }; 1 -> if (now - shiftTap < 450) 2 else 0; else -> 0 }
+        // one tap: the next letter is capital; a tap again turns it off. Two quick taps (the second within 400 ms of the first) turn on caps lock; a tap turns it off again.
+        // When the capital came by itself at a sentence start, the first tap turns it off and a second quick tap makes caps lock, as if the user had pressed shift twice
+        val now = android.os.SystemClock.uptimeMillis()
+        val quick = now - lastShiftTap < 400
+        val wasAuto = st.shift == 1 && autoShift
+        st.shift = when {
+            st.shift == 2 -> 0
+            st.shift == 1 && quick -> 2
+            st.shift == 0 && quick && autoOffTap -> 2
+            st.shift == 0 -> 1
+            else -> 0
+        }
+        autoOffTap = wasAuto && st.shift == 0
+        autoShift = false
+        lastShiftTap = now
         // a word is open: the bar shows (or drops) its capital-letter form
         if (word.isNotEmpty()) updateSuggestions()
     }
@@ -731,15 +1054,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slot(i: Int) {
         st.banAsk = -1
+        // a login of the vault: its user name or password is written as it is
+        if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { currentInputConnection?.commitText(it, 1); afterText() }; return }
         val qc = quickClip
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
             shotItem?.let { pasteClip(it) }
-            shotItem = null; st.shotThumb = null; updateSuggestions(); return
+            if (!shotPinned) { shotItem = null; st.shotThumb = null }; updateSuggestions(); return
         }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
-            if (--quickLeft <= 0) quickClip = null
+            // pasted twice, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
+            quickLeft--
+            if (quickLeft <= 0 && !quickPinned) quickClip = null
             afterText(); return
         }
         val c = currentInputConnection ?: return
@@ -757,9 +1084,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
-        if (emailField) {
+        if (emailField || atTokenNow()) {
             val before = c.getTextBeforeCursor(100, 0)?.toString().orEmpty()
-            if (w.startsWith("@") && '@' in before) c.deleteSurroundingText(before.length - before.lastIndexOf('@'), 0)
+            val tok = before.takeLastWhile { !it.isWhitespace() }
+            // a domain ("@outlook.com") replaces what stands after the typed "@"; a whole saved address replaces the typed beginning: the name is never written twice
+            if (w.startsWith("@") && '@' in tok) c.deleteSurroundingText(tok.length - tok.lastIndexOf('@'), 0)
+            else if ('@' in w && tok.isNotEmpty()) c.deleteSurroundingText(tok.length, 0)
             c.commitText(w, 1); afterText(); return
         }
         val isEmoji = !w[0].isLetterOrDigit()
@@ -772,7 +1102,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             word.clear(); target = null
             // a tapped suggestion that is not a completion: this typo means that word from now on
             if (!isEmoji && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learnTypo(this, typed.lowercase(lang.locale), w.lowercase(lang.locale))
-            if (isEmoji) { c.commitText("$typed $w ", 1) } else {
+            if (isEmoji) { c.commitText("$w ", 1) } else {
                 c.commitText("$w ", 1)
                 if (KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord, w)
                 prevWord = w
@@ -825,6 +1155,36 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         val pos = (selStart + delta).coerceAtLeast(0)
         c.setSelection(pos, pos); selStart = pos; selEnd = pos
+    }
+
+    /** The cursor moves [delta] lines up (negative) or down, staying in its column (or the line's end when the line is shorter). */
+    override fun moveLine(delta: Int) {
+        val c = currentInputConnection ?: return
+        finishWord("", false)
+        val before = c.getTextBeforeCursor(4000, 0)?.toString().orEmpty()
+        val after = c.getTextAfterCursor(4000, 0)?.toString().orEmpty()
+        val t = before + after
+        // the text around the cursor: [cur] is the cursor inside [t], [base] the field offset of t's first character
+        var cur = before.length
+        val base = selStart - before.length
+        repeat(Math.abs(delta)) {
+            val lineStart = if (cur == 0) 0 else t.lastIndexOf('\n', cur - 1) + 1
+            val col = cur - lineStart
+            if (delta < 0) {
+                if (lineStart == 0) return@repeat
+                val prevEnd = lineStart - 1
+                val prevStart = if (prevEnd == 0) 0 else t.lastIndexOf('\n', prevEnd - 1) + 1
+                cur = prevStart + minOf(col, prevEnd - prevStart)
+            } else {
+                val end = t.indexOf('\n', cur)
+                if (end < 0) return@repeat
+                val nextStart = end + 1
+                val nextEnd = t.indexOf('\n', nextStart).let { if (it < 0) t.length else it }
+                cur = nextStart + minOf(col, nextEnd - nextStart)
+            }
+        }
+        val pos = (base + cur).coerceAtLeast(0)
+        if (pos != selStart || pos != selEnd) { c.setSelection(pos, pos); selStart = pos; selEnd = pos }
     }
 
     override fun deleteWord() {
@@ -910,6 +1270,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (conn.responseCode != 200) null else conn.inputStream.bufferedReader().use { it.readText() }
         }.getOrNull()
         val q = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+        // the best machine translation first: Google's own translate service (the one the other keyboards use), then its mirrors, and MyMemory last
+        get("https://translate.googleapis.com/translate_a/single?client=gtx&sl=$from&tl=$to&dt=t&q=$q")?.let { b ->
+            runCatching {
+                val parts = org.json.JSONArray(b).getJSONArray(0)
+                (0 until parts.length()).joinToString("") { parts.getJSONArray(it).optString(0, "") }
+            }.getOrNull()?.takeIf { it.isNotBlank() && !it.equals(text, true) }?.let { return it }
+        }
         get("https://api.mymemory.translated.net/get?q=$q&langpair=$from%7C$to")?.let { b ->
             runCatching { org.json.JSONObject(b).getJSONObject("responseData").getString("translatedText") }.getOrNull()
                 ?.takeIf { it.isNotBlank() && !it.contains("MYMEMORY WARNING", true) && !it.equals(text, true) }?.let { return it }
@@ -1074,12 +1441,43 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (KeyboardPrefs.sound) { if (KeyboardPrefs.soundKind == 0) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f) else KeyboardEffects.play(KeyboardPrefs.soundKind) }
     }
 
+    /** Turkish endings on a name take the apostrophe as the word is typed: Adana + da is Adana'da, Pelin + den is Pelin'den. */
+    private fun apostropheAfterName(c: android.view.inputmethod.InputConnection) {
+        if (word.indexOf('\'') >= 0) return
+        val w = word.toString().lowercase(lang.locale)
+        // a place with its head word, after a space: Ağrı Dağı'na, Van Gölü'ne, Ege Denizi'nden (the apostrophe goes after the head word)
+        val before = c.getTextBeforeCursor(word.length + 1, 0)?.toString().orEmpty()
+        if (before.length == word.length + 1 && before.first() == ' ') {
+            for (h in TR_GEO_HEADS) {
+                if (!w.startsWith(h)) continue
+                val rest = w.substring(h.length)
+                if (rest.isNotEmpty() && rest.length <= 4 && rest in TR_ENDINGS) {
+                    word.setLength(0); word.append(h.substring(0, 1).uppercase(lang.locale)).append(h.substring(1)).append('\'').append(rest)
+                    return
+                }
+            }
+        }
+        for (cut in w.length - 1 downTo 3) {
+            val rest = w.substring(cut)
+            if (rest.length > 4) break
+            val stem = w.substring(0, cut)
+            if (stem in KeyboardDictionary.properNouns && stem !in KeyboardDictionary.commonNames && rest in TR_ENDINGS) {
+                val cap = stem.substring(0, 1).uppercase(lang.locale) + stem.substring(1)
+                word.setLength(0); word.append(cap).append('\'').append(rest)
+                return
+            }
+        }
+    }
+
     override fun emoji(e: String) {
         val c = currentInputConnection ?: return
         finishWord("", false)
         c.commitText(e, 1)
-        st.recents = (listOf(e) + st.recents.filter { it != e }).take(30)
-        getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString("\n")).apply()
+        // pictures (block shading, multi-line art) are not kept in the recent emoji: they show as broken dots there
+        if (!isArt(e)) {
+            st.recents = (listOf(e) + st.recents.filter { it != e }).take(30)
+            getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString("\n")).apply()
+        }
         lastWasSpace = false
     }
 
@@ -1173,7 +1571,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun padKey(code: Int, down: Boolean) {
         val c = currentInputConnection ?: return
         val t = SystemClock.uptimeMillis()
-        c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0))
+        val src = if (code in 19..22) android.view.InputDevice.SOURCE_DPAD or android.view.InputDevice.SOURCE_GAMEPAD else android.view.InputDevice.SOURCE_GAMEPAD
+        c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0, 0, -1, 0, 0, src))
     }
 
     /** "@gmail.com" (or the domain chosen in the settings) at the cursor. */
@@ -1209,6 +1608,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** The sentence start puts the shift on, as the field asks. */
     private fun updateCaps() {
         if (!KeyboardPrefs.autoCap || st.plain || st.shift == 2) return
+        // automatic capitals belong to the first letter of a sentence only: while a word is under way, the rest of it stays small
+        if (word.isNotEmpty()) return
         val c = currentInputConnection ?: return
         val info = currentInputEditorInfo ?: return
         if (info.inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return
@@ -1219,7 +1620,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val untouched = before.isEmpty() && c.getTextAfterCursor(1, 0).isNullOrEmpty() && !emailField && !urlNow() &&
             info.inputType and InputType.TYPE_MASK_VARIATION !in listOf(InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
         st.shift = if (c.getCursorCapsMode(info.inputType) != 0 || (own && info.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0 && info.inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD == 0 && (!noAuto || untouched))) 1 else 0
+        autoShift = st.shift == 1
     }
+
+    private val EN_GRAMMAR: Map<String, String> = mapOf(
+        "i" to "I", "im" to "I'm", "ive" to "I've", "ill" to "I'll", "id" to "I'd",
+        "dont" to "don't", "doesnt" to "doesn't", "didnt" to "didn't", "cant" to "can't", "wont" to "won't",
+        "wouldnt" to "wouldn't", "couldnt" to "couldn't", "shouldnt" to "shouldn't", "isnt" to "isn't", "arent" to "aren't",
+        "wasnt" to "wasn't", "werent" to "weren't", "hasnt" to "hasn't", "havent" to "haven't", "hadnt" to "hadn't",
+        "thats" to "that's", "whats" to "what's", "theres" to "there's", "heres" to "here's", "youre" to "you're",
+        "theyre" to "they're", "weve" to "we've", "youve" to "you've", "lets" to "let's", "hes" to "he's", "shes" to "she's",
+    )
 
     private fun cased(w: String, typed: String): String {
         // a word that is English and not Turkish is capitalised the English way (if -> If, not İf)
@@ -1231,7 +1642,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
-    private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com")
+    private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com", "@live.com", "@proton.me", "@msn.com", "@me.com")
+    /** The domains of the addresses typed before, the most used first, then the usual ones: a short list that reads on the bar. */
+    private fun rankedDomains(): List<String> {
+        val counts = getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }
+        val mine = counts.sortedByDescending { it.second }.map { "@" + it.first }
+        return (mine + domains).distinct().take(8)
+    }
     private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
 
     /** An e-mail field: the addresses typed here before when it is empty, the usual domains once there is a name or an "@". */
@@ -1244,44 +1661,123 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (emailRe.matches(tok)) {
             val low = tok.lowercase()
             getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { sp -> sp.edit().putString("list", (listOf(low) + emailsSaved().filter { it != low }).take(8).joinToString("\n")).apply() }
+            // the domains typed most come first on the bar (counted here)
+            val dom = low.substringAfter('@')
+            getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).let { sp -> sp.edit().putInt(dom, sp.getInt(dom, 0) + 1).apply() }
         }
+    }
+
+    /** The word right before the cursor (no spaces) holds an "@": the e-mail suggestions apply here, in any field. */
+    private fun atTokenNow(): Boolean {
+        val tok = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString().orEmpty().takeLastWhile { !it.isWhitespace() }
+        return '@' in tok
     }
 
     private fun emailSuggestions() {
         val before = currentInputConnection?.getTextBeforeCursor(100, 0)?.toString().orEmpty()
         if (emailRe.matches(before)) lastEmail = before
+        // the text being typed: the last word without spaces, so "@" in an earlier word does not count
+        val tok = before.takeLastWhile { !it.isWhitespace() }
+        val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
         val list = when {
-            before.isEmpty() -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }.take(3)
-            '@' in before -> domains.filter { it.startsWith("@" + before.substringAfterLast('@'), true) && it.length > before.substringAfterLast('@').length + 1 }.take(3)
+            // the addresses used most come first (the list is kept most recent first); all of them scroll on the bar
+            tok.isEmpty() -> saved.take(8)
+            // the continuation of an address: saved addresses first, then the domains after the "@"
+            '@' in tok -> {
+                val local = tok.substringBefore('@')
+                val domainPart = tok.substringAfterLast('@')
+                val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
+                // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
+                val dom = rankedDomains().filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
+                // an address you saved that fits what is typed comes first (a tap writes it whole), then the domains, the ones used most first: four show, four more are a swipe away
+                (mine.take(2) + dom.take(8)).distinct()
+            }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }
-        slotWords = arrayOf(list.getOrElse(0) { "" }, list.getOrElse(1) { "" }, list.getOrElse(2) { "" })
+        // at least three slots, so the code that reads the first three never meets a short list
+        slotWords = (list + listOf("", "", "")).take(maxOf(3, list.size)).toTypedArray()
         st.slots = slotWords.toList()
+        // the chips of the e-mail bar read in full (no cut-off words) and scroll, in an e-mail field and anywhere an address is typed
+        st.emailBar = list.isNotEmpty()
     }
 
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
         // a screenshot that was just taken takes the right slot for two minutes
-        if (shotItem != null && SystemClock.uptimeMillis() - shotAt > 120_000L) { shotItem = null; st.shotThumb = null }
+        if (shotItem != null && !shotPinned && SystemClock.uptimeMillis() - shotAt > 30_000L) { shotItem = null; st.shotThumb = null }
         if (shotItem != null && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
             return
         }
         val q = quickClip ?: return
-        // the copied text stays in the bar for two minutes; after that it is only in the clipboard
-        if (SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
+        // the copied text stays in the bar for two minutes; after that it is only in the clipboard (a newer copy replaces it)
+        if (!quickPinned && SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
         if (word.isNotEmpty() || emailField || st.plain) return
         val label = "\u0001" + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
         slotWords = arrayOf(slotWords[0], slotWords[1], q)
         st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, label)
     }
 
+    // a run that is still working is not cancelled by each new letter: typing faster than it finishes would then never get an answer at all.
+    // It finishes (its result is dropped when the word has moved on) and one more run for the newest text follows at once.
+    private var rerunNeeded = false
+
+    /** The texts the vault chips in the bar write, in the order of the chips (empty when the bar shows words). */
+    private var vaultTexts: List<String> = emptyList()
+
+    /**
+     * The logins of the Pulse password vault in the bar of a user-name or password box, read inside the app (no system autofill service). One chip for each
+     * different login: the same user name with the same password shows once. Only for the app the login belongs to; not offered while the vault is behind the screen lock.
+     */
+    /** The logins the bar may offer: those of the app; in a browser the page's address is unknown to a keyboard, so every login that belongs to a web address is offered (the chip shows its name). */
+    private fun loginPool(pkg: String?): List<com.umutk.pulse.features.VItem> {
+        val own = com.umutk.pulse.features.VaultStore.matches(this, pkg, null)
+        val browsers = setOf("com.android.chrome", "com.sec.android.app.sbrowser", "org.mozilla.firefox", "org.mozilla.firefox_beta", "com.brave.browser", "com.microsoft.emmx", "com.opera.browser", "com.opera.mini.native", "com.vivaldi.browser", "com.duckduckgo.mobile.android", "org.chromium.chrome", "com.kiwibrowser.browser", "com.google.android.apps.chrome")
+        if (pkg !in browsers) return own
+        val web = com.umutk.pulse.features.VaultStore.all(this).filter { v -> v.type == 1 && v.pass.isNotEmpty() && v.uris.any { u -> com.umutk.pulse.features.VaultStore.packageOf(u) == null } }.sortedBy { it.name.lowercase() }
+        return own + web
+    }
+
+    private fun loginSuggestions(): Boolean {
+        vaultTexts = emptyList()
+        val info = currentInputEditorInfo ?: return false
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
+        val numeric = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE
+        val user = !pass && ((cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
+            listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })) || numeric)
+        if (!pass && !user) return false
+        // a verification code box (SMS, e-mail, authenticator) is no login: nothing from the vault is offered there
+        if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return false
+        if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false
+        val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
+        val seen = HashSet<String>()
+        val list = loginPool(info.packageName)
+            // a number box offers only the logins whose user name is a number (a student or ID number, a phone number)
+            .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
+            .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
+            .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
+        if (list.isEmpty()) return false
+        vaultTexts = list.map { if (pass) it.pass else it.user }
+        val shown = list.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
+        val n = maxOf(3, shown.size)
+        slotWords = Array(n) { "" }
+        st.slots = (shown + listOf("", "", "")).take(n)
+        st.emailBar = true
+        return true
+    }
+
     private fun updateSuggestions() {
-        job?.cancel()
+        // no text field to write in (a game, a screen with no field): the bar has nothing to suggest, and nothing looks like typing
+        if (currentInputConnection == null || currentInputEditorInfo?.inputType == 0) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
-        if (emailField) { emailSuggestions(); return }
+        if (loginSuggestions()) return
+        if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
         if (nameField && !st.incognito) {
             val saved = getSharedPreferences("pulse_kb_names", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
@@ -1303,8 +1799,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // right after an automatic correction the bar shows what was typed, quoted at the left, so it can be put back with a tap or kept with a long press
         val shown = lastCorrection
         if (typed.isEmpty() && shown != null) {
-            slotWords = arrayOf("", "", ""); target = null
-            st.slots = listOf("\"${shown.original}\"", shown.corrected, "")
+            // the emoji of the word that was just written stays on offer at the right: a tap writes it after the word, which stays
+            val em = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(shown.corrected) ?: EmojiData.forWord(shown.corrected)).orEmpty() else ""
+            slotWords = arrayOf("", "", em); target = null
+            st.slots = listOf("\"${shown.original}\"", shown.corrected, em)
             return
         }
         // the start of the field or of a sentence: the words a sentence begins with, before anything has been typed
@@ -1315,26 +1813,88 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }
+        // every keystroke: the older correction work stops, and the new word is looked at at once (the completions); the corrections follow only when typing pauses
+        KeyboardDictionary.touch()
+        job?.cancel()
         job = scope.launch {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
-                if (word.toString() == typed) { target = q.third; targetFor = typed; slotWords = q.second; st.slots = q.first }
+                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
             }
+            // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
+            kotlinx.coroutines.delay(180)
+            if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
                 // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
                 val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
-                else { target = res.third; targetFor = typed; slotWords = res.second; st.slots = res.first }
+                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
                 showClipSlot()
             }
         }
     }
 
+    /**
+     * What is yours, offered in any field while the first letters are typed: your full name and your e-mail addresses (learned from what you typed, and from the vault's identity).
+     * "umut" can be "Umut Kıvanç Şahin" or "umutsahin1950@gmail.com": both are put on the bar, the name first, beside the usual word.
+     */
+    private fun personalItems(typed: String): List<String> {
+        if (st.incognito || typed.length < 2 || typed.any { it.isDigit() }) return emptyList()
+        val key = com.umutk.pulse.OfFind.fold(typed, false)
+        val names = LinkedHashSet<String>()
+        names.addAll(getSharedPreferences("pulse_kb_fullnames", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() })
+        val mails = LinkedHashSet<String>()
+        mails.addAll(emailsSaved())
+        if (!com.umutk.pulse.features.AuthPrefs.biometric(this)) runCatching {
+            com.umutk.pulse.features.VaultStore.all(this).filter { it.type == 4 }.forEach { v ->
+                val n = listOf("firstName", "middleName", "lastName").mapNotNull { v.fields[it]?.takeIf { s -> s.isNotBlank() } }.joinToString(" ")
+                if (n.contains(' ')) names.add(n)
+                v.fields["email"]?.takeIf { it.contains('@') }?.let { mails.add(it.lowercase()) }
+            }
+        }
+        fun hit(s: String) = !s.equals(typed, true) && (com.umutk.pulse.OfFind.fold(s, false).startsWith(key) || s.split(' ', '.', '@').any { com.umutk.pulse.OfFind.fold(it, false).startsWith(key) && key.length >= 3 })
+        return (names.filter(::hit).take(1) + mails.filter(::hit).take(1)).distinct()
+    }
+
+    /** Puts [personalItems] on the bar beside the usual words: the first on the right, the second on the left (unless that place holds the word as typed). */
+    private fun withPersonal(typed: String) {
+        val p = personalItems(typed)
+        if (p.isEmpty()) return
+        val w = slotWords.copyOf(); val s = st.slots.toMutableList()
+        fun put(i: Int, v: String) { if (i < w.size) w[i] = v; if (i < s.size) s[i] = v }
+        put(2, p[0])
+        if (p.size > 1 && !s.getOrElse(0) { "" }.startsWith("\"")) put(0, p[1])
+        slotWords = w; st.slots = s
+    }
+
+    /** How many words the bar shows: three on a phone, five from 600 dp of width, six from 900 dp (a tablet, also in landscape). */
+    private fun slotCount(): Int {
+        val w = resources.configuration.screenWidthDp
+        return when { w >= 900 -> 6; w >= 600 -> 5; else -> 3 }
+    }
+
+    /** The first three slots stay as they are (the word, the one in the middle, the special one); more words follow them when the screen is wide. */
+    private fun widenBar(words: Array<String>, list: List<String>, typed: String, code: String, prev: String?, up: Boolean): Pair<List<String>, Array<String>> {
+        val n = slotCount()
+        if (n <= 3) return list to words
+        val have = HashSet<String>(); list.forEach { if (it.isNotEmpty()) have.add(it.lowercase(lang.locale)) }
+        val lowerTyped = typed.lowercase(lang.locale)
+        val cands: List<String> = if (typed.isEmpty()) KeyboardDictionary.next(code, prev, 14).filter { !KeyboardDictionary.isBanned(it) }
+            .map { if (up) it.replaceFirstChar { c -> c.titlecase(lang.locale) } else KeyboardDictionary.form(it) }
+        else KeyboardDictionary.complete(dictCodes(code).first(), lowerTyped, 14).map { it.word }
+            .map { if (up) it.replaceFirstChar { c -> c.titlecase(lang.locale) } else it }
+        val extra = cands.filter { it.isNotEmpty() && have.add(it.lowercase(lang.locale)) }.take(n - 3)
+        val newList = list.take(3).let { it + List(maxOf(0, 3 - it.size)) { "" } } + extra
+        val newWords = words.take(3).toTypedArray().let { arr -> Array(3) { arr.getOrElse(it) { "" } } } + extra.toTypedArray()
+        return newList to newWords
+    }
+
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false): Triple<List<String>, Array<String>, String?> {
+        KeyboardDictionary.begin()
         if (typed.isEmpty()) {
             val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
             // after a word and a space: the emoji of the word just written takes the last place
@@ -1403,3 +1963,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return Triple(listOf(left, mid, right), words, fix?.let { capped(cased(it.word, typed)) })
     }
 }
+
+/** A picture made of characters (block shading, several lines): not an emoji, so it is left out of the recent list. */
+private fun isArt(s: String): Boolean =
+    s.contains('\n') || s.contains('\u23CE') || s.any { it in '\u2580'..'\u259F' || it in '\u2800'..'\u28FF' }
+
+/** A space already stands right after the cursor (the text after a mark was typed before), so the keyboard adds none. */
+private fun spaceAfterCursor(c: android.view.inputmethod.InputConnection): Boolean =
+    c.getTextAfterCursor(1, 0)?.firstOrNull()?.isWhitespace() == true
+
+/** The Turkish endings that follow a name (case, the locative, the ablative, with the vowel of the name); the apostrophe goes before them. */
+private val TR_GEO_HEADS = listOf("üniversitesi", "havalimanı", "köprüsü", "caddesi", "sokağı", "meydanı", "stadyumu", "parkı", "müzesi", "vadisi", "körfezi", "denizi", "boğazı", "ovası", "yaylası", "nehri", "gölü", "adası", "dağı")
+
+private val TR_ENDINGS = setOf("ı", "i", "u", "ü", "a", "e", "na", "ne", "nı", "ni", "nu", "nü", "ya", "ye", "yı", "yi", "yu", "yü", "da", "de", "ta", "te", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "la", "le", "yla", "yle", "ndan", "nden", "nda", "nde")

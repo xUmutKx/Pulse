@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Equalizer
@@ -212,14 +213,20 @@ object AppPlace {
         App("BlackOutLauncher", "BlackOut", "BlackOut", "shield", Icons.Outlined.DarkMode) { _, o -> o("blackout") },
         App("IslandLauncher", "Island", "Ada", "phone", Icons.Outlined.PhoneAndroid) { _, o -> o("island") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "history", Icons.Outlined.History) { _, o -> o("notifhist") },
-    )
+        App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { c, _ -> launchExtra(c, TOOL, "gamehub") },
+        App("HealthLauncher", "Health", "Sağlık", "heart", Icons.Outlined.Favorite) { c, _ -> launchExtra(c, TOOL, "health") },
+    ).filter { it.alias != "ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
     /** Every app from the calculator on only lives in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
     private val quiet = setOf("CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher",
-        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher")
-    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" } }
+        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher", "GameHubLauncher", "HealthLauncher")
+    fun load(c: Context) {
+        // Game Hub lives in the Extra apps list (once, for everyone: a place chosen before this stays only in Settings > Apps)
+        if (!sp(c).getBoolean("gamehub_extra", false)) { sp(c).edit().putString("GameHubLauncher", "hidden").putBoolean("gamehub_extra", true).apply() }
+        all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" }
+    }
     fun where(alias: String): String = placed[alias] ?: if (alias in quiet) "hidden" else "menu"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }
     fun byAlias(alias: String) = all.firstOrNull { it.alias == alias }
@@ -293,7 +300,8 @@ fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
     var seenMore by remember { mutableIntStateOf(ChromeKeys.moreTick) }
     LaunchedEffect(ChromeKeys.moreTick) { if (ChromeKeys.moreTick != seenMore) { seenMore = ChromeKeys.moreTick; open = !open } }
-    var extra by rememberSaveable { mutableStateOf(false) }
+    // Extra apps stays open when the menu opens; the other groups are shown as they are
+    var extra by rememberSaveable { mutableStateOf(true) }
     val w = LocalWindowLook.current
     Box {
         MoreIcon(color, 22.dp, Modifier.clickable { open = true }.padding(horizontal = 8.dp, vertical = 2.dp))

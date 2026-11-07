@@ -8,13 +8,28 @@ on:
         description: "Publish this build as a GitHub release (tag v<versionName>)"
         type: boolean
         default: false
+      play:
+        description: "Also build the Google Play files (play APK and AAB) and attach them to the release"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PULSE_STORE_PASSWORD: ${{ secrets.PULSE_STORE_PASSWORD }}
+      PULSE_KEY_PASSWORD: ${{ secrets.PULSE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
+      - name: Release key from the secrets (written to a temporary file, never in the repo)
+        shell: bash
+        env:
+          PULSE_KEYSTORE_B64: ${{ secrets.PULSE_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$PULSE_KEYSTORE_B64" ]; then echo "::error::PULSE_KEYSTORE_B64 secret is missing"; exit 1; fi
+          echo "$PULSE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pulse.keystore"
+          echo "PULSE_KEYSTORE=$RUNNER_TEMP/pulse.keystore" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -23,13 +38,13 @@ jobs:
         run: |
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           yes | "$SDKMANAGER" --licenses > /dev/null
-          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0"
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9
       - name: Build release APK
         shell: bash
-        run: set -o pipefail; gradle assembleRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
+        run: set -o pipefail; gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon 2>&1 | tee build.log
       - name: Compile errors as annotations
         if: failure()
         run: |
@@ -37,7 +52,7 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: pulse-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/foss/release/app-foss-release.apk
       - name: Publish the release
         if: github.event_name == 'workflow_dispatch' && inputs.release
         env:
@@ -45,10 +60,21 @@ jobs:
         run: |
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           # the build above is the Android 5 and up one; the normal one (Android 12 and up, the same code) is built now
-          cp app/build/outputs/apk/release/app-release.apk "Pulse-$VER-android5.apk"
-          gradle assembleRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk "Pulse-$VER.apk"
+          cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER-android5.apk"
+          gradle assembleFossRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon
+          cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER.apk"
+          # the Google Play files only when asked (input "play"): the open-source releases (GitHub, Obtainium, F-Droid) carry the two foss APKs
+          PLAYFILES=""
+          if [ "${{ inputs.play }}" = "true" ]; then
+            # the play build: the same app with the ads (Google Play store)
+            gradle assemblePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
+            cp app/build/outputs/apk/play/release/app-play-release.apk "Pulse-$VER-play.apk"
+            # the play bundle (AAB) for the Google Play upload: the same app, Play delivers the split APKs
+            gradle bundlePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
+            cp app/build/outputs/bundle/playRelease/app-play-release.aab "Pulse-$VER-play.aab"
+            PLAYFILES="Pulse-$VER-play.apk Pulse-$VER-play.aab"
+          fi
           # the notes: every YAPILACAKLAR.md entry from the version after the last release up to this one
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
-          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" $PLAYFILES --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md

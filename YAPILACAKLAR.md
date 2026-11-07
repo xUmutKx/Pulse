@@ -1778,3 +1778,534 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.289 Launcher: Pulse's accent and pop-up style no longer leak into the launcher's windows
 - 1.0.289 Windows 11 look: its own icon style for the left sidebar, preview cards for background and window material, Blur removed from the window material list
 - 1.0.289 Alarm appearance: live preview cards for every background style
+- 1.0.290 Lock-screen lyrics: a small window with the line and the next one, instead of a full-screen view that hid the lock screen and froze; taps reach the lock screen
+- 1.0.290 Lyrics notification: low importance (no pop-up), no tap target on the lock screen
+- 1.0.290 Extra apps menu opens expanded; shared-link window stays open with download progress until done
+- 1.0.290 Good Lock: one screen, not-installed modules grouped with picture tiles, a tap opens the module itself
+- 1.0.290 Overview: phone picture and model name at the top; battery health from the measured capacity, or typed in
+- 1.0.290 Playback keep-alive notification: minimum importance, no status-bar icon, no sound
+- derlenmedi: Music lists stutter while scrolling (Favourites and the other song lists): cover cache is now byte-bounded instead of 30 full-size pictures, and saved covers are read at most 512 px for the rows
+- derlenmedi: Lyrics search index is built in the background after every library scan (not only when the music page is open), so the first search is quick
+- derlenmedi: Lyrics search reads the phone's lyrics index at once; the index is filled in the background without blocking the search (the search no longer waits for the whole library to be read)
+- derlenmedi: Lock screen lyrics: two places (under the date, above the lock screen's bottom line) plus a position slider; the window follows the setting at once and the lyric line refreshes about five times a second while locked
+- derlenmedi: Keyboard symbols: Hearts and ribbons first with 30 new presets; Sky and weather no longer a tab (its entries spread over the others); Text and art last. Text and art: the keys type into its box, a tap copies a style or picture to the clipboard, ASCII pictures two per line with no box
+- derlenmedi: Music widget: the album cover opens the player directly (no trampoline), one request code per widget
+- derlenmedi: Floating keys removed (the key button over every app, its toolkit page and its quick settings tile)
+- derlenmedi: Dice and coin flip quick settings tiles turn: eight frames of a tumbling die and a turning coin, then the result
+- derlenmedi: Keyboard: always opens on the QWERTY keys; the Shift key says Shift; the floating keyboard's handle is bigger and drags up/down as well as sideways
+- derlenmedi: Space bar slide: one swipe moves further (it speeds up the longer it goes), slide up or down moves the cursor to the line above or below at the same column, and a sensitivity slider in keyboard settings
+- derlenmedi: Layout list: Game controls and Gamepad have a gamepad icon; gamepad shoulder buttons L1 L2 R1 R2 moved to the top corners, the size control stays in the middle at the bottom
+- derlenmedi: Gamepad: zoom buttons removed, L3 and R3 under the sticks, black ground. Private-typing hat only on the keys page, bigger and faint, showing again for a moment after each key
+- derlenmedi: Sleep timer: a Finish the track first option; when the time runs out the current track is finished first. Crossfade: a graph of the fade out and fade in under the fade slider
+- derlenmedi: Crossfade graph is the crossfade setting itself: drag across it to set 0 to 12 seconds; the fade band widens with the seconds
+- derlenmedi: Default fade between tracks is 3 seconds
+- derlenmedi: Crossfade overlaps: the next track starts on a second player a few seconds before the end, the two fade against each other, then the next track takes over at the same place
+- derlenmedi: Security card on the Overview: a shield icon beside the title
+- derlenmedi: Device overview: the phone picture is the owner's own photo when assets/device_photo.png exists; otherwise a drawing with the camera block
+- derlenmedi: App lock opens from the More menu and Extra apps (it had no route and showed a blank screen); with the accessibility service off, its settings open once so it can be switched on
+- derlenmedi: Player settings (video and music): groups open as full pages with no folding or arrows; the video player's index has an icon per group
+- derlenmedi: Alarm sheet: vibration and repeat limit on one line each (swipe sideways), snooze interval is a slider bar
+- derlenmedi: Alarm ringing screen customisation: a back arrow at the top left
+- derlenmedi: Alarm ringing background sheet: each style is a live preview card
+- derlenmedi: Alarm ringing customisation sheets are pure black in the dark look
+- derlenmedi: Alarm ringing: default background is AMOLED black; the glow switch turns the glow on and off on the ringing screen
+- derlenmedi: Lucid look: One UI (default), Material and AMOLED black, chosen from Appearance with previews; One UI action buttons light grey; Delete asks for confirmation
+- derlenmedi: Windows 11 sidebar: the Office icon follows the outline style like the others
+- derlenmedi: Alarm clock styles: Windows 95, XP, 7 and 11 faces drawn with the app's own Windows clock pictures
+- 1.0.291 Music: sleep timer can finish the track that is playing first; crossfade is a real overlap with a draggable graph (default 3 s)
+- 1.0.291 Music lists: smoother scrolling (covers cached by size, saved covers read at 512 px)
+- 1.0.291 Lock screen lyrics: a phone preview, position presets and slider, hidden while a password or text field is focused
+- 1.0.291 Keyboard: opens on the QWERTY keys, Shift says Shift, floating keyboard drags both ways, space-bar slide moves faster and between lines, gamepad with L3 R3
+- 1.0.291 Player settings: groups open as full pages with icons (video) and no folding (music)
+- 1.0.291 Alarms: Lucid look (One UI, Material, AMOLED black) with previews, delete asks first, Windows 95/XP/7/11 clock faces, ringing screen back arrow and AMOLED black default
+- 1.0.291 App lock opens from the menu again and asks for the accessibility service
+- 1.0.291 Widgets: music cover opens the player directly; dice and coin tiles turn
+- derlenmedi: Keyboard recent emoji: pictures made of characters (block shading, multi-line art) are no longer kept there
+- 1.0.292 Keyboard: pictures made of characters (block shading, multi-line art) are no longer kept in the recent emoji
+- 1.0.292 Alarm clock: Windows 95, XP, 7 and 11 faces; alarm ringing screen with the Lucid look
+- derlenmedi: Keyboard: Shift is the arrow again; a space after , . ? ! is not doubled when one already follows the cursor
+- derlenmedi: Keyboard Turkish: a name followed by a Turkish ending takes its apostrophe (Adana'da, Pelin'den); a list of Turkish names and places
+- derlenmedi: Quick settings Keyboard tile: turns the floating keyboard on and brings it up
+- derlenmedi: Turkish name list extended (about 430 names and places); the rest of the 2000 needs a list from the user or an allowed source
+- derlenmedi: Turkish name list: more people's names and places
+- derlenmedi: Keyboard Turkish: places with a head word take the apostrophe after the head (Ağrı Dağı'na, Van Gölü'ne)
+- derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
+- derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
+- derlenmedi: Alarm background sheet: the preview cards are a plain sideways row (no longer moving and clipped inside the sheet)
+- derlenmedi: Alarm background sheet: tapping a preview selects it (a clear layer takes the tap)
+- derlenmedi: Lucid app fonts: Newsreader, Montserrat, Playfair Display, Rubik, Saira, Lilita One, Bebas Neue, Pacifico, Lobster (bundled files)
+- derlenmedi: Lucid app fonts: Newsreader, Montserrat, Playfair Display, Rubik, Saira, Lilita One, Bebas Neue, Pacifico, Lobster (bundled files)
+- derlenmedi: Lucid fonts: distinctive bundled fonts (Bodoni Moda, DM Serif, Montagu Slab, Juliett, Neonderthaw, Edu Beginner, Kode Mono, Jersey 10, League Gothic, Tourney, Super Power, Tilt Neon, Stick No Bills, Segments) with a sample card for each
+- derlenmedi: Lucid fonts in Settings: app font and alarm clock font as the same cards; the clock uses the same fonts as the app
+- derlenmedi: Alarm font choices (clock, dismiss, snooze, and the per-alarm overrides) are font cards
+- derlenmedi: Book search: Gutenberg Turkish results first, then the English ones of the same search
+- derlenmedi: Books: a PDF with text is read as a text book, reflowed to the reader's pages; opening a file runs off the main thread
+- derlenmedi: Books: PDF page drawing no longer crashes the app (a failed page shows blank; the page is always closed)
+- derlenmedi: Converter tool in the Toolkit: images (PNG, JPG, WEBP, BMP), TXT to PDF/EPUB/DOCX, DOCX to TXT/EPUB, EPUB to TXT, PDF to TXT, CSV to JSON and back; picks files with the app's own browser
+- derlenmedi: Converter: video (MP4, M4A sound) and sound (M4A) through the phone's media encoder
+- 1.0.293 derlenmedi: Books shelf: a long press picks a book; a ⋮ at each cover's bottom-right opens its menu (favourite, select, remove); with books picked the top bar does bulk favourite and remove
+- 1.0.293 derlenmedi: Books shelf menu: plain rows (a tap does the action), no radio buttons
+- 1.0.293 derlenmedi: Store: clearing the cache keeps the downloads set to "Keep downloaded file"
+- 1.0.293 derlenmedi: Build fix: duplicate BouncyCastle classes removed from the release (pdfbox-android)
+- 1.0.294 derlenmedi: Artist pictures are scaled to 512 px JPEG when saved; pictures stored before are shrunk once in the background after a library scan (the 60 MB folder)
+- 1.0.294 derlenmedi: Build fix: SettingsScreen had one extra closing brace (the general section) and a missing tr import; AlarmCustomizationScreen had a bad matchParentSize import
+- 1.0.295 derlenmedi: Books: a book leaving the shelf (one, picked, emptied, or deleted outside Pulse) also removes its cover picture, favourite, progress and last-opened time; the book file stays
+- 1.0.296 derlenmedi: Keyboard: güzel and ipek (names that are ordinary words) are no longer capitalised or given an apostrophe; learned capitals for them are dropped
+- 1.0.296 derlenmedi: Keyboard: Adana'ya keeps its apostrophe at the space (no dictionary correction replaces it)
+- 1.0.296 derlenmedi: Keyboard: a name typed in lower case (adana) takes its capital when the word ends
+- 1.0.297 derlenmedi: Alarm ringing screen: Dismiss stops the alarm only when dragged outward (a tap does nothing)
+- 1.0.297 derlenmedi: Alarm editor: the + (new group) and the Alert Options arrow are removed; Save and Cancel are pinned at the bottom, always on screen
+- 1.0.298 derlenmedi: Alarm ringing screen compile fix (the drag value's converter import)
+- 1.0.298 derlenmedi: Poweramp widget: the cover opens the music page directly
+- 1.0.298 derlenmedi: Player: the artist name opens that artist's page in the library; the album is shown after it
+- 1.0.298 derlenmedi: Library: the category bar is hidden on artist and album pages; the page starts with a square cover as wide as the screen, then Play and Shuffle, then the songs
+- 1.0.299 derlenmedi: Alarm editor and alarm customisation: the scrolling part no longer swallows the scroll and the fling, so a swipe down carries on without lifting the finger
+- 1.0.300 derlenmedi: Excel viewer on a dark page: merged cells take the page ground (no white box), and every cell's text gets black or white when it would sit too close to its own background
+- 1.0.301 derlenmedi: Keyboard e-mail suggestions: up to eight addresses, most used first; one or two sit centred on the bar, more scroll to the right
+- 1.0.302 derlenmedi: Office: Save a copy asks where the copy goes (the document stays open); Save as is unchanged
+- 1.0.303 derlenmedi: APK info dialog (Material): Cancel, Browse and Install stay on one line
+- 1.0.303 derlenmedi: Device picture: drawn as a Samsung S23 from the back (flat aluminium frame, camera island top left), not an iPhone
+- 1.0.304 derlenmedi: Download manager: a magnet link or a .torrent file opens in the torrent app on the phone (qBittorrent and similar); without one, the page says which to install
+- 1.0.305 derlenmedi: Magnet and .torrent links from the system's open-with menu open Pulse's download page and go to a torrent app on the phone (Pulse is left out of that choice)
+- 1.0.306 derlenmedi: Download manager: magnet links and .torrent files download inside Pulse (libtorrent4j engine), no other app needed; the link appears in the list with its progress, pause and remove; Android 5 stays (minSdk 21)
+- 1.0.308 derlenmedi: Files home: Clean up removed; the title sits higher; an Analysis row under the title opens the storage by type; each storage kind opens its own list, Other opens every file that is in no kind; Recent shows at least five files (the newest on the phone fill it up)
+- 1.0.309 derlenmedi: Torrent engine removed completely (the APK was 94 MB with it, 46 MB without); magnet and .torrent links are no longer handled by Pulse
+- 1.0.310 derlenmedi: Excel viewer: each row takes the height the file gives it, so a tall title row and wrapped text show in full (rows and columns are no longer one fixed size)
+- 1.0.311 derlenmedi: Quick settings keyboard tile is a switch: a tap turns the floating keyboard on, a second tap closes it and the keyboard goes back to its own setting
+- 1.0.312 derlenmedi: Quick settings keyboard tile opens the normal keyboard as its own window (not the floating one); a second tap closes it; the floating keyboard setting is no longer touched by the tile
+- 1.0.313 derlenmedi: Share download window: Open Pulse, Download and Cancel buttons; the progress is a thin line at the bottom; the palette icon is gone
+- 1.0.314 derlenmedi: Download popup shows the speed while it runs; Cancel asks for confirmation when a download is still going
+- 1.0.315 derlenmedi: Floating keyboard stays in its column (no sideways slide; the handle moves it up and down); the suggestion bar takes no room when it has nothing to show; suggestions and autocorrect keep running
+- 1.0.316 derlenmedi: Alarm switched off on one day: "Turn back on for ..." names the occurrence after the one being turned off (Sunday, Monday off: Tuesday); keyboard tile opens the normal keyboard (a leftover floating mode is cleared)
+- 1.0.317 derlenmedi: Keyboard tile window: transparent, no dimming, touches outside pass to the app (fix for a black screen with touch taken)
+- 1.0.318 derlenmedi: Files home: title and settings at the top; the three lines open the Browse drawer; Analysis row removed; a type opens the analysis; Apps is the total of the installed apps (APK files are no longer counted as apps)
+- 1.0.319 derlenmedi: Files home Recent: the newest files on the phone first (downloads such as zip show at once), then the app's own recent list
+- 1.0.320 derlenmedi: Keyboard: two e-mail suggestions share the whole bar (nothing empty on the right); search-filter fields (YouTube Music search) get word suggestions
+- 1.0.321 derlenmedi: Winamp player: background choice (black, the track's cover, or the skin) filling the whole screen, set from a settings button at the top right
+- 1.0.322 derlenmedi: Winamp look: the top bar has pixel buttons (VOL, RADIO, LIKE, SET) with a raised bevel; the back arrow is gone there
+- 1.0.323 derlenmedi: Winamp screen: spectrum analyzer and album cover windows; a full layout (two columns on wide screens) and an analyzer switch in the settings button
+- 1.0.324 derlenmedi: Winamp look: the media notification is a Winamp window (green title, pixel bevel buttons: prev, play/pause, next); 1.0.323 compile fix (Arrangement import)
+- 1.0.325 derlenmedi: Look and Feel cards: every label reserves two lines, so all the cards stay at the same height
+- 1.0.326 derlendi: Winamp: no top bar (VOL/RADIO/LIKE gone), pixel SET button, two columns when turned sideways; floating keyboard 90% wide, movable anywhere, opens at the bottom; Files home: the three lines open a folder list on home, a pick opens Browse; spectrum and visualizer widget use the skin's colours; Lyrics page opens the Winamp lyrics window; Poweramp seek bar moves per display frame; notification/lock lyrics only with 3+ lines
+- 1.0.327 derlendi: Album art picker: each picture is downloaded once, Apply uses that copy, the rest go when the picker closes; lock screen lyrics on by default; floating keyboard is off after an update (the normal keyboard is the default)
+- (sürüm sonra) derlenmedi: Floating keyboard by accessibility: AccessKeyboardService draws a keyboard window over any app when a text field is focused and writes into the field (no overlay permission); Settings > Keyboard switch; the Winamp background menu is gone and SET opens music settings; one media notification with the lyric line (separate lyric notification off)
+- 1.0.328 derlendi: Winamp: SET is a gear, LIST OPTS opens music settings, closed playlist leaves its title bar; video: OpenSubtitles search with own key, bottom bar transparent, player buttons chosen in settings with a preview; keyboard: copied text slot lasts two minutes (newest copy wins), English names capitalised, taller suggestion bar; weather map tiles load as they arrive and are cached; Poweramp seek bar per frame
+- 1.0.329 derlendi: Auto EQ: a song without a genre tag is measured for its first 25 seconds (bass, middle, treble) and gets the preset that fits its sound
+- 1.0.330 derlendi: Game Hub: its own icon, games hidden in every launcher (pm hide), per-game profile (restrict in background, free memory), looks Amoled/Material/Windows; alarm dismiss copy follows the finger; keyboard English grammar fixes; alarm weekday label checked
+- 1.0.331 derlendi: Game Hub in the three-dot menu and the extra apps list; game profile; looks Amoled/Material/Windows
+- 1.0.332 derlendi: Settings search finds setting rows by their English or Turkish text (not only the categories); partial index of the main rows
+- 1.0.333 derlendi: Settings General no longer crashes on Windows 11 (Game Hub icon); video folders show at once from the media index; download dialog: Cancel, Open after the download, Download at the right
+- 1.0.334 derlendi: Game Hub: library grid, portrait panel dialog and landscape side panel, home page with the week's play time and a chart, hidden games keep name and icon
+- 1.0.335 derlendi: Game Hub: add any installed app to the library ("+ Add"), so it shows up with the games; the library works with hidden games too
+- 1.0.336 derlendi: Game Hub settings: a cover picture per game (at most 3 MB), tile size, hidden games shown or not, the page it opens on
+- 1.0.337 derlendi: Game Hub rewritten: side menu (Home, All games, Installed, Hidden, Settings), home page with welcome, stats and chart, library grid with covers and a round add button, settings sections; hidden games keep their names and icons
+- 1.0.338 derlendi: Game Hub library: tall covers in a grid, the name under each game
+- 1.0.339 derlendi: Game Hub library in banner cards like a store, sort row (name, play time, size); game page as a store page with Play; artist pictures kept in memory; weather tiles kept longer; calculator figure wraps to two lines
+- 1.0.340 derlendi: Game Hub looks (Amoled, Material with system colours, Windows 95/XP/8/10/11) with previews in a dialog; size or play time under each banner; hidden list checked against the system
+- 1.0.341 derlendi: Game Hub add list: switch hides an app at once (pm hide), one scrolling list, games switched on before are hidden once, library keeps its place when the sort changes
+- 1.0.342 derlendi: Keyboard: rounded suggestion bar even when empty; number pad + key; bottom right number pad key chosen in settings with preview; Game Hub controller icon and placed in Extra apps; floating keyboard as its own window; tile opens it in one step; keep Pulse as default keyboard (root/Shizuku)
+- 1.0.343 derlendi: Play and FOSS flavours (play has AdMob banner and native card, test ids while testing, rewarded only after watching; FOSS has no ads); Game Hub faster with APK banner art and store covers; blur smoother; Windows 11 splash sharper; launcher icon and sounds
+- (sürüm sonra) derlenmedi: Lyrics share card asks for a short ad (play build; foss shares at once), opens for 30 minutes
+- (sürüm sonra) derlenmedi: Debloat: the selected apps stay selected when the page is left or the app restarts; cleared after a removal
+- (sürüm sonra) derlenmedi: Poweramp search tab: one short ad opens it for 30 minutes (play build; foss and Premium open at once)
+- (sürüm sonra) derlenmedi: Theme locks (play build): the look in use stays open, the others show a padlock; one short ad opens all of them for 2 minutes, then only the look in use is open again (foss and Premium: no locks)
+- (sürüm sonra) derlenmedi: Music recap: each page fades and rises in, the minutes count up, and the top song's cover shows on the top songs and card pages
+- (sürüm sonra) derlenmedi: Keyboard dictionary from the owner's own data: common words are never autocorrected (kbd_keep), undone corrections are remembered from the start (kbd_rejected), 1097 typo fixes bundled (habits_user_add)
+- (sürüm sonra) derlenmedi: Setup: permissions card (each group with its reason, ticked when granted, optional ones marked); keyboard: the top bar keeps its height when a panel opens (no jump)
+- 1.0.344 derlenmedi: Build for the release: the changes since 1.0.343 (theme locks, recap and Poweramp recap row with page animation, lyrics share and search ad gates, Debloat selection kept, keyboard seed from the owner's data, setup permissions card, keyboard top bar height fixed)
+- (sürüm sonra) derlenmedi: Keyboard shift is for one letter only (two quick taps no longer make caps lock; caps is the long press or the caps key). Poweramp visualizer: the song, artist and album and the bass level under the bands
+- (sürüm sonra) derlenmedi: Keyboard: after . ! ? ; : a space comes at once, like the comma (numbers, web and mail addresses excluded); backspace removes that space with the mark
+- (sürüm sonra) derlenmedi: Poweramp visualizer: BPM line (estimated live from the bass beats; shows — until enough beats)
+- (sürüm sonra) derlenmedi: Keyboard on a tablet turned sideways: the letter rows are always split (own layout); keys size unchanged (the 2.3 figure is not clear yet)
+- (sürüm sonra) derlenmedi: App icon: the window is drawn at 70 percent inside the adaptive icon, so the mask no longer cuts its corners
+- (sürüm sonra) derlenmedi: Files: the home's three lines open the Browse side menu (same menu and ad everywhere); Hidden part on the storage bar (files in dot-folders, no longer Other); ad banner cannot crash the screen (empty place when the ad fails)
+- (sürüm sonra) derlenmedi: Game Hub: the game page is laid over its own cover, blurred; a hidden game keeps the size it had (shown in the list)
+- (sürüm sonra) derlenmedi: Ads: the native card's button label is black on a light accent (AMOLED's white button showed an empty white box)
+- (sürüm sonra) derlenmedi: Ads: the reward is given when the rewarded ad is closed (not while it still shows); the AMOLED ad card is black
+- (sürüm sonra) derlenmedi: Widgets: the Windows 11 tile has no mountain picture by default; it is a darker, more see-through plain tile (the old default is moved once)
+- (sürüm sonra) derlenmedi: Widgets: each widget asks for its own short ad before it is added (play build); Office viewer: banner at the foot
+- (sürüm sonra) derlenmedi: Settings: ad credit and Premium cards sit between Monitor and About; Watch has an icon; Premium opens the premium app's store page (one account, one device, 15 USD)
+- (sürüm sonra) derlenmedi: Premium: price 350 TL; a Features dialog lists what it unlocks with icons; Get opens the store
+- (sürüm sonra) derlenmedi: Ads: the strip at the foot is on every page, see-through, with a small button on top that sets its transparency
+- (sürüm sonra) derlenmedi: Device overview: the phone is drawn from the front (camera top centre); each detail (processor, memory, temperature, battery, storage, network, security) asks for its own short ad
+- (sürüm sonra) derlenmedi: Poweramp: the cover shrinks less when paused; a tap on the visualizer opens it at once, a hold opens the equalizer and the modes
+- (sürüm sonra) derlenmedi: Settings: a native ad card in the empty space at the foot of the settings (play build)
+- (sürüm sonra) derlenmedi: Reward dialog: the ad card background is transparent (it takes the dialog's own background)
+- (sürüm sonra) derlenmedi: Win11 desktop: the icon backing is a bluer, far more see-through tile; icons move left by two fifths of their width
+- (sürüm sonra) derlenmedi: Ads: a native ad strip under the e-book shelf and reader, and under the app manager (play build)
+- (sürüm sonra) derlenmedi: Weather: an ad strip at the foot; the weather map opens after a rewarded ad each time (play build)
+- 1.0.345 derlenmedi: README intro; the changes since 1.0.344 (ads on pages, widget ads, device overview front view, Poweramp tap/cover, Settings ad credit and Premium, weather map ad, e-book and manager strips, desktop icon backing)
+- 1.0.345 derlenmedi: connected devices on the Wi-Fi (neighbour table) and per-app Wi-Fi and mobile access (iptables, root or Shizuku)
+- (sürüm sonra) derlenmedi: Splash: the Windows 11 opening wallpaper has a darker veil
+- 1.0.345 build fix: the ad strip slider needs its onDone
+- 1.0.345 build fix: the banner release casts the view to AdView before destroy
+- (sürüm sonra) derlenmedi: Debloat: the reinstall list shows the apps this phone had, by name, also after they are gone; keyboard height can go up to 250
+- (sürüm sonra) derlenmedi: Splash: on a tablet turned sideways the Windows 11 opening is a plain dark gradient (no picture)
+- (sürüm sonra) derlenmedi: Widgets: a square weather detail widget (the next hours as lines, more of them when taller)
+- (sürüm sonra) derlenmedi: Files: the smart date is short (short month, year only when it is not this one)
+- (sürüm sonra) derlenmedi: Keyboard clipboard: the pin is a real thumbtack
+- (sürüm sonra) derlenmedi: Keyboard clipboard: the item menu has a delete button
+- (sürüm sonra) derlenmedi: Keyboard clipboard: the delete button is a trash bin
+- (sürüm sonra) derlenmedi: Keyboard: automatic capital only on the first letter of a sentence; the rest of the word stays small
+- (sürüm sonra) derlenmedi: Download popup: the Open with button is gone; the Download button becomes Open when the file is downloaded
+- (sürüm sonra) derlenmedi: Keyboard: the suggestion bar is at the foot of the keys (not the top). The count of 5 to 6 suggestions is not done yet
+- (sürüm sonra) derlenmedi: Installer: with root the install goes through root (pm), not the system installer screen
+- (sürüm sonra) derlenmedi: Keyboard: with a hardware keyboard attached, the screen keyboard shows only its suggestion bar at the foot
+- (sürüm sonra) derlenmedi: Installer: root installs run in the install service, so leaving the window does not stop them
+- (sürüm sonra) derlenmedi: Files previews: MKV frames try more times; the picture fallback is only for picture files (no random pictures for APK/video)
+- (sürüm sonra) derlenmedi: Files previews: a row reused for another file no longer keeps the old file's picture
+- (sürüm sonra) derlenmedi: Notes: a side panel with the note groups (all, favourites, locked, trash) with icons, and the folders as a tree; opened from the header's folder button
+- (sürüm sonra) derlenmedi: Keyboard feel: a hold-to-test vibration button at the chosen strength
+- (sürüm sonra) derlenmedi: Notes: a book view (pages with the text) next to list and grid; the view is a three-way choice
+- (sürüm sonra) derlenmedi: Notes: the folder menu is at the top right; folders open into sub folders with an arrow (Windows style)
+- (sürüm sonra) derlenmedi: Notes: a file can be linked to a note (the address is kept, the file is not copied); the note shows its name and place, and opens it
+- 1.0.346 derlenmedi: Notes side panel and folder tree, book view, file links; the menu at the top right; download popup; Files date and previews; installer via root; tablet opening; vibration test; keyboard hardware bar; widgets: square weather detail
+- 1.0.347 derlenmedi: Game Hub library: the info line (size/play time) is no longer cut off; a wide store banner (e.g. Resident Evil 4) shows whole on the tile instead of being cropped
+- (sürüm sonra) derlenmedi: Music player cover: the lyrics and the three-dot buttons no longer touch (gap added); the favourite star is the same 36dp size as them, and smaller
+- (sürüm sonra) derlenmedi: Music recap: black background and a 'Last played' list on the first page; Statistics: a 'Recently added' section next to 'Recently played'
+- (sürüm sonra) derlenmedi: Music recap: song covers next to the top songs and the last-played list
+- (sürüm sonra) derlenmedi: Files: tapping a type in the Types list (images, videos…) opens its list at once, without the overview in between
+- (sürüm sonra) derlenmedi: Floating keyboard (tile): the transparent window no longer blocks the screen before the keyboard is measured; the keyboard is asked once the window has focus
+- (sürüm sonra) derlenmedi: Files: a CSV opens in the spreadsheet viewer (not the text editor); text is read as UTF-8, or Windows-1254 when it is not UTF-8 (Turkish characters); keyboard lays out again on each new field
+- (sürüm sonra) derlenmedi: Toolkit: Converter tile removed; a Floating keyboard tile with a preview, a show button and an edit button (keyboard settings)
+- (sürüm sonra) derlenmedi: Keyboard Turkish: the capital I is ı in Turkish (taps, glide and the word after a key are lower-cased by the language, not by the phone's language)
+- (sürüm sonra) derlenmedi: Keyboard shift: one tap = one capital letter; two quick taps = caps lock; another tap turns it off
+- (sürüm sonra) derlenmedi: Messages: blocked messages are kept (no notification) and shown under Blocked; spam numbers are never blocked on their own, each one is confirmed in a popup (Suspicious numbers)
+- (sürüm sonra) derlenmedi: Game Hub tiles: the card's background is the app's icon, blurred under a black veil; the crisp icon sits centred on top; no dash when the play time or size is unknown; 'hidden' is easier to read
+- (sürüm sonra) derlenmedi: Notes sketch: the pen draws and a finger is ignored once a pen is used (palm rejection); the pen's button held erases. Pressure, pen menu, PDF, editor toolbar, text options and 3D previews are still to do
+- (sürüm sonra) derlenmedi: Notes sketch: pen, highlighter (wide, see-through) and straight line tools
+- (sürüm sonra) derlenmedi: Notes editor: transparent paper on the background, 720dp centred column for tablets, bottom toolbar (sketch, photo, checklist, record, colour, more)
+- (sürüm sonra) derlenmedi: Notes sketch: favourite pens (save the current pen with the bookmark button; pick it from the row under the colours)
+- (sürüm sonra) derlenmedi: Notes sketch toolbar in the Samsung-like order: close, tools (pen, highlight, eraser, line), five colours, widths, undo and redo, Save, and a menu (finger drawing on or off, favourite pen, clear)
+- (sürüm sonra) derlenmedi: Notes sketch: the pen's button pressed twice quickly opens a tool panel beside the pen (tools, 16 colours, widths); a tap outside closes it; also from the menu
+- (sürüm sonra) derlenmedi: PDF viewer: a text layer (PDFBox) with a select-text tool (drag over the words), and copy text; selected words are shaded
+- (sürüm sonra) derlenmedi: Network: per-app access list shows each app's icon and Wi-Fi and mobile icons with switches (saved at once); the list is taller
+- (sürüm sonra) derlenmedi: Ads (play only): the settings gear is gone from the ad strip; the card is see-through; only the button is black with white text
+- (sürüm sonra) derlenmedi: Keyboard bar: 5 words from 600 dp and 6 from 900 dp of width (3 on a phone); the first three keep their place
+- (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: a row of the Turkish letters (ç ğ ı ö ş ü, capitals with shift) under the suggestion bar
+- (sürüm sonra) derlenmedi: Toolkit: a tool opens in a window over the Toolkit grid (tap outside or back closes it), not full screen
+- (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: the bar has a keyboard button that opens the full keyboard; the keyboard service works before the first unlock (direct boot)
+- (sürüm sonra) derlenmedi: Toolkit dice and coin: lit surfaces (a metal coin with a rim, a bevelled die)
+- (sürüm sonra) derlenmedi: Quick panel coin: a translucent rim on the coin in every frame (the tile tints it, so the rim is transparency only)
+- (sürüm sonra) derlenmedi: Accessibility keyboard: placed again when the phone turns (narrower, low on the screen in landscape)
+- (sürüm sonra) derlenmedi: Accessibility keyboard: a floating button is always there (while on), with a pad for games and places with no text field: type, copy, clear
+- (sürüm sonra) derlenmedi: Toolkit: a tile sinks while pressed and springs back; a tool window grows and fades in
+- (sürüm sonra) derlenmedi: Notes editor: the text row formats the selected text (bold wraps it; heading, bullet and checklist go at the start of the line); with no selection they go at the cursor
+- (sürüm sonra) derlenmedi: Notes book view: the pages lean towards the finger when pressed, with a shadow that lifts and a dark spine on the left
+- (sürüm sonra) derlenmedi: Notes home: notes fill the width of a tablet (as many columns as fit); a phone keeps two in the grid and one in the list
+- (sürüm sonra) derlenmedi: Network: Devices on this Wi-Fi has a Scan again button; the count shows … while it scans
+- (sürüm sonra) derlenmedi: Network type: a change counts when the phone keeps at least one of the asked types (a phone without 5G now reports done instead of failing)
+- (sürüm sonra) derlenmedi: Notes start page: the last eight notes as nine squares (the bottom middle one is Notes, a new note), with a space above
+- (sürüm sonra) derlenmedi: PDF dark copy: light greys go to black (a steep curve; ink and photos as before). Notes: a Black background switch in the notes settings
+- (sürüm sonra) derlenmedi: One UI switch: the thumb slides with a spring and the track changes colour, with a soft shadow
+- (sürüm sonra) derlenmedi: PDF tools: delete pages, rotate pages, extract text, PDF to images, lock and unlock with a password, watermark, compress
+- (sürüm sonra) derlenmedi: PDF tools: flatten (form fields become page content)
+- (sürüm sonra) derlenmedi: One UI theme tokens follow the One UI design library (page #F7F7F7, text #010101, secondary #8C8C8C, dividers #E6E6E6); the switch animates
+- (sürüm sonra) derlenmedi: Tablet layout setting (Settings > General): centre, left, right or full screen for the pages
+- (sürüm sonra) derlenmedi: One UI tablet dialogs: centred on screen and up to 560 dp wide (a phone keeps the bottom sheet)
+- (sürüm sonra) derlenmedi: Tablet, every Windows-style dialog: up to 560 dp wide on a tablet (was 480)
+- (sürüm sonra) derlenmedi: Cache cleaner: apps whose cache is inside their own folder show the cache the system reports (needs the usage-access permission); tapping clears nothing for them, the app settings do
+- (sürüm sonra) derlenmedi: Ad credit: one ad = 5 minutes (was 60); the premium card has no description text when not bought
+- (sürüm sonra) derlenmedi: Ads: while the ad credit (5 minutes) or premium is open, no banner or native ad is drawn and the bottom space is freed
+- (sürüm sonra) derlenmedi: Floating keyboard: 70% of the width, a slimmer bar and handle, and a button to go back to the normal keyboard
+- (sürüm sonra) derlenmedi: Toolkit floating keyboard tile: a failure is shown as a message instead of crashing the app
+- (sürüm sonra) derlenmedi: Banner ads: the banner's own background is transparent
+- (sürüm sonra) derlenmedi: Windows 11 splash: in the dark look the opening is the dark gradient, not the light wallpaper
+- (sürüm sonra) derlenmedi: Notes start page like the Samsung one: a large 'All notes' title with the count, three columns of notes; the nine-square block is taken out
+- (sürüm sonra) derlenmedi: Pen page: the tool row uses Material icons (pen, highlighter, eraser, line) instead of words
+- (sürüm sonra) derlenmedi: Notes editor: the top and bottom bars use Material icons (back, add, undo, preview, share, copy, duplicate, delete; sketch, image, check, record, colour)
+- (sürüm sonra) derlenmedi: Notes list: the sort row (date modified, arrow to reverse) and the list icons (folders at left, settings and new note at right)
+- (sürüm sonra) derlenmedi: Notes pen page: the tool palette floats over the page at the top (rounded, lifted), like the Apple Notes markup tools
+- 1.0.349 derlendi: commits since 1.0.348 (see git log)
+- 1.0.350 derlendi: 1.0.349 build failed (missing Material icon imports in NotesScreens/NotesSketch); fixed, see git log
+- (sürüm sonra) derlenmedi: Video player media controls: VideoSessionService (media3 session for the video) so the notification, lock screen and headphone buttons drive the video; a video pauses the music player
+- (sürüm sonra) derlenmedi: Windows 11 açılış arka planı yeni duvar kağıdı (win11_splash_bg.jpg)
+- (sürüm sonra) derlenmedi: Video uyku zamanlayıcı artık kaydırmalı (0-120 dk) ve "video sonu" anahtarlı
+- (sürüm sonra) derlenmedi: Klavye: normal alanda "@" yazınca kayıtlı e-postalar ve alan adı önerileri gelir (önce kayıtlılar, sonra gmail/outlook vb.)
+- (sürüm sonra) derlenmedi: Video OpenSubtitles anahtarı artık video ayarları > Altyazı içinde; PiP penceresi kapatılınca video durur (arka plan sesi açık olsa bile)
+- (sürüm sonra) derlenmedi: Video üç nokta menüsü iki sütunlu ve üç noktanın altında açılıyor; yeni eklenen altyazı kendi parçası seçiliyor
+- (sürüm sonra) derlenmedi: Video mini pencere (üstte, yuvarlak köşeli, sürüklenir, kenara yapışır, aşağı fırlatınca kapanır, çift dokunma 10 sn, altyazılı); üç nokta menüsünde "Mini pencere"
+- (sürüm sonra) derlenmedi: Altyazı uygulanınca bildirim (açıldı / okunamadı / eklendi ama gösterilmedi)
+- (sürüm sonra) derlenmedi: Altyazı dosyasının kendi stili varsayılan olarak kullanılır; "İntroyu geç" düğmesi (ayarlanabilir süre, varsayılan 90 sn)
+- (sürüm sonra) derlenmedi: İntro algılama (yerel, sonraki bölümle kare karşılaştırma, klasör bazlı önbellek); "İntroyu geç" düğmesi. IntroDB/TheIntroDB kaynakları domain açılınca eklenecek; ses eşleştirme yok
+- (sürüm sonra) derlenmedi: İntro kaynağı: önce IntroDB (api.introdb.app, anahtarsız; dizinin IMDb kimliği OpenSubtitles anahtarıyla), bulamazsa yerel karşılaştırma
+- (sürüm sonra) derlenmedi: Hoş geldin ekranı boyut metni 11 MB yerine 44 MB
+- 1.0.351 derlendi: commits since 1.0.350 (video: intro, mini window, menus, subtitles; keyboard @ suggestions)
+- (sürüm sonra) derlenmedi: Gözat depolama taramasını uygulama açılışında bir kez yapar (donma); kapak: sistem kapağı siyahsa ya da yoksa videonun %30 karesi; altyazı arama listesi küçük satırlar
+- (sürüm sonra) derlenmedi: Notlar: arama artık üstte ikon (açılınca alan çıkar); yanına yeni klasör ikonu (yol yazılır, klasör yan menüde)
+- (sürüm sonra) derlenmedi: IntroDB özeti (recap) de atlanır ("Özeti geç"); atlama düğmesi ilerleme çubuğuna yaklaştırıldı (84 dp)
+- (sürüm sonra) derlenmedi: İntro/özet atlama düğmesi sağa yaslı değil, bir miktar sola (64 dp)
+- (sürüm sonra) derlenmedi: İntro önbelleği bölüm bazlı oldu (eskiden klasör bazlıydı, bütün bölümler aynı süreyi kullanıyordu); IntroDB sonucu ayrı, yerel eşleşme ayrı önbellekte; özet bilgisi eski kayıtlardan gelmiyordu
+- (sürüm sonra) derlenmedi: Hava widget: konum yoksa son kayıtlı/hava sayfası konumu denenir; büyük widgette 7 günlük tahmin
+- (sürüm sonra) derlenmedi: Hava: büyük widgette saatlik seçeneği (ayarlar > Büyük widget); Ekran kapağı: 2x1 yatay ve 1x2 dikey widget
+- (sürüm sonra) derlenmedi: Video oynarken bildirim (Durdur düğmesi videoyu duraklatır); duraklayınca bildirim kalkar
+- (sürüm sonra) derlenmedi: Hava veri kaynağı seçiminde "Hepsi, birleştirilmiş" (tüm servisler)
+- (sürüm sonra) derlenmedi: Mini pencere: varsayılan küçük, en büyük ekran genişliği, kontroller gizli (dokununca açılır), iki parmak bırakılınca sınıra animasyonla döner
+- (sürüm sonra) derlenmedi: Notlar: kalem notun kendi üstünde çizer (S Pen; parmak kaydırır, dokunma çizmez); üstte renk, kalınlık, geri al bar; notun mürekkebi kaydedilir
+- (sürüm sonra) derlenmedi: Launcher ikonları: 28 ek uygulamanın alias ikonu siyah zemin + beyaz çizgi (adaptive, drawable-v26 + yedek); Pulse ana ikonları (IconDefault, IconWin*) dokunulmadı
+- (sürüm sonra) derlenmedi: Uygulama sayfası: APK çıkar ikonu Fluent Box, Zorla durdur ikonu Fluent Prohibited (önceden ikisi de bilinmeyen "i" idi); Material için de eşlendi
+- (sürüm sonra) derlenmedi: Launcher ikonları Blaux 2.3.0 paketinden seçildi (28 uygulama, birebir ve uygun eşleşmeler); kendi çizimlerim kaldırıldı
+- (sürüm sonra) derlenmedi: Uygulama sayfası: activity, service, receiver ve intent action satırlarına dokununca çalıştırılır; sonuç üstte yazılır
+- (sürüm sonra) derlenmedi: Palette: kurulu ikon paketleri okunur (appfilter), ikon kaynağı olarak seçilebilir (Blaux dahil); ayarlar > İkon paketi
+- (sürüm sonra) derlenmedi: Palette ikon paketi: eşleşmeyen uygulamalarda ad araması (tam ya da kelime başı, 4 harften kısa adlar aranmaz)
+- (sürüm sonra) derlenmedi: Winamp: Medya kütüphanesi penceresi (KÜTÜPHANE: telefondaki müzik; RADYO: eklenen internet radyoları, ekleme ve silme)
+- (sürüm sonra) derlenmedi: Ekran kapağı widget: durum yerine saat yüzü (2x2 analog, 2x1 dijital, 1x2 matrix); dakikada bir yenilenir; dokununca kapak açılıp kapanır
+- (sürüm sonra) derlenmedi: Ekran kapağı widget arka planı: siyah ya da şeffaf (ekran kapağı ayarları)
+- (sürüm sonra) derlenmedi: Good Lock: kurulu modüllere kaldırma düğmesi; APKMirror bağlantısı yoksa site kısıtlı Samsung araması
+- (sürüm sonra) derlenmedi: Game Hub: kütüphanede yüzen arama (sağda, alanı üstte açılır); her oyunda süre ve boyut; oyun sayfasında boyut ve Data klasörünü Files ile aç
+- 1.0.352 derlendi: commits since 1.0.351 (Blaux launcher icons, Winamp media library, Palette icon packs, Game Hub search and data folder, screen cover clock widgets, app page run/uninstall, Good Lock uninstall)
+- (sürüm sonra) derlenmedi: Hava durumu: 7 günlük satır eski widget'tan çıkarıldı (eski görünüm geri geldi); yeni "Weather, forecast" widget'ı (7 gün veya sonraki 7 saat, ayar: Tahmin widget'ı: sonraki saatler)
+- (sürüm sonra) derlenmedi: Hava durumu widget'ları parça parça: sadece hava+saat, 7 gün, saatlik, ve tüm kombinasyonlar (hava+7 gün, hava+saatlik, 7 gün+saatlik, hepsi); ayrı widget olarak seçilir; ayardaki saatlik anahtarı kaldırıldı
+- (sürüm sonra) derlenmedi: Kapak widget'ları artık kapağın ilk sayfasını gösteriyor (renk, font, düzen aynı): dijital, analog (4 çeşit), matrix (durağan), piksel, çizgili analog ve çizgili dijital; diğer sayfalar dijital saat olarak çizilir
+- (sürüm sonra) derlenmedi: Alarm ekranı: Dismiss artık uzun basma gerektirmeden kaydırılarak kapatılıyor (düğme parmakla gider, daire büyür, yeterince kayınca kapanır, yoksa geri döner)
+- (sürüm sonra) derlenmedi: Ekran kapağı widget'ları varsayılan olarak arka plansız (şeffaf); siyah arka plan ayarla açılır
+- (sürüm sonra) derlenmedi: Ekran kapağı widget'ları saniyede bir yenileniyor (CoverTicker); Alarm Dismiss düğmesi kendi jest kutusuyla kaydırılarak kapanıyor; altyazı boyu tam ekranda yarıya indi, PiP'te %40
+- (sürüm sonra) derlenmedi: Video listesi: .ts dosyaları (küçük TypeScript kaynakları) video sayılmıyor, geliştirici klasörleri (node_modules, build vb.) taranmıyor
+- (sürüm sonra) derlenmedi: Atla (intro/özet) düğmesi: içi zaman çubuğu gibi 5 sn'de dolar, dolunca kapanır; dokunulursa hemen atlar
+- (sürüm sonra) derlenmedi: Altyazı ara penceresi baştan yazıldı: arama, dil, sonuç satırları; indirme ve hata durumları ekranda yazıyor. Alt çubuk değişikliği geri alındı.
+- (sürüm sonra) derlenmedi: Altyazı indirilince video başa dönmüyor ve durmuyor; yüklenen altyazı etiketi eşleşmezse son metin parçası seçiliyor
+- (sürüm sonra) derlenmedi: CC altyazı seçimi, oynatıcının o anki parça gruplarından yapılıyor (yeniden yüklemeden sonra eski liste eşleşmiyordu)
+- (sürüm sonra) derlenmedi: Notlar düzenleyici sadeleştirildi: üstte 4 simge, altta 4 simge + Diğer; Diğer satırı adlı chip'ler (Geri al, Önizleme, Kopyala, Çoğalt, Renk, Klasör, Hatırlatma, Kilit, Dosya, Ses kaydet, Sesli oku, Çöpe taşı)
+- (sürüm sonra) derlenmedi: Notlarda vurgulayıcı: seçili yazıyı ==...== ile sarar; düzenleyicide sarı zemin, önizlemede işaretsiz sarı zemin
+- (sürüm sonra) derlenmedi: Vurgulayıcı artık kalem: çizim katmanında yarı saydam sarı kalın çizgi (Multiply); metin işaretlemesi kaldırıldı
+- (sürüm sonra) derlenmedi: Vurgulayıcı düğmesi diğer kalem düğmeleriyle aynı stilde (Outlined.Highlight simgesi)
+- (sürüm sonra) derlenmedi: Notlar kalem paneli: 5 kalem türü (kalem, ince kalem, fırça, işaretleyici, vurgulayıcı), 5 boyut noktası, 5 renk; geri al ve bitti üstte
+1.0.353 derlendi: commits since 1.0.352 (Hava durumu parçalı widget'lar, kapak widget'ları kapak sayfasını gösteriyor ve saniyede yenileniyor, alarm Dismiss kaydırma, altyazı yükleme/CC seçimi ve arama penceresi, video alt çubuğu geri alındı, altyazı süresi yarıya, atla düğmesi zaman çubuğu, notlarda vurgulayıcı kalem ve kalem paneli)
+- (sonraki güncelleme) Klavye tablet yan konumda artık otomatik bölünmüyor; bölünmüş tuşlar yalnızca ayar açıkken
+- (sonraki güncelleme) Fiziksel klavye ABD düzenindeyken Türkçe dilde Türkçe Q yerleşimi: [ ] ; ' , . I tuşları ğ ü ş i ö ç ı yazar (Shift ile büyük)
+- (sonraki güncelleme) Fiziksel klavye bağlıyken alttaki Türkçe harf satırı kaldırıldı; yalnızca öneri çubuğu kalıyor
+- (sonraki güncelleme) Klavye: öneri çubuğu %15 incelti (yüzen, normal, yatay); yüzen klavyenin sağ üstteki klavye simgesi kaldırıldı
+- (sonraki güncelleme) Yüzen klavye: yatay hareket ekranın tamamına (boş %30), aşağı çekince yalnızca öneri çubuğu kalacak şekilde
+1.0.354 derlendi: 1.0.353 derlemesi iptal edildi; son değişiklikler: klavye (fiziksel Türkçe Q eşlemesi, Türkçe harf satırı kaldırıldı, öneri çubuğu ve yüzen klavye hareketi), kalem paneli, vurgulayıcı, notlar düzenleyici sadeleştirme, alt çubuk geri alındı, altyazı arama penceresi ve CC seçimi, video kaynak tarama düzeltmesi, kapak ticker/sayfası, alarm kaydırma
+- (sonraki güncelleme) Intro/atla verisi bölüm adı ve boyutuyla da saklanıyor; liste yüklenince yeniden aranıyor
+- (sonraki güncelleme) Atla/özet: OpenSubtitles anahtarı yoksa dizinin IMDb kimliği TVmaze'den (anahtarsız) alınıyor
+- (sonraki güncelleme) Atla/özet: üçüncü kaynak TheIntroDB (api.theintrodb.org/v2/media, anahtarsız); sıra IntroDB, TheIntroDB, görüntü eşleştirme
+1.0.355 derlendi: atla/özet için TheIntroDB ikinci kaynak, IntroDB/TVmaze anahtarsız dizi kimliği, intro önbelleği ad+boyut anahtarı; klavye (fiziksel Türkçe Q, öneri çubuğu, yüzen klavye hareketi), kalem paneli ve vurgulayıcı, altyazı arama ve CC seçimi
+- (sonraki güncelleme) Play sürümünde atla düğmesine basınca ödüllü reklam izlenir (her atlamada); foss'ta reklam yok
+1.0.356 derlendi: 1.0.355 derlemesi iptal edildi; play sürümünde atla düğmesi ödüllü reklam izletir (her atlamada); önceki değişiklikler aynen
+- (sonraki güncelleme) Play: atlamalarda her 3. atlamada ödüllü reklam (1 ve 2 doğrudan)
+- (sonraki güncelleme) Pano satırı simgeleri Fluent (sabitle, kısayol, seç, sil)
+- (sonraki derleme) Paket sahiplik doğrulaması: assets/adi-registration.properties eklendi; APK'yı Play Console'da yükle
+1.0.357 derlendi: 1.0.356 derlemesi iptal edildi; paket doğrulama dosyası (assets/adi-registration.properties) eklendi; atla düğmesi Play sürümünde her 3. atlamada reklam; pano simgeleri Fluent
+- (sonraki güncelleme) Klavye: öneri çubuğunda kilit (auth) simgesi; 1'e uzun basınca auth, 2'ye uzun basınca pano
+- (sonraki güncelleme) Klavye: 1/2 uzun basma kısayolu kaldırıldı (üst karakterler geri); çubukta kilit (auth) ve pano simgeleri
+- (sonraki güncelleme) Sayı klavyesinde (numpad) 1 uzun basınca auth, 2 uzun basınca pano; normal klavyede uzun basma karakterleri aynen
+- (sonraki güncelleme) İmza: release key moved to GitHub secrets (PULSE_KEYSTORE_B64, PULSE_STORE_PASSWORD, PULSE_KEY_PASSWORD); ci/pulse.keystore removed from the repo; no key = debug signing.
+1.0.358 derlendi: 1.0.357 yayın adımında 403 verdi; imza anahtarı artık GitHub secret'larında (özel), eski herkese açık anahtar repodan kaldırıldı
+- (sonraki güncelleme) Hava widget'ları: iç içe geçen yeni haftalık/saatlik/birleşik widget'lar kaldırıldı; sadece ilk 'Weather and clock' (arka planısız) kaldı; güneş ikonu 8 ışınlı yapıldı. derlenmedi
+- (sonraki güncelleme) Klavye: çubukta kilit ve pano simgeleri kaldırıldı (sayı tuşlarında uzun basma kalıyor). Video: Görünüm/Sırala penceresi ekranın ortası yerine sıralama düğmesinin altında popup, her seçeneğin simgesi var. derlenmedi
+1.0.359 derlendi: çubukta kilit/pano simgeleri kaldırıldı; video Görünüm/Sırala penceresi sıralama düğmesinin altında popup (simgeli); Depolama bölümü açılır-kapanır; OpenSubtitles anahtar kutusu yapıştırmayı/yazmayı gösteriyor; Pulse yedeği: favoriler ve yıldızlar kaydedilir, yüklerken geri eklensin mi diye sorulur; yeni forecast widget'ları kaldırıldı, güneş ikonu 8 ışınlı
+- (sonraki güncelleme) İmza geri alındı: sabit eski ci/pulse.keystore kullanılıyor (Play kaydıyla aynı parmak izi); GitHub secret'ları kullanılmıyor. derlenmedi
+- (sonraki güncelleme) Premium: ayrı premium uygulaması kaldırıldı; satın alma uygulamanın içinde Google Play tek seferlik ürün (pulse_premium) ile yapılıyor (play sürümü); açılışta Play'den geri yükleme; premium modülü ve build-premium workflow'u silindi. derlenmedi
+- (sonraki güncelleme) Premium: kayıtlı bayrak kaldırıldı; her açılışta Google Play'den sorgulanıyor, sonuç sadece bellekte tutuluyor. derlenmedi
+- (sonraki güncelleme) Reklam: sayfa içi ikinci reklamlar kaldırıldı (hava, uygulama yöneticisi, e-kitap, ayarlar); altta tek reklam şeridi kaldı. derlenmedi
+- (sonraki güncelleme) Play için AAB de release'e ekleniyor (Pulse-VER-play.aab); Play Console'a AAB yüklenecek. derlenmedi
+1.0.360 derlendi: Play için AAB ve alpha yükleme dosyası; Premium Google Play'de tek seferlik ürün (pulse_premium); sayfa içi ikinci reklamlar kaldırıldı; depolama açılır-kapanır; kilit/pano simgeleri bardan kaldırıldı; OpenSubtitles anahtarı yapıştırılabiliyor; Pulse yedeği (favori ve yıldızlar); hava widget'ları sadeleşti; imza sabit ci/pulse.keystore
+- (sonraki güncelleme) Play sürümü minSdk 24 (Google Play gereği); FOSS sürümü minSdk 21/31 aynı kaldı. derlenmedi
+1.0.361 derlendi: Play sürümü minSdk 24; ilk sürüm sürüm notları
+1.0.362 derlendi: Play için billing 8.0.0, hedef API 36 (play), compileSdk 36, yerel sembol; 762 zaten Play'de olduğu için 763
+1.0.363 (764): Play 763 kodu zaten kullanıldığı için sürüm kodu artırıldı. derlenmedi
+- (sonraki güncelleme) Yayın: GitHub release'inde yalnız FOSS APK'ları (Obtainium, F-Droid için); Play dosyaları yalnızca "play" seçeneğiyle
+- (sonraki güncelleme) Video: hız çubuğu (0.25–2x uçlar ayarlanır, ok düğmeleri 0.01 adım, normal hız düğmesi); altyazı indirilen dosya altyazı değilse pencere kapanmaz, hata gösterir; bildirim: kapak, ad, önceki/oynat-duraklat/sonraki düğmeleri. derlenmedi
+- (sonraki güncelleme) Files ana sayfası: Windows 11'de cam seçeneği ya da arka plan resmi varsa sayfa saydam (arkadaki görünür); AMOLED/Material siyah kalır. derlenmedi
+- (sonraki güncelleme) Files ana sayfası: APK dosyaları ('APK') ve kurulu uygulamalar ('Apps') ayrı satırlar; APK satırı dosya listesini açar, Apps açmaz; tür sayfasında etiket APK. derlenmedi
+- (sonraki güncelleme) Video giriş/özet atlama: dosya adından dizi adı artık yalnızca S/E işaretinden ÖNCEKİ kısım (önceden tüm adın kalanı TVmaze'ye gidiyordu, bu yüzden atla düğmesi çıkmıyordu); 3x07 biçimi ve ülke etiketi (US/UK) desteği. derlenmedi
+- (sonraki güncelleme) Müzik şarkı listeleri (Son eklenenler, vb.): basılı tutarak toplu seçim, tümünü seç, sil simgesi ve tek onay sorusu; silme: dosyalar hemen, kalanlar için Android 11+ tek sistem onayı. derlenmedi
+- (sonraki güncelleme) Hava durumu: gökyüzü görünümünde hava sahnesi (bulut, güneş, yağmur) tüm sayfanın arka planı oldu, yalnızca kartta değil; 'Sonraki saatler' her saat gösteriliyor (3-6 saatlik servislerde aralar doğrusal doldurulur). derlenmedi
+- (sonraki güncelleme) Fiziksel klavye: harfler ekran tuşlarıyla aynı yazım hattından geçer (öneri çubuğu kelimeyi izler, otomatik düzeltme çalışır, Türkçe harfler Türkçe Q konumlarında), F1/F2/F3 soldaki/ortadaki/sağdaki öneriyi seçer; çubukta F1-F3 küçük işaret. derlenmedi
+- (sonraki güncelleme) Alarm Dismiss: hareket eden kapsül üzerinde ölçülen sürükleme yarıya düşüyordu (eşik ~216 dp); artık hareketsiz dış kutu hareketi alır, kapsül parmağı 1:1 izler, ~110 dp'de kapanır, daire kapsülün olduğu yerden büyür. derlenmedi
+- (sonraki güncelleme) Klavye e-posta önerileri: alan adı '@gmail.com' olarak kısa gösterilir (kesilmiyor) ve seçince yalnızca '@' sonrası yazılır; kayıtlı tam adres seçilince yazılan baş kısmın yerine geçer (test@test@outlook.com olmaz); e-posta alanı olmayan alanlarda da aynı. derlenmedi
+- (sonraki güncelleme) GameHub: oyun boyutu artık program (split'ler dahil) + veri + OBB; root/Shizuku ile klasörler sayılır (gizli oyunlar da), yoksa sistem sayımı, yoksa APK dosyaları; son iyi değer saklanır, 12 saatte bir yenilenir; 1 GB üstü GB olarak gösterilir. derlenmedi
+- (sonraki güncelleme) Poweramp widget'ı: pencere en fazla 320x200 dp ölçeklenir; sağa-sola ya da yukarı büyütünce içerik aşırı büyümez, ortada kalır. Müzik özeti: pembe/mor/yeşil yerine beyaz yazı ve gri çubuklar, en sonda her veriyi içeren kaydırmalı Özet sayfası (farklı şarkı/sanatçı, aktif gün, günlük ortalama, en yoğun gün, her saat, ilk 10 sanatçı/şarkı, ruh hâli, tür), veriler ana iş parçacığında değil arka planda hesaplanır (takılma), PNG kaydı arka planda. derlenmedi
+- (sonraki güncelleme) Poweramp widget ayarları: yazı tipi (7), başlık/sanatçı/düğme/vurgu rengi, düğme stili (dolu/çerçeve) ve boyutu, albüm/sayaç/karıştır-tekrar/ilerleme çizgisi aç-kapa, sıfırla; önizleme canlı. derlenmedi
+
+- BlackOut: root/Shizuku ile "Tüm renkler" kartı varsayılan açık, renkler kendiliğinden taranır, ilk açılışta açık zeminler siyaha çevrilir; "Yalnız koyu renkler" varsayılan kapalı (derlenmedi)
+
+- Authenticator: kayıtlı hesaplar açılamazsa (Keystore anahtarı eşleşmiyor) dosya kenara alınır, yeni hesap eklenebilir (derlenmedi)
+
+- Klavye: hızlı yazarken otomatik büyük harf sonraki 2-3 harfe de bulaşıyordu; kelime içinde küçük kalır (derlenmedi)
+
+- Poweramp: kütüphane/arama listesinde şarkıya basınca now playing tam ekran açılır (derlenmedi)
+
+- Winamp: Media library düğmesi playlist penceresinin stilinde; RADIO sekmesi istasyonları kendiliğinden çeker (ülkeye göre en çok dinlenenler) + arama, elle ekleme kalktı (derlenmedi)
+
+- Kaset, pikap, iPod: çok daha ayrıntılı çizim (vidalar, makara paketleri, etiket çizgileri, plak olukları, kol/karşı ağırlık, iPod ekran/pil/tekerlek gradyanları) (derlenmedi)
+
+- Kaset/pikap/iPod: ambientCG CC0 doku fotoğrafları (ceviz, çelik, plastik, deri) çizimin altına; bildirim kartı bu üç görünüm için çizimli resim + üç tuş (derlenmedi)
+
+- BlackOut LSPosed: modül açıkken her uygulamada (kendi kuralı yoksa) beyazlar uygulama açılırken otomatik siyah; "Her uygulamada otomatik" anahtarı (derlenmedi)
+
+- Klavye: çok hızlı yazınca öneri çubuğu yetişemiyordu; kelime biterken düzeltme o anda hesaplanır (derlenmedi)
+
+- Alarm: "Turn back on for Friday" artık perşembeyi atlar (kapatılan çalma atlanır, geri sayım ve zamanlama cuma olur); anahtarla açmak ilk çalmayı korur (derlenmedi)
+
+- Clock: yeni alarm son 5 dk içinde kurulan alarmdan 5 dk sonrasına başlar, yoksa sistem saatinden (derlenmedi)
+
+- Dosya seçiciler: Android sistem seçicisi yerine Pulse'un kendi seçicisi (PulsePick: aç, çoklu, foto, kaydet; tüm dosya erişimi yoksa eskisi). Notes: klasör simgesi telefondan klasör bağlar, içindeki .md/.txt dosyalar not olur, düzenleme dosyaya yazılır (derlenmedi)
+
+- 1.0.364 derlendi (yukarıdaki "derlenmedi" maddelerinin hepsi bu sürümde)
+
+- Weather: gökyüzü arka planında beyaz yazılar için yarı saydam siyah kaplar (üst blok, saatler, günler, güneş/ay, kartlar) (derlenmedi)
+
+- Files ana sayfa: pm hide ile gizlenmiş uygulamalar da sayılır (MATCH_UNINSTALLED + root/Shizuku du ile boyut); Uygulamalar satırına basınca APK dosyaları listesi açılır (derlenmedi)
+
+- Files: ana sayfada "Uygulamalar" kendi listesi (yüklü + pm hide ile gizli uygulamalar, boyutla); "APK" ayrı satır, normal .apk dosyaları (derlenmedi)
+
+- Game Hub: oyun ekranında "ana ekrana ekle" düğmesi (GameLaunch kısayolu, gizli oyunu açar); gizli uygulama boyutu: MATCH_UNINSTALLED + user_de klasörü, boyut önbelleği yenilendi (derlenmedi)
+
+- Pulse dosya seçici: klasör listesi arka planda okunur (donma), görsel/video/APK önizlemeleri, sol üstte üç çizgi ile konumlar paneli (derlenmedi)
+
+- DONMA düzeltmeleri: klavye boşlukta eşzamanlı düzeltme artık ayrı iş parçacığı + 40 ms sınır; Files uygulama ölçümü yalnız kullanıcı uygulamaları, en çok 30 gizli (derlenmedi)
+
+- Fiziksel klavye: Files (Ctrl+C/X/V, Ctrl+A, Delete, F2, Ctrl+N, Ctrl+F, F5, Backspace/Alt+Sol, Esc), her ekranda Esc ve Alt+Sol geri (derlenmedi)
+
+- KASMA (ikinci tur): LSPosed otomatik beyaz kuralı artık Canvas çizim kancası takmaz (her karede maliyetliydi), klavye uygulamalarında hiç çalışmaz, kancalarda yansıma önbelleği; klavye öğrenilen kelime kaydı arka planda; önbellek temizleyici root taraması en düşük öncelikte (derlenmedi)
+
+- Klavye: fiziksel klavye algısı (yapılandırma + giriş cihazları + canlı dinleyici + ilk tuş), böylece açılışta doğru düzen ve fiziksel yazarken öneri/oto düzeltme; yeni alanın düzeni anında uygulanır (derlenmedi)
+
+- Klavye (fiziksel): pano/kilit/menü sayfaları artık gerçekten açılır, çeviri çubuğu kesilmez ve ekran dibinden yukarıda; çeviri açıkken Tab çeviriyi koyar, Enter koyup gönderir; çeviri kaynağı Google (gtx) önce, sonra Lingva, en son MyMemory (derlenmedi)
+
+- Klavye: yan boşluk en çok 200 dp (ayar ve yeniden boyutlandırma paneli) (derlenmedi)
+
+- Klavye: yan boşluk en çok 400 dp; ekranda en az 240 dp tuş genişliği kalacak şekilde sınırlanır (derlenmedi)
+
+- Video: hız penceresi kısaltıldı (başlıkta değer, çubuk, "Sonraki videolarda da kalsın" kutusu + 1x düğmesi); altyazı ekleme hatası artık sessiz değil (toast ile neden) (derlenmedi)
+
+- Video: altyazı artık Pulse tarafından okunup (srt/vtt/ass, otomatik kodlama) oynatıcının altyazı görünümüne satır satır verilir (videoyu yeniden yüklemez, iz seçimi yok); indirme zip/gzip/düz metin ve ikinci adres dener; Skip recap/intro düğmesi tamamen beyaz, altında ince süre çizgisi (derlenmedi)
+
+- Video: Skip recap/intro düğmesi: süre dolgusu artık düğmenin tüm yüksekliğini ve genişliğini kaplar (padding metne taşındı) (derlenmedi)
+
+- Klavye emoji önerisi: kelime yazılırken emojiye basınca kelime silinir, yalnız emoji kalır; boşluktan sonra (düzeltme olsa da) emoji önerisi yanında kalır, basınca kelimenin yanına yazılır (derlenmedi)
+
+- Winamp: Media library düğmesi ve penceresinin başlığı, playlist penceresinin pledit.bmp başlık çubuğuyla (altın çizgiler, köşeler) çizilir (derlenmedi)
+
+- Kaset: etiket çizgileri yazının üstünden geçmez, başlık sonundaki halka kalktı, D-C90 / TYPE I yazıları alt yamukla çakışmaz, tuş paneli doku köşeleri yuvarlak (derlenmedi)
+
+- Ek müzik görünümleri (kaset/iPod/plak): sağ üstte ayarlar düğmesi (görünüm değiştirilebilir); Ek temalar sekmesi kayıtlı iPod/plak seçimini kasete çevirmez; kasette film paketlerin kenarından teğet olarak ve kılavuz bilyelerden geçerek bağlanır (derlenmedi)
+
+- Sistem logosu (başlatıcı ikonu + uygulama bilgisi): siyah zemin, beyaz pencere + kalp atışı (ic_pulse_logo); uygulamanın içindeki mavi/yeşil logo (ic_launcher) aynen duruyor (derlenmedi)
+
+- İndirme yöneticisi: indir deyince bağlantı kutudan hemen çıkar, arka planda aranır ("Dosya aranıyor…" satırı), bulununca kendi satırı ve ilerleme çubuğu gelir; art arda birkaç bağlantı eklenebilir (derlenmedi)
+
+- Files > Uygulamalar: uzun basınca seçim, çöp kutusuyla toplu kaldırma (root/Shizuku ile hepsi birden, gizliler önce gösterilip; yoksa sistemin sorusu sırayla); sistem uygulamaları seçilemez; REQUEST_DELETE_PACKAGES izni (derlenmedi)
+
+## Planlananlar (kullanıcı istedi, henüz yapılmadı)
+- GameFibre (mrtnkl/gamefibre, lisans dosyası YOK): kullanıcı yazardan izin alacak; izin metni gelmeden kodunu kopyalama. Önce fikir/arayüz (sıralama, listeler, favoriler, etiket süzme) kendi kodumuzla.
+- GameHub: Android oyunları (yüklü + gizli) için GameFibre tarzı daha iyi arayüz ve sıralama.
+- Steam kütüphanesi: herkese açık profil (kullanıcı adı / Steam ID, anahtarsız); Epic/GOG sonra (giriş gerekir). Bu kütüphane görünümü PunkStore'a da eklenecek.
+- PunkStore (xUmutKx/PunkStore): 20 MB iniyor 70 MB çıkıyor, Google girişli olduğu halde çok yavaş, varsayılan yükleyici sürekli root'tan kaçıyor -> düzelt ve hızlandır.
+- Mağaza kaynakları: F-Droid, GitHub, GitLab, IzzyOnDroid, Obtainium (Pure benzeri uygulama kaybolmuş; kullanıcı bulursa gönderecek).
+- FlightScanner Pi: yalnız gemi (marine) tarama yönü -> Weather Map'te gemileri göster. Repo bekleniyor.
+- Güncelleme: foss sürümünde direkt; theming seçenekleri unutulmayacak.
+
+- Klavye: öneri hesabı her harfte iptal edilmez (hızlı yazınca hiç sonuç gelmiyordu); biten hesabın ardından en yeni metin için hemen yeniden çalışır; kelime sonu eşzamanlı düzeltme sınırı 90 ms (derlenmedi)
+
+- Alarm ekranı: Dismiss düğmesine kısa basış da alarmı kapatır (kaydırma yine çalışır); durdurma/erteleme servisi isteği hata verirse yedek yol, ekran her durumda kapanır (derlenmedi)
+
+- 1.0.365 derlendi (1.0.364 sonrası tüm "derlenmedi" maddeleri bu sürümde)
+
+- Video listesi: uzun basış artık tam ekran pencere açmaz; seçim modu (sağ üstte seçilen sayı, çöp kutusu, 3 nokta: hepsini seç/oynat/bilgi/paylaş/yeniden adlandır/klasörü gizle/oynanmadı say). Her videonun sağındaki 3 nokta küçük yüzen menü açar (derlenmedi)
+- Altyazı: tam ekran yazı boyu (varsayılan 38) ve pencere içi (PiP/yüzen) yazı boyu (varsayılan 18) ayrı ayarlar; boyut videodan videoya ve hızla değişmez (dosyadaki yazı boyutları yok sayılır); gerçek PiP penceresi küçük boyutu kullanır; A-B tekrar düğmesi "A-B" yazısı oldu (derlenmedi)
+- Altyazı kalıcı: seçilen/indirilen altyazı videoya göre telefona kaydedilir (uygulama klasörü + tüm-dosya izni varsa videonun yanına), video yeniden açılınca gecikmesiyle birlikte kendiliğinden yüklenir, "Kapalı" seçimi de hatırlanır; video silinince (listeden ya da dışarıdan) altyazısı da silinir. Varsayılan altyazı dili: seçili dil, uygulama dili, İngilizce sırasıyla (derlenmedi)
+- Altyazı penceresi baştan: uzun liste yerine 3 kısa sayfa (Kaynak / Görünüm / Zamanlama); boyut, renk, kalın/kenar/arka plan, yükseklik, gecikme, kodlama tek dokunuşla ve anında kaydedilir (derlenmedi)
+- Video oynatıcı: A-B tekrar düğmesi kaldırıldı; kaydırarak ileri/geri sarma 3 saniyeden kısaysa video atlamaz, kaldığı yerden devam eder (derlenmedi)
+- Video ayarları: uzun "Oynatıcı" sayfası üçe bölündü (Oynatma / Kontroller / Sistem), satırların başına simge eklendi; ⋮ menüsünün yeri seçilebilir (sağ üst ya da sol alt, Kontroller sayfasında "Menü konumu") (derlenmedi)
+- Klavye: cümle başında otomatik gelen büyük harfte Shift'e iki kez hızlı basınca artık caps lock açılır (ilk basış otomatik büyüğü kapatır, 400 ms içindeki ikinci basış caps lock yapar) (derlenmedi)
+- Hava durumu widget'ları geri geldi: şimdiki hava, 7 gün, sonraki 7 saat ve bunların karışımları (üstte hava+saat, altta günlük/saatlik tahmin) ayrı widget olarak (derlenmedi)
+- Widget sayfası: geniş ekranda satırda 5'e kadar widget kartı (telefonda 2); tüm widget görüntüleri artık orantılı ölçeklenir (fitXY yerine fitCenter), yeniden boyutlandırınca esnemez (derlenmedi)
+- İşlemler sayfası: root/Shizuku yokken kendi işlemlerinin yanında son 7 günde kullanılan (ya da simgeli tüm) uygulamalar listelenir; boyut ve ağ hızı gerçek okunur, root gerektiren bellek/CPU boş bırakılır (uydurma sayı yok); son okunan liste kaydedilir, okuma başarısız olursa o gösterilir (derlenmedi)
+- Hava durumu: bulut ve kar animasyonları kesintisiz döngü (bulutlar kendi 60 sn'lik döngüsünde tam sayıda tur atar, başa dönerken atlamaz) (derlenmedi)
+- Klavye: geniş ekranda (600 dp ve üstü) emoji/sembol/metin-ve-sanat sayfası solda, tuşlar sağda yan yana; dar ekranda "Metninizi yazın" kutusuna basınca kutu + stil satırı + tuşlar açılır, geri okuyla dönülür (derlenmedi)
+- Klavye yan boşluk: sınır (ekran genişliği - 240) / 2 idi, dar telefonda 40 dp'de kalıyordu; artık klavye en az 140 dp genişliğe inene kadar artar, klavye ortada kalır (derlenmedi)
+- Klavye "Derli toplu düzen" (Samsung klavyesi gibi) seçeneği: tuşlar bitişik (aralık en fazla 1 dp), klavye ekranın seçilen yüzdesinde (varsayılan 66%) ve ortada, yanlar boş; Ayarlar > Boyut bölümünde anahtar + genişlik kaydırıcısı; kapalıyken normal düzen aynen kalır (derlenmedi)
+- BlackOut otomatik siyah: yazı/simge/düğme renkleri artık değişmez (beyaz yazı siyaha dönmüyordu: yalnızca zemin/yüzey adlı renkler ve büyük dolgular (ekran genişliğinin %40'ı, en az 40 dp yükseklik) siyah olur; küçük şekiller kendi renginde kalır); uygulama kartında "Otomatik siyah" anahtarı varsayılan açık görünür ve uygulama başına kapatılabilir (derlenmedi)
+- Duvar kâğıdı küçük resimleri (Ayarlar > arka plan): 80 px genişlikte RGB_565 çözülüyordu (noktalı, bantlı görünüm); artık 3 kat küçültülmüş ARGB_8888 ve orta kalite süzme (derlenmedi)
+- Pulse açılış animasyonu (Windows 11): yatay ekranda dik resim kırpılmak yerine aynı mavi çiçeğin yatay hali (listenin son duvar kâğıdı, win11_wall_17) kullanılır (derlenmedi)
+- BlackOut: uygulamada "Renkler" anahtarı kapalıyken gri/web/koyu sayfa kancaları yine kuruluyordu (yalnız renk kuralları kapanıyordu), "etkilemiyor" deyip etkiliyordu; artık anahtar kapalıysa o uygulamada hiçbir kanca kurulmaz (derlenmedi)
+- Müzik kütüphanesi (Poweramp): öneriler ve mix yapıcı listenin altından kalktı (aşağı inerken kasıyordu); "Öneriler" ve "Mix yapıcı" kategori satırı oldu, içine girince açılıyor (iki adım). Mix yapıcıda 10 ruh hali birden görünür (kaydırmaya gerek yok). Öneriler daha çeşitli: son eklenenler, unutulanlar, favorilerinden, en yüksek puanlılar, henüz dinlemediklerin, on yıl ve tür satırları (derlenmedi)
+- Game Hub: gizlenen oyunların simgeleri artık yedeklenmeyen özel klasörde (noBackupFilesDir/gamehub); eski sürümün kaydettiği simgeler ilk kullanımda oraya taşınır; Pulse yedeği de gamehub/icon_* dosyalarını almaz (derlenmedi)
+- Şifre kasası (Pulse > Daha fazla > Şifreler): giriş, kart, kimlik, güvenli not ve SSH anahtarı kayıtları; Keystore ile şifreli, yedeğe girmeyen özel dosyada (noBackupFilesDir/vault.bin); Authenticator ile aynı ekran kilidi; Bitwarden JSON (şifresiz dışa aktarım) içe aktarma (tüm türler, klasörler, özel alanlar, TOTP anahtarı); yeni giriş ekleme/düzenleme/silme, kopyala (30 sn sonra pano temizlenir); Pulse'u otomatik doldurma servisi olarak seçtirme düğmesi (derlenmedi)
+- Otomatik doldurma servisi (Android 8+): PulseAutofillService, uygulama paketi (android://...@paket ya da androidapp://paket) ve web alanına göre girişleri önerir, formdan çıkarken yeni girişi kaydetmeyi sorar (SaveInfo), aynı adres+kullanıcıda şifreyi günceller; tarayıcıda yalnızca üçüncü taraf otomatik doldurmayı destekleyen tarayıcılarda çalışır (derlenmedi)
+- Şifre kasası: Fluent simgeler (giriş/not/kart/kimlik/SSH türleri, göz, kopyala, yükle, ekle, kalkan) (derlenmedi)
+- BlackOut: "Her uygulamada otomatik" artık varsayılan kapalı (seçince kendiliğinden yapmaz); kök/Shizuku ile kart açılınca zemini siyah yapma ayrı bir seçenek ("ov_auto", varsayılan kapalı); "Otomatik siyahları geri al" düğmesi (yalnız otomatik açılışta yapılan siyah zemin kaplamalarını kaldırır, elle yapılanlar kalır); renk adları okunur: yazı/simge/etiket/gölge adlıysa asla dokunulmaz, bg/background/surface/window adlıysa siyah (derlenmedi)
+- 1.0.366 derleniyor (1.0.365 sonrası tüm "derlenmedi" maddeleri bu sürümde)
+- Şifre kasası: sistemin otomatik doldurma servisi KALDIRILDI (istenmedi); Pulse klavyesi bir uygulamanın kullanıcı adı/şifre kutusunda, o uygulama için kayıtlı girişleri çubukta gösterir (uygulama içi veri, aynı kullanıcı+şifre bir kez), dokununca yazar; ekran kilidi açıksa klavyede önerilmez; tarayıcıda site bilinmediği için öneri yok (derlenmedi)
+- Klavye yavaşlık: düzeltme hesabı her harfte arkada koşmuyor; harfte yalnızca tamamlamalar (hızlı), düzeltmeler 180 ms duraksamada; yeni harf eski işi iptal eder ve çalışan işi durdurur (touch/begin); düzeltme adayları ilk harf/ikinci harf dizinleriyle bulunur (tüm kelime listesi taranmaz), Türkçe ek aramasında 6 bölme ve ilk harf ön elemesi; kelime sonunda anlık hesap en çok 45 ms (derlenmedi)
+- BlackOut "Her uygulamada otomatik" yeniden varsayılan açık; beyaz yazı/simge/küçük şekiller korunur, yalnız büyük zemin/yüzey adlı beyazlar siyah olur (derlenmedi)
+- Sistem simgesi (başlatıcı/uygulama bilgisi): yalnız beyaz nabız çizgisi, saf siyah zemin; 66 dp güvenli daire içinde, üst taraf kesilmez; eski Android için PNG'ler de yenilendi (derlenmedi)
+- Klavye bölünmüş görünüm: tuşlar yan yana yığılmak yerine üst üste biniyordu (yalnız alt sıra görünüyordu); kendi sütununa alındı; "Tuşlar solda, emoji sağda" ve "Emoji sayfası tüm genişliği kullanır" ayarları eklendi (derlenmedi)
+- Pulse dosya seçici: üstte araç çubuğu (alt çubuk yok): ara, sırala (ad/tarih/boyut/tür, yön), liste/ızgara görünümü (büyük önizlemeler), tür süzgeci (resim/video/ses/belge/arşiv), uzun basınca seçim, seçilince üstte sayı + hepsini seç + onay; kayıt kipinde ad alanı üstte; sıralama/görünüm hatırlanır (derlenmedi)
+- Uygulama yöneticisi: arama kutusu artık bir uygulama sayfasından geri dönünce de boş başlar; uygulama sayfasında sol üstte geri oku ve simge: simgeye dokununca 512 px PNG olarak Pictures/Pulse'a kaydedilir (derlenmedi)
+- Cihaz modülü: Şifreler/Kimlik doğrulayıcı gibi bir araçtan geri dönünce açık olan sekme (Güvenlik) korunur, ilk sekmeye (Cihaz) atmaz (derlenmedi)
+- İşlemler tablosu: GPU sütunu CPU'nun sağında (başlıkta toplam GPU kullanımı okunabiliyorsa; tek bir işlemin GPU'su telefondan okunamadığı için satırlar boş); sütunların sırası değiştirilebilir: başlığı basılı tutup yana sürükle, sıra kaydedilir (derlenmedi)
+- Ağ sayfası: Wi-Fi'deki cihaz sayısı artık /24 ağın her adresine sorarak sayılır (komşu tablosu Android 10+'da boştu, hep 1 gösteriyordu); sayfada son testlerin ortalama internet hızı (derlenmedi)
+- 1.0.367 derleniyor (1.0.366 sonrası tüm "derlenmedi" maddeleri bu sürümde)
+- Alarm atlama: "Turn back on for ..." ile atlanan çalma, eski bir kayıt tetiklense bile artık çalmaz (AlarmReceiver atlanan anı tanır, alarmı gerçek sonraki çalmaya kurar); atlama kaydı eşzamanlı yazılır (commit). Kök neden kodda bulunamadı; cihazda yeniden denenip sonuç bildirilecek (derlenmedi)
+- Video altyazı kalıcılığı: kayıt artık videonun adı+boyutuyla tutulur (aynı dosya başka adresle açılsa da bulunur), eski adresle kayıtlı olanlar bulunup yeniden kaydedilir; altyazı menüsünde yüklü altyazının yanında "kayıtlı" yazar; silinen videonun altyazısı temizlenir (derlenmedi)
+- Video akıllı adlandırma (varsayılan açık, Ayarlar > Kütüphane): "Dexter S03E08 · The Damage A Man Can Do", filmlerde "Ad (yıl)"; çözünürlük/kaynak/kodek/grup etiketleri çıkar; liste satırlarında ve oynatıcı başlığında (derlenmedi)
+- Altyazı arama: sonuçlar en iyi uyumdan başlayarak sıralanır (video dosya adıyla aynı sürüm ★ ile en üstte, sonra en çok ortak etiket, sonra puan); CC (işitme engelli) işareti görünür (derlenmedi)
+- Alarm atlama kaydı alarmın kendi verisine taşındı (skipRingAt, lucid_alarm.json içinde; açık/kapalı durumuyla aynı yazımda): çıkıp girince "3 gün" yerine "7 saat" görünmesi için ayrı bir tercih dosyasına bağımlılık kalktı; arayüz hesaplarken kaydı silmez (derlenmedi)
+
+## 1.0.368 (versionCode 769) — derleniyor
+- Alarm: atlanan çalma kaydı alarmın kendisinde (skipRingAt); "Pazartesi için aç" sonrası sıradaki zaman doğru olmalı (cihazda doğrulanmadı)
+- Video: altyazı kaydı ad+boyut ile, akıllı adlandırma, arama sıralaması (cihazda doğrulanmadı)
+- Hava durumu: 429 alan servis 10 dk duraklatılır, yeniden denenmez; son kayıtlı tahmin her hatada gösterilir
+- Play: APK kurma ve REQUEST_INSTALL_PACKAGES yalnızca foss (APK_INSTALL bayrağı)
+- Hoş geldin: erişilebilirlik servisleri için her biri ayrı anahtarlı satırlar (açıklama + Erişilebilirlik ayarlarına gider)
+- Güncelleme penceresi yalnızca foss; play güncellemeleri Play Store üzerinden
+
+- Notlar düzenleyici: kağıdın içi geri geldi (başlık, gövde, ekler, bağlantılar, sayaçlar; 1e5c6abe commit_i silmisti, "+" ile bos sayfa aciliyordu). Samsung Notes tarzi arac cubugu: klavye, kalem (tukenmez/dolma/firca/kursun, S Pen basinc), fosforlu, silgi (kalemin silgi ucu), kement (sec, tasi, renk, sil), geri al/yinele (yazi ve cizim), parmak cizer anahtari, basili tutunca duz cizgi; cizim yazi ile birlikte kayar, sayfa asagi uzar; ayarlar kalici (derlenmedi, cihazda denenmedi)
+
+- Lyrics: oynatici sozlerinde sarki satiri artik ekrana siger (en uzun kelimeye gore kucultme, aktif satir %10 buyur, kenar payi); bildirim ve kilit ekrani sozleri varsayilan KAPALI ve "deneysel"; zamansiz sozleri sarki suresine gore zamanlama yeni ayar (deneysel, varsayilan kapali); kapaliyken bildirim/kilit ekrani sadece zamanli sozleri gosterir (derlenmedi)
+
+- Extra uygulama ikonlari: son uygulamalar (recents) ekraninda her arac kendi adi ve launcher ikonuyla gorunur (hepsi ExtraToolActivity oldugu icin Pulse logosu cikiyordu); ArtCraft aktivitesinin ikonu Files ikonuydu, duzeltildi (derlenmedi)
+- Motion Cues performans: sensorler (saniyede ~150 olay) ana thread yerine kendi thread inde; overlay penceresi donanim hizlandirmali (yazilim cizimiydi); telefon sakinken saniyede 10 cizim; ekran kapaliyken sensorler durur. Klavye ve muzikle ayni anda kasmanin ana nedeni buydu (derlenmedi, cihazda olculmedi)
+
+- Notlar: klasor yolu duzeltmeleri: yazilan yol ayri bir klasor olarak saklanir (bos not silinince yol da kayboluyordu), klasor yolu seviyeli (ust klasor alt klasorlerin notlarini da gosterir, chipler seviye seviye, geri chip i), acik klasorde yeni not o klasore girer; arac cubugunda 3 boyutlu dik kalem/fosforlu/silgi (secilen yukari cikar, uc rengi mürekkep rengi); S Pen tusuna kisa basinca kalem menusu (cihaz tusu bildirirse); cizgiler orta noktalardan yumusatilir (derlenmedi, cihazda denenmedi)
+
+- Motion Cues ve ekran kaydedici yuzen cubugu/kalemi: erisilebilirlik hizmeti (Cover) acikken TYPE_ACCESSIBILITY_OVERLAY ile her seyin ustunde (durum cubugu, klavye, kilit ekrani), kapaliyken eski overlay izniyle; Motion Cues icin "overlay izni" artik zorunlu degil
+- Ekran kaydedici: uygulama hatayla cokerse kaydedici durdurulup o ana kadarki video galeriye (Movies/Pulse Recordings) yayinlanir; bir sonraki kayitta onceki yarim kalmis (disaridan oldurulmus) kayitlar bulunur, icinde veri olan yayinlanir, bos olan silinir (derlenmedi, cihazda denenmedi)
+
+- Yuzen klavye: erisilebilirlik klavyesi bir yazi alanina yazarken telefonun kendi klavyesi kapali tutulur (SoftKeyboardController), alan gidince normale doner; pencere degisince alan hala odaktaysa klavye kapanmaz; yazi alani yokken (oyun) oneri cubugu bos kalir ve yaziyor gibi gorunmez; gamepad tuslari SOURCE_GAMEPAD/DPAD kaynagiyla gonderilir (rastgele tus sorunu icin, cihazda denenmedi) (derlenmedi)
+
+- Video: klasorler de toplu secilir (uzun basinca klasorun tum videolari secilir, secimde dokununca ekle/cikar, ustte "N klasor - M video"), cop kutusu secili klasorlerin videolarini siler, "Klasoru gizle" secili klasorlere de uygulanir, "Hepsini sec" klasorleri de kapsar (derlenmedi)
+
+- Video oynatici: geri tusu calan videoyu kucuk pencerede surdurur (yuzen pencere, yoksa PiP; ayar: "Geri tusu kucuk pencerede oynatmaya devam eder", varsayilan acik); PiP altyazi boyu %40 kucuk (x0.6); video silme onay sorusu (secim, klasor ve tek video); medya kartinda (bildirim/kilit ekrani) videonun kapak resmi (sistem kucuk resmi, yoksa kare) (derlenmedi, cihazda denenmedi)
+
+- Sozler: bulunan ilk sozu otomatik secme ayari (Canli sozler > Nerede; varsayilan acik); kapaliyken bulunanlar liste olarak gelir, birine dokununca calan sarkiyla senkron onizlenir (konum izlenir), "Bunu kullan" sarkinin yanina kaydeder; sozler silinince ayni soz tekrar verilmez (metin parmak izi, sonraki en yakin bulunan gelir); kelime/hece zamanli (enhanced LRC <mm:ss.xx>) sozler: okunur, kaydedilir, oynaticida soylenen kelime yanar (ayar: Kelime kelime sozler, varsayilan acik). Kapak aramasi 3 servise ayni anda sorar, uygulaninca indirilen kopyalar silinir (derlenmedi, cihazda denenmedi)
+
+- Performans: erisilebilirlik servisleri sistem genelinde olay yagmuruna sebep oluyordu: yuzen klavye servisi artik her icerik degisiminde pencere agacini sorgulamaz (typeWindowContentChanged kaldirildi), ekran kapagi her kaydirma olayini almaz (typeViewScrolled kaldirildi, timeout 200 ms), BlackOut timeout 300 ms; MonitorService overlay ve bildirimi yalniz degisince yeniler; Sampler okunamayan dosyayi her saniye root kabuguyla sormaz (1 dk hatirlar) (derlenmedi, cihazda olculmedi)
+
+- Muzik (Poweramp gorunumu): basligin altindaki bos aralikta su an soylenen soz satiri (Canli sozler > Oynaticida goster ile acilip kapanir); "Tam ekran sozler" ayari zaten var (kapaliyken sozler kapagin ustunde acilir) (derlenmedi)
+
+- Ekran kapagi: yeni yuzler "Pano" (Android Auto tarzi saat/hava/muzik/pil kutulari, renkli) ve "Pano (AMOLED cizgili)" (siyah ekran, beyaz cerceveli kutular), "Kucuk saat + bildirimler" (AOD: duz kucuk dijital saat, altinda uygulama simgeleri ve basliklar; bildirim erisimi gerekir); sarj takilinca 5 animasyon (halka, sivi, simsek, parcacik, hucre; Ayarlar > Tetikleyiciler, 0 kapali, dokununca onizleme); ekran kapaliysa takilinca ekran acilinca oynar; "Sarjdayken kendiliginden basla" artik varsayilan ACIK ve "yalniz yan yatikken" varsayilan KAPALI (yeni anahtarlar, eski ayar yok sayilir); NotifLog.active() anlik bildirimler (derlenmedi, cihazda denenmedi)
+
+- Sayı klavyesi: 1 uzun basış → pano, 2 uzun basış → Quick auth (eskiden ters). derlenmedi
+
+- Şifre kasası: Pulse otomatik doldurma servisi GERİ geldi (site/uygulama girişini kaydet teklifi, SAVE_ON_ALL_VIEWS_INVISIBLE; öneriler klavye üst çubuğunda InlinePresentation ile); doğrulama kodu (OTP/SMS/captcha) alanları ne doldurulur ne kaydedilir, klavye çubuğunda da öneri yok. derlenmedi
+
+- Sayı klavyesi: eşleşen kayıtlı giriş/şifre varsa üst çubukta öneri olarak görünür (sayı kutularında yalnızca kullanıcı adı rakam olanlar). Profil README: eski 3 kart kaldırıldı, oled kart seti + yılan eklendi. derlenmedi
+
+- Buds yöneticisi: dokunma seçeneği "Özel" (sol=5, sağ=6, GalaxyBudsClient protokolü): kulaklık basılı tutmayı 147 mesajıyla bildirir; telefonda seçilen eylem çalışır (oynat/duraklat, sonraki/önceki, ses, ANC/ortam, gürültü döngüsü, ANC gücü, ekolayzır, konuşma algılama, oyun modu, fener, pil). derlenmedi
+
+- Ayarlar > Uygulamalar: Sağlık/Office/İndirmeler iki kez görünüyordu (araç satırı + sayfa satırı) → tek satır, sol menü yeri araç satırının seçeneği; Sağlık ayrı ana ekran ikonu (HealthLauncher, uyarlanabilir kalp ikonu); uygulamalar kartı yeniden tasarlandı (katlanır kategoriler, 48dp ikon, ikon+yer alt yazısı). derlenmedi
+
+- Müzik recap: yeni "Fiş" sayfası (krem kağıt, yırtık kenar, monospace şarkı listesi, TOPLAM dakika, gerçek Code 39 barkod); aynı resim PNG olarak kaydedilir. derlenmedi
+
+- Sağlık > Spor (GymMane projesinden, GPL-3.0 / sanat CC BY-SA 4.0): 466 egzersiz + 130 hareketli resim, antrenman kaydı (set/kg/tekrar), dinlenme sayacı (titreşim+bip), programlar ve rutinler, geçmiş, gelişim (1RM, haftalık hacim), vücut ölçüleri, yemek günlüğü (561 yiyecek, kcal hedefi), fiş şeklinde spor özeti (müzik fişiyle aynı çizici). Atlananlar: vücut haritası, Strava/FIT/PDF, AI plan, Wear, rozetler, notlar/yerler. GitHub Pages sitesi docs/index.html. derlenmedi
+
+- Düzeltmeler: sözsüz şarkılarda "null" (JSON null metin olarak okunuyordu); kilit ekranı sözleri yumuşak geçiş + sabit yükseklik + yazı boyutu ayarı (Canlı sözler); kamera açılınca kapak ve kilit sözleri kapanır; app lock balonu: FLAG_BUBBLE ile algı; klavye: birleşik kelime ayırma hızlandı, hızlı yazarken düzeltilemeyen kelime sonradan düzeltilir; klavye: kameradan yeni çekilen foto (HEIC→JPEG) çubukta. derlenmedi
+
+- 1.0.370 (derlendi): Sağlık > Spor (GymMane: egzersiz kütüphanesi + hareketli resimler, antrenman kaydı, dinlenme sayacı, programlar/rutinler, geçmiş, gelişim, vücut, beslenme, bugün için öneri, sonraki ağırlık hedefi, madalyalar, fiş özeti), müzik fişi, sayı klavyesi 1=pano 2=Quick auth + önerili üst çubuk, Buds özel dokunma eylemleri, klavye kamera fotoğrafı/HEIC, düzeltme hızlandırma, "null" sözler, kilit sözleri yazı boyutu/kamera, app lock balon, Sağlık ana ekran ikonu, ayarlar uygulamalar kartı, GitHub Pages (docs/index.html).
+
+- Good Lock: modül güncellemesi artık Samsung mağazasının kendi sürüm servisinden okunur (APKMirror 403 veriyordu), Güncelle Galaxy Store sayfasını açar; ArtCraft: yeni yayın (asset updated_at) kurulu uygulamadan yeniyse "Güncelleme var", eski dosya aynı adla kalmışsa yeniden indirir; Play sürümünde ArtCraft yok (manifest + listeler). derlenmedi
+
+- Kitap okuyucu: kapaklar 100 KB altı küçük JPEG (eski PNG kapaklar bir kez silinir, 25 MB), kapaksız kitaplarda siyah zemin beyaz başlık kapak, beyaz PDF ilk sayfası ters çevrilir; "Kaydırarak oku" modu (sayfa başı haritası, ileri/geri yarım sayfayı önce tam sayfaya getirir). derlenmedi
+
+- 1.0.371 (derlendi): ekran kapağı (StandBy kutucuğu kalktı, 5 sade şarj animasyonu + rastgele, çift dokunuşla kapanır, ekran açıkken/şarjda varsayılan kapalı), spor Sağlık içinde (altta), hava durumu anlık geçiş + harita konum noktası, Good Lock güncellemeleri (Samsung mağaza servisi), ArtCraft güncelleme algısı ve Play sürümünde yok, kitap kapakları küçük JPEG + siyah kapak + kaydırarak okuma.
+
+- Hava durumu: 3 saatlik kaynaklar (wttr, OpenWeatherMap, 7Timer) ve met.no (6 saatlik kuyruk) "sonraki 24/12 saat" listesinde 3 kat süre gösteriyordu: tüm kaynaklar build() içinde saatliğe çevrilir; 7Timer "şimdi" artık şu anki saat (eski koşunun 6-7 saat önceki ilk noktası değil); widget kendi kopyasında MGM/birleşik ek verileri de tutar; anlık geçişte yer son tahmin olur (widget aynı yeri gösterir). derlenmedi
+
+- 1.0.372 (derlendi): hava durumu saatlik normalleştirme (7Timer/wttr/OWM/met.no 3 kat süre), 7Timer şimdi, widget ek verileri, anlık geçişte widget aynı yer.
+
+- 1.0.373 (derlendi): hava durumu (7Timer/met.no kalktı, Bright Sky/WeatherAPI/Pirate Weather, widget dakikalık güncelleme ve boş kalmaz), klavye (sayı alanı geç tür, fotoğraf yönü/30 sn, metin 2 yapıştırma, sabitleme tuşu), sayı boyutu ayarı (detay hava), WMP Blob widget, kök yetkisiz işlemler (bugün ekran süresi), video küçük resim karışması, müzik kütüphane çipleri kalktı, kulaklık ses 0 bekler, ses tuşları (medya çalarken ses, Files sekme döngüsü), APK kurucu hızı + indirme bildirimi, indirme silme, Files PDF/Office önizleme koyu, PDF araması + Word araması, 365 üst blok alt oku.

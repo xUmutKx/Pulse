@@ -61,7 +61,7 @@ private fun material(k: String): ImageVector = when (k) {
     "download" -> Icons.Outlined.Download; "delete", "recycle" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
     "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore; "back" -> Icons.AutoMirrored.Outlined.ArrowBack
     "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
-    "home" -> Icons.Outlined.Home; "send" -> Icons.Outlined.Send; "language" -> Icons.Outlined.Language; "tune" -> Icons.Outlined.Tune; "keyboard" -> Icons.Outlined.Keyboard; "height" -> Icons.Outlined.Height; "emoji" -> Icons.Outlined.EmojiEmotions; "school" -> Icons.Outlined.School; "storage" -> Icons.Outlined.Storage; "video" -> Icons.Outlined.Movie; "gif" -> Icons.Outlined.Gif; "convert" -> Icons.Outlined.Transform; "compress" -> Icons.Outlined.Compress; "photos" -> Icons.Outlined.PhotoLibrary; "mute" -> Icons.Outlined.NotificationsOff; "block" -> Icons.Outlined.Block; "more" -> Icons.Outlined.MoreVert; "archive" -> Icons.Outlined.Archive; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
+    "home" -> Icons.Outlined.Home; "send" -> Icons.Outlined.Send; "language" -> Icons.Outlined.Language; "tune" -> Icons.Outlined.Tune; "keyboard" -> Icons.Outlined.Keyboard; "height" -> Icons.Outlined.Height; "emoji" -> Icons.Outlined.EmojiEmotions; "school" -> Icons.Outlined.School; "storage" -> Icons.Outlined.Storage; "video" -> Icons.Outlined.Movie; "gif" -> Icons.Outlined.Gif; "convert" -> Icons.Outlined.Transform; "compress" -> Icons.Outlined.Compress; "photos" -> Icons.Outlined.PhotoLibrary; "mute" -> Icons.Outlined.NotificationsOff; "block" -> Icons.Outlined.Block; "more" -> Icons.Outlined.MoreVert; "archive" -> Icons.Outlined.Archive; "apkPackage" -> Icons.Outlined.Inventory2; "forceStop" -> Icons.Outlined.Block; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
     "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility; "radio" -> Icons.Outlined.Radio; "shieldOk" -> Icons.Outlined.VerifiedUser; "eyeOn" -> Icons.Outlined.Visibility; "eyeOff" -> Icons.Outlined.VisibilityOff
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
@@ -86,11 +86,12 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     val k = if (k0 == "applock" && T.id in setOf("win11", "oneui", "coloros", "win95", "xp", "win7")) "lock" else k0
     // Material / AMOLED use the flat line icon (mat_office.xml below); the other looks keep their own Office logo
     // the Office suite logo is the colour picture: a line style in Windows 11 draws the thin outline like the other icons
-    val lineOffice = T.id == "win11" && !T.material && (LocalIconStyleOverride.current ?: IconStyle.of(IconCat.MENU)) == "line"
+    val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else if (LocalInSidebar.current) IconCat.SIDEBAR else IconCat.MENU
+    // the Office logo follows the icon style of its own place: outline in the sidebar too, not a red picture
+    val lineOffice = T.id == "win11" && !T.material && (LocalIconStyleOverride.current ?: IconStyle.of(cat)) == "line"
     if (k == "office" && T.id !in setOf("material", "amoled") && !lineOffice) { OfSuiteLogo(size, modifier, tint); return }
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
     // Windows 11: every icon group has its own style (IconStyle): original, Fluent colour or line
-    val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else if (LocalInSidebar.current) IconCat.SIDEBAR else IconCat.MENU
     val st = if (T.id == "win11" && !T.material) (LocalIconStyleOverride.current ?: IconStyle.of(cat)) else "original"
     val fluent = T.id == "win11" && !T.material && st != "line"
     val colour = st == "colour"
@@ -367,7 +368,7 @@ fun ProfileAvatar(size: androidx.compose.ui.unit.Dp, th: PTheme = T, modifier: M
 @Composable
 fun ProfilePhotoRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { u -> if (u != null) ProfilePhoto.set(ctx, u) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { u -> if (u != null) ProfilePhoto.set(ctx, u) }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileAvatar(56.dp)

@@ -74,6 +74,16 @@ internal object PowerampCovers {
     fun saved(c: Context, path: String): ImageBitmap? =
         fileFor(c, path).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() }
 
+    /** The saved cover at most about 512 px, for the song lists: a full-size picture takes megabytes for each row on screen. */
+    fun savedSmall(c: Context, path: String): ImageBitmap? {
+        val f = fileFor(c, path).takeIf { it.isFile } ?: return null
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(f.path, o)
+        var s = 1
+        while (o.outWidth / (s * 2) >= 512) s *= 2
+        return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = s })?.asImageBitmap()
+    }
+
     fun save(c: Context, path: String, jpg: ByteArray) {
         val f = fileFor(c, path)
         f.parentFile?.mkdirs()
@@ -100,18 +110,27 @@ internal object PowerampCovers {
     internal fun missTime(c: Context, path: String): Long =
         fileFor(c, path).let { File(it.parentFile, it.nameWithoutExtension + ".miss") }.takeIf { it.isFile }?.lastModified() ?: 0L
 
+    /** The pictures the picker has downloaded: each one is fetched once, Apply saves this copy, and closing the picker drops the rest. */
+    private val fetched = LinkedHashMap<String, ByteArray>()
+
     fun fetch(url: String): ByteArray {
+        synchronized(fetched) { fetched[url] }?.let { return it }
         val con = URL(url).openConnection() as HttpURLConnection
-        try {
+        val bytes = try {
             con.connectTimeout = 10_000
             con.readTimeout = 10_000
             // MusicBrainz and the Cover Art Archive ask every program to say who it is
             con.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)")
-            return con.inputStream.use { it.readBytes() }
+            con.inputStream.use { it.readBytes() }
         } finally {
             con.disconnect()
         }
+        synchronized(fetched) { fetched[url] = bytes; while (fetched.size > 40) fetched.remove(fetched.keys.first()) }
+        return bytes
     }
+
+    /** Forgets the downloaded pictures of the picker (the ones not applied are removed). */
+    fun dropFetched() = synchronized(fetched) { fetched.clear() }
 
     fun image(url: String): ImageBitmap? = runCatching {
         val b = fetch(url)
@@ -120,7 +139,14 @@ internal object PowerampCovers {
 
     /** Every service that has covers, one after the other (iTunes, Deezer, MusicBrainz with the Cover Art Archive; none needs a key); the same record from two of them is listed once. */
     fun search(term: String, entity: String): List<Hit> {
-        val all = searchItunes(term, entity) + searchDeezer(term, entity) + (if (entity == "album") searchBrainz(term) else emptyList())
+        // the three services are asked at the same time (not one after the other): the wait is the slowest one, not the three added up
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(3)
+        val all = try {
+            val i = pool.submit(java.util.concurrent.Callable { searchItunes(term, entity) })
+            val d = pool.submit(java.util.concurrent.Callable { searchDeezer(term, entity) })
+            val m = pool.submit(java.util.concurrent.Callable { if (entity == "album") searchBrainz(term) else emptyList() })
+            runCatching { i.get() }.getOrDefault(emptyList()) + runCatching { d.get() }.getOrDefault(emptyList()) + runCatching { m.get() }.getOrDefault(emptyList())
+        } finally { pool.shutdown() }
         fun key(h: Hit) = (h.artist + h.name).lowercase().filter { it.isLetterOrDigit() }
         return all.distinctBy { key(it) }.take(24)
     }
@@ -175,6 +201,8 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
     var saving by remember { mutableStateOf(false) }
     // a tap on a picture opens it large first; Apply puts it on the song
     var chosen by remember { mutableStateOf<PowerampCovers.Hit?>(null) }
+    // the downloaded pictures stay only while the picker is open
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { PowerampCovers.dropFetched() } }
     LaunchedEffect(track.path, attempt) {
         hits = null
         hits = withContext(Dispatchers.IO) {
@@ -222,6 +250,7 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
                             scope.launch {
                                 val ok = withContext(Dispatchers.IO) { runCatching { PowerampCovers.save(ctx, track.path, PowerampCovers.fetch(pick.big)) }.isSuccess }
                                 saving = false
+                                PowerampCovers.dropFetched()
                                 if (ok) { onSaved(); onClose() } else Toast.makeText(ctx, tr("Could not download", "İndirilemedi"), Toast.LENGTH_SHORT).show()
                             }
                         }.padding(horizontal = 22.dp, vertical = 9.dp))

@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -110,6 +113,8 @@ import androidx.media3.ui.PlayerView
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.Look
 import com.umutk.pulse.PButton
+import com.umutk.pulse.PCheck
+import com.umutk.pulse.PSlider
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PRadio
 import com.umutk.pulse.PSwitch
@@ -124,6 +129,12 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.layout.fillMaxHeight
+import com.umutk.pulse.ads.rememberAdGate
 
 @Composable
 internal fun VBtn(onClick: () -> Unit, raised: Boolean = false, content: @Composable () -> Unit) {
@@ -197,15 +208,21 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             when (prefs.decoder) { 0 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON; 1 -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER; else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF },
         ).also { if (prefs.decoder == 1) it.setMediaCodecSelector(softFirst) }
         rf.setEnableDecoderFallback(true); rf.applyDecoder(prefs)
+        // the cover of the video that starts (a video on the phone: the system's own thumbnail, which is quick); the others get theirs when they play
+        val coverAt = items[at].takeIf { it.local }?.let { coverBytes(ctx, it) }
         ExoPlayer.Builder(ctx, rf).net(ctx, prefs, items.any { it.uri.scheme?.startsWith("http") == true }).build().apply {
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), prefs.audioFocus)
             setHandleAudioBecomingNoisy(prefs.pauseNoisy)
             setMediaItems(
-                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
+                items.mapIndexed { n, it ->
+                    val meta = androidx.media3.common.MediaMetadata.Builder().setTitle(if (prefs.smartNames) smartName(it.name) else it.name.substringBeforeLast('.'))
+                    if (n == at) coverAt?.let { b -> meta.setArtworkData(b, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER) }
+                    MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(meta.build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build()
+                },
                 at, prefs.resume(items[at].key),
             )
             trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguage(prefs.prefSub.ifBlank { null }).build()
+                .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguages(*subLangs(prefs)).build()
             repeatMode = when (prefs.repeat) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
             skipSilenceEnabled = prefs.skipSilence
             pauseAtEndOfMediaItems = !prefs.autoPlay
@@ -217,6 +234,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
 
     var playing by remember { mutableStateOf(false) }
+    // the skip buttons that ran out, by the start of their segment: each shows once, then closes by itself
+    var skipGone by remember { mutableStateOf(setOf<Long>()) }
     var pos by remember { mutableLongStateOf(0L) }
     var dur by remember { mutableLongStateOf(0L) }
     var seeking by remember { mutableStateOf(false) }
@@ -224,6 +243,13 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var tracks by remember { mutableStateOf(Tracks.EMPTY) }
     var vsize by remember { mutableStateOf(VideoSize.UNKNOWN) }
     var inPip by remember { mutableStateOf(false) }
+    // set while the video was in the picture-in-picture window: when that window is closed (the activity stops), the video stops too
+    val pipWas = remember { booleanArrayOf(false) }
+    // the label of the subtitle just added, until its text track shows up in the player
+    val pendingSubLabel = remember { arrayOfNulls<String>(1) }
+    // while a picked subtitle reloads the item: the resume jump must not move the video back, and the text track count before the reload
+    val subReload = remember { booleanArrayOf(false) }
+    val textBefore = remember { intArrayOf(-1) }
     var shown by remember { mutableStateOf(true) }
     var poke by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
@@ -240,6 +266,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var remaining by remember { mutableStateOf(prefs.showRemaining) }
     var subDelay by remember { mutableLongStateOf(0L) }
     var ext by remember { mutableStateOf<Pair<Uri, String>?>(null) }
+    // the lines of the subtitle file picked or downloaded: shown by Pulse itself over the video (see SubCues.kt)
+    var extCues by remember { mutableStateOf<List<SubCue>?>(null) }
+    var subView by remember { mutableStateOf<androidx.media3.ui.SubtitleView?>(null) }
     val sk = skinOf(skinId)
     var zoom by remember { mutableFloatStateOf(1f) }
     var panX by remember { mutableFloatStateOf(0f) } // two-finger pan, only while zoomed
@@ -249,8 +278,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     fun say(icon: String, text: String) { hud = icon to text; hudStamp++ }
     val booster = remember { arrayOfNulls<LoudnessEnhancer>(1) }
     val equalizer = remember { arrayOfNulls<Equalizer>(1) }
-    var abA by remember { mutableLongStateOf(-1L) } // A-B repeat: start, end (-1 = not set)
-    var abB by remember { mutableLongStateOf(-1L) }
     var sleepAt by remember { mutableLongStateOf(0L) } // SystemClock.elapsedRealtime() deadline, 0 = off
     var sleepEnd by remember { mutableStateOf(false) } // stop after the current video
     var preview by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
@@ -280,35 +307,110 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         player.setHandleAudioBecomingNoisy(prefs.pauseNoisy)
         player.setSeekParameters(if (prefs.fastSeek) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguage(prefs.prefSub.ifBlank { null }).build()
+            .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguages(*subLangs(prefs)).build()
         applyBoost(player.audioSessionId); applyEq(player.audioSessionId)
         rev++
     }
     /** Loads the picked subtitle file again with the saved encoding and the delay. */
-    fun applySub() {
-        val e = ext ?: return
-        val i = player.currentMediaItemIndex
-        val at = player.currentPosition
-        val item = player.currentMediaItem ?: return
-        val u = prepareSub(ctx, e.first, e.second, prefs.subEnc, subDelay) ?: e.first
-        val cfg = MediaItem.SubtitleConfiguration.Builder(u).setMimeType(subMimeOf(e.second)).setLabel(e.second).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
-        player.replaceMediaItem(i, item.buildUpon().setSubtitleConfigurations(siblingSubs(ctx, items[i.coerceIn(items.indices)], prefs) + cfg).build())
-        player.seekTo(i, at)
-        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
+    fun applySubNow(quiet: Boolean = false) {
+        val e = ext ?: run { android.widget.Toast.makeText(ctx, tr("No subtitle picked", "Altyazı seçilmedi"), android.widget.Toast.LENGTH_SHORT).show(); return }
+        val bytes = (if (e.first.scheme == "file") java.io.File(e.first.path!!).inputStream() else ctx.contentResolver.openInputStream(e.first))?.use { it.readBytes() }
+        if (bytes == null) { android.widget.Toast.makeText(ctx, tr("The subtitle file could not be read", "Altyazı dosyası okunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
+        val cues = parseCues(decodeSubBytes(bytes, prefs.subEnc), e.second)
+        if (cues.isEmpty()) { android.widget.Toast.makeText(ctx, tr("No subtitle lines found in that file", "Bu dosyada altyazı satırı bulunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
+        extCues = cues
+        // the video's own text tracks stay quiet while this one shows
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+        if (!quiet) android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı") + " (${cues.size})", android.widget.Toast.LENGTH_SHORT).show()
     }
+    fun applySub() = runCatching { applySubNow() }.onFailure { t ->
+        android.util.Log.e("PulseVideo", "subtitle", t)
+        android.widget.Toast.makeText(ctx, tr("The subtitle could not be added: ", "Altyazı eklenemedi: ") + (t.message ?: t.javaClass.simpleName), android.widget.Toast.LENGTH_LONG).show()
+    }.let { }
+
+    /** Opens the subtitle kept for the video before (and its delay), unless "Off" was chosen for it. */
+    fun loadSaved(v: VideoItem?) {
+        if (v == null || extCues != null) return
+        if (SubStore.isOff(ctx, v.subKey)) { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build(); return }
+        // kept under the name and size; one kept by an older version is found under the address and filed again
+        val s = SubStore.saved(ctx, v.subKey) ?: SubStore.saved(ctx, v.key)?.also { old -> SubStore.save(ctx, v, old.first, old.second) } ?: return
+        ext = s; subDelay = SubStore.delay(ctx, v.subKey)
+        runCatching { applySubNow(quiet = true) }
+    }
+    /** A picked or downloaded subtitle: kept on the phone for this video, then shown. */
+    fun adopt(u: Uri, name: String) {
+        val v = items.getOrNull(cur)
+        val kept = v?.let { SubStore.save(ctx, it, u, name) }
+        ext = (kept ?: u) to name
+        applySub(); dlg = null
+    }
+
+    // the line for the moment goes to the subtitle view ten times a second; it is replaced only when it changes
+    LaunchedEffect(extCues, subDelay, subView) {
+        val cues = extCues
+        val v = subView ?: return@LaunchedEffect
+        if (cues == null) return@LaunchedEffect
+        var last = "\u0000"
+        while (true) {
+            val text = cueAt(cues, player.currentPosition - subDelay)
+            if (text != last) {
+                last = text
+                v.setCues(if (text.isEmpty()) emptyList() else listOf(androidx.media3.common.text.Cue.Builder().setText(text).build()))
+            }
+            kotlinx.coroutines.delay(100)
+        }
+    }
+    // leaving the external subtitle (a new video, or a subtitle picked from the list): its last line is wiped
+    LaunchedEffect(extCues) { if (extCues == null) subView?.setCues(emptyList()) }
+
+    LaunchedEffect(player) { loadSaved(items.getOrNull(cur)) }
 
     DisposableEffect(player) {
         val l = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
-            override fun onTracksChanged(t: Tracks) { tracks = t }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
+                // a video takes over: the music player must not keep playing underneath it
+                if (isPlaying) runCatching { com.umutk.pulse.extras.music.MusicPlayerEngine.get(ctx).player.takeIf { it.isPlaying }?.pause() }
+            }
+            override fun onTracksChanged(t: Tracks) {
+                tracks = t
+                // a subtitle just added: select its text track by its label (the default pick did not always take it)
+                val lbl = pendingSubLabel[0] ?: return
+                for (g in t.groups) {
+                    if (g.type != C.TRACK_TYPE_TEXT) continue
+                    for (i in 0 until g.length) {
+                        if (g.getTrackFormat(i).label != lbl || !g.isTrackSupported(i)) continue
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(g.mediaTrackGroup, i)).build()
+                        pendingSubLabel[0] = null; textBefore[0] = -1; subReload[0] = false
+                        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı"), android.widget.Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                }
+                // the label did not match: the picked file is the last text track the reload added
+                val texts = t.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+                if (textBefore[0] >= 0 && texts.size > textBefore[0]) {
+                    val g = texts.last()
+                    val idx = (0 until g.length).firstOrNull { g.isTrackSupported(it) }
+                    if (idx != null) {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(g.mediaTrackGroup, idx)).build()
+                        pendingSubLabel[0] = null; textBefore[0] = -1; subReload[0] = false
+                        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
             override fun onVideoSizeChanged(v: VideoSize) { vsize = v }
             override fun onAudioSessionIdChanged(audioSessionId: Int) { applyBoost(audioSessionId); applyEq(audioSessionId) }
             override fun onMediaItemTransition(m: MediaItem?, reason: Int) {
                 cur = player.currentMediaItemIndex
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
-                ext = null; subDelay = 0L; abA = -1L; abB = -1L
+                ext = null; extCues = null; subDelay = 0L
+                loadSaved(items.getOrNull(cur))
                 if (sleepEnd && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) { player.pause(); sleepEnd = false }
-                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                if (!subReload[0] && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) {
                     m?.let { val r = prefs.resume(it.mediaId); if (r > 0) player.seekTo(r) }
                 }
             }
@@ -316,7 +418,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         player.addListener(l)
         items.getOrNull(cur)?.let { prefs.addRecent(it) }
         applyBoost(player.audioSessionId); applyEq(player.audioSessionId)
-        onDispose { saveResume(); player.removeListener(l); runCatching { booster[0]?.release() }; runCatching { equalizer[0]?.release() }; player.release() }
+        // the system media controls (notification, lock screen, headphones) now drive this video, see VideoSessionService
+        VideoSessionService.player = player
+        runCatching { ctx.startService(android.content.Intent(ctx, VideoSessionService::class.java)) }
+        onDispose {
+            saveResume(); player.removeListener(l); runCatching { booster[0]?.release() }; runCatching { equalizer[0]?.release() }
+            // the mini window keeps this player (and its media session) alive: it is released when the window closes
+            if (FloatingVideo.owns(player)) return@onDispose
+            VideoSessionService.player = null
+            runCatching { ctx.stopService(android.content.Intent(ctx, VideoSessionService::class.java)) }
+            player.release()
+        }
     }
 
     // the screen stays on, the system bars hide, the options of the window return to normal on leave
@@ -343,7 +455,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     DisposableEffect(owner, player) {
         val observer = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_STOP) {
-                if ((android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)) Unit
+                if (FloatingVideo.owns(player)) Unit // the mini window plays on above other apps
+                else if (pipWas[0]) {
+                    // the picture-in-picture window was closed: the video stops, background audio does not keep it going
+                    pipWas[0] = false
+                    player.pause()
+                } else if ((android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)) Unit
                 else if (prefs.bg) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true).build()
                 else player.pause()
                 saveResume()
@@ -359,13 +476,30 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         var n = 0
         while (true) {
             if (!seeking) pos = player.currentPosition
-            if (abA >= 0 && abB > abA && player.currentPosition >= abB) player.seekTo(abA)
             if (sleepAt > 0 && SystemClock.elapsedRealtime() >= sleepAt) { player.pause(); sleepAt = 0L }
             dur = player.duration.coerceAtLeast(0L)
             inPip = (android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)
+            if (inPip) pipWas[0] = true
             if (++n % 8 == 0 && player.isPlaying) saveResume()
             delay(250)
         }
+    }
+    // the intro: the saved one of this folder, or found by comparing this episode with the next (or previous) one
+    var segs by remember { mutableStateOf<Segs?>(null) }
+    // runs again when the list has loaded (the first call may have seen no items yet)
+    LaunchedEffect(cur, items.size) {
+        val me = items.getOrNull(cur) ?: return@LaunchedEffect
+        val key = IntroCache.key(me.uri)
+        val nkey = IntroCache.nameKey(me.name, me.size)
+        // 1) saved IntroDB result of this episode (by its address, then by its name and size); 2) IntroDB now (intro and recap, by the show's IMDb id); 3) saved picture match; 4) a picture match now
+        (IntroCache.get(ctx, key, IntroCache.DB_FILE) ?: IntroCache.get(ctx, nkey, IntroCache.DB_FILE))?.let { segs = it; return@LaunchedEffect }
+        IntroSources.forFile(ctx, me.name)?.let { fromDb ->
+            IntroCache.put(ctx, key, fromDb, IntroCache.DB_FILE); IntroCache.put(ctx, nkey, fromDb, IntroCache.DB_FILE)
+            segs = fromDb; return@LaunchedEffect
+        }
+        (IntroCache.get(ctx, key, IntroCache.LOCAL_FILE) ?: IntroCache.get(ctx, nkey, IntroCache.LOCAL_FILE))?.let { segs = it; return@LaunchedEffect }
+        val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
+        if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> Segs(found, null).also { IntroCache.put(ctx, key, it, IntroCache.LOCAL_FILE); segs = it } }
     }
     val retriever = remember(cur) { arrayOfNulls<MediaMetadataRetriever>(1) }
     DisposableEffect(cur) { onDispose { runCatching { retriever[0]?.release() } } }
@@ -383,7 +517,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             }.getOrNull()
         } ?: preview
     }
-    LaunchedEffect(bg) { if (bg) MediaService.start(ctx, VideoPlaybackService::class.java) else MediaService.stop(ctx, VideoPlaybackService::class.java) }
+    // the notification shows while the video plays (and while it plays in the background); its Stop pauses the video
+    LaunchedEffect(playing, bg) { if (playing || bg) MediaService.start(ctx, VideoPlaybackService::class.java) else MediaService.stop(ctx, VideoPlaybackService::class.java) }
     LaunchedEffect(shown, playing, poke, dlg, rev) { if (shown && playing && dlg == null && prefs.ctrlTimeout > 0) { delay(prefs.ctrlTimeout.toLong()); shown = false } }
     LaunchedEffect(hudStamp) { delay(900); hud = null }
     LaunchedEffect(orient, vsize) {
@@ -407,6 +542,33 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
         return b.build()
     }
+
+    // what each button does (the bar and the ⋮ menu both call it)
+    fun runControl(id: String) {
+        when (id) {
+            "cc" -> dlg = "text"
+            "audio" -> dlg = "audio"
+            "rotate" -> { orient = (orient + 1) % 6; prefs.orient = orient; poke++; say("rotate", orientNames()[orient]) }
+            "repeat" -> {
+                rep = (rep + 1) % 3; prefs.repeat = rep; poke++
+                player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
+                say("rotate", repeatNames()[rep])
+            }
+            "scale" -> { aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++; say("scale", aspectNames()[aspect]) }
+            "speed" -> dlg = "speed"
+            "sleep" -> dlg = "sleep"
+            "pip" -> pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } }
+            "lock" -> { locked = true; shown = true; poke++ }
+            "settings" -> settings = true
+        }
+    }
+    fun controlOn(id: String): Boolean = when (id) {
+        "cc" -> tracks.isTypeSelected(C.TRACK_TYPE_TEXT) || extCues != null
+        "repeat" -> rep != 0
+        "speed" -> speed != 1f
+        "sleep" -> sleepAt > 0 || sleepEnd
+        else -> false
+    }
     LaunchedEffect(playing, vsize, bg, rev) { pipParams()?.let { pp -> runCatching { act?.setPictureInPictureParams(pp) } } }
 
     val audio = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -414,11 +576,30 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var volF by remember { mutableFloatStateOf(restoreVolume(audio, prefs)) }
     var bright by remember { mutableFloatStateOf((act?.window?.attributes?.screenBrightness ?: -1f).let { if (it < 0) .5f else it }) }
 
-    val pickSub = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
-        if (u != null) { ext = u to displayName(ctx, u); applySub(); dlg = null }
+    val pickSub = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
+        if (u != null) adopt(u, displayName(ctx, u))
     }
 
-    BackHandler(enabled = !settings) { if (!locked) onBack() }
+    BackHandler(enabled = !settings) {
+        if (locked) return@BackHandler
+        // a video that plays goes on in a small window (the floating one, else picture in picture) instead of stopping when Back is pressed
+        if (prefs.backMini && playing && !inPip) {
+            if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
+            val pp = pipParams()
+            if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) return@BackHandler
+        }
+        onBack()
+    }
+    // the system's media card (notification, lock screen) shows the picture of the video: the cover goes into the item that plays
+    LaunchedEffect(cur, player) {
+        val v = items.getOrNull(cur) ?: return@LaunchedEffect
+        val now = player.currentMediaItem ?: return@LaunchedEffect
+        if (now.mediaId != v.key || now.mediaMetadata.artworkData != null) return@LaunchedEffect
+        val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { coverBytes(ctx, v) } ?: return@LaunchedEffect
+        val i = player.currentMediaItemIndex
+        val cur2 = player.currentMediaItem ?: return@LaunchedEffect
+        if (cur2.mediaId == v.key) player.replaceMediaItem(i, cur2.buildUpon().setMediaMetadata(cur2.mediaMetadata.buildUpon().setArtworkData(bytes, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER).build()).build())
+    }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val step = prefs.dtapSec * 1000L
@@ -443,9 +624,10 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 update = {
                     it.player = player
                     it.resizeMode = when (aspect) { 1, 3, 4 -> AspectRatioFrameLayout.RESIZE_MODE_FILL; 2 -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM; else -> AspectRatioFrameLayout.RESIZE_MODE_FIT }
+                    if (subView !== it.subtitleView) subView = it.subtitleView
                     rev.let { _ ->
                         it.subtitleView?.apply {
-                            applySubPrefs(prefs)
+                            applySubPrefs(prefs, inPip)
                         }
                     }
                 },
@@ -528,7 +710,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                             if (ev.changes.none { it.pressed }) break
                         }
                         if (held) player.setPlaybackSpeed(speed)
-                        if (mode == 1) player.seekTo(target)
+                        // a swipe shorter than 3 seconds is a slip of the finger: the video goes on from where it was
+                        if (mode == 1 && abs(target - start) >= 3000) player.seekTo(target)
                         if (mode == 2 && prefs.rememberBright) prefs.bright = bright
                     }
                 },
@@ -536,6 +719,28 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
+        // skip the opening and the "previously on" recap: a button shows while one of them plays and jumps to its end
+        // the skip button: on the play build every third skip waits for a short rewarded ad; the other skips and the other builds are at once
+        val skipGate = rememberAdGate(tr("Skip with an ad", "Reklam izleyerek atla"), tr("Watch a short ad to skip this part.", "Bu bölümü atlamak için kısa bir reklam izle."), pass = false)
+        var skipCount by remember { mutableIntStateOf(0) }
+        segs?.let { sg ->
+            // a segment whose button already ran out is not shown again
+            val hit = listOf(sg.intro to tr("Skip intro", "İntroyu geç"), sg.recap to tr("Skip recap", "Özeti geç"))
+                .firstOrNull { (r, _) -> r != null && pos >= r.first && pos < r.last && r.first !in skipGone }
+            if (!inPip && hit != null) {
+                val range = hit.first!!
+                SkipPill(
+                    text = hit.second,
+                    startKey = range.first,
+                    onTap = {
+                        skipCount++
+                        if (skipCount % 3 == 0) skipGate { player.seekTo(range.last + 1) } else player.seekTo(range.last + 1)
+                    },
+                    onTimeout = { skipGone = skipGone + range.first },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
+                )
+            }
+        }
         hud?.let { (icon, text) ->
             Row(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 PIcon(icon, Color.White, 22.dp)
@@ -561,9 +766,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             ) {
                 SkinBtn(sk, onBack) { PIcon("back", tf, 24.dp) }
                 Text(items.getOrNull(cur)?.name.orEmpty(), Modifier.weight(1f), color = tf, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                SkinBtn(sk, { dlg = "audio" }) { PIcon("volume", tf, 24.dp) }
-                SkinBtn(sk, { dlg = "text" }) { Tag("CC", tracks.isTypeSelected(C.TRACK_TYPE_TEXT), tf, sk.accent) }
-                SkinBtn(sk, { settings = true }) { PIcon("settings", tf, 24.dp) }
                 SkinBtn(sk, { dlg = "more" }) { com.umutk.pulse.extras.ui.TIcon("more", tf, 22.dp, sk.icons) }
             }
                 Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -574,39 +776,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                     VBtn({ if (many) player.seekToNextMediaItem() else player.seekTo(player.currentPosition + step); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("next", Color.White, 26.dp, sk.icons) else Tag("+${prefs.dtapSec}", false, Color.White) }
                 }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xB3000000)))).background(sk.bottom).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            // the bottom bar is a see-through black fade over the picture, whatever the skin (the skin colour used to cover it)
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock(pos), color = fg, fontSize = 12.sp)
                     SkinSeek(pos.toFloat(), dur.toFloat(), sk, { seeking = true; pos = it.toLong(); poke++ }, { seeking = false; player.seekTo(pos) }, Modifier.weight(1f).padding(horizontal = 8.dp))
                     Text(if (remaining) "-" + clock(dur - pos) else clock(dur), Modifier.clickable { remaining = !remaining; prefs.showRemaining = remaining }, color = fg, fontSize = 12.sp)
                 }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    SkinBtn(sk, { locked = true; shown = true; poke++ }) { LockGlyph(fg) }
-                    SkinBtn(sk, { dlg = "speed" }) { Row(verticalAlignment = Alignment.CenterVertically) { PIcon("speed", if (speed != 1f) sk.accent else fg, 22.dp); Tag(speedName(speed), speed != 1f, fg, sk.accent) } }
-                    SkinBtn(sk, {
-                        aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++
-                        say("scale", aspectNames()[aspect])
-                    }) { PIcon("scale", fg, 24.dp) }
-                    SkinBtn(sk, {
-                        orient = (orient + 1) % 6; prefs.orient = orient; poke++
-                        say("rotate", orientNames()[orient])
-                    }) { PIcon("rotate", fg, 24.dp) }
-                    SkinBtn(sk, {
-                        rep = (rep + 1) % 3; prefs.repeat = rep; poke++
-                        player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
-                        say("rotate", repeatNames()[rep])
-                    }) { com.umutk.pulse.extras.ui.TIcon("repeat", if (rep != 0) sk.accent else fg, 22.dp, sk.icons) }
-                    SkinBtn(sk, {
-                        when {
-                            abA < 0 -> { abA = player.currentPosition; say("rotate", "A") }
-                            abB < 0 -> { abB = player.currentPosition.coerceAtLeast(abA + 500); say("rotate", "A-B") }
-                            else -> { abA = -1L; abB = -1L; say("rotate", tr("Off", "Kapalı")) }
-                        }
-                        poke++
-                    }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
-                    SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
-                    SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.PictureInPictureAlt, null, Modifier.size(22.dp), tint = fg) }
-                    SkinBtn(sk, { dlg = "cast" }) { androidx.compose.material3.Icon(Icons.Outlined.Cast, null, Modifier.size(22.dp), tint = fg) }
+                    barList(prefs.barButtons).forEach { id -> SkinBtn(sk, { runControl(id) }) { ControlGlyph(id, fg, sk, controlOn(id)) } }
                 }
             }
         }
@@ -614,8 +792,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
 
     when (dlg) {
-        "speed" -> PickDialog("x", speeds.map { speedName(it) to (it == speed) }, { dlg = null }) { i ->
-            speed = speeds[i]; player.setPlaybackSpeed(speed); if (prefs.rememberSpeed) prefs.speed = speed; dlg = null
+        "speed" -> VideoSpeedDialog(speed, prefs.speedMin, prefs.speedMax, prefs.rememberSpeed, { on -> prefs.rememberSpeed = on; if (on) prefs.speed = speed }, { dlg = null }) { v ->
+            speed = v; player.setPlaybackSpeed(v); if (prefs.rememberSpeed) prefs.speed = v
         }
         "audio" -> {
             val rows = trackRows(tracks, C.TRACK_TYPE_AUDIO)
@@ -640,16 +818,16 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 dlg = null
             }
         }
-        "sleep" -> {
-            val mins = listOf(0, 10, 15, 30, 45, 60, 90, 120, -1)
-            val names = mins.map { when (it) { 0 -> tr("Off", "Kapalı"); -1 -> tr("End of video", "Video sonu"); else -> "$it min" } }
-            PickDialog(tr("Sleep timer", "Uyku zamanlayıcı"), names.mapIndexed { i, n -> n to ((mins[i] == 0 && sleepAt == 0L && !sleepEnd) || (mins[i] == -1 && sleepEnd)) }, { dlg = null }) { i ->
-                val m = mins[i]
-                sleepEnd = m == -1
-                sleepAt = if (m > 0) SystemClock.elapsedRealtime() + m * 60_000L else 0L
+        "sleep" -> SleepDialog(
+            minutes = sleepAt.let { if (it > 0L) ((it - SystemClock.elapsedRealtime()) / 60_000L + 1).toInt().coerceIn(1, 120) else 0 },
+            endOfVideo = sleepEnd,
+            onSet = { m, end ->
+                sleepEnd = end
+                sleepAt = if (!end && m > 0) SystemClock.elapsedRealtime() + m * 60_000L else 0L
                 dlg = null
-            }
-        }
+            },
+            onDismiss = { dlg = null },
+        )
         "eq" -> EqDialog(prefs, equalizer[0], sk, { applyEq(player.audioSessionId) }) { dlg = null }
         "boost" -> {
             val boosts = listOf(0, 300, 600, 900, 1200, 1500)
@@ -659,36 +837,39 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
         "text" -> {
             val rows = trackRows(tracks, C.TRACK_TYPE_TEXT)
-            val off = rows.none { it.selected }
-            val w = LocalWindowLook.current
-            PickDialog(tr("Subtitles", "Altyazı"), listOf(tr("Off", "Kapalı") to off) + rows.map { it.label to it.selected }, { dlg = null },
-                extra = {
-                    Row(Modifier.fillMaxWidth().clickable { pickSub.launch(arrayOf("*/*")) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("folder", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(".srt .ass .vtt", color = w.text, fontSize = 14.sp)
+            val key = items.getOrNull(cur)?.subKey
+            SubMenu(
+                prefs, rows.map { it.label to it.selected }, off = extCues == null && rows.none { it.selected }, extName = ext?.second.takeIf { extCues != null }?.let { n -> if (key != null && SubStore.saved(ctx, key) != null) n + "  ·  " + tr("saved", "kayıtlı") else n }, delayMs = subDelay,
+                onChoose = { i ->
+                    extCues = null; ext = null; key?.let { SubStore.forget(ctx, it) }
+                    // the choice is made on the tracks the player has now: the list above can be from before a subtitle reload, and its groups then match nothing
+                    val live = trackRows(player.currentTracks, C.TRACK_TYPE_TEXT)
+                    val want = rows[i]
+                    val r = live.firstOrNull { it.label == want.label } ?: live.getOrNull(i)
+                    if (r != null) {
+                        if (prefs.rememberSel) r.lang?.let { prefs.prefSub = it }
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(r.group.mediaTrackGroup, r.idx)).build()
                     }
-                    Row(Modifier.fillMaxWidth().clickable { dlg = "osub" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("search", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(tr("Search online", "Çevrimiçi ara"), color = w.text, fontSize = 14.sp)
-                    }
-                    Row(Modifier.fillMaxWidth().clickable { dlg = "subopt" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("settings", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(tr("Style and delay", "Stil ve gecikme"), color = w.text, fontSize = 14.sp)
-                    }
+                    rev++
                 },
-            ) { i ->
-                player.trackSelectionParameters = if (i == 0) player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
-                else rows[i - 1].let { r ->
-                    if (prefs.rememberSel) r.lang?.let { prefs.prefSub = it }
-                    player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                        .addOverride(TrackSelectionOverride(r.group.mediaTrackGroup, r.idx)).build()
-                }
-                dlg = null
-            }
+                onOff = {
+                    extCues = null; ext = null; key?.let { SubStore.setOff(ctx, it, true) }
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                    rev++
+                },
+                onFile = { pickSub.launch(arrayOf("*/*")) }, onSearch = { dlg = "osub" },
+                onDelay = { subDelay = it; key?.let { k -> SubStore.setDelay(ctx, k, it) } },
+                onStyle = { rev++ }, onEnc = { dlg = "enc" }, onDismiss = { dlg = null },
+            )
         }
-        "osub" -> OnlineSubsDialog(ctx, items.getOrNull(cur)?.name.orEmpty(), { u, name -> ext = u to name; applySub(); dlg = null }) { dlg = null }
-        "subopt" -> SubOptions(prefs, subDelay, ext != null, { subDelay = it; applySub() }, { rev++ }, { dlg = "enc" }) { dlg = null }
-        "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "subopt" }) { i -> prefs.subEnc = encodings[i]; applySub(); dlg = "subopt" }
+        "osub" -> OnlineSubsDialog(ctx, items.getOrNull(cur)?.name.orEmpty(), { u, name -> adopt(u, name) }) { dlg = null }
+        "subopt" -> { dlg = "text" }
+        "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "text" }) { i -> prefs.subEnc = encodings[i]; if (ext != null) applySub(); dlg = "text" }
         "more" -> {
             // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
-            val moreItems = listOf(
+            val moreItems = CONTROL_IDS.filter { it !in barList(prefs.barButtons) }.map { MoreItem("ctl_$it", "", controlName(it), "") } + listOf(
+                MoreItem("mini", "video", tr("Mini window", "Mini pencere"), ""),
                 MoreItem("shuffle", "sort", tr("Shuffle", "Karıştır"), if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("bg", "volume", tr("Background audio", "Arka plan sesi"), if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("eq", "tune", tr("Equalizer", "Ekolayzır"), ""),
@@ -697,9 +878,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 MoreItem("share", "share", tr("Share", "Paylaş"), ""),
                 MoreItem("zoom", "scale", tr("Reset zoom", "Yakınlaştırmayı sıfırla"), ""),
             )
-            MoreSheet(moreItems, { dlg = null }) { key ->
+            MoreSheet(moreItems, { dlg = null }, sk, prefs.moreAt == 1) { key ->
                 dlg = null
                 when (key) {
+                    // the video goes to the mini window above other apps and this screen closes; the window keeps playing
+                    "mini" -> if (FloatingVideo.show(ctx, player, vsize)) onBack()
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
                     "bg" -> { bg = !bg; prefs.bg = bg }
                     "eq" -> dlg = "eq"
@@ -708,6 +891,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     "info" -> dlg = "info"
                     "share" -> items.getOrNull(cur)?.let { shareVideo(ctx, it) }
                     "zoom" -> { zoom = 1f; panX = 0f; panY = 0f }
+                    else -> if (key.startsWith("ctl_")) runControl(key.removePrefix("ctl_"))
                 }
             }
         }
@@ -745,7 +929,7 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
                 if (hasExt) stepper(tr("Delay", "Gecikme"), "%+d ms".format(delayMs), { onDelay(delayMs - 100); rev++ }, { onDelay(delayMs + 100); rev++ })
-                stepper(tr("Size", "Boyut"), "${p.subSize}", { p.subSize = (p.subSize - 2).coerceAtLeast(10); rev++; onStyle() }, { p.subSize = (p.subSize + 2).coerceAtMost(60); rev++; onStyle() })
+                stepper(tr("Size", "Boyut"), "${p.subSize}", { p.subSize = (p.subSize - 2).coerceAtLeast(16); rev++; onStyle() }, { p.subSize = (p.subSize + 2).coerceAtMost(72); rev++; onStyle() })
                 sw(tr("Bold", "Kalın"), p.subBold) { p.subBold = it }
                 sw(tr("Background", "Arka plan"), p.subBg) { p.subBg = it }
                 sw(tr("Outline", "Kenar"), p.subEdge) { p.subEdge = it }
@@ -762,32 +946,77 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
 private class MoreItem(val key: String, val icon: String, val name: String, val state: String)
 
 /**
- * The More menu: a dark panel at the bottom of the screen, above the progress bar, with an icon for each action. It stays dark
- * over a white picture, so its text reads on any video.
+ * The More menu: one column under the three-dot button (top right). Every row has the same height; a state (On / Off) sits at the end.
  */
+/** A skip button whose white fill runs across the whole button, edge to edge, over [durationMs]; a tap skips, and when it is full the button closes. */
 @Composable
-private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
-    Popup(alignment = Alignment.BottomCenter, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(Color(0xF2101010))
-            .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp)) {
-            items.chunked(4).forEach { row ->
-                Row(Modifier.fillMaxWidth()) {
-                    row.forEach { item ->
-                        Column(Modifier.weight(1f).clickable { onPick(item.key) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            PIcon(item.icon, Color.White, 26.dp)
-                            Text(if (item.state.isEmpty()) item.name else item.name + "\n" + item.state, color = Color.White, fontSize = 12.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
-                        }
-                    }
-                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout: () -> Unit, modifier: Modifier = Modifier, durationMs: Int = 5000) {
+    val fill = remember(startKey) { Animatable(0f) }
+    val currentTimeout by rememberUpdatedState(onTimeout)
+    LaunchedEffect(startKey) {
+        fill.animateTo(1f, tween(durationMs, easing = LinearEasing))
+        currentTimeout()
+    }
+    // the padding sits on the text, not on the button: the fill is as tall and as wide as the button itself
+    Box(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x66FFFFFF)).clickable { onTap() }) {
+        Box(Modifier.matchParentSize()) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value).background(Color(0xF2FFFFFF)))
+        }
+        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp))
+    }
+}
+
+@Composable
+private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, bottomLeft: Boolean = false, onPick: (String) -> Unit) {
+    val d = LocalDensity.current
+    val dx = with(d) { (if (bottomLeft) 12 else -12).dp.roundToPx() }
+    val dy = with(d) { (if (bottomLeft) -96 else 52).dp.roundToPx() }
+    Popup(alignment = if (bottomLeft) Alignment.BottomStart else Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        Column(Modifier.width(230.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
+            items.forEach { item ->
+                Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    if (item.key.startsWith("ctl_")) ControlGlyph(item.key.removePrefix("ctl_"), Color.White, sk, false)
+                    else PIcon(item.icon, Color.White, 18.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(item.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (item.state.isNotEmpty()) Text(item.state, color = Color(0xFFB0B0B0), fontSize = 11.sp, maxLines = 1)
                 }
             }
         }
     }
 }
 
-
 /** A list of radio rows in the look's own window. */
+/** Sleep timer: a slider from off to 120 minutes, and a switch for "stop at the end of this video". */
+@Composable
+private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean) -> Unit, onDismiss: () -> Unit) {
+    val w = LocalWindowLook.current
+    var m by remember { mutableFloatStateOf(minutes.toFloat()) }
+    var end by remember { mutableStateOf(endOfVideo) }
+    WinAlert(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Sleep timer", "Uyku zamanlayıcı"), color = w.text) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    if (end) tr("End of video", "Video sonu") else if (m < 1f) tr("Off", "Kapalı") else "${m.roundToInt()} min",
+                    color = w.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                PSlider(m, { m = it; end = false }, 0f..120f, modifier = Modifier.fillMaxWidth()) { }
+                Row(Modifier.fillMaxWidth().clickable { end = !end; if (end) m = 0f }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PCheck(end, { v -> end = v; if (v) m = 0f })
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("End of video", "Video sonu"), color = w.text, fontSize = 14.sp)
+                }
+            }
+        },
+        confirmButton = { PButton(tr("OK", "Tamam")) { onSet(m.roundToInt(), end) } },
+        dismissButton = { PButton(tr("Cancel", "İptal"), onClick = onDismiss) },
+    )
+}
+
 @Composable
 internal fun PickDialog(title: String, rows: List<Pair<String, Boolean>>, onDismiss: () -> Unit, extra: (@Composable () -> Unit)? = null, onPick: (Int) -> Unit) {
     val w = LocalWindowLook.current
@@ -852,3 +1081,11 @@ private fun EqDialog(prefs: VideoPrefs, eq: Equalizer?, sk: VSkin, apply: () -> 
         confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
     )
 }
+
+/** The picture of a video for the media card: a video on the phone gives the system's own thumbnail, any other one a frame of it. JPEG bytes, or null. */
+internal fun coverBytes(ctx: Context, v: VideoItem): ByteArray? = runCatching {
+    val bmp: android.graphics.Bitmap? =
+        if (v.local && android.os.Build.VERSION.SDK_INT >= 29) ctx.contentResolver.loadThumbnail(v.uri, android.util.Size(512, 512), null)
+        else MediaMetadataRetriever().let { r -> try { r.setDataSource(ctx, v.uri); r.getFrameAtTime(1_000_000) } finally { r.release() } }
+    bmp?.let { b -> java.io.ByteArrayOutputStream().also { o -> b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, o) }.toByteArray() }
+}.getOrNull()

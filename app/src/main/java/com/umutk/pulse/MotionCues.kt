@@ -113,25 +113,43 @@ class MotionCueService : Service() {
     private var view: CueView? = null
     private var est: MotionEstimator? = null
     private var strip: View? = null
+    private var type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    private var sensorThread: android.os.HandlerThread? = null
+    private var screenReceiver: android.content.BroadcastReceiver? = null
 
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(QuietChannel("cues", "Motion cues", NotificationManager.IMPORTANCE_LOW))
-        val n = androidx.core.app.NotificationCompat.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true).build()
+        val n = androidx.core.app.NotificationCompat.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true)
+            .addAction(0, com.umutk.pulse.tr("Turn off", "Kapat"), android.app.PendingIntent.getService(this, 7, Intent(this, javaClass).setAction("com.umutk.pulse.CUES_STOP"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(7, n)
         running = true
         loadPrefs(this)
-        wm = getSystemService(WindowManager::class.java)
-        if (!Compat.canOverlay(this)) { stopSelf(); return }
+        // the accessibility layer (Cover) is the topmost there is: above the bars, the keyboard and the lock screen; without it the plain overlay window
+        val acc = com.umutk.pulse.features.CoverAccessibilityService.instance
+        wm = (acc ?: this).getSystemService(WindowManager::class.java)
+        type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        if (acc == null && !Compat.canOverlay(this)) { stopSelf(); return }
         val v = CueView(this).also { view = it }
-        val lp = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
+        val lp = WindowManager.LayoutParams(-1, -1, type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, PixelFormat.TRANSLUCENT)
         // Android 12 treats touches through a window that is more than about 80% opaque as "obscured" and many apps refuse them; just under that, taps reach the app below
         if (Build.VERSION.SDK_INT >= 31) lp.alpha = .79f
         wm.addView(v, lp)
-        addTopStrip()
-        est = MotionEstimator(this) { m -> view?.setMotion(m) }.also { it.start(android.os.Handler(android.os.Looper.getMainLooper())) }
+        // no strip along the top edge any more: it took the touches there and the notification panel would not open; the cues are switched off from the tile or the notification
+        // about 150 sensor events a second: on a thread of their own, so the keyboard and the other screens keep the main thread
+        val th = android.os.HandlerThread("motion-cues").also { it.start(); sensorThread = it }
+        val h = android.os.Handler(th.looper)
+        est = MotionEstimator(this) { m -> view?.setMotion(m) }.also { it.start(h) }
+        // nothing to show while the screen is off: the sensors rest too
+        val rcv = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (i.action == Intent.ACTION_SCREEN_OFF) est?.stop() else if (i.action == Intent.ACTION_SCREEN_ON) est?.start(h)
+            }
+        }
+        screenReceiver = rcv
+        ContextCompat.registerReceiver(this, rcv, android.content.IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) }, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     /**
@@ -175,20 +193,25 @@ class MotionCueService : Service() {
                 return true
             }
         }
-        val lp = WindowManager.LayoutParams(-1, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        val lp = WindowManager.LayoutParams(-1, h, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
         lp.gravity = android.view.Gravity.TOP
         runCatching { wm.addView(sv, lp); strip = sv }
     }
 
-    override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY
+    override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
+        if (i?.action == "com.umutk.pulse.CUES_STOP") { stopSelf(); return START_NOT_STICKY }
+        return START_STICKY
+    }
     override fun onBind(i: Intent?) = null
 
     override fun onDestroy() {
         running = false
         // the quick settings tile reads the state again, so it does not stay lit after a close from the top edge
         if (Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, MotionCueTile::class.java)) }
+        screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         est?.stop()
+        sensorThread?.quitSafely()
         view?.let { runCatching { wm.removeView(it) } }
         strip?.let { runCatching { wm.removeView(it) } }
         super.onDestroy()
@@ -244,7 +267,8 @@ class MotionCueService : Service() {
                 cv.drawCircle(x, y, r, dot)
             }
             if (wave) drawWave(cv, width.toFloat(), height.toFloat(), dt, mv)
-            postInvalidateOnAnimation()
+            val calm = !wave && boost < .01f && kotlin.math.abs(gvx) < 1e-4f && kotlin.math.abs(gvy) < 1e-4f && kotlin.math.abs(mv.yawRate) < 1e-3f && kotlin.math.abs(mv.pitchRate) < 1e-3f
+            if (calm) postInvalidateDelayed(100) else postInvalidateOnAnimation()
         }
 
         /** A flat surface, like liquid in a glass: it rises from the bottom every few seconds and fades out. Sideways motion tilts it, forward/back motion lifts it. */

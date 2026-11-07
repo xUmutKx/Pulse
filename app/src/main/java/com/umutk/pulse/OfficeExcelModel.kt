@@ -31,6 +31,8 @@ fun xCol(k: Long) = (k % 20000L).toInt()
 class XSheet(var name: String, val path: String?) {
     val cells = HashMap<Long, XCell>()
     val colW = HashMap<Int, Float>()
+    /** the height of each row as the file gives it (points); rows without one keep the default height */
+    val rowHt = HashMap<Int, Float>()
     val merges = ArrayList<IntArray>()   // r1, c1, r2, c2
     val tables = ArrayList<XTable>()
     val pics = ArrayList<XPic>()
@@ -154,7 +156,7 @@ fun xLoad(f: File, name: String): XBook {
     val zip = head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte()
     if (!zip) {
         if (head[0] == 0xD0.toByte() && head[1] == 0xCF.toByte()) return xLoad(OfXls.toXlsx(f), name) // legacy .xls: converted to a temporary .xlsx; saving always writes xlsx
-        val text = f.readText()
+        val text = ofReadText(f)
         val first = text.lineSequence().firstOrNull() ?: ""
         val d = if (name.endsWith(".tsv", true) || first.count { it == '\t' } > first.count { it == ',' }) '\t' else if (first.count { it == ';' } > first.count { it == ',' }) ';' else ','
         return XBook(f, true, d).also { b -> b.styles.add(XStyle()); b.sheets.add(csvSheet(text, d, name.substringBeforeLast('.'))) }
@@ -301,7 +303,7 @@ private fun readSheet(sh: XSheet, ins: InputStream, shared: List<String>) {
     var v = StringBuilder(); var fs = StringBuilder(); var isT = StringBuilder(); var ph = 0; var fShared = false
     while (p.next() != XmlPullParser.END_DOCUMENT) when (p.eventType) {
         XmlPullParser.START_TAG -> when (nm(p)) {
-            "row" -> { r = (at(p, "r")?.toIntOrNull() ?: (r + 2)) - 1; c = -1 }
+            "row" -> { r = (at(p, "r")?.toIntOrNull() ?: (r + 2)) - 1; c = -1; at(p, "ht")?.toFloatOrNull()?.let { h -> if (r >= 0) sh.rowHt[r] = h } }
             "col" -> { val a = (at(p, "min")?.toIntOrNull() ?: 1) - 1; val z = ((at(p, "max")?.toIntOrNull() ?: 1) - 1).coerceAtMost(a + 200); val w = at(p, "width")?.toFloatOrNull(); if (w != null) for (i in a..z) sh.colW[i] = w }
             "c" -> {
                 val ref = at(p, "r")?.let { xParseRef(it) }

@@ -1,5 +1,11 @@
 package com.umutk.pulse.extras.lucid.ui.components
 
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.rotate
 import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.graphics.Rect
@@ -14,7 +20,18 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +58,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -60,6 +80,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
@@ -113,12 +134,7 @@ object AlarmLockPalette {
     )
 }
 
-fun ringingClockFontFamily(font: RingingClockFont): FontFamily = when (font) {
-    RingingClockFont.SYSTEM_DEFAULT -> FontFamily.SansSerif
-    RingingClockFont.SERIF -> FontFamily.Serif
-    RingingClockFont.CURSIVE -> FontFamily.Cursive
-    RingingClockFont.CUSTOM_FILE -> FontFamily.Default
-}
+fun ringingClockFontFamily(font: RingingClockFont): FontFamily = clockFontFamilyOf(font) ?: FontFamily.Default
 
 fun resolveRingingFontFamily(font: RingingClockFont, customFontPath: String?): FontFamily =
     if (font == RingingClockFont.CUSTOM_FILE) {
@@ -382,12 +398,15 @@ fun AmoledGlowBackground(
         label = "pulse"
     )
 
+    // the glow switch (Settings > Background glow): off is plain AMOLED black, on adds the coloured glow
+    val glowOn = androidx.compose.ui.platform.LocalContext.current
+        .getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", false)
     Box(
         modifier = modifier
             .background(Color.Black)
             .fillMaxSize()
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        if (glowOn) Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             drawRect(
                 brush = Brush.radialGradient(
@@ -472,8 +491,7 @@ fun AlarmClockBox(
             ),
         contentAlignment = Alignment.Center
     ) {
-        val isAnalog = style == RingingClockStyle.COMPACT_ANALOG ||
-            style == RingingClockStyle.NUMBERED_ANALOG
+        val isAnalog = style.isAnalog
         val dialDiameter = min(maxWidth, maxHeight)
 
         val resolvedFontSize = if (!isAnalog && autoFit &&
@@ -877,6 +895,9 @@ fun RingingClockFace(
             }
         }
 
+        RingingClockStyle.WIN95_CLOCK, RingingClockStyle.WINXP_CLOCK, RingingClockStyle.WIN7_CLOCK, RingingClockStyle.WIN11_CLOCK ->
+            WindowsClockFace(style, hour, minute, dialDiameter)
+
         RingingClockStyle.NUMBERED_ANALOG -> {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(modifier = Modifier.size(dialDiameter)) {
@@ -1039,6 +1060,101 @@ fun RingingActionPill(
     }
 }
 
+/**
+ * The alarm's Dismiss: always visible and fixed. Press and hold it, then drag: a circle grows out of the button, and it fills the
+ * screen when the drag is far enough, and the alarm stops. Let go early and the circle shrinks back.
+ * [onReveal] gives the circle's progress (0 to 1) and its centre in the screen's coordinates.
+ */
+@Composable
+fun DragDismissPill(
+    text: String,
+    onDismiss: () -> Unit,
+    onReveal: (progress: Float, center: Offset) -> Unit,
+    containerColor: Color = AlarmLockPalette.DismissButton,
+    contentColor: Color = Color.White,
+    fontFamily: FontFamily? = null,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+    // a plain swipe in any direction: the pill follows the finger and shrinks a little, the circle grows out of it, and past 55 % of
+    // 200 dp of travel (about 110 dp) the alarm is dismissed; short of that it springs back
+    val travel = with(LocalDensity.current) { 200.dp.toPx() }
+    val closeAt = .55f
+    val progress = remember { Animatable(0f) }
+    val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    val finished = remember { mutableStateOf(false) }
+    var center by remember { mutableStateOf(Offset.Zero) }
+    val currentReveal by rememberUpdatedState(onReveal)
+    val currentDismiss by rememberUpdatedState(onDismiss)
+    // the circle grows from where the pill is now, not from where it rests
+    LaunchedEffect(progress.value, shift.value) { currentReveal(progress.value, center + shift.value) }
+
+    // a plain press (hardly any travel) dismisses too: a sleepy finger that only taps must not be left with a button that does nothing
+    val tapSlop = with(LocalDensity.current) { 12.dp.toPx() }
+    fun settle(total: Offset) {
+        if (finished.value) return
+        if (total.getDistance() < tapSlop || total.getDistance() / travel >= closeAt) {
+            finished.value = true
+            scope.launch { progress.animateTo(1f, tween(160)); currentDismiss() }
+        } else {
+            scope.launch { progress.animateTo(0f, spring()) }
+            scope.launch { shift.animateTo(Offset.Zero, spring()) }
+        }
+    }
+
+    // The outer box stays where it is and takes the gesture; only the inner pill moves. A gesture on the moving pill itself would measure the
+    // finger against a layer that moves with it, and the drag would count for about half.
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { center = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f) }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var total = Offset.Zero
+                    var up = false
+                    while (!up) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (change.pressed) {
+                            change.consume()
+                            if (!finished.value) {
+                                total += change.positionChange()
+                                val p = (total.getDistance() / travel).coerceIn(0f, 1f)
+                                scope.launch { progress.snapTo(p); shift.snapTo(total) }
+                            }
+                        } else {
+                            up = true
+                            settle(total)
+                        }
+                    }
+                }
+            }
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .graphicsLayer {
+                    translationX = shift.value.x
+                    translationY = shift.value.y
+                    val sc = 1f - .08f * progress.value
+                    scaleX = sc
+                    scaleY = sc
+                }
+                .clip(RoundedCornerShape(50))
+                .background(containerColor)
+                .padding(horizontal = 56.dp, vertical = 18.dp)
+        ) {
+            Text(
+                text = text,
+                color = contentColor,
+                fontFamily = fontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp
+            )
+        }
+    }
+}
+
 @Composable
 fun SnoozePill(
     snoozeMinutes: Int,
@@ -1128,5 +1244,23 @@ fun Modifier.holdToRepeat(
                 }
             }
         )
+    }
+}
+
+/** A Windows clock face: its dial and hour and minute hands, drawn as the Windows clock of that version (the pictures of the app). */
+@Composable
+private fun WindowsClockFace(style: RingingClockStyle, hour: Int, minute: Int, size: androidx.compose.ui.unit.Dp) {
+    val (dial, hourHand, minuteHand) = when (style) {
+        RingingClockStyle.WIN95_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_w95_time_dial, com.umutk.pulse.R.drawable.clk_w95_time_hour, com.umutk.pulse.R.drawable.clk_w95_time_minute)
+        RingingClockStyle.WINXP_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_xp_clock_dial, com.umutk.pulse.R.drawable.clk_xp_clock_hour, com.umutk.pulse.R.drawable.clk_xp_clock_minute)
+        RingingClockStyle.WIN7_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_w7_clock_system_dial, com.umutk.pulse.R.drawable.clk_w7_clock_system_hour, com.umutk.pulse.R.drawable.clk_w7_clock_system_minute)
+        else -> Triple(com.umutk.pulse.R.drawable.clk_w11_clock_dial, com.umutk.pulse.R.drawable.clk_w11_clock_hour, com.umutk.pulse.R.drawable.clk_w11_clock_minute)
+    }
+    val hourDeg = (hour % 12 + minute / 60f) * 30f
+    val minuteDeg = minute * 6f
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Image(androidx.compose.ui.res.painterResource(dial), null, Modifier.fillMaxSize())
+        Image(androidx.compose.ui.res.painterResource(hourHand), null, Modifier.fillMaxSize().graphicsLayer { rotationZ = hourDeg })
+        Image(androidx.compose.ui.res.painterResource(minuteHand), null, Modifier.fillMaxSize().graphicsLayer { rotationZ = minuteDeg })
     }
 }

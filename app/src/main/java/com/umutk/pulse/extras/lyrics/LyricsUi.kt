@@ -71,31 +71,44 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
     val state = rememberLazyListState()
     // a size and a weight to read from the other side of the table: the setting's size plus a few, always bold
     val base = com.umutk.pulse.extras.music.MusicSettings.lyricsFont(androidx.compose.ui.platform.LocalContext.current).coerceIn(12, 30) + 4
+    val wordMode = com.umutk.pulse.extras.lyrics.LiveLyrics.wordSync(androidx.compose.ui.platform.LocalContext.current)
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
-    LazyColumn(modifier, state = state) {
+    // a line must fit the width, also the one being sung (it grows a little): the size shrinks for a long word, and the text keeps a margin for the growth
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+    val avail = maxWidth.value * 0.88f
+    LazyColumn(Modifier.fillMaxSize(), state = state) {
         itemsIndexed(result.lines) { i, l ->
             val on = i == cur
             if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", lo, 20.dp) } else {
                 // the line being sung grows and takes the accent, the others fade with their distance from it (all eased, none jumps)
-                val scale by androidx.compose.animation.core.animateFloatAsState(if (on) 1.18f else 1f, androidx.compose.animation.core.tween(300), label = "lyScale")
+                val scale by androidx.compose.animation.core.animateFloatAsState(if (on) 1.1f else 1f, androidx.compose.animation.core.tween(300), label = "lyScale")
                 val tone by androidx.compose.animation.animateColorAsState(if (on) hi else lo, androidx.compose.animation.core.tween(300), label = "lyTone")
                 val dist = if (cur < 0) 0 else kotlin.math.abs(i - cur)
                 val fade by androidx.compose.animation.core.animateFloatAsState(if (cur < 0 || on) 1f else (1f - .13f * dist).coerceAtLeast(.35f), androidx.compose.animation.core.tween(300), label = "lyFade")
-                Text(
-                    lyricMarked(l.text, mark, hi),
-                    color = tone,
-                    fontSize = base.sp,
-                    lineHeight = (base * 1.3f).sp,
-                    fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                        .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
-                        .padding(vertical = 8.dp)
-                        .graphicsLayer { scaleX = scale; scaleY = scale; alpha = fade },
-                )
+                // the longest word sets the largest size that still fits (a bold letter is about .64 of its size wide)
+                val longest = l.text.split(' ').maxOf { it.length }.coerceAtLeast(1)
+                val fs = minOf(base.toFloat(), avail / (longest * 0.64f * 1.1f)).coerceAtLeast(12f)
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        // the words of a line that has their times: the ones sung are lit as the line goes (when the setting is on)
+                        if (on && wordMode && l.words.isNotEmpty() && mark.isBlank()) androidx.compose.ui.text.buildAnnotatedString {
+                            l.words.forEach { w -> withStyle(androidx.compose.ui.text.SpanStyle(color = if (w.timeMs <= positionMs) hi else lo)) { append(w.text) } }
+                        } else lyricMarked(l.text, mark, hi),
+                        color = tone,
+                        fontSize = fs.sp,
+                        lineHeight = (fs * 1.3f).sp,
+                        fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                            .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
+                            .padding(vertical = 8.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale; alpha = fade },
+                    )
+                }
             }
         }
+    }
     }
 }
 

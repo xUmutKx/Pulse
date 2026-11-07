@@ -176,6 +176,21 @@ class Equalizer {
         if (i != currentPreset) usePreset(i)
     }
 
+    /**
+     * A track with no genre tag: the preset follows how it sounds. [low], [mid] and [high] are the average levels of the
+     * bass, middle and treble bands measured while it played (see MusicLevels).
+     */
+    fun usePresetForSound(low: Double, mid: Double, high: Double) {
+        val want = when {
+            low > mid * 1.4 && low > high * 1.3 -> listOf("Bass boost", "Hip Hop", "Dance")
+            high > mid * 1.2 && high > low * 1.1 -> listOf("Pop", "Dance")
+            else -> listOf("Normal", "Flat")
+        }
+        val names = presetNames
+        val i = want.firstNotNullOfOrNull { w -> names.indexOfFirst { it.equals(w, true) }.takeIf { it >= 0 } } ?: return
+        if (i != currentPreset) usePreset(i)
+    }
+
     fun release() {
         SoftEq.active = false; soft = false
         eq?.release()

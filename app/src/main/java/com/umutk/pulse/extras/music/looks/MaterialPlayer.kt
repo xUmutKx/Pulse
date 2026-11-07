@@ -209,7 +209,8 @@ private fun LevelBars(playing: Boolean, color: Color, modifier: Modifier = Modif
 }
 
 @Composable
-fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false, onNowPlaying: (Boolean) -> Unit = {}) {
+fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false, onNowPlaying: (Boolean) -> Unit = {},
+                   onNoise: () -> Unit = {}, onRadio: () -> Unit = {}, onRecap: () -> Unit = {}, onSettings: () -> Unit = {}) {
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
     val cur = st.current
@@ -227,7 +228,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val accent = remember(art, base) { art?.let { coverColor(it, base) }?.let { c -> if (c.luminance() < .3f) androidx.compose.ui.graphics.lerp(c, Color.White, .45f) else c } ?: base }
     // the cover colour flows into the next one instead of jumping
     val dyn by androidx.compose.animation.animateColorAsState(accent, tween(700), label = "dyn")
-    val tabs = listOf(tr("All songs", "Tüm şarkılar"),tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"))
+    val tabs = listOf(tr("All songs", "Tüm şarkılar"),tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"), tr("Recent", "Son eklenenler"))
     var tab by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
     var group by remember { mutableStateOf<String?>(null) }
@@ -318,6 +319,16 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 }
                 if (query.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = SUB, modifier = Modifier.size(20.dp).clickable { query = "" })
             }
+            // the white noise, the radio and the music recap (they were in the top bar)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.VolumeUp, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onNoise() })
+                Spacer(Modifier.width(14.dp))
+                Icon(Icons.Rounded.Radio, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onRadio() })
+                Spacer(Modifier.width(14.dp))
+                Icon(Icons.Rounded.FavoriteBorder, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onRecap() })
+                Spacer(Modifier.width(14.dp))
+                Icon(Icons.Rounded.Settings, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onSettings() })
+            }
             // tabs
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
                 tabs.forEachIndexed { i, s ->
@@ -336,8 +347,10 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     else -> emptyMap()
                 }
                 val g = group
-                if (tab == 0 || g != null) {
-                    val shown = if (tab == 0) songs else groups[g ?: ""].orEmpty()
+                // the recent tab: the songs with a date of being added, the last added first
+                val recents = songs.filter { it.dateAdded > 0 }.sortedByDescending { it.dateAdded }
+                if (tab == 0 || tab == 5 || g != null) {
+                    val shown = if (tab == 0) songs else if (tab == 5) recents else groups[g ?: ""].orEmpty()
                     Column {
                         if (g != null) Row(Modifier.fillMaxWidth().clickable { group = null }.padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(if (tab == 4) g.substringAfterLast('/') else g, color = TXT, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

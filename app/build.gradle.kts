@@ -7,25 +7,33 @@ plugins {
 
 android {
     namespace = "com.umutk.pulse"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 689
-        versionName = "1.0.289"
+        versionCode = 774
+        versionName = "1.0.373"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
-    // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
+    // release key: private, kept in GitHub Actions secrets (see ci/README.md); the workflow writes it to a file and passes its path
     signingConfigs {
         create("pulse") {
-            storeFile = rootProject.file("ci/pulse.keystore")
-            storePassword = "pulsepulse"; keyAlias = "pulse"; keyPassword = "pulsepulse"
+            storeFile = file(System.getenv("PULSE_KEYSTORE") ?: "pulse-missing.keystore")
+            storePassword = System.getenv("PULSE_STORE_PASSWORD"); keyAlias = "pulse"; keyPassword = System.getenv("PULSE_KEY_PASSWORD")
         }
+    }
+    // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
+    flavorDimensions += "store"
+    productFlavors {
+        // APK_INSTALL: the app may install APK files itself (REQUEST_INSTALL_PACKAGES). Off in the play build: Play declares that permission separately
+        create("foss") { dimension = "store"; buildConfigField("boolean", "APK_INSTALL", "true") }
+        create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
     }
     buildTypes {
         release {
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" } // native symbols in the bundle: no "missing symbols" warning in Play
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -39,13 +47,18 @@ android {
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
-    buildFeatures { compose = true; aidl = true }
+    buildFeatures { compose = true; aidl = true; buildConfig = true }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // java.time, Iterable.forEach ... on Android 5 to 7
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
+        exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
+    }
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
+    add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
+    add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)
     implementation("androidx.webkit:webkit:1.11.0") // Browser (extras/browser): force-dark on the phone's own WebView, no bundled engine

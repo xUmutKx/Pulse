@@ -89,6 +89,10 @@ object EbookPrefs {
     fun double(c: Context): Boolean = p(c).getBoolean("double", false)
     fun setDouble(c: Context, on: Boolean) { p(c).edit().putBoolean("double", on).apply() }
 
+    /** Reading by scrolling the text up and down, instead of turning pages by tapping. */
+    fun scroll(c: Context): Boolean = p(c).getBoolean("scroll", false)
+    fun setScroll(c: Context, on: Boolean) { p(c).edit().putBoolean("scroll", on).apply() }
+
     /** The cover width of the shelf, in dp (the height is 1.4 times it). */
     fun cover(c: Context): Int = p(c).getInt("cover", 84)
     fun setCover(c: Context, v: Int) { p(c).edit().putInt("cover", v.coerceIn(60, 130)).apply() }

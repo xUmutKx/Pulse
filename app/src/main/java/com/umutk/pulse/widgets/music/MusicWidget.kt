@@ -188,7 +188,11 @@ open class MusicWidget : AppWidgetProvider() {
                     setOnClickPendingIntent(R.id.mw_shuf, WidgetUi.broadcast(c, MusicWidget::class.java, A_SHUF))
                     setOnClickPendingIntent(R.id.mw_rep, WidgetUi.broadcast(c, MusicWidget::class.java, A_REP))
                 }
-                val open = WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 71, "route" to "music", "notif_open" to "player")
+                // the cover opens the player directly (not through the no-display trampoline, which some launchers drop); each widget
+                // has its own request code, so one widget's tap can never be handed to another
+                val open = android.app.PendingIntent.getActivity(c, 71000 + id,
+                    Intent().setClassName(c, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
                 setOnClickPendingIntent(if (layout == R.layout.widget_music_slim) R.id.mw_title else R.id.mw_art, open)
             }
             return when (kind) {

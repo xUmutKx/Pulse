@@ -3,10 +3,13 @@ package com.umutk.pulse.extras.music.poweramp
 import com.umutk.pulse.extras.music.foldHas
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Shuffle
 import com.umutk.pulse.extras.music.shownArtist
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -34,6 +37,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.AccountTree
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.NewReleases
@@ -47,6 +51,9 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -70,6 +77,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -118,6 +127,8 @@ private sealed interface Lib {
     object Songs : Lib
     object Folders : Lib
     object Stats : Lib
+    /** The music recap: a full page that replaces the library (the same ad gate as the music screen). */
+    object Recap : Lib
     object Favs : Lib
     /** Hidden categories (composers, folder tree), opened from the bottom row of the library list. */
     object More : Lib
@@ -125,6 +136,9 @@ private sealed interface Lib {
     object WhiteNoise : Lib
     object AllSounds : Lib
     object OnlinePlaylists : Lib
+    /** The suggestions and the mix maker, each on a page of its own (they were heavy at the bottom of the library list). */
+    object Suggestions : Lib
+    object MixMaker : Lib
     object Radio : Lib
     /** 0 most played, 1 recently played, 2 last added */
     class Quick(val kind: Int) : Lib
@@ -185,11 +199,18 @@ fun LibraryScreen(
     var sortBy by remember { mutableIntStateOf(0) } // 0 title, 1 folder, 2 library order, 3 year, 4 stars
     var reversed by remember { mutableStateOf(false) }   // the other direction of the picked order
     var node by remember { mutableStateOf<Lib>(Lib.Root) }
+    // the player's artist line opens that artist's page here (the group of the artists list)
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
+        com.umutk.pulse.extras.music.MusicNav.artist?.let { node = Lib.Group(1, it); com.umutk.pulse.extras.music.MusicNav.artist = null }
+    }
     val fg = style.onBackdrop
     // the tree starts at the longest directory shared by every file
     val root = remember(tracks) {
         tracks.map { dirOf(it.path) }.reduceOrNull(::commonDir) ?: ""
     }
+    // every page fades and rises in when it opens (the list arrives with its contents)
+    val enter = remember { Animatable(0f) }
+    LaunchedEffect(node) { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
     BackHandler(enabled = node != Lib.Root) {
         node = when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
@@ -204,6 +225,7 @@ fun LibraryScreen(
         Lib.Songs -> tr("All songs", "Tüm şarkılar")
         Lib.Folders -> tr("Folders", "Klasörler")
         Lib.Stats -> tr("Statistics", "İstatistikler")
+        Lib.Recap -> tr("Music recap", "Müzik özeti")
         Lib.Favs -> tr("Favourites", "Favoriler")
         Lib.More -> tr("More categories", "Daha fazla kategori")
         is Lib.Quick -> quickNames[n.kind]
@@ -211,6 +233,8 @@ fun LibraryScreen(
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
         Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
         Lib.Radio -> tr("Radio", "Radyo")
+        Lib.Suggestions -> tr("Recommendations", "Öneriler")
+        Lib.MixMaker -> tr("Mix maker", "Mix yapıcı")
         Lib.Playlists -> tr("Playlists", "Çalma listeleri")
         is Lib.Playlist -> n.name
         is Lib.M3u -> n.name
@@ -222,12 +246,13 @@ fun LibraryScreen(
     // these hubs have their own header and back button, so they replace the library page
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
+        Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
     }
-    Column(modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (node != Lib.Root) {
                 IconButton(onClick = { node = Lib.Root }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
@@ -239,32 +264,37 @@ fun LibraryScreen(
                 IconButton(onClick = { reversed = !reversed }) { Icon(if (reversed) Icons.Rounded.ArrowUpward else Icons.Rounded.ArrowDownward, tr("Direction", "Yön"), tint = style.accent) }
             }
         }
-        val catKey: Any? = when (val n = node) {
-            is Lib.Cat -> n.kind; is Lib.Group -> n.kind; Lib.Folders, is Lib.Folder -> "folders"; is Lib.Tree -> "tree"; else -> null
-        }
-        if (node == Lib.Root || catKey != null) CatChips(catKey, root, style) { node = it }
+        // the chip row (Albums, Artists, Genres ...) is gone: the same entries are rows of the list below
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val cats = listOf(
                     Triple(Icons.Rounded.LibraryMusic, Color(0xFF5B8DD9), Lib.Songs to tr("All songs", "Tüm şarkılar")),
                     Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
-                    Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
                     Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
                     Triple(Icons.Rounded.Radio, Color(0xFFD9785B), Lib.Radio to tr("Radio", "Radyo")),
+                    Triple(Icons.Rounded.AutoAwesome, Color(0xFFB65BD9), Lib.Suggestions to tr("Recommendations", "Öneriler")),
+                    Triple(Icons.Rounded.Tune, Color(0xFF5BD9B0), Lib.MixMaker to tr("Mix maker", "Mix yapıcı")),
                     Triple(Icons.Rounded.Album, Color(0xFFD96B6B), Lib.Cat(0) to catNames[0]),
                     Triple(Icons.Rounded.Person, Color(0xFFD98A5B), Lib.Cat(1) to catNames[1]),
                     Triple(Icons.Rounded.Piano, Color(0xFF9B6BD9), Lib.Cat(2) to catNames[2]),
                     Triple(Icons.Rounded.Event, Color(0xFF5BA0D9), Lib.Cat(3) to catNames[3]),
                     Triple(Icons.Rounded.Folder, Color(0xFF4A7BD6), Lib.Folders to tr("Folders", "Klasörler")),
                     Triple(Icons.Rounded.QueueMusic, Color(0xFF8E5BD9), Lib.Playlists to tr("Playlists", "Çalma listeleri")),
+                    Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.Star, Color(0xFFD9A05B), Lib.Favs to tr("Favourites", "Favoriler")),
                     Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
+                    Triple(Icons.Rounded.Insights, Color(0xFFC0609A), Lib.Recap to tr("Music recap", "Müzik özeti")),
                 )
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
-                // the suggestions sit at the bottom of the library, under the categories
-                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay, onQueue = onPlayTracks) }
+            }
+            // the suggestions and the mix maker open from the list: two taps, and the library list itself stays light
+            Lib.Suggestions -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay, onQueue = onPlayTracks, showMix = false) }
+            }
+            Lib.MixMaker -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                item { com.umutk.pulse.extras.music.MixMaker(tracks, style.onBackdrop, style.textDim, style.chip, style.accent) { l -> onPlayTracks(l, 0) } }
             }
             is Lib.Cat -> {
                 val groups = remember(tracks, n.kind) {
@@ -275,7 +305,10 @@ fun LibraryScreen(
                     itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull(), artist = if (n.kind == 1) name else null) { node = Lib.Group(n.kind, name) } }
                 }
             }
-            is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay, onPlayTracks)
+            is Lib.Group -> {
+                val items = tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }
+                SongList(items, current, style, onPlay, onPlayTracks, top = { items.firstOrNull()?.value?.let { BigCover(it, style) } })
+            }
             Lib.Songs -> {
                 val stars = remember(tracks) { com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx) }
                 val items = remember(tracks, sortBy, reversed) {
@@ -293,6 +326,7 @@ fun LibraryScreen(
                 SongList(items, current, style, onPlay, onPlayTracks, stars)
             }
             Lib.Stats -> StatsPage(style)
+            Lib.Recap -> Unit
             Lib.More -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val hidden = listOf(
                     Triple(Icons.Rounded.Edit, Color(0xFF6BC08A), Lib.Cat(4) to catNames[4]),
@@ -388,8 +422,9 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 }
 
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}) {
+private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null) {
     val songs = remember(items) { items.map { it.value } }
     val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val starMap = stars ?: remember { com.umutk.pulse.extras.music.stats.MusicStats.ratings(appCtx) }
@@ -400,12 +435,53 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     }
     // how the songs are laid out: one per row, or two or three to a row with the cover on top and the name under it
     var cols by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(1) }
+    // many songs at once: a long press picks the first, a tap picks or drops the next ones; the bin deletes them after one question
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var askDelete by remember { mutableStateOf(false) }
+    val selecting = picked.isNotEmpty()
+    val scope = rememberCoroutineScope()
+    val sysDelete = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        if (r.resultCode == android.app.Activity.RESULT_OK) { android.widget.Toast.makeText(appCtx, tr("Deleted", "Silindi"), android.widget.Toast.LENGTH_SHORT).show(); picked = emptySet() }
+        scope.launch { com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx) }
+    }
+    BackHandler(enabled = selecting) { picked = emptySet() }
+    fun toggle(t: Track) { picked = if (t.path in picked) picked - t.path else picked + t.path }
+    if (askDelete) com.umutk.pulse.WinAlert(
+        onDismissRequest = { askDelete = false },
+        title = { Text(tr("Delete ${picked.size} songs?", "${picked.size} şarkı silinsin mi?")) },
+        text = { Text(tr("The files are deleted from the phone. This cannot be undone.", "Dosyalar telefondan silinir. Bu geri alınamaz.")) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                askDelete = false
+                val victims = songs.filter { it.path in picked }
+                scope.launch {
+                    val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { deleteTracks(appCtx, victims) }
+                    if (out.ask != null) {
+                        // Android 11 and newer: one system question for all the songs that were left
+                        runCatching { sysDelete.launch(androidx.activity.result.IntentSenderRequest.Builder(out.ask).build()) }
+                    } else {
+                        android.widget.Toast.makeText(appCtx, if (out.failed == 0) tr("Deleted", "Silindi") else tr("${out.deleted} deleted, ${out.failed} could not be", "${out.deleted} silindi, ${out.failed} silinemedi"), android.widget.Toast.LENGTH_SHORT).show()
+                        picked = emptySet()
+                        com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx)
+                    }
+                }
+            }) { Text(tr("Delete", "Sil")) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { askDelete = false }) { Text(tr("Cancel", "Vazgeç")) } },
+    )
     val stars5: @Composable (Track, Dp) -> Unit = { t, sz ->
         val n = (starMap[t.path] ?: 0).coerceAtMost(5)
         if (n > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(n) { Icon(Icons.Rounded.Star, null, tint = Color.White, modifier = Modifier.size(sz)) } }
     }
     val header: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            // the number of picked songs stands at the left, where the count of the list was; the buttons are on the right
+            Text("${picked.size}", color = style.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(tr("selected", "seçili"), color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = songs.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SelectAll, tr("Select all", "Tümünü seç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
+        } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
@@ -417,24 +493,39 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         }
     }
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+        top?.let { p -> item { p() } }
         item { header() }
-        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
+        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { if (selecting) toggle(t) else onPlayTracks(songs, pos) }, onLongClick = { toggle(t) }, checked = t.path in picked, trailing = {
             Box(Modifier.padding(end = 8.dp)) { stars5(t, 13.dp) }
         }) }
     } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        top?.let { p -> item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { p() } }
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
         gridItemsIndexed(items) { pos, (_, t) ->
             val art = rememberTrackArt(t)
-            Column(Modifier.clickable { onPlayTracks(songs, pos) }) {
+            Column(Modifier.combinedClickable(onClick = { if (selecting) toggle(t) else onPlayTracks(songs, pos) }, onLongClick = { toggle(t) })) {
                 Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {
                     if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(32.dp))
+                    if (t.path in picked) Box(Modifier.fillMaxSize().background(style.accent.copy(alpha = .35f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                    }
                 }
                 Text(t.displayName(), color = if (t == current) style.accent else style.onBackdrop, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 stars5(t, 11.dp)
             }
         }
+    }
+}
+
+/** The cover of an artist or album page: a square as wide as the screen, at the top. */
+@Composable
+private fun BigCover(t: Track, style: PowerampStyle) {
+    val art = rememberTrackArt(t)
+    Box(Modifier.fillMaxWidth().aspectRatio(1f).background(style.chip), contentAlignment = Alignment.Center) {
+        if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(64.dp))
     }
 }
 
@@ -642,22 +733,30 @@ fun QueueScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun TrackRow(
     track: Track,
     selected: Boolean,
     style: PowerampStyle,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    checked: Boolean = false,
     trailing: @Composable () -> Unit = {},
 ) {
     Row(
-        Modifier.fillMaxWidth().height(rowHeight).clickable(onClick = onClick).padding(start = 16.dp, end = 8.dp),
+        Modifier.fillMaxWidth().height(rowHeight).background(if (checked) style.accent.copy(alpha = .32f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val art = rememberTrackArt(track)
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {
             if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Icon(Icons.Rounded.MusicNote, null, tint = if (selected) style.accent else style.textDim, modifier = Modifier.size(22.dp))
+            // a picked song wears a check mark over its cover
+            if (checked) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Check, null, tint = style.accent, modifier = Modifier.size(26.dp))
+            }
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
@@ -672,5 +771,21 @@ internal fun TrackRow(
             Text(track.folderName(), color = style.textDim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) { trailing() }
+    }
+}
+
+/** The music recap in the Poweramp library: one short ad opens it (shared with the music screen's recap: 30 minutes). */
+@Composable
+private fun RecapGated(back: () -> Unit) {
+    val ctx = LocalContext.current
+    val free = !com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)
+    var unlocked by remember { mutableStateOf(free || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, "recap")) }
+    val gate = com.umutk.pulse.ads.rememberAdGate(tr("Music recap", "Müzik özeti"), tr("Watch a short ad to open the recap.", "Özeti açmak için kısa bir reklam izle."), key = "recap", minutes = 30)
+    if (unlocked) {
+        com.umutk.pulse.extras.music.stats.RecapScreen(back = back)
+    } else {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            com.umutk.pulse.PButton(tr("Watch an ad to open the recap", "Özeti açmak için reklam izle"), onClick = { gate { unlocked = true } })
+        }
     }
 }

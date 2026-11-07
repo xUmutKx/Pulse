@@ -17,7 +17,7 @@ import com.umutk.pulse.tr
 object WeatherWidgets {
     fun refreshAll(c: Context) {
         val mgr = AppWidgetManager.getInstance(c)
-        listOf(WeatherWidget(), WeatherWideWidget(), WeatherClearWidget()).forEach { w ->
+        listOf(WeatherWidget(), WeatherWideWidget(), WeatherDetailWidget(), WeatherClearWidget(), WeatherDailyWidget(), WeatherHourlyWidget(), WeatherNowDailyWidget(), WeatherNowHourlyWidget(), WeatherDailyHourlyWidget(), WeatherAllWidget()).forEach { w ->
             mgr.getAppWidgetIds(ComponentName(c, w.javaClass)).forEach { id ->
                 mgr.updateAppWidget(id, w.contentFor(c, id, WidgetStyles.of(c, id)))
             }
@@ -29,22 +29,24 @@ object WeatherWidgets {
  * Home-screen weather in two sizes: small (2x2) and wide (4x2, with the next 12 hours as a line).
  * Draws the saved forecast at once; the network is only used when the saved copy is over an hour old.
  */
-abstract class WeatherWidgetBase(private val wide: Boolean) : PulseWidget() {
+abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: Boolean = false) : PulseWidget() {
     override fun content(ctx: Context, s: WidgetStyle): RemoteViews {
         val id = textId
         val f = WeatherStore.cached(ctx)
         val imp = WeatherFmt.imperial(ctx)
         val title = tr("Weather", "Hava durumu")
         val tile = if (f == null) {
-            Tile(big = "--", sub = listOf(tr("No data yet", "Henüz veri yok")))
+            Tile(big = "--", sub = listOf(tr("No data yet", "Henüz veri yok")), defScale = if (detail) .65f else 1f)
         } else {
             val today = f.days.firstOrNull()
             val range = today?.let { "${WeatherFmt.temp(it.max, imp)} / ${WeatherFmt.temp(it.min, imp)}" }
             val sub = listOfNotNull(f.place.ifBlank { null }, WeatherApi.condition(f.code) + (range?.let { " · $it" } ?: ""))
             val line = if (wide) f.hours.take(12).map { (if (imp) it.temp * 9 / 5 + 32 else it.temp).toFloat() } else emptyList()
-            Tile(big = WeatherFmt.temp(f.temp, imp), sub = sub, series = line)
+            // the detail square: the next hours as lines under the condition; a taller square shows more of them
+            val hoursSub = if (detail) f.hours.take(if (WidgetSize.dp(ctx, id)?.second ?: 0 >= 220) 6 else 3).map { h -> "${WeatherFmt.temp(h.temp, imp)}" } else emptyList()
+            Tile(big = WeatherFmt.temp(f.temp, imp), sub = sub + hoursSub, series = line, defScale = if (detail) .65f else 1f)
         }
-        val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
+        val icon = f?.let { WeatherApi.drawable(it.code, it.isDay) } ?: 0
         val dens = ctx.resources.displayMetrics.density
         val sz = WidgetSize.dp(ctx, id) ?: (if (wide) 250 to 110 else 110 to 110)
         val tw = (sz.first * dens).toInt().coerceIn(100, 1400)
@@ -99,3 +101,6 @@ class WeatherWidget : WeatherWidgetBase(wide = false)
 
 /** Weather, wide size (4x2), with the next 12 hours. */
 class WeatherWideWidget : WeatherWidgetBase(wide = true)
+
+/** Weather, square with the next hours as lines; a taller square shows more hours. */
+class WeatherDetailWidget : WeatherWidgetBase(wide = false, detail = true)

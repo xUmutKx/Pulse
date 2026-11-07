@@ -28,6 +28,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,6 +102,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.drawWithContent
@@ -224,6 +231,23 @@ private fun FilesPageInner() {
     val wl = LocalWindowLook.current
     val glassId = wl.id == "win11" && FilesPrefs.glass
     if (standalone) androidx.compose.runtime.SideEffect { (ctx as com.umutk.pulse.FilesActivity).setGlass(glassId) }
+    // the volume keys walk the bottom tabs round: Home, Browse, Search, More (Search is the Browse page with its search field open)
+    if (standalone) {
+        var pos by remember { mutableStateOf(0) }
+        var seen by remember { mutableStateOf(com.umutk.pulse.files.home.FilesHomeNav.tabKick) }
+        LaunchedEffect(tab) { pos = when (tab) { "home" -> 0; "files" -> if (pos == 2) 2 else 1; "share" -> pos; else -> 3 } }
+        LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.tabKick) {
+            if (com.umutk.pulse.files.home.FilesHomeNav.tabKick == seen) return@LaunchedEffect
+            seen = com.umutk.pulse.files.home.FilesHomeNav.tabKick
+            pos = ((pos + com.umutk.pulse.files.home.FilesHomeNav.tabDelta) % 4 + 4) % 4
+            when (pos) {
+                0 -> tab = "home"
+                1 -> tab = "files"
+                2 -> { com.umutk.pulse.files.home.FilesHomeNav.openSearch = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = true; tab = "files" }
+                else -> tab = "more"
+            }
+        }
+    }
     val body: @Composable () -> Unit = { com.umutk.pulse.LookFade(FilesLook.theme) {
         // full screen is a Dialog that covers the app, so the settings screen opens inside it (the app's sub screen would sit behind)
         androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.LocalOpenTool provides { id -> if (full && id == "files_settings") settings = true else openTool(id) }) {
@@ -250,6 +274,7 @@ private fun FilesPageInner() {
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
+                    "apps" -> InstalledAppsScreen(back)
                     "share" -> com.umutk.pulse.files.home.FilesSharePage(onBack = { tab = "files" })
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
@@ -506,7 +531,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
-        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden) } }
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) {
+            val names = if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden)
+            // then the text inside Word, Excel, PowerPoint, PDF and plain text files, so a word in a document finds the document
+            (names + DocText.contentHits(ctx, if (searchAll) top else dir, q, showHidden)).distinct()
+        } }
     }
     // typing searches this folder and everything under it by itself, a moment after the last key
     LaunchedEffect(query, searchOpen) {
@@ -529,6 +558,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
 
     fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false; searchOpen = false }
     // Browse pressed again in the bottom bar: back to the top folder from wherever we went into
+    // the three lines on the home page open this drawer (the Browse tab's side list)
+    // a folder picked in the home page's folder list opens here
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.pendingDir) {
+        com.umutk.pulse.files.home.FilesHomeNav.pendingDir?.let { p -> resultsFor = null; go(p); com.umutk.pulse.files.home.FilesHomeNav.pendingDir = null }
+    }
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openDrawer) {
+        if (com.umutk.pulse.files.home.FilesHomeNav.openDrawer) { drawer = true; com.umutk.pulse.files.home.FilesHomeNav.openDrawer = false }
+    }
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.toRoot) { if (com.umutk.pulse.files.home.FilesHomeNav.toRoot) { com.umutk.pulse.files.home.FilesHomeNav.toRoot = false; resultsFor = null; go(top.path) } }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
@@ -614,7 +651,30 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var selMore by remember { mutableStateOf(false) }
 
     var arcPasteNow: () -> Unit = {}
-    Box(Modifier.fillMaxSize()) {
+    // a physical keyboard: Ctrl+C / X / V copy, cut and paste the picked files into the folder on screen, Ctrl+A picks all, Delete deletes, F2 renames, Ctrl+N makes a folder,
+    // Ctrl+F searches, F5 reads the folder again, Backspace or Alt+Left goes up, Esc drops the pick. While a field or a dialog is open the keys belong to it.
+    val rootFr = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(searchOpen, dialog, arcFile) { if (!searchOpen && dialog == null) runCatching { rootFr.requestFocus() } }
+    val onKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handler@{ e ->
+        if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown || searchOpen || dialog != null || arcFile != null) return@handler false
+        val k = e.key
+        val ctrl = e.isCtrlPressed
+        when {
+            ctrl && k == androidx.compose.ui.input.key.Key.C -> if (picked.isNotEmpty()) { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı"); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.X -> if (picked.isNotEmpty()) { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi"); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.V -> if (clip != null) { doPaste(); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.A -> { sel = shown.map { it.path }.toSet(); true }
+            ctrl && k == androidx.compose.ui.input.key.Key.F -> { searchOpen = true; true }
+            ctrl && k == androidx.compose.ui.input.key.Key.N -> { name = ""; dialog = "newfolder" to dir; true }
+            k == androidx.compose.ui.input.key.Key.Delete -> if (picked.isNotEmpty()) { askDelete(picked); true } else false
+            k == androidx.compose.ui.input.key.Key.F2 -> picked.singleOrNull()?.let { f -> name = f.name; dialog = "rename" to f; true } ?: false
+            k == androidx.compose.ui.input.key.Key.F5 -> { refresh++; true }
+            k == androidx.compose.ui.input.key.Key.Backspace || (e.isAltPressed && k == androidx.compose.ui.input.key.Key.DirectionLeft) -> if (dir.path != top.path) { go(dir.parentFile?.path ?: top.path); true } else false
+            k == androidx.compose.ui.input.key.Key.Escape -> if (sel.isNotEmpty()) { sel = emptySet(); true } else false
+            else -> false
+        }
+    }
+    Box(Modifier.fillMaxSize().onPreviewKeyEvent(onKey).focusRequester(rootFr).focusable()) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // the header stays on screen while the list scrolls under it
         Column(Modifier.padding(horizontal = 12.dp)) {
@@ -1229,6 +1289,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (Opt.recycle) ExDrawerRow("delete", tr("Trash", "Çöp kutusu"), false) { drawer = false; openToolFn("recycle") }
             ExDrawerRow("settings", tr("Settings", "Ayarlar"), false) { drawer = false; openToolFn("files_settings") }
             ExDrawerRow("info", tr("About", "Hakkında"), false) { drawer = false; about = true }
+            // the play build's ad at the foot of the side menu (nothing in the foss build)
+            if (com.umutk.pulse.ads.PulseAds.ENABLED) com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
     }
@@ -1765,12 +1827,19 @@ private fun exSmartDate(ms: Long): String {
     val sameMonth = sameYear && now.get(java.util.Calendar.MONTH) == t.get(java.util.Calendar.MONTH)
     val sameDay = sameMonth && now.get(java.util.Calendar.DAY_OF_MONTH) == t.get(java.util.Calendar.DAY_OF_MONTH)
     val loc = java.util.Locale.getDefault()
-    // the month spelled out in full, whatever the system's short form is
-    val months = java.text.DateFormatSymbols.getInstance(loc).months
-    val d = t.get(java.util.Calendar.DAY_OF_MONTH); val y = t.get(java.util.Calendar.YEAR)
+    // a short date: the short month, the year only when it is not this one
+    val months = java.text.DateFormatSymbols.getInstance(loc).shortMonths
+    val d = t.get(java.util.Calendar.DAY_OF_MONTH); val y = t.get(java.util.Calendar.YEAR) % 100
     val hm = java.text.SimpleDateFormat("HH:mm", loc).format(Date(ms))
-    return if (sameDay) hm else "$d ${months[t.get(java.util.Calendar.MONTH)]} $y $hm"
+    return when {
+        sameDay -> hm
+        sameYear -> "$d ${months[t.get(java.util.Calendar.MONTH)]} $hm"
+        else -> "$d ${months[t.get(java.util.Calendar.MONTH)]} ${"%02d".format(y)} $hm"
+    }
 }
+
+/** Documents whose preview is a white page: PDF and the Office / Open Document files. */
+private val EX_PAPER_EXT = setOf("pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp", "doc", "xls", "ppt", "rtf")
 
 private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
 
@@ -1779,8 +1848,29 @@ private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "he
 internal fun exThumb(f: File): ImageBitmap? {
     if (!FilesPrefs.thumbs || !canPreview(f)) return null
     val ctx = LocalContext.current
-    val first = remember(f.path) { Thumbs.cached(f) }
-    return produceState(first, f.path) { if (value == null) value = Thumbs.load(ctx, f) }.value
+    // a row reused for another file must not keep the old file's picture: every new path starts from its own cache entry (or a fresh load)
+    // in a dark look a document page (PDF, Word, Excel, PowerPoint, Open Document) is shown dark: black paper, white text (a plain colour inversion; the page itself is not touched)
+    val dark = com.umutk.pulse.LocalWindowLook.current.dark && f.extension.lowercase() in EX_PAPER_EXT
+    return produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, f.path, dark) {
+        val base = Thumbs.cached(f) ?: Thumbs.load(ctx, f)
+        value = if (dark && base != null) withContext(kotlinx.coroutines.Dispatchers.Default) { invertedPage(f.path, base) } else base
+    }.value
+}
+
+private val invertedPages = object : android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(6 shl 20) {
+    override fun sizeOf(key: String, value: androidx.compose.ui.graphics.ImageBitmap) = value.width * value.height * 4
+}
+
+/** [src] with its colours inverted (white page to black, black text to white). */
+private fun invertedPage(path: String, src: androidx.compose.ui.graphics.ImageBitmap): androidx.compose.ui.graphics.ImageBitmap {
+    val key = "$path|${src.width}x${src.height}"
+    invertedPages.get(key)?.let { return it }
+    val b = src.asAndroidBitmap()
+    val out = android.graphics.Bitmap.createBitmap(b.width, b.height, android.graphics.Bitmap.Config.ARGB_8888)
+    val p = android.graphics.Paint().apply { colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(floatArrayOf(
+        -1f, 0f, 0f, 0f, 255f,  0f, -1f, 0f, 0f, 255f,  0f, 0f, -1f, 0f, 255f,  0f, 0f, 0f, 1f, 0f))) }
+    android.graphics.Canvas(out).drawBitmap(b, 0f, 0f, p)
+    return out.asImageBitmap().also { invertedPages.put(key, it) }
 }
 
 /** Total and free bytes of the shared storage; zeros when the system will not say. */

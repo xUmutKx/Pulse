@@ -13,6 +13,10 @@ class KbState {
     var listening by mutableStateOf(false)
     /** 0 off, 1 the next letter, 2 caps lock. */
     var shift by mutableIntStateOf(0)
+    /** A hardware keyboard is attached: the screen keyboard shrinks to its suggestion bar, at the foot of the screen. */
+    var hardware by mutableStateOf(false)
+    /** With a physical keyboard: the bar alone (false) or the full keyboard (true), opened by the keyboard button of the bar. */
+    var hwOpen by mutableStateOf(false)
     /** 0 letters, 1 symbols, 2 more symbols. */
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */
@@ -39,8 +43,15 @@ class KbState {
     // what is typed while the translation bar is open: the keys write here, not into the app's text box
     var transIn by mutableStateOf("")
     var transBusy by mutableStateOf(false)
+    // the "Text and art" page is open: the keys type into its box (the app's text box gets nothing), and the box shows what is typed
+    var artOn by mutableStateOf(false)
+    var artIn by mutableStateOf("")
+    /** narrow screens: the text-and-art box was tapped, so the emoji page shows the box and the keys under it */
+    var artKeys by mutableStateOf(false)
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())
+    /** The e-mail suggestions take the bar: centred for one or two, scrolling to the right for more. */
+    var emailBar by mutableStateOf(false)
     /** The letters typed so far in the word under way (shown as a quoted slot when it differs from the middle one). */
     var enter by mutableStateOf("newline")
     var dark by mutableStateOf(true)
@@ -57,10 +68,14 @@ class KbState {
     /** The period (seconds) of each code above, in the same order. */
     var authPeriods by mutableStateOf(listOf<Int>())
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
+    var quickPinned by mutableStateOf(false)
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
     var rootW by mutableStateOf(0f)
+    /** The floating keyboard's place in its window (left, top, right, bottom): only this part takes touches, the rest of the window is the app's. */
+    var floatRect: IntArray? = null
+    var refreshInsets: (() -> Unit)? = null
     /** The field wants no suggestions or learning (password, email, URL). */
     var plain by mutableStateOf(false)
     /** A number, phone, date or numeric-password field: only the number pad shows. */
@@ -79,6 +94,10 @@ class KbState {
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */
     /** The finger of this touch swiped down to close the keyboard: the key under it must not type. */
     @Volatile var swiped = false
+    // the space key is being slid to move the cursor: a slide down then does not close the keyboard
+    @Volatile var cursorDrag = false
+    // counts the keys typed: the private-typing hat shows again after each one
+    var keyTick by mutableStateOf(0)
     var trail by mutableStateOf(listOf<Offset>())
     /** Where each letter key sits (window pixels), for following a swipe over the keys. */
     val letterRects = HashMap<String, Rect>()
@@ -113,6 +132,8 @@ interface KbActions {
     fun arrow(code: Int)
     fun edit(id: String)
     fun moveCursor(delta: Int)
+    /** The cursor goes to the line above (negative) or the line below, at the same column. */
+    fun moveLine(delta: Int) {}
     fun quickDeleteStart()
     fun quickDelete(chars: Int)
     fun quickDeleteEnd(apply: Boolean)
@@ -124,6 +145,7 @@ interface KbActions {
     fun extraKey(id: String)
     fun hide()
     fun clipPin(id: Long) {}
+    fun quickPin() {}
     fun clipDelete(ids: Set<Long>) {}
     fun clipClear() {}
     fun pasteClip(item: ClipItem) {}

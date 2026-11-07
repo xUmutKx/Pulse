@@ -30,6 +30,14 @@ object KeyboardPrefs {
     var sidePad by mutableStateOf(2)
     var bottomPad by mutableStateOf(0)
     var keyGap by mutableStateOf(3)
+    /** the compact layout (like a tablet's own keyboard): the keys sit close together and the keyboard takes [compactPct] percent of the width, in the middle */
+    var compact by mutableStateOf(false)
+    var compactPct by mutableStateOf(66)
+    /** the emoji page beside the keys on a wide screen: false emoji left and keys right, true the other way round */
+    var emojiRight by mutableStateOf(false)
+    /** the emoji page ignores the side space and uses the whole width */
+    var emojiFull by mutableStateOf(true)
+    val gap: Int get() = if (compact) minOf(keyGap, 1) else keyGap
     /** The ?123 key is this many percent narrower than its normal width; the space bar takes the room. */
     var modeShrink by mutableStateOf(15)
     /** The comma key is this many percent narrower; the space bar takes the room. */
@@ -58,10 +66,13 @@ object KeyboardPrefs {
     var autocorrect by mutableStateOf(true)
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
+    var quickPinBtn by mutableStateOf(true)
     var quickPeriod by mutableStateOf(true)
     var autoCap by mutableStateOf(true)
     var autoSpace by mutableStateOf(false)
     var cursorControl by mutableStateOf(true)
+    /** How quickly the space key's slide moves the cursor, percent (50 slow .. 200 quick). */
+    var cursorSens by mutableStateOf(100)
     var quickDelete by mutableStateOf(true)
     var emojiPredictions by mutableStateOf(true)
     var learn by mutableStateOf(true)
@@ -86,11 +97,18 @@ object KeyboardPrefs {
     /** The extra row sits under the space row instead of above the letters. */
     var proBottom by mutableStateOf(true)
     var proIcons by mutableStateOf(true)
+    /** The bottom right key of the number pad: "enter" (the field's own action) or a character the key types. */
+    var numEnter by mutableStateOf("enter")
     /** A gap in the middle of the letter rows, so each thumb has its half (tablets, landscape). */
     var split by mutableStateOf(false)
     /** Floating: a narrower keyboard (70 percent of the width) that slides sideways by a handle on top; [floatX] is its place, 0 left to 1 right. */
     var floating by mutableStateOf(false)
+    /** The floating keyboard of the quick settings tile: only for the time its window is open, and never saved. The normal keyboard stays the normal keyboard. */
+    var floatSession by mutableStateOf(false)
+    val floatNow: Boolean get() = floating || floatSession
     var floatX by mutableStateOf(.5f)
+    /** Floating: how far the keyboard is lifted off its place at the bottom, 0 (down) to 1 (up to the middle of the screen). */
+    var floatY by mutableStateOf(0f)
     private var appCtx: Context? = null
     fun saveFloat() { appCtx?.let { save(it) } }
     /** The typing practice of the settings is open: nothing is corrected, so the slips stay visible to be learned. */
@@ -141,18 +159,19 @@ object KeyboardPrefs {
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
         heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
-        keyGap = p.getInt("keyGap", keyGap); modeShrink = p.getInt("modeShrink", modeShrink); commaShrink = p.getInt("commaShrink", commaShrink); oneHand = p.getString("oneHand", oneHand) ?: oneHand
+        keyGap = p.getInt("keyGap", keyGap); compact = p.getBoolean("compact", compact); compactPct = p.getInt("compactPct", compactPct); emojiRight = p.getBoolean("emojiRight", emojiRight); emojiFull = p.getBoolean("emojiFull", emojiFull); modeShrink = p.getInt("modeShrink", modeShrink); commaShrink = p.getInt("commaShrink", commaShrink); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect)
-        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction)
+        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn)
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
-        cursorControl = p.getBoolean("cursorControl", cursorControl); quickDelete = p.getBoolean("quickDelete", quickDelete)
+        cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn); learnMode = p.getInt("learnMode", if (learn) 3 else 0); autoLang = p.getBoolean("autoLang", true); emailDomain = p.getString("emailDomain", "gmail.com") ?: "gmail.com"; learn = learnMode != 0
         glide = p.getBoolean("glide", glide); flick = p.getBoolean("flick", flick); anim = p.getBoolean("anim", anim); proRow = p.getBoolean("proRow", proRow)
-        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proRow2 = p.getBoolean("proRow2", proRow2); proKeys2 = p.getString("proKeys2", proKeys2) ?: proKeys2; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); floating = p.getBoolean("floating", false); floatX = p.getFloat("floatX", .5f); appCtx = c.applicationContext; menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
+        numEnter = p.getString("numEnter", numEnter) ?: numEnter
+        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proRow2 = p.getBoolean("proRow2", proRow2); proKeys2 = p.getString("proKeys2", proKeys2) ?: proKeys2; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); floating = p.getBoolean("floating_v2", false) && p.getBoolean("floating", false); // an old saved "floating" from before the update is ignored: the normal keyboard is the default floatX = .5f; floatY = 0f /* the floating keyboard always opens at the bottom middle: a place saved from an old drag left it half up */; appCtx = c.applicationContext; menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // once: Shift joins the default extra keys (only for those who never changed the row)
         if (p.getInt("ratioVer", 0) < 1) { autoRatio = 80; p.edit().putInt("autoRatio", 80).putInt("ratioVer", 1).apply() }
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
@@ -223,14 +242,14 @@ object KeyboardPrefs {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
-            .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
+            .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putBoolean("compact", compact).putInt("compactPct", compactPct).putBoolean("emojiRight", emojiRight).putBoolean("emojiFull", emojiFull).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
-            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
-            .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
-            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putFloat("floatX", floatX).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
+            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
+            .putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
+            .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putBoolean("dirLayout", dirLayout).putInt("rgb", rgb).putInt("clipKeep", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
@@ -246,10 +265,10 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
+        theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; bottomKey = "emoji"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
+        numEnter = "enter"; cursorControl = true; cursorSens = 100; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; floatY = 0f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true

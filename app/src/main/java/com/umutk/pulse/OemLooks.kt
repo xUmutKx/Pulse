@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
@@ -39,9 +41,15 @@ fun OemSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean) {
     val w = if (one) 52.dp else 44.dp; val h = if (one) 30.dp else 26.dp
     val thumb = if (one) 24.dp else if (on) 20.dp else 14.dp
     val off = if (T.dark) Color(0xFF48484A) else Color(0xFFCFCFD4)
-    Box(Modifier.size(w, h).alpha2(enabled).background(if (on) acc else off, CircleShape)
+    // One UI: the thumb slides across and the track changes colour together, a short spring, not a jump
+    val pos by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .75f, stiffness = 600f), label = "switchPos")
+    val track by androidx.compose.animation.animateColorAsState(if (on) acc else off, androidx.compose.animation.core.tween(160), label = "switchTrack")
+    Box(Modifier.size(w, h).alpha2(enabled).background(track, CircleShape)
         .then(if (enabled) Modifier.clickable { onChange(!on) } else Modifier)) {
-        Box(Modifier.align(if (on) Alignment.CenterEnd else Alignment.CenterStart).padding(horizontal = if (one) 3.dp else 4.dp).size(thumb).background(Color.White, CircleShape))
+        val pad = if (one) 3.dp else 4.dp
+        val travel = w - thumb - pad * 2
+        Box(Modifier.offset(x = pad + travel * pos).align(Alignment.CenterStart).size(thumb)
+            .shadow(if (one) 2.dp else 0.dp, CircleShape).background(Color.White, CircleShape))
     }
 }
 
@@ -82,10 +90,12 @@ fun OemDialog(w: PTheme, onDismiss: () -> Unit, title: (@Composable () -> Unit)?
     if (!one) { ColorOsDialog(w, onDismiss, title, text, confirm, dismissBtn, containerColor); return }
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
         val view = LocalView.current
-        if (one) SideEffect { (view.parent as? DialogWindowProvider)?.window?.setGravity(Gravity.BOTTOM) }
+        // a phone: the dialog rises from the bottom; a tablet: it sits in the middle of the screen, like the rest of One UI on a tablet
+        val tabletDlg = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600
+        if (one) SideEffect { (view.parent as? DialogWindowProvider)?.window?.setGravity(if (tabletDlg) Gravity.CENTER else Gravity.BOTTOM) }
         val acc = Look.accent.copy(alpha = 1f)
         val shape = RoundedCornerShape(if (one) 32.dp else 22.dp)
-        Column(Modifier.padding(if (one) 12.dp else 24.dp).widthIn(max = 480.dp).fillMaxWidth()
+        Column(Modifier.padding(if (one) 12.dp else 24.dp).widthIn(max = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 560.dp else 480.dp).fillMaxWidth()
             .background(containerColor ?: w.panel, shape).then(if (one) Modifier else Modifier.border(1.dp, w.line, shape))
             .padding(horizontal = 24.dp, vertical = 26.dp), horizontalAlignment = if (one) Alignment.CenterHorizontally else Alignment.Start) {
             if (title != null) CompositionLocalProvider(LocalContentColor provides w.text) { androidx.compose.material3.ProvideTextStyle(TextStyle(color = w.text, fontSize = if (one) 22.sp else 20.sp, fontWeight = if (one) FontWeight.Medium else FontWeight.Bold)) { title() } }

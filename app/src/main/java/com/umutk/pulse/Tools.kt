@@ -73,6 +73,8 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "battery" -> BatteryHealthScreen(back)
         id == "health" -> HealthScreen(back)
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
+        // the App lock page: opened from the More menu and the Extra apps group (it had no route, so it showed a blank screen)
+        id == "applock" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AppLockPage() }
         id == "extrastore" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.extras.store.ExtraStoreScreen(onBack = back) } }
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
         id == "cover" -> {
@@ -111,6 +113,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
         id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
         id == "guide" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.GuidePage() }
+        id == "vault" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.VaultScreen(back) }
         id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
         id == "video" -> com.umutk.pulse.extras.video.VideoHub(back)
         id == "music" -> com.umutk.pulse.extras.music.MusicHub(back)
@@ -120,7 +123,9 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "tempmail" -> com.umutk.pulse.extras.tempmail.TempMailHub(back)
         id == "ebook" -> com.umutk.pulse.extras.ebook.EbookHub(back)
         id == "weathermap" -> com.umutk.pulse.extras.weathermap.WeatherMapHub(back)
-        id == "weather" -> com.umutk.pulse.extras.weather.WeatherHub(back)
+        id == "weather" -> Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { com.umutk.pulse.extras.weather.WeatherHub(back) }
+        }
         id == "paint" -> com.umutk.pulse.extras.paint.PaintHub(back)
         id == "browser" -> com.umutk.pulse.extras.browser.BrowserHub(back)
         id == "office" -> { androidx.activity.compose.BackHandler { back() }; OfficePage() }
@@ -128,6 +133,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "localsend" -> com.umutk.pulse.extras.localsend.LocalSendHub(back)
         id == "palette" -> com.umutk.pulse.extras.palette.PaletteHub(back)
         id == "blackout" -> com.umutk.pulse.extras.blackout.BlackOutHub(back)
+        id == "gamehub" -> com.umutk.pulse.extras.gamehub.GameHubHub(back)
         id == "island" -> com.umutk.pulse.extras.island.IslandHub(back)
         id == "keyboard" -> com.umutk.pulse.extras.keyboard.KeyboardSettings(back)
         id == "notifhist" -> com.umutk.pulse.extras.notifhist.NotifHistoryScreen(back)

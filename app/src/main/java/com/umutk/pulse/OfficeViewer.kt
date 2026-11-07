@@ -61,6 +61,7 @@ fun ofOpen(ctx: Context, f: File, lookDefault: String? = null) = ofOpenUri(ctx, 
 fun ofOpenUri(ctx: Context, uri: Uri, lookDefault: String? = null) {
     // a text file always opens in the text editor (Notepad in the Windows looks), whichever way it was reached
     uri.takeIf { it.scheme == "file" }?.path?.let { File(it) }?.takeIf { ofIsText(it) }?.let { ofOpenText(ctx, it); return }
+    // csv opens in the spreadsheet viewer (the text editor only shows it as plain text)
     val i = Intent(ctx, OfficeViewActivity::class.java).setData(uri).putExtra("edit", true).putExtra("recent", true)
     if (lookDefault != null) i.putExtra("of_look_default", lookDefault)
     if (ctx !is Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -79,6 +80,9 @@ class OfficeViewActivity : ComponentActivity() {
     private var confirm by mutableStateOf(false)
     private var saveAsTrigger by mutableStateOf<(() -> Unit)?>(null)
     private var saveAsDest: File? = null
+    /** "Save a copy" asks where the copy goes first; the chosen place is kept here for the write */
+    private var copyAsk by mutableStateOf<Pair<(File) -> Unit, (String) -> Unit>?>(null)
+    private var copyDest: File? = null
     /** a plain Save on a file that cannot be rewritten in its own format (.doc, .rtf, .odt): the writer waits for a Save as target */
     private var pendingSave by mutableStateOf<Pair<(File) -> Unit, (String) -> Unit>?>(null)
     /** "TXT olarak kaydet" asks for a .txt target; the text is the screen's current content */
@@ -87,7 +91,7 @@ class OfficeViewActivity : ComponentActivity() {
     private var name = ""
     private var srcFile: File? = null
     private var srcUri: Uri? = null
-    private val pickOther = registerForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    private val pickOther = registerForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) {
             runCatching { contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
             ofOpenUri(this, u)
@@ -129,7 +133,7 @@ class OfficeViewActivity : ComponentActivity() {
             } }
             val canEdit = total > 0 // every supported format opens editable; originals that cannot be rewritten go through Save as
             val d = OfDoc(tmp, name, canEdit,
-                { w, done -> if (convExt != null) pendingSave = w to done else persist(false, w, done) }, { w, done -> persist(true, w, done) }, { requestClose() })
+                { w, done -> if (convExt != null) pendingSave = w to done else persist(false, w, done) }, { w, done -> if (saveAsDest != null) persist(true, w, done) else copyAsk = w to done }, { requestClose() })
             runOnUiThread {
                 doc = d
                 if (intent.getBooleanExtra("recent", false)) OfficePrefs.addRecent(this, uri.toString(), name, k)
@@ -203,6 +207,7 @@ class OfficeViewActivity : ComponentActivity() {
                 fun asCopy(): String {
                     val dir = OfficePrefs.folder.apply { mkdirs() }
                     val base = name.substringBeforeLast('.'); val ext = convExt ?: name.substringAfterLast('.', "")
+                    copyDest?.let { d -> copyDest = null; tmp.copyTo(d, true); return d.name }
                     saveAsDest?.let { tmp.copyTo(it, true); return it.name }
                     var f = File(dir, "$base (copy).$ext"); var n = 2
                     while (f.exists()) f = File(dir, "$base (copy $n).$ext").also { n++ }
@@ -248,6 +253,8 @@ class OfficeViewActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(barTop))
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(barBot))
+            // the play build's banner at the foot of the Office viewer (nothing in the foss build)
+            if (com.umutk.pulse.ads.PulseAds.ENABLED) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)) { com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth()) }
         }
         val sbView = androidx.compose.ui.platform.LocalView.current
         SideEffect {
@@ -260,6 +267,14 @@ class OfficeViewActivity : ComponentActivity() {
             val ext = name.substringAfterLast('.', "").lowercase()
             OfSaveAsDialog(if (convExt != null) name.substringBeforeLast('.') + "_edited.${convExt}" else name, if (ext == "csv" || ext == "tsv") listOf("csv", "tsv") else listOf(convExt ?: ext.ifEmpty { "docx" }), srcFile?.parentFile, { saveAsTrigger = null }) { f ->
                 saveAsTrigger = null; saveAsDest = f; trig()
+            }
+        }
+        // "Save a copy": the place is asked (the copy is written there, the document stays open)
+        copyAsk?.let { (w, done) ->
+            val ext = name.substringAfterLast('.', "").lowercase()
+            val base = name.substringBeforeLast('.')
+            OfSaveAsDialog("$base (copy).${convExt ?: ext.ifEmpty { "docx" }}", listOf(convExt ?: ext.ifEmpty { "docx" }), srcFile?.parentFile, { copyAsk = null; done(tr("Copy cancelled", "Kopya iptal edildi")) }) { f ->
+                copyAsk = null; copyDest = f; persist(true, w, done)
             }
         }
         pendingSave?.let { (w, done) ->

@@ -247,11 +247,21 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             if (i.action == "com.umutk.pulse.action.GLOBAL") { performGlobalAction(i.getIntExtra("g", 0)); return }
             if (i.action == Intent.ACTION_SCREEN_ON) { lastTouch = android.os.SystemClock.uptimeMillis(); lastTrigger = false }
             autoCheck()
+            // the charger plugged in: the animation of the cover's setting plays over everything (the cover, if it starts, is under it); with the screen off it waits for the screen
+            val now = android.os.SystemClock.uptimeMillis()
+            if (i.action == Intent.ACTION_POWER_CONNECTED) {
+                // with the screen on it only plays when the setting asks for it; with the screen off it waits for the screen
+                if ((getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive) { if (StandByPrefs.chargeScreenOn(this@CoverAccessibilityService)) ChargeAnim.show(this@CoverAccessibilityService) } else chargeAt = now
+            } else if (i.action == Intent.ACTION_SCREEN_ON && chargeAt != 0L) {
+                if (now - chargeAt < 30_000L) ChargeAnim.show(this@CoverAccessibilityService)
+                chargeAt = 0L
+            }
         }
     }
 
     // the idle trigger: a touch anywhere (the system tells this service when a touch starts and ends) restarts the count
     @Volatile private var lastTouch = android.os.SystemClock.uptimeMillis()
+    @Volatile private var chargeAt = 0L
     private val tick = android.os.Handler(android.os.Looper.getMainLooper())
     private val idleCheck = object : Runnable {
         override fun run() {
@@ -295,7 +305,20 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             androidx.core.content.ContextCompat.registerReceiver(this, power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         }
     }
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) { lastTouch = android.os.SystemClock.uptimeMillis() }
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+        lastTouch = android.os.SystemClock.uptimeMillis()
+        // the camera opened (the swipe from the lock screen, or the camera app): the cover and the lock screen lyrics close, they must not stay over the viewfinder
+        if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val p = event.packageName?.toString().orEmpty(); val k = event.className?.toString().orEmpty()
+            if (p != packageName && (p.contains("camera", true) || k.contains("camera", true))) {
+                com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)
+                if (StandBy.showing) StandBy.hide(this)
+            }
+        }
+        // a password or text field got the focus (the PIN, the password, an edit): the lock screen lyrics step aside until the screen goes off
+        if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED &&
+            (event.isPassword || event.className?.contains("EditText") == true)) com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)
+    }
     override fun onInterrupt() {}
     override fun onUnbind(intent: Intent?): Boolean { tick.removeCallbacks(idleCheck); if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }

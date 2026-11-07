@@ -237,8 +237,8 @@ private fun WParaView(c: WCtx, p: XN) {
                         append(t); all.append(t); pop()
                     }
                     if (c.query.isNotEmpty()) {
-                        val low = all.toString().lowercase(); val q = c.query.lowercase(); var at = low.indexOf(q)
-                        while (at >= 0) { addStyle(SpanStyle(background = if (i == c.cur) Color(0xFFFFA040) else Color(0xFFFFFF00)), at, at + q.length); at = low.indexOf(q, at + q.length) }
+                        val ql = OfFind.length(c.query)
+                        for (at in OfFind.starts(all, c.query)) addStyle(SpanStyle(background = if (i == c.cur) Color(0xFFFFA040) else Color(0xFFFFFF00), color = Color.Black), at, at + ql)
                     }
                 }
                 val big = maxOf(size, runsOf(p).maxOfOrNull { r -> (w.effRp(p, r, c.tc).sz ?: 22) / 2f } ?: size) // M3 default lineHeight is a fixed 24sp: double spacing for small text
@@ -399,7 +399,12 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         o to st
     }
     val words = remember(v) { var n = 0; for (p in flat.ps) { var inW = false; for (ch in paraText(p)) { if (ch.isWhitespace()) inW = false else if (!inW) { inW = true; n++ } } }; n }
-    val matches = remember(v, query) { if (query.isEmpty()) emptyList() else flat.ps.indices.filter { paraText(flat.ps[it]).contains(query, true) } }
+    // the search runs off the main thread (a big document is thousands of paragraphs) and waits a moment while the letters are still being typed
+    val matches by produceState(emptyList<Int>(), v, query, OfFind.case) {
+        if (query.isBlank()) { value = emptyList(); return@produceState }
+        kotlinx.coroutines.delay(200)
+        value = withContext(kotlinx.coroutines.Dispatchers.Default) { flat.ps.indices.filter { OfFind.starts(paraText(flat.ps[it]), query).isNotEmpty() } }
+    }
 
     fun fresh() = w.flatten()
     fun syncEd() { val f = fresh(); ed = if (sel in f.ps.indices) TextFieldValue(paraText(f.ps[sel]), androidx.compose.ui.text.TextRange(paraText(f.ps[sel]).length)) else TextFieldValue("") }
@@ -428,7 +433,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         (if (copy) doc.saveCopy else doc.save)(wr) { msg -> if (!copy && !msg.startsWith("Save failed")) doc.dirty = false; toast(msg) }
     }
     SideEffect { doc.txt = { commit(); w.plain() } } // "TXT olarak kaydet" reads what is on screen now
-    val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickImg = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) scope.launch {
             val pic = withContext(Dispatchers.IO) { runCatching { prepImage(ctx, uri) }.getOrNull() }
             if (pic == null) { toast(tr("Cannot read image", "Resim okunamadı")); return@launch }
@@ -535,6 +540,8 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
             if (findOn) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 PField(query, { query = it; cur = -1 }, tr("Find", "Bul"), Modifier.weight(1f), onDone = { gotoMatch(cur + 1) })
                 Text(if (matches.isEmpty()) "0" else "${cur + 1}/${matches.size}", color = theme.pal.ink, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
+                Text("Aa", color = if (OfFind.case) theme.pal.accent else theme.pal.ink.copy(alpha = .6f), fontSize = 14.sp, fontWeight = if (OfFind.case) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { OfFind.case = !OfFind.case; cur = -1 }.padding(horizontal = 8.dp, vertical = 6.dp))
                 Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(32.dp).clickable { gotoMatch(if (cur < 0) -1 else cur - 1) }.padding(4.dp), theme.pal.ink)
                 Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(32.dp).clickable { gotoMatch(cur + 1) }.padding(4.dp), theme.pal.ink)
                 Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)

@@ -118,3 +118,12 @@ fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float
         PSlider(value, onChange, range, onDone = {})
     }
 }
+
+/** A settings group on its own page: the title on top and the rows always shown (no folding, no arrow). */
+@Composable
+fun FlatSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = {
+        Text(title, color = T.sub, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        content()
+    })
+}

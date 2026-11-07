@@ -107,14 +107,17 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun toggleAlarm(alarm: AlarmEntity, isEnabled: Boolean) {
+    fun toggleAlarm(alarm: AlarmEntity, isEnabled: Boolean, skipNext: Boolean = false) {
+        // the pill "Turn back on for Friday" switches the alarm on without the ring that was turned off; the switch itself turns it on for the very next one.
+        // The skipped ring is written with the alarm itself, in the same update as its on/off state
+        val skipAt = if (isEnabled && skipNext) scheduler.calculateTriggerTimeMillis(alarm.hour, alarm.minute, alarm.daysOfWeek) else 0L
         if (!isEnabled && alarm.daysOfWeek.isNotEmpty()) {
             _recentlyDisabledRepeating.update { it + alarm.id }
         } else if (isEnabled) {
             forgetReenable(listOf(alarm.id))
         }
         viewModelScope.launch {
-            val updatedAlarm = alarm.copy(isEnabled = isEnabled)
+            val updatedAlarm = alarm.copy(isEnabled = isEnabled, skipRingAt = skipAt)
             repository.update(updatedAlarm)
             if (isEnabled) {
                 scheduler.scheduleAlarm(
@@ -295,11 +298,11 @@ class AlarmViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun relativeTimeText(alarm: AlarmEntity): String {
-        val triggerAt = scheduler.calculateTriggerTimeMillis(
+        val triggerAt = com.umutk.pulse.extras.lucid.receiver.AlarmSkip.adjust(appContext, alarm.id, alarm.hour, alarm.minute, alarm.daysOfWeek, scheduler.calculateTriggerTimeMillis(
             hour24 = alarm.hour,
             minute = alarm.minute,
             daysOfWeek = alarm.daysOfWeek
-        )
+        ), clearOld = false)
         val diff = (triggerAt - System.currentTimeMillis()).coerceAtLeast(0L)
         return if (TimeLeftFormatter.remainingMinutes(diff) <= 0L) {
             "Alarm set for less than a minute from now."

@@ -10,6 +10,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +23,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import android.graphics.pdf.PdfDocument
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -59,7 +63,20 @@ fun Modifier.ofPinch(onZoom: (Float) -> Unit): Modifier = pointerInput(Unit) {
     }
 }
 
-class OfPdf(file: File) {
+/** A text selection: from word [a] to word [b] of page [page] (the same page). */
+class PSel(val page: Int, val a: Int, val b: Int)
+
+/** The word under a point (page fractions), or -1. */
+private fun wordAt(words: List<PWord>, fx: Float, fy: Float): Int =
+    words.indexOfFirst { fx >= it.x - .004f && fx <= it.x + it.w + .004f && fy >= it.y - .004f && fy <= it.y + it.h + .004f }
+
+/** A search hit: the words [a]..[b] of page [page]. */
+class PHit(val page: Int, val a: Int, val b: Int)
+
+/** One word of a page's text layer: its text and its box as fractions of the page (top-left origin). */
+class PWord(val text: String, val x: Float, val y: Float, val w: Float, val h: Float)
+
+class OfPdf(private val file: File) {
     private val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     private val r = PdfRenderer(pfd)
     val count = r.pageCount
@@ -75,7 +92,44 @@ class OfPdf(file: File) {
             b
         } finally { pg.close() }
     }
-    fun close() { runCatching { synchronized(r) { r.close() } }; runCatching { pfd.close() } }
+    fun close() { runCatching { synchronized(r) { r.close() } }; runCatching { pfd.close() }; runCatching { textDoc?.close() } }
+
+    // the text layer (for selecting and copying): read once per page, by PDFBox
+    private var textDoc: com.tom_roush.pdfbox.pdmodel.PDDocument? = null
+    // the words of the last pages read (a search over a huge document reads page after page: the cache is bounded)
+    private val wordsCache = object : LinkedHashMap<Int, List<PWord>>(64, .75f, true) { override fun removeEldestEntry(e: MutableMap.MutableEntry<Int, List<PWord>>?) = size > 80 }
+    fun words(i: Int, appCtx: android.content.Context): List<PWord> = synchronized(wordsCache) {
+        wordsCache[i] ?: (runCatching { extractWords(i, appCtx) }.getOrDefault(emptyList())).also { wordsCache[i] = it }
+    }
+    private fun extractWords(i: Int, appCtx: android.content.Context): List<PWord> {
+        if (i !in 0 until count) return emptyList()
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(appCtx)
+        val doc = textDoc ?: com.tom_roush.pdfbox.pdmodel.PDDocument.load(file).also { textDoc = it }
+        val box = doc.getPage(i).mediaBox
+        val pw = box.width; val ph = box.height
+        val stripper = object : com.tom_roush.pdfbox.text.PDFTextStripper() {
+            val chars = ArrayList<com.tom_roush.pdfbox.text.TextPosition>()
+            override fun writeString(text: String?, textPositions: MutableList<com.tom_roush.pdfbox.text.TextPosition>?) { textPositions?.let { chars.addAll(it) } }
+        }
+        stripper.startPage = i + 1; stripper.endPage = i + 1
+        stripper.getText(doc)
+        val out = ArrayList<PWord>()
+        val sb = StringBuilder(); var x0 = 0f; var y0 = 0f; var x1 = 0f; var y1 = 0f
+        fun flush() {
+            if (sb.isNotEmpty()) out.add(PWord(sb.toString(), x0 / pw, y0 / ph, (x1 - x0) / pw, (y1 - y0) / ph))
+            sb.clear()
+        }
+        for (tp in stripper.chars) {
+            val ch = tp.unicode ?: continue
+            if (ch.isBlank()) { flush(); continue }
+            val l = tp.xDirAdj; val b = tp.yDirAdj; val t = b - tp.heightDir; val r = l + tp.widthDirAdj
+            if (sb.isEmpty()) { x0 = l; y0 = t; x1 = r; y1 = b }
+            else { x0 = minOf(x0, l); y0 = minOf(y0, t); x1 = maxOf(x1, r); y1 = maxOf(y1, b) }
+            sb.append(ch)
+        }
+        flush()
+        return out
+    }
     private val darkCache = android.util.LruCache<String, Bitmap>(6)
     /** Display-only dark copy of a page (never used for saving); cached per page and width. */
     fun renderDark(i: Int, w: Int): Bitmap? {
@@ -83,6 +137,12 @@ class OfPdf(file: File) {
         val b = render(i, w) ?: return null
         smartInvert(b); darkCache.put(key, b); return b
     }
+}
+
+/** The new lightness of a pixel of lightness l in the dark copy: ink turns light; paper and light greys go to black (a steep curve, so #E0 is nearly #000). */
+private val PAPER_LUT = IntArray(256) { l ->
+    if (l < 128) 242 - l * 38 / 128
+    else (255.0 * Math.pow((255 - l) / 127.0, 2.4)).toInt().coerceIn(0, 255)
 }
 
 /**
@@ -147,7 +207,7 @@ fun smartInvert(b: Bitmap) {
             }
             val c = px[y * w + x]; val r = c shr 16 and 255; val g = c shr 8 and 255; val bl = c and 255
             val l = (r * 77 + g * 151 + bl * 28) shr 8
-            val l2 = if (l < 128) 242 - l * 38 / 128 else (255 - l) * 204 / 127 // dark ink -> light, paper -> black
+            val l2 = PAPER_LUT[l.coerceIn(0, 255)] // dark ink -> light, paper (and every light grey) -> black
             val d = l2 - l
             var nr = (r + d).coerceIn(0, 255); var ng = (g + d).coerceIn(0, 255); var nb = (bl + d).coerceIn(0, 255)
             if (keep > 0) { nr = (nr * (3 - keep) + r * keep) / 3; ng = (ng * (3 - keep) + g * keep) / 3; nb = (nb * (3 - keep) + bl * keep) / 3 }
@@ -220,6 +280,51 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     val cols = intArrayOf(0xFFD32F2F.toInt(), 0xFFFFEB3B.toInt(), 0xFF1976D2.toInt(), 0xFF388E3C.toInt(), 0xFF000000.toInt())
     var textAt by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }; var editing by remember { mutableStateOf<PAnn?>(null) }; var textVal by remember { mutableStateOf("") }
     var jump by remember { mutableStateOf(false) }; var jumpText by remember { mutableStateOf("") }
+    var sel by remember { mutableStateOf<PSel?>(null) }
+    // search: every page is read in turn off the main thread, the hits come in as they are found
+    var findOn by remember { mutableStateOf(false) }; var query by remember { mutableStateOf("") }
+    val hits = remember { mutableStateListOf<PHit>() }
+    var curHit by remember { mutableIntStateOf(-1) }
+    var scanned by remember { mutableIntStateOf(0) }
+    fun gotoHit(k: Int) {
+        if (hits.isEmpty()) return
+        curHit = ((k % hits.size) + hits.size) % hits.size
+        scope.launch { list.animateScrollToItem(hits[curHit].page.coerceIn(0, p.count - 1)) }
+    }
+    LaunchedEffect(findOn, query, OfFind.case) {
+        hits.clear(); curHit = -1; scanned = 0
+        if (!findOn || query.isBlank()) return@LaunchedEffect
+        delay(250)
+        val case = OfFind.case; val ql = OfFind.length(query)
+        for (pg in 0 until p.count) {
+            val found = withContext(Dispatchers.Default) {
+                val ws = p.words(pg, ctx)
+                if (ws.isEmpty()) emptyList() else {
+                    // the page as one line of text (a space between the words), so a phrase that runs over several words is found too
+                    val offs = IntArray(ws.size); val sb = StringBuilder()
+                    ws.forEachIndexed { k, w -> offs[k] = sb.length; sb.append(w.text); sb.append(' ') }
+                    OfFind.starts(sb, query, case).map { at ->
+                        var a = java.util.Arrays.binarySearch(offs, at); if (a < 0) a = -a - 2
+                        var b = java.util.Arrays.binarySearch(offs, at + ql - 1); if (b < 0) b = -b - 2
+                        PHit(pg, a.coerceIn(0, ws.lastIndex), b.coerceIn(0, ws.lastIndex))
+                    }
+                }
+            }
+            if (found.isNotEmpty()) { hits.addAll(found); if (curHit < 0) gotoHit(0) }
+            scanned = pg + 1
+            if (hits.size >= 5000) break
+            kotlinx.coroutines.yield()
+        }
+    }
+    fun copySel() {
+        val s = sel ?: return
+        val ws = p.words(s.page, ctx)
+        val lo = minOf(s.a, s.b); val hi = maxOf(s.a, s.b).coerceAtMost(ws.lastIndex)
+        if (lo > hi) return
+        val txt = (lo..hi).joinToString(" ") { ws[it].text }
+        (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("", txt))
+        Toast.makeText(ctx, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
+    }
     val widthDp = LocalConfiguration.current.screenWidthDp.dp
     val pagePx = with(LocalDensity.current) { (widthDp * committed).roundToPx() }.coerceIn(300, 2400)
     fun goto(i: Int) { scope.launch { list.animateScrollToItem(i.coerceIn(0, p.count - 1)) } }
@@ -233,12 +338,15 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Previous", "Önceki"), "View", Icons.Outlined.KeyboardArrowUp, cap = tr("Pages", "Sayfalar"), enabled = here > 0) { goto(here - 1) },
         OAct(tr("Next", "Sonraki"), "View", Icons.Outlined.KeyboardArrowDown, cap = tr("Pages", "Sayfalar"), enabled = here < p.count - 1) { goto(here + 1) },
         OAct(tr("Last", "Son"), "View", Icons.Outlined.LastPage, cap = tr("Pages", "Sayfalar"), enabled = here < p.count - 1) { goto(p.count - 1) },
+        OAct(tr("Find", "Bul"), "View", Icons.Outlined.Search, on = findOn, cap = tr("Search", "Ara"), png = "search") { findOn = !findOn },
         OAct(tr("Dark pages", "Koyu sayfalar"), "View", Icons.Outlined.DarkMode, on = OfficePrefs.darkPdf, cap = tr("Display", "Görünüm")) { OfficePrefs.setDarkPdf(ctx, !OfficePrefs.darkPdf) },
         OAct(tr("Pen", "Kalem"), "Edit", Icons.Outlined.Edit, on = tool == 1, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 1) 0 else 1 },
         OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci > 1) ci = 1 },
         OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3, cap = tr("Text", "Yazı")) { tool = if (tool == 3) 0 else 3 },
         OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4, cap = tr("Text", "Yazı")) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = cols.size - 1 },
         OAct(tr("Colour", "Renk"), "Edit", Icons.Outlined.Palette, cap = tr("Colour", "Renk")) { ci = (ci + 1) % cols.size },
+        OAct(tr("Select text", "Metin seç"), "Edit", Icons.Outlined.Create, on = tool == 5, cap = tr("Text", "Yazı")) { tool = if (tool == 5) 0 else 5 },
+        OAct(tr("Copy text", "Metni kopyala"), "Edit", Icons.Outlined.ContentCopy, enabled = sel != null, cap = tr("Text", "Yazı")) { copySel() },
         OAct(tr("Undo", "Geri al"), "Edit", Icons.Outlined.Undo, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.removeAt(anns.size - 1) },
         OAct(tr("Clear marks", "İşaretleri sil"), "Edit", Icons.Outlined.Delete, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.clear() },
         OAct(tr("Save a copy", "Kopya kaydet"), "File", Icons.Outlined.ContentCopy, png = "copy") {
@@ -261,14 +369,29 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Close", "Kapat"), "File", Icons.Outlined.Close) { doc.close() },
     )
     CompositionLocalProvider(LocalOfRibbon provides ofCaptionRibbons(theme, acts)) { PdfChrome(theme, doc.name, acts, "${tr("Page", "Sayfa")} ${list.firstVisibleItemIndex + 1} / ${p.count}   ${(zoom * 100).toInt()}%", doc.close) {
-        Box(Modifier.fillMaxSize().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(1f, 4f) }) {
+      Column(Modifier.fillMaxSize()) {
+        if (findOn) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            PField(query, { query = it }, tr("Find", "Bul"), Modifier.weight(1f), onDone = { gotoHit(curHit + 1) })
+            val busy = scanned < p.count && query.isNotBlank()
+            Text(if (hits.isEmpty()) (if (busy) "${scanned}/${p.count}" else "0") else "${curHit + 1}/${hits.size}${if (hits.size >= 5000) "+" else ""}${if (busy) " …" else ""}",
+                color = theme.pal.ink, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
+            Text("Aa", color = if (OfFind.case) theme.pal.accent else theme.pal.ink.copy(alpha = .6f), fontSize = 14.sp, fontWeight = if (OfFind.case) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable { OfFind.case = !OfFind.case }.padding(horizontal = 8.dp, vertical = 6.dp))
+            Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(32.dp).clickable { gotoHit(if (curHit < 0) -1 else curHit - 1) }.padding(4.dp), theme.pal.ink)
+            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(32.dp).clickable { gotoHit(curHit + 1) }.padding(4.dp), theme.pal.ink)
+            Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(1f, 4f) }) {
             Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
                 LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(p.count) { i -> PdfPage(p, i, pagePx, anns.filter { it.page == i }, tool, cols[ci],
-                        { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) }) }
+                        { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) },
+                        sel?.takeIf { it.page == i }, { s -> sel = s },
+                        if (findOn) hits.withIndex().filter { it.value.page == i }.map { it.value to (it.index == curHit) } else emptyList()) }
                 }
             }
         }
+      }
     } }
     textAt?.let { (pg, x, y) ->
         WinAlert(onDismissRequest = { textAt = null }, title = { Text(if (tool == 4 || editing != null) tr("Edit text", "Metni düzenle") else tr("Add text", "Yazı ekle")) },
@@ -286,7 +409,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
 }
 
 @Composable
-private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, color: Int, onAdd: (PAnn) -> Unit, onText: (Float, Float, PAnn?) -> Unit) {
+private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, color: Int, onAdd: (PAnn) -> Unit, onText: (Float, Float, PAnn?) -> Unit, sel: PSel?, onSel: (PSel?) -> Unit, found: List<Pair<PHit, Boolean>> = emptyList()) {
     val dark = OfficePrefs.darkPdf
     val bmp by produceState<ImageBitmap?>(null, i, px, dark) {
         if (!dark) { value = withContext(Dispatchers.IO) { runCatching { p.render(i, px)?.asImageBitmap() }.getOrNull() }; return@produceState }
@@ -298,11 +421,14 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
     val paint = remember { android.graphics.Paint() }
     var cur by remember { mutableStateOf<PAnn?>(null) }
     val toolNow by rememberUpdatedState(tool); val colNow by rememberUpdatedState(color)
+    val appCtx = LocalContext.current.applicationContext
+    val words by produceState<List<PWord>>(emptyList(), i) { value = withContext(Dispatchers.IO) { p.words(i, appCtx) } }
+    var selStart by remember(i) { mutableStateOf(-1) }
     Box(Modifier.fillMaxWidth()) {
         if (b != null) Image(b, null, Modifier.fillMaxWidth().background(bg), contentScale = ContentScale.FillWidth)
         else Box(Modifier.fillMaxWidth().aspectRatio(.707f).background(bg), contentAlignment = Alignment.Center) { Text("${i + 1}", color = Color.Gray) }
-        if (anns.isNotEmpty() || tool != 0 || cur != null) Canvas(Modifier.matchParentSize()
-            .pointerInput(tool, anns) {
+        if (anns.isNotEmpty() || tool != 0 || cur != null || found.isNotEmpty() || sel != null) Canvas(Modifier.matchParentSize()
+            .pointerInput(tool, anns, words) {
                 if (tool == 3) detectTapGestures { o ->
                     val hit = anns.lastOrNull { it.kind >= 2 && annBounds(it, size.width.toFloat(), size.height.toFloat(), paint).contains(o.x, o.y) }
                     onText(o.x / size.width, o.y / size.height, hit) }
@@ -319,12 +445,28 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
                                 onText(a.x, a.y, hit) }
                         }
                     }, onDragCancel = { cur = null })
+                else if (tool == 5) detectDragGestures(
+                    onDragStart = { o -> val k = wordAt(words, o.x / size.width, o.y / size.height); selStart = k; onSel(if (k >= 0) PSel(i, k, k) else null) },
+                    onDrag = { ch, _ -> val k = wordAt(words, ch.position.x / size.width, ch.position.y / size.height); if (k >= 0 && selStart >= 0) onSel(PSel(i, selStart, k)) },
+                    onDragEnd = { }, onDragCancel = { })
                 else if (tool != 0) detectDragGestures(
                     onDragStart = { o -> cur = PAnn(i, toolNow - 1, listOf(Offset(o.x / size.width, o.y / size.height)), colNow) },
                     onDragEnd = { cur?.let(onAdd); cur = null }, onDragCancel = { cur = null },
                     onDrag = { ch, _ -> cur?.let { c -> cur = PAnn(c.page, c.kind, c.pts + Offset(ch.position.x / size.width, ch.position.y / size.height), c.color) } })
             }) {
             drawIntoCanvas { cv -> (anns + listOfNotNull(cur)).forEach { drawAnn(cv.nativeCanvas, it, size.width, size.height, paint, dark) } }
+            // the words found by the search: yellow, the one in view orange
+            for ((h, now) in found) for (k in h.a..h.b) if (k in words.indices) {
+                val w = words[k]
+                drawRect(if (now) Color(0xAAFF9800) else Color(0x88FFEB3B), Offset(w.x * size.width, w.y * size.height), Size(w.w * size.width, w.h * size.height))
+            }
+            // the selected words, shaded
+            sel?.takeIf { it.page == i }?.let { s ->
+                for (k in minOf(s.a, s.b)..maxOf(s.a, s.b)) if (k in words.indices) {
+                    val w = words[k]
+                    drawRect(Color(0x663D8BFD), Offset(w.x * size.width, w.y * size.height), Size(w.w * size.width, w.h * size.height))
+                }
+            }
         }
     }
 }

@@ -77,6 +77,13 @@ private val EXTRA_SENSOR = Regex("spo2|oxygen|arable", RegexOption.IGNORE_CASE)
 /** Steps, distance and calories from the step counter, a heart rate from the camera flash, an activity timer and location. Estimates only. */
 @Composable
 fun HealthScreen(onBack: () -> Unit) {
+    // the gym log opens inside Health and takes its back button
+    var gym by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    if (gym >= 0) com.umutk.pulse.features.gym.GymScreen({ gym = -1 }, gym) else HealthMain(onBack) { gym = it }
+}
+
+@Composable
+private fun HealthMain(onBack: () -> Unit, openGym: (Int) -> Unit) {
     val ctx = LocalContext.current
     val sm = remember { ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val stepSensor = remember { sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
@@ -313,6 +320,8 @@ fun HealthScreen(onBack: () -> Unit) {
             Text("Used for distance and calories.", color = T.sub, fontSize = 12.sp)
         }
         }
+        // the gym log is part of Health, at the bottom of the page: this week, today's food and what to train next, with a way into each part
+        if (tab == 0) com.umutk.pulse.features.gym.GymSummary(openGym)
     }
     if (showGoals) GoalsDialog(prefs, { showGoals = false }) { rev++ }
     if (tab == 0) {

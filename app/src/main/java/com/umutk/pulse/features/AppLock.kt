@@ -270,6 +270,11 @@ fun AppLockPage() {
         onDispose { owner.lifecycle.removeObserver(obs) }
     }
     val a11y = remember(tick) { AppLock.serviceEnabled(ctx) }
+    // the page opens the accessibility settings by itself the first time it shows with the service off, so it can be switched on
+    var asked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(a11y) {
+        if (!a11y && !asked) { asked = true; runCatching { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+    }
     val usage = remember(tick) { AppLock.usageGranted(ctx) }
     val draw = remember(tick) { AppLock.canDraw(ctx) }
 

@@ -50,6 +50,9 @@ import com.umutk.pulse.PLoader
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 
 /**
  * The lyrics of the player, laid over the cover square. One rule keeps it from ever staying invisible: it is a plain AnimatedVisibility
@@ -70,13 +73,16 @@ fun PlayerLyrics(
     ) {
         val ctx = LocalContext.current
         var attempt by remember { mutableIntStateOf(0) }
+        // a find the person chose: the lyrics are looked up again, now from beside the song
+        var pickRev by remember { mutableIntStateOf(0) }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
         var qTitle by remember(title) { mutableStateOf(title) }
         var qArtist by remember(artist) { mutableStateOf(artist) }
         // (still looking, what was found)
-        val state by produceState(true to (null as LyricsResult?), title, artist, localPath, attempt) {
+        val state by produceState(true to (null as LyricsResult?), title, artist, localPath, attempt, pickRev) {
             value = true to null
             val r = runCatching {
-                if (attempt == 0) Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath) ?: Lyrics.forTrack(ctx, title.substringAfter(" - "), "", album, durationMs, localPath)
+                if (attempt == 0 || pickRev > 0) Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath) ?: Lyrics.forTrack(ctx, title.substringAfter(" - "), "", album, durationMs, localPath)
                 else Lyrics.forTrack(ctx, qTitle, qArtist, album, durationMs, null)
             }.getOrNull()
             value = false to r
@@ -84,6 +90,14 @@ fun PlayerLyrics(
                 Lyrics.keep(localPath, r)
             }
         }
+        // nothing found (or the first find is not taken on its own): the finds are listed, to try against the song and choose from
+        val noneFound = !state.first && state.second == null
+        val cands by produceState(emptyList<LyricsRecord>(), noneFound, qTitle, qArtist, attempt) {
+            value = if (noneFound) runCatching { Lyrics.candidates(ctx, qTitle, qArtist, album, durationMs) }.getOrDefault(emptyList()) else emptyList()
+        }
+        var preview by remember(title, artist) { mutableStateOf<LyricsRecord?>(null) }
+        // sharing the lyrics card is an ad-gated feature (play build): the ad opens it for 30 minutes
+        val shareGate = com.umutk.pulse.ads.rememberAdGate(tr("Share lyrics", "Şarkı sözünü paylaş"), tr("Watch a short ad to share the lyrics.", "Şarkı sözünü paylaşmak için kısa bir reklam izle."), key = "lyrics_share", minutes = 30)
         // 0 reading, 1 picking lines to share, 2 the card to share
         var mode by remember(title, artist) { mutableIntStateOf(0) }
         var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
@@ -112,7 +126,7 @@ fun PlayerLyrics(
             val (busy, res) = state
             when {
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
-                res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { LyricsShare.share(ctx, it) }, Modifier.fillMaxSize().padding(top = 40.dp))
+                res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { bmp -> shareGate { LyricsShare.share(ctx, bmp) } }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .12f))) {
@@ -128,6 +142,18 @@ fun PlayerLyrics(
                     LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true)
                 }
                 res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp), onDark = true)
+                // a find tried against the song that plays: its lines follow the position; "Use these" keeps it beside the song
+                preview != null && res == null -> Column(Modifier.fillMaxSize()) {
+                    val rec = preview!!
+                    Text("${rec.artistName} - ${rec.trackName}", color = Color.White.copy(alpha = .8f), fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 16.dp, end = 56.dp, top = 12.dp))
+                    Lyrics.toResult(rec, "lrclib")?.let { pr -> LyricsView(pr, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true) }
+                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Use these", "Bunu kullan"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                            .clickable { scope.launch { Lyrics.choose(ctx, rec, localPath); preview = null; pickRev++ } }.padding(horizontal = 20.dp, vertical = 9.dp))
+                        Text(tr("Back", "Geri"), color = Color.White, fontSize = 14.sp, modifier = Modifier.background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                            .clickable { preview = null }.padding(horizontal = 20.dp, vertical = 9.dp))
+                    }
+                }
                 busy -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
                     PLoader()
                     Text(tr("Searching for lyrics…", "Sözler aranıyor…"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
@@ -145,6 +171,20 @@ fun PlayerLyrics(
                     field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
                     Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
                         .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
+                    if (cands.isNotEmpty()) {
+                        Text(tr("Found", "Bulunanlar"), color = Color.White.copy(alpha = .6f), fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+                        Column(Modifier.heightIn(max = 220.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                            cands.forEach { c ->
+                                Column(Modifier.fillMaxWidth().clickable { preview = c }.padding(vertical = 7.dp)) {
+                                    Text("${c.artistName} - ${c.trackName}", color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text(
+                                        when { c.syncedLyrics?.contains('<') == true -> tr("Word by word", "Kelime kelime"); c.syncedLyrics != null -> tr("Synced", "Senkron"); else -> tr("Plain text", "Düz metin") },
+                                        color = Color.White.copy(alpha = .55f), fontSize = 11.sp,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp)) {

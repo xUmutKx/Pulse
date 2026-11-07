@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,8 @@ data class VideoItem(
     val w: Int = 0, val h: Int = 0, val mime: String = "",
 ) {
     val key: String get() = uri.toString()
+    /** What the video's kept subtitle is filed under: its name and size (the same file opened through another address finds it too), else its address. */
+    val subKey: String get() = if (size > 0 && name.isNotBlank()) "nm:$name|$size" else key
     val ext: String get() = name.substringAfterLast('.', "").uppercase()
     val local: Boolean get() = uri.scheme == "content" && uri.authority == "media"
 }
@@ -49,6 +52,45 @@ fun queryVideos(ctx: Context): List<VideoItem> {
             }
         }
     }
+    return out
+}
+
+/** Folders the walk never enters: app data, the Android folder and developer folders with source code or dependencies. */
+private val SKIP_DIRS = setOf("Android", "node_modules", "build", "__pycache__", "vendor")
+
+private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", "ts", "flv", "wmv", "mpg", "mpeg")
+
+/**
+ * Videos the media index does not know (a file copied in by another app, or a folder the index skipped): found by walking
+ * the shared storage. Files the index already lists (same name and size) are not added twice.
+ */
+private var unindexedCache: List<VideoItem>? = null
+
+/** [unindexedVideos] once per run: walking the whole storage on every change of the view froze the browser. */
+internal fun unindexedOnce(known: List<VideoItem>): List<VideoItem> = unindexedCache ?: unindexedVideos(known).also { unindexedCache = it }
+
+internal fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
+    val seen = known.mapTo(HashSet()) { it.name to it.size }
+    val root = android.os.Environment.getExternalStorageDirectory()
+    val out = ArrayList<VideoItem>()
+    fun walk(dir: java.io.File, depth: Int) {
+        if (depth > 8 || out.size > 3000) return
+        dir.listFiles()?.forEach { f ->
+            when {
+                f.isDirectory -> if (!f.name.startsWith(".") && f.name !in SKIP_DIRS) walk(f, depth + 1)
+                // a .ts file is a video only when it is big: small ones are TypeScript source code, which sits in developer folders
+                f.isFile && f.extension.lowercase() in VIDEO_EXT && (f.extension.lowercase() != "ts" || f.length() >= 5L * 1024 * 1024) && (f.name to f.length()) !in seen -> {
+                    val parent = f.parentFile
+                    out += VideoItem(
+                        Uri.fromFile(f), f.name, 0L, parent?.name.orEmpty(),
+                        parent?.path?.removePrefix(root.path)?.trimStart('/').orEmpty(), f.length(), f.lastModified() / 1000, f.lastModified() / 1000,
+                        0, 0, "video/" + f.extension.lowercase(),
+                    )
+                }
+            }
+        }
+    }
+    runCatching { walk(root, 0) }
     return out
 }
 
@@ -86,12 +128,39 @@ private val thumbs = object : LruCache<String, ImageBitmap>(8 * 1024 * 1024) {
 fun videoThumb(item: VideoItem): ImageBitmap? {
     val ctx = LocalContext.current
     val key = item.uri.toString()
-    val bmp by produceState(thumbs.get(key), key) {
-        if (value == null) value = withContext(Dispatchers.IO) {
-            if (android.os.Build.VERSION.SDK_INT < 29) null else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
+    // a list row is reused for another video when the list changes: the picture is kept together with the address it was made for, so a row never shows the one of the video it had before
+    val loaded by produceState<Pair<String, ImageBitmap?>>(key to thumbs.get(key), key) {
+        val have = thumbs.get(key)
+        if (have != null) { value = key to have; return@produceState }
+        value = key to withContext(Dispatchers.IO) {
+            val sys = if (android.os.Build.VERSION.SDK_INT < 29 || item.uri.scheme == "file") null
+                else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
+            // the system picture is often black (a fade-in first frame) or missing: then a frame from the middle of this video
+            if (sys != null && !isDark(sys)) sys else middleFrame(ctx, item.uri) ?: sys
         }?.also { thumbs.put(key, it) }
     }
-    return bmp
+    return if (loaded.first == key) loaded.second else thumbs.get(key)
+}
+
+/** True when the picture is nearly black: sampled on a 6x4 grid. */
+private fun isDark(b: ImageBitmap): Boolean {
+    val a = b.asAndroidBitmap()
+    var sum = 0L; var n = 0
+    for (y in 0 until 4) for (x in 0 until 6) {
+        val c = a.getPixel(a.width * (2 * x + 1) / 12, a.height * (2 * y + 1) / 8)
+        sum += ((c shr 16) and 0xff) + ((c shr 8) and 0xff) + (c and 0xff); n++
+    }
+    return sum / (3L * n) < 14
+}
+
+/** A frame at 30% of the video, read by the retriever (works for files the media index does not know). */
+private fun middleFrame(ctx: Context, u: Uri): ImageBitmap? {
+    val r = android.media.MediaMetadataRetriever()
+    return try {
+        r.setDataSource(ctx, u)
+        val ms = (r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L)
+        r.getScaledFrameAtTime(ms * 300, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)?.asImageBitmap()
+    } catch (e: Exception) { null } finally { runCatching { r.release() } }
 }
 
 private fun bool(sp: () -> SharedPreferences, k: String, d: Boolean) = object : ReadWriteProperty<Any?, Boolean> {
@@ -229,6 +298,10 @@ class VideoPrefs(ctx: Context) {
     var grid by bool(g, "grid", false)
     var showThumb by bool(g, "s_thumb", true)
     var showDur by bool(g, "s_dur", true)
+    /** a clean name for episodes and films: "Dexter S03E08 · The Damage A Man Can Do" instead of the file name with its release tags */
+    var smartNames by bool(g, "smart_names", true)
+    /** Back from a playing video: the video goes on in the small window (the floating one, else picture in picture) instead of stopping. */
+    var backMini by bool(g, "back_mini", true)
     var showExt by bool(g, "s_ext", false)
     var showPath by bool(g, "s_path", false)
     var showSize by bool(g, "s_size", false)
@@ -239,6 +312,10 @@ class VideoPrefs(ctx: Context) {
 
     // player
     var skin by str(g, "skin", "next")
+    /** The buttons on the player's bar, comma-separated (see VideoControls.kt); the rest are in the ⋮ menu. */
+    var barButtons by str(g, "bar_buttons", DEFAULT_BAR)
+    /** where the ⋮ menu opens: 0 top right, 1 bottom left (above the control bar) */
+    var moreAt by int(g, "more_at", 0)
     var bg by bool(g, "bg", false)
     /** 0 fit, 1 stretch, 2 crop, 3 16:9, 4 4:3 */
     var aspect by int(g, "aspect", 0)
@@ -255,6 +332,9 @@ class VideoPrefs(ctx: Context) {
     var defSpeed by flt(g, "def_speed", 1f) // start speed when "Remember speed" is off
     var rememberSpeed by bool(g, "remember_speed", false)
     var lpSpeed by flt(g, "lp_speed", 2f)
+    /** the two ends of the speed bar; any speed between them in steps of 0.01 */
+    var speedMin by flt(g, "speed_min", 0.25f)
+    var speedMax by flt(g, "speed_max", 2f)
     var gestSeek by bool(g, "g_seek", true)
     var gestVol by bool(g, "g_vol", true)
     var gestBright by bool(g, "g_bright", true)
@@ -290,7 +370,9 @@ class VideoPrefs(ctx: Context) {
     var prefAudio by str(g, "pref_audio", "")
     var prefSub by str(g, "pref_sub", "")
     var rememberSel by bool(g, "remember_sel", true)
-    var subSize by int(g, "sub_size", 20)
+    /** subtitle size in sp: one for the full screen, a smaller one for the picture-in-picture window; fixed for every video and speed */
+    var subSize by int(g, "sub_size_sp", 38)
+    var subSizePip by int(g, "sub_size_pip", 18)
     var subBg by bool(g, "sub_bg", false)
     var subBold by bool(g, "sub_bold", false)
     var subEdge by bool(g, "sub_edge", true)
@@ -309,7 +391,8 @@ class VideoPrefs(ctx: Context) {
     /** side margin in dp */
     var subMargin by int(g, "sub_margin", 0)
     /** true: use only the options here, false: keep the colours and sizes of the subtitle file */
-    var subIgnoreStyle by bool(g, "sub_ignore", true)
+    // the subtitle file's own styling (colour, place) is used by default; off ignores it and uses the settings below
+    var subIgnoreStyle by bool(g, "sub_ignore", false)
 
     // player extras
     var rememberVolume by bool(g, "rem_vol", false)

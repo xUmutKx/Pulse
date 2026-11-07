@@ -56,12 +56,13 @@ private fun pathOf(ctx: android.content.Context, uri: android.net.Uri): String? 
 fun HomeSheet() {
     val ctx = LocalContext.current
     val addWidget = rememberWidgetAdd { }
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // a file or a picture for the home screen: its place on the phone is kept, the file itself is not copied
     fun addLink(path: String?) {
         if (path == null) { android.widget.Toast.makeText(ctx, tr("This file cannot be put on the home screen", "Bu dosya ana ekrana konamaz"), android.widget.Toast.LENGTH_SHORT).show(); return }
         LauncherPrefs.links = (LauncherPrefs.links + "file:$path").distinct(); LauncherPrefs.save(ctx)
     }
-    val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
+    val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
     var folderName by androidx.compose.runtime.remember { mutableStateOf("") }
     if (HomeSheetState.sheet) ContextPopup(220.dp, 400.dp, onDismiss = { HomeSheetState.sheet = false }) {
         val w = com.umutk.pulse.LocalWindowLook.current
@@ -102,7 +103,7 @@ fun HomeSheet() {
         dismissButton = { com.umutk.pulse.PButton(tr("Cancel", "Vazgeç")) { HomeSheetState.newFolder = false } },
     )
     if (HomeSheetState.widgets) WidgetPickDialog(
-        onPick = { HomeSheetState.widgets = false; addWidget(it) },
+        onPick = { HomeSheetState.widgets = false; adGate { addWidget(it) } },
         onDismiss = { HomeSheetState.widgets = false })
 }
 

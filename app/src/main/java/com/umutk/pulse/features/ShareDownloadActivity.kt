@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -66,7 +67,9 @@ class ShareDownloadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this)
-        val url = Regex("https?://\\S+").find(intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty())?.value
+        // a shared text (SEND), or a stream opened from another app (VIEW with the link as its data)
+        val raw = if (intent.action == Intent.ACTION_VIEW) intent.dataString.orEmpty() else intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+        val url = Regex("https?://\\S+").find(raw)?.value
         if (url == null) { finish(); return }
         setContent {
             val ctx = LocalContext.current
@@ -85,11 +88,52 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
     val found by produceState<LinkFinder.Result?>(null, url) { value = LinkFinder.find(url) }
     var chosen by remember { mutableStateOf<String?>(null) }
     val target = chosen ?: if (found is LinkFinder.Result.Direct || found is LinkFinder.Result.Failed) url else null
+    // the window stays open after "Download": it shows the download's progress until it is done; tapping outside or Back closes it
+    var started by remember { mutableStateOf<String?>(null) }
+    val tasks by Downloads.tasks.collectAsState()
+    val task = started?.let { s -> tasks.lastOrNull { it.url == s } }
     fun download() {
         val t = target ?: return
         Downloads.add(ctx, t)
+        started = t
         Toast.makeText(ctx, tr("Download started", "İndirme başladı"), Toast.LENGTH_SHORT).show()
-        close()
+    }
+    val progressBlock: @Composable () -> Unit = {
+        val tk = task
+        if (tk != null) {
+            val total = tk.total.collectAsState().value
+            val done = tk.done.collectAsState().value
+            val st = tk.state.collectAsState().value
+            val speed = tk.speed.collectAsState().value
+            val frac = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
+            val label = when (st) {
+                DlState.DONE -> tr("Done", "Bitti")
+                DlState.FAILED -> tr("Failed", "Başarısız")
+                DlState.PAUSED -> tr("Paused", "Duraklatıldı")
+                // the speed shows while the download runs
+                else -> (if (total > 0) "${(frac * 100).toInt()}%" else tr("Downloading…", "İndiriliyor…")) + (if (speed > 0) " · " + speedText(speed) else "")
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, color = T.sub, fontSize = 12.sp)
+                Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(T.sub.copy(alpha = .25f))) {
+                    Box(Modifier.fillMaxWidth(if (st == DlState.DONE) 1f else frac).height(3.dp).background(T.accent))
+                }
+            }
+        }
+    }
+    var askCancel by remember { mutableStateOf(false) }
+    if (askCancel) com.umutk.pulse.PDialog(
+        title = tr("Cancel the download?", "İndirme iptal edilsin mi?"),
+        text = tr("The file that is part way is removed.", "Yarım kalan dosya silinir."),
+        confirm = tr("Cancel download", "İndirmeyi iptal et"),
+        onConfirm = { askCancel = false; task?.let { Downloads.remove(it) }; close() },
+        onDismiss = { askCancel = false },
+    )
+    // the link in an outside player (the app chooser); a stream plays there, the download stays here
+    fun openPlayer() {
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(target ?: url), "video/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { ctx.startActivity(Intent.createChooser(i, tr("Open with", "Birlikte aç")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { Toast.makeText(ctx, tr("No player found", "Oynatıcı bulunamadı"), Toast.LENGTH_SHORT).show() }
     }
     fun openPulse() { Downloads.wanted = true; ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); close() }
     val body: @Composable () -> Unit = {
@@ -114,24 +158,41 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
     }
     if (look.startsWith("win")) {
         // the Windows looks get a Windows dialog box
-        WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body() },
-            confirmButton = { PButton(tr("Download", "İndir")) { download() } },
-            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { close() } } })
+        val finishedWin = task?.state?.value == DlState.DONE
+        WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body(); progressBlock() },
+            confirmButton = { if (finishedWin) PButton(tr("Open", "Aç")) { openPulse() } else PButton(tr("Download", "İndir")) { if (started == null) download() } },
+            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { if (task?.state?.value == DlState.RUNNING || task?.state?.value == DlState.PAUSED) askCancel = true else close() } } })
     } else {
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .35f)).clickable(onClick = close), contentAlignment = Alignment.BottomCenter) {
             Column(Modifier.fillMaxWidth().clip26().background(T.bg).clickable(enabled = false) {}.navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Download", "İndir"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    ExtraLookIcon(T.text)
                 }
                 body()
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { download() }
-                    PButton(tr("Open Pulse", "Pulse'u aç"), Modifier.weight(1f)) { openPulse() }
+                // Cancel, then Open Pulse (only once the file is downloaded), and Download at the right end; the labels are never cut
+                val finished = task?.state?.value == DlState.DONE
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f), compact = true) {
+                        // a download that is still running asks first; it is removed only when the person confirms
+                        val running = task?.let { it.state.value == DlState.RUNNING || it.state.value == DlState.PAUSED } == true
+                        if (running) askCancel = true else close()
+                    }
+                    // the download button becomes Open once the file is downloaded
+                    if (finished) PButton(tr("Open", "Aç"), Modifier.weight(1f), compact = true) { openPulse() }
+                    else PButton(tr("Download", "İndir"), Modifier.weight(1f), compact = true) { if (started == null) download() }
                 }
+                // the progress is a thin line at the very bottom
+                progressBlock()
             }
         }
     }
+}
+
+/** A download speed for the window: KB/s or MB/s. */
+private fun speedText(b: Long): String = when {
+    b >= 1_048_576 -> "%.1f MB/s".format(b / 1_048_576.0)
+    b >= 1024 -> "%.0f KB/s".format(b / 1024.0)
+    else -> "$b B/s"
 }
 
 private fun Modifier.clip26() = this.then(Modifier.clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)))

@@ -35,6 +35,9 @@ object BudsPrefs {
     /** The last choice made for a control (the earbuds are not asked, so this is what was last sent from here). */
     fun saved(c: Context, key: String, def: Int) = p(c).getInt("c_$key", def)
     fun save(c: Context, key: String, v: Int) = p(c).edit().putInt("c_$key", v).apply()
+    /** What a touch and hold does when the earbud's touch option is "Custom": the id of an action of [BudsActions], per side ("L" or "R"). */
+    fun hold(c: Context, side: String) = p(c).getString("hold$side", "playPause") ?: "playPause"
+    fun setHold(c: Context, side: String, id: String) = p(c).edit().putString("hold$side", id).apply()
     /** Keep the connection in the background (a small notification). */
     fun keepOn(c: Context) = p(c).getBoolean("keepOn", false)
     fun setKeepOn(c: Context, v: Boolean) = p(c).edit().putBoolean("keepOn", v).apply()

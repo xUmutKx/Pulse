@@ -13,6 +13,18 @@ object NotesPrefs {
     fun transparent(c: Context) = sp(c).getBoolean("transparent", true)
     fun setTransparent(c: Context, on: Boolean) = sp(c).edit().putBoolean("transparent", on).apply()
 
+    /** Folders made from the list's "new folder" button, kept even while they hold no note (path like "Ders/Matematik"). */
+    fun extraFolders(c: Context): Set<String> = sp(c).getStringSet("extra_folders", emptySet()).orEmpty()
+    fun addFolder(c: Context, path: String) {
+        val p = path.trim().trim('/')
+        if (p.isBlank()) return
+        // the folder and its parents, so the tree in the side panel shows the whole path
+        val parts = p.split('/').filter { it.isNotBlank() }
+        val all = extraFolders(c).toMutableSet()
+        for (i in 1..parts.size) all += parts.take(i).joinToString("/")
+        sp(c).edit().putStringSet("extra_folders", all).apply()
+    }
+
     enum class Sort(val en: String, val tr: String) { UPDATED("Last edited", "Son düzenleme"), CREATED("Created", "Oluşturulma"), TITLE("Title", "Başlık") }
 
     /** Paper colours for the editor surface; AUTO keeps the look's own panel colour. */
@@ -37,7 +49,13 @@ object NotesPrefs {
 
     fun grid(c: Context) = sp(c).getBoolean("grid", false)
     fun setGrid(c: Context, on: Boolean) = sp(c).edit().putBoolean("grid", on).apply()
+    /** How the notes are laid out: "list" (one row each), "grid" (two columns of cards) or "book" (two columns of page-like cards). */
+    fun view(c: Context): String = sp(c).getString("view", null) ?: if (grid(c)) "grid" else "list"
+    fun setView(c: Context, v: String) = sp(c).edit().putString("view", v).putBoolean("grid", v != "list").apply()
 
+    /** A black background for the notes (the paper stays as it is): the switch in the notes settings. */
+    fun black(c: Context) = sp(c).getBoolean("black", false)
+    fun setBlack(c: Context, on: Boolean) { sp(c).edit().putBoolean("black", on).apply(); NotesBg.black = on }
     fun groups(c: Context) = sp(c).getBoolean("groups", true)
     fun setGroups(c: Context, on: Boolean) = sp(c).edit().putBoolean("groups", on).apply()
 
@@ -85,4 +103,9 @@ object NotesPrefs {
 
     /** A note colour as a Compose colour; 0 is no colour. */
     fun argb(v: Int): Color = if (v == 0) Color.Transparent else Color(v)
+}
+
+/** The notes background for this session (set from the settings and when the notes open): black, or the look's page colour. */
+object NotesBg {
+    @JvmStatic var black = false
 }

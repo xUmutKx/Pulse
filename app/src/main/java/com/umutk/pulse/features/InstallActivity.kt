@@ -27,6 +27,11 @@ class InstallActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // the play build does not install APK files (no REQUEST_INSTALL_PACKAGES there)
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) {
+            android.widget.Toast.makeText(this, com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"), android.widget.Toast.LENGTH_LONG).show()
+            finish(); return
+        }
         Cfg.load(this); Opt.load(this); Installer.load(this); InstallShow.load(this)
         // several APKs from Files: one floating window for all of them
         val many = intent.getStringArrayListExtra("apks")
@@ -45,23 +50,28 @@ class InstallActivity : ComponentActivity() {
             }
         }
         // root is detected before the window reads it; the APK is copied off the main thread, as MainActivity did
+        // the root check (it can wait on a root prompt for seconds) runs beside the copy, not before it; a root that is already known is not asked again
+        val rootCheck = Thread { if (Shell.root == null) Shell.detectRoot() }.also { it.start() }
         Thread {
-            Shell.detectRoot()
             val f = File(cacheDir, "open/open.apk").apply { parentFile?.mkdirs() }
             val total = size(uri)
             try {
                 val input = contentResolver.openInputStream(uri) ?: throw IOException("no content")
                 input.use { i -> f.outputStream().use { o ->
-                    val buf = ByteArray(64 * 1024)
-                    var done = 0L
+                    val buf = ByteArray(1024 * 1024)
+                    var done = 0L; var shownAt = 0L
                     while (true) {
                         val n = i.read(buf); if (n < 0) break
                         o.write(buf, 0, n); done += n
-                        if (total > 0) { val p = done.toFloat() / total; runOnUiThread { copied = p } }
+                        // the bar moves a few times a second, not once for every read
+                        val now = android.os.SystemClock.uptimeMillis()
+                        if (total > 0 && now - shownAt > 100) { shownAt = now; val p = done.toFloat() / total; runOnUiThread { copied = p } }
                     }
                 } }
             }
             catch (e: Exception) { runOnUiThread { Toast.makeText(this, "Could not read the APK: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show(); finish() }; return@Thread }
+            // the window reads the root state: it waits for the check a moment at most
+            runCatching { rootCheck.join(1500) }
             runOnUiThread { file = f }
         }.start()
     }

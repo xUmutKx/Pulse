@@ -48,8 +48,10 @@ class MusicPlaybackService : MediaSessionService() {
     private val volWatch = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1) != android.media.AudioManager.STREAM_MUSIC) return
-            if (!MusicSettings.pauseAtZeroVolume(c)) return
             val v = i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 1)
+            // a headset was plugged in while the volume was zero: nothing played then, the song starts when the volume is turned up
+            if (v > 0 && waitForVolume) { waitForVolume = false; Playlists.restore(c, engine); engine.play(); return }
+            if (!MusicSettings.pauseAtZeroVolume(c)) return
             // the volume turned to zero stops the song, and turned up again it carries on (only when it was stopped by this)
             if (v == 0 && engine.player.playWhenReady) { pausedByZero = true; engine.pause() }
             else if (v > 0 && pausedByZero) { pausedByZero = false; engine.play() }
@@ -57,6 +59,8 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     private var devCb: Any? = null
+    /** A headset or speaker connected while the media volume was zero: play waits until the volume is turned up. */
+    private var waitForVolume = false
 
     @androidx.annotation.RequiresApi(23)
     private inner class DevCb : AudioDeviceCallback() {
@@ -68,8 +72,9 @@ class MusicPlaybackService : MediaSessionService() {
             // a USB DAC can pop loudly while it starts up: pause when one connects
             if (usb && MusicSettings.pauseUsbDac(this@MusicPlaybackService)) engine.pause()
             else if (wired && MusicSettings.resumeWired(this@MusicPlaybackService)) {
-                Playlists.restore(this@MusicPlaybackService, engine)
-                engine.play()
+                // the volume is at zero: the song does not start now, it waits for the volume to be turned up
+                if (devices.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) waitForVolume = true
+                else { Playlists.restore(this@MusicPlaybackService, engine); engine.play() }
             }
         }
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = refresh()
@@ -104,12 +109,8 @@ class MusicPlaybackService : MediaSessionService() {
     private fun run(b: NotifBtn) {
         val p = engine.player
         when (b) {
-            NotifBtn.SHUFFLE -> p.shuffleModeEnabled = !p.shuffleModeEnabled
-            NotifBtn.REPEAT -> p.repeatMode = when (p.repeatMode) {
-                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                else -> Player.REPEAT_MODE_OFF
-            }
+            NotifBtn.SHUFFLE -> PlayModes.cycleShuffle(this)
+            NotifBtn.REPEAT -> PlayModes.cycleRepeat(this)
             NotifBtn.FAV -> p.currentMediaItem?.mediaId?.let { MusicStats.toggleFavourite(this, it) }
             NotifBtn.CLOSE -> {
                 engine.saveResume()
@@ -132,6 +133,16 @@ class MusicPlaybackService : MediaSessionService() {
 
     /** Opens the Music hub (the launcher alias routes to it); [open] names a sheet for the hub to show. */
     private fun hubIntent(open: String? = null) = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").also { i -> open?.let { i.putExtra(EXTRA_OPEN, it) } }
+
+    /** The Winamp notification card's buttons come here as service commands. */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            "pulse.winamp.prev" -> engine.previous()
+            "pulse.winamp.next" -> engine.next()
+            "pulse.winamp.play" -> if (engine.player.isPlaying) engine.pause() else engine.play()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate() {
