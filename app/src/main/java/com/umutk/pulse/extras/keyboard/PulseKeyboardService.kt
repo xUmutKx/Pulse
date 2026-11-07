@@ -525,6 +525,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (userLike) LoginSaver.rememberUser(info.packageName, text)
     }
 
+    /** A name field left with "Umut Kıvanç Şahin" in it: the whole name is kept, so its first letters offer it in any field. */
+    private fun learnFullName() {
+        if (st.incognito) return
+        val hint = (currentInputEditorInfo?.hintText?.toString().orEmpty() + " " + currentInputEditorInfo?.label?.toString().orEmpty()).lowercase()
+        if (!nameField && listOf("ad soyad", "adınız", "adiniz", "full name", "your name", "isim soyisim", "ad-soyad").none { hint.contains(it) }) return
+        val ic = currentInputConnection ?: return
+        val t = (ic.getTextBeforeCursor(80, 0)?.toString().orEmpty() + ic.getTextAfterCursor(80, 0)?.toString().orEmpty()).trim()
+        val parts = t.split(' ').filter { it.isNotBlank() }
+        if (parts.size !in 2..4 || !parts.all { p -> p.all { it.isLetter() || it == '\'' || it == '-' } }) return
+        getSharedPreferences("pulse_kb_fullnames", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(t) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != t }).take(5).joinToString("\n")).apply() }
+    }
+
     override fun onFinishInput() {
         runCatching { trackLogin() }
         super.onFinishInput()
@@ -532,6 +544,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         lastEmail?.let { e -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(e) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != e }).take(5).joinToString("\n")).apply() } }
         lastEmail = null
         word.clear(); lastCorrection = null
+        runCatching { learnFullName() }
         KeyboardDictionary.saveUser(this)
         Thread { runCatching { com.umutk.pulse.AutoBackup.maybeRun(applicationContext) } }.start()
     }
@@ -738,13 +751,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return false
         }
         var out = typed
+        // a word that is part of an address (after an "@") is never corrected: "gmail" and "com" stay as typed
+        val inAddr = c.getTextBeforeCursor(80, 0)?.toString().orEmpty().takeLastWhile { !it.isWhitespace() }.contains('@')
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
         // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
         var timedOut = false
         val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale
-        var t = if (typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
+        var t = if (inAddr || typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
-        if (t == null && correct && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
+        if (t == null && correct && !inAddr && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
             t = runCatching {
                 // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
@@ -756,7 +771,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (dotFix) {
             dotFix = false
             val lw = typed.lowercase(lang.locale)
-            if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
+            if (!inAddr && sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
         if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
@@ -1628,6 +1643,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com")
+    /** The domains of the addresses typed before, the most used first, then the usual ones: a short list that reads on the bar. */
+    private fun rankedDomains(): List<String> {
+        val counts = getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }
+        val mine = counts.sortedByDescending { it.second }.map { "@" + it.first }
+        return (mine + domains).distinct().take(6)
+    }
     private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
 
     /** An e-mail field: the addresses typed here before when it is empty, the usual domains once there is a name or an "@". */
@@ -1640,6 +1661,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (emailRe.matches(tok)) {
             val low = tok.lowercase()
             getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { sp -> sp.edit().putString("list", (listOf(low) + emailsSaved().filter { it != low }).take(8).joinToString("\n")).apply() }
+            // the domains typed most come first on the bar (counted here)
+            val dom = low.substringAfter('@')
+            getSharedPreferences("pulse_kb_domains", MODE_PRIVATE).let { sp -> sp.edit().putInt(dom, sp.getInt(dom, 0) + 1).apply() }
         }
     }
 
@@ -1664,7 +1688,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val domainPart = tok.substringAfterLast('@')
                 val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
                 // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
-                val dom = domains.filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
+                val dom = rankedDomains().filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
                 (dom + mine).distinct().take(8)
             }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
@@ -1673,7 +1697,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // at least three slots, so the code that reads the first three never meets a short list
         slotWords = (list + listOf("", "", "")).take(maxOf(3, list.size)).toTypedArray()
         st.slots = slotWords.toList()
-        st.emailBar = emailField && list.isNotEmpty()
+        // the chips of the e-mail bar read in full (no cut-off words) and scroll, in an e-mail field and anywhere an address is typed
+        st.emailBar = list.isNotEmpty()
     }
 
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
@@ -1794,7 +1819,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
-                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
+                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
             kotlinx.coroutines.delay(180)
@@ -1805,10 +1830,43 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
                 val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
-                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
+                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
                 showClipSlot()
             }
         }
+    }
+
+    /**
+     * What is yours, offered in any field while the first letters are typed: your full name and your e-mail addresses (learned from what you typed, and from the vault's identity).
+     * "umut" can be "Umut Kıvanç Şahin" or "umutsahin1950@gmail.com": both are put on the bar, the name first, beside the usual word.
+     */
+    private fun personalItems(typed: String): List<String> {
+        if (st.incognito || typed.length < 2 || typed.any { it.isDigit() }) return emptyList()
+        val key = com.umutk.pulse.OfFind.fold(typed, false)
+        val names = LinkedHashSet<String>()
+        names.addAll(getSharedPreferences("pulse_kb_fullnames", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() })
+        val mails = LinkedHashSet<String>()
+        mails.addAll(emailsSaved())
+        if (!com.umutk.pulse.features.AuthPrefs.biometric(this)) runCatching {
+            com.umutk.pulse.features.VaultStore.all(this).filter { it.type == 4 }.forEach { v ->
+                val n = listOf("firstName", "middleName", "lastName").mapNotNull { v.fields[it]?.takeIf { s -> s.isNotBlank() } }.joinToString(" ")
+                if (n.contains(' ')) names.add(n)
+                v.fields["email"]?.takeIf { it.contains('@') }?.let { mails.add(it.lowercase()) }
+            }
+        }
+        fun hit(s: String) = !s.equals(typed, true) && (com.umutk.pulse.OfFind.fold(s, false).startsWith(key) || s.split(' ', '.', '@').any { com.umutk.pulse.OfFind.fold(it, false).startsWith(key) && key.length >= 3 })
+        return (names.filter(::hit).take(1) + mails.filter(::hit).take(1)).distinct()
+    }
+
+    /** Puts [personalItems] on the bar beside the usual words: the first on the right, the second on the left (unless that place holds the word as typed). */
+    private fun withPersonal(typed: String) {
+        val p = personalItems(typed)
+        if (p.isEmpty()) return
+        val w = slotWords.copyOf(); val s = st.slots.toMutableList()
+        fun put(i: Int, v: String) { if (i < w.size) w[i] = v; if (i < s.size) s[i] = v }
+        put(2, p[0])
+        if (p.size > 1 && !s.getOrElse(0) { "" }.startsWith("\"")) put(0, p[1])
+        slotWords = w; st.slots = s
     }
 
     /** How many words the bar shows: three on a phone, five from 600 dp of width, six from 900 dp (a tablet, also in landscape). */
