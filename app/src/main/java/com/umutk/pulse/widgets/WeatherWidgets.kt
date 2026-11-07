@@ -46,7 +46,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: 
             val hoursSub = if (detail) f.hours.take(if (WidgetSize.dp(ctx, id)?.second ?: 0 >= 220) 6 else 3).map { h -> "${WeatherFmt.temp(h.temp, imp)}" } else emptyList()
             Tile(big = WeatherFmt.temp(f.temp, imp), sub = sub + hoursSub, series = line, defScale = if (detail) .65f else 1f)
         }
-        val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
+        val icon = f?.let { WeatherApi.drawable(it.code, it.isDay) } ?: 0
         val dens = ctx.resources.displayMetrics.density
         val sz = WidgetSize.dp(ctx, id) ?: (if (wide) 250 to 110 else 110 to 110)
         val tw = (sz.first * dens).toInt().coerceIn(100, 1400)
