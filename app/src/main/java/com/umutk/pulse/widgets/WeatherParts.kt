@@ -77,20 +77,29 @@ object WeatherParts {
         if (cells.isEmpty() || rh <= 0f) return
         val colW = w * .92f / cells.size
         val left0 = w * .04f
-        val name = textPaint(rh * .26f, true)
-        val temp = textPaint(rh * .24f, false)
-        val low = textPaint(rh * .24f, false, 190)
+        // the text size follows both the row height and the width of one column, and every text is shrunk until it fits its column: nothing runs into its neighbour
+        val base = minOf(rh * .185f, colW * .3f).coerceAtLeast(6f)
+        fun fitted(p: Paint, text: String): Paint {
+            while (p.measureText(text) > colW * .94f && p.textSize > 5f) p.textSize -= .5f
+            return p
+        }
         cells.forEachIndexed { i, cell ->
             val cx = left0 + colW * (i + .5f)
-            c.drawText(cell.label, cx - name.measureText(cell.label) / 2, y0 + rh * .30f, name)
+            val name = fitted(textPaint(base * 1.08f, true), cell.label)
+            val temp = fitted(textPaint(base, false), cell.hi)
+            c.drawText(cell.label, cx - name.measureText(cell.label) / 2, y0 + rh * .22f, name)
             ContextCompat.getDrawable(ctx, WeatherApi.drawable(cell.code, cell.day))?.let { dr ->
-                val s = minOf(colW * .7f, rh * .36f).toInt()
-                val top = (y0 + rh * .36f).toInt()
+                val s = minOf(colW * .62f, rh * .32f).toInt().coerceAtLeast(4)
+                val top = (y0 + rh * .30f).toInt()
                 dr.setBounds((cx - s / 2).toInt(), top, (cx + s / 2).toInt(), top + s); dr.draw(c)
             }
-            val hiY = if (cell.lo != null) y0 + rh * .80f else y0 + rh * .96f
+            // the high and (for the days) the low sit on two lines with a clear gap
+            val hiY = if (cell.lo != null) y0 + rh * .76f else y0 + rh * .92f
             c.drawText(cell.hi, cx - temp.measureText(cell.hi) / 2, hiY, temp)
-            cell.lo?.let { lo -> c.drawText(lo, cx - low.measureText(lo) / 2, y0 + rh * .98f, low) }
+            cell.lo?.let { lo ->
+                val low = fitted(textPaint(base, false, 190), lo)
+                c.drawText(lo, cx - low.measureText(lo) / 2, y0 + rh * .98f, low)
+            }
         }
     }
 
