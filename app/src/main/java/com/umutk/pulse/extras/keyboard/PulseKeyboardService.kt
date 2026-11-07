@@ -354,6 +354,30 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onEvaluateInputViewShown(): Boolean = true
 
+    /**
+     * Some apps (web pages, Flutter and React Native fields) give the field's real kind a moment after the keyboard came up, or restart the input without the keyboard
+     * being started again: the keyboard opened as the text keys in a number field and turned into the number pad only with the first key. The kind is looked at again
+     * at those moments (a new input, a moment after the start, the first selection change) and the number pad follows without a key.
+     */
+    private fun syncKind(info: EditorInfo?) {
+        info ?: return
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val num = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
+        if (num == st.numpad || st.forceLayout != null || st.panel != "keys") return
+        st.numpad = num
+        st.page = if (num) 1 else 0
+        st.plain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0)
+        androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        st.refreshInsets?.invoke()
+        kbRoot?.requestLayout()
+    }
+
+    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        // a restart of the input with the keyboard already up: the new kind is taken at once
+        if (restarting) syncKind(attribute)
+    }
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
@@ -397,6 +421,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the new field's layout (number pad, bar only for a hardware keyboard) is handed to the window now, not with the next key: state changes are applied at once and the window is measured again
         androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         kbRoot?.let { v -> v.post { st.refreshInsets?.invoke(); v.requestLayout() } }
+        // the app may still change the field's kind a moment after the start: it is looked at twice more
+        kbRoot?.let { v -> v.postDelayed({ syncKind(currentInputEditorInfo) }, 120); v.postDelayed({ syncKind(currentInputEditorInfo) }, 450) }
     }
 
     /**
@@ -442,6 +468,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val corrExec = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        if (st.numpad != (currentInputEditorInfo?.inputType?.and(InputType.TYPE_MASK_CLASS).let { it == InputType.TYPE_CLASS_NUMBER || it == InputType.TYPE_CLASS_PHONE || it == InputType.TYPE_CLASS_DATETIME })) syncKind(currentInputEditorInfo)
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
         // the field was emptied (a message was sent: the app clears it after the Enter) or the cursor jumped: the capital letter is worked out again from what is there now

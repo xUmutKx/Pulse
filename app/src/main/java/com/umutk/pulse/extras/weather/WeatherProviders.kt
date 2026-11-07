@@ -120,96 +120,100 @@ object WeatherProviders {
         return build(now, hours.take(120), lat, lon, zone)
     }
 
-    // ---- 7Timer: no key, worldwide (the civil product: a point every three hours; read defensively, a missing field is a neutral value) ----
-    private fun t7Code(prec: String, amount: Int, cloud: Int): Int = when {
-        prec == "rain" -> if (amount >= 5) 65 else if (amount >= 3) 63 else 61
-        prec == "snow" -> 73
-        prec == "frzr" -> 66
-        prec == "icep" -> 77
-        cloud <= 2 -> 0
-        cloud <= 4 -> 2
+    // ---- Bright Sky (the German weather service DWD): no key. Stations and the ICON model; hourly for about ten days ----
+    /** The sky of a "icon" word (Bright Sky, Pirate Weather) as the WMO code the page draws; without a word the cloud cover decides. */
+    private fun skyIcon(icon: String, cloud: Int, mm: Double): Int = when {
+        icon.startsWith("thunder") -> 95
+        icon == "hail" -> 77
+        icon == "snow" -> 73
+        icon == "sleet" -> 67
+        icon == "rain" -> if (mm >= 4.0) 65 else if (mm >= 1.0) 63 else 61
+        icon == "fog" -> 45
+        icon.startsWith("partly") -> 2
+        icon == "cloudy" -> 3
+        icon.startsWith("clear") -> 0
+        cloud <= 20 -> 0
+        cloud <= 60 -> 2
         else -> 3
     }
 
-    /** The wind of 7Timer is a scale from 1 to 8; these are its speeds in km/h. */
-    private val t7Wind = doubleArrayOf(0.0, 1.0, 7.0, 20.0, 34.0, 50.0, 76.0, 104.0, 130.0)
-
-    private fun t7Dir(d: String): Int = when (d.uppercase()) {
-        "N" -> 0; "NE" -> 45; "E" -> 90; "SE" -> 135; "S" -> 180; "SW" -> 225; "W" -> 270; "NW" -> 315; else -> 0
-    }
-
-    fun t7(lat: Double, lon: Double): String {
-        val j = JSONObject(WeatherApi.get("https://www.7timer.info/bin/api.pl?lon=%.4f&lat=%.4f&product=civil&output=json".format(java.util.Locale.US, lat, lon)))
+    fun brightsky(lat: Double, lon: Double): String {
         val zone = ZoneId.systemDefault()
-        // "init" is the start of the run in UTC, as yyyyMMddHH
-        val init = j.optString("init", "")
-        if (init.length < 10) error("7Timer sent no start time")
-        val start = LocalDateTime.of(init.substring(0, 4).toInt(), init.substring(4, 6).toInt(), init.substring(6, 8).toInt(), init.substring(8, 10).toInt(), 0)
-            .atZone(ZoneOffset.UTC).withZoneSameInstant(zone).toLocalDateTime()
-        val series = j.getJSONArray("dataseries")
-        val pts = ArrayList<Pair<Hr, Now>>()
-        for (i in 0 until series.length()) {
-            val e = series.getJSONObject(i)
-            val t = start.plusHours(e.optLong("timepoint", 0L))
-            val temp = e.optDouble("temp2m", Double.NaN)
-            if (temp.isNaN()) continue
-            val cloud = e.optInt("cloudcover", 1)
-            val prec = e.optString("prec_type", "none")
-            val amount = e.optInt("prec_amount", 0)
-            val code = t7Code(prec, amount, cloud)
-            val rain = if (prec == "none") 0 else 60
-            val wind = e.optJSONObject("wind10m")
-            val speed = t7Wind.getOrElse(wind?.optInt("speed", 1) ?: 1) { 0.0 }
-            val hum = e.optString("rh2m", "50").replace("%", "").toIntOrNull() ?: 50
-            pts += Hr(t, temp, code, rain) to Now(t, temp, temp, hum, code, speed, t7Dir(wind?.optString("direction", "N") ?: "N"), 1013.0, (cloud - 1) * 12, if (prec == "none") 0.0 else amount.toDouble())
-        }
-        if (pts.isEmpty()) error("7Timer sent no readings")
-        // the run is some hours old, so its first point lies in the past: "now" is the latest point that is not in the future (at this hour), and the hours start there
+        val today = LocalDate.now(zone)
+        val arr = JSONObject(WeatherApi.get("https://api.brightsky.dev/weather?lat=%.4f&lon=%.4f&date=%s&last_date=%s&tz=%s".format(java.util.Locale.US, lat, lon, today, today.plusDays(9), zone.id))).getJSONArray("weather")
         val nowT = LocalDateTime.now(zone).withMinute(0).withSecond(0).withNano(0)
-        val ix = pts.indexOfLast { !it.first.t.isAfter(nowT) }.coerceAtLeast(0)
-        val c = pts[ix].second
-        val n = Now(nowT, c.temp, c.feels, c.hum, c.code, c.wind, c.dir, c.press, c.cloud, c.precip)
-        // the hours between two points are filled in by build() (it makes every service's list hourly)
-        return build(n, pts.drop(ix).map { it.first }.take(80), lat, lon, zone)
-    }
-
-    // ---- MET Norway: no key -----------------------------------------------------------------------------------------------------------------
-    fun metno(lat: Double, lon: Double): String {
-        val body = WeatherApi.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f".format(java.util.Locale.US, lat, lon))
-        val ts = JSONObject(body).getJSONObject("properties").getJSONArray("timeseries")
-        val zone = ZoneId.systemDefault()
         val hours = ArrayList<Hr>(); var now: Now? = null
-        for (i in 0 until ts.length()) {
-            val e = ts.getJSONObject(i)
-            val t = Instant.parse(e.getString("time")).atZone(zone).toLocalDateTime()
-            val data = e.getJSONObject("data"); val det = data.getJSONObject("instant").getJSONObject("details")
-            val temp = det.optDouble("air_temperature", Double.NaN)
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val t = java.time.OffsetDateTime.parse(o.getString("timestamp")).atZoneSameInstant(zone).toLocalDateTime()
+            val temp = o.optDouble("temperature", Double.NaN)
             if (temp.isNaN()) continue
-            // an hour, else the six hours that follow: the sky and the rain of the slot
-            val nx = data.optJSONObject("next_1_hours") ?: data.optJSONObject("next_6_hours")
-            val code = nx?.optJSONObject("summary")?.optString("symbol_code")?.let { noaa(it) } ?: 3
-            val mm = nx?.optJSONObject("details")?.optDouble("precipitation_amount", 0.0) ?: 0.0
-            val rain = if (mm <= 0.0) (if (code >= 51) 40 else 0) else (30 + mm * 35).toInt().coerceAtMost(100)
-            if (now == null) now = Now(t, temp, temp, det.optDouble("relative_humidity", 50.0).toInt(), code, det.optDouble("wind_speed", 0.0) * 3.6,
-                det.optDouble("wind_from_direction", 0.0).toInt(), det.optDouble("air_pressure_at_sea_level", 0.0), det.optDouble("cloud_area_fraction", 0.0).toInt(), mm)
-            hours += Hr(t, temp, code, rain)
+            val cloud = o.optInt("cloud_cover", 50); val mm = o.optDouble("precipitation", 0.0)
+            val code = skyIcon(if (o.isNull("icon")) "" else o.optString("icon"), cloud, mm)
+            val rain = if (!o.isNull("precipitation_probability")) o.optInt("precipitation_probability", 0) else if (mm > 0.0) 60 else 0
+            if (t.isAfter(nowT)) { hours += Hr(t, temp, code, rain); continue }
+            // the latest record that is not in the future is "now"; it also starts the list
+            now = Now(nowT, temp, temp, o.optInt("relative_humidity", 60), code, o.optDouble("wind_speed", 0.0), o.optInt("wind_direction", 0), o.optDouble("pressure_msl", 0.0), cloud, mm)
+            hours.clear(); hours += Hr(nowT, temp, code, rain)
         }
-        val n = now ?: error("MET Norway sent no readings")
-        return build(n, hours.take(120), lat, lon, zone)
+        val n = now ?: hours.firstOrNull()?.let { h -> Now(nowT, h.temp, h.temp, 60, h.code, 0.0, 0, 0.0, 50, 0.0) } ?: error("Bright Sky sent no readings")
+        return build(n, hours, lat, lon, zone)
     }
 
-    private fun noaa(sym: String): Int = when {
-        sym.contains("thunder") -> 95
-        sym.contains("heavysnow") -> 75
-        sym.contains("snow") -> 73
-        sym.contains("sleet") -> 67
-        sym.contains("heavyrain") -> 65
-        sym.contains("rain") -> 63
-        sym.contains("fog") -> 45
-        sym.startsWith("cloudy") -> 3
-        sym.startsWith("partlycloudy") -> 2
-        sym.startsWith("fair") -> 1
-        else -> 0
+    // ---- WeatherAPI.com: the user's key (the free plan: three days) ----
+    private fun wapiCode(c: Int): Int = when (c) {
+        1000 -> 0; 1003 -> 2; 1006, 1009 -> 3; 1030, 1135, 1147 -> 45
+        1063, 1150, 1153, 1180, 1183, 1240 -> 61; 1186, 1189, 1243 -> 63; 1192, 1195, 1246 -> 65
+        1066, 1210, 1213, 1216, 1219, 1255 -> 73; 1114, 1117, 1222, 1225, 1258 -> 75; 1237, 1261, 1264 -> 77
+        1069, 1072, 1168, 1171, 1198, 1201, 1204, 1207, 1249, 1252 -> 67
+        1087, 1273, 1276, 1279, 1282 -> 95
+        else -> 3
+    }
+
+    fun wapi(lat: Double, lon: Double, key: String): String {
+        require(key.isNotBlank()) { "Enter the WeatherAPI.com key in the weather settings" }
+        val j = JSONObject(WeatherApi.get("https://api.weatherapi.com/v1/forecast.json?key=$key&q=%.4f,%.4f&days=10&aqi=no&alerts=no".format(java.util.Locale.US, lat, lon)))
+        val zone = runCatching { ZoneId.of(j.getJSONObject("location").getString("tz_id")) }.getOrDefault(ZoneId.systemDefault())
+        val f = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        val cur = j.getJSONObject("current")
+        val nowT = LocalDateTime.now(zone).withMinute(0).withSecond(0).withNano(0)
+        val now = Now(nowT, cur.getDouble("temp_c"), cur.optDouble("feelslike_c", cur.getDouble("temp_c")), cur.optInt("humidity", 50), wapiCode(cur.getJSONObject("condition").optInt("code", 1009)),
+            cur.optDouble("wind_kph", 0.0), cur.optInt("wind_degree", 0), cur.optDouble("pressure_mb", 0.0), cur.optInt("cloud", 0), cur.optDouble("precip_mm", 0.0))
+        val hours = ArrayList<Hr>()
+        val days = j.getJSONObject("forecast").getJSONArray("forecastday")
+        for (d in 0 until days.length()) {
+            val hs = days.getJSONObject(d).getJSONArray("hour")
+            for (h in 0 until hs.length()) {
+                val o = hs.getJSONObject(h)
+                val t = LocalDateTime.parse(o.getString("time"), f)
+                if (t.isBefore(nowT)) continue
+                hours += Hr(t, o.getDouble("temp_c"), wapiCode(o.getJSONObject("condition").optInt("code", 1009)), o.optInt("chance_of_rain", 0))
+            }
+        }
+        return build(now, hours, lat, lon, zone)
+    }
+
+    // ---- Pirate Weather: the user's key (the free plan: ten thousand calls a month) ----
+    fun pirate(lat: Double, lon: Double, key: String): String {
+        require(key.isNotBlank()) { "Enter the Pirate Weather key in the weather settings" }
+        val j = JSONObject(WeatherApi.get("https://api.pirateweather.net/forecast/$key/%.4f,%.4f?units=si&extend=hourly&exclude=minutely,alerts".format(java.util.Locale.US, lat, lon)))
+        val zone = runCatching { ZoneId.of(j.getString("timezone")) }.getOrDefault(ZoneId.systemDefault())
+        fun local(sec: Long) = Instant.ofEpochSecond(sec).atZone(zone).toLocalDateTime()
+        val cur = j.getJSONObject("currently")
+        val mm0 = cur.optDouble("precipIntensity", 0.0)
+        val cloud0 = (cur.optDouble("cloudCover", 0.5) * 100).toInt()
+        val nowT = LocalDateTime.now(zone).withMinute(0).withSecond(0).withNano(0)
+        val now = Now(nowT, cur.getDouble("temperature"), cur.optDouble("apparentTemperature", cur.getDouble("temperature")), (cur.optDouble("humidity", 0.5) * 100).toInt(),
+            skyIcon(cur.optString("icon"), cloud0, mm0), cur.optDouble("windSpeed", 0.0) * 3.6, cur.optInt("windBearing", 0), cur.optDouble("pressure", 0.0), cloud0, mm0)
+        val hs = j.getJSONObject("hourly").getJSONArray("data")
+        val hours = ArrayList<Hr>()
+        for (i in 0 until hs.length()) {
+            val o = hs.getJSONObject(i)
+            val t = local(o.getLong("time"))
+            if (t.isBefore(nowT)) continue
+            hours += Hr(t, o.getDouble("temperature"), skyIcon(o.optString("icon"), (o.optDouble("cloudCover", 0.5) * 100).toInt(), o.optDouble("precipIntensity", 0.0)), (o.optDouble("precipProbability", 0.0) * 100).toInt())
+        }
+        return build(now, hours, lat, lon, zone)
     }
 
     // ---- OpenWeatherMap: the user's key (the free plan) -------------------------------------------------------------------------------------
