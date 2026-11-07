@@ -302,7 +302,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 } else {
                     Box(Modifier.size(40.dp).clickable { screen = "" }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 24.dp) }
                 }
-                Text(if (screen == "options") tr("Options", "Seçenekler") else if (screen == "find") tr("Find free books", "Ücretsiz kitap bul") else title, color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Text(if (screen == "options") tr("Options", "Seçenekler") else if (screen == "find") tr("Find free books", "Ücretsiz kitap bul") else if (screen == "stats") tr("Statistics", "İstatistikler") else title, color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { searching = !searching; if (!searching) query = "" }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
                     Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }, contentAlignment = Alignment.Center) { PIcon("add", th.ink, 24.dp) }
@@ -314,6 +314,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
                 screen = ""; tab = 0; onOpen(book)
             }
+            else if (screen == "stats") Box(Modifier.weight(1f)) { StatsPage(th.ink, th.sub, T.accent) { u -> shelf.any { it.uri == u } } }
             else if (screen == "options") {
                 LazyColumn(Modifier.weight(1f)) {
                     item { SectionTitle(tr("My Shelf", "Rafım"), th) }
@@ -402,6 +403,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onTab = { tab = it; screen = ""; drawer = false },
             onFiles = { drawer = false; pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) },
             onFind = { drawer = false; screen = "find" },
+            onStats = { drawer = false; screen = "stats" },
             onOptions = { drawer = false; screen = "options" },
             onAbout = { drawer = false; about = true },
             onDayNight = {
@@ -467,7 +469,7 @@ private fun ShelfMenu(th: Theme, title: String, items: List<Triple<String, Strin
 @Composable
 private fun ShelfDrawer(
     tab: Int, dayNight: Int, amoled: Boolean,
-    onTab: (Int) -> Unit, onFiles: () -> Unit, onFind: () -> Unit, onOptions: () -> Unit, onAbout: () -> Unit,
+    onTab: (Int) -> Unit, onFiles: () -> Unit, onFind: () -> Unit, onStats: () -> Unit, onOptions: () -> Unit, onAbout: () -> Unit,
     onDayNight: () -> Unit, onExit: () -> Unit, onClose: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onClose() })
@@ -479,6 +481,7 @@ private fun ShelfDrawer(
         DrawerRow(th, "heart", tr("My Favorites", "Favorilerim"), tab == 2, false) { onTab(2) }
         DrawerRow(th, "add", tr("My Files", "Dosyalarım"), false, false, onFiles)
         DrawerRow(th, "search", tr("Find free books", "Ücretsiz kitap bul"), false, false, onFind)
+        DrawerRow(th, "sort", tr("Statistics", "İstatistikler"), false, false, onStats)
         Spacer(Modifier.weight(1f))
         Box(Modifier.fillMaxWidth().height(1.dp).background(th.sub.copy(alpha = .3f)))
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -580,6 +583,16 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     LaunchedEffect(orientation) { setOrientation(ctx, orientation) }
     // the page's text, read aloud; a page read to its end turns to the next one
     val curText = remember { arrayOf("") }
+    val curFirst = remember { arrayOf("") }
+    // the reading statistics: a second counts while the reader is on screen and a page turned, or a word went by, in the last two minutes
+    val actAt = remember { longArrayOf(android.os.SystemClock.uptimeMillis()) }
+    LaunchedEffect(start.uri) {
+        while (true) {
+            kotlinx.coroutines.delay(1000)
+            val resumed = (ctx as? androidx.activity.ComponentActivity)?.lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) != false
+            if (resumed && android.os.SystemClock.uptimeMillis() - actAt[0] < 120_000L) EbookStats.addSeconds(ctx, start.uri, start.title, start.author, 1)
+        }
+    }
     val pageTurner = remember { mutableStateOf<(() -> Unit)?>(null) }
     val speaker = remember { Speaker(ctx) { if (speaking) pageTurner.value?.invoke() } }
     // the words being read, as a range of the page's text: they are highlighted
@@ -621,6 +634,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             "options" -> panel = "quick"
             "custom" -> panel = "bar"
             "info" -> panel = "info"
+            "rsvp" -> panel = "rsvp"
             "share" -> b?.let { bk ->
                 val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, bk.title + if (bk.author.isNotEmpty()) " - " + bk.author else "")
                 ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -635,7 +649,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("Opening…", "Açılıyor…"), color = th.sub, fontSize = 14.sp) }
         } else if (b.pdf) {
             PdfPages(ctx, uri, page, th, forward,
-                onTurn = { d -> forward = d > 0; page = (page + d).coerceAtLeast(0); save() },
+                onTurn = { d -> forward = d > 0; page = (page + d).coerceAtLeast(0); actAt[0] = android.os.SystemClock.uptimeMillis(); if (d > 0) EbookStats.addPage(ctx, start.uri, start.title, start.author); save() },
                 onTap = { bars = !bars })
         } else {
             val chapters = b.chapters
@@ -657,6 +671,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 val shown = if (list == null) 0 else page.coerceIn(0, (list.size - 1).coerceAtLeast(0))
                 val cur = list?.getOrNull(shown).orEmpty()
                 curText[0] = cur.joinToString(" ") { it.text }
+                curFirst[0] = cur.firstOrNull()?.text.orEmpty().take(30)
                 val key = chapter.toLong() * 100000L + shown
                 // the next page, or the next chapter; used by the tap zones, the autoscroll and the speech
                 fun next() {
@@ -675,6 +690,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 LaunchedEffect(autoOn, key) { if (autoOn) { kotlinx.coroutines.delay(autoSec * 1000L); if (autoOn) next() } }
                 LaunchedEffect(speaking, key) { spoken = IntRange.EMPTY; if (speaking) speaker.speak(curText[0]) else speaker.stop() }
                 LaunchedEffect(list) { pageCount = list?.size ?: 0 }
+                // the statistics: a page turned forward counts, and the last page of the last chapter is the end of the book
+                val lastKey = remember { longArrayOf(-1L) }
+                LaunchedEffect(key) {
+                    actAt[0] = android.os.SystemClock.uptimeMillis()
+                    if (lastKey[0] >= 0 && key > lastKey[0] && key - lastKey[0] <= 100000L) EbookStats.addPage(ctx, start.uri, start.title, start.author)
+                    lastKey[0] = key
+                    if (list != null && chapter == chapters.lastIndex && shown >= list.size - 1) EbookStats.finish(ctx, start.uri)
+                }
                 if (!scrollMode || list == null) {
                 AnimatedContent(
                         targetState = key,
@@ -869,8 +892,17 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             }
         }
 
+        // RSVP speed reading: one word at a time, from the top of the page being read
+        if (panel == "rsvp" && b != null && !b.pdf) {
+            val paras = b.chapters.getOrNull(chapter)?.paras.orEmpty()
+            val first = curFirst[0]
+            val from = if (first.isBlank()) 0 else paras.indexOfFirst { it.text.contains(first) }.coerceAtLeast(0)
+            val words = remember(chapter, from, b) { rsvpWords(paras.drop(from)) }
+            RsvpPane(words, th.ink, th.sub, th.bg, T.accent, { actAt[0] = android.os.SystemClock.uptimeMillis() }) { panel = "" }
+        }
+
         // the pages of the menu and the lists: each fills the reader, with its title and a back arrow
-        if (panel.isNotEmpty() && panel != "quick" && panel != "menu" && panel != "sizepop" && panel != "themepop" && b != null) {
+        if (panel.isNotEmpty() && panel != "quick" && panel != "menu" && panel != "sizepop" && panel != "themepop" && panel != "rsvp" && b != null) {
             val titleOf = when (panel) {
                 "visual" -> tr("Visual Options", "Görünüm seçenekleri"); "control" -> tr("Control Options", "Denetim seçenekleri")
                 "themes" -> tr("Themes", "Temalar"); "ops" -> tr("More Operations", "Diğer işlemler")
@@ -1151,6 +1183,16 @@ private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
             busy = if (results == null) tr("No connection", "Bağlantı yok") else ""
         }
     }
+    // before anything is searched the page shows the free classics (the most downloaded books of Project Gutenberg)
+    var showingClassics by remember { mutableStateOf(false) }
+    LaunchedEffect(srcIx) {
+        if (query.isBlank() && sources.getOrNull(srcIx)?.second == BookFind.GUTENDEX) {
+            busy = tr("Loading the classics...", "Klasikler yükleniyor...")
+            val r = withContext(Dispatchers.IO) { runCatching { BookFind.classics() }.getOrNull() }
+            if (query.isBlank()) { results = r; showingClassics = r != null }
+            busy = if (r == null) tr("No connection", "Bağlantı yok") else ""
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         // the places to look in: tap one to pick it, hold an added one to remove it, the + adds one
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1183,6 +1225,7 @@ private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
         }
         Text(tr("Only books whose copyright has ended, from Project Gutenberg. Turkish first.",
             "Yalnızca telif süresi dolmuş kitaplar, Project Gutenberg'den. Önce Türkçe."), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+        if (showingClassics && query.isBlank() && !results.isNullOrEmpty()) Text(tr("Free classics", "Ücretsiz klasikler"), color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
         if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
         if (results != null && results.isNullOrEmpty() && busy.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = th.sub, fontSize = 13.sp)
         LazyVerticalGrid(columns = GridCells.Adaptive(104.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
