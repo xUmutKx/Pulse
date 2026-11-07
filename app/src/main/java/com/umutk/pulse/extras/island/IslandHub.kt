@@ -104,6 +104,38 @@ fun IslandHub(onBack: () -> Unit) {
             }
 
             BoCard {
+                BoSwitchRow(tr("Notification light", "Bildirim ışığı"), tr("A light around the camera while a notification waits, for phones without a light.", "Işığı olmayan telefonlar için, bildirim beklerken kameranın çevresinde yanan ışık."), IslandPrefs.led && overlay && access, bold = true) {
+                    if (it && !access) ctx.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    if (it && !overlay) { setOn(true); return@BoSwitchRow }
+                    IslandPrefs.led = it; save()
+                    if (it && IslandService.live == null) { IslandPrefs.on = true; save(); IslandService.start(ctx) }
+                }
+                BoStatus(access, tr("Notification access is on", "Bildirim erişimi açık"), tr("Needs notification access", "Bildirim erişimi gerekir"), Modifier.padding(top = 6.dp))
+                BoText(tr("Style", "Biçim"), 13, T.text, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(IslandPrefs.ledStyle == "ring", tr("Ring", "Halka")) { IslandPrefs.ledStyle = "ring"; save(); IslandService.relayoutLight() }
+                    PChip(IslandPrefs.ledStyle == "dot", tr("Dot", "Nokta")) { IslandPrefs.ledStyle = "dot"; save(); IslandService.relayoutLight() }
+                    PChip(IslandPrefs.ledStyle == "glow", tr("Glow", "Parıltı")) { IslandPrefs.ledStyle = "glow"; save(); IslandService.relayoutLight() }
+                }
+                BoText(tr("Motion", "Hareket"), 13, T.text, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(IslandPrefs.ledAnim == "pulse", tr("Pulse", "Nabız")) { IslandPrefs.ledAnim = "pulse"; save() }
+                    PChip(IslandPrefs.ledAnim == "swirl", tr("Swirl", "Dönüş")) { IslandPrefs.ledAnim = "swirl"; save() }
+                    PChip(IslandPrefs.ledAnim == "still", tr("Still", "Sabit")) { IslandPrefs.ledAnim = "still"; save() }
+                }
+                BoText(tr("Colour", "Renk"), 13, T.text, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(IslandPrefs.ledAuto, tr("Of the app", "Uygulamanın")) { IslandPrefs.ledAuto = true; save() }
+                    listOf(0xFFFFFFFF.toInt() to tr("White", "Beyaz"), 0xFF4CAF50.toInt() to tr("Green", "Yeşil"), 0xFF2196F3.toInt() to tr("Blue", "Mavi"), 0xFFF44336.toInt() to tr("Red", "Kırmızı")).forEach { (c, n) ->
+                        PChip(!IslandPrefs.ledAuto && IslandPrefs.ledColor == c, n) { IslandPrefs.ledAuto = false; IslandPrefs.ledColor = c; save() }
+                    }
+                }
+                Slide(tr("Thickness", "Kalınlık"), IslandPrefs.ledWidth, 1f..8f) { IslandPrefs.ledWidth = it; save(); IslandService.relayoutLight() }
+                BoSwitchRow(tr("Silent notifications too", "Sessiz bildirimler de"), "", IslandPrefs.ledSilent) { IslandPrefs.ledSilent = it; save() }
+                BoButtons { BoBtn(tr("Test the light", "Işığı dene"), IslandPrefs.led && IslandPrefs.on && overlay) { IslandService.testLight() } }
+            }
+
+            BoCard {
                 BoText(tr("Position and size", "Konum ve boyut"), 16, T.text, bold = true)
                 BoText(tr("Place the pill over the camera of this phone: turn on the outline, then move the sliders until it fits.", "Hapı bu telefonun kamerasının üstüne yerleştirin: çerçeveyi açın, sonra oturana kadar çubukları oynatın."))
                 BoSwitchRow(tr("Show the outline", "Çerçeveyi göster"), "", calibrating, IslandPrefs.on && overlay) { v ->

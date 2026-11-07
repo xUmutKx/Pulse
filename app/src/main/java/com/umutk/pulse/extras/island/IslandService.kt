@@ -14,6 +14,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.database.ContentObserver
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
@@ -42,8 +43,11 @@ import com.umutk.pulse.extras.lyrics.LyricsListenerService
 
 /** Gives the island the notifications other apps post, and a component the media sessions can be read with. Declared in the manifest. */
 class IslandListenerService : NotificationListenerService() {
-    override fun onNotificationPosted(sbn: StatusBarNotification) { IslandService.live?.onNotification(sbn) }
-    override fun onNotificationRemoved(sbn: StatusBarNotification) { IslandService.live?.remove("n:" + sbn.key) }
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+        val imp = runCatching { currentRanking.let { r -> android.service.notification.NotificationListenerService.Ranking().also { x -> r.getRanking(sbn.key, x) }.importance } }.getOrDefault(3)
+        IslandService.live?.let { it.light(sbn, imp); it.onNotification(sbn) }
+    }
+    override fun onNotificationRemoved(sbn: StatusBarNotification) { IslandService.live?.let { it.remove("n:" + sbn.key); it.led?.remove(sbn.key) } }
 }
 
 /** Starts the island again after a restart, when it was on. */
@@ -65,8 +69,10 @@ class IslandService : Service() {
         fun start(c: Context) { val i = Intent(c, IslandService::class.java); if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
         fun stop(c: Context) { c.stopService(Intent(c, IslandService::class.java)) }
         /** The pill outlined and always there, to place it over the camera while the sliders are moved. */
-        fun calibrate(on: Boolean) { live?.let { s -> s.main.post { s.view?.calibrating = on; s.refresh() } } }
+        fun calibrate(on: Boolean) { live?.let { s -> s.main.post { s.view?.calibrating = on; s.refresh(); s.led?.relayout() } } }
         fun demo(c: Context) { live?.demo() }
+        fun testLight() { live?.testLight() }
+        fun relayoutLight() { live?.relayoutLight() }
     }
 
     internal val main = Handler(Looper.getMainLooper())
@@ -84,6 +90,7 @@ class IslandService : Service() {
     private var plugged = false
     private var torchOn = false
     private var torchId: String? = null
+    internal var led: NotifLed? = null
     private val poll = object : Runnable { override fun run() { pollMusic(); main.postDelayed(this, 700) } }
 
     override fun onBind(i: Intent?): IBinder? = null
@@ -113,6 +120,7 @@ class IslandService : Service() {
         view = v
         v.visibility = android.view.View.GONE
         if (runCatching { wm.addView(v, lp) }.isFailure) { stopSelf(); return }
+        led = NotifLed(this, wm)
         cacheLabels()
         registerSources()
         main.post(poll)
@@ -127,6 +135,7 @@ class IslandService : Service() {
         runCatching { unregisterReceiver(receiver) }
         runCatching { contentResolver.unregisterContentObserver(shots) }
         torchCb?.let { runCatching { getSystemService(CameraManager::class.java).unregisterTorchCallback(it) } }
+        led?.hide(); led = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
         super.onDestroy()
@@ -206,6 +215,19 @@ class IslandService : Service() {
         main.postDelayed({ pollMusic() }, 250)
     }
 
+    /** The notification light: lit for a notification that makes a sound or a vibration (unless silent ones are wanted too), put out when it is dismissed or the phone is unlocked. */
+    fun light(sbn: StatusBarNotification, importance: Int) {
+        if (!IslandPrefs.led || sbn.packageName == packageName) return
+        val n = sbn.notification
+        if (n.flags and Notification.FLAG_ONGOING_EVENT != 0 || n.flags and Notification.FLAG_GROUP_SUMMARY != 0 || n.category == Notification.CATEGORY_TRANSPORT || n.category == Notification.CATEGORY_PROGRESS || n.category == Notification.CATEGORY_SERVICE) return
+        if (!IslandPrefs.ledSilent && importance < NotificationManager.IMPORTANCE_DEFAULT) return
+        val col = if (n.color != 0) n.color else runCatching { androidx.palette.graphics.Palette.from(packageManager.getApplicationIcon(sbn.packageName).toBitmap(48, 48)).generate().let { p -> p.getVibrantColor(p.getDominantColor(Color.WHITE)) } }.getOrDefault(Color.WHITE)
+        main.post { led?.add(sbn.key, col or 0xFF000000.toInt()) }
+    }
+
+    fun testLight() { main.post { led?.test(main) } }
+    fun relayoutLight() { main.post { led?.relayout() } }
+
     // ---- notifications of other apps ------------------------------------------------------------------------------------------------------------
     fun onNotification(sbn: StatusBarNotification) {
         if (!IslandPrefs.notif || sbn.packageName == packageName) return
@@ -234,6 +256,7 @@ class IslandService : Service() {
                     if (!now && plugged) remove("charge")
                     plugged = now
                 }
+                Intent.ACTION_USER_PRESENT -> led?.clear()
                 Intent.ACTION_HEADSET_PLUG -> if (i.getIntExtra("state", 0) == 1) post(IslandItem("headset", "headset", "Headphones", "Connected", ttl = 3500, prio = 3))
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     val dev = if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java) else @Suppress("DEPRECATION") i.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
@@ -286,7 +309,7 @@ class IslandService : Service() {
 
     private fun registerSources() {
         val f = IntentFilter().apply {
-            addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_HEADSET_PLUG); addAction(BluetoothDevice.ACTION_ACL_CONNECTED); addAction("android.media.VOLUME_CHANGED_ACTION")
+            addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_USER_PRESENT); addAction(Intent.ACTION_HEADSET_PLUG); addAction(BluetoothDevice.ACTION_ACL_CONNECTED); addAction("android.media.VOLUME_CHANGED_ACTION")
         }
         val pf = IntentFilter().apply { addAction(Intent.ACTION_PACKAGE_ADDED); addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED); addDataScheme("package") }
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, f, Context.RECEIVER_EXPORTED); registerReceiver(receiver, pf, Context.RECEIVER_EXPORTED) } else { registerReceiver(receiver, f); registerReceiver(receiver, pf) }

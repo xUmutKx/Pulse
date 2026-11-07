@@ -28,6 +28,13 @@ object IslandPrefs {
     var style by mutableStateOf("black")        // black / accent / art (the colour of the cover)
     var collapse by mutableIntStateOf(6)        // seconds before an opened island closes by itself; 0 = never
     var haptic by mutableStateOf(true)
+    var led by mutableStateOf(false)            // notification light around the camera
+    var ledStyle by mutableStateOf("ring")      // ring / dot / glow
+    var ledAnim by mutableStateOf("pulse")      // pulse / swirl / still
+    var ledAuto by mutableStateOf(true)         // colour of the app, else ledColor
+    var ledColor by mutableIntStateOf(0xFFFFFFFF.toInt())
+    var ledWidth by mutableFloatStateOf(3f)
+    var ledSilent by mutableStateOf(false)      // also light for silent notifications
 
     fun load(c: Context) {
         val p = sp(c)
@@ -35,12 +42,15 @@ object IslandPrefs {
         music = p.getBoolean("music", true); notif = p.getBoolean("notif", true); charge = p.getBoolean("charge", true); headset = p.getBoolean("headset", true)
         volume = p.getBoolean("volume", true); torch = p.getBoolean("torch", true); uninstall = p.getBoolean("uninstall", true); shot = p.getBoolean("shot", true)
         style = p.getString("style", "black") ?: "black"; collapse = p.getInt("collapse", 6); haptic = p.getBoolean("haptic", true)
+        led = p.getBoolean("led", false); ledStyle = p.getString("ledStyle", "ring") ?: "ring"; ledAnim = p.getString("ledAnim", "pulse") ?: "pulse"; ledAuto = p.getBoolean("ledAuto", true)
+        ledColor = p.getInt("ledColor", 0xFFFFFFFF.toInt()); ledWidth = p.getFloat("ledWidth", 3f); ledSilent = p.getBoolean("ledSilent", false)
     }
 
     fun save(c: Context) {
         sp(c).edit().putBoolean("on", on).putFloat("top", top).putFloat("x", x).putFloat("w", w).putFloat("h", h).putBoolean("rest", rest)
             .putBoolean("music", music).putBoolean("notif", notif).putBoolean("charge", charge).putBoolean("headset", headset).putBoolean("volume", volume)
-            .putBoolean("torch", torch).putBoolean("uninstall", uninstall).putBoolean("shot", shot).putString("style", style).putInt("collapse", collapse).putBoolean("haptic", haptic).apply()
+            .putBoolean("torch", torch).putBoolean("uninstall", uninstall).putBoolean("shot", shot).putString("style", style).putInt("collapse", collapse).putBoolean("haptic", haptic)
+            .putBoolean("led", led).putString("ledStyle", ledStyle).putString("ledAnim", ledAnim).putBoolean("ledAuto", ledAuto).putInt("ledColor", ledColor).putFloat("ledWidth", ledWidth).putBoolean("ledSilent", ledSilent).apply()
     }
 
     fun enabled(kind: String) = when (kind) {
