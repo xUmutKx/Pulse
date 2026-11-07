@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import com.umutk.pulse.PIcon
 
 /**
@@ -68,23 +69,65 @@ object NetPolicy {
     }.getOrDefault(0)
 
     /**
-     * The devices that answer on this Wi-Fi: every address of the phone's own /24 network is asked once, a few dozen at a time (the neighbour table alone shows nothing
-     * on Android 10 and later). The phone itself is not counted; 0 when the phone is not on a Wi-Fi network.
+     * The devices that answer on this Wi-Fi, as addresses. Every address of the phone's own /24 network is asked: an echo, then a connection to a few ports (a refused
+     * connection also shows a device is there: phones, TVs and routers answer that way when they do not answer the echo), and two multicast calls (SSDP and mDNS) are
+     * listened to for a moment. The phone itself is not in the list; empty when the phone is not on a Wi-Fi network.
      */
-    fun scan(c: Context): Int = runCatching {
+    fun scanList(c: Context): List<String> = runCatching {
         val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val net = cm.activeNetwork ?: return 0
+        val net = cm.activeNetwork ?: return emptyList()
         val caps = cm.getNetworkCapabilities(net)
-        if (caps == null || !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) return 0
-        val la = cm.getLinkProperties(net)?.linkAddresses?.firstOrNull { it.address is java.net.Inet4Address } ?: return 0
+        if (caps == null || !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) return emptyList()
+        val la = cm.getLinkProperties(net)?.linkAddresses?.firstOrNull { it.address is java.net.Inet4Address } ?: return emptyList()
         val own = la.address.address
+        val ownText = la.address.hostAddress.orEmpty()
+        val found = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
         val hosts = (1..254).map { i -> own.copyOf().also { it[3] = i.toByte() } }.filter { !it.contentEquals(own) }
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(48)
+        // the multicast calls run beside the sweep
+        val listeners = listOf(
+            Thread { multicast("239.255.255.250", 1900, "M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: ssdp:all\r\n\r\n".toByteArray(), found, ownText) },
+            Thread { multicast("224.0.0.251", 5353, byteArrayOf(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 9, 95, 115, 101, 114, 118, 105, 99, 101, 115, 7, 95, 100, 110, 115, 45, 115, 100, 4, 95, 117, 100, 112, 5, 108, 111, 99, 97, 108, 0, 0, 12, 0, 1), found, ownText) },
+        ).onEach { it.start() }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(64)
         try {
-            val futures = hosts.map { h -> pool.submit<Boolean> { runCatching { java.net.InetAddress.getByAddress(h).isReachable(300) }.getOrDefault(false) } }
-            futures.count { runCatching { it.get(8, java.util.concurrent.TimeUnit.SECONDS) }.getOrDefault(false) }
+            val futures = hosts.map { h ->
+                pool.submit<Boolean> {
+                    val addr = java.net.InetAddress.getByAddress(h)
+                    var up = runCatching { addr.isReachable(250) }.getOrDefault(false)
+                    if (!up) for (port in intArrayOf(80, 443, 53, 62078, 8009, 7000, 22, 445)) {
+                        val s = java.net.Socket()
+                        try { s.connect(java.net.InetSocketAddress(addr, port), 200); up = true }
+                        catch (e: java.net.ConnectException) { if ((e.message ?: "").contains("refused", true)) up = true }
+                        catch (e: Exception) { }
+                        finally { runCatching { s.close() } }
+                        if (up) break
+                    }
+                    if (up) found.add(addr.hostAddress.orEmpty())
+                    up
+                }
+            }
+            futures.forEach { runCatching { it.get(12, java.util.concurrent.TimeUnit.SECONDS) } }
         } finally { pool.shutdownNow() }
-    }.getOrDefault(0)
+        listeners.forEach { runCatching { it.join(2500) } }
+        found.filter { it != ownText }.sortedBy { ip -> ip.substringAfterLast('.').toIntOrNull() ?: 0 }
+    }.getOrDefault(emptyList())
+
+    /** One multicast call and the addresses of whoever answers within about two seconds. */
+    private fun multicast(group: String, port: Int, query: ByteArray, found: MutableSet<String>, own: String) {
+        runCatching {
+            val sock = java.net.DatagramSocket()
+            sock.soTimeout = 400
+            sock.send(java.net.DatagramPacket(query, query.size, java.net.InetAddress.getByName(group), port))
+            val end = System.currentTimeMillis() + 2200
+            val buf = ByteArray(1500)
+            while (System.currentTimeMillis() < end) {
+                try { val p = java.net.DatagramPacket(buf, buf.size); sock.receive(p); p.address.hostAddress?.let { if (it != own) found.add(it) } } catch (e: java.net.SocketTimeoutException) { }
+            }
+            sock.close()
+        }
+    }
+
+    fun scan(c: Context): Int = scanList(c).size
 
     /** Sets the two cuts of one app. Returns false when the rule could not be set (no root or Shizuku). */
     fun setRule(c: Context, pkg: String, wifi: Boolean, mobile: Boolean): Boolean {
@@ -117,19 +160,22 @@ object NetPolicy {
 fun NetAccessCard() {
     val ctx = LocalContext.current
     var devices by remember { mutableIntStateOf(0) }
+    var found by remember { mutableStateOf<List<String>>(emptyList()) }
     var open by remember { mutableStateOf(false) }
     // the scan runs again each time the button is pressed (and once when the card opens)
     var scan by remember { mutableIntStateOf(0) }
     var scanning by remember { mutableStateOf(true) }
     LaunchedEffect(scan) {
         scanning = true
-        withContext(Dispatchers.IO) { NetPolicy.reapply(ctx); devices = maxOf(NetPolicy.devices(), NetPolicy.scan(ctx)) }
+        withContext(Dispatchers.IO) { NetPolicy.reapply(ctx); val l = NetPolicy.scanList(ctx); found = l; devices = maxOf(NetPolicy.devices(), l.size) }
         scanning = false
     }
     PCard(Modifier.fillMaxWidth()) {
         Text(tr("Devices on this Wi-Fi", "Bu Wi-Fi'deki cihazlar"), color = T.sub, fontSize = 12.sp)
         Text(if (scanning) "…" else "${devices + 1}", color = T.text, fontSize = 26.sp)
         Text(tr("this phone and the others it sees (the router too)", "bu telefon ve gördüğü diğerleri (yönlendirici dahil)"), color = T.sub, fontSize = 11.sp)
+        // the addresses that answered
+        if (!scanning && found.isNotEmpty()) Text(found.take(40).joinToString("  ·  "), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.padding(top = 6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             PButton(tr("Access per app", "Uygulama başına erişim")) { open = true }
@@ -169,11 +215,13 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
                         }
                         Spacer(Modifier.width(10.dp))
                         Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        PIcon("wifi", if (!wifi) T.accent else T.sub, 18.dp, Modifier.semantics { contentDescription = "Wi-Fi" })
-                        PSwitch(!wifi, { on -> val was = wifi; wifi = !on; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, !on, mobile)) wifi = was } })
-                        Spacer(Modifier.width(10.dp))
-                        PIcon("phone", if (!mobile) T.accent else T.sub, 18.dp, Modifier.semantics { contentDescription = tr("Mobile", "Mobil") })
-                        PSwitch(!mobile, { on -> val was = mobile; mobile = !on; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, !on)) mobile = was } })
+                        // the two icons are the buttons: lit when the app may use that network, grey when it is cut off
+                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = wifi; wifi = !wifi; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) wifi = was } }.semantics { contentDescription = "Wi-Fi" }, contentAlignment = Alignment.Center) {
+                            PIcon("wifi", if (!wifi) T.accent else T.sub.copy(alpha = .35f), 26.dp)
+                        }
+                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = mobile; mobile = !mobile; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) mobile = was } }.semantics { contentDescription = tr("Mobile", "Mobil") }, contentAlignment = Alignment.Center) {
+                            PIcon("phone", if (!mobile) T.accent else T.sub.copy(alpha = .35f), 26.dp)
+                        }
                     }
                 }
             }
