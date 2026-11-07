@@ -95,6 +95,7 @@ object WidgetAccent {
         ids.forEach { edit.remove("accent_$it") }
         edit.apply()
         WidgetOver.remove(c, ids)
+        WidgetText.remove(c, ids)
     }
 }
 
@@ -128,4 +129,17 @@ object WidgetSize {
         val h = o.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
         return if (w > 0 && h > 0) w to h else null
     }
+}
+
+/** The size of the big number of a text widget, six steps, kept per appWidgetId; a widget that was never set uses the size its tile asks for. */
+object WidgetText {
+    val steps = floatArrayOf(.5f, .65f, .8f, 1f, 1.2f, 1.4f)
+    val names = listOf("XS", "S", "M", "L", "XL", "XXL")
+    private fun p(c: Context) = c.getSharedPreferences("widget_text", Context.MODE_PRIVATE)
+    fun level(c: Context, id: Int): Int? = if (id > 0 && p(c).contains("lvl_$id")) p(c).getInt("lvl_$id", 3).coerceIn(0, steps.lastIndex) else null
+    fun scale(c: Context, id: Int, def: Float): Float = level(c, id)?.let { steps[it] } ?: def
+    /** The step nearest to [def], shown picked in the settings while nothing was chosen. */
+    fun shown(c: Context, id: Int, def: Float): Int = level(c, id) ?: steps.indices.minByOrNull { kotlin.math.abs(steps[it] - def) }!!
+    fun save(c: Context, id: Int, lvl: Int) = p(c).edit().putInt("lvl_$id", lvl).apply()
+    fun remove(c: Context, ids: IntArray) = p(c).edit().apply { ids.forEach { remove("lvl_$it") } }.apply()
 }
