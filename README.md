@@ -10,8 +10,6 @@
 |---|---|---|---|---|
 | <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
 
-### More screenshots
-
 | Processes | Performance | Overview | CPU cores | Windows 95 Performance |
 |---|---|---|---|---|
 | <img src="docs/screenshots/processes.png" width="170" alt="Processes"> | <img src="docs/screenshots/performance.png" width="170" alt="Performance"> | <img src="docs/screenshots/overview.png" width="170" alt="Overview"> | <img src="docs/screenshots/cores.png" width="170" alt="CPU cores"> | <img src="docs/screenshots/win95-performance.png" width="170" alt="Windows 95 Performance"> |
