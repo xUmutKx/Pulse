@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.athenaeum
 
+import com.umutk.pulse.tr
 import com.umutk.pulse.R
 
 import android.content.Intent
@@ -1113,7 +1114,7 @@ fun SettingsScreen() {
     ) { uri ->
         if (uri != null) {
             val ok = BackupManager.createBackup(context, uri)
-            backupMessage = if (ok) "Backup created." else "Backup failed."
+            backupMessage = if (ok) tr("Backup created.", "Yedek oluşturuldu.") else tr("Backup failed.", "Yedekleme başarısız.")
         }
     }
 
@@ -1132,7 +1133,7 @@ fun SettingsScreen() {
         val uri = pendingRestoreUri
         if (result.resultCode == android.app.Activity.RESULT_OK && uri != null) {
             val ok = BackupManager.restoreBackup(context, uri)
-            backupMessage = if (ok) "Backup restored." else "Restore failed — is this a valid backup file?"
+            backupMessage = if (ok) tr("Backup restored.", "Yedek geri yüklendi.") else tr("Restore failed — is this a valid backup file?", "Geri yükleme başarısız. Bu geçerli bir yedek dosyası mı?")
         }
         pendingRestoreUri = null
     }
@@ -1153,7 +1154,7 @@ fun SettingsScreen() {
             OutlinedTextField(
                 value = userName,
                 onValueChange = { userName = it },
-                label = { Text("Name") },
+                label = { Text(tr("Name", "Ad")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -1167,13 +1168,13 @@ fun SettingsScreen() {
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Who are you?",
+                text = tr("Who are you?", "Sen kimsin?"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Your name appears on the home greeting.",
+                text = tr("Your name appears on the home greeting.", "Adın ana sayfadaki karşılamada görünür."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -1186,7 +1187,7 @@ fun SettingsScreen() {
                 },
                 modifier = Modifier.padding(top = 16.dp)
             ) {
-                Text("Save")
+                Text(tr("Save", "Kaydet"))
             }
             if (savedMessage.isNotBlank()) {
                 Text(
@@ -1199,13 +1200,13 @@ fun SettingsScreen() {
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Restore content",
+                text = tr("Restore content", "İçeriği geri yükle"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Bring back any built-in spirits, deities, or spells you deleted. Your custom entries are never touched and no duplicates are created.",
+                text = tr("Bring back any built-in spirits, deities, or spells you deleted. Your custom entries are never touched and no duplicates are created.", "Sildiğin hazır ruhları, tanrıları ve büyüleri geri getir. Kendi girdilerine dokunulmaz, kopya oluşmaz."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -1223,7 +1224,7 @@ fun SettingsScreen() {
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Restore built-in entries")
+                Text(tr("Restore built-in entries", "Hazır girdileri geri yükle"))
             }
             if (restoreMessage.isNotBlank()) {
                 Text(
@@ -1235,14 +1236,15 @@ fun SettingsScreen() {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            AthLookPicker()
             Text(
-                text = "Visible sections",
+                text = tr("Visible sections", "Görünen bölümler"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Turn off anything you don't use. Hidden sections disappear from the bottom bar and home screen — nothing is deleted.",
+                text = tr("Turn off anything you don't use. Hidden sections disappear from the bottom bar and home screen — nothing is deleted.", "Kullanmadığını kapat. Gizlenen bölümler alt çubuktan ve ana sayfadan kalkar, hiçbir şey silinmez."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -1259,7 +1261,7 @@ fun SettingsScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = feature.label,
+                        text = featLabel(feature),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -1292,7 +1294,7 @@ fun SettingsScreen() {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = child.label,
+                                text = featLabel(child),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
@@ -1318,7 +1320,7 @@ fun SettingsScreen() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Widget background",
+                    text = tr("Widget background", "Widget arka planı"),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
@@ -1338,7 +1340,7 @@ fun SettingsScreen() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Use system colors (Material You)",
+                    text = tr("Use system colors (Material You)", "Sistem renklerini kullan (Material You)"),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
@@ -1354,13 +1356,13 @@ fun SettingsScreen() {
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Backup & restore",
+                text = tr("Backup & restore", "Yedekle ve geri yükle"),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Back up everything — spirits, deities, spells, offerings, readings, settings, and your card/rune edits — as a single file you can save anywhere. Restoring replaces all current data with the backup's.",
+                text = tr("Back up everything — spirits, deities, spells, offerings, readings, settings, and your card/rune edits — as a single file you can save anywhere. Restoring replaces all current data with the backup's.", "Her şeyi tek dosyada yedekle: ruhlar, tanrılar, büyüler, adaklar, okumalar, ayarlar ve kart/rün düzenlemeleri. Geri yükleme mevcut verilerin yerine yedeği koyar."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -1374,7 +1376,7 @@ fun SettingsScreen() {
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Create backup")
+                Text(tr("Create backup", "Yedek oluştur"))
             }
             Button(
                 onClick = {
@@ -1393,7 +1395,7 @@ fun SettingsScreen() {
                     contentDescription = null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
-                Text("Restore from backup")
+                Text(tr("Restore from backup", "Yedekten geri yükle"))
             }
             if (backupMessage.isNotBlank()) {
                 Text(
@@ -1406,26 +1408,8 @@ fun SettingsScreen() {
             Spacer(modifier = Modifier.height(32.dp))
 
             val context = LocalContext.current
-            Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/zad1ag"))
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("Support me on Ko-fi")
-            }
             Text(
-                text = "Credits",
+                text = tr("Credits", "Katkılar"),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1441,7 +1425,7 @@ fun SettingsScreen() {
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Icons from ")
+                    Text(tr("Icons from ", "Simgeler: "))
                     Text(
                         text = "game-icons.net",
                         color = linkColor,
@@ -1459,22 +1443,22 @@ fun SettingsScreen() {
     if (showRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
-            title = { Text("Restore built-in entries?") },
-            text = { Text("All deleted built-in spirits, deities, and spells will be restored. Your custom entries will not be changed or duplicated.") },
+            title = { Text(tr("Restore built-in entries?", "Hazır girdiler geri yüklensin mi?")) },
+            text = { Text(tr("All deleted built-in spirits, deities, and spells will be restored. Your custom entries will not be changed or duplicated.", "Silinen tüm hazır ruhlar, tanrılar ve büyüler geri gelir. Kendi girdilerin değişmez ve kopyalanmaz.")) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         TarotApp.core.restoreBuiltins()
-                        restoreMessage = "Built-in entries restored."
+                        restoreMessage = tr("Built-in entries restored.", "Hazır girdiler geri yüklendi.")
                         showRestoreConfirm = false
                     }
                 ) {
-                    Text("Restore")
+                    Text(tr("Restore", "Geri yükle"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRestoreConfirm = false }) {
-                    Text("Cancel")
+                    Text(tr("Cancel", "İptal"))
                 }
             }
         )
@@ -1486,20 +1470,20 @@ fun SettingsScreen() {
                 showBackupRestoreConfirm = false
                 pendingRestoreUri = null
             },
-            title = { Text("Restore from backup?") },
-            text = { Text("Your current data will be replaced with the backup's contents. This cannot be undone.") },
+            title = { Text(tr("Restore from backup?", "Yedekten geri yüklensin mi?")) },
+            text = { Text(tr("Your current data will be replaced with the backup's contents. This cannot be undone.", "Mevcut verilerin yedeğin içeriğiyle değiştirilecek. Bu geri alınamaz.")) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showBackupRestoreConfirm = false
                         pendingRestoreUri?.let { uri ->
                             val ok = BackupManager.restoreBackup(context, uri)
-                            backupMessage = if (ok) "Backup restored." else "Restore failed — is this a valid backup file?"
+                            backupMessage = if (ok) tr("Backup restored.", "Yedek geri yüklendi.") else tr("Restore failed — is this a valid backup file?", "Geri yükleme başarısız. Bu geçerli bir yedek dosyası mı?")
                         }
                         pendingRestoreUri = null
                     }
                 ) {
-                    Text("Restore", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Restore", "Geri yükle"), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -1507,7 +1491,7 @@ fun SettingsScreen() {
                     showBackupRestoreConfirm = false
                     pendingRestoreUri = null
                 }) {
-                    Text("Cancel")
+                    Text(tr("Cancel", "İptal"))
                 }
             }
         )
@@ -1572,7 +1556,7 @@ private fun EditCardDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
+                    label = { Text(tr("Name", "Ad")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1641,13 +1625,25 @@ private fun EditCardDialog(
                     onSave(card.withOverride(TarotApp.overrides.getCardOverride(card.id)))
                 }
             ) {
-                Text("Save")
+                Text(tr("Save", "Kaydet"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(tr("Cancel", "İptal"))
             }
         }
     )
+}
+
+private fun featLabel(f: FeatureSettings.Feature): String = when (f) {
+    FeatureSettings.Feature.TAROT -> "Tarot"
+    FeatureSettings.Feature.ASTROLOGY -> tr("Astrology", "Astroloji")
+    FeatureSettings.Feature.MAGIC -> tr("Magic", "Büyü")
+    FeatureSettings.Feature.SPELLS -> tr("Spells", "Büyüler")
+    FeatureSettings.Feature.STAVES -> tr("Staves", "Asalar")
+    FeatureSettings.Feature.RUNES -> tr("Runes", "Rünler")
+    FeatureSettings.Feature.SPIRITS -> tr("Spirits", "Ruhlar")
+    FeatureSettings.Feature.ENTITIES -> tr("Entities", "Varlıklar")
+    FeatureSettings.Feature.DEITIES -> tr("Deities", "Tanrılar")
 }
