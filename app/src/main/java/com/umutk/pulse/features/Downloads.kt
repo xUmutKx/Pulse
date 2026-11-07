@@ -344,7 +344,24 @@ object Downloads {
         app?.getSystemService(NotificationManager::class.java)?.cancel(t.nid)
         // after the writer has stopped, so it cannot bring the file back
         val running = t.job
-        scope.launch { running?.join(); t.file.delete() }
+        scope.launch {
+            runCatching { running?.join() }
+            if (!eraseFile(t.file)) {
+                // the file is still there (the phone refused the delete): the row goes, so the file is said to stay
+                val c = app ?: return@launch
+                android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(c, com.umutk.pulse.tr("Could not delete ${t.file.name}", "${t.file.name} silinemedi"), android.widget.Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    /** Deletes [f]: the plain way first, then through MediaStore (a file in the shared Downloads folder that this app may not remove directly). True when it is gone. */
+    private fun eraseFile(f: File): Boolean {
+        if (!f.exists()) return true
+        runCatching { f.delete() }
+        if (!f.exists()) return true
+        val c = app ?: return false
+        runCatching { c.contentResolver.delete(android.provider.MediaStore.Files.getContentUri("external"), "_data=?", arrayOf(f.path)) }
+        return !f.exists()
     }
 
     /** A finished download whose file is gone (deleted in a file manager, an unmounted card) leaves the list: the list shows what is really there. */
@@ -966,7 +983,7 @@ private fun DownloadsContent() {
         if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
             title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
             text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
-            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { Downloads.remove(it) }
+            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { runCatching { Downloads.remove(it) } }
                 findScope.launch { kotlinx.coroutines.delay(1500); val left = n.count { it.file.exists() }; if (left > 0) android.widget.Toast.makeText(ctx, tr("$left files could not be deleted", "$left dosya silinemedi"), android.widget.Toast.LENGTH_LONG).show() } } },
             dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { bulkAsk = false } })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
