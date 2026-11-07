@@ -15,6 +15,7 @@
         <!-- ArtCraft downloads and installs APK files of another project: not in the Play build -->
         <activity android:name="com.umutk.pulse.ArtCraftActivity" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.ArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.YoutubeLauncher" tools:node="remove" />
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />
     </application>
 </manifest>

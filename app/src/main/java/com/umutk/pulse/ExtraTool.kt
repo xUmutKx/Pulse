@@ -258,6 +258,7 @@ open class ExtraToolActivity : ComponentActivity() {
         return when {
             n.endsWith("MusicLauncher") -> "music"
             n.endsWith("VideoLauncher") -> "video"
+            n.endsWith("YoutubeLauncher") -> "youtube"
             n.endsWith("WhiteNoiseLauncher") -> "whitenoise"
             n.endsWith("VoiceLauncher") -> "voice"
             n.endsWith("NotesLauncher") -> "notes"
