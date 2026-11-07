@@ -554,7 +554,8 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         Box(Modifier.fillMaxWidth().height(14.dp).background(if (openP == 0f) Color.Transparent else below)
             .draggable(orientation = androidx.compose.foundation.gestures.Orientation.Vertical, state = gripDrag, onDragStopped = { pull = if (pull > .5f) 1f else 0f })
             .clickable { pull = if (pull > .5f) 0f else 1f }, contentAlignment = Alignment.Center) {
-            OfChevron(ink.copy(alpha = .6f))
+            // open: only the thin line (the arrow in the title bar closes it); the arrow here shows only when the block is closed, as the way back
+            if (hid) OfChevron(ink.copy(alpha = .6f))
         }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
