@@ -100,6 +100,10 @@ internal class ImgEditState(val original: Bitmap) {
         push(); bmp = nb; strokes = emptyList()
     }
     fun addStroke(s: ImgStroke) { push(); strokes = strokes + s }
+    /** The picture with its strokes drawn in (what an effect works on). */
+    fun current(): Bitmap = baked()
+    /** An effect's result replaces the picture (the strokes are in it); the undo history keeps what was before. */
+    fun applyBitmap(nb: Bitmap) { push(); bmp = nb; strokes = emptyList() }
 }
 
 private fun imgDrawStrokes(c: android.graphics.Canvas, strokes: List<ImgStroke>, w: Int, h: Int) {
@@ -366,6 +370,23 @@ private fun ColumnScope.ImgEditBody(src: ImgSrc, b0: Bitmap, onClose: () -> Unit
                 val names = listOf(tr("Original", "Orijinal"), tr("Mono", "Siyah beyaz"), tr("Sepia", "Sepya"), tr("Warm", "Sıcak"), tr("Cool", "Soğuk"), tr("Vivid", "Canlı"))
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     names.forEachIndexed { i, n -> PChip(st.fx == i, n) { if (st.fx != i) { st.push(); st.fx = i } } }
+                }
+                // effects that change the picture itself (shadow, dots, miniature, pixels, grain, blur); each one can be undone
+                Spacer(Modifier.height(6.dp))
+                val effects = listOf(tr("Shadow", "Gölge"), tr("Dots", "Nokta"), "Tilt-shift", tr("Pixels", "Piksel"), tr("Grain", "Tane"), tr("Blur", "Bulanık"))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    effects.forEachIndexed { i, n ->
+                        PChip(false, n) {
+                            if (!busy) {
+                                busy = true
+                                scope.launch {
+                                    val nb = withContext(Dispatchers.Default) { runCatching { com.umutk.pulse.features.PhotoToolsCore.effect(st.current(), i) }.getOrNull() }
+                                    busy = false
+                                    if (nb != null) st.applyBitmap(nb) else Toast.makeText(ctx, tr("Could not apply it", "Uygulanamadı"), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else -> {

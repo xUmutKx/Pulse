@@ -288,6 +288,76 @@ internal object PhotoToolsCore {
         return res
     }
 
+    // ---- effects for the photo editor ----------------------------------------------------------------------------------------------------------------------
+
+    /** The editor's effects, by id: 0 shadow (vignette), 1 halftone dots, 2 tilt-shift, 3 pixels, 4 grain, 5 soft blur. */
+    fun effect(src: Bitmap, id: Int): Bitmap = when (id) {
+        0 -> vignette(src)
+        1 -> dots(src)
+        2 -> tiltShift(src, 0, .55f, .2f, .5f, .6f, 1.35f, 1.1f)
+        3 -> pixelate(src)
+        4 -> grain(src)
+        else -> softBlur(src)
+    }
+
+    private fun copyOf(src: Bitmap): Bitmap = src.copy(Bitmap.Config.ARGB_8888, true)
+
+    /** A shadow around the edges: the picture darkens towards the corners. */
+    private fun vignette(src: Bitmap): Bitmap {
+        val out = copyOf(src); val c = Canvas(out)
+        val w = out.width.toFloat(); val h = out.height.toFloat()
+        val r = kotlin.math.sqrt(w * w + h * h) / 2f
+        val p = Paint().apply { shader = android.graphics.RadialGradient(w / 2f, h / 2f, r, intArrayOf(0x00000000, 0x00000000, 0xB3000000.toInt()), floatArrayOf(0f, .45f, 1f), android.graphics.Shader.TileMode.CLAMP) }
+        c.drawRect(0f, 0f, w, h, p)
+        return out
+    }
+
+    /** Halftone: the picture as coloured dots of different sizes on paper. */
+    private fun dots(src: Bitmap): Bitmap {
+        val w = src.width; val h = src.height
+        val cellPx = max(6, max(w, h) / 90)
+        val cols = (w + cellPx - 1) / cellPx; val rows = (h + cellPx - 1) / cellPx
+        val small = Bitmap.createScaledBitmap(src, cols, rows, true)
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(out); c.drawColor(android.graphics.Color.WHITE)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        for (y in 0 until rows) for (x in 0 until cols) {
+            val px = small.getPixel(x, y)
+            val l = (0.299f * ((px shr 16) and 255) + 0.587f * ((px shr 8) and 255) + 0.114f * (px and 255)) / 255f
+            val r = cellPx * .62f * kotlin.math.sqrt(1f - l * .92f)
+            p.color = px or (0xFF shl 24)
+            c.drawCircle((x + .5f) * cellPx, (y + .5f) * cellPx, r, p)
+        }
+        return out
+    }
+
+    private fun pixelate(src: Bitmap): Bitmap {
+        val block = max(6, max(src.width, src.height) / 90)
+        val small = Bitmap.createScaledBitmap(src, max(1, src.width / block), max(1, src.height / block), false)
+        return Bitmap.createScaledBitmap(small, src.width, src.height, false)
+    }
+
+    private fun grain(src: Bitmap): Bitmap {
+        val w = src.width; val h = src.height
+        val px = IntArray(w * h); src.getPixels(px, 0, w, 0, 0, w, h)
+        val r = java.util.Random(7)
+        for (i in px.indices) {
+            val n = (r.nextGaussian() * 22).toInt(); val p = px[i]
+            px[i] = (p and (0xFF shl 24)) or (((((p shr 16) and 255) + n).coerceIn(0, 255)) shl 16) or (((((p shr 8) and 255) + n).coerceIn(0, 255)) shl 8) or (((p and 255) + n).coerceIn(0, 255))
+        }
+        return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
+    }
+
+    private fun softBlur(src: Bitmap): Bitmap {
+        val w = src.width; val h = src.height
+        val k = min(1f, 900f / max(w, h))
+        val sw = (w * k).roundToInt().coerceAtLeast(1); val sh = (h * k).roundToInt().coerceAtLeast(1)
+        val small = Bitmap.createScaledBitmap(src, sw, sh, true)
+        val px = IntArray(sw * sh); small.getPixels(px, 0, sw, 0, 0, sw, sh)
+        boxBlur(px, sw, sh, max(2, max(sw, sh) / 140), 3)
+        return Bitmap.createScaledBitmap(Bitmap.createBitmap(px, sw, sh, Bitmap.Config.ARGB_8888), w, h, true)
+    }
+
     // ---- halftone QR -------------------------------------------------------------------------------------------------------------------------------------
 
     /** Modules that must keep their own colour whole: the finder patterns and their separators, the timing lines, the alignment patterns and the format / version areas. */
