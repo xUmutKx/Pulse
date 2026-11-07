@@ -48,8 +48,11 @@ jobs:
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           "$SDKMANAGER" "platforms;android-37" || true
           cd extras/ytxtube
-          chmod +x gradlew
-          set -o pipefail; ./gradlew assembleRelease -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' --no-daemon 2>&1 | tee ../../ytx-build.log
+          # the client's own Gradle (its wrapper jar is not kept here: the workflow's wrapper check refuses jars it does not know)
+          GV=$(grep -oP 'gradle-\K[0-9.]+(?=-bin)' gradle/wrapper/gradle-wrapper.properties)
+          curl -fsSL "https://services.gradle.org/distributions/gradle-$GV-bin.zip" -o "$RUNNER_TEMP/g.zip"
+          unzip -q "$RUNNER_TEMP/g.zip" -d "$RUNNER_TEMP/gradle-ytx"
+          set -o pipefail; "$RUNNER_TEMP/gradle-ytx/gradle-$GV/bin/gradle" assembleRelease -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' --no-daemon 2>&1 | tee ../../ytx-build.log
           mkdir -p ../../app/src/foss/assets/extras
           cp app/build/outputs/apk/release/app-release.apk ../../app/src/foss/assets/extras/ytxtube.apk
           ls -l ../../app/src/foss/assets/extras/ytxtube.apk
