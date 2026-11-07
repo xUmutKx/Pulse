@@ -149,6 +149,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     val recapGate = com.umutk.pulse.ads.rememberAdGate(tr("Music recap", "Müzik özeti"), tr("Watch a short ad to open the recap.", "Özeti açmak için kısa bir reklam izle."), key = "recap", minutes = 30)
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
+    var ytOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         when ((ctx as? android.app.Activity)?.intent?.getStringExtra(MusicPlaybackService.EXTRA_OPEN)) {
@@ -219,6 +220,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
         if (radioOpen) Box(Modifier.fillMaxSize().background(Color.Black)) { com.umutk.pulse.extras.radio.RadioScreen({ radioOpen = false }, ink = Color.White, sub = Color.White.copy(alpha = .6f), accent = Color(0xFFC6FF3D)) }
         if (recapOpen) Box(Modifier.fillMaxSize()) { com.umutk.pulse.extras.music.stats.RecapScreen { recapOpen = false } }
         if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { WebMusicHub { onlineOpen = false } }
+        if (ytOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.youtube.YoutubeMusicScreen { ytOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
         // the settings are a full-screen page of their own (a dialog without the usual width limit), not a panel inside the player
@@ -260,6 +262,9 @@ private fun MusicHubBody(onBack: () -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", ink, 22.dp); Text(tr("Floating lyrics search", "Yüzen söz araması"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp).weight(1f))
                     com.umutk.pulse.PSwitch(floating, { floating = it; if (it) com.umutk.pulse.extras.lyrics.FloatingLyricsSearch.show(ctx) else com.umutk.pulse.extras.lyrics.FloatingLyricsSearch.hide(ctx) })
+                }
+                if (com.umutk.pulse.BuildConfig.APK_INSTALL) Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; ytOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("music", ink, 22.dp); Text("YouTube Music", color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; spotifyOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("heart", ink, 22.dp); Text("Spotify", color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
