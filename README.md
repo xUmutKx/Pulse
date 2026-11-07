@@ -1,6 +1,7 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
-### Pulse
+<details><summary><b>📱 Pulse</b></summary>
+
 
 > I love some apps, but sometimes a single feature I want is missing. After a while I started adding things one by one to random apps, and then I thought: why not pack them into a single app, all for convenience. Simple, and under 50 MB.
 
@@ -12,7 +13,11 @@
 |---|---|---|---|---|
 | <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
 
-### More screenshots
+
+</details>
+
+<details><summary><b>🖼️ More screenshots</b></summary>
+
 
 | Processes | Performance | Overview | CPU cores | Windows 95 Performance |
 |---|---|---|---|---|
@@ -29,7 +34,11 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 
 
 
-### Everything in Pulse, by category
+
+</details>
+
+<details><summary><b>📚 Everything in Pulse, by category</b></summary>
+
 
 <details><summary><b>🎨 Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
@@ -97,7 +106,11 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 - Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
 </details>
 
-### Features
+
+</details>
+
+<details><summary><b>✨ Features</b></summary>
+
 
 <details><summary><b>📊 Task manager</b></summary>
 
@@ -238,6 +251,9 @@ Pulse checks GitHub for a newer release at most every 12 hours. When one exists,
 - **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
 - **Screen cover**: a black overlay that keeps a clock, date, battery and your own text, like an always-on display. Six clock styles with previews and nine positions on the screen.
 - **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page. Pie charts draw each slice flush against the next.
+
+
+</details>
 
 
 </details>
