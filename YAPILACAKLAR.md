@@ -2305,3 +2305,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.371 (derlendi): ekran kapağı (StandBy kutucuğu kalktı, 5 sade şarj animasyonu + rastgele, çift dokunuşla kapanır, ekran açıkken/şarjda varsayılan kapalı), spor Sağlık içinde (altta), hava durumu anlık geçiş + harita konum noktası, Good Lock güncellemeleri (Samsung mağaza servisi), ArtCraft güncelleme algısı ve Play sürümünde yok, kitap kapakları küçük JPEG + siyah kapak + kaydırarak okuma.
 
 - Hava durumu: 3 saatlik kaynaklar (wttr, OpenWeatherMap, 7Timer) ve met.no (6 saatlik kuyruk) "sonraki 24/12 saat" listesinde 3 kat süre gösteriyordu: tüm kaynaklar build() içinde saatliğe çevrilir; 7Timer "şimdi" artık şu anki saat (eski koşunun 6-7 saat önceki ilk noktası değil); widget kendi kopyasında MGM/birleşik ek verileri de tutar; anlık geçişte yer son tahmin olur (widget aynı yeri gösterir). derlenmedi
+
+- 1.0.372 (derlendi): hava durumu saatlik normalleştirme (7Timer/wttr/OWM/met.no 3 kat süre), 7Timer şimdi, widget ek verileri, anlık geçişte widget aynı yer.
