@@ -35,6 +35,14 @@ object BookFind {
         return if (text.startsWith("{")) gutendex(text) else opds(text, url)
     }
 
+    /** The free classics of Project Gutenberg, the most downloaded first: some Turkish books, then English ones (shown before anything is searched). */
+    fun classics(): List<Found> {
+        val tr = runCatching { gutendex(get("https://gutendex.com/books/?languages=tr")) }.getOrDefault(emptyList()).take(12)
+        val en = runCatching { gutendex(get("https://gutendex.com/books/?languages=en")) }.getOrDefault(emptyList()).take(30)
+        val seen = HashSet<String>()
+        return (tr + en).filter { seen.add(it.title.lowercase()) }
+    }
+
     private fun gutendex(json: String): List<Found> {
         val results = JSONObject(json).getJSONArray("results")
         return List(results.length()) { i ->

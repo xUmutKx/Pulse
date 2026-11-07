@@ -31,6 +31,7 @@ val BAR_TOOLS = listOf(
     Triple("tune", tr("Options", "Seçenekler"), "options"),
     Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
+    Triple("sort", tr("RSVP speed reading", "RSVP hızlı okuma"), "rsvp"),
 )
 
 /** The places books are found in before the user adds any: Project Gutenberg, Turkish first and then all languages. */
