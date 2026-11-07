@@ -42,7 +42,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.umutk.pulse.extras.athenaeum.BuildConfig
 import com.umutk.pulse.extras.athenaeum.ui.NatalChartScreen
 import com.umutk.pulse.extras.athenaeum.ui.OnboardingScreen
 
