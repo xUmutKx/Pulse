@@ -144,8 +144,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.quickPinned = true
     }
     override fun clipPin(id: Long) { st.clipItems = ClipStore.togglePin(this, id) }
-    override fun clipDelete(ids: Set<Long>) { st.clipItems = ClipStore.delete(this, ids) }
-    override fun clipClear() { st.clipItems = ClipStore.clear(this) }
+    override fun clipDelete(ids: Set<Long>) {
+        val gone = st.clipItems.filter { it.id in ids }
+        st.clipItems = ClipStore.delete(this, ids)
+        // an item deleted from the clipboard leaves the right slot of the bar at once
+        if (shotItem?.id in ids) { shotItem = null; st.shotThumb = null }
+        val q = quickClip
+        if (q != null && gone.any { it.image == null && it.text == q }) quickClip = null
+        updateSuggestions()
+    }
+    override fun clipClear() {
+        val before = st.clipItems.filter { !it.pinned }
+        st.clipItems = ClipStore.clear(this)
+        if (shotItem != null && before.any { it.id == shotItem?.id }) { shotItem = null; st.shotThumb = null }
+        val q = quickClip
+        if (q != null && before.any { it.image == null && it.text == q }) quickClip = null
+        updateSuggestions()
+    }
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
     override fun authPick(code: String) {

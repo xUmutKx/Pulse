@@ -536,12 +536,13 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
                 st.slots.forEachIndexed { i, s0 ->
                     val s = if (crowded && i == 2) "" else s0
-                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else (s.length / 9f).coerceIn(1f, 2.2f)
+                    // the copied item and the photo in the right slot get a wider place to tap
+                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else if (s.startsWith("\u0001") || s.startsWith("\u0002")) 1.8f else (s.length / 9f).coerceIn(1f, 2.2f)
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
-                            st.shotThumb?.let { Image(it, null, Modifier.height(32.dp).widthIn(max = 48.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
+                            st.shotThumb?.let { Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
                             if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -1604,7 +1605,7 @@ private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
 /** The pin beside the item waiting in the right slot of the bar. */
 @Composable
 private fun QuickPin(st: KbState, th: KbTheme, act: KbActions) {
-    Box(Modifier.size(30.dp).clickable { act.quickPin() }, contentAlignment = Alignment.Center) {
+    Box(Modifier.size(44.dp).clickable { act.quickPin() }, contentAlignment = Alignment.Center) {
         Icon(kbIcon(th, "PushPin"), null, tint = if (st.quickPinned) th.accent else th.sub.copy(alpha = .7f), modifier = Modifier.size(16.dp))
     }
 }
