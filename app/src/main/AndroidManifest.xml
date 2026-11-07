@@ -1534,6 +1534,12 @@
             </intent-filter>
             <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:mimeType="video/*"/></intent-filter>
         </activity-alias>
+        <activity-alias android:name=".YoutubeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_video" android:roundIcon="@mipmap/ic_video" android:label="YouTube">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".WhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_noise" android:roundIcon="@drawable/launch_noise" android:label="White Noise">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

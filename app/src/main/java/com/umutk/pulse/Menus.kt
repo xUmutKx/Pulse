@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.MenuBook
@@ -217,13 +218,14 @@ object AppPlace {
         App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { c, _ -> launchExtra(c, TOOL, "gamehub") },
         App("HealthLauncher", "Health", "Sağlık", "heart", Icons.Outlined.Favorite) { c, _ -> launchExtra(c, TOOL, "health") },
         App("AthenaeumLauncher", "Athenaeum", "Athenaeum", "star", Icons.Outlined.AutoAwesome) { c, _ -> launchExtra(c, "com.umutk.pulse.extras.athenaeum.AthenaeumActivity") },
-    ).filter { it.alias != "ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+        App("YoutubeLauncher", "YouTube", "YouTube", "video", Icons.Outlined.PlayCircle) { c, _ -> launchExtra(c, TOOL, "youtube") },
+    ).filter { (it.alias != "ArtCraftLauncher" && it.alias != "YoutubeLauncher") || com.umutk.pulse.BuildConfig.APK_INSTALL }
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
     /** Every app from the calculator on only lives in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
     private val quiet = setOf("CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher",
-        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher", "GameHubLauncher", "HealthLauncher", "AthenaeumLauncher")
+        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher", "GameHubLauncher", "HealthLauncher", "AthenaeumLauncher", "YoutubeLauncher")
     fun load(c: Context) {
         // Game Hub lives in the Extra apps list (once, for everyone: a place chosen before this stays only in Settings > Apps)
         if (!sp(c).getBoolean("gamehub_extra", false)) { sp(c).edit().putString("GameHubLauncher", "hidden").putBoolean("gamehub_extra", true).apply() }

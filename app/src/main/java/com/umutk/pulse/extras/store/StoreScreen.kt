@@ -439,10 +439,11 @@ private fun BuiltinRows() {
         BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
         BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download") { openTool("downloads") },
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
+        BuiltinRow("YouTube", tr("Search, watch and listen, no Shorts; songs play in Pulse's player", "Ara, izle ve dinle, Shorts yok; şarkılar Pulse çaların da çalar"), "video", "app:YoutubeLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "youtube") },
         BuiltinRow("Athenaeum", tr("Tarot, astrology, natal charts, spirits and magic, offline", "Tarot, astroloji, doğum haritası, ruhlar ve büyü, çevrimdışı"), "star", "app:AthenaeumLauncher") { launchExtra(ctx, "com.umutk.pulse.extras.athenaeum.AthenaeumActivity") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
-    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+    ).filter { (it.place != "app:ArtCraftLauncher" && it.place != "app:YoutubeLauncher") || com.umutk.pulse.BuildConfig.APK_INSTALL }
     // every app stays listed here, with or without its launcher icon; a long press hides a row, the eye shows the hidden ones
     // a tool switched off in Settings > Extra apps is not listed here either
     // the Tools / Apps / ⋮ menu placements only decide where a tool is listed outside this page; here it stays listed, even when it is set to hidden there
