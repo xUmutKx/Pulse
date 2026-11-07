@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.winamp
 
+import com.umutk.pulse.extras.music.PlayModes
+import com.umutk.pulse.extras.music.ShuffleKind
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -118,7 +120,8 @@ fun WinampScreen(
     var showEq by remember { mutableStateOf(false) }
     var shade by remember { mutableStateOf(false) }
     var volume by remember { mutableStateOf(engine.player.volume) }
-    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
+    val ctxPm = androidx.compose.ui.platform.LocalContext.current
+    var shuffle by remember { mutableStateOf(PlayModes.shuffle != ShuffleKind.OFF) }
     var repeat by remember { mutableStateOf(engine.player.repeatMode != Player.REPEAT_MODE_OFF) }
     val eq = engine.equalizer
     var eqEnabled by remember { mutableStateOf(eq.enabled) }
@@ -146,11 +149,8 @@ fun WinampScreen(
                 lyricsOn = lyricsOn, onLyrics = { lyricsOn = !lyricsOn },
                 onToggleEq = { showEq = !showEq; bands = eq.bandLevels },
                 scaleDp = sEff, shuffle = shuffle, repeat = repeat, eqOn = showEq, plOn = showPl, shade = shade,
-                onShuffle = { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle },
-                onRepeat = {
-                    repeat = !repeat
-                    engine.player.repeatMode = if (repeat) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
-                },
+                onShuffle = { PlayModes.cycleShuffle(ctxPm); shuffle = PlayModes.shuffle != ShuffleKind.OFF },
+                onRepeat = { repeat = PlayModes.cycleRepeat(ctxPm) != Player.REPEAT_MODE_OFF },
                 onShade = { shade = !shade },
             )
             // the media library (library and internet radio) opens under the playlist, from its own button
