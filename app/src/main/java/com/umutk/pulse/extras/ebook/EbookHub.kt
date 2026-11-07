@@ -110,11 +110,15 @@ private val READER_THEMES = listOf(
     Theme(Color(0xFF05070F), Color(0xFFE6E9F2), Color(0xFF9AA3B8), 1),   // space
     Theme(Color(0xFFFBF0F3), Color(0xFF3A2A30), Color(0xFF8C6E78), 2),   // sakura
     Theme(Color(0xFF1E1620), Color(0xFFF0DCE4), Color(0xFFB89AA8), 3),   // sakura night
+    // no blue light: a dark warm ground and amber ink, like a night-shift screen, easy on the eyes in the dark
+    Theme(Color(0xFF0A0703), Color(0xFFE2B77A), Color(0xFF8F7048)),   // eye comfort
+    Theme(Color(0xFF1A120A), Color(0xFFD9B88F), Color(0xFF8C7456)),   // warm night
 )
 private val THEME_NAMES = listOf(
     tr("Day", "Gündüz"), tr("Pure white", "Saf beyaz"), tr("Sand", "Kum"), tr("Paper grey", "Kâğıt gri"),
     tr("Night", "Gece"), tr("True black", "Tam siyah"), tr("Slate", "Arduvaz"), tr("Charcoal", "Kömür"),
     tr("Space", "Uzay"), tr("Sakura", "Sakura"), tr("Sakura night", "Sakura gece"),
+    tr("Eye comfort", "Göz rahatı"), tr("Warm night", "Sıcak gece"),
 )
 /** The day and the night theme of the automatic switch. */
 private const val DAY_THEME = 0
@@ -644,7 +648,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 val pages by produceState<List<List<Para>>?>(null, chapter, textSize, fontIx, wPx, hPx, themeIx) {
                     value = null
                     value = withContext(Dispatchers.Default) {
-                        paginate(measurer, chapters.getOrNull(chapter)?.paras.orEmpty(), wPx - with(density) { 40.dp.roundToPx() }, hPx - with(density) { 96.dp.roundToPx() }, bodyStyle, headStyle, with(density) { 14.dp.toPx() })
+                        paginate(measurer, chapters.getOrNull(chapter)?.paras.orEmpty(), wPx - with(density) { 40.dp.roundToPx() }, hPx - with(density) { 112.dp.roundToPx() }, bodyStyle, headStyle, with(density) { 14.dp.toPx() })
                     }
                 }
                 val list = pages
