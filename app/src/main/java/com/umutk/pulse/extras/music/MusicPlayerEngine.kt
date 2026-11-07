@@ -228,7 +228,8 @@ class MusicPlayerEngine private constructor(context: Context) {
         reloadSettings()
         // shuffle and repeat survive a restart and an update: restored here, saved on every change
         val modes = app.getSharedPreferences("music_modes", Context.MODE_PRIVATE)
-        player.shuffleModeEnabled = modes.getBoolean("shuffle", false)
+        // the player's own random mode is no longer used (PlayModes makes a fixed order); an older saved "on" is dropped
+        player.shuffleModeEnabled = false
         player.repeatMode = modes.getInt("repeat", Player.REPEAT_MODE_OFF)
         player.addListener(object : Player.Listener {
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { modes.edit().putBoolean("shuffle", shuffleModeEnabled).apply(); if (shuffleModeEnabled) applySmartShuffle() }
@@ -282,7 +283,7 @@ class MusicPlayerEngine private constructor(context: Context) {
     fun playQueue(list: List<Track>, startIndex: Int = 0) {
         cancelCrossfade()
         player.setMediaItems(list.map { it.toMediaItem() }, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)), C.TIME_UNSET)
-        applySmartShuffle(list, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)))
+        PlayModes.onQueueSet(app)
         player.prepare()
         player.play()
     }
@@ -336,6 +337,16 @@ class MusicPlayerEngine private constructor(context: Context) {
     fun moveInQueue(from: Int, to: Int) = player.moveMediaItem(from, to)
 
     fun removeFromQueue(index: Int) = player.removeMediaItem(index)
+
+    /** Replaces everything after the playing song; the playing song is not touched, so nothing stops or jumps. */
+    fun replaceUpcoming(items: List<MediaItem>) {
+        val cur = player.currentMediaItemIndex
+        if (cur < 0 || player.mediaItemCount == 0) return
+        if (player.mediaItemCount > cur + 1) player.removeMediaItems(cur + 1, player.mediaItemCount)
+        player.addMediaItems(items)
+    }
+
+    fun replaceUpcomingTracks(tracks: List<Track>) = replaceUpcoming(tracks.map { it.toMediaItem() })
 
     fun queue(): List<Track> = List(player.mediaItemCount) { player.getMediaItemAt(it).toTrack() }
 
