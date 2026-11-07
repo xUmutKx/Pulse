@@ -992,7 +992,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
             shotItem?.let { pasteClip(it) }
-            if (!shotPinned) { shotItem = null; st.shotThumb = null } updateSuggestions(); return
+            if (!shotPinned) { shotItem = null; st.shotThumb = null }; updateSuggestions(); return
         }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
