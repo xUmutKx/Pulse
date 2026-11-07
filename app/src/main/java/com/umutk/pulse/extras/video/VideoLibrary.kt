@@ -128,15 +128,18 @@ private val thumbs = object : LruCache<String, ImageBitmap>(8 * 1024 * 1024) {
 fun videoThumb(item: VideoItem): ImageBitmap? {
     val ctx = LocalContext.current
     val key = item.uri.toString()
-    val bmp by produceState(thumbs.get(key), key) {
-        if (value == null) value = withContext(Dispatchers.IO) {
+    // a list row is reused for another video when the list changes: the picture is kept together with the address it was made for, so a row never shows the one of the video it had before
+    val loaded by produceState<Pair<String, ImageBitmap?>>(key to thumbs.get(key), key) {
+        val have = thumbs.get(key)
+        if (have != null) { value = key to have; return@produceState }
+        value = key to withContext(Dispatchers.IO) {
             val sys = if (android.os.Build.VERSION.SDK_INT < 29 || item.uri.scheme == "file") null
                 else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
             // the system picture is often black (a fade-in first frame) or missing: then a frame from the middle of this video
             if (sys != null && !isDark(sys)) sys else middleFrame(ctx, item.uri) ?: sys
         }?.also { thumbs.put(key, it) }
     }
-    return bmp
+    return if (loaded.first == key) loaded.second else thumbs.get(key)
 }
 
 /** True when the picture is nearly black: sampled on a 6x4 grid. */
