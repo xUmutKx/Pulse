@@ -264,9 +264,6 @@ fun LibraryScreen(
                 IconButton(onClick = { reversed = !reversed }) { Icon(if (reversed) Icons.Rounded.ArrowUpward else Icons.Rounded.ArrowDownward, tr("Direction", "Yön"), tint = style.accent) }
             }
         }
-        val catKey: Any? = when (val n = node) {
-            is Lib.Cat -> n.kind; is Lib.Group -> n.kind; Lib.Folders, is Lib.Folder -> "folders"; is Lib.Tree -> "tree"; else -> null
-        }
         // the chip row (Albums, Artists, Genres ...) is gone: the same entries are rows of the list below
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
