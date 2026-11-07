@@ -1838,6 +1838,9 @@ private fun exSmartDate(ms: Long): String {
     }
 }
 
+/** Documents whose preview is a white page: PDF and the Office / Open Document files. */
+private val EX_PAPER_EXT = setOf("pdf", "docx", "xlsx", "pptx", "odt", "ods", "odp", "doc", "xls", "ppt", "rtf")
+
 private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
 
 /** A small decoded picture for an image file, or null for anything else or when the device cannot decode it. */
@@ -1846,8 +1849,8 @@ internal fun exThumb(f: File): ImageBitmap? {
     if (!FilesPrefs.thumbs || !canPreview(f)) return null
     val ctx = LocalContext.current
     // a row reused for another file must not keep the old file's picture: every new path starts from its own cache entry (or a fresh load)
-    // in a dark look a PDF page is shown dark: black paper, white text (a plain colour inversion; the page itself is not touched)
-    val dark = com.umutk.pulse.LocalWindowLook.current.dark && f.extension.equals("pdf", true)
+    // in a dark look a document page (PDF, Word, Excel, PowerPoint, Open Document) is shown dark: black paper, white text (a plain colour inversion; the page itself is not touched)
+    val dark = com.umutk.pulse.LocalWindowLook.current.dark && f.extension.lowercase() in EX_PAPER_EXT
     return produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, f.path, dark) {
         val base = Thumbs.cached(f) ?: Thumbs.load(ctx, f)
         value = if (dark && base != null) withContext(kotlinx.coroutines.Dispatchers.Default) { invertedPage(f.path, base) } else base
