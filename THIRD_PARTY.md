@@ -18,7 +18,3 @@ The ASCII art tool of the Toolkit follows the modes and the dithering of [Atelie
 ## Halftone QR (method)
 
 The halftone QR tool uses the "submodule" method described at kloet.net/usr/halftone (a QR module is cut into 3x3 blocks, the middle block keeps the module's colour and the other eight carry the picture). The code is written from scratch; the QR itself is made with ZXing (Apache 2.0).
-
-## Athenaeum (extras/athenaeum)
-
-[Athenaeum](https://github.com/zad1ag/athenaeum) by zad1ag, GNU GPL v3: an offline occult companion (tarot, astrology, natal charts, spirits, spells, staves, runes). Its Kotlin and Compose code is in `app/src/main/java/com/umutk/pulse/extras/athenaeum` (package renamed, started on demand instead of in an Application class, resource names kept) and its Rust core in `native/athenaeum` (the JNI names follow the new package); the Rust core is built into the app for arm64-v8a and armeabi-v7a. Its icons for entities and spells are from game-icons.net (CC BY 3.0).

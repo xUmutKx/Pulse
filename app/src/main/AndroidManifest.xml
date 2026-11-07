@@ -293,24 +293,6 @@
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
         <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
-        <!-- Athenaeum: tarot, astrology, natal charts, spirits and magic, offline (extras/athenaeum) -->
-        <activity android:name=".extras.athenaeum.AthenaeumActivity" android:exported="true" android:label="Athenaeum" android:icon="@mipmap/ath_ic_launcher" android:roundIcon="@mipmap/ath_ic_launcher"
-            android:theme="@style/Theme.TarotApp" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.athenaeum" />
-        <activity-alias android:name=".AthenaeumLauncher" android:enabled="false" android:targetActivity=".extras.athenaeum.AthenaeumActivity" android:exported="true" android:icon="@mipmap/ath_ic_launcher" android:roundIcon="@mipmap/ath_ic_launcher" android:label="Athenaeum">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <receiver android:name=".extras.athenaeum.MoonWidgetProvider" android:exported="false" android:label="Athenaeum moon">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="android.intent.action.DATE_CHANGED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/moon_widget_info" />
-        </receiver>
         <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
