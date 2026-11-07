@@ -171,7 +171,7 @@ class WeatherClearWidget : PulseWidget() {
         val today = f?.days?.firstOrNull()
         if (today != null) { val rt = "↑${WeatherFmt.temp(today.max, imp)} / ↓${WeatherFmt.temp(today.min, imp)}"; val rp = paint(.062f); c.drawText(rt, left(rp, rt), h * .88f, rp) }
         // right: the sky, the date and the time
-        val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
+        val icon = f?.let { WeatherApi.drawable(it.code, it.isDay) } ?: 0
         if (icon != 0) ContextCompat.getDrawable(ctx, icon)?.let { d ->
             val s = (h * .34f).toInt(); val right = (w - padR).toInt(); val top = (h * .08f).toInt()
             d.setBounds(right - s, top, right, top + s); d.draw(c)

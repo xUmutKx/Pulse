@@ -406,10 +406,19 @@ object WeatherApi {
     }
 
     /** Vector drawable for the home-screen widgets, same three looks as [icon]. */
-    fun drawable(code: Int): Int = when (code) {
-        0, 1 -> com.umutk.pulse.R.drawable.wi_weather_sun
+    fun drawable(code: Int, day: Boolean = true): Int = when (code) {
+        // clear sky: the sun by day, the moon at night
+        0, 1 -> if (day) com.umutk.pulse.R.drawable.wi_weather_sun else com.umutk.pulse.R.drawable.wi_weather_moon
         95, 96, 99 -> com.umutk.pulse.R.drawable.wi_weather_bolt
         else -> com.umutk.pulse.R.drawable.wi_weather_cloud
+    }
+
+    /** Whether the hour [time] ("yyyy-MM-ddTHH:mm") of [f] is between that day's sunrise and sunset; without them 6:00 to 19:59 counts as day. */
+    fun isDayAt(f: Forecast, time: String): Boolean {
+        val d = f.days.firstOrNull { time.startsWith(it.date) }
+        if (d != null && d.sunrise.length >= 16 && d.sunset.length >= 16 && d.sunrise != d.sunset) return time.take(16) >= d.sunrise.take(16) && time.take(16) < d.sunset.take(16)
+        val h = time.substringAfter('T', "12").take(2).toIntOrNull() ?: 12
+        return h in 6..19
     }
 
     /** Codes that count as severe for the alert: thunderstorm, heavy snow or heavy rain. */

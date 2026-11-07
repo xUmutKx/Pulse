@@ -60,7 +60,7 @@ object WeatherReport {
                 body.append("   ${h.rain}%")
             }
             if (warn.isNotEmpty()) body.append("\n").append(warn)
-            post(c, ID, f.place, body, WeatherApi.drawable(f.code))
+            post(c, ID, f.place, body, WeatherApi.drawable(f.code, f.isDay))
             sp.edit().putLong("at", now).apply()
             if (rainDue) sp.edit().putLong("rainAt", now).apply()
         }

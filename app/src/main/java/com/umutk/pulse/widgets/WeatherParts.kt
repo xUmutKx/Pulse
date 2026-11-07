@@ -27,7 +27,7 @@ import java.util.Locale
 enum class WeatherPart(val bit: Int) { NOW(1), DAILY(2), HOURLY(4) }
 
 /** One cell of a forecast row: the day or hour, the sky, the high (or the temperature) and the low. */
-private class ForecastCell(val label: String, val code: Int, val hi: String, val lo: String?)
+private class ForecastCell(val label: String, val code: Int, val hi: String, val lo: String?, val day: Boolean = true)
 
 /**
  * Drawing for every mix of parts: the current weather on top (the same as the "Weather and clock" widget), then the rows of the seven days and the seven hours.
@@ -61,7 +61,7 @@ object WeatherParts {
             val fmt = SimpleDateFormat("HH", Locale.getDefault())
             val parse = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US)
             f.hours.take(7).map { hr ->
-                ForecastCell(runCatching { parse.parse(hr.time)?.let { fmt.format(it) } }.getOrNull() ?: hr.time.takeLast(5), hr.code, WeatherFmt.temp(hr.temp, imp), null)
+                ForecastCell(runCatching { parse.parse(hr.time)?.let { fmt.format(it) } }.getOrNull() ?: hr.time.takeLast(5), hr.code, WeatherFmt.temp(hr.temp, imp), null, WeatherApi.isDayAt(f, hr.time))
             }
         } else {
             val dayFmt = SimpleDateFormat("EEE", Locale.getDefault())
@@ -83,7 +83,7 @@ object WeatherParts {
         cells.forEachIndexed { i, cell ->
             val cx = left0 + colW * (i + .5f)
             c.drawText(cell.label, cx - name.measureText(cell.label) / 2, y0 + rh * .30f, name)
-            ContextCompat.getDrawable(ctx, WeatherApi.drawable(cell.code))?.let { dr ->
+            ContextCompat.getDrawable(ctx, WeatherApi.drawable(cell.code, cell.day))?.let { dr ->
                 val s = minOf(colW * .7f, rh * .36f).toInt()
                 val top = (y0 + rh * .36f).toInt()
                 dr.setBounds((cx - s / 2).toInt(), top, (cx + s / 2).toInt(), top + s); dr.draw(c)
