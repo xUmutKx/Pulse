@@ -96,9 +96,11 @@ class WidgetConfigActivity : ComponentActivity() {
             val material = remember { mutableStateOf(WidgetOver.material(c, widgetId)) }
             val tint = remember { mutableStateOf(WidgetOver.tint(c, widgetId)) }
             val rev = remember { mutableStateOf(0) }
+            val textLvl = remember { mutableStateOf(WidgetText.level(c, widgetId)) }
             fun apply() {
                 WidgetOver.save(c, widgetId, opacity.value, blur.value, material.value, tint.value)
                 WidgetAccent.save(c, widgetId, own.value)
+                textLvl.value?.let { WidgetText.save(c, widgetId, it) }
                 if (kind != null) WidgetStyles.save(c, widgetId, chosen.value)
                 refresh(kind, skin, face, chosen.value)
                 rev.value++
@@ -146,6 +148,14 @@ class WidgetConfigActivity : ComponentActivity() {
                                         row.forEach { s -> LogoChip(styleLogo(s), styleShort(s), chosen.value == s, Modifier.weight(1f), ring = ring, text = wl.text) { chosen.value = s; apply() } }
                                         repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
                                     }
+                                }
+                            }
+                            if (kind != null && kind !is WeatherClearWidget && kind !is WeatherPartsWidget) {
+                                Text(com.umutk.pulse.tr("Number size", "Sayı boyutu"), color = wl.text, fontSize = 14.sp)
+                                val def = if (kind is WeatherDetailWidget) .65f else 1f
+                                val cur = textLvl.value ?: WidgetText.shown(c, widgetId, def)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    WidgetText.names.forEachIndexed { i, n -> PChip(cur == i, n) { textLvl.value = i; apply() } }
                                 }
                             }
                             if (face == null) {

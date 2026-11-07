@@ -36,7 +36,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: 
         val imp = WeatherFmt.imperial(ctx)
         val title = tr("Weather", "Hava durumu")
         val tile = if (f == null) {
-            Tile(big = "--", sub = listOf(tr("No data yet", "Henüz veri yok")))
+            Tile(big = "--", sub = listOf(tr("No data yet", "Henüz veri yok")), defScale = if (detail) .65f else 1f)
         } else {
             val today = f.days.firstOrNull()
             val range = today?.let { "${WeatherFmt.temp(it.max, imp)} / ${WeatherFmt.temp(it.min, imp)}" }
@@ -44,7 +44,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean, private val detail: 
             val line = if (wide) f.hours.take(12).map { (if (imp) it.temp * 9 / 5 + 32 else it.temp).toFloat() } else emptyList()
             // the detail square: the next hours as lines under the condition; a taller square shows more of them
             val hoursSub = if (detail) f.hours.take(if (WidgetSize.dp(ctx, id)?.second ?: 0 >= 220) 6 else 3).map { h -> "${WeatherFmt.temp(h.temp, imp)}" } else emptyList()
-            Tile(big = WeatherFmt.temp(f.temp, imp), sub = sub + hoursSub, series = line)
+            Tile(big = WeatherFmt.temp(f.temp, imp), sub = sub + hoursSub, series = line, defScale = if (detail) .65f else 1f)
         }
         val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
         val dens = ctx.resources.displayMetrics.density

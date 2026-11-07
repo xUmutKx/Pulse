@@ -27,6 +27,8 @@ class Tile(
     val tone: Int = 0,
     /** With [bars]: how many bars from the left are lit, the rest dimmed (signal bars); -1 = all lit. */
     val lit: Int = -1,
+    /** The size of the big value when the widget has no size of its own (1 = the full size). */
+    val defScale: Float = 1f,
 )
 
 /**
@@ -170,18 +172,20 @@ object TextTile {
         val lineH = 15f * d
         val subs = t.sub.take(maxSub).take(((avail * .45f) / lineH).toInt().coerceAtLeast(0))
         val vs = minOf((avail - subs.size * lineH) * .9f, if (compact) 34f * d else 42f * d).coerceAtLeast(12f * d)
-        val vp = paint(fg, vs, valueFace)
+        // the widget's own scale, never taller than the room above the lines below (nothing overlaps)
+        val vs2 = minOf(vs * WidgetText.scale(ctx, id, t.defScale), ((avail - subs.size * lineH) * .95f).coerceAtLeast(12f * d))
+        val vp = paint(fg, vs2, valueFace)
         var y: Float
         if (w95) {
-            val fr = RectF(L, top, leftR, top + vs * 1.15f)
+            val fr = RectF(L, top, leftR, top + vs2 * 1.15f)
             ctx.getDrawable(com.umutk.pulse.R.drawable.widget_win95_field)?.let { it.setBounds(fr.left.toInt(), fr.top.toInt(), fr.right.toInt(), fr.bottom.toInt()); it.draw(c) }
-            vp.textSize = vs * .8f
-            text(vp, t.big, L + 5f * d, fr.bottom - vs * .28f, leftR - L - 10f * d)
+            vp.textSize = vs2 * .8f
+            text(vp, t.big, L + 5f * d, fr.bottom - vs2 * .28f, leftR - L - 10f * d)
             y = fr.bottom
         } else {
-            y = top + vs * .82f
+            y = top + vs2 * .82f
             text(vp, t.big, L - (if (w10 || amo) d else 0f), y, leftR - L)
-            y += vs * .12f
+            y += vs2 * .12f
         }
         val sp = paint(fg2, 12f * d, Typeface.DEFAULT)
         subs.forEach { line -> y += lineH; text(Paint(sp), line, L, y - 3f * d, leftR - L) }
