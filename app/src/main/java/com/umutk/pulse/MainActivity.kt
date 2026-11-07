@@ -142,6 +142,8 @@ open class MainActivity : ComponentActivity() {
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
         // a physical keyboard: Esc, or Alt + Left, is Back in every screen
         if (keyCode == android.view.KeyEvent.KEYCODE_ESCAPE || (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.isAltPressed == true)) { onBackPressedDispatcher.onBackPressed(); return true }
+        // something is playing: the volume keys are the volume keys (they only open the panels when it is quiet)
+        if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && mediaPlaying()) return super.onKeyDown(keyCode, event)
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
             if ((event?.repeatCount ?: 0) == 0) { if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) ChromeKeys.leftTick++ else ChromeKeys.moreTick++ }
             return true
@@ -149,9 +151,11 @@ open class MainActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
     override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) return true
+        if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && !mediaPlaying()) return true
         return super.onKeyUp(keyCode, event)
     }
+    /** True while any app (this one too) is playing sound on the media stream. */
+    protected fun mediaPlaying() = (getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager)?.isMusicActive == true
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

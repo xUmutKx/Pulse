@@ -73,6 +73,9 @@ object FilesHomeNav {
     var pendingFile by mutableStateOf<File?>(null)
     /** A type tapped on the home page ("images", "videos", ...): the types page opens straight on that list. */
     var kind by mutableStateOf<String?>(null)
+    /** The volume keys: each press counts [tabKick] up and leaves its direction (+1 / -1) in [tabDelta]; the bottom tabs follow. */
+    var tabKick by mutableStateOf(0)
+    var tabDelta = 1
 }
 
 /** The folders opened lately (newest first), kept next to the recent files. */

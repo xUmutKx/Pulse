@@ -80,6 +80,16 @@ class FilesActivity : MainActivity() {
     override fun onNewIntent(intent: android.content.Intent) { refresh(); archiveFrom(intent); dirFrom(intent); super.onNewIntent(intent) }
     override fun onResume() { refresh(); super.onResume() }
 
+    // quiet: the volume keys walk the bottom tabs round (up goes forward, down goes back, the ends join); while something plays they stay the volume
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        val up = keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP
+        if ((up || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && !mediaPlaying()) {
+            if ((event?.repeatCount ?: 0) == 0) { com.umutk.pulse.files.home.FilesHomeNav.tabDelta = if (up) 1 else -1; com.umutk.pulse.files.home.FilesHomeNav.tabKick++ }
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     // the look is process-wide: give Pulse its own back as soon as Files is not on screen
     private fun restorePulse() { Cfg.load(this); Opt.load(this) }
     override fun onStop() { super.onStop(); restorePulse() }

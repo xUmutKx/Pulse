@@ -230,6 +230,23 @@ private fun FilesPageInner() {
     val wl = LocalWindowLook.current
     val glassId = wl.id == "win11" && FilesPrefs.glass
     if (standalone) androidx.compose.runtime.SideEffect { (ctx as com.umutk.pulse.FilesActivity).setGlass(glassId) }
+    // the volume keys walk the bottom tabs round: Home, Browse, Search, More (Search is the Browse page with its search field open)
+    if (standalone) {
+        var pos by remember { mutableStateOf(0) }
+        var seen by remember { mutableStateOf(com.umutk.pulse.files.home.FilesHomeNav.tabKick) }
+        LaunchedEffect(tab) { pos = when (tab) { "home" -> 0; "files" -> if (pos == 2) 2 else 1; "share" -> pos; else -> 3 } }
+        LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.tabKick) {
+            if (com.umutk.pulse.files.home.FilesHomeNav.tabKick == seen) return@LaunchedEffect
+            seen = com.umutk.pulse.files.home.FilesHomeNav.tabKick
+            pos = ((pos + com.umutk.pulse.files.home.FilesHomeNav.tabDelta) % 4 + 4) % 4
+            when (pos) {
+                0 -> tab = "home"
+                1 -> tab = "files"
+                2 -> { com.umutk.pulse.files.home.FilesHomeNav.openSearch = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = true; tab = "files" }
+                else -> tab = "more"
+            }
+        }
+    }
     val body: @Composable () -> Unit = { com.umutk.pulse.LookFade(FilesLook.theme) {
         // full screen is a Dialog that covers the app, so the settings screen opens inside it (the app's sub screen would sit behind)
         androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.LocalOpenTool provides { id -> if (full && id == "files_settings") settings = true else openTool(id) }) {
