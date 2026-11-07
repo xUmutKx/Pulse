@@ -173,8 +173,9 @@ object WeatherApi {
         val drain = d.getJSONArray("precipitation_probability_max"); val duv = d.getJSONArray("uv_index_max")
         val dsr = d.getJSONArray("sunrise"); val dss = d.getJSONArray("sunset")
         val dsun = d.optJSONArray("sunshine_duration")
-        val days = (0 until dt.length()).map {
-            Day(dt.getString(it), dc.getInt(it), dmax.optDouble(it, 0.0), dmin.optDouble(it, 0.0), drain.optInt(it, 0), duv.optDouble(it, 0.0),
+        // a null in the lists (the service is renewing its data around midnight) must not make the whole copy unreadable: such a day or hour reads as zero, a day without a date is left out
+        val days = (0 until dt.length()).filter { !dt.isNull(it) }.map {
+            Day(dt.getString(it), dc.optInt(it, 0), dmax.optDouble(it, 0.0), dmin.optDouble(it, 0.0), drain.optInt(it, 0), duv.optDouble(it, 0.0),
                 dsr.optString(it), dss.optString(it), (dsun?.optDouble(it, 0.0) ?: 0.0) / 3600.0)
         }
         // the hourly list starts at midnight, so begin at the current hour and keep 24 hours
@@ -183,15 +184,15 @@ object WeatherApi {
         val nowHour = cur.getString("time").take(13) + ":00"
         var start = 0
         while (start < ht.length() && ht.getString(start) < nowHour) start++
-        val hours = (start until minOf(start + 24, ht.length())).map { Hour(ht.getString(it), hc.getInt(it), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
+        val hours = (start until minOf(start + 24, ht.length())).filter { !ht.isNull(it) }.map { Hour(ht.getString(it), hc.optInt(it, 0), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
         val hv = h.optJSONArray("visibility")
-        val hours48 = (start until minOf(start + 96, ht.length())).map { Hour(ht.getString(it), hc.getInt(it), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
+        val hours48 = (start until minOf(start + 96, ht.length())).filter { !ht.isNull(it) }.map { Hour(ht.getString(it), hc.optInt(it, 0), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
         val ex = runCatching { JSONObject(extras) }.getOrNull()
         val pol = ex?.optJSONObject("pollen")?.let { po -> po.keys().asSequence().associateWith { k -> po.optInt(k, 0) } }.orEmpty()
         val base = Forecast(
             place, at, cur.getString("time"), cur.getDouble("temperature_2m"), cur.optDouble("apparent_temperature", cur.getDouble("temperature_2m")),
-            cur.getInt("weather_code"), cur.getDouble("wind_speed_10m"), cur.optDouble("wind_gusts_10m", 0.0), cur.optInt("wind_direction_10m", 0),
-            cur.getInt("relative_humidity_2m"), cur.optDouble("surface_pressure", 0.0), cur.optInt("cloud_cover", 0), cur.optInt("is_day", 1) == 1,
+            cur.optInt("weather_code", 0), cur.optDouble("wind_speed_10m", 0.0), cur.optDouble("wind_gusts_10m", 0.0), cur.optInt("wind_direction_10m", 0),
+            cur.optInt("relative_humidity_2m", 0), cur.optDouble("surface_pressure", 0.0), cur.optInt("cloud_cover", 0), cur.optInt("is_day", 1) == 1,
             days, hours, aqi, cur.optDouble("precipitation", 0.0),
             cur.optDouble("dew_point_2m", 0.0), if (hv != null && start < hv.length() && !hv.isNull(start)) hv.optDouble(start, 0.0) / 1000.0 else -1.0,
             ex?.optDouble("ymax", Double.NaN) ?: Double.NaN, ex?.optDouble("ymin", Double.NaN) ?: Double.NaN, pol, hours48,
@@ -542,6 +543,8 @@ object WeatherStore {
     fun removeCity(c: Context, pl: Place) = saveCities(c, cities(c).filterNot { it.lat == pl.lat && it.lon == pl.lon })
 
     fun saveCache(c: Context, place: String, raw: String, aqi: Int, extras: String? = null) {
+        // an answer that cannot be read (a service in the middle of renewing its data) never replaces the copy that is on screen
+        if (runCatching { WeatherApi.parse(place, raw, 0L, aqi, extras.orEmpty()) }.isFailure) return
         p(c).edit().putString("raw", raw).putString("cache_place", place).putInt("aqi", aqi).putLong("at", System.currentTimeMillis()).apply { if (extras != null) putString("extras", extras) }.apply()
     }
 
