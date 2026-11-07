@@ -659,18 +659,19 @@ private fun ExtraAppsCard() {
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
         Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
         Triple("HealthLauncher", R.drawable.ic_ad_health_fg, tr("Health", "Sağlık")),
+        Triple("AthenaeumLauncher", R.drawable.ic_onboarding_tarot_fool, "Athenaeum"),
     // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
     ).filter { it.first != "ArtCraftLauncher" || BuildConfig.APK_INSTALL }
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
-        (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "HealthLauncher", "CalendarLauncher", "ContactsLauncher"),
+        (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "HealthLauncher", "AthenaeumLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
     )
     val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "ebook", "PaintLauncher" to "paint",
         "CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "GameHubLauncher" to "gamehub", "IslandLauncher" to "island", "HealthLauncher" to "health")
-    val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
+    val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity", "AthenaeumLauncher" to "extras.athenaeum.AthenaeumActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
         if (android.os.Build.VERSION.SDK_INT < 26) return

@@ -45,3 +45,10 @@
 
 # the Google Mobil Reklamlar SDK refers to an Android 14 class (loudness control) that the build's SDK does not have; the ads do not use it
 -dontwarn android.media.LoudnessCodecController**
+
+# Athenaeum (extras/athenaeum): its models are read by Gson with reflection and its core is native
+-keep class com.umutk.pulse.extras.athenaeum.** { *; }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keepattributes Signature
+-keepattributes *Annotation*
