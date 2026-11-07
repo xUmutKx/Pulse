@@ -382,15 +382,35 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     private fun syncKind(info: EditorInfo?) {
         info ?: return
+        if (st.forceLayout != null || st.panel != "keys") return
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val num = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
-        if (num == st.numpad || st.forceLayout != null || st.panel != "keys") return
-        st.numpad = num
-        st.page = if (num) 1 else 0
-        st.plain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0)
+        // the kind of the text field itself (a password box without suggestions, an address box, a plain one) is read again too: a field that first said "password"
+        // or "no input" and then became a normal one kept the plain keys, with no suggestion bar, until the first key
+        val kindChanged = applyKind(info)
+        val numChanged = num != st.numpad
+        if (!kindChanged && !numChanged) return
+        if (numChanged) { st.numpad = num; st.page = if (num) 1 else 0 }
+        updateSuggestions()
         androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         st.refreshInsets?.invoke()
         kbRoot?.requestLayout()
+    }
+
+    /** Takes the kind of the field from [info] (plain keys, address, web address, name, no automatic correction); true when any of them changed. */
+    private fun applyKind(info: EditorInfo): Boolean {
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val nAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
+        val nPlain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
+            v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
+        val nEmail = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
+        val nUri = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
+        val nName = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+        val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
+        noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
+        return changed
     }
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
@@ -416,14 +436,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         // a field that asks for no suggestions (many web inputs in Chrome do) still gets the bar; only the automatic correction stays off there
-        noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
-        st.plain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
-            v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
-        emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
+        applyKind(info); lastEmail = null
         st.emailBar = false
-        uriField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
-        nameField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
         st.numpad = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
         st.panel = "keys"; st.toolbar = false
@@ -1683,9 +1697,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
             .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
             .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
-        if (list.isEmpty()) return false
-        vaultTexts = list.map { if (pass) it.pass else it.user }
-        val shown = list.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
+        // a password box of an app with no login of its own in the vault: every saved login is offered (a tap writes its password), so the bar is not left empty
+        val shownList = if (list.isEmpty() && pass) com.umutk.pulse.features.VaultStore.all(this).filter { it.type == 1 && it.pass.isNotEmpty() }.sortedBy { it.name.lowercase() }
+            .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6) else list
+        if (shownList.isEmpty()) return false
+        vaultTexts = shownList.map { if (pass) it.pass else it.user }
+        val shown = shownList.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
         val n = maxOf(3, shown.size)
         slotWords = Array(n) { "" }
         st.slots = (shown + listOf("", "", "")).take(n)
