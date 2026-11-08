@@ -87,6 +87,7 @@ import com.umutk.pulse.FluentPaths
 import com.umutk.pulse.PField
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.extras.blackout.Privilege
+import com.umutk.pulse.Compat
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -253,6 +254,7 @@ private fun freeMemory(c: Context) {
 
 /** Opens the game itself (its launch activity). */
 internal fun openGame(c: Context, pkg: String) {
+    runCatching { prepareGame(c, pkg) }
     val pm = c.packageManager
     // the launch activity; when the system gives none, the launcher activity of the package; else the root or Shizuku shell starts it
     val launcher = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setPackage(pkg)
@@ -605,9 +607,9 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
                 Chip(pal, tr("Change cover", "Kapağı değiştir")) { if (com.umutk.pulse.ads.PulseAds.ENABLED) askAd = true else pick.launch("image/*") }
                 Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
             }
-            // achievements and community need a service the phone's games do not have: said here, not faked
-            SectionTitle(pal, tr("Achievements", "Başarımlar"))
-            Text(tr("This game does not report achievements to Pulse.", "Bu oyun başarımlarını Pulse'a bildirmiyor."), color = pal.sub, fontSize = 13.sp)
+            GamePerformance(pal, g.pkg, can)
+            // the game does not report achievements: these are Pulse's own marks, counted from the time played
+            GameMilestones(pal, g.pkg, total)
             SectionTitle(pal, tr("Community", "Topluluk"))
             Text(tr("No community for an Android app here.", "Bir Android uygulaması için burada topluluk yok."), color = pal.sub, fontSize = 13.sp)
             Spacer(Modifier.height(24.dp))
@@ -898,6 +900,18 @@ fun GameHubHub(onBack: () -> Unit) {
                             Chip(pal, if (prefs(ctx).getInt("start", 1) == k) "● $label" else label) { prefs(ctx).edit().putInt("start", k).apply(); page = page }
                         }
                     }
+                    SectionTitle(pal, tr("In-game menu", "Oyun içi menü"))
+                    var menuOn by remember { mutableStateOf(GameMenuService.enabled(ctx)) }
+                    SettingRow(pal, tr("Show the menu over a game", "Oyunun üstünde menüyü göster"), menuOn, true) { on ->
+                        if (on && !Compat.canOverlay(ctx)) {
+                            runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        } else if (on && !usageAllowed(ctx)) {
+                            runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        } else {
+                            menuOn = on; prefs(ctx).edit().putBoolean("menu", on).apply()
+                            if (on) GameMenuService.start(ctx) else GameMenuService.stop(ctx)
+                        }
+                    }
                     SectionTitle(pal, tr("Access", "Erişim"))
                     Text(
                         when (mode) {
@@ -1018,4 +1032,257 @@ private fun sortGames(list: List<GameRow>, sort: Int, usage: Map<String, android
     1 -> list.sortedByDescending { usage[it.pkg]?.totalTimeInForeground ?: 0L }
     2 -> list.sortedByDescending { sizes[it.pkg] ?: 0L }
     else -> list
+}
+
+// ---- performance of a game ----------------------------------------------------------------------------------------------------------------------
+/**
+ * Per game: the performance mode (standard, performance, battery), the resolution scale (percent) and a frame-rate cap (0 = the game's own). They are set through
+ * Android's own game manager in the root or Shizuku shell (`cmd game`), and again before each start from Game Hub. What a game takes of them is up to the game
+ * and the phone: a game that does not support game modes ignores them.
+ */
+private fun tuneOf(c: Context, pkg: String) = Triple(prefs(c).getString("tm_$pkg", "standard") ?: "standard", prefs(c).getInt("td_$pkg", 100), prefs(c).getInt("tf_$pkg", 0))
+
+private fun applyTune(c: Context, pkg: String): Boolean {
+    val (mode, down, fps) = tuneOf(c, pkg)
+    val cmds = if (mode == "standard" && down == 100 && fps == 0) listOf("cmd game reset $pkg")
+    else listOf("cmd game set --mode $mode --downscale ${if (down >= 100) "disable" else "%.2f".format(java.util.Locale.US, down / 100f)} --fps ${if (fps <= 0) "disable" else fps} $pkg")
+    return cmds.all { cmd ->
+        val out = Privilege.run(cmd)
+        out.code >= 0 && !Regex("(?i)error|exception|unknown|denied|not supported|unsupported").containsMatchIn(out.text)
+    }
+}
+
+/** Before a start: the saved tuning of the game is set again, and the background apps are closed when that is switched on for the game. Needs root or Shizuku. */
+private fun prepareGame(c: Context, pkg: String) {
+    if (GameMenuService.enabled(c) && Compat.canOverlay(c)) GameMenuService.start(c)
+    if (Privilege.mode == Privilege.Mode.None) return
+    val (mode, down, fps) = tuneOf(c, pkg)
+    if (mode != "standard" || down != 100 || fps != 0) applyTune(c, pkg)
+    if (prefs(c).getBoolean("tb_$pkg", false)) Privilege.run("am kill-all")
+}
+
+private fun usageAllowed(c: Context): Boolean = runCatching {
+    val ops = c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+    ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) == android.app.AppOpsManager.MODE_ALLOWED
+}.getOrDefault(false)
+
+@Composable
+private fun GamePerformance(pal: Pal, pkg: String, can: Boolean) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var mode by remember(pkg) { mutableStateOf(tuneOf(ctx, pkg).first) }
+    var down by remember(pkg) { mutableStateOf(tuneOf(ctx, pkg).second) }
+    var fps by remember(pkg) { mutableStateOf(tuneOf(ctx, pkg).third) }
+    var boost by remember(pkg) { mutableStateOf(prefs(ctx).getBoolean("tb_$pkg", false)) }
+    fun apply() {
+        prefs(ctx).edit().putString("tm_$pkg", mode).putInt("td_$pkg", down).putInt("tf_$pkg", fps).apply()
+        scope.launch(Dispatchers.IO) {
+            val ok = applyTune(ctx, pkg)
+            if (!ok) withContext(Dispatchers.Main) { toast(ctx, tr("The phone did not take this setting", "Telefon bu ayarı kabul etmedi")) }
+        }
+    }
+    SectionTitle(pal, tr("Performance", "Performans"))
+    if (!can) Text(tr("Needs root or Shizuku", "Root ya da Shizuku gerekir"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("standard" to tr("Standard", "Standart"), "performance" to tr("Performance", "Performans"), "battery" to tr("Battery", "Pil")).forEach { (k, label) ->
+            Chip(pal, if (mode == k) "● $label" else label) { if (can) { mode = k; apply() } }
+        }
+    }
+    Text(tr("Resolution", "Çözünürlük"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(100, 85, 70, 50).forEach { v ->
+            Chip(pal, if (down == v) "● $v%" else "$v%") { if (can) { down = v; apply() } }
+        }
+    }
+    Text("FPS", color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(0, 30, 60, 90, 120).forEach { v ->
+            val label = if (v == 0) tr("Game's own", "Oyunun") else "$v"
+            Chip(pal, if (fps == v) "● $label" else label) { if (can) { fps = v; apply() } }
+        }
+    }
+    SettingRow(pal, tr("Close background apps before play", "Oynamadan önce arka plan uygulamalarını kapat"), boost, can) { on ->
+        boost = on; prefs(ctx).edit().putBoolean("tb_$pkg", on).apply()
+    }
+}
+
+/** Marks for the time played (Pulse's own, since the game reports none), and the days played in the last 30. */
+@Composable
+private fun GameMilestones(pal: Pal, pkg: String, total: Long) {
+    val ctx = LocalContext.current
+    val days by produceState(0, pkg) { value = withContext(Dispatchers.IO) { daysPlayed(ctx, pkg, 30) } }
+    val marks = listOf(1, 5, 10, 25, 50, 100, 250, 500)
+    val hours = total / 3_600_000.0
+    val got = marks.count { hours >= it }
+    SectionTitle(pal, tr("Achievements", "Başarımlar") + "  $got/${marks.size}")
+    marks.chunked(4).forEach { row ->
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            row.forEach { m ->
+                val on = hours >= m
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(pal.radius.coerceAtLeast(6.dp))).background(if (on) pal.accent else pal.card).padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (on) { FluentIcon("check", pal.bg, 14.dp); Spacer(Modifier.width(4.dp)) }
+                        Text("$m " + tr("h", "sa"), color = if (on) pal.bg else pal.sub, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+    Text(tr("Days played in the last 30", "Son 30 günde oynanan gün") + ": $days", color = pal.sub, fontSize = 13.sp)
+}
+
+private fun daysPlayed(c: Context, pkg: String, days: Int): Int = runCatching {
+    val usm = c.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+    val end = System.currentTimeMillis()
+    usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, end - days * 86_400_000L, end).count { it.packageName == pkg && it.totalTimeInForeground > 0 }
+}.getOrDefault(0)
+
+// ---- the menu over a game ----------------------------------------------------------------------------------------------------------------------
+/**
+ * While a game of the library is on the screen, a small tab sits on the right edge; a tap opens a panel over the game: the battery, the heat and the free memory,
+ * do not disturb, the performance mode, a screenshot and closing the background apps. It looks at the foreground app every few seconds (usage access) and draws over
+ * other apps; the actions use root or Shizuku.
+ */
+class GameMenuService : android.app.Service() {
+    companion object {
+        fun enabled(c: Context) = prefs(c).getBoolean("menu", false)
+        fun start(c: Context) { runCatching { val i = android.content.Intent(c, GameMenuService::class.java); if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) } }
+        fun stop(c: Context) { c.stopService(android.content.Intent(c, GameMenuService::class.java)) }
+    }
+
+    private val h = android.os.Handler(android.os.Looper.getMainLooper())
+    private lateinit var wm: android.view.WindowManager
+    private var handle: android.view.View? = null
+    private var panel: android.view.View? = null
+    private var shown: String? = null
+    private var fg: String? = null
+    private var lastTs = 0L
+    private var nullStreak = 0
+    private var games = emptySet<String>()
+    private var gamesAt = 0L
+    private val poll = object : Runnable { override fun run() { runCatching { check() }; h.postDelayed(this, 2500) } }
+
+    override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("game_menu", "Game Hub", android.app.NotificationManager.IMPORTANCE_MIN))
+        val n = androidx.core.app.NotificationCompat.Builder(this, "game_menu").setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("Game Hub").setOngoing(true).setSilent(true).build()
+        runCatching { if (Build.VERSION.SDK_INT >= 34) startForeground(22, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(22, n) }
+        if (!Compat.canOverlay(this)) { stopSelf(); return }
+        wm = getSystemService(android.view.WindowManager::class.java)
+        Thread { if (Privilege.mode == Privilege.Mode.None) runCatching { Privilege.detect() } }.start()
+        h.post(poll)
+    }
+
+    override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int = START_STICKY
+
+    override fun onDestroy() { h.removeCallbacksAndMessages(null); hide(); super.onDestroy() }
+
+    private fun check() {
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return
+        val now = System.currentTimeMillis()
+        val ev = usm.queryEvents(maxOf(lastTs, now - 20_000L), now) ?: return
+        val e = android.app.usage.UsageEvents.Event()
+        while (ev.hasNextEvent()) {
+            ev.getNextEvent(e)
+            lastTs = maxOf(lastTs, e.timeStamp + 1)
+            when (e.eventType) {
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> fg = e.packageName
+                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> if (fg == e.packageName) fg = null
+            }
+        }
+        if (now - gamesAt > 60_000L) { games = loadGames(this).map { it.pkg }.toSet(); gamesAt = now }
+        val g = fg?.takeIf { it in games }
+        if (g == null) { if (++nullStreak >= 2) hide() } else { nullStreak = 0; if (shown != g) show(g) }
+    }
+
+    private fun lp(w: Int, hgt: Int, x: Int = 0) = android.view.WindowManager.LayoutParams(w, hgt, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, android.graphics.PixelFormat.TRANSLUCENT).apply {
+        gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL; this.x = x
+    }
+
+    private fun show(pkg: String) {
+        hide()
+        shown = pkg
+        val d = resources.displayMetrics.density
+        val v = android.widget.TextView(this).apply {
+            text = "\u2039"; textSize = 22f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadii = floatArrayOf(14 * d, 14 * d, 0f, 0f, 0f, 0f, 14 * d, 14 * d) }
+            setOnClickListener { togglePanel(pkg) }
+        }
+        if (runCatching { wm.addView(v, lp((26 * d).toInt(), (64 * d).toInt())) }.isSuccess) handle = v
+    }
+
+    private fun hide() {
+        closePanel()
+        handle?.let { v -> runCatching { wm.removeView(v) } }
+        handle = null; shown = null
+    }
+
+    private fun closePanel() { panel?.let { v -> runCatching { wm.removeView(v) } }; panel = null }
+
+    private fun togglePanel(pkg: String) { if (panel != null) closePanel() else openPanel(pkg) }
+
+    private fun sh(cmd: String, done: (Privilege.Out) -> Unit = {}) { Thread { val o = Privilege.run(cmd); h.post { done(o) } }.start() }
+
+    private fun openPanel(pkg: String) {
+        val d = resources.displayMetrics.density
+        fun px(v: Int) = (v * d).toInt()
+        val col = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(px(14), px(12), px(14), px(12))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xF0141414.toInt()); cornerRadius = 18 * d }
+        }
+        fun label(t: String, size: Float, c: Int = 0xFFFFFFFF.toInt()) = android.widget.TextView(this).apply { text = t; textSize = size; setTextColor(c) }
+        fun button(t: String, on: () -> Unit) = android.widget.TextView(this).apply {
+            text = t; textSize = 14f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+            setPadding(px(10), px(9), px(10), px(9))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
+            setOnClickListener { on() }
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) }
+        }
+        val name = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+        col.addView(label(name, 16f))
+        val bat = registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val pct = bat?.let { 100 * it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0
+        val temp = (bat?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+        val mi = android.app.ActivityManager.MemoryInfo().also { (getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }
+        col.addView(label("$pct%  ·  %.1f \u00B0C  ·  %.1f GB".format(temp, mi.availMem / 1_073_741_824.0), 13f, 0xFFB0B0B0.toInt()))
+        // do not disturb
+        val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
+        lateinit var dnd: android.widget.TextView
+        fun dndText() = tr("Do not disturb", "Rahatsız etme") + ": " + if (dndOn()) tr("on", "açık") else tr("off", "kapalı")
+        dnd = button(dndText()) { sh("cmd notification set_dnd ${if (dndOn()) "off" else "on"}") { h.postDelayed({ dnd.text = dndText() }, 300) } }
+        col.addView(dnd)
+        // the performance mode
+        val row = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) } }
+        listOf("standard" to tr("Standard", "Standart"), "performance" to tr("Performance", "Performans"), "battery" to tr("Battery", "Pil")).forEach { (k, t) ->
+            row.addView(android.widget.TextView(this).apply {
+                text = if (tuneOf(this@GameMenuService, pkg).first == k) "\u25CF $t" else t; textSize = 12f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+                setPadding(px(4), px(9), px(4), px(9))
+                background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = px(4) }
+                setOnClickListener {
+                    prefs(this@GameMenuService).edit().putString("tm_$pkg", k).apply()
+                    sh("cmd game mode $k $pkg") { o -> toast(this@GameMenuService, if (o.code >= 0 && !Regex("(?i)error|exception|unknown|denied").containsMatchIn(o.text)) t else tr("The phone did not take this setting", "Telefon bu ayarı kabul etmedi")); closePanel() }
+                }
+            })
+        }
+        col.addView(row)
+        col.addView(button(tr("Screenshot", "Ekran görüntüsü")) {
+            closePanel(); handle?.visibility = android.view.View.INVISIBLE
+            h.postDelayed({
+                val f = "/sdcard/Pictures/Screenshots/Game_" + System.currentTimeMillis() + ".png"
+                sh("mkdir -p /sdcard/Pictures/Screenshots && screencap -p $f") { o ->
+                    handle?.visibility = android.view.View.VISIBLE
+                    toast(this, if (o.code == 0 || o.text.isBlank()) tr("Saved", "Kaydedildi") else o.text.take(80))
+                }
+            }, 450)
+        })
+        col.addView(button(tr("Close background apps", "Arka plan uygulamalarını kapat")) { sh("am kill-all") { toast(this, tr("Done", "Tamam")); closePanel() } })
+        val v = col
+        if (runCatching { wm.addView(v, lp(px(270), -2, px(34))) }.isSuccess) panel = v
+    }
 }
