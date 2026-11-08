@@ -308,7 +308,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         // the setup (terms, root and Shizuku) comes first, once; the Files app has none of it
         if (!setupDone && wctx !is FilesActivity) SetupScreen { setupDone = true }
         else if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
-        else if (!welcomed) Welcome { welcomed = true }
+        // the full welcome only on the very first start; after an update just what is new (no permissions or setup again)
+        else if (!welcomed) { if (wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) WhatsNew { welcomed = true } else Welcome { welcomed = true } }
         else key(th.dark) {
             // tablets and landscape: the pages are phone lists, so on a wide screen they keep a readable width in the middle instead of stretching edge to edge
             val cfgW = androidx.compose.ui.platform.LocalConfiguration.current
