@@ -190,7 +190,7 @@ fun SetupScreen(onDone: () -> Unit) {
         // the one thing that is required, said plainly: everything else can be skipped and given later
         Text(tr("Only accepting the terms is required. Every permission below is optional: skip any of them, Pulse asks again when a feature needs it.",
             "Sadece koşulları kabul etmek gereklidir. Aşağıdaki izinlerin hepsi isteğe bağlıdır: istediğini atla, bir özellik gerektirdiğinde Pulse yeniden sorar."),
-            color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+            color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         WelcomeCard(tr("Terms and privacy", "Koşullar ve gizlilik")) {
             WelcomeLine(tr("Pulse keeps your files, music and settings on this phone. Nothing is sent to us.",
                 "Pulse dosyalarını, müziğini ve ayarlarını bu telefonda tutar. Bize hiçbir şey gönderilmez."))
@@ -198,10 +198,10 @@ fun SetupScreen(onDone: () -> Unit) {
                 "Play sürümü Google AdMob reklamları gösterir. Google bunlar için bir reklam kimliği kullanabilir; bunu telefonunuzun ayarlarından değiştirebilirsiniz."))
             WelcomeLine(tr("The terms of use and the privacy notice are in About.", "Kullanım koşulları ve gizlilik bildirimi Hakkında bölümünde."))
             // the whole line is the switch (a big target), not only the small box
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clickable { accepted = !accepted }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 PCheck(accepted, { accepted = it })
-                Text(tr("I have read and accept the terms and the privacy notice (required)", "Koşulları ve gizlilik bildirimini okudum, kabul ediyorum (gerekli)"),
-                    color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
+                Text(tr("I have read and accept the terms and the privacy notice", "Koşulları ve gizlilik bildirimini okudum, kabul ediyorum"),
+                    color = T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
         PermissionsCard()
@@ -213,7 +213,7 @@ fun SetupScreen(onDone: () -> Unit) {
         }
         Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) {
             // always one button that works: it accepts the terms (when not ticked yet) and goes on; permissions are never needed to continue
-            PButton(if (accepted) tr("Continue", "Devam") else tr("Accept and continue", "Kabul et ve devam et"), onClick = { accepted = true; finish() })
+            PButton(tr("Continue", "Devam"), onClick = { accepted = true; finish() })
         }
     }
 }
@@ -253,14 +253,13 @@ private fun PermissionsCard() {
         permItems().forEach { item ->
             val granted = remember(tick, item.title) { item.perms.isEmpty() || item.perms.all { ContextCompat.checkSelfPermission(ctx, it) == PackageManager.PERMISSION_GRANTED } }
             val ask = { if (!granted && item.perms.isNotEmpty()) { asked = item; launcher.launch(item.perms.toTypedArray()) } }
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp).clickable(enabled = !granted) { ask() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { PIcon(item.icon, Look.accent, 26.dp) }
-                Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                    Text(item.title, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended, not required.", "Önerilir, şart değil.")), color = T.sub, fontSize = 13.sp)
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                PCheck(granted, { wanted -> if (wanted) ask() })
+                Box(Modifier.padding(start = 8.dp).size(28.dp), contentAlignment = Alignment.Center) { PIcon(item.icon, Look.accent, 22.dp) }
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(item.title, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended, not required.", "Önerilir, şart değil.")), color = T.sub, fontSize = 12.sp)
                 }
-                if (granted) Text("✓ " + tr("Given", "Verildi"), color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
-                else PButton(tr("Allow", "İzin ver"), compact = true, onClick = { ask() })
             }
         }
     }
