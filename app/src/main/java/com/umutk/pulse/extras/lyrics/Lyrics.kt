@@ -183,6 +183,11 @@ object Lyrics {
      */
     fun keep(path: String, r: LyricsResult): Boolean = embedMp3(path, r) || saveSidecar(path, r)
 
+    /** The lyrics are kept with the song already (its tag, a .lrc or .txt beside it, or the lyrics chosen for it): no search and no listening needed. */
+    fun hasLocal(ctx: Context, path: String, artist: String, title: String): Boolean = runCatching {
+        readEmbedded(path) != null || readSidecar(path, title) != null || LyricsStore(ctx.applicationContext).load(path, artist, title) != null
+    }.getOrDefault(false)
+
     /** Lyrics the person edited or made: they replace what the song had (its tag for an MP3, else a .lrc beside it). True when they are kept. */
     fun saveEdited(path: String?, r: LyricsResult): Boolean {
         if (path == null || path.contains("://")) return false
