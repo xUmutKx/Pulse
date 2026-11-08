@@ -100,6 +100,10 @@ fun PlayerLyrics(
         val shareGate = com.umutk.pulse.ads.rememberAdGate(tr("Share lyrics", "Şarkı sözünü paylaş"), tr("Watch a short ad to share the lyrics.", "Şarkı sözünü paylaşmak için kısa bir reklam izle."), key = "lyrics_share", minutes = 30)
         // 0 reading, 1 picking lines to share, 2 the card to share
         var mode by remember(title, artist) { mutableIntStateOf(0) }
+        // lyrics the person edited or made with Pulse AI: shown at once, before the song's file is read again
+        var edited by remember(title, artist) { mutableStateOf<LyricsResult?>(null) }
+        var aiRun by remember(title, artist) { mutableStateOf(false) }
+        val aiOk = localPath != null && com.umutk.pulse.extras.ai.aiSupported && com.umutk.pulse.extras.music.MusicSettings.aiLyrics(ctx)
         var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
         var style by remember { mutableIntStateOf(0) }
         var pull by remember { mutableFloatStateOf(0f) }
@@ -123,8 +127,10 @@ fun PlayerLyrics(
             else picked = cur + i
         }
         Box(Modifier.fillMaxSize().background(Color.Black).nestedScroll(closer).pointerInput(Unit) { tapGestures { } }) {
-            val (busy, res) = state
+            val (busy, res0) = state
+            val res = edited ?: res0
             when {
+                res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp))
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
                 res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { bmp -> shareGate { LyricsShare.share(ctx, bmp) } }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
@@ -132,7 +138,13 @@ fun PlayerLyrics(
                         Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .12f))) {
                             art?.let { androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
                             // the share button sits in the cover's top-left corner
-                            Box(Modifier.align(Alignment.TopStart).size(26.dp).background(Color.Black.copy(alpha = .55f), androidx.compose.foundation.shape.RoundedCornerShape(bottomEnd = 10.dp)).clickable { mode = 1; picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("share", Color.White, 15.dp) }
+                            // the share button, and beside it the AI button: it listens to the song and writes its lyrics with their times
+                            Row(Modifier.align(Alignment.TopStart), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Box(Modifier.size(26.dp).background(Color.Black.copy(alpha = .55f), androidx.compose.foundation.shape.RoundedCornerShape(bottomEnd = 10.dp)).clickable { mode = 1; picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("share", Color.White, 15.dp) }
+                                if (aiOk) Box(Modifier.size(26.dp).background(Color.Black.copy(alpha = .55f), androidx.compose.foundation.shape.RoundedCornerShape(bottomEnd = 10.dp)).clickable {
+                                    if (com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) aiRun = true else com.umutk.pulse.launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai")
+                                }, contentAlignment = Alignment.Center) { PIcon("star", Color.White, 15.dp) }
+                            }
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp, end = 40.dp)) {
                             Text(title, color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -171,6 +183,12 @@ fun PlayerLyrics(
                     field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
                     Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
                         .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
+                    if (aiOk) Row(Modifier.padding(top = 10.dp).background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                        .clickable { if (com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) aiRun = true else com.umutk.pulse.launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai") }
+                        .padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("star", Color.White, 16.dp)
+                        Text(tr("Make timed lyrics", "Zamanlı söz oluştur"), color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                    }
                     if (cands.isNotEmpty()) {
                         Text(tr("Found", "Bulunanlar"), color = Color.White.copy(alpha = .6f), fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
                         Column(Modifier.heightIn(max = 220.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
@@ -187,10 +205,16 @@ fun PlayerLyrics(
                     }
                 }
             }
+            // the AI lyrics run here, over the lyrics (the dialog shows the progress and writes the lines when it is done)
+            if (aiRun && localPath != null) com.umutk.pulse.extras.ai.AiLyricsDialog(localPath, title, artist) { lrc ->
+                aiRun = false
+                if (lrc != null) Lyrics.fromText(lrc, "ai")?.let { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) } }
+            }
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
-                // the share button sits right here, no menu: Share opens the line picker
+                // the share button sits right here, no menu: Share opens the line picker; the edit button opens the editor
                 if (res != null && mode == 0) IconButton(onClick = { mode = 1; picked = emptySet() }) { PIcon("share", Color.White, 22.dp) }
-                IconButton(onClick = { if (mode == 0) onDismiss() else mode = mode - 1 }) { PIcon(if (mode == 0) "close" else "back", Color.White, 22.dp) }
+                if (res != null && mode == 0) IconButton(onClick = { mode = 3 }) { PIcon("edit", Color.White, 22.dp) }
+                IconButton(onClick = { if (mode == 0) onDismiss() else mode = if (mode == 3) 0 else mode - 1 }) { PIcon(if (mode == 0) "close" else "back", Color.White, 22.dp) }
             }
         }
     }
