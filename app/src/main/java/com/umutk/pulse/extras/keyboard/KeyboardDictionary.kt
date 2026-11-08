@@ -167,6 +167,8 @@ object KeyboardDictionary {
         runCatching { c.assets.open("kbd/kbd_keep.txt").bufferedReader().useLines { it.forEach { l -> if (l.isNotBlank()) kept += l.trim().lowercase(Locale.ROOT) } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
+        // the capitals learned before (one stray shift made ordinary words start with a capital in the suggestions): cleared once
+        if (!File(c.filesDir, "kbd_forms_fix").exists()) { File(c.filesDir, "kbd_forms.txt").delete(); File(c.filesDir, "kbd_forms_fix").writeText("1") }
         runCatching { File(c.filesDir, "kbd_forms.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) forms[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
@@ -231,6 +233,8 @@ object KeyboardDictionary {
 
     /** Names and other words the person writes with a capital in the middle of a sentence (Umut, Kıvanç, Şahin): lower case -> the way it was written. */
     private val forms = ConcurrentHashMap<String, String>()
+    /** How often each word came with a capital in the middle of a sentence (this run). */
+    private val capSeen = ConcurrentHashMap<String, Int>()
     /** The written form of a learned word ("umut" -> "Umut"), or the word itself. */
     fun form(w: String): String = forms[w.lowercase(Locale.ROOT)] ?: w
 
@@ -238,7 +242,12 @@ object KeyboardDictionary {
         val w = word.lowercase(Locale.ROOT)
         if (w.length < 2 || w.any { it.isDigit() }) return
         // behind another word and still capitalised: a name, so the suggestions give it its capital again
-        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() } && w !in commonNames) forms[w] = word
+        // (a capital that comes back: one shift left on by mistake must not capitalise the word for ever)
+        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() } && w !in commonNames) {
+            val n = (capSeen[w] ?: 0) + 1
+            capSeen[w] = n
+            if (n >= 3) forms[w] = word
+        }
         // the learning mode: words (the vocabulary and the names), sentences (which word follows which), both, or nothing
         if (KeyboardPrefs.learnWords || (user[w] ?: 0) > 0) user[w] = (user[w] ?: 0) + 1
         if (KeyboardPrefs.learnPairs && !prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
