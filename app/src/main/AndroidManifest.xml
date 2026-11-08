@@ -74,6 +74,7 @@
     <!-- Sound mode tile: Silent needs Do Not Disturb access, and Pulse is listed there only with this -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <queries>
+        <package android:name="com.umutk.pulse.extra.ai" />
         <package android:name="com.termux" />
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="rikka.shizuku" />

@@ -181,6 +181,8 @@ object KeyboardPrefs {
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
         // the menu gets the separate "Extra keys" row switch and the "Key set" panel (F keys, Shift, ...) once, whatever it held
+        // Pulse AI's text fix joins the menu once
+        if (!p.getBoolean("menuAiFix", false)) { if ("aifix" !in menuItems.split(',')) menuItems = "$menuItems,aifix"; p.edit().putBoolean("menuAiFix", true).putString("menuItems", menuItems).apply() }
         if (p.getInt("menuVer", 0) < 3) { menuItems = (menuItems.split(',') + listOf("proRow", "keyset")).distinct().joinToString(","); p.edit().putInt("menuVer", 3).putString("menuItems", menuItems).apply() }
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
         // the emoji key lives beside ?123 again; the bar keeps the three-dot menu in its place

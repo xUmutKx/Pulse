@@ -259,6 +259,8 @@ fun LyricsSheet(
                 field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
                 Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
                     .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
+                // no lyrics anywhere: Pulse AI listens to the song on the phone and writes timed lyrics (a .lrc beside the song)
+                if (localPath != null && com.umutk.pulse.extras.music.MusicSettings.aiLyrics(ctx)) AiLyricsButton(localPath, title, artist) { r -> res = r }
             }
         }
         IconButton(onClick = { close() }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }
@@ -280,4 +282,56 @@ fun lyricMarked(text: String, query: String, accent: androidx.compose.ui.graphic
             i = j
         }
     }
+}
+
+
+/** The package of Pulse AI (an extra app: local chat and speech to text). */
+const val PULSE_AI_PKG = "com.umutk.pulse.extra.ai"
+
+/**
+ * The AI button of the lyrics. The first time it explains what happens (a local model, downloaded once into Download/PulseAI); without Pulse AI it
+ * points to its download. With it, Pulse AI listens to the song and gives back an LRC, which is kept beside the song and shown.
+ */
+@Composable
+private fun AiLyricsButton(path: String, title: String, artist: String, onLyrics: (LyricsResult) -> Unit) {
+    val ctx = LocalContext.current
+    val sp = remember { ctx.getSharedPreferences("lyrics_ai", android.content.Context.MODE_PRIVATE) }
+    var welcome by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
+    val installed = remember { runCatching { ctx.packageManager.getPackageInfo(PULSE_AI_PKG, 0); true }.getOrDefault(false) }
+    val run = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
+        val lrc = r.data?.getStringExtra("lrc")
+        if (r.resultCode == android.app.Activity.RESULT_OK && !lrc.isNullOrBlank()) {
+            Lyrics.fromText(lrc, "ai")?.let { onLyrics(it); Thread { runCatching { Lyrics.keepText(path, lrc, "ai") } }.start() }
+        } else note = tr("No lyrics were made", "Söz oluşturulamadı")
+    }
+    fun start() {
+        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", java.io.File(path))
+        val i = android.content.Intent("com.umutk.pulse.ai.TRANSCRIBE").setPackage(PULSE_AI_PKG).setDataAndType(uri, "audio/*")
+            .putExtra("title", title).putExtra("artist", artist).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { run.launch(i) }.onFailure { note = tr("Pulse AI could not be opened", "Pulse AI açılamadı") }
+    }
+    Row(Modifier.padding(top = 10.dp).background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+        .clickable { if (!sp.getBoolean("welcomed", false) || !installed) welcome = true else start() }.padding(horizontal = 18.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text("AI", color = Color.White, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, modifier = Modifier.padding(end = 8.dp))
+        Text(tr("Make timed lyrics", "Zamanlı söz oluştur"), color = Color.White, fontSize = 14.sp)
+    }
+    if (note.isNotEmpty()) Text(note, color = Color.White.copy(alpha = .6f), fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+    if (welcome) com.umutk.pulse.WinAlert(onDismissRequest = { welcome = false },
+        title = { Text(tr("AI lyrics", "Yapay zekâ ile sözler")) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tr("Pulse AI listens to the song on this phone and writes its words with their times. Nothing is sent anywhere.",
+                "Pulse AI şarkıyı bu telefonda dinler ve sözlerini zamanlarıyla yazar. Hiçbir şey dışarı gönderilmez."))
+            Text(tr("It needs a speech model once (Whisper, 190-575 MB). It is downloaded into Download/PulseAI, not into the phone's app data, and other tools can use it too.",
+                "Bir kez bir ses modeli gerekir (Whisper, 190-575 MB). Download/PulseAI klasörüne iner, uygulama verisine değil; başka araçlar da kullanabilir."))
+            Text(tr("A song takes a few minutes. Music behind the voice can make some words wrong.", "Bir şarkı birkaç dakika sürer. Sesin arkasındaki müzik bazı kelimeleri yanlış yapabilir."), color = com.umutk.pulse.T.sub)
+            if (!installed) Text(tr("Pulse AI is an extra app of its own: get it first.", "Pulse AI ayrı bir ek uygulamadır: önce onu edin."), color = com.umutk.pulse.T.accent)
+        } },
+        confirmButton = { androidx.compose.material3.TextButton({
+            welcome = false
+            if (installed) { sp.edit().putBoolean("welcomed", true).apply(); start() }
+            else runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/xUmutKx/Pulse/releases?q=ai-v&expanded=true")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }) { Text(if (installed) tr("Start", "Başla") else tr("Get Pulse AI", "Pulse AI'yı edin")) } },
+        dismissButton = { androidx.compose.material3.TextButton({ welcome = false }) { Text(tr("Cancel", "İptal")) } })
 }
