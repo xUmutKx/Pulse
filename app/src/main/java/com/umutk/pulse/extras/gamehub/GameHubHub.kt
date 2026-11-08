@@ -334,7 +334,7 @@ class GameRehideService : android.app.Service() {
         @Volatile private var running = false
         fun start(c: Context) {
             val i = android.content.Intent(c, GameRehideService::class.java)
-            runCatching { if (android.os.Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
+            runCatching { if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
         }
     }
 
@@ -342,9 +342,9 @@ class GameRehideService : android.app.Service() {
 
     override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
         val nm = getSystemService(android.app.NotificationManager::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("game_rehide", "Game Hub", android.app.NotificationManager.IMPORTANCE_MIN))
-        val n = androidx.core.app.NotificationCompat.Builder(this, "game_rehide").setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("Game Hub").setContentText(tr("A game is open; it is hidden again when it closes", "Bir oyun açık; kapanınca yeniden gizlenecek")).setOngoing(true).setSilent(true).build()
-        runCatching { if (android.os.Build.VERSION.SDK_INT >= 34) startForeground(21, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(21, n) }
+        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("game_rehide", "Game Hub", android.app.NotificationManager.IMPORTANCE_MIN))
+        val n = androidx.core.app.NotificationCompat.Builder(this, "game_rehide").setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("Game Hub").setContentText(tr("A game is open; its settings go back when it closes", "Bir oyun açık; kapanınca ayarlar eski hâline döner")).setOngoing(true).setSilent(true).build()
+        runCatching { if (Build.VERSION.SDK_INT >= 34) startForeground(21, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(21, n) }
         if (running) return START_NOT_STICKY
         running = true
         val ctx = applicationContext
@@ -354,16 +354,17 @@ class GameRehideService : android.app.Service() {
                 val seen = HashSet<String>()
                 val t0 = System.currentTimeMillis()
                 while (System.currentTimeMillis() - t0 < 12 * 3600_000L) {
-                    val pending = prefs(ctx).getStringSet("pendingHide", emptySet()) ?: emptySet()
-                    if (pending.isEmpty()) break
-                    var left = pending
-                    for (pkg in pending) {
+                    val hide = prefs(ctx).getStringSet("pendingHide", emptySet()) ?: emptySet()
+                    val prof = prefs(ctx).getStringSet("profileOn", emptySet()) ?: emptySet()
+                    if (hide.isEmpty() && prof.isEmpty()) break
+                    for (pkg in hide + prof) {
                         val up = Privilege.run("pidof $pkg").text.trim().let { it.isNotEmpty() && it.first().isDigit() }
                         if (up) seen += pkg
-                        val gone = !up && (pkg in seen || System.currentTimeMillis() - t0 > 40_000L)
-                        if (gone && setGameHidden(ctx, pkg, true, quiet = true)) left = left - pkg
+                        // the game has closed (or never started within 40 seconds): its settings go back and it is hidden again
+                        if (up || !(pkg in seen || System.currentTimeMillis() - t0 > 40_000L)) continue
+                        if (pkg in prof) revertProfile(ctx, pkg)
+                        if (pkg in hide && setGameHidden(ctx, pkg, true, quiet = true)) prefs(ctx).edit().putStringSet("pendingHide", (prefs(ctx).getStringSet("pendingHide", emptySet()) ?: emptySet()) - pkg).apply()
                     }
-                    if (left != pending) prefs(ctx).edit().putStringSet("pendingHide", left).apply()
                     Thread.sleep(4000)
                 }
             } finally { running = false; stopSelf() }
@@ -666,6 +667,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
                 Chip(pal, if (favNow) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori")) { toggleFav(ctx, g.pkg) }
             }
             GamePerformance(pal, g.pkg, can)
+            GameProfile(pal, g.pkg, can)
             SectionTitle(pal, tr("Cover", "Kapak"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(pal, tr("Change cover", "Kapağı değiştir")) { if (com.umutk.pulse.ads.PulseAds.ENABLED) askAd = true else pick.launch("image/*") }
@@ -673,6 +675,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
             }
             // the game does not report achievements: these are Pulse's own marks, counted from the time played
             GameMilestones(pal, g.pkg, total)
+            GameHistory(pal, g.pkg)
             SectionTitle(pal, tr("Community", "Topluluk"))
             Text(tr("No community for an Android app here.", "Bir Android uygulaması için burada topluluk yok."), color = pal.sub, fontSize = 13.sp)
             Spacer(Modifier.height(24.dp))
@@ -1167,6 +1170,79 @@ private fun prepareGame(c: Context, pkg: String) {
     val (mode, down, fps) = tuneOf(c, pkg)
     if (mode != "standard" || down != 100 || fps != 0) applyTune(c, pkg)
     if (prefs(c).getBoolean("tb_$pkg", false)) Privilege.run("am kill-all")
+    if (applyProfile(c, pkg)) GameRehideService.start(c)
+}
+
+// ---- the profile of a game: brightness, volume, do not disturb and the network, set when it starts and put back when it closes ----
+private fun profileOf(c: Context, pkg: String) = listOf(prefs(c).getInt("pb_$pkg", -1), prefs(c).getInt("pv_$pkg", -1), if (prefs(c).getBoolean("pd_$pkg", false)) 1 else 0, when (prefs(c).getString("pn_$pkg", "")) { "wifi" -> 1; "mobile" -> 2; else -> 0 })
+
+/** Sets the profile of [pkg]; what each value was is kept first. False when the game has no profile. */
+private fun applyProfile(c: Context, pkg: String): Boolean {
+    val (b, v, d, n) = profileOf(c, pkg)
+    if (b < 0 && v < 0 && d == 0 && n == 0) return false
+    val p = prefs(c).edit()
+    val am = c.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+    if (v >= 0) {
+        p.putInt("old_v_$pkg", am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
+        runCatching { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) * v / 100).coerceAtLeast(0), 0) }
+    }
+    if (Privilege.mode != Privilege.Mode.None) {
+        if (b >= 0) {
+            p.putString("old_b_$pkg", Privilege.run("settings get system screen_brightness").text.trim()).putString("old_bm_$pkg", Privilege.run("settings get system screen_brightness_mode").text.trim())
+            Privilege.run("settings put system screen_brightness_mode 0; settings put system screen_brightness ${(255 * b / 100).coerceIn(1, 255)}")
+        }
+        if (d == 1) {
+            p.putInt("old_d_$pkg", (c.getSystemService(android.app.NotificationManager::class.java)).currentInterruptionFilter)
+            Privilege.run("cmd notification set_dnd on")
+        }
+        if (n != 0) {
+            p.putString("old_md_$pkg", Privilege.run("settings get global mobile_data").text.trim()).putString("old_wf_$pkg", Privilege.run("settings get global wifi_on").text.trim())
+            Privilege.run(if (n == 1) "svc data disable" else "svc wifi disable")
+        }
+    }
+    p.putStringSet("profileOn", (prefs(c).getStringSet("profileOn", emptySet()) ?: emptySet()) + pkg).apply()
+    return true
+}
+
+/** Puts back what [applyProfile] changed. */
+private fun revertProfile(c: Context, pkg: String) {
+    val sp = prefs(c)
+    val (b, v, d, n) = profileOf(c, pkg)
+    val am = c.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+    if (v >= 0 && sp.contains("old_v_$pkg")) runCatching { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, sp.getInt("old_v_$pkg", 0), 0) }
+    if (Privilege.mode != Privilege.Mode.None) {
+        if (b >= 0) {
+            sp.getString("old_b_$pkg", null)?.takeIf { it.isNotEmpty() && it != "null" }?.let { Privilege.run("settings put system screen_brightness $it") }
+            sp.getString("old_bm_$pkg", null)?.takeIf { it.isNotEmpty() && it != "null" }?.let { Privilege.run("settings put system screen_brightness_mode $it") }
+        }
+        if (d == 1 && sp.getInt("old_d_$pkg", android.app.NotificationManager.INTERRUPTION_FILTER_ALL) == android.app.NotificationManager.INTERRUPTION_FILTER_ALL) Privilege.run("cmd notification set_dnd off")
+        if (n == 1 && sp.getString("old_md_$pkg", "1") != "0") Privilege.run("svc data enable")
+        if (n == 2 && sp.getString("old_wf_$pkg", "1") != "0") Privilege.run("svc wifi enable")
+    }
+    sp.edit().putStringSet("profileOn", (sp.getStringSet("profileOn", emptySet()) ?: emptySet()) - pkg).apply()
+}
+
+@Composable
+private fun GameProfile(pal: Pal, pkg: String, can: Boolean) {
+    val ctx = LocalContext.current
+    var b by remember(pkg) { mutableStateOf(prefs(ctx).getInt("pb_$pkg", -1)) }
+    var v by remember(pkg) { mutableStateOf(prefs(ctx).getInt("pv_$pkg", -1)) }
+    var d by remember(pkg) { mutableStateOf(prefs(ctx).getBoolean("pd_$pkg", false)) }
+    var n by remember(pkg) { mutableStateOf(prefs(ctx).getString("pn_$pkg", "") ?: "") }
+    SectionTitle(pal, tr("Profile", "Profil"))
+    Text(tr("Brightness", "Parlaklık"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(-1 to tr("As is", "Aynı"), 30 to "30%", 60 to "60%", 100 to "100%").forEach { (k, l) -> Chip(pal, if (b == k) "● $l" else l) { if (can || k < 0) { b = k; prefs(ctx).edit().putInt("pb_$pkg", k).apply() } } }
+    }
+    Text(tr("Volume", "Ses"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(-1 to tr("As is", "Aynı"), 0 to tr("Mute", "Sessiz"), 50 to "50%", 100 to "100%").forEach { (k, l) -> Chip(pal, if (v == k) "● $l" else l) { v = k; prefs(ctx).edit().putInt("pv_$pkg", k).apply() } }
+    }
+    SettingRow(pal, tr("Do not disturb while playing", "Oynarken rahatsız etme"), d, can) { on -> d = on; prefs(ctx).edit().putBoolean("pd_$pkg", on).apply() }
+    Text(tr("Network", "Ağ"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("" to tr("As is", "Aynı"), "wifi" to tr("Wi-Fi only", "Yalnız Wi-Fi"), "mobile" to tr("Mobile only", "Yalnız mobil")).forEach { (k, l) -> Chip(pal, if (n == k) "● $l" else l) { if (can || k.isEmpty()) { n = k; prefs(ctx).edit().putString("pn_$pkg", k).apply() } } }
+    }
 }
 
 private fun usageAllowed(c: Context): Boolean = runCatching {
@@ -1211,6 +1287,48 @@ private fun GamePerformance(pal: Pal, pkg: String, can: Boolean) {
     }
     SettingRow(pal, tr("Close background apps before play", "Oynamadan önce arka plan uygulamalarını kapat"), boost, can) { on ->
         boost = on; prefs(ctx).edit().putBoolean("tb_$pkg", on).apply()
+    }
+}
+
+/** The time played on each of the last [days] days, oldest first (milliseconds). */
+private fun dailyUsage(c: Context, pkg: String, days: Int): List<Long> = runCatching {
+    val usm = c.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+    val fmt = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
+    val end = System.currentTimeMillis()
+    val per = HashMap<String, Long>()
+    usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, end - days * 86_400_000L, end).filter { it.packageName == pkg }.forEach { u ->
+        val k = fmt.format(java.util.Date(u.firstTimeStamp)); per[k] = (per[k] ?: 0L) + u.totalTimeInForeground
+    }
+    (days - 1 downTo 0).map { per[fmt.format(java.util.Date(end - it * 86_400_000L))] ?: 0L }
+}.getOrDefault(List(days) { 0L })
+
+/** The last 30 days as bars, and the goal for the week: a number of hours the person sets, with how far this week has got. */
+@Composable
+private fun GameHistory(pal: Pal, pkg: String) {
+    val ctx = LocalContext.current
+    val daily by produceState(List(30) { 0L }, pkg) { value = withContext(Dispatchers.IO) { dailyUsage(ctx, pkg, 30) } }
+    var goal by remember(pkg) { mutableStateOf(prefs(ctx).getInt("gw_$pkg", 0)) }
+    val week = daily.takeLast(7).sum()
+    SectionTitle(pal, tr("Last 30 days", "Son 30 gün"))
+    val max = (daily.maxOrNull() ?: 0L).coerceAtLeast(60_000L)
+    Canvas(Modifier.fillMaxWidth().height(90.dp).clip(RoundedCornerShape(12.dp)).background(pal.card)) {
+        val bw = size.width / (daily.size * 1.5f)
+        daily.forEachIndexed { i, t ->
+            val h = (size.height - 16f) * (t.toFloat() / max)
+            drawRect(if (i == daily.lastIndex) pal.accent else pal.accent.copy(alpha = .55f), topLeft = Offset(i * bw * 1.5f + bw * .5f, size.height - 8f - h), size = Size(bw, h.coerceAtLeast(if (t > 0) 3f else 1f)))
+        }
+    }
+    Text(tr("Most in a day", "Bir günde en çok") + ": " + hm(max.takeIf { daily.any { it > 0 } } ?: 0L), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    SectionTitle(pal, tr("Weekly goal", "Haftalık hedef"))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(0 to tr("None", "Yok"), 2 to "2 " + tr("h", "sa"), 5 to "5 " + tr("h", "sa"), 10 to "10 " + tr("h", "sa"), 20 to "20 " + tr("h", "sa")).forEach { (k, l) ->
+            Chip(pal, if (goal == k) "● $l" else l) { goal = k; prefs(ctx).edit().putInt("gw_$pkg", k).apply() }
+        }
+    }
+    if (goal > 0) {
+        val frac = (week / (goal * 3_600_000f)).coerceIn(0f, 1f)
+        Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(10.dp).clip(RoundedCornerShape(5.dp)).background(pal.card)) { Box(Modifier.fillMaxWidth(frac).height(10.dp).background(pal.accent)) }
+        Text(hm(week) + " / $goal " + tr("h", "sa") + if (frac >= 1f) "  ✓" else "", color = if (frac >= 1f) pal.accent else pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -1269,6 +1387,66 @@ class GameMenuService : android.app.Service() {
     private var games = emptySet<String>()
     private var gamesAt = 0L
     private val poll = object : Runnable { override fun run() { runCatching { check() }; h.postDelayed(this, 2500) } }
+    // the frame counter, the recording and the warnings
+    private var fpsView: android.widget.TextView? = null
+    private var fpsLayer: String? = null
+    private var fpsBusy = false
+    private var recordingSince = 0L
+    private var warnHeatAt = 0L
+    private var warnBatAt = 0L
+    private val fpsPoll = object : Runnable {
+        override fun run() {
+            val pkg = shown
+            if (pkg != null && fpsView != null && !fpsBusy) {
+                fpsBusy = true
+                Thread {
+                    val fps = runCatching { measureFps(pkg) }.getOrNull()
+                    h.post { fpsView?.text = if (fps == null) "FPS –" else "FPS $fps"; fpsBusy = false }
+                }.start()
+            }
+            if (fpsView != null) h.postDelayed(this, 1000)
+        }
+    }
+
+    /** The frame rate of the game's window from SurfaceFlinger (root or Shizuku): the frames shown in the last second. Null when the window cannot be found. */
+    private fun measureFps(pkg: String): Int? {
+        var layer = fpsLayer
+        if (layer == null) {
+            val list = Privilege.run("dumpsys SurfaceFlinger --list").text.lines()
+            layer = list.firstOrNull { it.contains(pkg) && it.contains("SurfaceView") } ?: list.firstOrNull { it.contains(pkg) && !it.contains("Background") } ?: return null
+            fpsLayer = layer.trim()
+        }
+        val rows = Privilege.run("dumpsys SurfaceFlinger --latency '$layer'").text.lines().drop(1).mapNotNull { l -> l.trim().split(Regex("\\s+")).getOrNull(1)?.toLongOrNull() }.filter { it > 0 && it < Long.MAX_VALUE / 2 }
+        if (rows.size < 2) { fpsLayer = null; return null }
+        val last = rows.max()
+        return rows.count { it > last - 1_000_000_000L }
+    }
+
+    private fun showFps() {
+        if (fpsView != null) return
+        val d = resources.displayMetrics.density
+        val v = android.widget.TextView(this).apply {
+            text = "FPS …"; textSize = 13f; setTextColor(0xFF7CFC00.toInt()); setPadding((8 * d).toInt(), (3 * d).toInt(), (8 * d).toInt(), (3 * d).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = 8 * d }
+        }
+        val l = android.view.WindowManager.LayoutParams(-2, -2, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, android.graphics.PixelFormat.TRANSLUCENT)
+            .apply { gravity = android.view.Gravity.TOP or android.view.Gravity.START; x = (8 * d).toInt(); y = (8 * d).toInt() }
+        if (runCatching { wm.addView(v, l) }.isSuccess) { fpsView = v; h.post(fpsPoll) }
+    }
+
+    private fun hideFps() { fpsView?.let { v -> runCatching { wm.removeView(v) } }; fpsView = null; fpsLayer = null }
+
+    /** A warning, at most every ten minutes each: the phone is hot, or the battery is low and not charging. */
+    private fun warn() {
+        val bat = registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)) ?: return
+        val temp = bat.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) / 10f
+        val pct = 100 * bat.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / bat.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+        val charging = bat.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (temp >= 43f && now - warnHeatAt > 600_000L) { warnHeatAt = now; toast(this, tr("The phone is hot", "Telefon ısındı") + ": %.1f \u00B0C".format(temp)) }
+        if (pct <= 15 && !charging && now - warnBatAt > 600_000L) { warnBatAt = now; toast(this, tr("Battery is low", "Pil azaldı") + ": $pct%") }
+    }
 
     override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
 
@@ -1303,7 +1481,7 @@ class GameMenuService : android.app.Service() {
         }
         if (now - gamesAt > 60_000L) { games = loadGames(this).map { it.pkg }.toSet(); gamesAt = now }
         val g = fg?.takeIf { it in games }
-        if (g == null) { if (++nullStreak >= 2) hide() } else { nullStreak = 0; if (shown != g) show(g) }
+        if (g == null) { if (++nullStreak >= 2) hide() } else { nullStreak = 0; if (shown != g) show(g); warn() }
     }
 
     private fun lp(w: Int, hgt: Int, x: Int = 0) = android.view.WindowManager.LayoutParams(w, hgt, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -1321,10 +1499,11 @@ class GameMenuService : android.app.Service() {
             setOnClickListener { togglePanel(pkg) }
         }
         if (runCatching { wm.addView(v, lp((26 * d).toInt(), (64 * d).toInt())) }.isSuccess) handle = v
+        if (prefs(this).getBoolean("menuFps", false)) showFps()
     }
 
     private fun hide() {
-        closePanel()
+        closePanel(); hideFps()
         handle?.let { v -> runCatching { wm.removeView(v) } }
         handle = null; shown = null
     }
@@ -1357,7 +1536,7 @@ class GameMenuService : android.app.Service() {
         val pct = bat?.let { 100 * it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0
         val temp = (bat?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
         val mi = android.app.ActivityManager.MemoryInfo().also { (getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }
-        col.addView(label("$pct%  ·  %.1f \u00B0C  ·  %.1f GB".format(temp, mi.availMem / 1_073_741_824.0), 13f, 0xFFB0B0B0.toInt()))
+        col.addView(label("$pct%  ·  %.1f \u00B0C  ·  %.1f GB".format(temp, mi.availMem / 1_073_741_824.0), 13f, if (temp >= 43f || pct <= 15) 0xFFFF6E6E.toInt() else 0xFFB0B0B0.toInt()))
         // do not disturb
         val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
         lateinit var dnd: android.widget.TextView
@@ -1379,6 +1558,31 @@ class GameMenuService : android.app.Service() {
             })
         }
         col.addView(row)
+        // the frame counter in the corner
+        lateinit var fpsBtn: android.widget.TextView
+        fun fpsText() = "FPS: " + if (fpsView != null) tr("on", "açık") else tr("off", "kapalı")
+        fpsBtn = button(fpsText()) {
+            val on = fpsView == null
+            prefs(this).edit().putBoolean("menuFps", on).apply()
+            if (on) showFps() else hideFps()
+            fpsBtn.text = fpsText()
+        }
+        col.addView(fpsBtn)
+        // the screen recording (up to three minutes), saved in Movies
+        lateinit var recBtn: android.widget.TextView
+        fun recText() = if (recordingSince > 0L && android.os.SystemClock.elapsedRealtime() - recordingSince < 180_000L) tr("Stop recording", "Kaydı durdur") else tr("Record screen", "Ekranı kaydet")
+        recBtn = button(recText()) {
+            if (recText() == tr("Stop recording", "Kaydı durdur")) {
+                recordingSince = 0L
+                sh("pkill -2 screenrecord") { toast(this, tr("Saved in Movies", "Movies klasörüne kaydedildi")) }
+            } else {
+                recordingSince = android.os.SystemClock.elapsedRealtime()
+                closePanel()
+                sh("mkdir -p /sdcard/Movies && (nohup screenrecord --time-limit 180 /sdcard/Movies/Game_${System.currentTimeMillis()}.mp4 >/dev/null 2>&1 &)") { toast(this, tr("Recording", "Kayıt başladı")) }
+            }
+            recBtn.text = recText()
+        }
+        col.addView(recBtn)
         col.addView(button(tr("Screenshot", "Ekran görüntüsü")) {
             closePanel(); handle?.visibility = android.view.View.INVISIBLE
             h.postDelayed({
