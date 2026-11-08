@@ -2018,8 +2018,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         var nnFix: KeyboardDictionary.Cand? = null
         if (lm != null) runCatching {
             // the model knows capitals and punctuation: the text before goes in as it is, and every word is weighed in the case it would be written in
-            val stt = NeuralLm.state(lm, nnLang, ctxText ?: lmCtx)
-            val capFirst = typed.firstOrNull()?.isUpperCase() == true
+            val cased = lm.cased()
+            val stt = NeuralLm.state(lm, nnLang, (ctxText ?: lmCtx).let { if (cased) it else it.lowercase(loc) })
+            val capFirst = cased && typed.firstOrNull()?.isUpperCase() == true
             fun form(w: String) = if (capFirst) w.replaceFirstChar { it.titlecase(loc) } else w
             val wider = if (lower.length >= 3 && limit < NN_REACH) candCodes.flatMap { KeyboardDictionary.correct(it, lower, NN_REACH, 6, tc) } else emptyList()
             val pool = (corr + wider).filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) && kotlin.math.abs(it.word.length - lower.length) <= 2 }
