@@ -21,10 +21,10 @@ The halftone QR tool uses the "submodule" method described at kloet.net/usr/half
 
 ## Keyboard neural language model (assets/kb/lm_tr.bin, lm_en.bin)
 
-Pulse's own character-level GRU models, trained by the Pulse author for this app. Training text: Leipzig Corpora Collection
-(Universität Leipzig), corpora `tur-tr_web_2019_300K`, `tur_news_2020_300K`, `eng-com_web-public_2018_300K`, `eng_news_2020_300K`,
-licensed CC BY 4.0 (https://wortschatz.uni-leipzig.de/en/download). D. Goldhahn, T. Eckart, U. Quasthoff: Building Large Monolingual
-Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Only the trained weights ship; no corpus text is included.
+Pulse's own character-level GRU models (capitals and punctuation included), trained by the Pulse author for this app. Training text: Leipzig Corpora Collection
+(Universität Leipzig), corpora `tur_wikipedia_2021_300K`, `tur_news_2020_300K`, `tur-tr_web_2015_300K`, `tur-tr_web_2019_300K`, `eng_wikipedia_2016_300K`,
+`eng-simple_wikipedia_2021_300K`, `eng_news_2020_300K`, `eng_newscrawl-public_2018_300K`, `eng-com_web-public_2018_300K`, licensed CC BY 4.0 (https://wortschatz.uni-leipzig.de/en/download). D. Goldhahn, T. Eckart, U. Quasthoff: Building Large Monolingual
+Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Everyday sentences from Tatoeba (tatoeba.org), CC BY 2.0 FR. Only the trained weights ship; no corpus text is included.
 
 ## Pulse AI (localai/, aistt/)
 
