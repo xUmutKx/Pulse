@@ -159,7 +159,6 @@ private val tools = listOf(
 private val photoTools = listOf(
     Tool("ASCII art", "ASCII sanatı", "document", wide = true) { AsciiArtTool() },
     Tool("Halftone QR", "Yarım ton QR", "gridView", wide = true) { HalftoneQrTool() },
-    Tool("Tilt-shift", "Tilt-shift", "image", wide = true) { TiltShiftTool() },
 )
 private val allTools get() = tools + photoTools
 
@@ -244,20 +243,25 @@ fun ToolkitPage() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(tr("Toolkit", "Araç kutusu"), guide = "toolkit")
         tools.chunked(3).forEachIndexed { r, row ->
+            // a short last row is centred: the empty room is split evenly on both sides, no gap is left on one side
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val side = (3 - row.size) / 2f
+                if (row.size < 3) Spacer(Modifier.weight(side))
                 row.forEachIndexed { c, t ->
                     ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = r * 3 + c }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                if (row.size < 3) Spacer(Modifier.weight(side))
             }
         }
         PHead(tr("Photo tools", "Fotoğraf araçları"))
         photoTools.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val side = (3 - row.size) / 2f
+                if (row.size < 3) Spacer(Modifier.weight(side))
                 row.forEachIndexed { c, t ->
                     ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = tools.size + r * 3 + c }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                if (row.size < 3) Spacer(Modifier.weight(side))
             }
         }
         Spacer(Modifier.height(12.dp))
