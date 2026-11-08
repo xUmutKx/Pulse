@@ -362,6 +362,15 @@ object KeyboardDictionary {
 
     fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
 
+    /** How often the person wrote [w] (the learned words; typos left uncorrected are learned too, so this is a hint, not proof of a word). */
+    fun userCount(w: String): Int = user[w.lowercase(Locale.ROOT)] ?: 0
+
+    /** A word of the built-in list (or, in Turkish, a listed base with its endings): learned words do not count here. */
+    fun inLexicon(code: String, w: String): Boolean {
+        val lang = d(code); val l = w.lowercase(Locale.ROOT)
+        return lexes[lang]?.index?.containsKey(l) == true || (lang == "tr" && trKnown(l))
+    }
+
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
