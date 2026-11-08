@@ -855,6 +855,9 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
         <!-- Island (extras/island): a pill at the top of the screen that shows the song, notifications, charger, headset, volume, torch, removed apps and screenshots -->
+        <service android:name="com.umutk.pulse.extras.gamehub.GameRehideService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="hides a game again after it closes" />
+        </service>
         <service android:name="com.umutk.pulse.extras.island.IslandService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a pill over the camera that shows what is going on" />
         </service>
