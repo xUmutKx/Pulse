@@ -267,6 +267,9 @@ private fun PermissionsCard() {
 
 /** The notes of this version, shown once after an update (the first start has the full welcome instead). Newest first. */
 private val WHATS_NEW = listOf(
+    "star" to (tr("Pulse AI: local chat and timed lyrics on the phone, an extra app inside Pulse; models go to Download/PulseAI.",
+        "Pulse AI: telefonda yerel sohbet ve zamanlı şarkı sözleri, Pulse'un içinde bir ek uygulama; modeller Download/PulseAI'ya iner.")),
+    "music" to (tr("Music: the Sonic look, a turntable in glowing lines.", "Müzik: Sonic görünümü, parlayan çizgilerle bir pikap.")),
     "keyboard" to (tr("Keyboard: a neural model on the phone (Turkish and English) weighs every correction by the sentence; e-mail and name suggestions can be blocked; a learning card in statistics.",
         "Klavye: telefonda çalışan bir sinir ağı modeli (Türkçe ve İngilizce) her düzeltmeyi cümleye göre tartar; e-posta ve isim önerileri engellenebilir; istatistikte öğrenme kartı.")),
     "apps" to (tr("Extra apps: choose each app's icon from an installed icon pack (search by words) or make one: line or glass, any colours.",
