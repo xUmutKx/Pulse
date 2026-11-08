@@ -123,7 +123,7 @@ private fun AiModelsPage() {
     var found by remember { mutableStateOf<List<AiModel>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
     val onPhone by produceState(emptyList<AiModel>(), tick / 30) { value = withContext(Dispatchers.IO) { runCatching { phoneModels() }.getOrDefault(emptyList()) } }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u: Uri? ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
         if (u != null) { runCatching { c.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }; Store.setCustomUri(c, if (u.toString().endsWith(".bin")) "speech" else "chat", u); tick++ }
     }
     val rec = remember { Device.recommended(c, CHAT_MODELS) }
@@ -168,7 +168,9 @@ private fun Section(t: String) = Text(t, color = Look.accent, fontSize = 15.sp, 
 @Composable
 private fun ModelRow(m: AiModel, tick: Int, suggested: Boolean, changed: () -> Unit) {
     val c = LocalContext.current
-    val p = remember(tick) { Store.progress(c, m) }
+    // the percentage moves while the model downloads (the download goes on in Pulse's downloader, so it is read again and again)
+    var p by remember { mutableFloatStateOf(Store.progress(c, m)) }
+    LaunchedEffect(tick, m.id) { while (true) { p = Store.progress(c, m); delay(400) } }
     val fit = remember(m.bytes) { if (m.bytes > 0) Device.fit(c, m) else 1 }
     val active = remember(tick) { Store.active(c, m.kind) == m.id }
     PCard(Modifier.fillMaxWidth().alpha(if (fit == 0) .55f else 1f)) {
@@ -188,7 +190,7 @@ private fun ModelRow(m: AiModel, tick: Int, suggested: Boolean, changed: () -> U
                     if (m.path == null) Box(Modifier.size(40.dp).clickable { Store.delete(c, m); changed() }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 20.dp) }
                 }
                 p >= 0f -> Text("${(p * 100).toInt()}%", color = Look.accent, fontSize = 14.sp)
-                else -> PButton(tr("Download", "İndir"), compact = true) { if (fit > 0) { Store.remember(c, m); Store.download(c, m); changed() } }
+                else -> PButton(tr("Download", "İndir"), compact = true) { if (fit > 0) { Store.remember(c, m); Store.download(c, m); p = 0f; changed() } }
             }
         }
         if (p in 0f..0.999f) PProgress(p, Modifier.fillMaxWidth().padding(top = 8.dp))
@@ -217,7 +219,7 @@ private fun AiChat(toModels: () -> Unit) {
     var started by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
     val list = rememberLazyListState()
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u: Uri? -> if (u != null) attached = readAttachment(c, u) }
+    val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? -> if (u != null) attached = readAttachment(c, u) }
     if (Store.known(c, "chat").none { Store.has(c, it) } && Store.customUri(c, "chat") == null) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             PIcon("download", T.sub, 40.dp)
@@ -287,7 +289,7 @@ private fun AiSpeechPage() {
     var frac by remember { mutableFloatStateOf(0f) }
     var busy by remember { mutableStateOf(false) }
     var lang by remember { mutableStateOf("auto") }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u: Uri? ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
         if (u == null) return@rememberLauncherForActivityResult
         busy = true; result = ""
         scope.launch {
