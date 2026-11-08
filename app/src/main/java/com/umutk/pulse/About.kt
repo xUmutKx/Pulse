@@ -110,6 +110,9 @@ fun AboutPage() {
         upd?.let { r -> UpdateDialog(r) { upd = null } }
         Text("An all-in-one file manager for Android with the look of Windows, plus a task manager, a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
         PCard {
+            Fold(tr("Premium", "Premium")) { PremiumBox() }
+        }
+        PCard {
             Fold("Privacy") {
                 Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
             }
@@ -155,5 +158,27 @@ private fun LicencesPage() {
                 color = T.sub, fontSize = 12.sp)
         }
         Text("Icons in the Windows themes: Microsoft Fluent System Icons (MIT). The Shizuku API files are from RikkaApps Shizuku (MIT).", color = T.sub, fontSize = 11.sp)
+    }
+}
+
+/** About > Premium: whether it is on, and (outside the Play build) the field for a promo code. Five wrong codes lock the field for a while. */
+@Composable
+private fun PremiumBox() {
+    val ctx = LocalContext.current
+    var on by remember { mutableStateOf(Premium.isOn(ctx)) }
+    var code by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (on) { Text(tr("Premium is on. Thank you!", "Premium açık. Teşekkürler!"), color = Look.accent, fontSize = 14.sp); return@Column }
+        if (!Premium.codesOffered) { Text(tr("Premium comes through Google Play.", "Premium Google Play üzerinden gelir."), color = T.sub, fontSize = 13.sp); return@Column }
+        PField(code, { code = it.take(24) }, "PLS-XXXX-XXXX-XXXX-XXXX", Modifier.fillMaxWidth())
+        PButton(tr("Unlock", "Aç"), compact = true) {
+            when (val r = Premium.redeem(ctx, code)) {
+                is Premium.Result.Ok -> { on = true; note = "" }
+                is Premium.Result.Wrong -> note = tr("Wrong code. ${r.left} tries left.", "Kod yanlış. ${r.left} deneme hakkı kaldı.")
+                is Premium.Result.Locked -> note = tr("Too many tries. Try again in ${r.minutes} min.", "Çok fazla deneme. ${r.minutes} dk sonra tekrar deneyin.")
+            }
+        }
+        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 13.sp)
     }
 }
