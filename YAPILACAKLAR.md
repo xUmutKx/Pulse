@@ -2339,3 +2339,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: varsayılan "Raf" görünümü (kapaklar rafta, dokununca kart döner: Oyna / Ayrıntılar); Boxshelf kaynağına dayalı yeniden çizim, ilk sürüm. (derlenmedi)
 - Game Hub Raf görünümü tam: kayan raf (coverflow), kutuyu çevirip açma (kapak, kılavuz, disk), ilk kurulum penceresi. (derlenmedi)
 - Game Hub kurulum sihirbazı: 5 adım (hoş geldin, oyunlar, görünüm, kutu resimleri, erişim); yalnızca Game Hub hiç kullanılmamışsa kendiliğinden açılır, Ayarlar > Kurulum ile her zaman açılır. (derlenmedi)
+- Raf: gerçek kasa görünümü (üst bant, gerilen sırt yazısı, kapak/ikon+ad); ayrıntı sayfası dikey düzen: kasa+ad, Aç/Daha fazla, Genel ve Ayarlar sekmeleri (seçili sekmede mavi çizgi yok). (derlenmedi)
