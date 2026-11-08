@@ -66,7 +66,7 @@ fun StoreRowShell(modifier: Modifier = Modifier, content: @Composable () -> Unit
 
 /** Page header. Classic: a window title bar. Fluent: a big plain title. Play: a top app bar. [onSearch] null hides the search icon. */
 @Composable
-fun StoreHeader(title: String, onBack: () -> Unit, onSearch: (() -> Unit)? = null) {
+fun StoreHeader(title: String, onBack: () -> Unit, onSearch: (() -> Unit)? = null, onSettings: (() -> Unit)? = null) {
     val t = T
     when (storeStyle(t)) {
         StoreStyle.CLASSIC -> {
@@ -80,6 +80,7 @@ fun StoreHeader(title: String, onBack: () -> Unit, onSearch: (() -> Unit)? = nul
                 Text(title, color = t.titleText, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     modifier = Modifier.weight(1f).padding(start = 6.dp))
                 if (onSearch != null) Box(Modifier.size(32.dp).clickable { onSearch() }, contentAlignment = Alignment.Center) { PIcon("search", t.titleText, 18.dp) }
+                if (onSettings != null) Box(Modifier.size(32.dp).clickable { onSettings() }, contentAlignment = Alignment.Center) { PIcon("settings", t.titleText, 18.dp) }
             }
         }
         StoreStyle.FLUENT -> Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -87,11 +88,13 @@ fun StoreHeader(title: String, onBack: () -> Unit, onSearch: (() -> Unit)? = nul
             Text(title, color = t.text, fontSize = 28.sp, fontWeight = if (t.id == "win11") FontWeight.SemiBold else FontWeight.Light,
                 maxLines = 1, modifier = Modifier.weight(1f))
             if (onSearch != null) Box(Modifier.size(40.dp).clickable { onSearch() }, contentAlignment = Alignment.Center) { PIcon("search", t.text, 22.dp) }
+                if (onSettings != null) Box(Modifier.size(40.dp).clickable { onSettings() }, contentAlignment = Alignment.Center) { PIcon("settings", t.text, 22.dp) }
         }
         StoreStyle.PLAY -> Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", t.text, 22.dp) }
             Text(title, color = t.text, fontSize = 22.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.weight(1f))
             if (onSearch != null) Box(Modifier.size(40.dp).clickable { onSearch() }, contentAlignment = Alignment.Center) { PIcon("search", t.text, 22.dp) }
+                if (onSettings != null) Box(Modifier.size(40.dp).clickable { onSettings() }, contentAlignment = Alignment.Center) { PIcon("settings", t.text, 22.dp) }
         }
     }
 }

@@ -40,6 +40,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var job: Job? = null
 
     private val word = StringBuilder()
+    /** The text before the open word, read with every key, for the neural model. */
+    @Volatile private var lmCtx = ""
     /** The last word a held delete key took away, and when: the next word typed in its place teaches that it was a slip. */
     private var deletedWord: String? = null
     private var deletedAt = 0L
@@ -758,7 +760,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
         // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
         var timedOut = false
-        val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale
+        val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale; val ctxNow = lmCtx
         var t = if (inAddr || typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
         if (t == null && correct && !inAddr && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
@@ -826,15 +828,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
         // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
-        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow)
+        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow, ctxNow)
         return true
     }
 
     /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
-    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean) {
+    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean, ctx: String = lmCtx) {
         if (!KeyboardPrefs.autocorrect || !KeyboardPrefs.suggestions) return
         scope.launch {
-            val fix = withContext(Dispatchers.Default) { KeyboardDictionary.uncancelled { runCatching { compute(code, loc, typed, pw, up, pw2).third }.getOrNull() } } ?: return@launch
+            val fix = withContext(Dispatchers.Default) { KeyboardDictionary.uncancelled { runCatching { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third }.getOrNull() } } ?: return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
             if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
             val key = typed + tail
@@ -1827,6 +1829,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (!KeyboardPrefs.suggestions || st.plain || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
+        // the text before the word, for the neural model (the word itself is the open one at the end)
+        lmCtx = runCatching { currentInputConnection?.getTextBeforeCursor(160, 0)?.toString().orEmpty().let { b -> if (typed.isNotEmpty() && b.endsWith(typed)) b.dropLast(typed.length) else b } }.getOrDefault("")
         // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
         val tc: KeyboardDictionary.TouchCtx? = if (typed.isNotEmpty() && touchPts.size >= typed.length && st.letterRects.isNotEmpty()) {
             val centers = HashMap<Char, androidx.compose.ui.geometry.Offset>()
@@ -1931,7 +1935,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
-    private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false): Triple<List<String>, Array<String>, String?> {
+    private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false, ctxText: String? = null): Triple<List<String>, Array<String>, String?> {
         KeyboardDictionary.begin()
         if (typed.isEmpty()) {
             val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
@@ -1986,8 +1990,31 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }.maxByOrNull { it.score }
         // two words that run together (a key typed for the space among them) are split before any other mending
         val split = if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
-        val fix = swapFix ?: split ?: fix0
-        val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
+        // the neural model (CharLm, trained on open Turkish and English text): every near word is weighed by how well it fits the sentence before it, the typing
+        // cost (in bits, NN_LAM per unit) taken off; the typed word wins unless a near word beats it by a margin (a real word needs a bigger one).
+        // It also reaches a missing or an extra letter ("mrhaba", "gelyorum"), which the old rule could not afford, and orders the bar by the sentence.
+        val nnLang = KeyboardLayouts.dict(code)
+        val lm = if (!fast && KeyboardPrefs.neural && lower.length >= 2 && !stretched && !keepCase) NeuralLm.get(this, nnLang) else null
+        val nnScore = HashMap<String, Float>()
+        var nnFix: KeyboardDictionary.Cand? = null
+        if (lm != null) runCatching {
+            val stt = NeuralLm.state(lm, nnLang, (ctxText ?: lmCtx).lowercase(loc))
+            val wider = if (lower.length >= 3 && limit < NN_REACH) candCodes.flatMap { KeyboardDictionary.correct(it, lower, NN_REACH, 6, tc) } else emptyList()
+            val pool = (corr + wider).filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) && kotlin.math.abs(it.word.length - lower.length) <= 2 }
+                .sortedBy { it.cost }.distinctBy { it.word }.take(10)
+            for (cd in pool) nnScore[cd.word] = lm.score(stt, cd.word) - NN_LAM * cd.cost
+            for (cd in comp) if (cd.word != lower && cd.word !in nnScore) nnScore[cd.word] = lm.score(stt, cd.word) - NN_COMP
+            val typedLm = lm.score(stt, lower)
+            val best = pool.maxByOrNull { nnScore.getValue(it.word) }
+            if (best != null) {
+                val diacriticOnly = best.cost <= .15f * lower.length && best.word.length == lower.length
+                val margin = (if (valid) NN_VALID else NN_UNKNOWN) + (if (lower.length <= 3 && !diacriticOnly) NN_SHORT else 0f)
+                if ((lower.length >= 3 || diacriticOnly) && nnScore.getValue(best.word) > typedLm + margin) nnFix = best
+            }
+        }
+        val fix = swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0
+        val others = (comp.map { it.word } + corr.map { it.word } + nnScore.keys).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
+            .let { o -> if (nnScore.isEmpty()) o else o.sortedByDescending { nnScore[it] ?: -1e9f } }
         val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String
         // Shift pressed while the word is open: the middle holds the capital-letter form (the one the correction would give, when there is one), and a tap puts it in
@@ -2001,6 +2028,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return Triple(listOf(left, mid, right), words, fix?.let { capped(cased(it.word, typed)) })
     }
 }
+
+// The neural correction rule (bits): cost weight, how far it reaches, the handicap of a completion, and the margin the typed word keeps
+// (a known word, an unknown one, a short one). Tuned on held-out sentences with made-up slips (see the PR notes).
+private const val NN_LAM = 10f
+private const val NN_REACH = 1.05f
+private const val NN_COMP = 3f
+private const val NN_VALID = 10f
+private const val NN_UNKNOWN = -3f
+private const val NN_SHORT = 4f
 
 /** A picture made of characters (block shading, several lines): not an emoji, so it is left out of the recent list. */
 private fun isArt(s: String): Boolean =
