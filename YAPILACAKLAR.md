@@ -2333,3 +2333,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Seçici (müzik): klasör önbelleğe alınıp liste hemen açılıyor; şarkılardan sözü olanlar arka planda belirlenip altta soluk, "Sözü olanlar" ayracıyla gösteriliyor. (derlenmedi)
 - Dosya sıkıştırma: başarısız olunca gerçek hata nedeni bildirimde ve sonuç satırında gösteriliyor (logcat: PulseZip). (derlenmedi)
 - Dosya sıkıştırma: zip "Prefix string too short" hatasıyla her seferinde başarısız oluyordu (geçici dosya öneki 2 harf); düzeltildi, masaüstünde parçalı zip birleşince geçerli çıktı. (derlenmedi)
+- Game Hub: varsayılan performans modu ve küçük kart boyutu. (derlenmedi)
