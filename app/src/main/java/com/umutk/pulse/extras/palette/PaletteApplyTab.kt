@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.palette
 
+import androidx.compose.foundation.clickable
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -88,6 +89,22 @@ fun ApplyTab(st: PaletteState) {
                         ShortcutApplier.pin(ctx, app, bmp)
                     }
                 }
+            }
+        }
+        // one app, one icon by hand: a picture from an installed icon pack found by words (dondurma, ice cream…) or the icon maker (line or glass), put on the home screen
+        Card(tr("Icon for one app", "Tek uygulamaya ikon"), tr("Find a picture in an installed icon pack by words, or make one, and pin the app with it.", "Yüklü bir ikon paketinde kelimeyle resim bul ya da üret, uygulamayı onunla sabitle.")) {
+            var appQuery by remember { mutableStateOf("") }
+            var chosen by remember { mutableStateOf<AppInfo?>(null) }
+            com.umutk.pulse.PField(appQuery, { appQuery = it }, tr("App", "Uygulama"), Modifier.fillMaxWidth())
+            if (appQuery.length >= 2) st.apps.filter { it.label.contains(appQuery, true) || it.packageName.contains(appQuery, true) }.take(6).forEach { a ->
+                Text(a.label, color = T.text, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clickable { chosen = a }.padding(vertical = 6.dp))
+            }
+            chosen?.let { a ->
+                com.umutk.pulse.extras.store.IconChooser(a.label, "apps", null, onDismiss = { chosen = null }, onSave = { chosen = null },
+                    onPin = { b ->
+                        val i = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(a.packageName, a.activityName)
+                        if (!com.umutk.pulse.extras.store.ExtraIcons.pin(ctx, a.packageName + "/" + a.activityName, a.label, b, i)) saved = tr("The launcher does not take shortcuts", "Başlatıcı kısayol kabul etmiyor")
+                    })
             }
         }
         Text(tr("Icon resolution", "İkon çözünürlüğü"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

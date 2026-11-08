@@ -67,6 +67,41 @@ class IconPack(c: Context, val pkg: String) {
     /** Every drawable name the pack uses, for the name search below. */
     private val names: List<String> by lazy { map.values.distinct().sorted() }
 
+    /** Every icon the pack offers (its drawable.xml, then the names of appfilter.xml), for the keyword search. */
+    val allNames: List<String> by lazy {
+        val out = LinkedHashSet<String>()
+        runCatching {
+            val id = res.getIdentifier("drawable", "xml", pkg)
+            fun take(p: XmlPullParser) { var ev = p.eventType; while (ev != XmlPullParser.END_DOCUMENT) { if (ev == XmlPullParser.START_TAG && p.name == "item") p.getAttributeValue(null, "drawable")?.let { out += it }; ev = p.next() } }
+            if (id != 0) take(res.getXml(id)) else res.assets.open("drawable.xml").use { ins -> val p = Xml.newPullParser(); p.setInput(ins, "utf-8"); take(p) }
+        }
+        out += names
+        out.toList()
+    }
+
+    /** The package names each icon is drawn for (from appfilter.xml): "com.bottleice.app" finds its icon by "bottle" or "ice". */
+    private val pkgsOf: Map<String, List<String>> by lazy { map.entries.groupBy({ it.value }, { it.key.substringBefore('/') }) }
+
+    /**
+     * Icons by words: each word of [query] (Turkish words are looked up in English too: "dondurma" also searches "ice", "cream", "gelato") must be found in the icon's
+     * name or in the package name of an app it is drawn for. Exact name parts come first.
+     */
+    fun search(query: String, limit: Int = 60): List<String> {
+        val words = query.lowercase().split(' ', '_', '-', '.').filter { it.length >= 2 }
+        if (words.isEmpty()) return allNames.take(limit)
+        val groups = words.map { w -> listOf(w) + (IconWords.en[w] ?: emptyList()) }
+        fun hay(n: String) = n + " " + (pkgsOf[n]?.joinToString(" ") ?: "")
+        val hits = allNames.filter { n -> val h = hay(n); groups.all { g -> g.any { h.contains(it) } } }
+        val loose = if (hits.size < limit) allNames.filter { n -> n !in hits && groups.any { g -> g.any { hay(n).contains(it) } } } else emptyList()
+        return (hits.sortedBy { n -> (if (groups.all { g -> g.any { n.split('_').contains(it) } }) 0 else 1) * 1000 + n.length } + loose.sortedBy { it.length }).take(limit)
+    }
+
+    /** The picture of an icon by its drawable name. */
+    fun drawable(name: String): Drawable? {
+        val id = res.getIdentifier(name, "drawable", pkg)
+        return if (id == 0) null else runCatching { res.getDrawable(id, null) }.getOrNull()
+    }
+
     /**
      * The picture this pack gives the activity [activity] of [app]: its own entry first; without one, the first icon whose name is
      * the app's name (or starts with it, as a word). Names shorter than four letters are never searched ("fm", "get" match nothing).
@@ -96,4 +131,31 @@ object IconPackCache {
         packs.getOrPut(pkg) { runCatching { IconPack(c.applicationContext, pkg) }.getOrNull() }
     }
     fun forget() = synchronized(packs) { packs.clear() }
+}
+
+/** Turkish words and the English ones icon packs name their pictures with (and a few English synonyms). */
+object IconWords {
+    val en: Map<String, List<String>> = mapOf(
+        "dondurma" to listOf("ice", "cream", "gelato", "popsicle", "icecream"), "buz" to listOf("ice", "frost"), "şişe" to listOf("bottle"), "sise" to listOf("bottle"),
+        "kahve" to listOf("coffee", "cafe"), "çay" to listOf("tea"), "yemek" to listOf("food", "recipe", "eat", "meal"), "tarif" to listOf("recipe", "cook"), "pizza" to listOf("pizza"),
+        "müzik" to listOf("music", "player", "audio"), "muzik" to listOf("music"), "şarkı" to listOf("music", "song"), "video" to listOf("video", "movie", "player"), "film" to listOf("movie", "film", "cinema"),
+        "kamera" to listOf("camera"), "fotoğraf" to listOf("photo", "gallery", "picture"), "foto" to listOf("photo", "gallery"), "galeri" to listOf("gallery", "photo"),
+        "hava" to listOf("weather"), "saat" to listOf("clock", "time", "watch"), "alarm" to listOf("alarm", "clock"), "takvim" to listOf("calendar"), "not" to listOf("note", "notes", "memo"), "notlar" to listOf("notes", "note"),
+        "dosya" to listOf("file", "folder", "explorer"), "dosyalar" to listOf("files", "file", "folder"), "klasör" to listOf("folder"), "mesaj" to listOf("message", "sms", "chat"), "mesajlar" to listOf("messages", "sms"),
+        "sohbet" to listOf("chat", "messenger"), "telefon" to listOf("phone", "dialer", "call"), "arama" to listOf("call", "dialer", "search"), "kişi" to listOf("contact", "people"), "kişiler" to listOf("contacts", "people"),
+        "ayar" to listOf("settings", "setting"), "ayarlar" to listOf("settings"), "harita" to listOf("map", "maps", "navigation"), "oyun" to listOf("game", "games", "play"), "kitap" to listOf("book", "books", "reader"),
+        "kitaplar" to listOf("books", "book", "library"), "hesap" to listOf("calculator", "calc", "account"), "hesapmakinesi" to listOf("calculator", "calc"), "tarayıcı" to listOf("browser", "web"),
+        "indir" to listOf("download"), "indirme" to listOf("download"), "alışveriş" to listOf("shop", "shopping", "cart", "store"), "mağaza" to listOf("store", "shop", "market"), "banka" to listOf("bank", "banking"),
+        "para" to listOf("money", "wallet", "cash", "pay"), "cüzdan" to listOf("wallet"), "spor" to listOf("sport", "fitness", "gym"), "sağlık" to listOf("health", "fit"), "adım" to listOf("step", "pedometer"),
+        "klavye" to listOf("keyboard"), "ses" to listOf("voice", "sound", "audio", "recorder"), "kayıt" to listOf("record", "recorder"), "kaydedici" to listOf("recorder"), "çizim" to listOf("draw", "sketch", "paint"),
+        "resim" to listOf("paint", "picture", "image", "draw"), "boya" to listOf("paint", "color"), "renk" to listOf("color", "palette"), "palet" to listOf("palette"), "araba" to listOf("car", "auto", "drive"),
+        "uçak" to listOf("plane", "flight", "air"), "otobüs" to listOf("bus"), "tren" to listOf("train", "rail"), "taksi" to listOf("taxi", "cab"), "otel" to listOf("hotel", "booking"), "ev" to listOf("home", "house"),
+        "ana" to listOf("home", "launcher"), "başlatıcı" to listOf("launcher"), "kilit" to listOf("lock", "locker"), "güvenlik" to listOf("security", "shield", "vpn"), "şifre" to listOf("password", "pass", "key"),
+        "parola" to listOf("password", "pass"), "pil" to listOf("battery"), "şarj" to listOf("battery", "charge"), "temizlik" to listOf("clean", "cleaner"), "ofis" to listOf("office", "docs", "word"),
+        "belge" to listOf("document", "docs", "doc", "pdf"), "pdf" to listOf("pdf", "reader"), "tablo" to listOf("sheet", "excel", "table"), "sunum" to listOf("slides", "powerpoint", "presentation"),
+        "posta" to listOf("mail", "email", "gmail"), "eposta" to listOf("mail", "email"), "haber" to listOf("news"), "radyo" to listOf("radio", "fm"), "podcast" to listOf("podcast"), "çeviri" to listOf("translate"),
+        "sözlük" to listOf("dictionary"), "okul" to listOf("school", "edu", "class"), "ders" to listOf("lesson", "class", "study"), "hava durumu" to listOf("weather"), "fener" to listOf("flashlight", "torch"),
+        "pusula" to listOf("compass"), "tarama" to listOf("scan", "scanner"), "tarayici" to listOf("browser", "scan"), "qr" to listOf("qr", "barcode", "scan"), "yazdır" to listOf("print"), "bulut" to listOf("cloud", "drive"),
+        "ice" to listOf("icecream", "cream", "gelato"), "icecream" to listOf("ice", "cream"), "cream" to listOf("ice"), "notes" to listOf("note", "memo"), "photos" to listOf("photo", "gallery"),
+    )
 }

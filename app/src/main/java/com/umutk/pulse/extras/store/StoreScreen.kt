@@ -116,6 +116,7 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
     var openKey by rememberSaveable { mutableStateOf<String?>(null) }
     var askRemove by remember { mutableStateOf<ExtraModule?>(null) }
     var settings by rememberSaveable { mutableStateOf(false) }
+    var iconsOpen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         StoreCatalog.refresh(ctx)
@@ -147,9 +148,11 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         installed.filterIsInstance<ModuleEntry>().sumOf { StoreInstaller.installedBytes(ctx, it.m) }
     }
 
-    BackHandler(enabled = openKey != null || settings) { if (settings) settings = false else openKey = null }
+    BackHandler(enabled = openKey != null || settings || iconsOpen) { if (iconsOpen) iconsOpen = false else if (settings) settings = false else openKey = null }
     val detail = entries.firstOrNull { it.key == openKey }
-    if (settings) {
+    if (iconsOpen) {
+        ExtraIconsScreen(builtinIconRows()) { iconsOpen = false }
+    } else if (settings) {
         StoreSettingsScreen(modules) { settings = false }
     } else if (detail != null) {
         StoreDetail(detail, states[detail.key] ?: ModuleState.NOT_INSTALLED, progress[detail.key], errors[detail.key],
@@ -159,7 +162,7 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         val style = storeStyle()
         val totals = tr("Total", "Toplam") + " " + formatMb(StoreInstaller.totalBytes(modules)) + "  ·  " + tr("Installed", "Kurulu") + " " + formatMb(installedBytes)
         Column(Modifier.fillMaxSize()) {
-            StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null)
+            StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null, onSettings = { iconsOpen = true })
             // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
             LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), state = ExtraListScroll.state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { BuiltinRows() }
@@ -368,7 +371,55 @@ private fun StoreDetail(
 
 /** Built into Pulse: nothing is downloaded, each row opens the page in this app. Routes are in Tools.kt; apps are Pulse's own standalone activities. */
 /** [place]: "app:<alias>" or "tool:<id>" when the row has a switch for being listed in the right-hand ⋮ menu (Extra apps). */
-private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
+private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val cls: String = "com.umutk.pulse.ExtraToolActivity", val route: String? = null, val onClick: () -> Unit)
+
+/** Every extra app of the list (the built-in ones). */
+@Composable
+private fun builtinRows(): List<BuiltinRow> {
+    val ctx = LocalContext.current
+    val openTool = LocalOpenTool.current
+    return listOf(        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "music") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
+        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "video") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
+        BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher", cls = "com.umutk.pulse.FilesActivity") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
+        BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher", cls = "com.umutk.pulse.ImageViewActivity") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
+        BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher", cls = "com.umutk.pulse.CalendarActivity") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
+        BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users", "app:ContactsLauncher", cls = "com.umutk.pulse.ContactsActivity") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
+        BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu", "app:ArtCraftLauncher", cls = "com.umutk.pulse.ArtCraftActivity") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
+        BuiltinRow(tr("Browser", "Tarayıcı"), tr("Dark mode and ad blocking, the phone's own WebView", "Dark mode ve reklam engelleme, telefonun kendi WebView'ı"), "globe", "app:BrowserLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "browser") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "browser") },
+        BuiltinRow(tr("Office (own app)", "Office (ayrı uygulama)"), tr("Its own launcher icon: Word, Excel, PowerPoint, PDF and PDF tools", "Kendi başlatıcı simgesi: Word, Excel, PowerPoint, PDF ve PDF araçları"), "document", "app:OfficeLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "office") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "office") },
+        BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages", "app:MessagesLauncher", route = "messages") { openTool("messages") },
+        BuiltinRow(tr("Launcher", "Ana ekran"), tr("Home screen looks", "Ana ekran görünümleri"), "apps", "tool:launcher", route = "launcher") { openTool("launcher") },
+        BuiltinRow("Palette", tr("The colours of a wallpaper", "Bir duvar kağıdının renkleri"), "image", "app:PaletteLauncher", route = "palette") { openTool("palette") },
+        BuiltinRow(tr("Device troubleshoot", "Cihaz sorun giderme"), tr("Finds and explains what is wrong", "Sorunu bulur ve açıklar"), "shieldOk", "tool:troubleshoot", route = "troubleshoot") { openTool("troubleshoot") },
+        BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record", "app:ScreenRecLauncher", route = "screenrec") { openTool("screenrec") },
+        BuiltinRow(tr("Calculator", "Hesap makinesi"), tr("Standard, scientific, graphing (also 3D), converter", "Standart, bilimsel, grafik (3D dahil), dönüştürücü"), "calc", "app:CalculatorLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "calculator") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "calculator") },
+        BuiltinRow("Game Hub", tr("Game library: hides games from launchers, covers, play time", "Oyun kütüphanesi: oyunları başlatıcılardan gizler, kapaklar, oynama süresi"), "phone", "app:GameHubLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "gamehub") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "gamehub") },
+        BuiltinRow(tr("Keyboard", "Klavye"), tr("Pulse keyboard: themes, swipe typing, autocorrect", "Pulse klavyesi: temalar, kaydırarak yazma, otomatik düzeltme"), "keyboard", "app:KeyboardLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "keyboard") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "keyboard") },
+        BuiltinRow(tr("Clock", "Saat"), tr("Alarms, world clock, stopwatch, timer", "Alarm, dünya saati, kronometre, zamanlayıcı"), "timer", "app:ClockLauncher", route = "clock") { openTool("clock") },
+        BuiltinRow(tr("Books", "Kitaplar"), tr("E-books: EPUB, TXT and PDF with a shelf, pages, bookmarks and themes", "E-kitaplar: EPUB, TXT ve PDF; raf, sayfalar, yer imleri ve temalar"), "book", "app:EbookLauncher", route = "ebook") { openTool("ebook") },
+        BuiltinRow(tr("Buds manager", "Buds yöneticisi"), tr("Galaxy Buds: stop the music and noise control when taken out", "Galaxy Buds: çıkarınca müzik ve gürültü denetimi dursun"), "sensors", "tool:buds", route = "buds") { openTool("buds") },
+        BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "paint") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
+        BuiltinRow("BlackOut", tr("Greys to true black on AMOLED: LSPosed module, colour rules, dropper, dark pages", "AMOLED'de griler gerçek siyah: LSPosed modülü, renk kuralları, damlalık, koyu sayfalar"), "shield", "app:BlackOutLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "blackout") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "blackout") },
+        BuiltinRow("Island", tr("A pill over the camera: the song, notifications, charger, headset, volume, torch and screenshots", "Kameranın üstünde bir hap: şarkı, bildirimler, şarj, kulaklık, ses, fener ve ekran görüntüleri"), "phone", "app:IslandLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "island") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "island") },
+        BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "voice") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
+        BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "notes") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
+        BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "weather") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
+        // the tools of the ⋮ menu's Tools group, so nothing is missing from this one full list of every extra app
+        BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit", route = "toolkit") { openTool("toolkit") },
+        BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office", route = "office") { openTool("office") },
+        BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download", route = "downloads") { openTool("downloads") },
+        BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health", route = "health") { openTool("health") },
+        BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer", route = "installer") { openTool("installer") },
+        BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock", route = "goodlock") { openTool("goodlock") },
+    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+}
+
+/** The extra apps as rows of the icon page (Extra apps > ⚙). */
+@Composable
+internal fun builtinIconRows(): List<IconRow> {
+    val ctx = LocalContext.current
+    return builtinRows().map { r -> IconRow(r.place ?: r.name, r.name, r.icon, android.content.Intent().setClassName(ctx, r.cls).also { i -> r.route?.let { i.putExtra("route", it) } }) }
+}
 
 /** The icon key of a row: in Windows 11 the Fluent picture of the tool or app ("tool:clock" -> tool_clock, "app:BrowserLauncher" -> extraBrowser), else the row's own key. */
 private fun rowKey(r: BuiltinRow): String {
@@ -406,42 +457,7 @@ private fun BuiltinRows() {
     val ctx = LocalContext.current
     var hidden by remember { mutableStateOf(ExtraRowsHidden.load(ctx)) }
     var showHidden by remember { mutableStateOf(false) }
-    val openTool = LocalOpenTool.current
-    val rows = listOf(
-        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
-        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
-        BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
-        BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
-        BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
-        BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users", "app:ContactsLauncher") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
-        BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu", "app:ArtCraftLauncher") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
-        BuiltinRow(tr("Browser", "Tarayıcı"), tr("Dark mode and ad blocking, the phone's own WebView", "Dark mode ve reklam engelleme, telefonun kendi WebView'ı"), "globe", "app:BrowserLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "browser") },
-        BuiltinRow(tr("Office (own app)", "Office (ayrı uygulama)"), tr("Its own launcher icon: Word, Excel, PowerPoint, PDF and PDF tools", "Kendi başlatıcı simgesi: Word, Excel, PowerPoint, PDF ve PDF araçları"), "document", "app:OfficeLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "office") },
-        BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages", "app:MessagesLauncher") { openTool("messages") },
-        BuiltinRow(tr("Launcher", "Ana ekran"), tr("Home screen looks", "Ana ekran görünümleri"), "apps", "tool:launcher") { openTool("launcher") },
-        BuiltinRow("Palette", tr("The colours of a wallpaper", "Bir duvar kağıdının renkleri"), "image", "app:PaletteLauncher") { openTool("palette") },
-        BuiltinRow(tr("Device troubleshoot", "Cihaz sorun giderme"), tr("Finds and explains what is wrong", "Sorunu bulur ve açıklar"), "shieldOk", "tool:troubleshoot") { openTool("troubleshoot") },
-        BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record", "app:ScreenRecLauncher") { openTool("screenrec") },
-        BuiltinRow(tr("Calculator", "Hesap makinesi"), tr("Standard, scientific, graphing (also 3D), converter", "Standart, bilimsel, grafik (3D dahil), dönüştürücü"), "calc", "app:CalculatorLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "calculator") },
-        BuiltinRow("Game Hub", tr("Game library: hides games from launchers, covers, play time", "Oyun kütüphanesi: oyunları başlatıcılardan gizler, kapaklar, oynama süresi"), "phone", "app:GameHubLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "gamehub") },
-        BuiltinRow(tr("Keyboard", "Klavye"), tr("Pulse keyboard: themes, swipe typing, autocorrect", "Pulse klavyesi: temalar, kaydırarak yazma, otomatik düzeltme"), "keyboard", "app:KeyboardLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "keyboard") },
-        BuiltinRow(tr("Clock", "Saat"), tr("Alarms, world clock, stopwatch, timer", "Alarm, dünya saati, kronometre, zamanlayıcı"), "timer", "app:ClockLauncher") { openTool("clock") },
-        BuiltinRow(tr("Books", "Kitaplar"), tr("E-books: EPUB, TXT and PDF with a shelf, pages, bookmarks and themes", "E-kitaplar: EPUB, TXT ve PDF; raf, sayfalar, yer imleri ve temalar"), "book", "app:EbookLauncher") { openTool("ebook") },
-        BuiltinRow(tr("Buds manager", "Buds yöneticisi"), tr("Galaxy Buds: stop the music and noise control when taken out", "Galaxy Buds: çıkarınca müzik ve gürültü denetimi dursun"), "sensors", "tool:buds") { openTool("buds") },
-        BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
-        BuiltinRow("BlackOut", tr("Greys to true black on AMOLED: LSPosed module, colour rules, dropper, dark pages", "AMOLED'de griler gerçek siyah: LSPosed modülü, renk kuralları, damlalık, koyu sayfalar"), "shield", "app:BlackOutLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "blackout") },
-        BuiltinRow("Island", tr("A pill over the camera: the song, notifications, charger, headset, volume, torch and screenshots", "Kameranın üstünde bir hap: şarkı, bildirimler, şarj, kulaklık, ses, fener ve ekran görüntüleri"), "phone", "app:IslandLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "island") },
-        BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
-        BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
-        BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
-        // the tools of the ⋮ menu's Tools group, so nothing is missing from this one full list of every extra app
-        BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit") { openTool("toolkit") },
-        BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
-        BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download") { openTool("downloads") },
-        BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
-        BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
-        BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
-    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+    val rows = builtinRows()
     // every app stays listed here, with or without its launcher icon; a long press hides a row, the eye shows the hidden ones
     // a tool switched off in Settings > Extra apps is not listed here either
     // the Tools / Apps / ⋮ menu placements only decide where a tool is listed outside this page; here it stays listed, even when it is set to hidden there
@@ -463,7 +479,7 @@ private fun BuiltinRows() {
                     hidden = if (isHidden) hidden - key else hidden + key
                     ExtraRowsHidden.save(ctx, hidden)
                 }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    PIcon(rowKey(r), T.text, 34.dp)
+                    ExtraIcon(r.place ?: r.name, 34.dp) { PIcon(rowKey(r), T.text, 34.dp) }
                     Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
                 }
             }
@@ -476,7 +492,7 @@ private fun BuiltinRows() {
             hidden = if (isHidden) hidden - key else hidden + key
             ExtraRowsHidden.save(ctx, hidden)
         }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon(rowKey(r), T.text, 26.dp)
+            ExtraIcon(r.place ?: r.name, 26.dp) { PIcon(rowKey(r), T.text, 26.dp) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
