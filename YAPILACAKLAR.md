@@ -2338,3 +2338,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - İkon seçici: Üretici/Paket/Varsayılan seçenekleri ayrı satırda; arama yokken ada uyan simgeler öne çıkıyor. (derlenmedi)
 - Game Hub: varsayılan "Raf" görünümü (kapaklar rafta, dokununca kart döner: Oyna / Ayrıntılar); Boxshelf kaynağına dayalı yeniden çizim, ilk sürüm. (derlenmedi)
 - Game Hub Raf görünümü tam: kayan raf (coverflow), kutuyu çevirip açma (kapak, kılavuz, disk), ilk kurulum penceresi. (derlenmedi)
+- Game Hub kurulum sihirbazı: 5 adım (hoş geldin, oyunlar, görünüm, kutu resimleri, erişim); yalnızca Game Hub hiç kullanılmamışsa kendiliğinden açılır, Ayarlar > Kurulum ile her zaman açılır. (derlenmedi)

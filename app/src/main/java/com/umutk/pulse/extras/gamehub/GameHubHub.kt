@@ -102,9 +102,9 @@ private const val PREFS = "gamehub"
 internal class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
 /** The looks of Game Hub, in the order they are offered. */
-private val THEMES = listOf("shelf", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
+internal val THEMES = listOf("shelf", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
 
-private fun themeName(k: String): String = when (k) {
+internal fun themeName(k: String): String = when (k) {
     "material" -> "Material"
     "glass" -> tr("Material, transparent", "Material, şeffaf")
     "shelf" -> tr("Shelf (default)", "Raf (varsayılan)")
@@ -120,7 +120,7 @@ private fun themeName(k: String): String = when (k) {
 private fun systemColor(c: Context, res: Int, fallback: Color): Color =
     if (Build.VERSION.SDK_INT >= 31) runCatching { Color(c.getColor(res)) }.getOrDefault(fallback) else fallback
 
-private fun palOf(theme: String, c: Context): Pal = when (theme) {
+internal fun palOf(theme: String, c: Context): Pal = when (theme) {
     // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
     "shelf" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
@@ -791,6 +791,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var mode by remember { mutableStateOf(Privilege.mode) }
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
+    // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
+    var setupOpen by remember { mutableStateOf(prefs(ctx).all.isEmpty()) }
     var times by remember { mutableStateOf(GameHubState.times ?: emptyMap()) }
     var usage by remember { mutableStateOf(GameHubState.usage ?: emptyMap()) }
     var sort by remember { mutableStateOf(prefs(ctx).getInt("sort", 0)) }   // 0 name, 1 play time, 2 size
@@ -995,6 +997,8 @@ fun GameHubHub(onBack: () -> Unit) {
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
+                    SectionTitle(pal, tr("Setup", "Kurulum"))
+                    Chip(pal, tr("Open the setup", "Kurulumu aç")) { setupOpen = true }
                     SectionTitle(pal, tr("Library", "Kütüphane"))
                     Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1059,8 +1063,7 @@ fun GameHubHub(onBack: () -> Unit) {
     if (themeOpen) ThemeDialog(theme, ctx, onPick = { k -> setTheme(k); themeOpen = false }, onClose = { themeOpen = false })
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
     // the first time the shelf look opens: a short setup (games found, box art, play time, more apps)
-    var setupOpen by remember { mutableStateOf(theme == "shelf" && !prefs(ctx).getBoolean("shelfSetup", false)) }
-    if (setupOpen) ShelfSetup(pal, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
+    if (setupOpen) ShelfSetup(pal, theme, onTheme = { setTheme(it) }, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
         Column(Modifier.fillMaxSize().hubGround(theme, pal).statusBarsPadding()) {
