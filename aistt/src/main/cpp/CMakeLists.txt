@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 project(pulsewhisper C CXX)
 set(CMAKE_CXX_STANDARD 17)
+# small libraries: no debug information, unused code dropped, symbols stripped at link time
+add_compile_options(-g0 -ffunction-sections -fdata-sections)
+add_link_options(-Wl,--gc-sections -Wl,--strip-all)
 if(NOT DEFINED WHISPER_SRC)
     message(FATAL_ERROR "WHISPER_SRC is not set (the workflow fetches whisper.cpp into localai/vendor)")
 endif()
