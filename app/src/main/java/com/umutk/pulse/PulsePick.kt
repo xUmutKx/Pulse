@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
@@ -235,13 +237,14 @@ private fun recentFiles(ctx: Context, mimes: List<String>): List<File> {
 }
 
 /** The folder that holds the most songs of the phone (MediaStore's audio rows, counted by folder). */
-private fun musicFolder(ctx: Context): File? = runCatching {
+private var musicFolderCache: File? = null
+private fun musicFolder(ctx: Context): File? = musicFolderCache ?: runCatching {
     val counts = HashMap<String, Int>()
     ctx.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media.DATA), null, null, null)?.use { c ->
         while (c.moveToNext()) { val p = c.getString(0) ?: continue; val d = p.substringBeforeLast('/', ""); if (d.isNotEmpty()) counts[d] = (counts[d] ?: 0) + 1 }
     }
     counts.maxByOrNull { it.value }?.key?.let { File(it) }?.takeIf { it.isDirectory }
-}.getOrNull()
+}.getOrNull()?.also { musicFolderCache = it }
 
 /** The places of the side panel: the phone's storage, its usual folders and any memory card. */
 private class PickPlace(val name: String, val dir: File, val icon: String)
@@ -279,12 +282,15 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
     // a song is wanted: the picker opens the folder that holds the most songs, not the list of recent files
     val wantsAudio = mimes.any { it.startsWith("audio/") }
     var recents by remember { mutableStateOf(canRecent && !wantsAudio) }
+    // until the music folder is known the list waits (it would otherwise show the storage root first)
+    var resolved by remember { mutableStateOf(!wantsAudio) }
     LaunchedEffect(wantsAudio) {
-        if (wantsAudio) withContext(kotlinx.coroutines.Dispatchers.IO) { musicFolder(ctx) }?.let { cur = it }
+        if (wantsAudio) { withContext(kotlinx.coroutines.Dispatchers.IO) { musicFolder(ctx) }?.let { cur = it }; resolved = true }
     }
     // the folder is read off the main thread: a folder with thousands of pictures must not freeze the window
-    val raw by produceState<List<File>?>(null, cur, mode, recents) {
+    val raw by produceState<List<File>?>(null, cur, mode, recents, resolved) {
         value = null
+        if (!resolved) return@produceState
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             if (recents) return@withContext recentFiles(ctx, mimes)
             val all = cur.listFiles().orEmpty().filter { !it.name.startsWith(".") }
@@ -292,7 +298,22 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
         }
     }
     val q = search?.trim().orEmpty()
-    val list = raw?.let { l ->
+    // songs: which have lyrics already (in the file, a .lrc/.txt beside it, or saved). Read after the list is shown, a few at a time;
+    // when all are known the songs with lyrics go to the bottom, dimmed, under a line
+    val lyr = remember(raw) { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    var lyrDone by remember(raw) { mutableStateOf(false) }
+    LaunchedEffect(raw) {
+        val songs = if (wantsAudio) raw.orEmpty().filter { it.isFile && kindOf(it) == 3 } else emptyList()
+        if (songs.isEmpty()) { lyrDone = true; return@LaunchedEffect }
+        songs.chunked(60).forEach { chunk ->
+            val part = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                chunk.associate { f -> f.path to com.umutk.pulse.extras.lyrics.LyricsStatus.has(ctx, f.path, "", f.nameWithoutExtension) }
+            }
+            lyr.putAll(part)
+        }
+        lyrDone = true
+    }
+    val listRaw = raw?.let { l ->
         val dirs = l.filter { it.isDirectory && (q.isEmpty() || it.name.contains(q, true)) }.sortedBy { it.name.lowercase() }
         val cmp: Comparator<File> = when (sortBy) {
             0 -> compareBy { it.name.lowercase() }
@@ -304,6 +325,9 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
             .let { if (recents) it else it.sortedWith(cmp).let { s -> if (desc) s.reversed() else s } }
         dirs + files
     }
+    val list = if (listRaw == null || !lyrDone || !wantsAudio) listRaw
+        else listRaw.filter { it.isDirectory } + listRaw.filter { it.isFile && lyr[it.path] != true } + listRaw.filter { it.isFile && lyr[it.path] == true }
+    val firstWithLyrics = if (list == null || !lyrDone || !wantsAudio) -1 else list.indexOfFirst { it.isFile && lyr[it.path] == true }
     val up: () -> Unit = { if (drawer) drawer = false else if (search != null) { search = null } else if (ticked.isNotEmpty()) ticked.clear() else if (recents) onCancel() else if (cur != top) cur = cur.parentFile ?: top else onCancel() }
     BackHandler { up() }
     fun open(f: File) {
@@ -386,10 +410,13 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
                 }
             }
             else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                items(list, key = { it.path }) { f ->
+                itemsIndexed(list, key = { _, f -> f.path }) { idx, f ->
                     val on = f in ticked
+                    val hasLyrics = lyr[f.path] == true
+                    Column {
+                    if (idx == firstWithLyrics && idx > 0) Text(tr("With lyrics", "Sözü olanlar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 4.dp))
                     Row(
-                        Modifier.fillMaxWidth().background(if (on) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent)
+                        Modifier.fillMaxWidth().alpha(if (hasLyrics) .42f else 1f).background(if (on) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent)
                             .combinedClickable(onClick = { if (sel && f.isFile && mode != "save") { if (on) ticked.remove(f) else ticked.add(f) } else open(f) },
                                 onLongClick = { if (f.isFile && (mode == "multi" || mode == "open")) { if (mode == "open") onPicked(listOf(f)) else if (on) ticked.remove(f) else ticked.add(f) } })
                             .padding(horizontal = 14.dp, vertical = 7.dp),
@@ -402,6 +429,7 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
                             if (f.isFile) Text(sizeText(f.length()) + " · " + java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.lastModified())), color = T.sub, fontSize = 12.sp, maxLines = 1)
                         }
                         if (mode == "multi" && f.isFile) PCheck(on, { if (on) ticked.remove(f) else ticked.add(f) })
+                    }
                     }
                 }
             }
