@@ -159,7 +159,7 @@ private fun zipWrite(job: ZipJob) {
     try {
         val creator = org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator(
             pool,
-            org.apache.commons.compress.parallel.ScatterGatherBackingStoreSupplier { org.apache.commons.compress.parallel.FileBasedScatterGatherBackingStore(File.createTempFile("pz", ".tmp")) },
+            org.apache.commons.compress.parallel.ScatterGatherBackingStoreSupplier { org.apache.commons.compress.parallel.FileBasedScatterGatherBackingStore(File.createTempFile("pzip", ".tmp")) },
             3,
         )
         for (f in job.files) {
