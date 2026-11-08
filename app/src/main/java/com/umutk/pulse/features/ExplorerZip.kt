@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import kotlinx.coroutines.flow.update
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -139,31 +140,50 @@ private fun splitVolumes(archive: File, size: Long, cancelled: () -> Boolean) {
     archive.delete()
 }
 
-/** Writes the zip entry by entry, the same layout the old Compress button made: each file or folder under its parent's name. */
+/**
+ * Writes the zip with all the cores: every file is compressed in a thread of its own (commons-compress "scatter" streams) and the pieces are put together at the end,
+ * so a folder of many files takes about a quarter of the time on four cores. Packed kinds (pictures, video, music, archives) are only stored.
+ */
 private fun zipWrite(job: ZipJob) {
     if (job.kind == "7z") return sevenZWrite(job)
-    val buf = ByteArray(256 * 1024)
-    ZipOutputStream(job.target.outputStream().buffered(1 shl 20)).use { zos ->
+    val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
+    val pool = java.util.concurrent.Executors.newFixedThreadPool(threads)
+    try {
+        val creator = org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator(
+            pool,
+            org.apache.commons.compress.parallel.ScatterGatherBackingStoreSupplier { org.apache.commons.compress.parallel.FileBasedScatterGatherBackingStore(File.createTempFile("pz", ".tmp")) },
+            3,
+        )
         for (f in job.files) {
             val root = f.parentFile ?: job.target.absoluteFile.parentFile
             f.walkTopDown().forEach { e ->
                 if (job.cancelled) throw ZipCancelled()
                 val rel = e.relativeTo(root).path.replace(File.separatorChar, '/')
-                // pictures, video, music and archives are compressed already: they are only stored (a lot faster); the rest takes a quick level
-                zos.setLevel(if (e.extension.lowercase() in ZIP_PACKED) java.util.zip.Deflater.NO_COMPRESSION else 3)
-                if (e.isDirectory) zos.putNextEntry(ZipEntry("$rel/")) else zos.putNextEntry(ZipEntry(rel))
-                if (e.isFile) e.inputStream().use { ins ->
-                    while (true) {
-                        if (job.cancelled) throw ZipCancelled()
-                        val n = ins.read(buf)
-                        if (n < 0) break
-                        zos.write(buf, 0, n)
-                        job.done.value += n.toLong()
-                    }
+                val ze = org.apache.commons.compress.archivers.zip.ZipArchiveEntry(if (e.isDirectory) "$rel/" else rel)
+                ze.time = e.lastModified()
+                if (e.isDirectory) {
+                    ze.method = ZipEntry.STORED
+                    creator.addArchiveEntry(ze, org.apache.commons.compress.parallel.InputStreamSupplier { java.io.ByteArrayInputStream(ByteArray(0)) })
+                } else {
+                    ze.method = if (e.extension.lowercase() in ZIP_PACKED) ZipEntry.STORED else ZipEntry.DEFLATED
+                    creator.addArchiveEntry(ze, org.apache.commons.compress.parallel.InputStreamSupplier { CountingIn(e, job) })
                 }
-                zos.closeEntry()
             }
         }
+        try {
+            org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream(job.target).use { zos -> creator.writeTo(zos) }
+        } catch (x: java.util.concurrent.ExecutionException) { throw (x.cause ?: x) }
+    } finally { pool.shutdownNow() }
+}
+
+/** A file read for the zip: the bytes counted into the job's progress, and a cancel stops the read. */
+private class CountingIn(f: File, private val job: ZipJob) : java.io.FilterInputStream(f.inputStream().buffered(256 * 1024)) {
+    override fun read(): Int { if (job.cancelled) throw ZipCancelled(); val b = super.read(); if (b >= 0) job.done.update { it + 1L }; return b }
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        if (job.cancelled) throw ZipCancelled()
+        val n = super.read(b, off, len)
+        if (n > 0) job.done.update { it + n.toLong() }
+        return n
     }
 }
 
