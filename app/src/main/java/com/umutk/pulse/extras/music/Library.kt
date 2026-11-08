@@ -30,6 +30,19 @@ object MusicLibrary {
     /** Applies the saved tags (edits and the ones found online) to the loaded list again, so new tags show without a rescan. */
     fun reapplyTags(c: Context) { _tracks.value = MusicTags.apply(c.applicationContext, _tracks.value) }
 
+    /** Songs whose files were just deleted: their media-store rows are removed too (a row left behind lists the song again as an empty "null" entry) and they leave the list at once. */
+    fun forget(c: Context, paths: Collection<String>) {
+        val app = c.applicationContext
+        for (p in paths) if (!p.contains("://")) runCatching {
+            app.contentResolver.delete(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, MediaStore.Audio.Media.DATA + "=?", arrayOf(p))
+        }
+        val gone = paths.toSet()
+        _tracks.value = _tracks.value.filter { it.path !in gone }
+        runCatching { cacheFile(app).writeText(_tracks.value.joinToString("\n") { t ->
+            listOf(t.path, t.title.orEmpty(), t.durationSec, t.artist.orEmpty(), t.album.orEmpty(), t.albumId, t.genre.orEmpty(), t.year, t.composer.orEmpty(), t.dateAdded).joinToString("\t") { it.toString().replace('\t', ' ').replace('\n', ' ') }
+        }) }
+    }
+
     /** Loads the cache (if nothing is loaded yet), then rescans when permitted. */
     suspend fun refresh(c: Context) = withContext(Dispatchers.IO) {
         val app = c.applicationContext
