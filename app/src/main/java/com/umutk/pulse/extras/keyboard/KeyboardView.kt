@@ -1587,15 +1587,18 @@ private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
 private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
     val shown = st.slots.withIndex().filter { it.value.isNotEmpty() }
     val chip: @Composable (Int, String) -> Unit = { i, s ->
-        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-            Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, softWrap = false)
+        // held like a word: it buzzes and turns into the block mark; a tap on the mark never offers it again (Settings > Blocked suggestions brings it back)
+        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).combinedClickable(onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(22.dp))
+            else Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, softWrap = false)
         }
     }
     // one or two: they share the whole bar, so nothing is left empty and a long address keeps its end in view
     if (shown.size <= 2) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         shown.forEach { (i, s) ->
-            Box(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-                Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).combinedClickable(onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }).padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(22.dp))
+                else Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     } else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

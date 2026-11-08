@@ -836,6 +836,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             getSharedPreferences("pulse_kb_names", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(nm) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != nm }).take(30).joinToString("\n")).apply() }
         }
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
+        if (!st.incognito) { KbStats.add(this, "words"); if (out != typed) KbStats.add(this, "fixes") }
         corrAt = SystemClock.uptimeMillis()
         learnFromDelete(out)
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
@@ -938,6 +939,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
                 lastCorrection = null
                 if (!st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
+                if (!st.incognito) KbStats.add(this, "undone")
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
                 editAt = SystemClock.uptimeMillis()
                 word.append(lc.original); touchPts.clear(); target = null; peak = null
@@ -1062,13 +1064,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val typed = if (word.isNotEmpty()) word.toString() else lastCorrection?.original.orEmpty()
             if (typed.length >= 2 && typed.none { it.isDigit() }) {
                 KeyboardDictionary.learnWord(typed, 4)
-                lastCorrection?.let { KeyboardDictionary.reject(this, it.original, it.corrected) }
+                lastCorrection?.let { KeyboardDictionary.reject(this, it.original, it.corrected); KbStats.add(this, "undone") }
                 android.widget.Toast.makeText(this, com.umutk.pulse.tr("Saved \"$typed\" as a right word", "\"$typed\" doğru kelime olarak kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
                 updateSuggestions()
             }
             return
         }
-        if (w.isEmpty() || !w[0].isLetter() || st.slots.getOrNull(i)?.startsWith("\u0001") == true) return
+        // an e-mail address or a domain ("@gmail.com") on the e-mail bar can be blocked too
+        if (w.isEmpty() || (!w[0].isLetter() && !(st.emailBar && w[0] == '@')) || st.slots.getOrNull(i)?.startsWith("\u0001") == true) return
         st.banAsk = i
         scope.launch { delay(3000); if (st.banAsk == i) st.banAsk = -1 }
     }
@@ -1107,6 +1110,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             lastCorrection = null
             if (c.getTextBeforeCursor(n, 0)?.toString() == lcb.corrected + lcb.sep) {
                 if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lcb.original, lcb.corrected)
+                if (!st.incognito) KbStats.add(this, "undone")
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lcb.original, 1); c.endBatchEdit()
                 word.append(lcb.original); target = null
             }
@@ -1701,8 +1705,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (emailRe.matches(before)) lastEmail = before
         // the text being typed: the last word without spaces, so "@" in an earlier word does not count
         val tok = before.takeLastWhile { !it.isWhitespace() }
-        val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
-        val list = when {
+        val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && !KeyboardDictionary.isBanned(it) }
+        val list0 = when {
             // the addresses used most come first (the list is kept most recent first); all of them scroll on the bar
             tok.isEmpty() -> saved.take(8)
             // the continuation of an address: saved addresses first, then the domains after the "@"
@@ -1718,6 +1722,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }
+        val list = list0.filter { !KeyboardDictionary.isBanned(it) }
         // at least three slots, so the code that reads the first three never meets a short list
         slotWords = (list + listOf("", "", "")).take(maxOf(3, list.size)).toTypedArray()
         st.slots = slotWords.toList()
@@ -1912,7 +1917,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         fun hit(s: String) = !s.equals(typed, true) && (com.umutk.pulse.OfFind.fold(s, false).startsWith(key) || s.split(' ', '.', '@').any { com.umutk.pulse.OfFind.fold(it, false).startsWith(key) && key.length >= 3 })
-        return (names.filter(::hit).take(1) + mails.filter(::hit).take(1)).distinct()
+        return (names.filter { hit(it) && !KeyboardDictionary.isBanned(it) }.take(1) + mails.filter { hit(it) && !KeyboardDictionary.isBanned(it) }.take(1)).distinct()
     }
 
     /** Puts [personalItems] on the bar beside the usual words: the first on the right, the second on the left (unless that place holds the word as typed). */
