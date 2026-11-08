@@ -201,6 +201,40 @@ private fun joinVolumes(first: File): File {
     return out
 }
 
+/** The passwords typed for encrypted zips, kept while the app runs. */
+internal object ArchiveKeys {
+    private val keys = HashMap<String, String>()
+    fun get(f: File): String? = synchronized(keys) { keys[f.path] }
+    fun put(f: File, pw: String) { synchronized(keys) { keys[f.path] = pw } }
+}
+
+internal class NeedPassword : IOException("password needed")
+
+internal fun isEncryptedZip(f: File): Boolean = kindOf(f) == "zip" && runCatching { net.lingala.zip4j.ZipFile(f).isEncrypted }.getOrDefault(false)
+
+/** An encrypted zip: its entries are read through zip4j with the password that was typed (NeedPassword when there is none, an error when it is wrong). */
+private fun zip4jWalk(f: File, body: (AEntry, () -> InputStream) -> Unit) {
+    val pw = ArchiveKeys.get(f) ?: throw NeedPassword()
+    val zf = net.lingala.zip4j.ZipFile(f, pw.toCharArray())
+    for (h in zf.fileHeaders.toList()) {
+        val p = norm(h.fileName)
+        if (p.isNotEmpty()) body(AEntry(p, h.isDirectory, maxOf(h.uncompressedSize, 0), maxOf(h.compressedSize, 0), maxOf(h.lastModifiedTimeEpoch, 0))) { zf.getInputStream(h) }
+    }
+}
+
+@androidx.compose.runtime.Composable
+internal fun ArchivePasswordDialog(f: File, onDismiss: () -> Unit, onPassword: (String) -> Unit) {
+    var pw by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    com.umutk.pulse.WinAlert(onDismissRequest = onDismiss,
+        title = { androidx.compose.material3.Text(com.umutk.pulse.tr("Password", "Parola")) },
+        text = { androidx.compose.foundation.layout.Column {
+            androidx.compose.material3.Text(f.name, color = com.umutk.pulse.T.sub, fontSize = 13.sp)
+            com.umutk.pulse.PField(pw, { pw = it }, com.umutk.pulse.tr("Password", "Parola"), androidx.compose.ui.Modifier.fillMaxWidth())
+        } },
+        confirmButton = { androidx.compose.material3.TextButton({ if (pw.isNotEmpty()) onPassword(pw) }) { androidx.compose.material3.Text(com.umutk.pulse.tr("Open", "Aç")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(com.umutk.pulse.tr("Cancel", "İptal")) } })
+}
+
 private fun walk(f: File, body: (AEntry, () -> InputStream) -> Unit) {
     if (f.name.lowercase().endsWith(".001")) {
         val joined = joinVolumes(f)
@@ -208,7 +242,7 @@ private fun walk(f: File, body: (AEntry, () -> InputStream) -> Unit) {
         return
     }
     when (kindOf(f)) {
-        "zip" -> ZipFile(f).use { z ->
+        "zip" -> if (ArchiveKeys.get(f) != null || isEncryptedZip(f)) zip4jWalk(f, body) else ZipFile(f).use { z ->
             for (e in z.entries().toList()) {
                 val p = norm(e.name)
                 if (p.isNotEmpty()) body(AEntry(p, e.isDirectory, maxOf(e.size, 0), if (e.compressedSize >= 0) e.compressedSize else maxOf(e.size, 0), maxOf(e.time, 0))) { z.getInputStream(e) }
