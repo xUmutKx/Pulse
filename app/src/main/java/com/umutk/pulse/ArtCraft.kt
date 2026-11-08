@@ -72,13 +72,36 @@ object ArtCraft {
         return con.inputStream.bufferedReader().use { it.readText() }
     }
 
+    /**
+     * The newest release read from github.com without the API: /releases/latest leads to the tag, and the tag's asset list (expanded_assets) holds the APK links;
+     * the size of each comes from a HEAD request. Returned in the API's shape.
+     */
+    private fun fromPage(): JSONObject {
+        val repo = API.removePrefix("https://api.github.com/repos/").removeSuffix("/releases")
+        val latest = URL("https://github.com/$repo/releases/latest").openConnection() as HttpURLConnection
+        latest.instanceFollowRedirects = true; latest.connectTimeout = 15000; latest.readTimeout = 30000
+        latest.inputStream.close()
+        val tag = latest.url.path.substringAfter("/releases/tag/", "").takeIf { it.isNotEmpty() } ?: throw IllegalStateException("no release")
+        val html = (URL("https://github.com/$repo/releases/expanded_assets/$tag").openConnection() as HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 30000 }.inputStream.bufferedReader().use { it.readText() }
+        val links = Regex("""href="(/$repo/releases/download/[^"]+\.apk)"""").findAll(html).map { "https://github.com" + it.groupValues[1] }.distinct().toList()
+        if (links.isEmpty()) throw IllegalStateException("no APK in $tag")
+        val assets = JSONArray()
+        for (u in links) {
+            val size = runCatching { (URL(u).openConnection() as HttpURLConnection).run { requestMethod = "HEAD"; instanceFollowRedirects = true; connectTimeout = 15000; com.umutk.pulse.Compat.contentLength(this).also { disconnect() } } }.getOrDefault(0L)
+            assets.put(JSONObject().put("name", java.net.URLDecoder.decode(u.substringAfterLast('/'), "UTF-8")).put("browser_download_url", u).put("size", size))
+        }
+        return JSONObject().put("tag_name", java.net.URLDecoder.decode(tag, "UTF-8")).put("body", "").put("assets", assets)
+    }
+
     /** Reads the newest release that has APKs, fills the list, and fetches the icon of every APK over HTTP. */
     fun refresh(c: Context) {
         Thread {
             try {
-                val arr = JSONArray(getText(API))
-                val rel: JSONObject = (0 until arr.length()).map { arr.getJSONObject(it) }
-                    .firstOrNull { (it.optJSONArray("assets")?.length() ?: 0) > 0 } ?: throw IllegalStateException("no release with APKs")
+                // the API first; when it fails (404 or a rate limit, it happens without a token) the release page itself is read
+                val rel: JSONObject = runCatching {
+                    val arr = JSONArray(getText(API))
+                    (0 until arr.length()).map { arr.getJSONObject(it) }.firstOrNull { (it.optJSONArray("assets")?.length() ?: 0) > 0 } ?: throw IllegalStateException("no release with APKs")
+                }.getOrElse { first -> runCatching { fromPage() }.getOrElse { throw first } }
                 val assets = rel.getJSONArray("assets")
                 // a release can ship two .apk builds of the same app (e.g. a split-ABI build next to a universal one); keep the larger, it is the fuller build
                 val list = (0 until assets.length()).map { assets.getJSONObject(it) }
