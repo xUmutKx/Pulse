@@ -99,7 +99,7 @@ import kotlinx.coroutines.withContext
 private const val PREFS = "gamehub"
 
 /** A look of Game Hub: its colours, its corner radius, and whether it is flat (no gradients, as the Windows looks are). */
-private class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
+internal class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
 /** The looks of Game Hub, in the order they are offered. */
 private val THEMES = listOf("shelf", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
@@ -142,14 +142,14 @@ private fun palOf(theme: String, c: Context): Pal = when (theme) {
     else -> Pal(Color.Black, Color(0xFF111111), Color.White, Color(0xFF9A9A9A), Color(0xFF00E676))
 }
 
-private class GameRow(val pkg: String, val name: String)
+internal class GameRow(val pkg: String, val name: String)
 
 /** The ground of a page: the look's colour; the transparent look gets a soft wash of its accent under the veil. */
 private fun Modifier.hubGround(theme: String, pal: Pal): Modifier =
     if (theme == "glass") background(Brush.linearGradient(listOf(pal.accent.copy(alpha = .55f), Color(0xFF0A0A12), pal.accent.copy(alpha = .3f)))).background(pal.bg) else background(pal.bg)
 
-private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
+internal fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+internal fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
 /** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
 private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 0)) { 0 -> 84; 2 -> 128; else -> 100 }
@@ -197,7 +197,7 @@ private fun reconcileHidden(c: Context) {
 }
 
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
-private fun loadGames(c: Context): List<GameRow> {
+internal fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
     val installed = runCatching {
         pm.getInstalledApplications(0)
@@ -214,7 +214,7 @@ private fun loadGames(c: Context): List<GameRow> {
 
 /** The cover a person picked for a game (at most 3 MB). */
 private const val COVER_MAX = 3L * 1024 * 1024
-private fun playCoverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/play_" + pkg.replace('.', '_') + ".jpg")
+internal fun playCoverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/play_" + pkg.replace('.', '_') + ".jpg")
 private fun favSet(c: Context): Set<String> = prefs(c).getStringSet("favs", emptySet()) ?: emptySet()
 private fun toggleFav(c: Context, pkg: String) {
     prefs(c).edit().putStringSet("favs", if (pkg in favSet(c)) favSet(c) - pkg else favSet(c) + pkg).apply()
@@ -225,7 +225,7 @@ private fun toggleFav(c: Context, pkg: String) {
  * The store picture of a game from its Google Play page (its wide feature graphic when the page shows one), kept as the game's cover until the person picks their own.
  * Tried once every two weeks per game; a page that cannot be read (no network, no listing) just leaves the cover as it was.
  */
-private fun fetchPlayCover(c: Context, pkg: String): Boolean {
+internal fun fetchPlayCover(c: Context, pkg: String): Boolean {
     val now = System.currentTimeMillis()
     if (now - prefs(c).getLong("pt_$pkg", 0L) < 14 * 86_400_000L) return false
     prefs(c).edit().putLong("pt_$pkg", now).apply()
@@ -247,7 +247,7 @@ private fun fetchPlayCover(c: Context, pkg: String): Boolean {
     }.getOrDefault(false)
 }
 
-private fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
+internal fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
 
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
 private fun iconFile(c: Context, pkg: String): java.io.File {
@@ -261,7 +261,7 @@ private fun iconFile(c: Context, pkg: String): java.io.File {
 }
 
 /** Hides or shows a game in every launcher through the root or Shizuku shell (pm hide / pm unhide). */
-private fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean = false): Boolean {
+internal fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean = false): Boolean {
     // the name and the icon are kept while the game is still visible to the system: afterwards it cannot be found by the system
     if (hide) runCatching {
         val pm = c.packageManager
@@ -390,7 +390,7 @@ private fun rehideLaunched(c: Context) {
 private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHORT).show()
 
 /** Decoded pictures of the games, kept in memory: each picture is decoded once, at the size it is drawn (no decode on every scroll or return). */
-private object GameArt {
+internal object GameArt {
     /** Raised when a cover has arrived from the store, so the pictures on the screen are read again. */
     val version = androidx.compose.runtime.mutableIntStateOf(0)
 
@@ -456,7 +456,7 @@ private fun usageOf(c: Context, days: Int): Map<String, android.app.usage.UsageS
 }
 
 /** Time in the foreground of each game over the last [days] days (Android usage statistics; needs the usage access, granted by root or Shizuku). */
-private fun playTimes(c: Context, days: Int): Map<String, Long> {
+internal fun playTimes(c: Context, days: Int): Map<String, Long> {
     if (Build.VERSION.SDK_INT < 22) return emptyMap()
     val usm = c.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return emptyMap()
     val end = System.currentTimeMillis()
@@ -465,11 +465,11 @@ private fun playTimes(c: Context, days: Int): Map<String, Long> {
 }
 
 /** Asks the usage access for Pulse through the root or Shizuku shell, so the play time can be read. */
-private fun grantUsageAccess(c: Context) {
+internal fun grantUsageAccess(c: Context) {
     Privilege.run("appops set ${c.packageName} GET_USAGE_STATS allow")
 }
 
-private fun hm(ms: Long): String {
+internal fun hm(ms: Long): String {
     val m = ms / 60_000
     return if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m"
 }
@@ -477,7 +477,7 @@ private fun hm(ms: Long): String {
 
 /** A Fluent glyph for the Game Hub's own pages: the same vector paths the rest of Pulse uses (Windows 11 looks). */
 @Composable
-private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
+internal fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
     val paths = remember(key) { ((FluentPaths.map[key] ?: FluentPaths.map["info"]!!)).map { PathParser().parsePathString(it).toPath() } }
     Canvas(Modifier.size(size)) {
         scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
@@ -489,7 +489,7 @@ private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.
  * "APK only" in the settings skips the picked picture.
  */
 @Composable
-private fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
+internal fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
     val ctx = LocalContext.current
     val apkOnly = prefs(ctx).getInt("iconMode", 0) == 1
     val px = if (wide) 960 else 600
@@ -692,7 +692,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
 
 /** A row with a label and a switch. */
 @Composable
-private fun SettingRow(pal: Pal, label: String, on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SettingRow(pal: Pal, label: String, on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
         PSwitch(on, onChange, enabled = enabled)
@@ -1058,6 +1058,9 @@ fun GameHubHub(onBack: () -> Unit) {
     }
     if (themeOpen) ThemeDialog(theme, ctx, onPick = { k -> setTheme(k); themeOpen = false }, onClose = { themeOpen = false })
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
+    // the first time the shelf look opens: a short setup (games found, box art, play time, more apps)
+    var setupOpen by remember { mutableStateOf(theme == "shelf" && !prefs(ctx).getBoolean("shelfSetup", false)) }
+    if (setupOpen) ShelfSetup(pal, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
         Column(Modifier.fillMaxSize().hubGround(theme, pal).statusBarsPadding()) {
@@ -1613,60 +1616,3 @@ class GameMenuService : android.app.Service() {
     }
 }
 
-
-/**
- * The shelf: the games stand on wooden shelves, three to a row, each box art on its own card. A tap turns the card over (a small 3D turn, only that card
- * animates) and shows its name, the Play button and the page of the game. Rows are built lazily, so a long library stays quick.
- */
-@Composable
-private fun ShelfView(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
-    val rows = games.chunked(3)
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 14.dp, end = 14.dp, top = 56.dp, bottom = 90.dp),
-    ) {
-        itemsIndexed(rows) { _, row ->
-            Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-                    row.forEach { g ->
-                        Box(Modifier.weight(1f)) { ShelfCard(g, pal, g.pkg in hidden, onPlay, onDetails) }
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-                // the plank the boxes stand on
-                Box(Modifier.fillMaxWidth().padding(top = 0.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFF6B4A33), Color(0xFF3E2A1D)))))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ShelfCard(g: GameRow, pal: Pal, hidden: Boolean, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
-    var back by remember(g.pkg) { mutableStateOf(false) }
-    // the turn: 0 shows the front, 180 the back; only this card's layer is touched while it turns
-    val turn by androidx.compose.animation.core.animateFloatAsState(if (back) 180f else 0f, androidx.compose.animation.core.tween(380), label = "turn")
-    Box(
-        Modifier.fillMaxWidth().aspectRatio(2f / 3f)
-            .graphicsLayer { rotationY = turn; cameraDistance = 14f * density }
-            .clip(RoundedCornerShape(10.dp))
-            .clickable { back = !back },
-    ) {
-        if (turn <= 90f) {
-            Box(Modifier.fillMaxSize()) { GameCover(g.pkg, pal, wide = false) }
-            if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .8f), fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color.Black.copy(alpha = .5f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
-        } else {
-            // the back: drawn un-mirrored, the turn is already past the middle
-            Column(Modifier.fillMaxSize().graphicsLayer { rotationY = 180f }.background(pal.card).padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Text(g.name, color = pal.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).background(pal.accent)
-                        .clickable { onPlay(g) }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                        Text(tr("Play", "Oyna"), color = pal.bg, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Text(tr("Details", "Ayrıntılar"), color = pal.accent, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clickable { onDetails(g) }.padding(4.dp), textAlign = TextAlign.Center)
-                }
-            }
-        }
-    }
-}
