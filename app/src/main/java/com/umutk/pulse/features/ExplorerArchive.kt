@@ -290,7 +290,7 @@ internal fun archiveExtract(f: File, dest: File, job: FileJob? = null): String =
         if (e.dir) out.mkdirs() else {
             out.parentFile?.mkdirs()
             // copied in blocks, so the bar of the job moves and a cross stops it between blocks
-            open().use { i -> out.outputStream().use { o -> val buf = ByteArray(256 * 1024); while (job?.cancelled != true) { val k = i.read(buf); if (k < 0) break; o.write(buf, 0, k); job?.done?.addAndGet(k.toLong()) } } }
+            open().use { i -> out.outputStream().use { o -> val buf = ByteArray(256 * 1024); while (job?.cancelled != true) { while (job?.paused == true && !job.cancelled) Thread.sleep(150); val k = i.read(buf); if (k < 0) break; o.write(buf, 0, k); job?.done?.addAndGet(k.toLong()) } } }
             if (e.time > 0) out.setLastModified(e.time)
             n++
         }
