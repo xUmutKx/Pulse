@@ -639,7 +639,7 @@ internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
-    "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture")
+    "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture"); "aifix" -> androidx.compose.material.icons.Icons.Rounded.AutoAwesome
     "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
 }
 

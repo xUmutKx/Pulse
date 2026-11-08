@@ -30,13 +30,13 @@ object ExtraKeys {
     val menu = listOf(
         "auth" to "Quick auth", "clip" to "Clipboard", "gamepad" to "Gamepad", "translate" to "Translate", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
         "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers",
-        "glide" to "Swipe typing", "lang" to "Language", "layout" to "Key layout",
+        "glide" to "Swipe typing", "lang" to "Language", "layout" to "Key layout", "aifix" to "AI fix",
     )
     /** What a long press on the comma, the period or the key beside ?123 can do (Settings > Keyboard): id and name; "none" keeps the key's own pop-up characters. */
     val hold = listOf(
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
     )
-    const val DEFAULT_MENU = "gamepad,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout"
+    const val DEFAULT_MENU = "gamepad,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout,aifix"
     const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
 }
