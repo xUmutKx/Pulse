@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.Look
 import com.umutk.pulse.PButton
 import com.umutk.pulse.PCard
+import com.umutk.pulse.PLoader
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
@@ -299,6 +300,22 @@ private fun AiSpeechPage() {
             result = r.getOrNull() ?: r.exceptionOrNull()?.message ?: tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller).")
         }
     }
+    // a song from the list: its lyrics are listened to, kept with the song, and the list drops it
+    fun makeFor(t: com.umutk.pulse.extras.music.Track) {
+        if (busy) return
+        busy = true; result = ""
+        scope.launch {
+            val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
+            val r = runCatching { Transcriber.lrc(c, androidx.core.content.FileProvider.getUriForFile(c, c.packageName + ".files", java.io.File(t.path)), lang, t.title, t.artist) { s, f -> stage = s; frac = f } }
+            poll.cancel(); busy = false
+            val lrc = r.getOrNull()
+            if (lrc != null) {
+                com.umutk.pulse.extras.lyrics.Lyrics.fromText(lrc, "ai")?.let { com.umutk.pulse.extras.lyrics.Lyrics.saveEdited(t.path, it) }
+                com.umutk.pulse.extras.lyrics.LyricsStatus.forget(t.path)
+                result = tr("Lyrics made for ${t.title ?: t.path}", "${t.title ?: t.path} için sözler yapıldı")
+            } else result = r.exceptionOrNull()?.message ?: tr("No lyrics were made", "Söz oluşturulamadı")
+        }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PCard {
             Text(tr("A song or a recording becomes timed lyrics (LRC). In the music player the AI button of the lyrics does this for the song that is playing.",
@@ -317,11 +334,36 @@ private fun AiSpeechPage() {
             SelectionContainer { Text(result, color = T.text, fontSize = 13.sp) }
             TextButton({ c.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, result), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text(tr("Share", "Paylaş"), color = Look.accent) }
         }
+        SongsWithoutLyrics(busy, lang) { t -> makeFor(t) }
     }
 }
 
+/** The songs that have no lyrics yet, at the bottom of the speech page: a search box, and a tap makes the lyrics of that song. */
 @Composable
-private fun AiMemoryPage() {
+private fun SongsWithoutLyrics(busy: Boolean, lang: String, onMake: (com.umutk.pulse.extras.music.Track) -> Unit) {
+    val c = LocalContext.current
+    val tracks by com.umutk.pulse.extras.music.MusicLibrary.tracks.collectAsState()
+    var rows by remember { mutableStateOf<List<com.umutk.pulse.extras.music.Track>?>(null) }
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(tracks) {
+        rows = withContext(Dispatchers.IO) { tracks.filter { !it.path.contains("://") && !com.umutk.pulse.extras.lyrics.LyricsStatus.has(c, it.path, it.artist.orEmpty(), it.title.orEmpty()) } }
+    }
+    val q = query.trim()
+    val shown = rows?.filter { q.isEmpty() || (it.title ?: "").contains(q, true) || it.artist.orEmpty().contains(q, true) || it.path.contains(q, true) }
+    PCard {
+        Text(tr("Songs without lyrics", "Sözü olmayan şarkılar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("${rows?.size ?: 0} songs", "${rows?.size ?: 0} şarkı"), color = T.sub, fontSize = 12.sp)
+        com.umutk.pulse.PField(query, { query = it }, tr("Search", "Ara"), Modifier.padding(top = 8.dp))
+        if (shown == null) PLoader(Modifier.padding(top = 10.dp).size(24.dp))
+        else shown.take(300).forEach { t ->
+            Column(Modifier.fillMaxWidth().clickable(enabled = !busy) { onMake(t) }.padding(vertical = 8.dp)) {
+                Text(t.title ?: java.io.File(t.path).nameWithoutExtension, color = T.text, fontSize = 14.sp, maxLines = 1)
+                Text(t.artist.orEmpty(), color = T.sub, fontSize = 12.sp, maxLines = 1)
+            }
+        }
+        if (shown != null && shown.size > 300) Text(tr("Search to find more", "Daha fazlası için ara"), color = T.sub, fontSize = 12.sp)
+    }
+}() {
     val c = LocalContext.current
     var facts by remember { mutableStateOf(AiMemory.facts(c)) }
     var on by remember { mutableStateOf(AiMemory.on(c)) }
