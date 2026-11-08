@@ -246,6 +246,16 @@ private fun musicFolder(ctx: Context): File? = musicFolderCache ?: runCatching {
     counts.maxByOrNull { it.value }?.key?.let { File(it) }?.takeIf { it.isDirectory }
 }.getOrNull()?.also { musicFolderCache = it }
 
+/** The folders opened lately in the picker (newest first, at most six). */
+private fun frequent(ctx: Context): List<File> =
+    ctx.getSharedPreferences("pulse_pick", Context.MODE_PRIVATE).getString("frequent", "").orEmpty().split('\n').filter { it.isNotBlank() }.map { File(it) }
+
+private fun noteFrequent(ctx: Context, dir: File) {
+    if (dir == Environment.getExternalStorageDirectory()) return
+    val list = (listOf(dir.path) + frequent(ctx).map { it.path }).distinct().take(6)
+    ctx.getSharedPreferences("pulse_pick", Context.MODE_PRIVATE).edit().putString("frequent", list.joinToString("\n")).apply()
+}
+
 /** The places of the side panel: the phone's storage, its usual folders and any memory card. */
 private class PickPlace(val name: String, val dir: File, val icon: String)
 
@@ -254,7 +264,9 @@ private fun places(ctx: Context): List<PickPlace> {
     val out = ArrayList<PickPlace>()
     out += PickPlace(tr("Internal storage", "Dahili depolama"), root, "disk")
     listOf("Download" to tr("Downloads", "İndirilenler"), "DCIM" to tr("Camera", "Kamera"), "Pictures" to tr("Pictures", "Resimler"), "Movies" to tr("Videos", "Videolar"),
-        "Music" to tr("Music", "Müzik"), "Documents" to tr("Documents", "Belgeler")).forEach { (d, n) -> File(root, d).takeIf { it.isDirectory }?.let { out += PickPlace(n, it, "folder") } }
+        "Music" to tr("Music", "Müzik"), "Documents" to tr("Documents", "Belgeler"), "Pictures/Screenshots" to tr("Screenshots", "Ekran görüntüleri")).forEach { (d, n) -> File(root, d).takeIf { it.isDirectory }?.let { out += PickPlace(n, it, "folder") } }
+    // the folders opened most lately, like the Frequent list of the file manager
+    frequent(ctx).forEach { d -> if (d.isDirectory) out += PickPlace(d.name, d, "history") }
     runCatching {
         File("/storage").listFiles().orEmpty().filter { it.isDirectory && it.name != "emulated" && it.name != "self" && it.canRead() }.forEach { out += PickPlace(tr("Memory card", "Hafıza kartı") + " " + it.name, it, "disk") }
     }
@@ -332,7 +344,7 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
     BackHandler { up() }
     fun open(f: File) {
         when {
-            f.isDirectory -> { cur = f; ticked.clear() }
+            f.isDirectory -> { cur = f; ticked.clear(); noteFrequent(ctx, f) }
             mode == "multi" -> if (f in ticked) ticked.remove(f) else ticked.add(f)
             mode == "save" -> name = f.name
             else -> onPicked(listOf(f))
@@ -445,7 +457,7 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
                 }
                 Text(tr("Places", "Konumlar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
                 places(ctx).forEach { p ->
-                    Row(Modifier.fillMaxWidth().clickable { top = if (p.icon == "disk") p.dir else Environment.getExternalStorageDirectory(); cur = p.dir; recents = false; drawer = false }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { top = if (p.icon == "disk") p.dir else Environment.getExternalStorageDirectory(); cur = p.dir; recents = false; drawer = false; noteFrequent(ctx, p.dir) }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon(p.icon, T.accent, 22.dp)
                         Spacer(Modifier.width(14.dp))
                         Text(p.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
