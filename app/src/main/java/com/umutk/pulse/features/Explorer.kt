@@ -216,8 +216,9 @@ private fun FilesPageInner() {
     // an archive is already on its way in (set the moment the intent arrives, before the content:// copy that can take a second): skip the home flash
     var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse && !FilesLaunch.opening) "home" else "files") }
     val top = remember { Environment.getExternalStorageDirectory() }
-    // Folder sizes / File types / Clean cache are only ever opened from the Browse tab's own drawer, so back always returns there, never to Home
-    val back: () -> Unit = { tab = "files" }
+    // a tool opened from the Files home (Storage analyze, file types...) or from More goes back where it was opened, not to Browse
+    var toolFrom by rememberSaveable { mutableStateOf("") }
+    val back: () -> Unit = { tab = toolFrom.ifEmpty { "files" }; toolFrom = "" }
     // Back from any other tab of the standalone app goes to the home page first
     androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { tab = "home" }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
@@ -267,14 +268,14 @@ private fun FilesPageInner() {
                 when (tab) {
                     "home" -> {
                         val ot = com.umutk.pulse.LocalOpenTool.current
-                        com.umutk.pulse.files.home.FilesHome(onTab = { tab = it },
+                        com.umutk.pulse.files.home.FilesHome(onTab = { if (it != "files") toolFrom = "home"; tab = it },
                             onOpenDir = { d -> ExNav.lastHere = d; tab = "files" },
                             onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); if (isArchiveFile(f) || f.extension.equals("apk", true)) { ExNav.lastHere = f.parentFile?.path ?: ExNav.lastHere; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f; tab = "files" } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
                             onSettings = { ot("files_settings") })
                     }
                     "files" -> if (FilesLaunch.opening && FilesLaunch.archive == null) com.umutk.pulse.Center(tr("Opening…", "Açılıyor…"))
                         else ExplorerTab(full || !standalone, { tab = it }) { full = !full }
-                    "more" -> com.umutk.pulse.files.home.FilesMorePage(onTab = { tab = it })
+                    "more" -> com.umutk.pulse.files.home.FilesMorePage(onTab = { if (it != "files") toolFrom = "more"; tab = it })
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
@@ -774,6 +775,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         val exScroll = rememberScrollState()
         // pull the list down from its top to reload it: the drag is counted here, a release past the line refreshes
         var pull by remember { mutableFloatStateOf(0f) }
+        // after a release past the line the arrow keeps turning a moment, so the reload is seen
+        var pulled by remember { mutableStateOf(false) }
+        LaunchedEffect(pulled) { if (pulled) { kotlinx.coroutines.delay(700); pulled = false } }
         val pullLine = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
         val pullConn = remember {
             object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
@@ -786,7 +790,13 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     return androidx.compose.ui.geometry.Offset.Zero
                 }
                 override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
-                    if (pull >= pullLine) { AppDataFolders.forget(); refresh++ }
+                    if (pull >= pullLine) { AppDataFolders.forget(); refresh++; pulled = true }
+                    pull = 0f
+                    return androidx.compose.ui.unit.Velocity.Zero
+                }
+                // a release with no fling at all still ends the pull (some devices give no fling then)
+                override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                    if (pull >= pullLine) { AppDataFolders.forget(); refresh++; pulled = true }
                     pull = 0f
                     return androidx.compose.ui.unit.Velocity.Zero
                 }
@@ -794,6 +804,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         if (pull > 0f) Box(Modifier.fillMaxWidth().height(with(androidx.compose.ui.platform.LocalDensity.current) { pull.toDp() }), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp).graphicsLayer { rotationZ = pull / pullLine * 270f; alpha = (pull / pullLine).coerceIn(0f, 1f) }, Look.accent)
+        } else if (pulled) Box(Modifier.fillMaxWidth().height(40.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator(Modifier.size(22.dp), color = Look.accent, strokeWidth = 2.dp)
         }
         // the folder you left keeps its place: coming back lands where you were
         SideEffect { ExScroll.live = exScroll }
