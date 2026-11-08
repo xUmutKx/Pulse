@@ -2026,9 +2026,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val best = pool.maxByOrNull { nnScore.getValue(it.word) }
             if (best != null) {
                 val diacriticOnly = best.cost <= .15f * lower.length && best.word.length == lower.length
-                val margin = (if (listed) NN_VALID else NN_UNKNOWN) + (if (lower.length <= 3 && !diacriticOnly) NN_SHORT else 0f)
+                val margin = (if (listed) NN_VALID else NN_UNKNOWN) + (if (lower.length <= 3 && !diacriticOnly) NN_SHORT else 0f) -
                     // the strength setting moves the margin: modest asks 2 bits more, aggressive 2 less, very aggressive 4 less
-                    - (KeyboardPrefs.autoLevel.coerceIn(0, 3) - 1) * 2f
+                    (KeyboardPrefs.autoLevel.coerceIn(0, 3) - 1) * 2f
                 if ((lower.length >= 3 || diacriticOnly) && nnScore.getValue(best.word) > typedLm + margin) nnFix = best
             }
         }
