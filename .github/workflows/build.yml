@@ -38,7 +38,19 @@ jobs:
         run: |
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           yes | "$SDKMANAGER" --licenses > /dev/null
-          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0"
+          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0" "ndk;29.0.13113456" "cmake;3.31.6" > /dev/null
+      # Pulse AI's engines: llama.cpp and whisper.cpp at the commits their JNI was written against (built into the app for arm64)
+      - name: llama.cpp and whisper.cpp sources
+        env:
+          LLAMA_COMMIT: a691b2345844ce1b430201fc5fd404ce062e05f2
+          WHISPER_COMMIT: f92e1e4d1056700c39d4e86c1140f0a088fe1ab6
+        run: |
+          mkdir -p localai/vendor && cd localai/vendor
+          for r in "llama.cpp $LLAMA_COMMIT" "whisper.cpp $WHISPER_COMMIT"; do
+            set -- $r
+            git init -q "$1" && git -C "$1" remote add origin "https://github.com/ggml-org/$1.git"
+            git -C "$1" fetch -q --depth 1 origin "$2" && git -C "$1" checkout -q FETCH_HEAD
+          done
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9

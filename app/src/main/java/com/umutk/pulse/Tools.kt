@@ -124,6 +124,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "tempmail" -> com.umutk.pulse.extras.tempmail.TempMailHub(back)
         id == "ebook" -> com.umutk.pulse.extras.ebook.EbookHub(back)
         id == "weathermap" -> com.umutk.pulse.extras.weathermap.WeatherMapHub(back)
+        id == "ai" -> com.umutk.pulse.extras.ai.AiHub(back)
         id == "weather" -> Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) { com.umutk.pulse.extras.weather.WeatherHub(back) }
         }

@@ -1,4 +1,4 @@
-package com.umutk.pulse.ai
+package com.umutk.pulse.extras.ai
 
 import android.app.ActivityManager
 import android.app.DownloadManager
@@ -7,15 +7,19 @@ import android.net.Uri
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import java.io.File
-import java.util.Locale
+import com.umutk.pulse.tr
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
-/** Turkish when the phone is in Turkish. */
-fun tr(en: String, trText: String): String = if (Locale.getDefault().language == "tr") trText else en
 
 /** A model that can be downloaded: a chat model (GGUF, llama.cpp) or a speech model (ggml, whisper.cpp). */
 class AiModel(
     val id: String, val kind: String, val name: String, val file: String, val url: String, val bytes: Long,
     val license: String, val uncensored: Boolean = false, val note: String = "",
+    /** A file found on the phone or from a search: its path or URI, not in the catalog. */
+    val path: String? = null,
 )
 
 private fun hf(repo: String, file: String) = "https://huggingface.co/$repo/resolve/main/$file"
@@ -94,6 +98,7 @@ object Store {
     }
 
     fun has(c: Context, m: AiModel): Boolean {
+        m.path?.let { return File(it).isFile }
         if (Environment.isExternalStorageManager()) return fileOf(m).let { it.isFile && it.length() >= m.bytes * 98 / 100 }
         val id = sp(c).getLong("dl_${m.id}", -1L); if (id < 0) return false
         val dm = c.getSystemService(DownloadManager::class.java)
@@ -112,6 +117,7 @@ object Store {
      * (/proc/self/fd/N; the descriptor stays open while the model is used, [hold] keeps it).
      */
     fun openPath(c: Context, m: AiModel, hold: (ParcelFileDescriptor) -> Unit): String? {
+        m.path?.let { return it }
         val f = fileOf(m)
         if (Environment.isExternalStorageManager() && f.isFile) return f.path
         val id = sp(c).getLong("dl_${m.id}", -1L); if (id < 0) return null
@@ -127,6 +133,19 @@ object Store {
         return "/proc/self/fd/${pfd.fd}"
     }
 
+    /** Models from a search or found on the phone, kept so they stay in the list once picked or downloaded. */
+    fun remember(c: Context, m: AiModel) {
+        val o = JSONObject().put("id", m.id).put("kind", m.kind).put("name", m.name).put("file", m.file).put("url", m.url).put("bytes", m.bytes).put("license", m.license).put("unc", m.uncensored).put("path", m.path ?: "")
+        sp(c).edit().putString("extra_${m.id}", o.toString()).apply()
+    }
+    fun forget(c: Context, m: AiModel) { sp(c).edit().remove("extra_${m.id}").apply() }
+    fun extras(c: Context): List<AiModel> = sp(c).all.filterKeys { it.startsWith("extra_") }.values.mapNotNull { v -> runCatching {
+        val o = JSONObject(v as String)
+        AiModel(o.getString("id"), o.getString("kind"), o.getString("name"), o.getString("file"), o.getString("url"), o.getLong("bytes"), o.getString("license"), o.optBoolean("unc"), path = o.optString("path").ifEmpty { null })
+    }.getOrNull() }
+    /** Every model of a kind this phone knows: the catalog and the remembered ones. */
+    fun known(c: Context, kind: String): List<AiModel> = (if (kind == "chat") CHAT_MODELS else SPEECH_MODELS) + extras(c).filter { it.kind == kind }
+
     fun active(c: Context, kind: String): String? = sp(c).getString("active_$kind", null)
     fun setActive(c: Context, kind: String, id: String) { sp(c).edit().putString("active_$kind", id).apply() }
     fun customUri(c: Context, kind: String): Uri? = sp(c).getString("custom_$kind", null)?.let(Uri::parse)
@@ -134,3 +153,40 @@ object Store {
 }
 
 fun gb(bytes: Long): String = if (bytes >= 1_000_000_000) "%.1f GB".format(bytes / 1e9) else "%d MB".format(bytes / 1_000_000)
+
+
+/** Pulse AI runs on arm64 phones with Android 9 or newer (its engines are built for those). */
+val aiSupported: Boolean get() = android.os.Build.VERSION.SDK_INT >= 28 && android.os.Build.SUPPORTED_ABIS.firstOrNull() == "arm64-v8a"
+
+/**
+ * Any GGUF on Hugging Face, by words (the idea of Pumpkin's model search): the most downloaded repos for [q], and in each the Q4_K_M file
+ * (else the smallest Q4 one), with its size so the phone's fit can be shown. Runs on the network; call it off the main thread.
+ */
+fun searchHf(q: String, limit: Int = 12): List<AiModel> {
+    fun get(u: String): String = (URL(u).openConnection() as HttpURLConnection).run { connectTimeout = 10000; readTimeout = 20000; inputStream.bufferedReader().use { it.readText() } }
+    val repos = JSONArray(get("https://huggingface.co/api/models?search=" + java.net.URLEncoder.encode(q, "UTF-8") + "&filter=gguf&sort=downloads&direction=-1&limit=$limit"))
+    val out = ArrayList<AiModel>()
+    for (i in 0 until repos.length()) {
+        val id = repos.getJSONObject(i).getString("id")
+        val info = runCatching { JSONObject(get("https://huggingface.co/api/models/$id?blobs=true")) }.getOrNull() ?: continue
+        val files = info.optJSONArray("siblings") ?: continue
+        val ggufs = (0 until files.length()).map { files.getJSONObject(it) }.filter { it.getString("rfilename").endsWith(".gguf", true) && !it.getString("rfilename").contains("mmproj", true) }
+        val pick = ggufs.firstOrNull { it.getString("rfilename").contains("q4_k_m", true) } ?: ggufs.filter { it.getString("rfilename").contains("q4", true) }.minByOrNull { it.optLong("size") } ?: continue
+        val f = pick.getString("rfilename")
+        val lic = info.optJSONObject("cardData")?.optString("license").orEmpty().ifEmpty { "?" }
+        out += AiModel("hf:" + id + "/" + f, "chat", id.substringAfter('/'), f.substringAfterLast('/'), "https://huggingface.co/$id/resolve/main/$f", pick.optLong("size"), lic,
+            uncensored = Regex("abliterat|uncensor", RegexOption.IGNORE_CASE).containsMatchIn(id))
+    }
+    return out
+}
+
+/** GGUF and whisper files already on the phone (Download, Download/PulseAI and the folders other apps keep them in): used in place, nothing is copied. */
+fun phoneModels(): List<AiModel> {
+    if (!Environment.isExternalStorageManager()) return emptyList()
+    val root = Environment.getExternalStorageDirectory()
+    val dirs = listOf(Store.dir, File(root, "Download"), File(root, "Documents"), File(root, "Models"), File(root, "Android/media"))
+    val seen = HashSet<String>()
+    return dirs.flatMap { d -> d.walkTopDown().maxDepth(3).filter { it.isFile && (it.name.endsWith(".gguf", true) || (it.name.startsWith("ggml-") && it.name.endsWith(".bin"))) }.toList() }
+        .filter { seen.add(it.canonicalPath) && CHAT_MODELS.none { m -> m.file == it.name } && SPEECH_MODELS.none { m -> m.file == it.name } }
+        .map { f -> AiModel("file:" + f.path, if (f.name.endsWith(".bin")) "speech" else "chat", f.nameWithoutExtension, f.name, "", f.length(), "?", path = f.path) }
+}
