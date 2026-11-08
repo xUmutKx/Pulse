@@ -543,7 +543,6 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
                             st.shotThumb?.let { Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
-                            if (KeyboardPrefs.quickPinBtn) QuickPin(st, th, act)
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
