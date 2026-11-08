@@ -244,7 +244,7 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
     var kind by remember { mutableStateOf(0) }
     var sortBy by remember { mutableStateOf(sp.getInt("sort", 1)) }          // 0 name, 1 date, 2 size, 3 type
     var desc by remember { mutableStateOf(sp.getBoolean("desc", true)) }
-    var grid by remember { mutableStateOf(sp.getBoolean("grid", true)) }
+    var grid by remember { mutableStateOf(sp.getBoolean("viewGrid", false)) }
     var sortMenu by remember { mutableStateOf(false) }
     val ticked = remember { mutableStateListOf<File>() }
     // the folder is read off the main thread: a folder with thousands of pictures must not freeze the window
@@ -299,17 +299,15 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
                     Box(Modifier.size(40.dp).clickable { search = if (search == null) "" else null }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
                     Box {
                         Box(Modifier.size(40.dp).clickable { sortMenu = true }, contentAlignment = Alignment.Center) { PIcon("sort", T.text, 22.dp) }
-                        androidx.compose.material3.DropdownMenu(sortMenu, { sortMenu = false }, containerColor = androidx.compose.ui.graphics.Color(0xF2101010)) {
-                            listOf(tr("Name", "Ad"), tr("Date", "Tarih"), tr("Size", "Boyut"), tr("Type", "Tür")).forEachIndexed { i, n ->
-                                androidx.compose.material3.DropdownMenuItem(
-                                    text = { Text(n, color = if (sortBy == i) T.accent else androidx.compose.ui.graphics.Color.White, fontSize = 14.sp) },
-                                    onClick = { if (sortBy == i) desc = !desc else sortBy = i; sp.edit().putInt("sort", sortBy).putBoolean("desc", desc).apply(); sortMenu = false },
-                                    trailingIcon = if (sortBy == i) ({ PIcon(if (desc) "down" else "up", T.accent, 16.dp) }) else null,
-                                )
+                        // the same themed menu as the file manager's, each order with its icon; the chosen one is ticked (a second tap turns the direction)
+                        ThemedMenu(sortMenu, { sortMenu = false }) {
+                            listOf(tr("Name", "Ad") to "document", tr("Date", "Tarih") to "calendar", tr("Size", "Boyut") to "storage", tr("Type", "Tür") to "apps").forEachIndexed { i, (n, ic) ->
+                                ThemedMenuItem(n + if (sortBy == i) (if (desc) "  ↓" else "  ↑") else "", { if (sortBy == i) desc = !desc else sortBy = i; sp.edit().putInt("sort", sortBy).putBoolean("desc", desc).apply(); sortMenu = false },
+                                    iconKey = ic, checked = sortBy == i)
                             }
                         }
                     }
-                    Box(Modifier.size(40.dp).clickable { grid = !grid; sp.edit().putBoolean("grid", grid).apply() }, contentAlignment = Alignment.Center) { PIcon(if (grid) "listView" else "gridView", T.text, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { grid = !grid; sp.edit().putBoolean("viewGrid", grid).apply() }, contentAlignment = Alignment.Center) { PIcon(if (grid) "listView" else "gridView", T.text, 22.dp) }
                     Box(Modifier.size(40.dp).clickable { onCancel() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
                     if (mode == "folder") Box(Modifier.size(48.dp).clickable { onPicked(listOf(cur)) }, contentAlignment = Alignment.Center) { PIcon("check", T.accent, 26.dp) }
                 }

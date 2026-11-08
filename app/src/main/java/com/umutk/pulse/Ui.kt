@@ -119,9 +119,10 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     if (T.material) {
         // downloaded Material Symbols (res/drawable/mat_<key>.xml); the built-in set is the fallback for a missing one
         val id = remember(k) { ctx.resources.getIdentifier("mat_$k", "drawable", ctx.packageName) }
-        if (id != 0) Image(painterResource(id), null, modifier.size(size), colorFilter = ColorFilter.tint(tint))
-        else Icon(material(k), null, modifier.size(size), tint)
-        return
+        if (id != 0) { Image(painterResource(id), null, modifier.size(size), colorFilter = ColorFilter.tint(tint)); return }
+        // a key with no Material picture used to show the "info" circle: the Fluent glyph of that key is drawn instead (below)
+        val v = material(k)
+        if (v != Icons.Outlined.Info || k == "info" || !FluentPaths.map.containsKey(k)) { Icon(v, null, modifier.size(size), tint); return }
     }
     // each design keeps its own icon set: Win95 / XP / Win7 their PNG packs, Win10 and Win11 only the Fluent vectors (Fluent is the last resort for the rest)
     val pack = when (T.id) {
