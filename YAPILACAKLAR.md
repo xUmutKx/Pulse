@@ -2317,3 +2317,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.376 (derlenmedi): Files önizleme/sıkıştırma/çıkarma hızlandı, Island bildirim ışığı, hava durumu gece yarısı düzeltmesi, YouTube ve Athenaeum kaldırıldı, README katlanır.
 
 - 1.0.377 (derlenmedi): Game Hub profil/performans/menü/grafik/hedef/Google Play kapak, Files paralel zip/parola/yinelenen/duraklat, klavye pano ve boşluk imleci, okuyucu işareti, hava durumu, ağ gecikme testi.
+
+- 1.0.378 (derlendi): Recent uzun basma klasörü açar, gizli oyunlar Uygulamalar boyutunda, Files büyük klasör performansı, klavye giriş önerisi düzeltmesi ve otomatik doldurma anahtarı, klavye çubuğu şeridi ve gizli mod işareti, alarm kapanış ses patlaması düzeltmesi.
