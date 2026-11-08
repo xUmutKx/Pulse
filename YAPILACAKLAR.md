@@ -2323,3 +2323,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.379 (derlendi): Pulse AI tek APK içinde (llama.cpp sohbet, whisper.cpp zamanlı söz, modeller Download/PulseAI), Sonic müzik görünümü, klavye sinir ağı modeli (çok kaynaklı, büyük harf ve noktalama) ve sahibin hatalarına göre ayar, 26 yeni hata çifti ve 98 harf karıştırması, klavye istatistik ekranı ve AI fix, e-posta önerisi engelleme, Premium sadece Play Billing (promo kodları kaldırıldı), kurulum ekranı izin düzeltmesi, güncelleme sonrası Yenilikler ekranı, Files geri dönüş ve yenileme, hesap makinesi taşma ve basamak gruplama, ikon paketi/ikon üretici, PDF yerinde düzenleme ve vektör kaydetme, müzik silme, ArtCraft sürüm okuma.
 
 - 1.0.380 (derlendi): 1.0.379 ile aynı, Pulse AI yerel kütüphaneleri soyuldu (APK 106 MB idi).
+
+- Araç kutusu: Tilt-shift kutucuğu kaldırıldı; kısa kalan satırlar ortalandı. (derlenmedi)
