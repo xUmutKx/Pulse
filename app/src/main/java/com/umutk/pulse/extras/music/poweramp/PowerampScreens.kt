@@ -319,7 +319,7 @@ fun NowPlayingScreen(
                 title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
                 localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
                 onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
-                modifier = Modifier.fillMaxSize(), full = true, art = art,
+                modifier = Modifier.fillMaxSize(), full = true, art = art, playing = playing, onTogglePlay = onPlayPause,
             )
         }
         Column(Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 13.dp)) {
@@ -387,7 +387,7 @@ fun NowPlayingScreen(
                         title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
                         localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
                         onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
-                        modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))), art = art,
+                        modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))), art = art, playing = playing, onTogglePlay = onPlayPause,
                     )
                 }
             }
