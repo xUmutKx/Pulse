@@ -34,7 +34,7 @@ import com.umutk.pulse.T
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.tr
 
-private sealed interface Page { object List : Page; object Search : Page; object Now : Page; class Open(val r: LyricsRecord) : Page }
+private sealed interface Page { object List : Page; object Search : Page; object Now : Page; object Library : Page; class Open(val r: LyricsRecord) : Page }
 
 /** Full page: saved lyrics, online search (LyricsScreen), and the lyrics of the playing track. */
 @Composable
@@ -55,6 +55,7 @@ private fun LyricsHubBody(onBack: () -> Unit) {
                 IconButton(onClick = onBack) { PIcon("back", T.text, 22.dp) }
                 Spacer(Modifier.weight(1f))
                 if (st.current != null) IconButton(onClick = { page = Page.Now }) { PIcon("volume", T.text, 22.dp) }
+                IconButton(onClick = { page = Page.Library }) { PIcon("music", T.text, 22.dp) }
                 IconButton(onClick = { page = Page.Search }) { PIcon("search", T.text, 22.dp) }
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -76,6 +77,10 @@ private fun LyricsHubBody(onBack: () -> Unit) {
             Row { IconButton(onClick = { page = Page.List; items = store.list() }) { PIcon("back", T.text, 22.dp) } }
             val pos by produceState(0) { while (true) { value = engine.positionMs; delay(250) } }
             LyricsPanel(st.current, pos, Modifier.weight(1f).fillMaxWidth(), engine::seekTo)
+        }
+        Page.Library -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Row { IconButton(onClick = { page = Page.List }) { PIcon("back", T.text, 22.dp) } }
+            LyricsLibrary()
         }
         is Page.Open -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
             Row { IconButton(onClick = { page = Page.List }) { PIcon("back", T.text, 22.dp) } }
