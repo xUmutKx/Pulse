@@ -113,6 +113,9 @@ object WeatherReport {
         // high importance so the notification pops up; no sound or vibration, and only the first post alerts
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Weather", "Hava durumu"), NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null); enableVibration(false) })
         val large = ContextCompat.getDrawable(c, iconRes)?.toBitmap(160, 160)
+        // a tap opens the weather app (the same page the widgets open)
+        val open = android.app.PendingIntent.getActivity(c, 9200 + id, android.content.Intent().setComponent(android.content.ComponentName(c, "com.umutk.pulse.ExtraToolActivity")).putExtra("route", "weather").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_ad_weather_fg)
             .setLargeIcon(large)
@@ -122,6 +125,7 @@ object WeatherReport {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOnlyAlertOnce(true)
             .setAutoCancel(true)
+            .setContentIntent(open)
             .build()
         nm.notify(id, n)
     }
