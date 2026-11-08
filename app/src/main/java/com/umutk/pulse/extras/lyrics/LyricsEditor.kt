@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,10 +39,19 @@ import com.umutk.pulse.tr
  * half a second at once. The check keeps the lines (the song's tag or a .lrc beside it).
  */
 @Composable
-fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier,
+    playing: Boolean = false, onTogglePlay: (() -> Unit)? = null) {
     val lines = remember(res) { mutableStateListOf<LyricLine>().apply { addAll(res.lines) } }
     val listState = rememberLazyListState()
     val current = if (res.synced) lines.indexOfLast { it.timeMs in 0..positionMs } else -1
+    // while the song plays the playing line is kept in the middle of the list; paused, the list stays where it is for checking and editing
+    LaunchedEffect(current, playing) {
+        if (current >= 0 && playing) {
+            val vp = listState.layoutInfo.viewportSize.height
+            val h = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == current }?.size ?: 120
+            listState.animateScrollToItem(current, -((vp - h) / 2).coerceAtLeast(0))
+        }
+    }
     fun setTime(i: Int, ms: Long) { lines[i] = lines[i].copy(timeMs = ms.coerceAtLeast(0L), words = emptyList()) }
     fun nudge(i: Int, d: Long) { val t = lines[i].timeMs; setTime(i, (if (t < 0) positionMs else t) + d) }
     fun shiftAll(d: Long) { lines.indices.forEach { i -> val t = lines[i].timeMs; if (t >= 0) setTime(i, t + d) } }
@@ -54,6 +64,7 @@ fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> 
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { PIcon("close", Color.White, 22.dp) }
             Text(tr("Edit lyrics", "Sözleri düzenle"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (onTogglePlay != null) IconButton(onClick = onTogglePlay) { PIcon(if (playing) "pause" else "play", Color.White, 22.dp) }
             IconButton(onClick = { save() }) { PIcon("check", Color.White, 22.dp) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
