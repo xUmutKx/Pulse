@@ -212,20 +212,20 @@ fun SetupScreen(onDone: () -> Unit) {
 }
 
 /** One permission group and the feature it serves. Nothing is asked until the box is ticked; a group left empty is skipped. */
-private class PermItem(val title: String, val why: String, val perms: List<String>, val optional: Boolean)
+private class PermItem(val title: String, val why: String, val perms: List<String>, val optional: Boolean, val icon: String = "info")
 
 private fun permItems(): List<PermItem> = listOf(
     PermItem(tr("Files and music", "Dosyalar ve müzik"), tr("Shows your music, photos and videos.", "Müziğini, fotoğraflarını ve videolarını gösterir."),
         if (Build.VERSION.SDK_INT >= 33) listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_IMAGES)
-        else listOf(Manifest.permission.READ_EXTERNAL_STORAGE), optional = false),
+        else listOf(Manifest.permission.READ_EXTERNAL_STORAGE), optional = false, icon = "music"),
     PermItem(tr("Notifications", "Bildirimler"), tr("Music controls and download progress.", "Müzik kontrolleri ve indirme durumu."),
-        if (Build.VERSION.SDK_INT >= 33) listOf(Manifest.permission.POST_NOTIFICATIONS) else emptyList(), optional = true),
-    PermItem(tr("Contacts", "Kişiler"), tr("The Pulse contacts list.", "Pulse kişi listesi."), listOf(Manifest.permission.READ_CONTACTS), optional = true),
-    PermItem(tr("Calendar", "Takvim"), tr("The Pulse calendar.", "Pulse takvimi."), listOf(Manifest.permission.READ_CALENDAR), optional = true),
+        if (Build.VERSION.SDK_INT >= 33) listOf(Manifest.permission.POST_NOTIFICATIONS) else emptyList(), optional = true, icon = "bell"),
+    PermItem(tr("Contacts", "Kişiler"), tr("The Pulse contacts list.", "Pulse kişi listesi."), listOf(Manifest.permission.READ_CONTACTS), optional = true, icon = "users"),
+    PermItem(tr("Calendar", "Takvim"), tr("The Pulse calendar.", "Pulse takvimi."), listOf(Manifest.permission.READ_CALENDAR), optional = true, icon = "calendar"),
     PermItem(tr("Phone calls", "Telefon aramaları"), tr("Call from Pulse contacts and the call history.", "Pulse kişilerinden arama yapma ve arama geçmişi."),
-        listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_CALL_LOG), optional = true),
+        listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_CALL_LOG), optional = true, icon = "call"),
     PermItem(tr("Messages", "Mesajlar"), tr("Read and send text messages from Pulse.", "Pulse'tan kısa mesaj okuma ve gönderme."),
-        listOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS), optional = true),
+        listOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS), optional = true, icon = "messages"),
 )
 
 @Composable
@@ -240,11 +240,46 @@ private fun PermissionsCard() {
             val granted = remember(tick, item.title) { item.perms.isEmpty() || item.perms.all { ContextCompat.checkSelfPermission(ctx, it) == PackageManager.PERMISSION_GRANTED } }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 PCheck(granted, { wanted -> if (wanted && !granted && item.perms.isNotEmpty()) launcher.launch(item.perms.toTypedArray()) })
+                Box(Modifier.padding(start = 8.dp).size(28.dp), contentAlignment = Alignment.Center) { PIcon(item.icon, Look.accent, 22.dp) }
                 Column(Modifier.weight(1f).padding(start = 8.dp)) {
                     Text(item.title, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended.", "Önerilir.")), color = T.sub, fontSize = 12.sp)
                 }
             }
         }
+    }
+}
+
+/** The notes of this version, shown once after an update (the first start has the full welcome instead). Newest first. */
+private val WHATS_NEW = listOf(
+    "keyboard" to (tr("Keyboard: a neural model on the phone (Turkish and English) weighs every correction by the sentence; e-mail and name suggestions can be blocked; a learning card in statistics.",
+        "Klavye: telefonda çalışan bir sinir ağı modeli (Türkçe ve İngilizce) her düzeltmeyi cümleye göre tartar; e-posta ve isim önerileri engellenebilir; istatistikte öğrenme kartı.")),
+    "apps" to (tr("Extra apps: choose each app's icon from an installed icon pack (search by words) or make one: line or glass, any colours.",
+        "Ek uygulamalar: her uygulamanın ikonunu yüklü bir ikon paketinden (kelimeyle arayarak) seç ya da üret: çizgi veya cam, istediğin renkler.")),
+    "document" to (tr("PDF: tap printed text to edit it in place; saved copies stay real PDF text; dark pages keep photos whole.",
+        "PDF: basılı yazıya dokunup yerinde düzenle; kaydedilen kopyalarda yazı gerçek PDF yazısı kalır; koyu sayfalarda fotoğraflar bozulmaz.")),
+    "folder" to (tr("Files: pull down to refresh, faster APK extract and install, split archives extract by picking their parts.",
+        "Dosyalar: aşağı çekip yenile, daha hızlı APK çıkarma ve kurma, bölünmüş arşivler parçaları seçilerek çıkarılır.")),
+    "music" to (tr("Music: deleted songs leave the list at once, no empty entries.", "Müzik: silinen şarkılar listeden hemen çıkar, boş kayıt kalmaz.")),
+)
+
+/** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
+@Composable
+fun WhatsNew(onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    fun finish() { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putBoolean("welcomed", true).putString("seen_version", appVersionName(ctx)).apply(); onDone() }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter).padding(top = 40.dp, bottom = 24.dp)) {
+        Image(rememberLauncherLogo(), null, Modifier.size(72.dp))
+        Text(tr("Pulse is updated", "Pulse güncellendi"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 12.dp))
+        Text(tr("Version ", "Sürüm ") + appVersionName(ctx), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+        WelcomeCard(tr("What's new", "Yenilikler")) {
+            WHATS_NEW.forEach { (ic, line) ->
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.Top) {
+                    Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) { PIcon(ic, Look.accent, 22.dp) }
+                    Text(line, color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(start = 10.dp, top = 4.dp))
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) { PButton(tr("Continue", "Devam"), onClick = { finish() }) }
     }
 }
