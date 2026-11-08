@@ -380,6 +380,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
                     }
                     if (id == "more") com.umutk.pulse.ThemedMenu(menu, { menu = false }) {
                         com.umutk.pulse.ThemedMenuItem(tr("Media tools and converter", "Medya araçları ve dönüştürücü"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
+                        com.umutk.pulse.ThemedMenuItem(tr("Duplicate files", "Yinelenen dosyalar"), { menu = false; openTool("duplicates") }, iconKey = "copy")
                         com.umutk.pulse.ThemedMenuItem(tr("Folder sizes", "Klasör boyutları"), { menu = false; onTab("tree") }, iconKey = "disk")
                         com.umutk.pulse.ThemedMenuItem(tr("File types", "Dosya türleri"), { menu = false; onTab("types") }, iconKey = "folder")
                         com.umutk.pulse.ThemedMenuItem(tr("Clean cache", "Önbelleği temizle"), { menu = false; onTab("cache") }, iconKey = "delete")
@@ -427,6 +428,7 @@ fun FilesMorePage(onTab: (String) -> Unit) {
     val openTool = com.umutk.pulse.LocalOpenTool.current
     val rows = listOf(
         Triple("tool_mediatools", tr("Media tools and converter", "Medya araçları ve dönüştürücü"), tr("Compress pictures and videos, make GIFs, convert files", "Resim ve videoları sıkıştır, GIF yap, dosya dönüştür")) to { openTool("mediatools") },
+        Triple("copy", tr("Duplicate files", "Yinelenen dosyalar"), tr("Files with the same content, delete the extra copies", "Aynı içerikli dosyalar, fazla kopyaları sil")) to { openTool("duplicates") },
         Triple("disk", tr("Folder sizes", "Klasör boyutları"), tr("Where the storage went, folder by folder", "Depolama nereye gitti, klasör klasör")) to { onTab("tree") },
         Triple("filetypes", tr("File types", "Dosya türleri"), tr("Pictures, videos, audio, documents, archives, apps", "Resimler, videolar, ses, belgeler, arşivler, uygulamalar")) to { onTab("types") },
         Triple("clean", tr("Clean cache", "Önbelleği temizle"), tr("Junk of apps that is safe to delete", "Uygulamaların silinmesi güvenli artıkları")) to { onTab("cache") },
