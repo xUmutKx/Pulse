@@ -38,6 +38,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -63,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -77,6 +79,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -99,11 +102,12 @@ private const val PREFS = "gamehub"
 private class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
 /** The looks of Game Hub, in the order they are offered. */
-private val THEMES = listOf("amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
+private val THEMES = listOf("shelf", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
 
 private fun themeName(k: String): String = when (k) {
     "material" -> "Material"
     "glass" -> tr("Material, transparent", "Material, şeffaf")
+    "shelf" -> tr("Shelf (default)", "Raf (varsayılan)")
     "win95" -> "Windows 95"
     "winxp" -> "Windows XP"
     "win8" -> "Windows 8"
@@ -117,6 +121,8 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
     if (Build.VERSION.SDK_INT >= 31) runCatching { Color(c.getColor(res)) }.getOrDefault(fallback) else fallback
 
 private fun palOf(theme: String, c: Context): Pal = when (theme) {
+    // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
+    "shelf" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
     "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
@@ -775,7 +781,7 @@ fun GameHubHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawer = rememberDrawerState(DrawerValue.Closed)
-    var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "material") ?: "material") }
+    var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "shelf") ?: "shelf") }
     var themeOpen by remember { mutableStateOf(false) }
     val pal = palOf(theme, ctx)
     var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
@@ -945,7 +951,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
+                    } else if (theme == "shelf" && viewMode != 1) ShelfView(
+                        sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
+                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
+                    ) else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
                         Modifier.fillMaxSize().padding(horizontal = 12.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1601,5 +1610,63 @@ class GameMenuService : android.app.Service() {
         col.addView(button(tr("Close background apps", "Arka plan uygulamalarını kapat")) { sh("am kill-all") { toast(this, tr("Done", "Tamam")); closePanel() } })
         val v = col
         if (runCatching { wm.addView(v, lp(px(270), -2, px(34))) }.isSuccess) panel = v
+    }
+}
+
+
+/**
+ * The shelf: the games stand on wooden shelves, three to a row, each box art on its own card. A tap turns the card over (a small 3D turn, only that card
+ * animates) and shows its name, the Play button and the page of the game. Rows are built lazily, so a long library stays quick.
+ */
+@Composable
+private fun ShelfView(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    val rows = games.chunked(3)
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 14.dp, end = 14.dp, top = 56.dp, bottom = 90.dp),
+    ) {
+        itemsIndexed(rows) { _, row ->
+            Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+                    row.forEach { g ->
+                        Box(Modifier.weight(1f)) { ShelfCard(g, pal, g.pkg in hidden, onPlay, onDetails) }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+                // the plank the boxes stand on
+                Box(Modifier.fillMaxWidth().padding(top = 0.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
+                    .background(Brush.verticalGradient(listOf(Color(0xFF6B4A33), Color(0xFF3E2A1D)))))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShelfCard(g: GameRow, pal: Pal, hidden: Boolean, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    var back by remember(g.pkg) { mutableStateOf(false) }
+    // the turn: 0 shows the front, 180 the back; only this card's layer is touched while it turns
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (back) 180f else 0f, androidx.compose.animation.core.tween(380), label = "turn")
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(2f / 3f)
+            .graphicsLayer { rotationY = turn; cameraDistance = 14f * density }
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { back = !back },
+    ) {
+        if (turn <= 90f) {
+            Box(Modifier.fillMaxSize()) { GameCover(g.pkg, pal, wide = false) }
+            if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .8f), fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color.Black.copy(alpha = .5f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+        } else {
+            // the back: drawn un-mirrored, the turn is already past the middle
+            Column(Modifier.fillMaxSize().graphicsLayer { rotationY = 180f }.background(pal.card).padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Text(g.name, color = pal.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).background(pal.accent)
+                        .clickable { onPlay(g) }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                        Text(tr("Play", "Oyna"), color = pal.bg, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(tr("Details", "Ayrıntılar"), color = pal.accent, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clickable { onDetails(g) }.padding(4.dp), textAlign = TextAlign.Center)
+                }
+            }
+        }
     }
 }
