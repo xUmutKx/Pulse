@@ -1264,7 +1264,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
     }
     if (arcFile == null) ExSearchBar(standalone, searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = ""; resultsFor = null; searchAll = false }, searchAll) { searchAll = !searchAll; if (query.trim().length >= 2) resultsFor = query.trim() }
-    if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
+    if (recentView) RecentScreen({ openFile(it) }, { recentView = false }, { f -> f.parentFile?.let { d -> com.umutk.pulse.files.home.FilesHomeNav.pendingDir = d.path; com.umutk.pulse.files.home.FilesHomeNav.pendingSelect = f.path; recentView = false } })
     ExMiniPlayer()
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
     arcInfo?.let { p ->
