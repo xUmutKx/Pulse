@@ -2017,16 +2017,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val nnScore = HashMap<String, Float>()
         var nnFix: KeyboardDictionary.Cand? = null
         if (lm != null) runCatching {
-            val stt = NeuralLm.state(lm, nnLang, (ctxText ?: lmCtx).lowercase(loc))
+            // the model knows capitals and punctuation: the text before goes in as it is, and every word is weighed in the case it would be written in
+            val stt = NeuralLm.state(lm, nnLang, ctxText ?: lmCtx)
+            val capFirst = typed.firstOrNull()?.isUpperCase() == true
+            fun form(w: String) = if (capFirst) w.replaceFirstChar { it.titlecase(loc) } else w
             val wider = if (lower.length >= 3 && limit < NN_REACH) candCodes.flatMap { KeyboardDictionary.correct(it, lower, NN_REACH, 6, tc) } else emptyList()
             val pool = (corr + wider).filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) && kotlin.math.abs(it.word.length - lower.length) <= 2 }
                 .sortedBy { it.cost }.distinctBy { it.word }.take(10)
             // the words the person writes weigh a little more (log2 of how often), but a learned word is not taken as a real one: typos left
             // uncorrected were learned too ("öok", "dğzelt"), and they must still be mended
             fun mine(w: String) = NN_USER * kotlin.math.ln(KeyboardDictionary.userCount(w) + 1f) / kotlin.math.ln(2f)
-            for (cd in pool) nnScore[cd.word] = lm.score(stt, cd.word) - NN_LAM * cd.cost + mine(cd.word)
-            for (cd in comp) if (cd.word != lower && cd.word !in nnScore) nnScore[cd.word] = lm.score(stt, cd.word) - NN_COMP + mine(cd.word)
-            val typedLm = lm.score(stt, lower) + mine(lower)
+            for (cd in pool) nnScore[cd.word] = lm.score(stt, form(cd.word)) - NN_LAM * cd.cost + mine(cd.word)
+            for (cd in comp) if (cd.word != lower && cd.word !in nnScore) nnScore[cd.word] = lm.score(stt, form(cd.word)) - NN_COMP + mine(cd.word)
+            val typedLm = lm.score(stt, form(lower)) + mine(lower)
             val listed = codes.any { KeyboardDictionary.inLexicon(it, lower) }
             val best = pool.maxByOrNull { nnScore.getValue(it.word) }
             if (best != null) {

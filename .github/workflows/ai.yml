@@ -53,7 +53,8 @@ jobs:
         run: set -o pipefail; gradle :localai:assembleRelease -PwithAi -Dorg.gradle.jvmargs='-Xmx6g -Dfile.encoding=UTF-8' --no-daemon 2>&1 | tee build.log
       - name: Errors
         if: failure()
-        run: grep -n -E "error:|e: |FAILED|CMake Error" build.log | head -80 || true
+        run: |
+          grep -n -E "error:|e: |FAILED|CMake Error" build.log | head -80 || true
       - uses: actions/upload-artifact@v5
         with:
           name: pulse-ai-apk
