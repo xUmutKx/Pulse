@@ -72,6 +72,8 @@ class ZipJob(val id: Int, val name: String, val files: List<File>, val target: F
     val done = MutableStateFlow(0L)
     val state = MutableStateFlow(ZipState.RUNNING)
     @Volatile var cancelled = false
+    /** why it failed (the exception), shown with the result so a failure can be told apart */
+    @Volatile var error = ""
 }
 
 /** Thrown inside the writer when the job is cancelled. */
@@ -99,6 +101,10 @@ object ZipJobs {
         runCatching { ContextCompat.startForegroundService(c, Intent(c, ZipService::class.java)) }
         scope.launch {
             val failed = runCatching { zipWrite(job); if (splitBytes > 0) splitVolumes(job.target, splitBytes) { job.cancelled } }.exceptionOrNull()
+            if (failed != null && failed !is ZipCancelled) {
+                job.error = "${failed.javaClass.simpleName}: ${failed.message ?: "-"}"
+                android.util.Log.e("PulseZip", "compress ${job.name} (${job.kind}, split $splitBytes) failed", failed)
+            }
             val st = when {
                 failed == null -> ZipState.DONE
                 failed is ZipCancelled -> ZipState.CANCELLED
@@ -263,7 +269,7 @@ private fun sizeOf(f: File): Long = if (f.isFile) f.length() else f.walkTopDown(
 private fun endText(job: ZipJob, st: ZipState): String = when (st) {
     ZipState.DONE -> tr("Compressed ${job.target.name} · ${exSize(job.target.length())}", "${job.target.name} sıkıştırıldı · ${exSize(job.target.length())}")
     ZipState.CANCELLED -> tr("Compression cancelled", "Sıkıştırma iptal edildi")
-    else -> tr("Could not compress ${job.name}", "${job.name} sıkıştırılamadı")
+    else -> tr("Could not compress ${job.name}", "${job.name} sıkıştırılamadı") + if (job.error.isNotEmpty()) "\n" + job.error.take(160) else ""
 }
 
 private fun notifyEnd(c: Context, job: ZipJob, st: ZipState) {
