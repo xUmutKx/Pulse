@@ -22,8 +22,9 @@
 #endif
 #endif
 
+// Pulse AI: __android_log_is_loggable exists only from Android 11; the library is built for Android 9, so the level is compared here
 static inline int ai_should_log(int prio) {
-    return __android_log_is_loggable(prio, LOG_TAG, LOG_MIN_LEVEL);
+    return prio >= LOG_MIN_LEVEL;
 }
 
 #if LOG_MIN_LEVEL <= ANDROID_LOG_VERBOSE
