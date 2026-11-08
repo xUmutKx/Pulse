@@ -116,7 +116,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (uri != null && clip.description.hasMimeType("image/*")) {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
         } else {
-            val t = item.coerceToText(this)?.toString()?.trim()
+            // a very long copy can come as a text file behind an address instead of inline: it is read from there (up to 2 MB)
+            val t = (runCatching { item.coerceToText(this)?.toString() }.getOrNull()?.takeIf { uri == null || it != uri.toString() }
+                ?: uri?.let { u -> runCatching { contentResolver.openInputStream(u)?.use { ins -> String(ins.readNBytes(2_000_000)) } }.getOrNull() })?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
             if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
