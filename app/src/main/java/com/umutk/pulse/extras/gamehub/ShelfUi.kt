@@ -29,7 +29,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -111,15 +113,29 @@ private fun ShelfPill(label: String, filled: Boolean, pal: Pal, onClick: () -> U
     ) { Text(label, color = if (filled) pal.bg else pal.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
 }
 
-/** One box art standing on the shelf: a lit hinge strip down the left and a gloss over the top, as on a real case. */
+/**
+ * One game case on the shelf, as a retail case: a dark band on top with its label, the spine down the left with the title running up it, and the
+ * cover (the store picture, one you chose, or the app icon with the name) filling the rest, with a gloss over it.
+ */
 @Composable
 private fun BoxArt(g: GameRow, pal: Pal, hidden: Boolean, modifier: Modifier = Modifier) {
-    Box(modifier.clip(RoundedCornerShape(6.dp)).background(pal.card)) {
-        GameCover(g.pkg, pal, wide = false)
-        Box(Modifier.fillMaxHeight().width(9.dp).background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .5f), Color.White.copy(alpha = .16f), Color.Transparent))))
-        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .14f), Color.Transparent, Color.Transparent))))
-        if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .85f), fontSize = 10.sp,
-            modifier = Modifier.align(Alignment.BottomStart).padding(6.dp).background(Color.Black.copy(alpha = .55f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+    Row(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFF0F1216))) {
+        // the spine
+        BoxWithConstraints(Modifier.fillMaxHeight().width(13.dp).background(Brush.horizontalGradient(listOf(Color(0xFF07090B), Color(0xFF2A3038)))), contentAlignment = Alignment.Center) {
+            Text(g.name, color = Color.White.copy(alpha = .8f), fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                modifier = Modifier.requiredWidth(maxHeight - 10.dp).graphicsLayer { rotationZ = -90f })
+        }
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            Box(Modifier.fillMaxWidth().height(17.dp).background(Color(0xFF22272E)).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+                Text(tr("GAME", "OYUN"), color = Color.White.copy(alpha = .6f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                GameCover(g.pkg, pal, wide = false, title = g.name)
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .14f), Color.Transparent, Color.Transparent))))
+                if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .85f), fontSize = 10.sp,
+                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color.Black.copy(alpha = .55f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+            }
+        }
     }
 }
 
@@ -370,6 +386,75 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
                 Spacer(Modifier.weight(1f))
                 ShelfPill(if (step == last) tr("Done", "Bitti") else tr("Next", "İleri"), true, pal) { if (step == last) onDone() else step++ }
             }
+        }
+    }
+}
+
+/**
+ * The page of a game, laid out like the details panel of Boxshelf but stacked for a phone held upright: the case with the name and its kind, a wide
+ * Open button and More, then two tabs: Overview (what it is and the facts) and Settings (the game's own settings). No stripe marks the chosen tab;
+ * it is shown by its weight and a soft pill.
+ */
+@Composable
+internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, size: Long, hidden: Boolean, onBack: () -> Unit, onPlay: () -> Unit, settings: @Composable () -> Unit) {
+    val ctx = LocalContext.current
+    var tab by remember(g.pkg) { mutableStateOf(0) }
+    var more by remember(g.pkg) { mutableStateOf(false) }
+    var fav by remember(g.pkg) { mutableStateOf(g.pkg in favSet(ctx)) }
+    Column(Modifier.fillMaxSize().background(pal.bg).statusBarsPadding()) {
+        Box(Modifier.padding(8.dp).size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                BoxArt(g, pal, hidden, Modifier.width(104.dp).aspectRatio(2f / 3f))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(tr("GAME", "OYUN"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp)
+                    Text(g.name, color = pal.text, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text(tr("Game", "Oyun"), color = pal.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(pal.card).padding(horizontal = 12.dp, vertical = 5.dp))
+                }
+            }
+            Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.text).clickable(onClick = onPlay).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+                    Text(tr("Open", "Aç"), color = pal.bg, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.clip(RoundedCornerShape(14.dp)).background(pal.card).clickable { more = !more }.padding(horizontal = 20.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                    Text("··· " + tr("More", "Daha fazla"), color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (more) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ShelfPill(tr("Add to home", "Ana ekrana ekle"), false, pal) { pinGame(ctx, g.pkg) }
+                ShelfPill(if (fav) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori"), false, pal) { toggleFav(ctx, g.pkg); fav = g.pkg in favSet(ctx) }
+                ShelfPill(tr("Data folder", "Data klasörü"), false, pal) { openDataFolder(ctx, g.pkg) }
+            }
+            Row(Modifier.padding(top = 18.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(tr("Overview", "Genel"), tr("Settings", "Ayarlar")).forEachIndexed { i, label ->
+                    Text(label, color = if (tab == i) pal.text else pal.sub, fontSize = 15.sp, fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (tab == i) pal.card else Color.Transparent).clickable { tab = i }.padding(horizontal = 14.dp, vertical = 7.dp))
+                }
+            }
+            if (tab == 0) {
+                Text(tr("Opens ${g.name}. Close it to come back to the shelf.", "${g.name} açılır. Kapatınca rafa dönersin."), color = pal.text, fontSize = 15.sp)
+                Text(tr("GAME INFO", "OYUN BİLGİSİ"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp))
+                InfoRow(pal, tr("Type", "Tür"), tr("Game", "Oyun"))
+                InfoRow(pal, tr("Program", "Program"), g.pkg)
+                InfoRow(pal, tr("Returns", "Dönüş"), tr("When you close the app", "Uygulamayı kapatınca"))
+                InfoRow(pal, tr("Total played", "Toplam oynama"), if (total > 0) hm(total) else "-")
+                InfoRow(pal, tr("Last played", "Son oynama"), if (lastUsed > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(lastUsed)) else "-")
+                InfoRow(pal, tr("Size", "Boyut"), if (size > 0) "%.1f MB".format(size / 1_048_576.0) else "-")
+                InfoRow(pal, tr("On the shelf", "Rafta"), if (hidden) tr("Hidden", "Gizli") else tr("Shown", "Görünür"))
+            } else settings()
+            Spacer(Modifier.height(28.dp))
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(pal: Pal, label: String, value: String) {
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(pal.sub.copy(alpha = .18f)))
+        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = pal.sub, fontSize = 14.sp)
+            Text(value, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 16.dp))
         }
     }
 }
