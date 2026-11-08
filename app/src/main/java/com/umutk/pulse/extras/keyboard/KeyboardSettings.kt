@@ -304,6 +304,7 @@ fun KeyboardSettings(back: () -> Unit) {
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Look.accent else T.panel).clickable { KeyboardPrefs.clipHours = h; save() }.padding(vertical = 8.dp, horizontal = 2.dp))
                 }
             }
+            Switch(tr("Password manager in the bar", "Parola yöneticisi çubukta"), tr("The system autofill suggestions show in the bar; off, they come as the system's own pop-up", "Sistem otomatik doldurma önerileri çubukta görünür; kapalıysa sistemin kendi açılır penceresi çıkar"), KeyboardPrefs.inlineAutofill) { KeyboardPrefs.inlineAutofill = it; save() }
             Switch(tr("Pin button in the bar", "Çubukta sabitleme tuşu"), tr("The copied item or photo in the bar gets a pin: pinned ones stay in the clipboard and in the bar", "Çubuktaki kopyalanan öğe ya da fotoğrafta sabitleme tuşu olur: sabitlenenler panoda ve çubukta kalır"), KeyboardPrefs.quickPinBtn) { KeyboardPrefs.quickPinBtn = it; save() }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }
             Switch(tr("Quick period", "Hızlı nokta"), tr("Double tap on space puts in a period", "Boşluğa çift dokunuş nokta koyar"), KeyboardPrefs.quickPeriod) { KeyboardPrefs.quickPeriod = it; save() }
