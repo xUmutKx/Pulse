@@ -447,6 +447,18 @@ fun KeyboardSettings(back: () -> Unit) {
             if (lnote.isNotEmpty()) Text(lnote, color = T.sub, fontSize = 12.sp)
         }
 
+        // the suggestions blocked from the bar (a word, a name or an e-mail address held and blocked): a tap brings one back
+        KbSection("eyeOff", tr("Blocked suggestions", "Engellenen öneriler")) {
+            var blocked by remember { mutableStateOf(KeyboardDictionary.bannedList(ctx)) }
+            if (blocked.isEmpty()) Text(tr("None", "Yok"), color = T.sub, fontSize = 13.sp)
+            blocked.forEach { w ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(w, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(36.dp).clickable { KeyboardDictionary.unban(ctx, w); blocked = KeyboardDictionary.bannedList(ctx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("restore", T.accent, 20.dp) }
+                }
+            }
+        }
+
         // statistics: what the keyboard has learned and where the fingers land
         KbSection("tune", tr("Statistics", "İstatistik")) {
             remember { KeyboardDictionary.ensureUser(ctx) }
@@ -454,6 +466,29 @@ fun KeyboardSettings(back: () -> Unit) {
             @Composable fun row(label: String, v: Int?) = Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f)); Text("${v ?: 0}", color = T.text, fontSize = 13.sp)
             }
+            // how far the keyboard has learned this person: its words, its slips, where the fingers land, and how often its corrections were right
+            val words = KbStats.get(ctx, "words"); val fixes = KbStats.get(ctx, "fixes"); val undone = KbStats.get(ctx, "undone")
+            val parts = listOf(
+                tr("Your words", "Kelimeleriniz") to ((st2["words"] ?: 0) / 3000f).coerceIn(0f, 1f),
+                tr("Your typos", "Yazım hatalarınız") to ((st2["typos"] ?: 0) / 400f).coerceIn(0f, 1f),
+                tr("Touch model", "Dokunuş modeli") to ((st2["letters"] ?: 0) / 30000f).coerceIn(0f, 1f),
+                tr("Correction accuracy", "Düzeltme isabeti") to (if (fixes < 20) 0f else (1f - undone.toFloat() / fixes).coerceIn(0f, 1f)),
+            )
+            val overall = parts.map { it.second }.average().toFloat()
+            Text(tr("Learning", "Öğrenme") + " " + (overall * 100).toInt() + "%", color = T.text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+            parts.forEach { (label, f) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(T.accent.copy(alpha = .15f))) {
+                        Box(Modifier.fillMaxWidth(f).height(8.dp).background(T.accent))
+                    }
+                    Text(" ${(f * 100).toInt()}%", color = T.text, fontSize = 12.sp, modifier = Modifier.width(44.dp))
+                }
+            }
+            row(tr("Words written", "Yazılan kelime"), words)
+            row(tr("Automatic corrections", "Otomatik düzeltme"), fixes)
+            row(tr("Corrections taken back", "Geri alınan düzeltme"), undone)
+            if (KeyboardPrefs.neural) Text(tr("Neural model: Turkish and English, on the phone", "Sinir ağı modeli: Türkçe ve İngilizce, telefonda"), color = T.sub, fontSize = 12.sp)
             row(tr("Letters typed", "Yazılan harf"), st2["letters"])
             row(tr("Learned words", "Öğrenilen kelime"), st2["words"])
             row(tr("Learned typos", "Öğrenilen yazım hatası"), st2["typos"])

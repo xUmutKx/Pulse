@@ -558,6 +558,14 @@ object KeyboardDictionary {
     // words the person asked never to see as a suggestion again
     private val banned: MutableSet<String> = ConcurrentHashMap.newKeySet()
     fun isBanned(w: String) = w.lowercase(Locale.ROOT) in banned
+    /** The blocked suggestions, for the list in the settings. */
+    fun bannedList(c: Context): List<String> { if (!userLoaded) loadUser(c); return banned.sorted() }
+    /** Brings a blocked suggestion back. */
+    fun unban(c: Context, w: String) {
+        if (!userLoaded) loadUser(c)
+        banned -= w.lowercase(Locale.ROOT)
+        runCatching { File(c.filesDir, "kbd_banned.txt").writeText(banned.joinToString("\n")) }
+    }
     fun ban(c: Context, w: String) {
         if (!userLoaded) loadUser(c)
         banned += w.lowercase(Locale.ROOT)
