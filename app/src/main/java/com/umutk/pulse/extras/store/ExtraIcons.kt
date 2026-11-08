@@ -199,11 +199,12 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         val pv = preview
                         if (spec != null && pv != null) Image(pv.asImageBitmap(), null, Modifier.size(64.dp)) else PIcon(glyph, T.text, 40.dp)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
-                        PChip(tab == "pack", tr("Icon pack", "İkon paketi")) { tab = "pack" }
-                        PChip(tab == "make", tr("Maker", "Üretici")) { tab = "make"; makeNow() }
-                    }
+                }
+                // the three choices on their own row (scrolls when narrow), so no label is squeezed into a column
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
+                    PChip(tab == "pack", tr("Icon pack", "İkon paketi")) { tab = "pack" }
+                    PChip(tab == "make", tr("Maker", "Üretici")) { tab = "make"; makeNow() }
                 }
                 if (tab == "pack") {
                     if (packs.isEmpty()) Text(tr("No icon pack is installed", "Yüklü ikon paketi yok"), color = T.sub, fontSize = 13.sp)
@@ -244,10 +245,16 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                     Text(tr("Glyph colour", "Simge rengi"), color = T.sub, fontSize = 12.sp)
                     Swatches(INK_SWATCHES + Look.accent.toArgb(), ink) { ink = it; makeNow() }
                     PField(glyphQuery, { glyphQuery = it }, tr("Glyph", "Simge"), Modifier.fillMaxWidth())
-                    val keys = remember(glyphQuery) {
+                    // without a search, the glyphs that fit the name come first (Music player: music, play), the app's own glyph before them
+                    val keys = remember(glyphQuery, name, glyph) {
                         val q = glyphQuery.lowercase().trim()
-                        val words = if (q.isEmpty()) emptyList() else listOf(q) + (com.umutk.pulse.extras.palette.iconpack.IconWords.en[q] ?: emptyList())
-                        com.umutk.pulse.FluentPaths.map.keys.filter { k -> words.isEmpty() || words.any { k.lowercase().contains(it) } }.sorted().take(40)
+                        val words = if (q.isEmpty()) {
+                            name.lowercase().split(Regex("[^\\p{L}]+")).filter { it.length >= 3 }.flatMap { w -> listOf(w) + (com.umutk.pulse.extras.palette.iconpack.IconWords.en[w] ?: emptyList()) }
+                        } else listOf(q) + (com.umutk.pulse.extras.palette.iconpack.IconWords.en[q] ?: emptyList())
+                        val all = com.umutk.pulse.FluentPaths.map.keys
+                        val hits = all.filter { k -> words.isNotEmpty() && words.any { k.lowercase().contains(it) } }.sorted()
+                        val own = listOf(glyph).filter { it in all && q.isEmpty() }
+                        (own + hits).distinct().ifEmpty { all.sorted() }.take(40)
                     }
                     keys.chunked(6).forEach { line ->
                         Row(Modifier.fillMaxWidth()) {
