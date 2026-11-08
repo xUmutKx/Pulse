@@ -2331,3 +2331,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Şarkı sözleri: sözü olmayan şarkılar için arka planda toplu söz (Pulse AI, bildirimli servis, kuyruk kalıcı); sözü olmayanlar üstte, olanlar soluk ve altta; klasör seçici en çok şarkılı klasörü açar. (derlenmedi)
 - Sözler düzenleyici: şarkı çalarken çalan satır ortada akar; duraklatınca yerinde kalır, satırlar onaysız düzenlenir/silinir; düzenleyicide oynat/durdur tuşu. (derlenmedi)
 - Seçici (müzik): klasör önbelleğe alınıp liste hemen açılıyor; şarkılardan sözü olanlar arka planda belirlenip altta soluk, "Sözü olanlar" ayracıyla gösteriliyor. (derlenmedi)
+- Dosya sıkıştırma: başarısız olunca gerçek hata nedeni bildirimde ve sonuç satırında gösteriliyor (logcat: PulseZip). (derlenmedi)
