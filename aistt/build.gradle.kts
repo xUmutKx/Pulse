@@ -12,10 +12,12 @@ android {
     compileSdk = 36
     ndkVersion = "29.0.13113456"
     defaultConfig {
-        minSdk = 33
+        minSdk = 28
         ndk { abiFilters += listOf("arm64-v8a") }
+        consumerProguardFiles("proguard-rules.pro")
         externalNativeBuild {
             cmake {
+                abiFilters += listOf("arm64-v8a")
                 arguments += listOf("-DWHISPER_SRC=$vendor/whisper.cpp", "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=OFF",
                     "-DWHISPER_BUILD_EXAMPLES=OFF", "-DWHISPER_BUILD_TESTS=OFF", "-DWHISPER_BUILD_SERVER=OFF", "-DGGML_NATIVE=OFF", "-DGGML_OPENMP=OFF",
                     "-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16")

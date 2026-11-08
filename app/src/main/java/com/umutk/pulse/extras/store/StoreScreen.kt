@@ -404,10 +404,7 @@ private fun builtinRows(): List<BuiltinRow> {
         BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "voice") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
         BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "notes") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
         // Pulse AI: its own APK (local chat and speech to text); opened when installed, else its download page
-        BuiltinRow("Pulse AI", tr("Local chat, timed lyrics and text fixes, on the phone", "Telefonda yerel sohbet, zamanlı sözler ve metin düzeltme"), "star", "ext:ai") {
-            val i = ctx.packageManager.getLaunchIntentForPackage("com.umutk.pulse.extra.ai")
-            runCatching { ctx.startActivity((i ?: android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/xUmutKx/Pulse/releases?q=ai-v&expanded=true"))).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        },
+        BuiltinRow("Pulse AI", tr("Local chat, timed lyrics and text fixes, on the phone", "Telefonda yerel sohbet, zamanlı sözler ve metin düzeltme"), "star", "app:AiLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "ai") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai") },
         BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "weather") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
         // the tools of the ⋮ menu's Tools group, so nothing is missing from this one full list of every extra app
         BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit", route = "toolkit") { openTool("toolkit") },

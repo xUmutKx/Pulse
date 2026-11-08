@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Pulse AI's engines are built for Android 9+; Pulse checks the version before it loads them -->
+    <uses-sdk tools:overrideLibrary="com.arm.aichat, com.umutk.pulse.ai.stt" />
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <!-- LocalSend: the multicast announcement of nearby devices -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -74,7 +76,6 @@
     <!-- Sound mode tile: Silent needs Do Not Disturb access, and Pulse is listed there only with this -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <queries>
-        <package android:name="com.umutk.pulse.extra.ai" />
         <package android:name="com.termux" />
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="rikka.shizuku" />
@@ -1584,6 +1585,12 @@
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_keyboard" android:roundIcon="@drawable/launch_keyboard" android:label="Keyboard">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".AiLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_ai" android:roundIcon="@drawable/launch_ai" android:label="Pulse AI">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

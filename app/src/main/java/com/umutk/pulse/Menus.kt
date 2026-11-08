@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.MenuBook
@@ -206,6 +207,7 @@ object AppPlace {
         App("VoiceLauncher", "Voice recorder", "Ses kaydedici", "voice", Icons.Outlined.Mic) { c, _ -> launchExtra(c, TOOL, "voice") },
         App("NotesLauncher", "Notes", "Notlar", "notes", Icons.Outlined.Notes) { c, _ -> launchExtra(c, TOOL, "notes") },
         App("WeatherLauncher", "Weather", "Hava durumu", "weather", Icons.Outlined.WbSunny) { c, _ -> launchExtra(c, TOOL, "weather") },
+        App("AiLauncher", "Pulse AI", "Pulse AI", "star", Icons.Outlined.AutoAwesome) { c, _ -> launchExtra(c, TOOL, "ai") },
         App("MessagesLauncher", "Messages", "Mesajlar", "chat", Icons.Outlined.Message) { _, o -> o("messages") },
         App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
         App("KeyboardLauncher", "Keyboard", "Klavye", "keyboard", Icons.Outlined.Keyboard) { c, _ -> launchExtra(c, TOOL, "keyboard") },

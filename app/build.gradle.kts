@@ -48,6 +48,8 @@ android {
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
     buildFeatures { compose = true; aidl = true; buildConfig = true }
+    // Pulse AI: ggml loads its CPU back ends from the library folder at run time, so the native libraries are extracted on install
+    packaging { jniLibs { useLegacyPackaging = true } }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 
@@ -56,6 +58,8 @@ dependencies {
     implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
+    implementation(project(":localai")) // Pulse AI chat: llama.cpp (arm64)
+    implementation(project(":aistt")) // Pulse AI speech to text: whisper.cpp (arm64)
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
     add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
