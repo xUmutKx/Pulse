@@ -1,0 +1,4 @@
+-keep class com.arm.aichat.** { *; }
+-keep class com.umutk.pulse.ai.stt.** { *; }
+-keepclasseswithmembernames class * { native <methods>; }
+-keep class kotlin.Metadata { *; }
