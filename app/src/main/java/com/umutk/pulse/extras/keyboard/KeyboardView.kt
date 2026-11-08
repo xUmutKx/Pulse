@@ -1455,7 +1455,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                         Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
                             Icon(kbIcon(th, "PushPin"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
                         }
-                        if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        if (it2.image != null) ClipThumb(it2.image) else Text(it2.text.take(240), color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         Text(ago(now - it2.time), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
                     }

@@ -54,7 +54,7 @@ object ClipStore {
     fun addText(c: Context, t: String): List<ClipItem> {
         read(c)
         val text = t.trim()
-        if (text.isEmpty() || text.length > 20000) return load(c)
+        if (text.isEmpty() || text.length > 300_000) return load(c)
         val same = items.firstOrNull { it.image == null && it.text == text }
         items = items.filter { it !== same } + ClipItem(System.currentTimeMillis(), text, null, System.currentTimeMillis(), same?.pinned == true)
         trim(c); write(c)
