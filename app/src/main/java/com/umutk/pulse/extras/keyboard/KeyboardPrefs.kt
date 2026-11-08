@@ -67,6 +67,8 @@ object KeyboardPrefs {
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
     var quickPinBtn by mutableStateOf(true)
+    /** The password manager's suggestions (the system's autofill) drawn in the bar; off, they come as the system's own pop-up. */
+    var inlineAutofill by mutableStateOf(true)
     var quickPeriod by mutableStateOf(true)
     var autoCap by mutableStateOf(true)
     var autoSpace by mutableStateOf(false)
@@ -165,7 +167,7 @@ object KeyboardPrefs {
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect)
-        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn)
+        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill)
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn); learnMode = p.getInt("learnMode", if (learn) 3 else 0); autoLang = p.getBoolean("autoLang", true); emailDomain = p.getString("emailDomain", "gmail.com") ?: "gmail.com"; learn = learnMode != 0
@@ -247,7 +249,7 @@ object KeyboardPrefs {
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
-            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
+            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putBoolean("dirLayout", dirLayout).putInt("rgb", rgb).putInt("clipKeep", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
