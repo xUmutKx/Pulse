@@ -89,7 +89,8 @@ object Premium {
      */
     @Volatile var verified = false
 
-    fun on(c: Context): Boolean = verified
+    /** The play build: only a verified Play purchase (Play's own promo codes redeem into it). Other builds: a Pulse promo code (About > Premium). */
+    fun on(c: Context): Boolean = verified || (com.umutk.pulse.BuildConfig.FLAVOR != "play" && com.umutk.pulse.Premium.isOn(c))
 }
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
