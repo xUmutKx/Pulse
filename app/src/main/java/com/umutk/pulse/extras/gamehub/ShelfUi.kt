@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -293,40 +294,82 @@ private fun CaseBack(g: GameRow, pal: Pal, modifier: Modifier) {
 }
 
 /**
- * The first time the shelf opens: your games are listed, the box art is fetched from the store (it can be switched off), and play time and more
- * apps are one tap away. Done keeps the choice; it is asked once.
+ * The setup, in the steps of Boxshelf's setup wizard (games, look, box art, access), cut down to what a phone has: it opens by itself the first time
+ * Game Hub is ever used, and any time from Settings > Setup. Each choice is kept at once; Done only closes it.
  */
 @Composable
-internal fun ShelfSetup(pal: Pal, onAddMore: () -> Unit, onDone: () -> Unit) {
+internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAddMore: () -> Unit, onDone: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val games = remember { loadGames(ctx) }
+    var step by remember { mutableStateOf(0) }
+    val last = 4
     var art by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+    var iconMode by remember { mutableStateOf(prefs(ctx).getInt("iconMode", 0)) }
     var busy by remember { mutableStateOf(false) }
     var got by remember { mutableStateOf<Int?>(null) }
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)) {
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(pal.card).padding(18.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(tr("Set up your shelf", "Rafını kur"), color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(tr("${games.size} games were found on this phone.", "Bu telefonda ${games.size} oyun bulundu."), color = pal.sub, fontSize = 13.sp)
-            ShelfPill(tr("Add more apps", "Başka uygulama ekle"), false, pal) { onAddMore() }
-            SettingRow(pal, tr("Box art from the store", "Mağazadan kutu resimleri"), art, true) { art = it; prefs(ctx).edit().putBoolean("playCovers", it).apply() }
-            if (art) {
-                ShelfPill(if (busy) tr("Fetching…", "Getiriliyor…") else tr("Fetch the box art now", "Kutu resimlerini şimdi getir"), false, pal) {
-                    if (!busy) { busy = true; scope.launch {
-                        got = withContext(Dispatchers.IO) { var n = 0; for (g in games) if (!coverFile(ctx, g.pkg).isFile && !playCoverFile(ctx, g.pkg).isFile && fetchPlayCover(ctx, g.pkg)) n++; n }
-                        GameArt.version.intValue++; busy = false
-                    } }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(pal.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // where you are: one bar per step
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(last + 1) { i -> Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(if (i <= step) pal.accent else pal.sub.copy(alpha = .3f))) }
+            }
+            Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                when (step) {
+                    0 -> {
+                        Text(tr("Welcome to your shelf", "Rafına hoş geldin"), color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("Your games stand on a shelf as boxes you can turn, open and play. A few quick choices first; you can change them any time in Settings.",
+                            "Oyunların bir rafta, çevirip açıp oynayabileceğin kutular olarak durur. Önce birkaç kısa seçim; hepsini istediğin zaman Ayarlar'dan değiştirebilirsin."), color = pal.sub, fontSize = 14.sp)
+                    }
+                    1 -> {
+                        Text(tr("Games", "Oyunlar"), color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("${games.size} games were found on this phone.", "Bu telefonda ${games.size} oyun bulundu."), color = pal.sub, fontSize = 14.sp)
+                        Text(games.take(6).joinToString(", ") { it.name } + if (games.size > 6) "…" else "", color = pal.text, fontSize = 13.sp)
+                        ShelfPill(tr("Add more apps", "Başka uygulama ekle"), false, pal) { onAddMore() }
+                    }
+                    2 -> {
+                        Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        THEMES.forEach { k ->
+                            val tp = palOf(k, ctx)
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.bg).clickable { onTheme(k) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(22.dp).clip(CircleShape).background(tp.accent))
+                                Text(themeName(k), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                                if (k == theme) FluentIcon("check", pal.accent, 18.dp)
+                            }
+                        }
+                    }
+                    3 -> {
+                        Text(tr("Box art", "Kutu resimleri"), color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        SettingRow(pal, tr("Box art from the store", "Mağazadan kutu resimleri"), art, true) { art = it; prefs(ctx).edit().putBoolean("playCovers", it).apply() }
+                        if (art) {
+                            ShelfPill(if (busy) tr("Fetching…", "Getiriliyor…") else tr("Fetch the box art now", "Kutu resimlerini şimdi getir"), false, pal) {
+                                if (!busy) { busy = true; scope.launch {
+                                    got = withContext(Dispatchers.IO) { var n = 0; for (g in games) if (!coverFile(ctx, g.pkg).isFile && !playCoverFile(ctx, g.pkg).isFile && fetchPlayCover(ctx, g.pkg)) n++; n }
+                                    GameArt.version.intValue++; busy = false
+                                } }
+                            }
+                            got?.let { Text(tr("$it covers fetched", "$it kapak getirildi"), color = pal.sub, fontSize = 12.sp) }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ShelfPill(tr("Cover, else app icon", "Kapak, yoksa uygulama simgesi"), iconMode == 0, pal) { iconMode = 0; prefs(ctx).edit().putInt("iconMode", 0).apply(); GameArt.version.intValue++ }
+                            ShelfPill(tr("App icon only", "Yalnız uygulama simgesi"), iconMode == 1, pal) { iconMode = 1; prefs(ctx).edit().putInt("iconMode", 1).apply(); GameArt.version.intValue++ }
+                        }
+                    }
+                    else -> {
+                        Text(tr("Play time and access", "Oynama süresi ve erişim"), color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("Play time needs usage access. Hiding games and per-game settings need root or Shizuku (optional).", "Oynama süresi kullanım erişimi ister. Oyun gizleme ve oyun başına ayarlar root ya da Shizuku ister (isteğe bağlı)."), color = pal.sub, fontSize = 13.sp)
+                        ShelfPill(tr("Allow play time", "Oynama süresine izin ver"), false, pal) {
+                            if (Privilege.mode != Privilege.Mode.None) grantUsageAccess(ctx)
+                            else runCatching { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        }
+                    }
                 }
-                got?.let { Text(tr("$it covers fetched", "$it kapak getirildi"), color = pal.sub, fontSize = 12.sp) }
             }
-            ShelfPill(tr("Allow play time", "Oynama süresine izin ver"), false, pal) {
-                if (Privilege.mode != Privilege.Mode.None) grantUsageAccess(ctx)
-                else runCatching { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (step > 0) ShelfPill(tr("Back", "Geri"), false, pal) { step-- }
+                Spacer(Modifier.weight(1f))
+                ShelfPill(if (step == last) tr("Done", "Bitti") else tr("Next", "İleri"), true, pal) { if (step == last) onDone() else step++ }
             }
-            ShelfPill(tr("Done", "Bitti"), true, pal) { onDone() }
         }
     }
 }
