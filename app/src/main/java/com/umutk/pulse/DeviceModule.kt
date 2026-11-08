@@ -36,6 +36,13 @@ private object DeviceKept { var sub = "overview" }
 fun DeviceModule() {
     var sub by remember { mutableStateOf(DeviceKept.sub) }
     androidx.compose.runtime.SideEffect { DeviceKept.sub = sub }
+    // leaving the app puts the module back on Overview, so it opens there next time (a tool opened from a tab still comes back to that tab)
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) { sub = "overview"; DeviceKept.sub = "overview" } }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
             // on Overview the parts that have a tile below are not repeated up here (the tile opens them)
