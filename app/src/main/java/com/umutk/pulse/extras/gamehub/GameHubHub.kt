@@ -898,6 +898,11 @@ fun GameHubHub(onBack: () -> Unit) {
                         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(pal.radius)).clickable { profile = last }) {
                             GameCover(last.pkg, pal)
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .75f)))))
+                            // removes the cover picture kept for the game (the one chosen or fetched); the game's own banner from its app stays
+                            Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.Black.copy(alpha = .5f))
+                                .clickable { coverFile(ctx, last.pkg).delete(); playCoverFile(ctx, last.pkg).delete(); GameArt.version.intValue++ }, contentAlignment = Alignment.Center) {
+                                FluentIcon("delete", Color.White, 16.dp)
+                            }
                             Row(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(last.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f))
                                 Box(Modifier.clip(RoundedCornerShape(20.dp)).background(pal.accent).clickable { openGame(ctx, last.pkg) }.padding(horizontal = 16.dp, vertical = 8.dp)) { Text(tr("Play", "Oyna"), color = pal.bg, fontWeight = FontWeight.Bold) }
