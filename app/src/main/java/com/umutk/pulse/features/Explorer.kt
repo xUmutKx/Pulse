@@ -455,6 +455,13 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
     LaunchedEffect(wantedArc) { if (wantedArc != null) { arcFile = wantedArc; arcCwd = ""; arcSel = emptySet(); FilesLaunch.archive = null } }
+    // a password-protected zip asks for its password before it opens
+    var pwFor by remember { mutableStateOf<File?>(null) }
+    LaunchedEffect(arcFile) {
+        val f = arcFile
+        if (f != null && ArchiveKeys.get(f) == null && withContext(Dispatchers.IO) { isEncryptedZip(f) }) pwFor = f
+    }
+    pwFor?.let { f -> ArchivePasswordDialog(f, onDismiss = { pwFor = null; arcFile = null }) { pw -> ArchiveKeys.put(f, pw); pwFor = null; arcRev++ } }
     val arcAll by produceState<List<AEntry>?>(null, arcFile, arcRev) {
         value = arcFile?.let { f -> withContext(Dispatchers.IO) { runCatching { archiveEntries(f) }.getOrDefault(emptyList()) } }
     }
@@ -1371,7 +1378,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
 
     zipAsk?.let { files ->
-        ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind, bytes) }
+        ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes, pw -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind, bytes, pw) }
     }
     shareSheet?.let { picks ->
         ExShareSheet(picks, { shareSheet = null }, { note = it })

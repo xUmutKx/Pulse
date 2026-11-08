@@ -67,7 +67,7 @@ private const val ZC_ACT_CANCEL = "com.umutk.pulse.ZIP_CANCEL"
 enum class ZipState { RUNNING, DONE, FAILED, CANCELLED }
 
 /** One compression: [done] counts the bytes read so far out of [total]; [cancelled] stops it between reads. */
-class ZipJob(val id: Int, val name: String, val files: List<File>, val target: File, val total: Long, val kind: String = "zip") {
+class ZipJob(val id: Int, val name: String, val files: List<File>, val target: File, val total: Long, val kind: String = "zip", val password: String = "") {
     val done = MutableStateFlow(0L)
     val state = MutableStateFlow(ZipState.RUNNING)
     @Volatile var cancelled = false
@@ -91,9 +91,9 @@ object ZipJobs {
     fun cancel(id: Int) { list.value.firstOrNull { it.id == id }?.let { it.cancelled = true } }
 
     /** Starts compressing [files] into [dir] as "[name].[kind]" (zip or 7z; a number is added when the name is taken). */
-    fun start(ctx: Context, files: List<File>, name: String, dir: File, kind: String = "zip", splitBytes: Long = 0): ZipJob {
+    fun start(ctx: Context, files: List<File>, name: String, dir: File, kind: String = "zip", splitBytes: Long = 0, password: String = ""): ZipJob {
         val c = ctx.applicationContext
-        val job = ZipJob(++seq, name, files, zipTarget(dir, name, kind), files.sumOf { sizeOf(it) }, kind)
+        val job = ZipJob(++seq, name, files, zipTarget(dir, name, kind), files.sumOf { sizeOf(it) }, kind, password)
         list.value = list.value + job
         runCatching { ContextCompat.startForegroundService(c, Intent(c, ZipService::class.java)) }
         scope.launch {
@@ -146,6 +146,7 @@ private fun splitVolumes(archive: File, size: Long, cancelled: () -> Boolean) {
  */
 private fun zipWrite(job: ZipJob) {
     if (job.kind == "7z") return sevenZWrite(job)
+    if (job.password.isNotEmpty()) return zip4jWrite(job)
     val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
     val pool = java.util.concurrent.Executors.newFixedThreadPool(threads)
     try {
@@ -174,6 +175,38 @@ private fun zipWrite(job: ZipJob) {
             org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream(job.target).use { zos -> creator.writeTo(zos) }
         } catch (x: java.util.concurrent.ExecutionException) { throw (x.cause ?: x) }
     } finally { pool.shutdownNow() }
+}
+
+/** A zip with a password: AES-256 encrypted entries, written by zip4j one item after the other; the progress is read from its monitor by a helper thread. */
+private fun zip4jWrite(job: ZipJob) {
+    val zf = net.lingala.zip4j.ZipFile(job.target, job.password.toCharArray())
+    val pm = zf.progressMonitor
+    val params = net.lingala.zip4j.model.ZipParameters().apply {
+        isEncryptFiles = true
+        encryptionMethod = net.lingala.zip4j.model.enums.EncryptionMethod.AES
+        aesKeyStrength = net.lingala.zip4j.model.enums.AesKeyStrength.KEY_STRENGTH_256
+        compressionLevel = net.lingala.zip4j.model.enums.CompressionLevel.FAST
+    }
+    @Volatile var base = 0L
+    @Volatile var cur = 0L
+    val mon = Thread {
+        while (!Thread.currentThread().isInterrupted) {
+            if (job.cancelled) pm.isCancelAllTasks = true
+            job.done.value = base + cur * pm.percentDone / 100L
+            try { Thread.sleep(150) } catch (_: InterruptedException) { break }
+        }
+    }.apply { start() }
+    try {
+        for (f in job.files) {
+            if (job.cancelled) throw ZipCancelled()
+            cur = sizeOf(f)
+            if (f.isDirectory) zf.addFolder(f, params) else zf.addFile(f, params)
+            base += cur; cur = 0
+            job.done.value = base
+        }
+    } catch (x: Exception) {
+        if (job.cancelled) throw ZipCancelled() else throw x
+    } finally { mon.interrupt() }
 }
 
 /** A file read for the zip: the bytes counted into the job's progress, and a cancel stops the read. */
@@ -290,13 +323,14 @@ class ZipService : Service() {
 
 /** The compress box: the output name, what goes in, and the size the zip should come to. Confirm starts the job in the background. */
 @Composable
-fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, String, Long) -> Unit) {
+fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, String, Long, String) -> Unit) {
     val est by produceState<ZipEstimate?>(null, files) { value = withContext(Dispatchers.IO) { zipEstimate(files) } }
     var name by remember(files) { mutableStateOf(if (files.size == 1) files[0].name else "Archive") }
     var kind by remember(files) { mutableStateOf("zip") }
     var split by remember(files) { mutableStateOf(false) }
     var amount by remember(files) { mutableStateOf("100") }
     var unit by remember(files) { mutableStateOf("MB") }
+    var password by remember(files) { mutableStateOf("") }
     WinAlert(onDismissRequest = onDismiss,
         title = { Text(tr("Compress", "Sıkıştır")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -305,6 +339,8 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("zip", "7z").forEach { k -> PChip(kind == k, k.uppercase()) { kind = k } }
             }
+            // a password: the zip is encrypted (AES-256); not for 7z
+            if (kind == "zip") PField(password, { password = it }, tr("Password (optional)", "Parola (isteğe bağlı)"), Modifier.fillMaxWidth())
             // volumes: the archive is cut into parts of this size (name.zip.001, .002, ...)
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PChip(split, tr("Split into parts", "Parçalara böl")) { split = !split }
@@ -318,7 +354,7 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
             ZipInfo(tr("Size", "Boyut"), est?.let { exSize(it.bytes) } ?: "…")
             ZipInfo(tr("Estimated archive", "Tahmini arşiv"), est?.let { "≈ " + exSize(it.packed) } ?: "…")
         } },
-        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); val bytes = if (split) ((amount.toDoubleOrNull() ?: 0.0) * (if (unit == "GB") 1024.0 * 1024 * 1024 else 1024.0 * 1024)).toLong() else 0L; if (n.isNotBlank() && (!split || bytes >= 1024 * 1024)) onStart(n, kind, bytes) }) { Text(tr("Compress", "Sıkıştır")) } },
+        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); val bytes = if (split) ((amount.toDoubleOrNull() ?: 0.0) * (if (unit == "GB") 1024.0 * 1024 * 1024 else 1024.0 * 1024)).toLong() else 0L; if (n.isNotBlank() && (!split || bytes >= 1024 * 1024)) onStart(n, kind, bytes, if (kind == "zip") password else "") }) { Text(tr("Compress", "Sıkıştır")) } },
         dismissButton = { TextButton(onDismiss) { Text(tr("Cancel", "İptal")) } })
 }
 
