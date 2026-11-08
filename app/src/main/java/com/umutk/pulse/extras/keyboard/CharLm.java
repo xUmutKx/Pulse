@@ -68,6 +68,9 @@ public final class CharLm {
         return sign * Float.intBitsToFloat(((e - 15 + 127) << 23) | (m << 13));
     }
 
+    /** The model was trained with capitals (and so reads text as it is written). */
+    public boolean cased() { return chars.indexOf('A') >= 0; }
+
     /** The index of a character (already lower-cased the way the language does it); other characters are the unknown sign. */
     public int index(char c) {
         if (Character.isWhitespace(c)) return space;
