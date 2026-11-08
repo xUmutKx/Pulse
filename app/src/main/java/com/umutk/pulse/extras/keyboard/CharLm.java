@@ -73,6 +73,7 @@ public final class CharLm {
         if (Character.isWhitespace(c)) return space;
         if (c == '’' || c == '`') c = '\'';
         if (c == '–' || c == '—') c = '-';
+        if (c == '\u201C' || c == '\u201D' || c == '\u00AB' || c == '\u00BB') c = '"';
         return c < map.length ? map[c] : unk;
     }
 
