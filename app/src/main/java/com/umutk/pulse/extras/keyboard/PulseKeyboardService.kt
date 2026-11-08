@@ -108,11 +108,24 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastGlide: String? = null
     private var glideAlts: List<String> = emptyList()
     private var clipboard: ClipboardManager? = null
-    private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
+    private val clipListener = ClipboardManager.OnPrimaryClipChangedListener { takeClip(false) }
+    /** The clip last taken (its time and text), so the check on opening does not take the same one twice. */
+    private var lastClipSig = ""
+
+    /**
+     * The newest copy into the keyboard's clipboard and the bar. The system does not always tell the keyboard about a copy (Circle to Search, Google Lens and
+     * some overlays copy while no field is open), so the clipboard is also looked at whenever the keyboard opens: a copy of the last two minutes that was missed is taken then.
+     */
+    private fun takeClip(onOpen: Boolean) {
         // everything copied is kept (a password field's copy and a sensitive one are not), texts and pictures
-        val clip = clipboard?.primaryClip?.takeIf { it.itemCount > 0 } ?: return@OnPrimaryClipChangedListener
-        if (st.incognito || st.plain) return@OnPrimaryClipChangedListener
-        if (android.os.Build.VERSION.SDK_INT >= 24 && clip.description.extras?.getBoolean("android.content.extra.IS_SENSITIVE") == true) return@OnPrimaryClipChangedListener
+        val clip = runCatching { clipboard?.primaryClip }.getOrNull()?.takeIf { it.itemCount > 0 } ?: return
+        if (st.incognito || st.plain) return
+        if (android.os.Build.VERSION.SDK_INT >= 24 && clip.description.extras?.getBoolean("android.content.extra.IS_SENSITIVE") == true) return
+        val stamp = if (android.os.Build.VERSION.SDK_INT >= 26) clip.description.timestamp else 0L
+        val sig = "$stamp|" + (clip.getItemAt(0).text?.toString()?.take(200) ?: clip.getItemAt(0).uri?.toString().orEmpty())
+        if (sig == lastClipSig) return
+        if (onOpen && (stamp == 0L || android.os.SystemClock.elapsedRealtime() - stamp > 120_000)) { lastClipSig = sig; return }
+        lastClipSig = sig
         val item = clip.getItemAt(0)
         val uri = item.uri
         if (uri != null && clip.description.hasMimeType("image/*")) {
@@ -439,6 +452,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        if (!restarting) runCatching { takeClip(true) }
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
         st.hardware = hardwareAttached()
