@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.umutk.pulse"
     compileSdk = 36
+    ndkVersion = "29.0.13113456" // the NDK the CI installs: AGP strips the native libraries with it
     defaultConfig {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
