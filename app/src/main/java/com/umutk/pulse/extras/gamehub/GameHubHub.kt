@@ -215,8 +215,8 @@ internal fun loadGames(c: Context): List<GameRow> {
 /** The cover a person picked for a game (at most 3 MB). */
 private const val COVER_MAX = 3L * 1024 * 1024
 internal fun playCoverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/play_" + pkg.replace('.', '_') + ".jpg")
-private fun favSet(c: Context): Set<String> = prefs(c).getStringSet("favs", emptySet()) ?: emptySet()
-private fun toggleFav(c: Context, pkg: String) {
+internal fun favSet(c: Context): Set<String> = prefs(c).getStringSet("favs", emptySet()) ?: emptySet()
+internal fun toggleFav(c: Context, pkg: String) {
     prefs(c).edit().putStringSet("favs", if (pkg in favSet(c)) favSet(c) - pkg else favSet(c) + pkg).apply()
     GameHubState.favVersion.intValue++
 }
@@ -489,7 +489,7 @@ internal fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit
  * "APK only" in the settings skips the picked picture.
  */
 @Composable
-internal fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
+internal fun GameCover(pkg: String, pal: Pal, wide: Boolean = true, title: String? = null) {
     val ctx = LocalContext.current
     val apkOnly = prefs(ctx).getInt("iconMode", 0) == 1
     val px = if (wide) 960 else 600
@@ -513,6 +513,10 @@ internal fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
         val wideArt = a != null && !wide && a.width > a.height * 1.2f
         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = if (wideArt) ContentScale.Fit else ContentScale.Crop)
         else ic?.let { Image(it, null, Modifier.fillMaxSize(0.6f), contentScale = ContentScale.Fit) }
+        // no cover picture: the name stands on the bottom, like the printed title of a case
+        if (a == null && title != null) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .75f)))).padding(horizontal = 8.dp, vertical = 10.dp)) {
+            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -597,7 +601,7 @@ private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit,
 
 /** A game's page, like a store page: the banner with the cover, the name, a big Play button, the play time and the last played day, and the settings of the game. */
 @Composable
-private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, onHidden: (Boolean) -> Unit) {
+internal fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, compact: Boolean = false, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
     var askAd by remember(g.pkg) { mutableStateOf(false) }
@@ -634,25 +638,25 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
         }
     }
     Box(Modifier.fillMaxWidth()) {
-    blurred?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
-    if (blurred != null) Box(Modifier.matchParentSize().background(pal.bg.copy(alpha = .72f)))
+    if (!compact) blurred?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
+    if (!compact && blurred != null) Box(Modifier.matchParentSize().background(pal.bg.copy(alpha = .72f)))
     Column(Modifier.fillMaxWidth()) {
         // the banner: the cover across the top, the icon and the name over its bottom edge
-        key(coverTick) {
+        if (!compact) key(coverTick) {
             Box(Modifier.fillMaxWidth().height(230.dp).background(pal.bg)) {
                 GameCover(g.pkg, pal)
                 if (!pal.flat) Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.bg))))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-30).dp), verticalAlignment = Alignment.Bottom) {
+        if (!compact) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-30).dp), verticalAlignment = Alignment.Bottom) {
             Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(pal.card), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
             Spacer(Modifier.width(12.dp))
             Text(g.name, color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(bottom = 6.dp))
         }
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-18).dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = if (compact) 0.dp else 16.dp).offset(y = if (compact) 0.dp else (-18).dp)) {
             if (!can) Text(tr("Root or Shizuku is not connected: the hide and background switches are off. Press Check again in Settings.", "Root ya da Shizuku bağlı değil: gizleme ve arka plan anahtarları kapalı. Ayarlar'da Yeniden kontrol et'e bas."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
             // the big Play button, and a shortcut of the game for the home screen (a hidden game starts from it too)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!compact) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         FluentIcon("play", pal.bg, 22.dp)
@@ -662,9 +666,9 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
                 }
                 Box(Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(pal.card).clickable { pinGame(ctx, g.pkg) }, contentAlignment = Alignment.Center) { FluentIcon("add", pal.text, 22.dp) }
             }
-            Spacer(Modifier.height(16.dp))
+            if (!compact) Spacer(Modifier.height(16.dp))
             // the facts: total time, last played
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (!compact) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard(pal, Modifier.weight(1f), tr("Total played", "Toplam oynama"), if (total > 0) hm(total) else "-")
                 StatCard(pal, Modifier.weight(1f), tr("Last played", "Son oynama"), if (lastUsed > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(lastUsed)) else "-")
             }
@@ -1066,7 +1070,12 @@ fun GameHubHub(onBack: () -> Unit) {
     if (setupOpen) ShelfSetup(pal, theme, onTheme = { setTheme(it) }, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
-        Column(Modifier.fillMaxSize().hubGround(theme, pal).statusBarsPadding()) {
+        if (theme == "shelf") {
+            val u = usage[g.pkg]
+            ShelfDetails(g, pal, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L, sizes[g.pkg] ?: 0L, g.pkg in hidden, onBack = { profile = null }, onPlay = { openGame(ctx, g.pkg) }) {
+                GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L, compact = true) { want -> setHidden(g.pkg, want) }
+            }
+        } else Column(Modifier.fillMaxSize().hubGround(theme, pal).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { profile = null }, contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
             }
@@ -1099,7 +1108,7 @@ private fun infoLine(g: GameRow, usage: Map<String, android.app.usage.UsageStats
 }
 
 /** The app's data folder in Pulse's Files, opened at once. */
-private fun openDataFolder(c: Context, pkg: String) {
+internal fun openDataFolder(c: Context, pkg: String) {
     val dir = "/storage/emulated/0/Android/data/$pkg"
     runCatching { c.startActivity(Intent(c, com.umutk.pulse.FilesActivity::class.java).putExtra("open_dir", dir).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
