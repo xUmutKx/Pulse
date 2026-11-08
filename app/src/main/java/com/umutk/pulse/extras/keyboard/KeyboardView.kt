@@ -324,8 +324,10 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         // private typing: a big faint hat behind the keys, only on the keys page; it shows for a moment after every key and fades out
         if (st.incognito && st.panel == "keys") {
             val hat = remember { androidx.compose.animation.core.Animatable(0f) }
+            // switching private typing on (or coming back to the keys) shows the big mark for a moment; every key after that flashes it faintly
+            LaunchedEffect(st.incognito, st.panel) { hat.snapTo(.5f); kotlinx.coroutines.delay(900); hat.animateTo(0f, androidx.compose.animation.core.tween(900)) }
             LaunchedEffect(st.keyTick) { if (st.keyTick > 0) { hat.snapTo(.2f); hat.animateTo(0f, androidx.compose.animation.core.tween(1400)) } }
-            com.umutk.pulse.extras.IncognitoGlyph(th.sub, 96.dp, Modifier.align(Alignment.Center).graphicsLayer { alpha = hat.value })
+            com.umutk.pulse.extras.IncognitoGlyph(th.sub, 150.dp, Modifier.align(Alignment.Center).graphicsLayer { alpha = hat.value })
         }
     }
 }
@@ -472,11 +474,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
-    // no suggestions: no container, only a rounded, thick handle line at the top of the keys. The slot keeps the bar's full height,
-    // so the keyboard does not grow or shrink when a panel (quick auth, emoji, clipboard) opens or closes
+    // no suggestions: no container, only a short handle line just above the keys (the space of an empty bar is given to the keys)
     if (!barHasContent) {
-        Box(Modifier.fillMaxWidth().height(kbBarHeight()), contentAlignment = Alignment.Center) {
-            Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
+        Box(Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
         }
         return
     }
