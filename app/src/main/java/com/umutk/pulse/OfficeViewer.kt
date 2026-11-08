@@ -196,6 +196,15 @@ class OfficeViewActivity : ComponentActivity() {
         return l
     }
 
+    /** Opened from Files (or another Pulse screen): closing goes back to that screen, where the file was, not to the home screen (this viewer lives in a task of its own). */
+    override fun finish() {
+        val back = intent?.getStringExtra("pulse_back")
+        super.finish()
+        if (back != null && back.startsWith("com.umutk.pulse.")) runCatching {
+            startActivity(Intent().setClassName(this, back).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        }
+    }
+
     private fun requestClose() { if (doc?.dirty == true) confirm = true else finish() }
 
     /** [writer] writes the new file into a temp file; it then replaces the original (or becomes a "(copy)" in the Office folder). */
