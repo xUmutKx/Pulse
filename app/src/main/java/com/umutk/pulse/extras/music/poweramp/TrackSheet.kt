@@ -186,7 +186,7 @@ internal fun TrackSheet(
                             }
                         }
                         Toast.makeText(ctx, if (ok) tr("Deleted", "Silindi") else tr("Could not delete", "Silinemedi"), Toast.LENGTH_SHORT).show()
-                        if (ok) MusicLibrary.refresh(ctx)
+                        if (ok) { withContext(Dispatchers.IO) { MusicLibrary.forget(ctx, listOf(track.path)) }; MusicLibrary.refresh(ctx) }
                         close()
                     }
                 }) { Text(tr("Delete", "Sil")) }

@@ -6,6 +6,7 @@ import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import com.umutk.pulse.extras.music.MusicLibrary
 import com.umutk.pulse.extras.music.Track
 import java.io.File
 
@@ -24,6 +25,7 @@ internal fun deleteTracks(ctx: Context, tracks: List<Track>): DeleteOutcome {
         val f = File(t.path)
         if (f.delete() || !f.exists()) deleted++ else left += t
     }
+    MusicLibrary.forget(ctx, tracks.map { it.path }.filter { !File(it).exists() })
     if (left.isEmpty()) return DeleteOutcome(deleted, 0, null)
     val uris = left.mapNotNull { t -> if (t.path.contains("://")) null else audioUri(ctx, t.path) }
     if (Build.VERSION.SDK_INT >= 30 && uris.isNotEmpty()) {
