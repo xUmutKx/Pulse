@@ -343,6 +343,10 @@ object Ebook {
         return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
     }
 
+    /** The word the speed reading stopped on: chapter, page and the word's place among the page's words. */
+    fun saveMark(c: Context, uri: String, chapter: Int, page: Int, word: Int) { p(c).edit().putString("mk_$uri", "$chapter,$page,$word").apply() }
+    fun mark(c: Context, uri: String): IntArray? = p(c).getString("mk_$uri", null)?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 3 }?.toIntArray()
+
     fun savePlace(c: Context, uri: String, chapter: Int, page: Int) {
         p(c).edit().putString("at_$uri", "$chapter,$page").apply()
     }

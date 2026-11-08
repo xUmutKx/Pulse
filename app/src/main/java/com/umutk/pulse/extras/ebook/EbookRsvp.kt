@@ -74,13 +74,14 @@ private fun rsvpPrefs(c: Context) = c.getSharedPreferences("ebook_rsvp", Context
  * It runs from the word where [words] begins (the page being read); [onTick] is told at each word so the reading time is counted.
  */
 @Composable
-internal fun RsvpPane(words: List<RWord>, ink: Color, sub: Color, bg: Color, accent: Color, onTick: () -> Unit, onClose: () -> Unit) {
+internal fun RsvpPane(words: List<RWord>, ink: Color, sub: Color, bg: Color, accent: Color, onTick: () -> Unit, onWord: (Int) -> Unit, onClose: () -> Unit) {
     val ctx = LocalContext.current
     var wpm by remember { mutableIntStateOf(rsvpPrefs(ctx).getInt("wpm", 300)) }
     var at by remember { mutableIntStateOf(0) }
     var playing by remember { mutableStateOf(true) }
     val total = words.size
     LaunchedEffect(playing, at, wpm, total) {
+        onWord(at)
         if (!playing || total == 0) return@LaunchedEffect
         if (at >= total - 1) { playing = false; return@LaunchedEffect }
         onTick()
