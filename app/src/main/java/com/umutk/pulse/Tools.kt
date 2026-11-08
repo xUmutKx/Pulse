@@ -111,6 +111,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
         id == "chargewatts" -> com.umutk.pulse.extras.charging.ChargingWattsScreen(back)
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
+        id == "duplicates" -> com.umutk.pulse.features.DuplicatesScreen(back)
         id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
         id == "guide" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.GuidePage() }
         id == "vault" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.VaultScreen(back) }
