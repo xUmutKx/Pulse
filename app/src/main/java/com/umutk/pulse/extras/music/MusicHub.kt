@@ -96,7 +96,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 
 /** The four looks, in switcher order. Material is the default. */
-private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics"), CASSETTE("Cassette"), IPOD("iPod"), TURNTABLE("Turntable") }
+private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics"), CASSETTE("Cassette"), IPOD("iPod"), TURNTABLE("Turntable"), SONIC("Sonic") }
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
 
@@ -207,6 +207,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     look == MusicLook.CASSETTE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.IPOD -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.TURNTABLE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
+                    look == MusicLook.SONIC -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.SonicPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize()) }
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
@@ -398,6 +399,7 @@ private enum class ThemeFamily(val en: String, val turkish: String, val look: Mu
     WMP("Windows Media Player 7", "Windows Media Player 7", MusicLook.WMP),
     SKINS("Media Player skins", "Medya oynatıcı kaplamaları", MusicLook.SKINS),
     LYRICS("Lyrics", "Sözler", MusicLook.LYRICS),
+    SONIC("Sonic", "Sonic", MusicLook.SONIC),
     EXTRA("Extra themes", "Ek temalar", MusicLook.CASSETTE),
 }
 
@@ -431,7 +433,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
     when (family) {
         ThemeFamily.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampSkinSettings()
         ThemeFamily.WMP -> WmpSkinGrid(wmp) { wmp = it; prefs(ctx).edit().putInt("wmp_skin", it).apply() }
-        ThemeFamily.MATERIAL, ThemeFamily.LYRICS -> familyMini(family, scheme)?.let { m ->
+        ThemeFamily.MATERIAL, ThemeFamily.LYRICS, ThemeFamily.SONIC -> familyMini(family, scheme)?.let { m ->
             ThemeGrid(listOf(ThemeItem(family.name, tr(family.en, family.turkish)) { MiniLook(m, Modifier.fillMaxSize()) }), family.name, onSelect = { pick(family) })
         }
         ThemeFamily.SKINS -> ImgSkinGrid(skinPick) { skinPick = it; prefs(ctx).edit().putInt("img_skin", it).apply() }
@@ -454,6 +456,8 @@ private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when 
     ThemeFamily.WMP -> wmpMini(Wmp7Skin.Default)
     ThemeFamily.SKINS -> MiniColors(SolidColor(Color(0xFFD65DA8)), Color(0xFF2AA89E), Color.White, Color(0xFFFFE0F0))
     ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
+    // Sonic: black, glowing white lines and its orange
+    ThemeFamily.SONIC -> MiniColors(SolidColor(Color.Black), Color(0xFF0B0B0B), Color(0xFFF05A24), Color.White.copy(alpha = .8f))
     // the Poweramp look: black, a dark panel and its blue accent
     ThemeFamily.POWERAMP -> MiniColors(SolidColor(Color.Black), Color(0xFF14161A), Color(0xFF2E8BFF), Color.White.copy(alpha = .5f))
     // the cassette look: the yellow deck, the cream label and the dark keys
