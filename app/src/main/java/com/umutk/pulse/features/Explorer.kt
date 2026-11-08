@@ -85,6 +85,10 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.runtime.rememberCoroutineScope
@@ -522,8 +526,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             value = acc.toMap()
         }
     }
-    val listing = remember(here, refresh, showHidden, sort, viaRoot, if (sort / 2 == 1) dirSizes else null) {
-        exSort((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes)
+    // the folder is read and sorted off the main thread, once, with each file's kind kept (no stat while sorting or filtering): a folder of thousands of pictures opens without a freeze
+    val prevHere = remember { arrayOf<String?>(null) }
+    val listing by produceState<ExListing?>(null, here, refresh, showHidden, sort, viaRoot, if (sort / 2 == 1) dirSizes else null) {
+        if (prevHere[0] != here) value = null
+        prevHere[0] = here
+        value = withContext(Dispatchers.Default) { exSortList((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes) }
     }
     var resultsFor by remember { mutableStateOf<String?>(null) }
     // the search looks under this folder; the button beside the field widens it to the whole storage
@@ -550,15 +558,27 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (query.trim().length < 2) { resultsFor = null; return@LaunchedEffect }
         delay(350); resultsFor = query.trim()
     }
-    val shown: List<File> = when {
-        arcFile != null -> emptyList()
-        recentView -> recents.map { File(it) }.filter { it.exists() }
-        query.isNotBlank() -> listing.filter { it.name.contains(query.trim(), ignoreCase = true) }.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
-        else -> listing.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
+    val filtNow = filtDir[here] ?: filtAll
+    val shownState by produceState<List<File>?>(null, listing, query, filtNow, recentView, recents, arcFile) {
+        val l = listing
+        value = withContext(Dispatchers.Default) {
+            when {
+                arcFile != null -> emptyList()
+                recentView -> recents.map { File(it) }.filter { it.exists() }
+                l == null -> null
+                else -> {
+                    val q = query.trim()
+                    val out = ArrayList<File>(l.files.size)
+                    for (i in l.files.indices) { val f = l.files[i]; if ((q.isEmpty() || f.name.contains(q, ignoreCase = true)) && exFilterOk(f, filtNow, l.dir[i])) out += f }
+                    out
+                }
+            }
+        }
     }
-    // a long folder (an app data folder holds hundreds of entries) is composed in slices of 60, one slice every 50 ms, so it opens at once and the rest fills in
-    val sliceFor by produceState(60, here, shown.size) { value = 60; while (value < shown.size) { delay(50); value += 60 } }
-    val shownNow = if (shown.size <= 80) shown else shown.take(sliceFor)
+    val listingReady = shownState != null
+    val shown: List<File> = shownState ?: emptyList()
+    // only the rows near the screen are composed (see ExWindowed), so the whole folder can be long
+    val shownNow = shown
     val filt = filtDir[here] ?: filtAll
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
@@ -783,7 +803,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (want > 0) { kotlinx.coroutines.withTimeoutOrNull(1500) { snapshotFlow { exScroll.maxValue }.first { it >= want } }; exScroll.scrollTo(want.coerceAtMost(exScroll.maxValue)) } else exScroll.scrollTo(0)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-        Column(Modifier.fillMaxSize().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(Modifier.fillMaxSize().onGloballyPositioned { ExScroll.viewTop = it.positionInRoot().y }.nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
@@ -1013,7 +1033,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         zipJobs.forEach { ZipProgressLine(it) }
         FileJobLines()
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else if (rootErr.isNotEmpty()) rootErr else "No files here", color = T.sub, fontSize = 13.sp)
+        if (shown.isEmpty() && listingReady && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else if (rootErr.isNotEmpty()) rootErr else "No files here", color = T.sub, fontSize = 13.sp)
         val item: @Composable (File) -> Unit = { f ->
             val grid = gridNow
             val isz = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5).let { if (grid) it * 3 / 2 else it }
@@ -1170,13 +1190,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val tile = ((24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 8).dp
             val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
             val cell = (maxWidth - gap * (cols - 1)) / cols
-            // the rows go one under the other: a box would stack them on top of each other
-            Column(Modifier.fillMaxWidth()) {
-                shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
-                } }
+            val chunks = remember(shownNow, cols) { shownNow.chunked(cols) }
+            ExWindowed(chunks.size, exScroll, 0.dp, "g$cols/${FilesPrefs.icon}") { i ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    chunks[i].forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { key(f.path) { item(f) } } }
+                }
             }
-        } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
+        } else ExWindowed(shownNow.size, exScroll, 3.dp, "l${FilesPrefs.icon}") { i ->
+            val f = shownNow[i]
+            key(f.path) { item(f) }
+            if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
+        }
         Spacer(Modifier.height(88.dp))
         }
         // a thin handle on the right edge: drag it to run through a long list quickly
@@ -1695,10 +1719,10 @@ private val EX_FILTER_ICONS = mapOf("all" to Icons.Outlined.FilterList, "images"
     "docs" to Icons.Outlined.Description, "archives" to Icons.Outlined.FolderZip, "apks" to Icons.Outlined.Apps, "folders" to Icons.Outlined.Folder)
 private val EX_FILTERS = listOf("all" to "All", "images" to "Images", "videos" to "Videos", "audio" to "Audio", "docs" to "Documents", "archives" to "Archives", "apks" to "APKs", "folders" to "Folders only")
 
-private fun exFilterOk(f: File, type: String): Boolean {
+private fun exFilterOk(f: File, type: String, isDir: Boolean = f.isDirectory): Boolean {
     if (type == "all") return true
-    if (type == "folders") return f.isDirectory
-    if (f.isDirectory) return true // folders stay so the list can still be walked
+    if (type == "folders") return isDir
+    if (isDir) return true // folders stay so the list can still be walked
     val e = f.extension.lowercase()
     return when {
         type.startsWith("ext:") -> e in type.removePrefix("ext:").split(',').map { it.trim().trimStart('.').lowercase() }.filter { it.isNotEmpty() }
@@ -1753,6 +1777,23 @@ private fun ExDots(tint: Color) {
         // three dots stacked vertically, the usual "more" button
         for (i in 0..2) drawCircle(tint, r, Offset(size.width / 2, size.height * (.2f + .3f * i)))
     }
+}
+
+/** A folder's files in order, with whether each is a folder (read once). */
+internal class ExListing(val files: List<File>, val dir: BooleanArray)
+
+/** The same order as [exSort], but each file's kind, name, size and time are read once before the sort (a sort that asks the file system at every comparison takes seconds on thousands of files). */
+private fun exSortList(list: List<File>, mode: Int, dirSizes: Map<String, Long> = emptyMap()): ExListing {
+    class K(val f: File, val dir: Boolean, val name: String, val num: Long)
+    val kind = mode / 2
+    val ks = list.map { f ->
+        val d = f.isDirectory
+        K(f, d, if (kind == 0) f.name.lowercase() else "", when (kind) { 1 -> if (d) dirSizes[f.path] ?: -1L else f.length(); 2 -> f.lastModified(); else -> 0L })
+    }
+    val key: Comparator<K> = if (kind == 0) compareBy { it.name } else compareBy { it.num }
+    val by = if (mode % 2 == 1) key.reversed() else key
+    val sorted = ks.sortedWith(if (FilesPrefs.foldersFirst) compareBy<K> { !it.dir }.then(by) else by)
+    return ExListing(sorted.map { it.f }, BooleanArray(sorted.size) { sorted[it].dir })
 }
 
 /** Folders first, then the order picked by the sort icon: name, size or date, each ascending then descending. */
@@ -2345,6 +2386,8 @@ private fun androidx.compose.foundation.layout.BoxScope.ExNewFab(pick: (String) 
 
 /** Where each folder was scrolled to when it was left, so going back (or opening it again) continues from there. */
 object ExScroll {
+    /** The top of the scrolling list on the screen (px), to tell where the rows start inside the scrolled content. */
+    @Volatile var viewTop = 0f
     val memo = HashMap<String, Int>()
     var live: androidx.compose.foundation.ScrollState? = null
 }
@@ -2479,5 +2522,33 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
                 }
             }
         }
+    }
+}
+
+/**
+ * Composes only the rows near the screen of a long list that lives inside a scrolled column: the rows before and after are one empty space each, of the height they
+ * would take. A folder of thousands of pictures then costs as much as one screen. A row is as tall as the first one measured (rows of a list are even);
+ * [sig] says when that has to be measured again (icon size, columns).
+ */
+@Composable
+private fun ExWindowed(count: Int, scroll: androidx.compose.foundation.ScrollState, gap: androidx.compose.ui.unit.Dp, sig: String, row: @Composable (Int) -> Unit) {
+    if (count == 0) return
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val gapPx = with(density) { gap.roundToPx() }
+    var top by remember { mutableIntStateOf(0) }
+    var rowH by remember(sig, density.fontScale) { mutableIntStateOf(with(density) { 58.dp.roundToPx() }) }
+    var measured by remember(sig, density.fontScale) { mutableStateOf(false) }
+    val viewport = with(density) { androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp.roundToPx() }
+    val pitch = (rowH + gapPx).coerceAtLeast(1)
+    val first by remember(pitch, count) { androidx.compose.runtime.derivedStateOf { (((scroll.value - top) / pitch - 8).coerceAtLeast(0) / 4) * 4 } }
+    val f0 = first.coerceIn(0, count - 1)
+    val last = (f0 + viewport / pitch + 20).coerceAtMost(count - 1)
+    Column(Modifier.fillMaxWidth().onGloballyPositioned { c -> top = (c.positionInRoot().y + scroll.value - ExScroll.viewTop).toInt() }) {
+        Spacer(Modifier.height(with(density) { (f0 * pitch).toDp() }))
+        for (i in f0..last) {
+            Column(Modifier.fillMaxWidth().onSizeChanged { sz -> if (!measured && i == f0 && sz.height > 0) { rowH = sz.height; measured = true } }) { row(i) }
+            if (gapPx > 0 && i < last) Spacer(Modifier.height(gap))
+        }
+        Spacer(Modifier.height(with(density) { ((count - 1 - last) * pitch).toDp() }))
     }
 }
