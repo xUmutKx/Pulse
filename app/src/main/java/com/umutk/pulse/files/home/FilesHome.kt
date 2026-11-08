@@ -301,7 +301,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recentFiles, key = { it.path }) { f ->
-                        Column(Modifier.width(112.dp).combinedClickable(onClick = { onOpenFile(f) }, onLongClick = { f.parentFile?.let { d -> FilesHomeNav.pendingSelect = f.path; onOpenDir(d.path) } })) {
+                        Column(Modifier.width(112.dp).combinedClickable(onClick = { onOpenFile(f) }, onLongClick = { f.parentFile?.let { d -> FilesHomeNav.pendingDir = d.path; FilesHomeNav.pendingSelect = f.path; onOpenDir(d.path) } })) {
                             Box(box(Modifier.fillMaxWidth().height(96.dp)), contentAlignment = Alignment.Center) {
                                 val th = exThumb(f)
                                 if (th != null) androidx.compose.foundation.Image(th, null, Modifier.fillMaxSize().clip(RoundedCornerShape(if (mat) 14.dp else 0.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)

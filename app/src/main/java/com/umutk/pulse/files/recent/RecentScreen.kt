@@ -2,6 +2,7 @@ package com.umutk.pulse.files.recent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,7 +40,7 @@ import kotlinx.coroutines.withContext
 
 /** Full-page Recent view: files opened in Files, then the newest files on the device. No selection here. */
 @Composable
-fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit) {
+fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit, onLong: (File) -> Unit = {}) {
     val ctx = LocalContext.current
     FilesPrefs.load(ctx)
     val recent = remember { RecentStore.list(ctx).map { File(it) }.filter { it.isFile } }
@@ -54,7 +55,7 @@ fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize()) {
             item { Head(tr("Recently opened", "Son açılanlar")) }
             if (recent.isEmpty()) item { Empty(tr("Nothing yet", "Henüz yok")) }
-            items(recent) { f -> Entry(f, f.parentFile?.name.orEmpty(), exDate(f.lastModified(), FilesPrefs.dateFmt)) { onOpen(f) } }
+            items(recent) { f -> Entry(f, f.parentFile?.name.orEmpty(), exDate(f.lastModified(), FilesPrefs.dateFmt), { onOpen(f) }, { onLong(f) }) }
 
             item { Head(tr("New files", "Yeni gelenler")) }
             val list = arrivals
@@ -62,7 +63,7 @@ fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit) {
                 list == null -> Unit
                 list.isEmpty() && !RecentStore.canListAll(ctx) -> item { Empty(tr("No access", "Erişim yok")) }
                 list.isEmpty() -> item { Empty(tr("Nothing yet", "Henüz yok")) }
-                else -> items(list) { a -> Entry(File(a.path), File(a.path).parentFile?.name.orEmpty(), exDate(a.addedMs, FilesPrefs.dateFmt)) { onOpen(File(a.path)) } }
+                else -> items(list) { a -> Entry(File(a.path), File(a.path).parentFile?.name.orEmpty(), exDate(a.addedMs, FilesPrefs.dateFmt), { onOpen(File(a.path)) }, { onLong(File(a.path)) }) }
             }
         }
     }
@@ -75,9 +76,11 @@ private fun Head(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 14.d
 private fun Empty(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 6.dp, bottom = 6.dp), color = T.sub, fontSize = 13.sp)
 
 @Composable
-private fun Entry(file: File, folder: String, date: String, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun Entry(file: File, folder: String, date: String, onClick: () -> Unit, onLong: () -> Unit = {}) {
     val name = file.name
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLong).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
             val th = com.umutk.pulse.features.exThumb(file)
             if (th != null) {
