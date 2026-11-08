@@ -54,6 +54,9 @@ import com.umutk.pulse.tr
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The dial's top: the smallest of these that holds the speed with some room. */
 private fun scaleFor(v: Float): Float = listOf(10f, 25f, 50f, 100f, 250f, 500f, 1000f, 2500f, 5000f).firstOrNull { v * 1.15f <= it } ?: 10000f
@@ -161,7 +164,32 @@ fun SpeedTestScreen(back: () -> Unit) {
             Text(isp, color = T.text, fontSize = 17.sp, fontWeight = FontWeight.Medium)
             Text(listOf(place, ip).filter { it.isNotBlank() }.joinToString(" · "), color = T.sub, fontSize = 13.sp, textAlign = TextAlign.Start)
         }
+        LatencyCard()
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** The latency test (min / average / max and the lost packets to three well-known servers), part of the speed test. */
+@Composable
+private fun LatencyCard() {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var results by remember { androidx.compose.runtime.mutableStateOf<List<String>>(emptyList()) }
+    var busy by remember { androidx.compose.runtime.mutableStateOf(false) }
+    PCard {
+        Text(tr("Latency test", "Gecikme testi"), color = T.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        com.umutk.pulse.PButton(if (busy) tr("Measuring…", "Ölçülüyor…") else tr("Start", "Başlat")) {
+            if (!busy) { busy = true; scope.launch {
+                val targets = listOf("Cloudflare" to ("1.1.1.1" to 443), "Google DNS" to ("8.8.8.8" to 53), "Google" to ("google.com" to 443))
+                results = withContext(Dispatchers.IO) {
+                    targets.map { (n, hp) ->
+                        val r = com.umutk.pulse.Hw.ping(hp.first, hp.second); val ok = r.filter { it >= 0 }
+                        if (ok.isEmpty()) tr("$n: unreachable", "$n: ulaşılamıyor") else "$n: ${ok.min()} / ${ok.average().toInt()} / ${ok.max()} ms (min / avg / max), " + tr("lost", "kayıp") + " ${r.size - ok.size}/${r.size}"
+                    }
+                }
+                busy = false
+            } }
+        }
+        results.forEach { Text(it, color = T.text, fontSize = 13.sp) }
     }
 }
 
