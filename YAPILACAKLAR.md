@@ -2334,3 +2334,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Dosya sıkıştırma: başarısız olunca gerçek hata nedeni bildirimde ve sonuç satırında gösteriliyor (logcat: PulseZip). (derlenmedi)
 - Dosya sıkıştırma: zip "Prefix string too short" hatasıyla her seferinde başarısız oluyordu (geçici dosya öneki 2 harf); düzeltildi, masaüstünde parçalı zip birleşince geçerli çıktı. (derlenmedi)
 - Game Hub: varsayılan performans modu ve küçük kart boyutu. (derlenmedi)
+- Ağ türü: önce modemin kendi tercih modu komutu (cmd phone set-preferred-network-mode, SIM başına) deneniyor; 5G yalnız için 28 ve 23 sırayla. (derlenmedi)

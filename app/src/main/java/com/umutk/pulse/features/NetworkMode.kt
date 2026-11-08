@@ -107,7 +107,12 @@ object NetMode {
             // the phone service takes the allowed types directly (Android 13+); older phones only read the global setting above
             val m = mask(mode)
             val subs = "\$(content query --uri content://telephony/siminfo --projection _id 2>/dev/null | sed -n 's/.*_id=\\([0-9]*\\).*/\\1/p')"
-            val cmd = "for k in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do settings put global \$k $mode; done; " +
+            // the modem's own preferred mode first (as the Switcher 5G app does as root): per SIM, then the phone's default; for 5G only, some modems
+            // name it 28 and others 23, so the first one the phone takes is used
+            val prefIds = if (mode == 23) "28 23" else "$mode"
+            val prefCmd = "for s in $subs; do for p in $prefIds; do cmd phone set-preferred-network-mode -s \$s \$p && break; done; done; " +
+                "for p in $prefIds; do cmd phone set-preferred-network-mode \$p && break; done; "
+            val cmd = prefCmd + "for k in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do settings put global \$k $mode; done; " +
                 "for s in $subs; do cmd phone set-allowed-network-types-for-users -s \$s $m; done; cmd phone set-allowed-network-types-for-users $m" +
                 (if (air) "; cmd connectivity airplane-mode enable; sleep 1; cmd connectivity airplane-mode disable" else "") + "; echo __OK"
             val out = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
