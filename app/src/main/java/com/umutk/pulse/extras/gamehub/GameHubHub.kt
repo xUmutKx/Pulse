@@ -146,7 +146,7 @@ private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVA
 private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
 /** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
-private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 1)) { 0 -> 84; 2 -> 128; else -> 100 }
+private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 0)) { 0 -> 84; 2 -> 128; else -> 100 }
 private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("showHidden", true)
 private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
 private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
@@ -789,7 +789,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var usage by remember { mutableStateOf(GameHubState.usage ?: emptyMap()) }
     var sort by remember { mutableStateOf(prefs(ctx).getInt("sort", 0)) }   // 0 name, 1 play time, 2 size
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
-    var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
+    var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 0)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
     val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
@@ -1151,7 +1151,7 @@ private fun sortGames(list: List<GameRow>, sort: Int, usage: Map<String, android
  * Android's own game manager in the root or Shizuku shell (`cmd game`), and again before each start from Game Hub. What a game takes of them is up to the game
  * and the phone: a game that does not support game modes ignores them.
  */
-private fun tuneOf(c: Context, pkg: String) = Triple(prefs(c).getString("tm_$pkg", "standard") ?: "standard", prefs(c).getInt("td_$pkg", 100), prefs(c).getInt("tf_$pkg", 0))
+private fun tuneOf(c: Context, pkg: String) = Triple(prefs(c).getString("tm_$pkg", "performance") ?: "performance", prefs(c).getInt("td_$pkg", 100), prefs(c).getInt("tf_$pkg", 0))
 
 private fun applyTune(c: Context, pkg: String): Boolean {
     val (mode, down, fps) = tuneOf(c, pkg)
