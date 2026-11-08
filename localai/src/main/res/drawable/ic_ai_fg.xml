@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse AI: the Pulse window with a spark, inside the adaptive icon's safe circle -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.62" android:scaleY="0.62">
+        <path android:fillColor="#FFC0C0C0" android:pathData="M18,18H90V90H18Z" />
+        <path android:fillColor="#FF404040" android:fillType="evenOdd" android:pathData="M18,18H90V90H18Z M20,20V88H88V20Z" />
+        <path android:fillColor="#FF000080" android:pathData="M22,22H86V33H22Z" />
+        <path android:fillColor="#FF000000" android:pathData="M24,36H84V86H24Z" />
+        <path android:fillColor="#FF00E5FF" android:pathData="M54,42 L58,56 L72,61 L58,66 L54,80 L50,66 L36,61 L50,56 Z" />
+    </group>
+</vector>

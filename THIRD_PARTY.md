@@ -25,3 +25,7 @@ Pulse's own character-level GRU models, trained by the Pulse author for this app
 (Universität Leipzig), corpora `tur-tr_web_2019_300K`, `tur_news_2020_300K`, `eng-com_web-public_2018_300K`, `eng_news_2020_300K`,
 licensed CC BY 4.0 (https://wortschatz.uni-leipzig.de/en/download). D. Goldhahn, T. Eckart, U. Quasthoff: Building Large Monolingual
 Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Only the trained weights ship; no corpus text is included.
+
+## Pulse AI (localai/, aistt/)
+
+local chat and speech to text: llama.cpp and whisper.cpp (MIT, ggml authors), fetched at build time; llama.cpp's Android example JNI (MIT) is in localai. See localai/NOTICE.md.
