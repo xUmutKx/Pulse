@@ -568,7 +568,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // the three lines on the home page open this drawer (the Browse tab's side list)
     // a folder picked in the home page's folder list opens here
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.pendingDir) {
-        com.umutk.pulse.files.home.FilesHomeNav.pendingDir?.let { p -> resultsFor = null; go(p); com.umutk.pulse.files.home.FilesHomeNav.pendingDir = null }
+        com.umutk.pulse.files.home.FilesHomeNav.pendingDir?.let { p -> resultsFor = null; go(p); com.umutk.pulse.files.home.FilesHomeNav.pendingDir = null; com.umutk.pulse.files.home.FilesHomeNav.pendingSelect?.let { f -> sel = setOf(f); com.umutk.pulse.files.home.FilesHomeNav.pendingSelect = null } }
     }
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openDrawer) {
         if (com.umutk.pulse.files.home.FilesHomeNav.openDrawer) { drawer = true; com.umutk.pulse.files.home.FilesHomeNav.openDrawer = false }
