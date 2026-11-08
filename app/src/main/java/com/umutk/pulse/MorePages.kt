@@ -239,8 +239,6 @@ fun NetworkPage() {
     val h by Sampler.history.collectAsState()
     val scope = rememberCoroutineScope()
     val openTool = com.umutk.pulse.LocalOpenTool.current
-    var results by remember { mutableStateOf<List<String>>(emptyList()) }
-    var busy by remember { mutableStateOf(false) }
     LiveSections("Network", 4000, top = {
         // the graph opens the two network tools: they are reached from here only
         com.umutk.pulse.features.NetAccessCard()
@@ -257,24 +255,8 @@ fun NetworkPage() {
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
-            PButton(tr("Internet speed test", "İnternet hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
+            PButton(tr("Speed test", "Hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
         }
-        }
-        PCard {
-            Text("Latency test", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            PButton(if (busy) "Measuring…" else "Start") {
-                if (!busy) { busy = true; scope.launch {
-                    val targets = listOf("Cloudflare" to ("1.1.1.1" to 443), "Google DNS" to ("8.8.8.8" to 53), "Google" to ("google.com" to 443))
-                    results = withContext(Dispatchers.IO) {
-                        targets.map { (n, hp) ->
-                            val r = Hw.ping(hp.first, hp.second); val ok = r.filter { it >= 0 }
-                            if (ok.isEmpty()) "$n: unreachable" else "$n: ${ok.min()} / ${ok.average().toInt()} / ${ok.max()} ms (min / avg / max), lost ${r.size - ok.size}/${r.size}"
-                        }
-                    }
-                    busy = false
-                } }
-            }
-            results.forEach { Text(it, color = T.text, fontSize = 13.sp) }
         }
         NetworksSection()
     }) { Hw.network(it) }
