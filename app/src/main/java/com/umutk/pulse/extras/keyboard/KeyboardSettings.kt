@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -466,34 +467,71 @@ fun KeyboardSettings(back: () -> Unit) {
             @Composable fun row(label: String, v: Int?) = Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f)); Text("${v ?: 0}", color = T.text, fontSize = 13.sp)
             }
-            // how far the keyboard has learned this person: its words, its slips, where the fingers land, and how often its corrections were right
+            // how far the keyboard has learned this person: a big ring for the whole, four small ones for its parts, then the numbers and the last two weeks
             val words = KbStats.get(ctx, "words"); val fixes = KbStats.get(ctx, "fixes"); val undone = KbStats.get(ctx, "undone")
             val parts = listOf(
-                tr("Your words", "Kelimeleriniz") to ((st2["words"] ?: 0) / 3000f).coerceIn(0f, 1f),
-                tr("Your typos", "Yazım hatalarınız") to ((st2["typos"] ?: 0) / 400f).coerceIn(0f, 1f),
+                tr("Your words", "Kelimelerin") to ((st2["words"] ?: 0) / 3000f).coerceIn(0f, 1f),
+                tr("Your typos", "Yazım hataların") to ((st2["typos"] ?: 0) / 400f).coerceIn(0f, 1f),
                 tr("Touch model", "Dokunuş modeli") to ((st2["letters"] ?: 0) / 30000f).coerceIn(0f, 1f),
-                tr("Correction accuracy", "Düzeltme isabeti") to (if (fixes < 20) 0f else (1f - undone.toFloat() / fixes).coerceIn(0f, 1f)),
+                tr("Accuracy", "İsabet") to (if (fixes < 20) 0f else (1f - undone.toFloat() / fixes).coerceIn(0f, 1f)),
             )
             val overall = parts.map { it.second }.average().toFloat()
-            Text(tr("Learning", "Öğrenme") + " " + (overall * 100).toInt() + "%", color = T.text, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
-            parts.forEach { (label, f) ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(T.accent.copy(alpha = .15f))) {
-                        Box(Modifier.fillMaxWidth(f).height(8.dp).background(T.accent))
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatRing(overall, 120.dp, 12.dp) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${(overall * 100).toInt()}%", color = T.text, fontSize = 28.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(tr("learned", "öğrendi"), color = T.sub, fontSize = 12.sp)
                     }
-                    Text(" ${(f * 100).toInt()}%", color = T.text, fontSize = 12.sp, modifier = Modifier.width(44.dp))
+                }
+                Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    parts.chunked(2).forEach { pair ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { (label, f) ->
+                                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                    StatRing(f, 38.dp, 5.dp) { Text("${(f * 100).toInt()}", color = T.text, fontSize = 11.sp) }
+                                    Text(label, color = T.sub, fontSize = 12.sp, maxLines = 2, modifier = Modifier.padding(start = 6.dp))
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            row(tr("Words written", "Yazılan kelime"), words)
-            row(tr("Automatic corrections", "Otomatik düzeltme"), fixes)
-            row(tr("Corrections taken back", "Geri alınan düzeltme"), undone)
-            if (KeyboardPrefs.neural) Text(tr("Neural model: Turkish and English, on the phone", "Sinir ağı modeli: Türkçe ve İngilizce, telefonda"), color = T.sub, fontSize = 12.sp)
-            row(tr("Letters typed", "Yazılan harf"), st2["letters"])
-            row(tr("Learned words", "Öğrenilen kelime"), st2["words"])
-            row(tr("Learned typos", "Öğrenilen yazım hatası"), st2["typos"])
-            row(tr("Undone corrections", "Geri alınan düzeltme"), st2["rejects"])
-            row(tr("Word pairs", "Kelime çifti"), st2["pairs"])
+            // the numbers as tiles
+            val tiles = listOf(tr("Words written", "Yazılan kelime") to words, tr("Corrections", "Düzeltme") to fixes, tr("Taken back", "Geri alınan") to undone,
+                tr("Letters", "Harf") to (st2["letters"] ?: 0), tr("Learned words", "Öğrenilen kelime") to (st2["words"] ?: 0), tr("Learned typos", "Öğrenilen hata") to (st2["typos"] ?: 0))
+            tiles.chunked(3).forEach { line ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    line.forEach { (l, v) ->
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(T.accent.copy(alpha = .10f)).padding(10.dp)) {
+                            Text(if (v >= 10000) "${v / 1000}k" else "$v", color = T.text, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                            Text(l, color = T.sub, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            // the last two weeks: words written each day, the corrections drawn over them
+            val dw = remember(rev) { KbStats.days(ctx, "words") }; val df = remember(rev) { KbStats.days(ctx, "fixes") }
+            Text(tr("Last 14 days", "Son 14 gün"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+            val top = (dw.maxOrNull() ?: 0).coerceAtLeast(1)
+            Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
+                dw.forEachIndexed { i, v ->
+                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
+                        Box(Modifier.fillMaxWidth().fillMaxHeight((v.toFloat() / top).coerceIn(.02f, 1f)).clip(RoundedCornerShape(3.dp)).background(T.accent.copy(alpha = .35f)))
+                        Box(Modifier.fillMaxWidth().fillMaxHeight((df[i].toFloat() / top).coerceIn(0f, 1f)).clip(RoundedCornerShape(3.dp)).background(T.accent))
+                    }
+                }
+            }
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).background(T.accent.copy(alpha = .35f))); Text(" " + tr("words", "kelime") + "   ", color = T.sub, fontSize = 11.sp)
+                Box(Modifier.size(10.dp).background(T.accent)); Text(" " + tr("corrections", "düzeltme"), color = T.sub, fontSize = 11.sp)
+            }
+            // a few of the slips it learned from you
+            val slips = remember(rev) { KeyboardDictionary.someTypos(6) }
+            if (slips.isNotEmpty()) {
+                Text(tr("Slips it learned", "Öğrendiği hatalar"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                slips.forEach { (a, b) -> Row(Modifier.padding(vertical = 1.dp)) { Text(a, color = T.sub, fontSize = 13.sp, modifier = Modifier.width(110.dp)); Text("→  $b", color = T.text, fontSize = 13.sp) } }
+            }
+            if (KeyboardPrefs.neural) Text(tr("Neural model: Turkish and English, on the phone", "Sinir ağı modeli: Türkçe ve İngilizce, telefonda"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Text(tr("Where you type", "Nerelere basıyorsunuz"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
             // the heat map: each key coloured by how often it was typed
             val rowsK = listOf("qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç")
@@ -707,4 +745,22 @@ private fun vibeStart(c: Context, ms: Int) {
 
 private fun vibeStop(c: Context) {
     (c.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.cancel()
+}
+
+
+/** A ring that fills to [f] (0..1) in the accent, with [content] in its middle. */
+@Composable
+private fun StatRing(f: Float, size: androidx.compose.ui.unit.Dp, stroke: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
+    val anim by androidx.compose.animation.core.animateFloatAsState(f, androidx.compose.animation.core.tween(900), label = "ring")
+    val acc = T.accent
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val w = stroke.toPx()
+            val st = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            val tl = androidx.compose.ui.geometry.Offset(w / 2, w / 2); val sz = androidx.compose.ui.geometry.Size(this.size.width - w, this.size.height - w)
+            drawArc(acc.copy(alpha = .15f), -90f, 360f, false, tl, sz, style = st)
+            drawArc(acc, -90f, 360f * anim, false, tl, sz, style = st)
+        }
+        content()
+    }
 }

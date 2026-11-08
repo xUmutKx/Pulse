@@ -172,6 +172,8 @@ object KeyboardDictionary {
     // how often each letter was typed (the heat map of the keyboard settings)
     private val keyCounts = ConcurrentHashMap<Char, Int>()
     fun keyCount(ch: Char) = keyCounts[ch] ?: 0
+    /** Some of the slips learned (typed > meant), for the statistics. */
+    fun someTypos(n: Int = 8): List<Pair<String, String>> = typos.entries.take(n).map { it.key to it.value }
     /** Numbers for the statistics page: learned words, learned typos, undone corrections, word pairs, letters typed. */
     fun stats(): List<Pair<String, Int>> = listOf("words" to user.size, "typos" to typos.size, "rejects" to rejects.size, "pairs" to pairs.values.sumOf { it.size }, "letters" to keyCounts.values.sum())
 
