@@ -2330,3 +2330,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Müzik çalar sözleri: kapak üstünde paylaş yanında AI (zamanlı söz üretir), "söz bulunamadı" ekranında AI; sözleri düzenleme ekranı (satır zamanı: saat tuşu şu anki konum, ±0.1 s, tüm şarkı ±0.5 s, satır ekle/sil). (derlenmedi)
 - Şarkı sözleri: sözü olmayan şarkılar için arka planda toplu söz (Pulse AI, bildirimli servis, kuyruk kalıcı); sözü olmayanlar üstte, olanlar soluk ve altta; klasör seçici en çok şarkılı klasörü açar. (derlenmedi)
 - Sözler düzenleyici: şarkı çalarken çalan satır ortada akar; duraklatınca yerinde kalır, satırlar onaysız düzenlenir/silinir; düzenleyicide oynat/durdur tuşu. (derlenmedi)
+- Seçici (müzik): klasör önbelleğe alınıp liste hemen açılıyor; şarkılardan sözü olanlar arka planda belirlenip altta soluk, "Sözü olanlar" ayracıyla gösteriliyor. (derlenmedi)
