@@ -187,22 +187,22 @@ private fun zip4jWrite(job: ZipJob) {
         aesKeyStrength = net.lingala.zip4j.model.enums.AesKeyStrength.KEY_STRENGTH_256
         compressionLevel = net.lingala.zip4j.model.enums.CompressionLevel.FAST
     }
-    @Volatile var base = 0L
-    @Volatile var cur = 0L
+    val base = java.util.concurrent.atomic.AtomicLong(0L)
+    val cur = java.util.concurrent.atomic.AtomicLong(0L)
     val mon = Thread {
         while (!Thread.currentThread().isInterrupted) {
             if (job.cancelled) pm.isCancelAllTasks = true
-            job.done.value = base + cur * pm.percentDone / 100L
+            job.done.value = base.get() + cur.get() * pm.percentDone / 100L
             try { Thread.sleep(150) } catch (_: InterruptedException) { break }
         }
     }.apply { start() }
     try {
         for (f in job.files) {
             if (job.cancelled) throw ZipCancelled()
-            cur = sizeOf(f)
+            cur.set(sizeOf(f))
             if (f.isDirectory) zf.addFolder(f, params) else zf.addFile(f, params)
-            base += cur; cur = 0
-            job.done.value = base
+            base.addAndGet(cur.get()); cur.set(0)
+            job.done.value = base.get()
         }
     } catch (x: Exception) {
         if (job.cancelled) throw ZipCancelled() else throw x
