@@ -98,6 +98,68 @@ class OfPdf(private val file: File) {
     private var textDoc: com.tom_roush.pdfbox.pdmodel.PDDocument? = null
     // the words of the last pages read (a search over a huge document reads page after page: the cache is bounded)
     private val wordsCache = object : LinkedHashMap<Int, List<PWord>>(64, .75f, true) { override fun removeEldestEntry(e: MutableMap.MutableEntry<Int, List<PWord>>?) = size > 80 }
+    /**
+     * The PDF with the marks written into it as PDF drawing (no picture of the pages): the pages, their text and their pictures stay as they were, text taken from a page
+     * is covered with a patch in the colour of the paper and the new text is written over it in a font that has Turkish letters. Returns false when it cannot be done
+     * (rotated pages, no usable font, a protected file): the caller then saves the page pictures instead.
+     */
+    fun saveVector(out: File, anns: List<PAnn>, appCtx: android.content.Context): Boolean = runCatching {
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(appCtx)
+        val pd = com.tom_roush.pdfbox.pdmodel.PDDocument.load(file)
+        try {
+            val fontFile = listOf("NotoSans-Regular.ttf", "Roboto-Regular.ttf", "DroidSans.ttf", "NotoSerif-Regular.ttf").map { File("/system/fonts/$it") }.firstOrNull { it.isFile }
+            val needFont = anns.any { it.kind >= 2 && it.text.isNotBlank() }
+            val font = if (needFont) fontFile?.let { f -> f.inputStream().use { com.tom_roush.pdfbox.pdmodel.font.PDType0Font.load(pd, it) } } ?: return@runCatching false else null
+            for (i in 0 until pd.numberOfPages) {
+                val here = anns.filter { it.page == i }; if (here.isEmpty()) continue
+                val pg = pd.getPage(i)
+                if (pg.rotation != 0) return@runCatching false
+                val box = pg.cropBox ?: pg.mediaBox; val W = box.width; val H = box.height
+                val cs = com.tom_roush.pdfbox.pdmodel.PDPageContentStream(pd, pg, com.tom_roush.pdfbox.pdmodel.PDPageContentStream.AppendMode.APPEND, true, true)
+                try {
+                    fun rgb(c: Int) = floatArrayOf((c shr 16 and 255) / 255f, (c shr 8 and 255) / 255f, (c and 255) / 255f)
+                    for (a in here) {
+                        val col = rgb(a.color)
+                        if (a.kind >= 2) {
+                            val lines = a.text.split('\n'); val n = lines.size
+                            var size = W * .03f; var left: Float; var base: Float
+                            if (a.kind == 3 && a.pts.size >= 2) {
+                                val x0 = minOf(a.pts[0].x, a.pts[1].x) * W; val x1 = maxOf(a.pts[0].x, a.pts[1].x) * W
+                                val yTop = minOf(a.pts[0].y, a.pts[1].y) * H; val yBot = maxOf(a.pts[0].y, a.pts[1].y) * H
+                                if (a.bg != 0) size = (yBot - yTop) * .84f / n
+                                val bgc = if (a.bg != 0) rgb(a.bg) else floatArrayOf(1f, 1f, 1f)
+                                cs.setNonStrokingColor(bgc[0], bgc[1], bgc[2]); cs.addRect(box.lowerLeftX + x0, box.lowerLeftY + H - yBot, x1 - x0, yBot - yTop); cs.fill()
+                                left = x0 + size * .15f; base = if (a.bg != 0) yTop + (yBot - yTop) * .8f / n else yTop + size
+                            } else {
+                                left = a.pts[0].x * W; base = a.pts[0].y * H
+                                if (a.kind == 3) { // a patch from a single tap (no dragged box): behind the text, as drawn on the screen
+                                    val tw = lines.maxOf { font!!.getStringWidth(it) / 1000f * size }
+                                    cs.setNonStrokingColor(1f, 1f, 1f); cs.addRect(box.lowerLeftX + left - size * .15f, box.lowerLeftY + H - (base + size * .3f), tw + size * .3f, size * 1.3f + (n - 1) * size * 1.2f); cs.fill()
+                                }
+                            }
+                            cs.setNonStrokingColor(col[0], col[1], col[2])
+                            lines.forEachIndexed { k, l ->
+                                if (l.isEmpty()) return@forEachIndexed
+                                val safe = l.filter { ch -> runCatching { font!!.encode(ch.toString()); true }.getOrDefault(false) }
+                                cs.beginText(); cs.setFont(font!!, size); cs.newLineAtOffset(box.lowerLeftX + left, box.lowerLeftY + H - (base + k * size * 1.2f)); cs.showText(safe); cs.endText()
+                            }
+                        } else if (a.pts.isNotEmpty()) {
+                            val gs = com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState()
+                            if (a.kind == 1) { gs.strokingAlphaConstant = 90f / 255f; cs.setGraphicsStateParameters(gs) }
+                            cs.setStrokingColor(col[0], col[1], col[2]); cs.setLineWidth(W * (if (a.kind == 1) .035f else .004f)); cs.setLineCapStyle(1); cs.setLineJoinStyle(1)
+                            fun px(o: androidx.compose.ui.geometry.Offset) = floatArrayOf(box.lowerLeftX + o.x * W, box.lowerLeftY + H - o.y * H)
+                            val f0 = px(a.pts[0]); cs.moveTo(f0[0], f0[1])
+                            if (a.pts.size == 1) cs.lineTo(f0[0] + 1f, f0[1]) else for (k in 1 until a.pts.size) { val q = px(a.pts[k]); cs.lineTo(q[0], q[1]) }
+                            cs.stroke()
+                            if (a.kind == 1) { val g0 = com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState(); g0.strokingAlphaConstant = 1f; cs.setGraphicsStateParameters(g0) }
+                        }
+                    }
+                } finally { cs.close() }
+            }
+            pd.save(out); true
+        } finally { pd.close() }
+    }.getOrDefault(false)
+
     fun words(i: Int, appCtx: android.content.Context): List<PWord> = synchronized(wordsCache) {
         wordsCache[i] ?: (runCatching { extractWords(i, appCtx) }.getOrDefault(emptyList())).also { wordsCache[i] = it }
     }
@@ -380,6 +442,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Save a copy", "Kopya kaydet"), "File", Icons.Outlined.ContentCopy, png = "copy") {
             val snap = anns.toList(); val paint = android.graphics.Paint()
             doc.saveCopy({ out ->
+                // first as PDF drawing on the real pages (text stays text, nothing is turned into a picture); the page pictures only when that cannot be done
+                if (!p.saveVector(out, snap, ctx.applicationContext)) {
                 val pd = PdfDocument()
                 try {
                     for (i in 0 until p.count) {
@@ -392,6 +456,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
                     }
                     java.io.FileOutputStream(out).use { pd.writeTo(it) }
                 } finally { pd.close() }
+                }
             }) { msg -> if (!msg.startsWith("Save failed")) doc.dirty = false; Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show() }
         },
         OAct(tr("Close", "Kapat"), "File", Icons.Outlined.Close) { doc.close() },

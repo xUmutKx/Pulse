@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.music
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,7 @@ object MusicLibrary {
             MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.ALBUM_ID,
             genreCol, MediaStore.Audio.Media.YEAR, MediaStore.Audio.Media.COMPOSER, MediaStore.Audio.Media.DATE_ADDED,
         )
+        val stale = ArrayList<Uri>()
         val minMs = MusicSettings.minSeconds(c) * 1000L
         val excluded = MusicSettings.excluded(c)
         val hidden = MusicSettings.showHidden(c)
@@ -93,8 +95,12 @@ object MusicLibrary {
                     val raw = q.getString(1).orEmpty()
                     if (excluded.any { raw.startsWith(it) }) continue
                     if (!hidden && raw.contains("/.")) continue
-                    val path = q.getString(1)?.takeIf { File(it).exists() }
-                        ?: android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, q.getLong(0)).toString()
+                    val uriNow = android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, q.getLong(0))
+                    val path = q.getString(1)?.takeIf { File(it).exists() } ?: run {
+                        // a row whose file is gone (deleted outside the media store) and cannot be opened any more: removed from the store and left out, so no empty "null" song is listed
+                        val alive = runCatching { c.contentResolver.openAssetFileDescriptor(uriNow, "r")?.use { true } ?: false }.getOrDefault(false)
+                        if (!alive) { stale += uriNow; null } else uriNow.toString()
+                    } ?: continue
                     val artist = fixTag(q.getString(4))?.takeIf { it != "<unknown>" }
                     val genre = if (Build.VERSION.SDK_INT >= 30) q.getString(7)?.takeIf { it.isNotBlank() } else null
                     out += Track(path, fixTag(q.getString(2)), (q.getLong(3) / 1000).toInt(), artist, fixTag(q.getString(5)), q.getLong(6),
@@ -104,6 +110,7 @@ object MusicLibrary {
         } catch (e: SecurityException) {
             // permission revoked mid-scan: keep what the cache has
         }
+        for (u in stale) runCatching { c.contentResolver.delete(u, null, null) }
         return out
     }
 

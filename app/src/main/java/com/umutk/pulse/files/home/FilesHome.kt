@@ -348,7 +348,7 @@ fun openFileWithSystem(ctx: Context, f: File) {
     runCatching {
         val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
         val mime = com.umutk.pulse.features.fileMime(f)
-        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).putExtra("pulse_back", (ctx as? android.app.Activity)?.javaClass?.name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 
