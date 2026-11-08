@@ -683,7 +683,7 @@ private fun apkExport(f: File): String {
             if (e.isDirectory || !name.endsWith(".apk", true)) continue
             val dst = File(out, name).canonicalFile
             if (dst.parentFile != out.canonicalFile) continue
-            z.getInputStream(e).use { i -> dst.outputStream().use { i.copyTo(it) } }
+            z.getInputStream(e).use { i -> dst.outputStream().buffered(1 shl 20).use { o -> i.copyTo(o, 1 shl 20) } }
             n++
         }
     }
@@ -1192,4 +1192,14 @@ private fun ViewStylePicker(picked: Int, onPick: (Int) -> Unit) {
             }
         }
     }
+}
+
+/** One archive from a pick: the file itself, or the first part when the pick is parts (x.zip.001, .002, ...) of one split archive. */
+internal fun arcPick(picked: List<File>): File? {
+    picked.singleOrNull()?.let { return it.takeIf { f -> isArchiveFile(f) } }
+    if (picked.size < 2 || !picked.all { it.isFile && Regex("""\.\d{3}$""").containsMatchIn(it.name) }) return null
+    val stems = picked.map { it.name.dropLast(4) }.toSet()
+    if (stems.size != 1) return null
+    val first = File(picked[0].parentFile, stems.first() + ".001")
+    return first.takeIf { isFirstPart(it) && isArchiveFile(it) }
 }
