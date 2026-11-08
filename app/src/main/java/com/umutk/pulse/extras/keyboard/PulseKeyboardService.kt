@@ -1249,6 +1249,33 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.selecting = false; afterText()
     }
 
+    /**
+     * AI fix: the selected text (or the whole field) goes to Pulse AI on the phone, which mends spelling, punctuation, capitals and the Turkish letters,
+     * and the answer replaces it. Nothing leaves the phone; without Pulse AI (or a model in it) a note says so.
+     */
+    private fun aiFix() {
+        val c = currentInputConnection ?: return
+        if (st.incognito) return
+        val sel = c.getSelectedText(0)?.toString().orEmpty()
+        val whole = if (sel.isEmpty()) (c.getTextBeforeCursor(4000, 0)?.toString().orEmpty() + c.getTextAfterCursor(4000, 0)?.toString().orEmpty()) else sel
+        if (whole.isBlank()) return
+        android.widget.Toast.makeText(this, com.umutk.pulse.tr("AI is fixing the text…", "Yapay zekâ metni düzeltiyor…"), android.widget.Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val out = withContext(Dispatchers.IO) {
+                runCatching { contentResolver.call(android.net.Uri.parse("content://com.umutk.pulse.extra.ai.api"), "fix", whole, null)?.getString("text") }.getOrNull()
+            }
+            val ic = currentInputConnection ?: return@launch
+            if (out.isNullOrBlank()) {
+                android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("Pulse AI with a chat model is needed", "Sohbet modeli olan Pulse AI gerekli"), android.widget.Toast.LENGTH_LONG).show(); return@launch
+            }
+            ic.beginBatchEdit()
+            if (sel.isEmpty()) { ic.performContextMenuAction(android.R.id.selectAll) }
+            ic.commitText(out, 1)
+            ic.endBatchEdit()
+            word.clear(); afterText()
+        }
+    }
+
     override fun menu(id: String) {
         when (id) {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
@@ -1274,6 +1301,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "theme" -> { val l = KeyboardThemes.ids; KeyboardPrefs.theme = l[(l.indexOf(KeyboardPrefs.theme) + 1).mod(l.size)]; KeyboardPrefs.save(this) }
             "incognito" -> st.incognito = !st.incognito
             "autocorrect" -> { KeyboardPrefs.autocorrect = !KeyboardPrefs.autocorrect; KeyboardPrefs.save(this) }
+            "aifix" -> { st.panel = "keys"; aiFix() }
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"

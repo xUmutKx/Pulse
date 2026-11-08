@@ -38,6 +38,10 @@ object MusicSettings {
     fun preamp(c: Context) = sp(c).getInt("preamp", 0)
     fun setPreamp(c: Context, db: Int) = sp(c).edit().putInt("preamp", db.coerceIn(-12, 12)).apply()
 
+    /** The AI button of the lyrics: timed lyrics made on the phone by Pulse AI for a song that has none. */
+    fun aiLyrics(c: Context) = sp(c).getBoolean("aiLyrics", true)
+    fun setAiLyrics(c: Context, on: Boolean) = sp(c).edit().putBoolean("aiLyrics", on).apply()
+
     fun skipSilence(c: Context) = sp(c).getBoolean("skipSil", false)
     fun setSkipSilence(c: Context, on: Boolean) = sp(c).edit().putBoolean("skipSil", on).apply()
 
