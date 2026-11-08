@@ -145,8 +145,8 @@ fun CalculatorHub(back: () -> Unit) {
         if (round) {
             // the Material calculator: a roomy display (the earlier sum or the answer so far above, the number being typed below) and round keys of a sensible size
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.End) {
-                Text(preview?.let { "= $it" } ?: history.firstOrNull() ?: " ", color = T.sub, fontSize = 20.sp, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
-                Text(shown, color = T.text, fontSize = if (shown.length > 12) 40.sp else 64.sp, fontWeight = FontWeight.Light, maxLines = 2, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                Text(preview?.let { "= " + grouped(it) } ?: history.firstOrNull() ?: " ", color = T.sub, fontSize = 20.sp, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                FitLine(grouped(shown), T.text, 64, Modifier.fillMaxWidth().padding(top = 6.dp))
             }
             RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "="))) { press(it) }
             Spacer(Modifier.height(48.dp))
@@ -157,8 +157,8 @@ fun CalculatorHub(back: () -> Unit) {
             Modifier.fillMaxWidth().then(if (classic) Modifier.background(Color.White).frame(T, raised = false) else Modifier).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            Text(preview?.let { "= $it" } ?: if (mem != 0.0) "M" else " ", color = if (classic) Color.Black else T.sub, fontSize = 16.sp, maxLines = 1)
-            Text(shown, color = if (classic) Color.Black else T.text, fontSize = if (shown.length > 12) 30.sp else 46.sp, fontWeight = FontWeight.Light, maxLines = 2, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+            Text(preview?.let { "= " + grouped(it) } ?: if (mem != 0.0) "M" else " ", color = if (classic) Color.Black else T.sub, fontSize = 16.sp, maxLines = 1)
+            FitLine(grouped(shown), if (classic) Color.Black else T.text, 46, Modifier.fillMaxWidth())
         }
         Spacer(Modifier.height(6.dp))
         val rows = if (classic) listOf(
@@ -307,3 +307,33 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
 }
 
 private fun Color.compositeOverBg(): Color = compositeOver(T.panel)
+
+
+/**
+ * Numbers as people write them: groups of three (2.450.000 in Turkish, 2,450,000 in English) and the decimal sign of the language.
+ * Only for the screen; what is typed and worked out keeps its plain form.
+ */
+internal fun grouped(s: String): String {
+    val turkish = java.util.Locale.getDefault().language == "tr"
+    val sep = if (turkish) '.' else ','; val dec = if (turkish) "," else "."
+    return Regex("""(\d+)(\.\d*)?""").replace(s) { m ->
+        val int = m.groupValues[1]
+        val g = if (int.length <= 3) int else int.reversed().chunked(3).joinToString(sep.toString()).reversed()
+        g + m.groupValues[2].let { if (it.isEmpty()) "" else dec + it.drop(1) }
+    }
+}
+
+/** One line that always fits: the text shrinks (down to 18 sp) instead of breaking onto a second line over the first. */
+@Composable
+private fun FitLine(text: String, color: Color, maxSp: Int, modifier: Modifier) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier, contentAlignment = Alignment.CenterEnd) {
+        val tm = androidx.compose.ui.text.rememberTextMeasurer()
+        val width = constraints.maxWidth
+        val size = remember(text, width) {
+            var sp = maxSp
+            while (sp > 18 && tm.measure(text, androidx.compose.ui.text.TextStyle(fontSize = sp.sp, fontWeight = FontWeight.Light), maxLines = 1, softWrap = false).size.width > width) sp -= 2
+            sp
+        }
+        Text(text, color = color, fontSize = size.sp, fontWeight = FontWeight.Light, maxLines = 1, softWrap = false, textAlign = TextAlign.End)
+    }
+}
