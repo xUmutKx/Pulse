@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -79,6 +80,7 @@ fun Welcome(onDone: () -> Unit) {
         WelcomeCard(tr("Accessibility", "Erişilebilirlik")) {
             WelcomeLine(tr("Pulse uses the Accessibility service for four features. Each one is switched on in Accessibility settings:",
                 "Pulse dört özellik için Erişilebilirlik servisini kullanır. Her biri Erişilebilirlik ayarlarında açılır:"))
+            WelcomeLine(tr("None of them is required: you can press Start below and turn them on later.", "Hiçbiri şart değil: aşağıdaki Başla'ya basıp sonra da açabilirsin."))
             for (s in ACCESS_ROWS) {
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(end = 12.dp)) {
@@ -185,16 +187,21 @@ fun SetupScreen(onDone: () -> Unit) {
         Image(rememberLauncherLogo(), null, Modifier.size(72.dp))
         Text(tr("Set up Pulse", "Pulse'u kur"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 12.dp))
         Text(tr("Two things before you start.", "Başlamadan önce iki şey."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+        // the one thing that is required, said plainly: everything else can be skipped and given later
+        Text(tr("Only accepting the terms is required. Every permission below is optional: skip any of them, Pulse asks again when a feature needs it.",
+            "Sadece koşulları kabul etmek gereklidir. Aşağıdaki izinlerin hepsi isteğe bağlıdır: istediğini atla, bir özellik gerektirdiğinde Pulse yeniden sorar."),
+            color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
         WelcomeCard(tr("Terms and privacy", "Koşullar ve gizlilik")) {
             WelcomeLine(tr("Pulse keeps your files, music and settings on this phone. Nothing is sent to us.",
                 "Pulse dosyalarını, müziğini ve ayarlarını bu telefonda tutar. Bize hiçbir şey gönderilmez."))
             WelcomeLine(tr("The Play version shows ads from Google AdMob. Google may use an advertising ID for them, and you can change that in your phone's settings.",
                 "Play sürümü Google AdMob reklamları gösterir. Google bunlar için bir reklam kimliği kullanabilir; bunu telefonunuzun ayarlarından değiştirebilirsiniz."))
             WelcomeLine(tr("The terms of use and the privacy notice are in About.", "Kullanım koşulları ve gizlilik bildirimi Hakkında bölümünde."))
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            // the whole line is the switch (a big target), not only the small box
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clickable { accepted = !accepted }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 PCheck(accepted, { accepted = it })
-                Text(tr("I have read and accept the terms and the privacy notice", "Koşulları ve gizlilik bildirimini okudum, kabul ediyorum"),
-                    color = T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                Text(tr("I have read and accept the terms and the privacy notice (required)", "Koşulları ve gizlilik bildirimini okudum, kabul ediyorum (gerekli)"),
+                    color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
         PermissionsCard()
@@ -205,8 +212,8 @@ fun SetupScreen(onDone: () -> Unit) {
                 "Pulse ikisi olmadan da çalışır. Bu araçlar, ayarlarından erişim verene kadar kapalı kalır."))
         }
         Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) {
-            if (accepted) PButton(tr("Continue", "Devam"), onClick = { finish() })
-            else Text(tr("Accept the terms to continue", "Devam etmek için koşulları kabul et"), color = T.sub, fontSize = 13.sp)
+            // always one button that works: it accepts the terms (when not ticked yet) and goes on; permissions are never needed to continue
+            PButton(if (accepted) tr("Continue", "Devam") else tr("Accept and continue", "Kabul et ve devam et"), onClick = { accepted = true; finish() })
         }
     }
 }
@@ -232,19 +239,28 @@ private fun permItems(): List<PermItem> = listOf(
 private fun PermissionsCard() {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
+    var asked by remember { mutableStateOf<PermItem?>(null) }
+    val act = ctx as? android.app.Activity
+    // after two refusals Android no longer shows its question: the app's own settings page opens instead, so the button never seems dead
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
+        tick++
+        val it0 = asked; asked = null
+        if (it0 != null && res.values.any { !it } && act != null && it0.perms.none { p -> androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(act, p) }) openAppSettings(ctx)
+    }
     WelcomeCard(tr("Permissions", "İzinler")) {
-        WelcomeLine(tr("Each one is for one feature. Tick the ones you want; the rest you can skip, and the feature asks again when you open it.",
-            "Her biri tek bir özellik için. İstediklerini işaretle; kalanlarını atlayabilirsin, özellik açıldığında yeniden sorar."))
+        WelcomeLine(tr("All optional. Each one is for one feature: give the ones you want now, the rest when you need them.",
+            "Hepsi isteğe bağlı. Her biri tek bir özellik için: istediklerini şimdi ver, kalanlarını gerektiğinde."))
         permItems().forEach { item ->
             val granted = remember(tick, item.title) { item.perms.isEmpty() || item.perms.all { ContextCompat.checkSelfPermission(ctx, it) == PackageManager.PERMISSION_GRANTED } }
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                PCheck(granted, { wanted -> if (wanted && !granted && item.perms.isNotEmpty()) launcher.launch(item.perms.toTypedArray()) })
-                Box(Modifier.padding(start = 8.dp).size(28.dp), contentAlignment = Alignment.Center) { PIcon(item.icon, Look.accent, 22.dp) }
-                Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                    Text(item.title, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended.", "Önerilir.")), color = T.sub, fontSize = 12.sp)
+            val ask = { if (!granted && item.perms.isNotEmpty()) { asked = item; launcher.launch(item.perms.toTypedArray()) } }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).clickable(enabled = !granted) { ask() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { PIcon(item.icon, Look.accent, 26.dp) }
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Text(item.title, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended, not required.", "Önerilir, şart değil.")), color = T.sub, fontSize = 13.sp)
                 }
+                if (granted) Text("✓ " + tr("Given", "Verildi"), color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                else PButton(tr("Allow", "İzin ver"), compact = true, onClick = { ask() })
             }
         }
     }
@@ -281,5 +297,14 @@ fun WhatsNew(onDone: () -> Unit) {
             }
         }
         Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) { PButton(tr("Continue", "Devam"), onClick = { finish() }) }
+    }
+}
+
+
+/** The app's own page in Android settings (Permissions is one tap from there). */
+private fun openAppSettings(c: android.content.Context) {
+    runCatching {
+        c.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + c.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        android.widget.Toast.makeText(c, tr("Open Permissions there and allow it", "Orada İzinler'e girip izin ver"), android.widget.Toast.LENGTH_LONG).show()
     }
 }
