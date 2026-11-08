@@ -1262,11 +1262,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         android.widget.Toast.makeText(this, com.umutk.pulse.tr("AI is fixing the text…", "Yapay zekâ metni düzeltiyor…"), android.widget.Toast.LENGTH_SHORT).show()
         scope.launch {
             val out = withContext(Dispatchers.IO) {
-                runCatching { contentResolver.call(android.net.Uri.parse("content://com.umutk.pulse.extra.ai.api"), "fix", whole, null)?.getString("text") }.getOrNull()
+                runCatching { com.umutk.pulse.extras.ai.AiEngine.fix(this@PulseKeyboardService, whole) }.getOrNull()
             }
             val ic = currentInputConnection ?: return@launch
             if (out.isNullOrBlank()) {
-                android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("Pulse AI with a chat model is needed", "Sohbet modeli olan Pulse AI gerekli"), android.widget.Toast.LENGTH_LONG).show(); return@launch
+                android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("Pulse AI needs a chat model (Extra apps > Pulse AI > Models)", "Pulse AI için bir sohbet modeli gerekli (Ek uygulamalar > Pulse AI > Modeller)"), android.widget.Toast.LENGTH_LONG).show(); return@launch
             }
             ic.beginBatchEdit()
             if (sel.isEmpty()) { ic.performContextMenuAction(android.R.id.selectAll) }

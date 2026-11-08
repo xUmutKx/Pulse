@@ -1,0 +1,2 @@
+-keep class com.umutk.pulse.ai.stt.** { *; }
+-keepclasseswithmembernames class * { native <methods>; }

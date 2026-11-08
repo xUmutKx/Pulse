@@ -92,6 +92,7 @@ val VoiceLook = ToolLook("voice_look")
 // Notes opens black (AMOLED) until another look is picked
 val NotesLook = ToolLook("notes_look", "amoled")
 val WeatherLook = ToolLook("weather_look")
+val AiLook = ToolLook("ai_look")
 val PaintLook = ToolLook("paint_look")
 // the calculator opens in the Windows 11 look until another is picked
 val CalculatorLook = ToolLook("calculator_look", "win11")
@@ -191,7 +192,7 @@ open class ExtraToolActivity : ComponentActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
         taskLook(start)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "ai" -> AiLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
         toolLook = store
         enter()
         setContent {
@@ -226,6 +227,7 @@ open class ExtraToolActivity : ComponentActivity() {
             "voice" -> "launch_voice" to tr("Voice recorder", "Ses kaydedici")
             "notes" -> "launch_notes" to tr("Notes", "Notlar")
             "weather" -> "launch_weather" to tr("Weather", "Hava durumu")
+            "ai" -> "launch_ai" to "Pulse AI"
             "paint" -> "launch_paint" to "Paint"
             "browser" -> "launch_browser" to tr("Browser", "Tarayıcı")
             "office" -> "launch_office" to "Office"
@@ -262,6 +264,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("VoiceLauncher") -> "voice"
             n.endsWith("NotesLauncher") -> "notes"
             n.endsWith("WeatherLauncher") -> "weather"
+            n.endsWith("AiLauncher") -> "ai"
             n.endsWith("PaintLauncher") -> "paint"
             n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("OfficeLauncher") -> "office"
