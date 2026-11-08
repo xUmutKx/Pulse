@@ -65,6 +65,8 @@ fun PlayerLyrics(
     onDismiss: () -> Unit, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier,
     // the whole-screen form: the cover, title and artist across the top, the lyrics under them
     full: Boolean = false, art: androidx.compose.ui.graphics.ImageBitmap? = null,
+    // the song's play and pause, for the editor: a song paused there is where lines are checked and set
+    playing: Boolean = false, onTogglePlay: (() -> Unit)? = null,
 ) {
     AnimatedVisibility(
         visible, modifier,
@@ -130,7 +132,8 @@ fun PlayerLyrics(
             val (busy, res0) = state
             val res = edited ?: res0
             when {
-                res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp))
+                res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp),
+                    playing = playing, onTogglePlay = onTogglePlay)
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
                 res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { bmp -> shareGate { LyricsShare.share(ctx, bmp) } }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
