@@ -916,6 +916,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     var startY = d.position.y
                     var lastLine = 0
                     var curX = d.position.x
+                    var curY = d.position.y
                     // the long press and the repeats fall due at a fixed time: the finger's small moves must not push them back
                     var due = android.os.SystemClock.uptimeMillis() + longMs
                     var glide = false
@@ -936,7 +937,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     // held long enough: a whole word per repeat instead of a letter, with a tick under the finger each time
                                     if (!quick) { delRepeats++; a.deleteWord(); view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK); due = now + maxOf(55L, 230L - delRepeats * 22L) } else due = now + 55L
                                 }
-                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; st.cursorDrag = true; startX = curX; startY = d.position.y; lastStep = 0; lastLine = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
+                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; st.cursorDrag = true; startX = curX; startY = curY; lastStep = 0; lastLine = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
                                 // the comma, the period and the key beside ?123 run the action chosen for them in Settings; "none" leaves the key's own pop-up characters
                                 KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> {
@@ -959,6 +960,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                         c.consume()
                         curX = c.position.x
+                        curY = c.position.y
                         curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
                         if (c.changedToUp() || !c.pressed) {
                             if (st.swiped) { st.preview = null; break }
@@ -1001,7 +1003,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             key.kind == KeyKind.DELETE && KeyboardPrefs.quickDelete && !quick && dx < -28.dp.toPx() -> { quick = true; a.quickDeleteStart(); startX = c.position.x }
                             key.kind == KeyKind.DELETE && quick -> a.quickDelete((-dx / 14.dp.toPx()).toInt().coerceAtLeast(0))
                             // sliding along the space key moves the cursor, held first or not
-                            key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && abs(dx) > 18.dp.toPx() -> { spaceDragged = true; st.cursorDrag = true; long = true; startX = c.position.x; startY = c.position.y; lastStep = 0; lastLine = 0; a.feedback() }
+                            key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && (abs(dx) > 18.dp.toPx() || abs(c.position.y - startY) > 18.dp.toPx()) -> { spaceDragged = true; st.cursorDrag = true; long = true; startX = c.position.x; startY = c.position.y; lastStep = 0; lastLine = 0; a.feedback() }
                             spaceDragged && key.kind == KeyKind.SPACE -> {
                                 // across: a letter per unit of slide, and the slide speeds up the longer it goes, so one swipe crosses a line of text
                                 val unit = 12.dp.toPx() * 100f / KeyboardPrefs.cursorSens
@@ -1009,7 +1011,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 val chars = (n + n * kotlin.math.abs(n) / 10f).toInt()
                                 if (chars != lastStep) { a.moveCursor(chars - lastStep); lastStep = chars }
                                 // up and down: the cursor goes to the line above or below, at the same column
-                                val lineUnit = 26.dp.toPx() * 100f / KeyboardPrefs.cursorSens
+                                val lineUnit = 20.dp.toPx() * 100f / KeyboardPrefs.cursorSens
                                 val lines = ((c.position.y - startY) / lineUnit).toInt()
                                 if (lines != lastLine) { a.moveLine(lines - lastLine); lastLine = lines }
                             }

@@ -1157,34 +1157,27 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         c.setSelection(pos, pos); selStart = pos; selEnd = pos
     }
 
-    /** The cursor moves [delta] lines up (negative) or down, staying in its column (or the line's end when the line is shorter). */
+    /**
+     * The cursor moves [delta] lines up (negative) or down. In a field with several lines the editor itself is asked (the up and down keys), so the lines of wrapped
+     * text count as lines too, not only the ones ended by a line break; in a one-line field up goes to the start and down to the end.
+     */
     override fun moveLine(delta: Int) {
         val c = currentInputConnection ?: return
         finishWord("", false)
         val before = c.getTextBeforeCursor(4000, 0)?.toString().orEmpty()
         val after = c.getTextAfterCursor(4000, 0)?.toString().orEmpty()
-        val t = before + after
-        // the text around the cursor: [cur] is the cursor inside [t], [base] the field offset of t's first character
-        var cur = before.length
-        val base = selStart - before.length
-        repeat(Math.abs(delta)) {
-            val lineStart = if (cur == 0) 0 else t.lastIndexOf('\n', cur - 1) + 1
-            val col = cur - lineStart
-            if (delta < 0) {
-                if (lineStart == 0) return@repeat
-                val prevEnd = lineStart - 1
-                val prevStart = if (prevEnd == 0) 0 else t.lastIndexOf('\n', prevEnd - 1) + 1
-                cur = prevStart + minOf(col, prevEnd - prevStart)
-            } else {
-                val end = t.indexOf('\n', cur)
-                if (end < 0) return@repeat
-                val nextStart = end + 1
-                val nextEnd = t.indexOf('\n', nextStart).let { if (it < 0) t.length else it }
-                cur = nextStart + minOf(col, nextEnd - nextStart)
-            }
+        val multi = (currentInputEditorInfo?.inputType ?: 0) and android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0 || (before + after).contains('\n')
+        if (!multi) {
+            val pos = if (delta < 0) selStart - before.length else selStart + after.length
+            val p = pos.coerceAtLeast(0)
+            if (p != selStart || p != selEnd) { c.setSelection(p, p); selStart = p; selEnd = p }
+            return
         }
-        val pos = (base + cur).coerceAtLeast(0)
-        if (pos != selStart || pos != selEnd) { c.setSelection(pos, pos); selStart = pos; selEnd = pos }
+        val code = if (delta < 0) android.view.KeyEvent.KEYCODE_DPAD_UP else android.view.KeyEvent.KEYCODE_DPAD_DOWN
+        repeat(Math.abs(delta)) {
+            c.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
+            c.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+        }
     }
 
     override fun deleteWord() {
