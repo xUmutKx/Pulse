@@ -43,6 +43,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -232,6 +234,15 @@ private fun recentFiles(ctx: Context, mimes: List<String>): List<File> {
     return out
 }
 
+/** The folder that holds the most songs of the phone (MediaStore's audio rows, counted by folder). */
+private fun musicFolder(ctx: Context): File? = runCatching {
+    val counts = HashMap<String, Int>()
+    ctx.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Audio.Media.DATA), null, null, null)?.use { c ->
+        while (c.moveToNext()) { val p = c.getString(0) ?: continue; val d = p.substringBeforeLast('/', ""); if (d.isNotEmpty()) counts[d] = (counts[d] ?: 0) + 1 }
+    }
+    counts.maxByOrNull { it.value }?.key?.let { File(it) }?.takeIf { it.isDirectory }
+}.getOrNull()
+
 /** The places of the side panel: the phone's storage, its usual folders and any memory card. */
 private class PickPlace(val name: String, val dir: File, val icon: String)
 
@@ -265,7 +276,12 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
     val ticked = remember { mutableStateListOf<File>() }
     // picking a file opens on Recent: the newest files of the phone, in one list; a place in the side panel browses the folders
     val canRecent = mode == "open" || mode == "multi"
-    var recents by remember { mutableStateOf(canRecent) }
+    // a song is wanted: the picker opens the folder that holds the most songs, not the list of recent files
+    val wantsAudio = mimes.any { it.startsWith("audio/") }
+    var recents by remember { mutableStateOf(canRecent && !wantsAudio) }
+    LaunchedEffect(wantsAudio) {
+        if (wantsAudio) withContext(kotlinx.coroutines.Dispatchers.IO) { musicFolder(ctx) }?.let { cur = it }
+    }
     // the folder is read off the main thread: a folder with thousands of pictures must not freeze the window
     val raw by produceState<List<File>?>(null, cur, mode, recents) {
         value = null
