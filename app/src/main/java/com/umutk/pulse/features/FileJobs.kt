@@ -28,11 +28,14 @@ private const val FJ_CH_END = "fileops_end"
 private const val FJ_ID_RUN = 7611
 private const val FJ_ID_END = 7700
 private const val FJ_ACT_CANCEL = "com.umutk.pulse.FILEOPS_CANCEL"
+private const val FJ_ACT_PAUSE = "com.umutk.pulse.FILEOPS_PAUSE"
 
 /** One running copy or delete. [total] and [done] count bytes (copy) or items (delete). */
 class FileJob(val id: Int, val title: String, val total: Long) {
     val done = AtomicLong(0)
     @Volatile var cancelled = false
+    /** Held while the copy waits between two blocks; the notification button (or the file manager) switches it. */
+    @Volatile var paused = false
 }
 
 /**
@@ -54,6 +57,9 @@ object FileJobs {
     }
 
     fun cancelAll() { list.forEach { it.cancelled = true } }
+
+    /** Pauses every running job, or lets them go on when they were paused. */
+    fun togglePause() { val on = list.none { it.paused }; list.forEach { it.paused = on } }
 
     /** Ends the job: its progress goes away and a short result is posted. */
     fun end(ctx: Context, job: FileJob, text: String) {
@@ -80,6 +86,7 @@ object FileJobs {
                 dst.outputStream().use { o ->
                     val buf = ByteArray(256 * 1024)
                     while (job?.cancelled != true) {
+                        while (job?.paused == true && !job.cancelled) Thread.sleep(150)
                         val n = i.read(buf)
                         if (n < 0) break
                         o.write(buf, 0, n)
@@ -115,6 +122,7 @@ class FileOpService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(FJ_CH_RUN, tr("File operations", "Dosya işlemleri"), NotificationManager.IMPORTANCE_LOW)) else Unit
         if (intent?.action == FJ_ACT_CANCEL) FileJobs.cancelAll()
+        if (intent?.action == FJ_ACT_PAUSE) FileJobs.togglePause()
         val fg = runCatching {
             if (Build.VERSION.SDK_INT >= 34) startForeground(FJ_ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(FJ_ID_RUN, note())
         }
@@ -140,7 +148,8 @@ class FileOpService : Service() {
         val pct = if (job.total > 0) (job.done.get() * 100 / job.total).toInt().coerceIn(0, 100) else 0
         val more = FileJobs.running().size - 1
         val cancel = PendingIntent.getService(this, job.id, Intent(this, FileOpService::class.java).setAction(FJ_ACT_CANCEL), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        return b.setContentTitle(job.title).setContentText("$pct%" + (if (more > 0) " · +$more" else ""))
-            .setProgress(100, pct, false).addAction(0, tr("Cancel", "İptal"), cancel).build()
+        val pause = PendingIntent.getService(this, job.id + 5000, Intent(this, FileOpService::class.java).setAction(FJ_ACT_PAUSE), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        return b.setContentTitle(job.title).setContentText((if (job.paused) tr("Paused", "Duraklatıldı") + " · " else "") + "$pct%" + (if (more > 0) " · +$more" else ""))
+            .setProgress(100, pct, false).addAction(0, if (job.paused) tr("Resume", "Devam") else tr("Pause", "Duraklat"), pause).addAction(0, tr("Cancel", "İptal"), cancel).build()
     }
 }
