@@ -183,6 +183,17 @@ object Lyrics {
      */
     fun keep(path: String, r: LyricsResult): Boolean = embedMp3(path, r) || saveSidecar(path, r)
 
+    /** Lyrics the person edited or made: they replace what the song had (its tag for an MP3, else a .lrc beside it). True when they are kept. */
+    fun saveEdited(path: String?, r: LyricsResult): Boolean {
+        if (path == null || path.contains("://")) return false
+        if (embedMp3(path, r)) return true
+        return runCatching {
+            File(path.substringBeforeLast('.') + ".lrc").writeText(lrcText(r))
+            dirNames.remove(File(path).parent)
+            true
+        }.getOrDefault(false)
+    }
+
     /** [keep] for lyrics given as text (a saved record, a cache entry); true when they are kept, or a .lrc is there already. */
     fun keepText(path: String, text: String, source: String): Boolean {
         val r = fromText(text, source) ?: return false
