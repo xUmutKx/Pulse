@@ -838,7 +838,7 @@ class AlarmAudioService : Service() {
     private fun stopOngoingPlayback() {
         try {
             mediaPlayer?.let { player ->
-                if (player.isPlaying) player.stop()
+                runCatching { player.setVolume(0f, 0f) }; if (player.isPlaying) player.stop()
                 player.release()
             }
         } catch (e: Exception) {
@@ -854,11 +854,13 @@ class AlarmAudioService : Service() {
         }
         audioFocusRequest = null
 
+        // the system's alarm volume goes back only after the last of the sound has drained from the audio buffers: put back at once, the tail of the alarm
+        // played at the old (often full) volume for a moment as the alarm was dismissed
         previousStreamVolume?.let { prevVol ->
-            try {
-                audioManager?.setStreamVolume(AudioManager.STREAM_ALARM, prevVol, 0)
-            } catch (_: SecurityException) {
-            }
+            val am = audioManager
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try { am?.setStreamVolume(AudioManager.STREAM_ALARM, prevVol, 0) } catch (_: SecurityException) { }
+            }, 900)
         }
         previousStreamVolume = null
     }
@@ -890,6 +892,7 @@ class AlarmAudioService : Service() {
 
     private fun stopAlarmAndSelf() {        try {
             mediaPlayer?.let { player ->
+                runCatching { player.setVolume(0f, 0f) }
                 if (player.isPlaying) {
                     player.stop()
                 }
@@ -908,11 +911,13 @@ class AlarmAudioService : Service() {
         }
         audioFocusRequest = null
 
+        // the system's alarm volume goes back only after the last of the sound has drained from the audio buffers: put back at once, the tail of the alarm
+        // played at the old (often full) volume for a moment as the alarm was dismissed
         previousStreamVolume?.let { prevVol ->
-            try {
-                audioManager?.setStreamVolume(AudioManager.STREAM_ALARM, prevVol, 0)
-            } catch (_: SecurityException) {
-            }
+            val am = audioManager
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try { am?.setStreamVolume(AudioManager.STREAM_ALARM, prevVol, 0) } catch (_: SecurityException) { }
+            }, 900)
         }
         previousStreamVolume = null
 
