@@ -291,6 +291,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Quick auth: fingerprint first", "Hızlı kimlik: önce parmak izi"), tr("Off: the codes show at once", "Kapalı: kodlar hemen görünür"), KeyboardPrefs.authLock) { KeyboardPrefs.authLock = it; save() }
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
+            Switch(tr("Neural correction", "Sinir ağı düzeltmesi"), tr("Corrections are weighed by the sentence, on the phone", "Düzeltmeler cümleye göre tartılır, telefonda"), KeyboardPrefs.neural) { KeyboardPrefs.neural = it; save() }
             Text("${tr("Strength", "Güç")}: " + listOf(tr("Modest", "Ölçülü"), tr("Normal", "Normal"), tr("Aggressive", "Sert"), tr("Very aggressive", "Çok sert"))[KeyboardPrefs.autoLevel.coerceIn(0, 3)], color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider(KeyboardPrefs.autoLevel / 3f, { KeyboardPrefs.autoLevel = (it * 3).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Correct on its own from", "Kendiliğinden düzelt, benzerlik")}: ${KeyboardPrefs.autoRatio}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
