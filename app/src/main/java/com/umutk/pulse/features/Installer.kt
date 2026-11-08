@@ -258,7 +258,7 @@ object Installer {
         val out = named.filter { !part.matches(it.second) }.map { it.first }.toMutableList()
         for ((stem, list) in groups) {
             val joined = File(c.cacheDir, "installer/joined/${System.nanoTime()}/$stem").apply { parentFile?.mkdirs() }
-            joined.outputStream().use { o -> list.sortedBy { it.second }.forEach { (u, _) -> c.contentResolver.openInputStream(u)?.use { it.copyTo(o) } } }
+            joined.outputStream().buffered(1 shl 20).use { o -> list.sortedBy { it.second }.forEach { (u, _) -> c.contentResolver.openInputStream(u)?.use { it.copyTo(o, 1 shl 20) } } }
             out += Uri.fromFile(joined)
         }
         return out
@@ -317,12 +317,12 @@ object Installer {
         if (installed || keep == null || have.size < 2) apk else {
             val raw = File(dir, "shrunk_raw.apk")
             ZipFile(apk).use { zf ->
-                java.util.zip.ZipOutputStream(raw.outputStream()).use { z ->
+                java.util.zip.ZipOutputStream(raw.outputStream().buffered(1 shl 20)).use { z ->
                     zf.entries().asSequence().filter { e -> val m = Regex("^lib/([^/]+)/").find(e.name); !e.name.startsWith("META-INF/") && (m == null || m.groupValues[1] == keep) }.forEach { e ->
                         val ne = java.util.zip.ZipEntry(e.name)
                         // stored entries (libraries the app maps straight from the APK, resources.arsc) must stay stored and aligned
                         if (e.method == java.util.zip.ZipEntry.STORED) { ne.method = java.util.zip.ZipEntry.STORED; ne.size = e.size; ne.compressedSize = e.size; ne.crc = e.crc }
-                        z.putNextEntry(ne); zf.getInputStream(e).use { it.copyTo(z) }; z.closeEntry()
+                        z.putNextEntry(ne); zf.getInputStream(e).use { it.copyTo(z, 1 shl 20) }; z.closeEntry()
                     }
                 }
             }
@@ -417,7 +417,7 @@ object Installer {
      */
     fun silentScript(c: Context, p: Picked, down: Boolean, user: Int): String {
         val d = File(c.externalCacheDir ?: c.cacheDir, "install").apply { deleteRecursively(); mkdirs() }
-        val files = p.files.map { f -> File(d, f.name).also { f.copyTo(it, true) } }
+        val files = p.files.map { f -> File(d, f.name).also { f.copyTo(it, true, 1 shl 20) } }
         fun q(s: String) = "'" + s.replace("'", "'\\''") + "'"
         val create = "pm install-create -r" + (if (down) " -d" else "") + InstallShow.srcPkg?.let { " -i $it --install-reason 0" }.orEmpty() + " --user $user"
         val sb = StringBuilder()

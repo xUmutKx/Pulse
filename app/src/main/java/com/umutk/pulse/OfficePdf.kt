@@ -184,7 +184,11 @@ fun smartInvert(b: Bitmap) {
             if (y > 0 && cand[k - bw] && !seen[k - bw]) { seen[k - bw] = true; stack[sp++] = k - bw }
             if (y < bh - 1 && cand[k + bw] && !seen[k + bw]) { seen[k + bw] = true; stack[sp++] = k + bw }
         }
-        if (cnt >= 6 && minOf(x1 - x0 + 1, y1 - y0 + 1) >= 3 && cnt * 25 >= bw * bh) for (k in members) img[k] = true
+        if (cnt >= 6 && minOf(x1 - x0 + 1, y1 - y0 + 1) >= 3 && cnt * 25 >= bw * bh) {
+            // pictures are rectangles: a region that fills most of its box is taken whole, so light parts of a photo are not turned dark in squares
+            if (cnt * 100 >= (x1 - x0 + 1) * (y1 - y0 + 1) * 45) { for (yy in y0..y1) for (xx in x0..x1) img[yy * bw + xx] = true }
+            else for (k in members) img[k] = true
+        }
     }
     val src = img.copyOf() // close one-block holes inside photos
     for (by in 1 until bh - 1) for (bx in 1 until bw - 1) if (!src[by * bw + bx]) {
@@ -217,8 +221,23 @@ fun smartInvert(b: Bitmap) {
     b.setPixels(px, 0, w, 0, 0, w, h)
 }
 
+/** The paper colour around a box (taken just outside its left edge) and the ink colour inside it (the pixel farthest from the paper): for text taken from the page. */
+private fun pageColors(b: Bitmap, x0: Float, y0: Float, x1: Float, y1: Float): Pair<Int, Int> {
+    val w = b.width; val h = b.height
+    val l = (x0 * w).toInt().coerceIn(0, w - 1); val r = (x1 * w).toInt().coerceIn(l + 1, w)
+    val t = (y0 * h).toInt().coerceIn(0, h - 1); val bt = (y1 * h).toInt().coerceIn(t + 1, h)
+    val px = (l - 3).coerceAtLeast(0)
+    val bg = b.getPixel(px, ((t + bt) / 2).coerceIn(0, h - 1)) or 0xFF000000.toInt()
+    var best = 0; var ink = if (android.graphics.Color.luminance(bg) > .5f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+    for (y in t until bt step 2) for (x in l until r step 2) {
+        val c = b.getPixel(x, y); val d = Math.abs((c shr 16 and 255) - (bg shr 16 and 255)) + Math.abs((c shr 8 and 255) - (bg shr 8 and 255)) + Math.abs((c and 255) - (bg and 255))
+        if (d > best) { best = d; ink = c or 0xFF000000.toInt() }
+    }
+    return bg to ink
+}
+
 /** One mark on a page; points are 0..1 of the page width / height. kind 0 pen, 1 highlighter, 2 text, 3 text on a white patch (edit text). */
-class PAnn(val page: Int, val kind: Int, val pts: List<Offset>, val color: Int, val text: String = "")
+class PAnn(val page: Int, val kind: Int, val pts: List<Offset>, val color: Int, val text: String = "", val bg: Int = 0)
 
 /** Box of a text mark in pixels (kind 3 paints it white first, hiding the original text under it). */
 private fun annBounds(a: PAnn, w: Float, h: Float, pt: android.graphics.Paint): android.graphics.RectF {
@@ -231,16 +250,25 @@ private fun annBounds(a: PAnn, w: Float, h: Float, pt: android.graphics.Paint): 
     return android.graphics.RectF(p0.x * w - pad, p0.y * h - pt.textSize, p0.x * w + (ls.maxOf { pt.measureText(it) }) + pad, p0.y * h + (ls.size - 1) * pt.textSize * 1.2f + pt.textSize * .3f)
 }
 
+/** A colour as the dark copy of the page shows it (same lightness curve as the smart invert). */
+private fun darkOf(c: Int): Int {
+    val r = c shr 16 and 255; val g = c shr 8 and 255; val b = c and 255
+    val l = (r * 77 + g * 151 + b * 28) shr 8; val d = PAPER_LUT[l.coerceIn(0, 255)] - l
+    return (0xFF shl 24) or ((r + d).coerceIn(0, 255) shl 16) or ((g + d).coerceIn(0, 255) shl 8) or (b + d).coerceIn(0, 255)
+}
+
 /** [dark] is screen-only: black patch and light text for black-ink marks; the saved PDF always uses dark = false. */
 private fun drawAnn(cv: android.graphics.Canvas, a: PAnn, w: Float, h: Float, pt: android.graphics.Paint, dark: Boolean = false) {
-    pt.reset(); pt.isAntiAlias = true; pt.color = if (dark && a.color == 0xFF000000.toInt()) 0xFFEDEDED.toInt() else a.color
+    pt.reset(); pt.isAntiAlias = true; pt.color = if (dark && a.bg != 0) darkOf(a.color) else if (dark && a.color == 0xFF000000.toInt()) 0xFFEDEDED.toInt() else a.color
     if (a.kind >= 2) {
         pt.style = android.graphics.Paint.Style.FILL; pt.textSize = w * .03f
         val p0 = a.pts.firstOrNull() ?: return
         val box = if (a.kind == 3 && a.pts.size >= 2) annBounds(a, w, h, pt) else null
-        if (a.kind == 3) { val r = box ?: annBounds(a, w, h, pt); val c = pt.color; pt.color = if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE; cv.drawRect(r, pt); pt.color = c }
+        val nLines = a.text.split('\n').size
+        if (a.bg != 0 && box != null) pt.textSize = box.height() * .84f / nLines // a line taken from the page: the text takes the height of the line it replaces
+        if (a.kind == 3) { val r = box ?: annBounds(a, w, h, pt); val c = pt.color; pt.color = if (a.bg != 0) (if (dark) darkOf(a.bg) else a.bg) else if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE; cv.drawRect(r, pt); pt.color = c }
         val ox = box?.let { it.left + pt.textSize * .15f } ?: p0.x * w
-        val oy = box?.let { it.top + pt.textSize } ?: p0.y * h
+        val oy = if (a.bg != 0 && box != null) box.top + box.height() * .8f / nLines else box?.let { it.top + pt.textSize } ?: p0.y * h
         a.text.split('\n').forEachIndexed { k, l -> cv.drawText(l, ox, oy + k * pt.textSize * 1.2f, pt) }
         return
     }
@@ -398,7 +426,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
             text = { PField(textVal, { textVal = it }, "") },
             confirmButton = { TextButton({
                 val old = editing; val fresh = old != null && old.pts.size >= 2 && old !in anns; if (old != null) anns.remove(old)
-                if (textVal.isNotBlank() || fresh) anns.add(PAnn(pg, if (tool == 4 || old?.kind == 3) 3 else 2, if (old != null) old.pts else listOf(Offset(x, y)), old?.color ?: cols[ci], textVal))
+                if (textVal.isNotBlank() || fresh) anns.add(PAnn(pg, if (tool == 4 || old?.kind == 3) 3 else 2, if (old != null) old.pts else listOf(Offset(x, y)), old?.color ?: cols[ci], textVal, old?.bg ?: 0))
                 if (textVal.isNotBlank() || old != null) doc.dirty = true; textAt = null; editing = null }) { Text("OK") } },
             dismissButton = { TextButton({ textAt = null; editing = null }) { Text(tr("Cancel", "İptal")) } })
     }
@@ -410,6 +438,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
 
 @Composable
 private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, color: Int, onAdd: (PAnn) -> Unit, onText: (Float, Float, PAnn?) -> Unit, sel: PSel?, onSel: (PSel?) -> Unit, found: List<Pair<PHit, Boolean>> = emptyList()) {
+    val pdfScope = androidx.compose.runtime.rememberCoroutineScope()
     val dark = OfficePrefs.darkPdf
     val bmp by produceState<ImageBitmap?>(null, i, px, dark) {
         if (!dark) { value = withContext(Dispatchers.IO) { runCatching { p.render(i, px)?.asImageBitmap() }.getOrNull() }; return@produceState }
@@ -441,6 +470,23 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
                             val (a, b) = c.pts[0] to c.pts[1]
                             val big = Math.abs(b.x - a.x) * size.width > 12 && Math.abs(b.y - a.y) * size.height > 8
                             if (big) onText(minOf(a.x, b.x), minOf(a.y, b.y), c)
+                            else if (wordAt(words, a.x, a.y).let { it >= 0 }) {
+                                // a tap on printed text: the whole line becomes editable, covered with the colour of the page and written in its ink
+                                val k = wordAt(words, a.x, a.y); val w0 = words[k]
+                                val cy = w0.y + w0.h / 2
+                                val row = words.filter { Math.abs(it.y + it.h / 2 - cy) < w0.h * .5f }.sortedBy { it.x }
+                                var lo = row.indexOf(w0); var hi = lo
+                                while (lo > 0 && row[lo].x - (row[lo - 1].x + row[lo - 1].w) < w0.h * 1.6f) lo--
+                                while (hi < row.size - 1 && row[hi + 1].x - (row[hi].x + row[hi].w) < w0.h * 1.6f) hi++
+                                val seg = row.subList(lo, hi + 1)
+                                val x0 = seg.minOf { it.x } - .004f; val x1 = seg.maxOf { it.x + it.w } + .004f
+                                val y0 = seg.minOf { it.y }; val y1 = seg.maxOf { it.y + it.h }
+                                val line = seg.joinToString(" ") { it.text }
+                                pdfScope.launch {
+                                    val (bgc, ink) = withContext(Dispatchers.IO) { runCatching { p.render(i, px) }.getOrNull()?.let { pageColors(it, x0, y0, x1, y1) } } ?: (0xFFFFFFFF.toInt() to 0xFF000000.toInt())
+                                    onText(x0, y0, PAnn(i, 3, listOf(Offset(x0, y0), Offset(x1, y1)), ink, line, bgc))
+                                }
+                            }
                             else { val hit = anns.lastOrNull { it.kind >= 2 && annBounds(it, size.width.toFloat(), size.height.toFloat(), paint).contains(a.x * size.width, a.y * size.height) }
                                 onText(a.x, a.y, hit) }
                         }

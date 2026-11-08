@@ -225,10 +225,12 @@ internal fun extractApp(ctx: Context, pkg: String): String {
             File(dir, "$name.apk").also { files[0].copyTo(it, overwrite = true) }
         } else {
             File(dir, "$name.apks").also { target ->
-                ZipOutputStream(target.outputStream().buffered()).use { zos ->
+                ZipOutputStream(target.outputStream().buffered(1 shl 20)).use { zos ->
+                    zos.setLevel(0) // APKs are packed already: stored, not squeezed again
+                    val buf = ByteArray(1 shl 20)
                     files.forEachIndexed { i, f ->
                         zos.putNextEntry(ZipEntry(if (i == 0) "base.apk" else f.name))
-                        f.inputStream().use { it.copyTo(zos) }
+                        f.inputStream().use { ins -> while (true) { val k = ins.read(buf); if (k < 0) break; zos.write(buf, 0, k) } }
                         zos.closeEntry()
                     }
                 }

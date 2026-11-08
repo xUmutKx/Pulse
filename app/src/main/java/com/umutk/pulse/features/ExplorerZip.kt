@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import androidx.compose.ui.focus.focusRequester
 import kotlinx.coroutines.flow.update
 import android.app.Notification
 import android.app.NotificationChannel
@@ -328,7 +329,9 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
     var name by remember(files) { mutableStateOf(if (files.size == 1) files[0].name else "Archive") }
     var kind by remember(files) { mutableStateOf("zip") }
     var split by remember(files) { mutableStateOf(false) }
-    var amount by remember(files) { mutableStateOf("100") }
+    var amount by remember(files) { mutableStateOf("") }
+    val amountFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(split) { if (split) runCatching { kotlinx.coroutines.delay(120); amountFocus.requestFocus() } }
     var unit by remember(files) { mutableStateOf("MB") }
     var password by remember(files) { mutableStateOf("") }
     WinAlert(onDismissRequest = onDismiss,
@@ -346,7 +349,7 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
                 PChip(split, tr("Split into parts", "Parçalara böl")) { split = !split }
             }
             if (split) Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PField(amount, { amount = it.filter { c -> c.isDigit() || c == '.' }.take(7) }, tr("Size of a part", "Parça boyutu"), Modifier.weight(1f))
+                PField(amount, { amount = it.filter { c -> c.isDigit() || c == '.' }.take(7) }, tr("Size of a part (100)", "Parça boyutu (100)"), Modifier.weight(1f).focusRequester(amountFocus))
                 listOf("MB", "GB").forEach { u -> PChip(unit == u, u) { unit = u } }
             }
             ZipInfo(tr("Content", "İçerik"), zipKind(files))
@@ -354,7 +357,7 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
             ZipInfo(tr("Size", "Boyut"), est?.let { exSize(it.bytes) } ?: "…")
             ZipInfo(tr("Estimated archive", "Tahmini arşiv"), est?.let { "≈ " + exSize(it.packed) } ?: "…")
         } },
-        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); val bytes = if (split) ((amount.toDoubleOrNull() ?: 0.0) * (if (unit == "GB") 1024.0 * 1024 * 1024 else 1024.0 * 1024)).toLong() else 0L; if (n.isNotBlank() && (!split || bytes >= 1024 * 1024)) onStart(n, kind, bytes, if (kind == "zip") password else "") }) { Text(tr("Compress", "Sıkıştır")) } },
+        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); val bytes = if (split) ((amount.toDoubleOrNull() ?: 100.0) * (if (unit == "GB") 1024.0 * 1024 * 1024 else 1024.0 * 1024)).toLong() else 0L; if (n.isNotBlank() && (!split || bytes >= 1024 * 1024)) onStart(n, kind, bytes, if (kind == "zip") password else "") }) { Text(tr("Compress", "Sıkıştır")) } },
         dismissButton = { TextButton(onDismiss) { Text(tr("Cancel", "İptal")) } })
 }
 
