@@ -517,6 +517,9 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 key(v) {
                     Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF232325))) {
                         androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
+                            // the chip's picture is a surface of its own: behind the keyboard window, not above it, so a chip that is
+                            // scrolled half out of the bar cannot paint its text over the arrow, the close button and the suggestions
+                            if (android.os.Build.VERSION.SDK_INT >= 30) runCatching { (v as? android.widget.inline.InlineContentView)?.setZOrderedOnTop(false) }
                             android.widget.FrameLayout(c).also { f -> (v.parent as? android.view.ViewGroup)?.removeView(v); f.addView(v) }
                         })
                     }
