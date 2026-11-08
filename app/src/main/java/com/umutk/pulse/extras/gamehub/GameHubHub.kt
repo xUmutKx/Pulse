@@ -274,11 +274,60 @@ internal fun openGame(c: Context, pkg: String) {
         if (again != null && runCatching { c.startActivity(android.content.Intent(again).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) {
             val pending = prefs(c).getStringSet("pendingHide", emptySet()) ?: emptySet()
             prefs(c).edit().putStringSet("pendingHide", pending + pkg).apply()
+            GameRehideService.start(c)
             return
         }
         Privilege.run("pm hide $pkg")
     }
     toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor") + if (out.text.isBlank()) "" else ": " + out.text.take(100))
+}
+
+/**
+ * Hides a game again once it has closed, without Game Hub having to come back to the screen. A hidden app is stopped by `pm hide`, so it cannot be hidden while it
+ * runs: this service looks every few seconds whether the game's process is still there and hides it the moment it is gone. A game that never showed up within
+ * 40 seconds (it did not start) is hidden at once; the wait ends after 12 hours.
+ */
+class GameRehideService : android.app.Service() {
+    companion object {
+        @Volatile private var running = false
+        fun start(c: Context) {
+            val i = android.content.Intent(c, GameRehideService::class.java)
+            runCatching { if (android.os.Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
+        }
+    }
+
+    override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
+
+    override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("game_rehide", "Game Hub", android.app.NotificationManager.IMPORTANCE_MIN))
+        val n = androidx.core.app.NotificationCompat.Builder(this, "game_rehide").setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("Game Hub").setContentText(tr("A game is open; it is hidden again when it closes", "Bir oyun açık; kapanınca yeniden gizlenecek")).setOngoing(true).setSilent(true).build()
+        runCatching { if (android.os.Build.VERSION.SDK_INT >= 34) startForeground(21, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(21, n) }
+        if (running) return START_NOT_STICKY
+        running = true
+        val ctx = applicationContext
+        Thread {
+            try {
+                if (Privilege.mode == Privilege.Mode.None) runCatching { Privilege.detect() }
+                val seen = HashSet<String>()
+                val t0 = System.currentTimeMillis()
+                while (System.currentTimeMillis() - t0 < 12 * 3600_000L) {
+                    val pending = prefs(ctx).getStringSet("pendingHide", emptySet()) ?: emptySet()
+                    if (pending.isEmpty()) break
+                    var left = pending
+                    for (pkg in pending) {
+                        val up = Privilege.run("pidof $pkg").text.trim().let { it.isNotEmpty() && it.first().isDigit() }
+                        if (up) seen += pkg
+                        val gone = !up && (pkg in seen || System.currentTimeMillis() - t0 > 40_000L)
+                        if (gone && setGameHidden(ctx, pkg, true, quiet = true)) left = left - pkg
+                    }
+                    if (left != pending) prefs(ctx).edit().putStringSet("pendingHide", left).apply()
+                    Thread.sleep(4000)
+                }
+            } finally { running = false; stopSelf() }
+        }.start()
+        return START_NOT_STICKY
+    }
 }
 
 /** Hides again the hidden games that were shown for their start; the ones that still cannot be hidden stay in the list. */
