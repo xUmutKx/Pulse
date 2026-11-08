@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- the app icon: see ic_pulse_app.xml -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- scaled to 70 percent around the middle: the adaptive icon mask (a circle or squircle) cuts the frame otherwise -->
-    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.7" android:scaleY="0.7">
+    <!-- scaled to 62 percent around the middle (the frame's corners stay inside the 66-unit safe circle): the adaptive icon mask (a circle or squircle) cuts the frame otherwise -->
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.62" android:scaleY="0.62">
         <path android:fillColor="#FFC0C0C0" android:pathData="M18,18H90V90H18Z" />
         <path android:fillColor="#FF404040" android:fillType="evenOdd" android:pathData="M18,18H90V90H18Z M20,20V88H88V20Z" />
         <path android:fillColor="#FF000080" android:pathData="M22,22H86V33H22Z" />
