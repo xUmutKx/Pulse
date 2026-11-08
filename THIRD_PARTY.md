@@ -29,3 +29,7 @@ Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 
 ## Pulse AI (localai/, aistt/)
 
 local chat and speech to text: llama.cpp and whisper.cpp (MIT, ggml authors), fetched at build time; llama.cpp's Android example JNI (MIT) is in localai. See localai/NOTICE.md.
+
+## Sonic look of the music player
+
+The Sonic look (extras/music/cassette/SonicPlayer.kt) follows the design of [Sonic](https://github.com/Abhiroop1122/Sonic) by Abhiroop1122 (MIT licence): the deck in glowing lines, the LED windows, the crate of sleeves. The code is written for Pulse in 2D; no file of Sonic is copied (its font and 3D model are not used).
