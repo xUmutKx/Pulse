@@ -12,6 +12,9 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
     set(GGML_OPENMP ON)
 endif()
 
+# small libraries: no debug information, unused code dropped, symbols stripped at link time
+add_compile_options(-g0 -ffunction-sections -fdata-sections)
+add_link_options(-Wl,--gc-sections -Wl,--strip-all)
 if(NOT DEFINED LLAMA_SRC)
     message(FATAL_ERROR "LLAMA_SRC is not set (the workflow fetches llama.cpp into localai/vendor)")
 endif()
