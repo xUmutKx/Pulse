@@ -1,7 +1,6 @@
 package com.umutk.pulse.extras.ai
 
 import android.app.ActivityManager
-import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
@@ -71,59 +70,52 @@ object Store {
     val dir: File get() = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "PulseAI")
     fun fileOf(m: AiModel) = File(dir, m.file)
 
-    /** Starts a download with the system download manager (it goes on in the background and survives the app). */
-    fun download(c: Context, m: AiModel): Long {
-        val dm = c.getSystemService(DownloadManager::class.java)
-        val req = DownloadManager.Request(Uri.parse(m.url)).setTitle("Pulse AI: ${m.name}")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "PulseAI/${m.file}")
-        val id = dm.enqueue(req)
-        sp(c).edit().putLong("dl_${m.id}", id).apply()
-        return id
+    /**
+     * The model downloads run in Pulse's own downloader (the engine of the Downloads page): they go on when the app is closed, show on the
+     * Downloads page while they run, and the file is kept in Download/PulseAI.
+     */
+    private val jobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** Starts a download of the model. */
+    fun download(c: Context, m: AiModel) {
+        val app = c.applicationContext
+        val file = fileOf(m)
+        file.parentFile?.mkdirs()
+        jobs.remove(m.id)?.cancel()
+        jobs[m.id] = scope.launch { runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, m.url, file, m.bytes) {} } }
     }
 
     /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. */
     fun progress(c: Context, m: AiModel): Float {
         if (has(c, m)) return 1f
-        val id = sp(c).getLong("dl_${m.id}", -1L); if (id < 0) return -1f
-        val dm = c.getSystemService(DownloadManager::class.java)
-        dm.query(DownloadManager.Query().setFilterById(id))?.use { q ->
-            if (!q.moveToFirst()) return -1f
-            val st = q.getInt(q.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-            val done = q.getLong(q.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-            val total = q.getLong(q.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)).takeIf { it > 0 } ?: m.bytes
-            return when (st) { DownloadManager.STATUS_SUCCESSFUL -> 1f; DownloadManager.STATUS_FAILED -> -1f; else -> (done.toFloat() / total).coerceIn(0f, .999f) }
+        val t = com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path } ?: return -1f
+        return when (t.state.value) {
+            com.umutk.pulse.features.DlState.DONE -> 1f
+            com.umutk.pulse.features.DlState.FAILED -> -1f
+            else -> (t.done.value.toFloat() / (t.total.value.takeIf { it > 0 } ?: m.bytes)).coerceIn(0f, .999f)
         }
-        return -1f
     }
 
+    /** The file is there whole: its size is right and no download of it is still running. */
     fun has(c: Context, m: AiModel): Boolean {
         m.path?.let { return File(it).isFile }
-        if (Environment.isExternalStorageManager()) return fileOf(m).let { it.isFile && it.length() >= m.bytes * 98 / 100 }
-        val id = sp(c).getLong("dl_${m.id}", -1L); if (id < 0) return false
-        val dm = c.getSystemService(DownloadManager::class.java)
-        return dm.query(DownloadManager.Query().setFilterById(id))?.use { q -> q.moveToFirst() && q.getInt(q.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL } == true
+        val f = fileOf(m)
+        if (!f.isFile || f.length() < m.bytes * 98 / 100) return false
+        return com.umutk.pulse.features.Downloads.tasks.value.none { it.file.path == f.path && it.state.value == com.umutk.pulse.features.DlState.RUNNING }
     }
 
     fun delete(c: Context, m: AiModel) {
-        val id = sp(c).getLong("dl_${m.id}", -1L)
-        if (id >= 0) runCatching { c.getSystemService(DownloadManager::class.java).remove(id) }
+        jobs.remove(m.id)?.cancel()
+        com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path }?.let { com.umutk.pulse.features.Downloads.remove(it) }
         runCatching { fileOf(m).delete() }
         sp(c).edit().remove("dl_${m.id}").apply()
     }
 
-    /**
-     * A path the native code can open: the file itself with all-files access, else the download handed over by the download manager
-     * (/proc/self/fd/N; the descriptor stays open while the model is used, [hold] keeps it).
-     */
+    /** A path the native code can open: the model file itself (Pulse has all-files access, the same as its downloads). */
     fun openPath(c: Context, m: AiModel, hold: (ParcelFileDescriptor) -> Unit): String? {
         m.path?.let { return it }
-        val f = fileOf(m)
-        if (Environment.isExternalStorageManager() && f.isFile) return f.path
-        val id = sp(c).getLong("dl_${m.id}", -1L); if (id < 0) return null
-        val pfd = runCatching { c.getSystemService(DownloadManager::class.java).openDownloadedFile(id) }.getOrNull() ?: return null
-        hold(pfd)
-        return "/proc/self/fd/${pfd.fd}"
+        return fileOf(m).takeIf { it.isFile }?.path
     }
 
     /** A model file picked by hand (any GGUF or ggml file on the phone). */

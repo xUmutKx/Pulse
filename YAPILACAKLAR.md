@@ -2325,3 +2325,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.380 (derlendi): 1.0.379 ile aynı, Pulse AI yerel kütüphaneleri soyuldu (APK 106 MB idi).
 
 - Araç kutusu: Tilt-shift kutucuğu kaldırıldı; kısa kalan satırlar ortalandı. (derlenmedi)
+- Dosya seçici: varsayılan "Son eklenenler" (medya dizininden en yeni dosyalar), kenar çubuğundan konum seçilebilir; Pulse AI dosya seçicileri Pulse seçicisini kullanıyor. (derlenmedi)
+- Pulse AI model indirmeleri Pulse indiricisiyle yapılıyor (uygulama kapansa da sürer, Download/PulseAI); yüzde canlı güncellenir. (derlenmedi)
