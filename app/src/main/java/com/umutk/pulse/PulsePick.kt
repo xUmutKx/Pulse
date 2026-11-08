@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -216,6 +217,21 @@ private val EXT_ARC = setOf("zip", "rar", "7z", "tar", "gz", "apk", "xapk", "apk
 private fun kindOf(f: File): Int = when (f.extension.lowercase()) { in EXT_IMG -> 1; in EXT_VID -> 2; in EXT_AUD -> 3; in EXT_DOC -> 4; in EXT_ARC -> 5; else -> 0 }
 private fun sizeText(b: Long) = when { b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0); b >= 1L shl 20 -> "%.1f MB".format(b / 1048576.0); b >= 1024 -> "%d KB".format(b / 1024); else -> "$b B" }
 
+/** The newest files of the phone (the media index, by the day each was added), kept to the first few hundred that fit the wanted types. */
+private fun recentFiles(ctx: Context, mimes: List<String>): List<File> {
+    val out = ArrayList<File>()
+    runCatching {
+        ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns.DATA), null, null,
+            "${MediaStore.Files.FileColumns.DATE_ADDED} DESC")?.use { c ->
+            while (c.moveToNext() && out.size < 400) {
+                val f = File(c.getString(0) ?: continue)
+                if (f.isFile && !f.name.startsWith(".") && PulsePick.fits(f.name, mimes)) out += f
+            }
+        }
+    }
+    return out
+}
+
 /** The places of the side panel: the phone's storage, its usual folders and any memory card. */
 private class PickPlace(val name: String, val dir: File, val icon: String)
 
@@ -247,10 +263,14 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
     var grid by remember { mutableStateOf(sp.getBoolean("viewGrid", false)) }
     var sortMenu by remember { mutableStateOf(false) }
     val ticked = remember { mutableStateListOf<File>() }
+    // picking a file opens on Recent: the newest files of the phone, in one list; a place in the side panel browses the folders
+    val canRecent = mode == "open" || mode == "multi"
+    var recents by remember { mutableStateOf(canRecent) }
     // the folder is read off the main thread: a folder with thousands of pictures must not freeze the window
-    val raw by produceState<List<File>?>(null, cur, mode) {
+    val raw by produceState<List<File>?>(null, cur, mode, recents) {
         value = null
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (recents) return@withContext recentFiles(ctx, mimes)
             val all = cur.listFiles().orEmpty().filter { !it.name.startsWith(".") }
             all.filter { it.isDirectory } + (if (mode == "folder") emptyList() else all.filter { it.isFile && PulsePick.fits(it.name, mimes) })
         }
@@ -264,10 +284,11 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
             3 -> compareBy<File> { it.extension.lowercase() }.thenBy { it.name.lowercase() }
             else -> compareBy { it.lastModified() }
         }
-        val files = l.filter { it.isFile && (kind == 0 || kindOf(it) == kind) && (q.isEmpty() || it.name.contains(q, true)) }.sortedWith(cmp).let { if (desc) it.reversed() else it }
+        val files = l.filter { it.isFile && (kind == 0 || kindOf(it) == kind) && (q.isEmpty() || it.name.contains(q, true)) }
+            .let { if (recents) it else it.sortedWith(cmp).let { s -> if (desc) s.reversed() else s } }
         dirs + files
     }
-    val up: () -> Unit = { if (drawer) drawer = false else if (search != null) { search = null } else if (ticked.isNotEmpty()) ticked.clear() else if (cur != top) cur = cur.parentFile ?: top else onCancel() }
+    val up: () -> Unit = { if (drawer) drawer = false else if (search != null) { search = null } else if (ticked.isNotEmpty()) ticked.clear() else if (recents) onCancel() else if (cur != top) cur = cur.parentFile ?: top else onCancel() }
     BackHandler { up() }
     fun open(f: File) {
         when {
@@ -289,13 +310,13 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
                     Box(Modifier.size(48.dp).clickable { onPicked(ticked.toList()) }, contentAlignment = Alignment.Center) { PIcon("check", T.accent, 26.dp) }
                 } else {
                     Box(Modifier.size(44.dp).clickable { drawer = !drawer }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
-                    if (cur != top) Box(Modifier.size(40.dp).clickable { cur = cur.parentFile ?: top }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(180f)) }
+                    if (!recents && cur != top) Box(Modifier.size(40.dp).clickable { cur = cur.parentFile ?: top }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(180f)) }
                     if (search != null) {
                         androidx.compose.foundation.text.BasicTextField(
                             search.orEmpty(), { search = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = T.text, fontSize = 16.sp),
                             cursorBrush = androidx.compose.ui.graphics.SolidColor(T.accent), modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 10.dp),
                         )
-                    } else Text(cur.path.removePrefix(top.path).ifEmpty { "/" }, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
+                    } else Text(if (recents) tr("Recent", "Son eklenenler") else cur.path.removePrefix(top.path).ifEmpty { "/" }, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
                     Box(Modifier.size(40.dp).clickable { search = if (search == null) "" else null }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
                     Box {
                         Box(Modifier.size(40.dp).clickable { sortMenu = true }, contentAlignment = Alignment.Center) { PIcon("sort", T.text, 22.dp) }
@@ -373,9 +394,14 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
         if (drawer) {
             Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .45f)).clickable { drawer = false })
             Column(Modifier.fillMaxHeight().width(260.dp).background(T.bg).padding(top = 8.dp)) {
+                if (canRecent) Row(Modifier.fillMaxWidth().clickable { recents = true; drawer = false }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("history", T.accent, 22.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Text(tr("Recent", "Son eklenenler"), color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 Text(tr("Places", "Konumlar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
                 places(ctx).forEach { p ->
-                    Row(Modifier.fillMaxWidth().clickable { top = if (p.icon == "disk") p.dir else Environment.getExternalStorageDirectory(); cur = p.dir; drawer = false }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { top = if (p.icon == "disk") p.dir else Environment.getExternalStorageDirectory(); cur = p.dir; recents = false; drawer = false }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon(p.icon, T.accent, 22.dp)
                         Spacer(Modifier.width(14.dp))
                         Text(p.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
