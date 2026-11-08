@@ -1002,7 +1002,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     @androidx.annotation.RequiresApi(30)
-    override fun onInlineSuggestionsResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean {
+    override fun onInlineSuggestionsResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean = try { inlineResponse(response) } catch (e: Throwable) { st.inline = emptyList(); false }
+
+    @androidx.annotation.RequiresApi(30)
+    private fun inlineResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean {
         val list = response.inlineSuggestions
         if (list.isEmpty()) { st.inline = emptyList(); return false }
         val d = resources.displayMetrics.density
@@ -1057,7 +1060,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun slot(i: Int) {
         st.banAsk = -1
         // a login of the vault: its user name or password is written as it is
-        if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { currentInputConnection?.commitText(it, 1); afterText() }; return }
+        if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { fillField(it) }; return }
         val qc = quickClip
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
@@ -1735,6 +1738,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return own + web
     }
 
+    /**
+     * A login chip was tapped: the box gets exactly that text. What was typed in the box before (the first letters of the user name, a half-written password) is taken
+     * out first, so the chip no longer lands behind it ("na" + "nam..."), and the state of the word and of the last correction is cleared so the delete key does not bring an old word back.
+     */
+    private fun fillField(text: String) {
+        val c = currentInputConnection ?: return
+        runCatching {
+            finishWord("", false); lastGlide = null; lastCorrection = null
+            val before = c.getTextBeforeCursor(500, 0)?.length ?: 0
+            val after = c.getTextAfterCursor(500, 0)?.length ?: 0
+            c.beginBatchEdit()
+            if (before > 0 || after > 0) c.deleteSurroundingText(before, after)
+            c.commitText(text, 1)
+            c.endBatchEdit()
+            selStart = text.length; selEnd = text.length
+        }
+        vaultTexts = emptyList()
+        afterText()
+    }
+
     private fun loginSuggestions(): Boolean {
         vaultTexts = emptyList()
         val info = currentInputEditorInfo ?: return false
@@ -1742,24 +1765,35 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
             (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
-        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
+        // what the app says about the box: its hint, its label, its private options (a web page's field often says its name there)
+        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty() + " " + info.privateImeOptions.orEmpty()).lowercase()
         val numeric = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE
-        val user = !pass && ((cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
-            listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })) || numeric)
-        if (!pass && !user) return false
+        // a box that says it is something else (a school, a department, a name, an amount) is no login box, whatever else it looks like
+        val notLogin = listOf("okul", "school", "bölüm", "bolum", "department", "faculty", "fakülte", "fakulte", "sınıf", "sinif", "class", "ad soyad", "full name", "first name", "last name", "soyad", "adres", "address", "city", "şehir", "sehir", "amount", "tutar", "adet", "quantity", "miktar", "yaş", "age", "search", "ara", "note", "not ")
+            .any { label.contains(it) } && listOf("user", "kullanıcı", "kullanici", "login", "mail", "şifre", "sifre", "pass").none { label.contains(it) }
+        if (notLogin) return false
+        val passLabel = listOf("password", "passwd", "şifre", "sifre", "parola", "pass word", "pin kodu").any { label.contains(it) }
+        val userLabel = listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "eposta", "email", "e-mail", "mail", "hesap", "account", "tc kimlik", "kimlik no", "öğrenci", "ogrenci", "student").any { label.contains(it) }
+        val passBox = pass || (cls == InputType.TYPE_CLASS_TEXT && passLabel)
+        val user = !passBox && ((cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS || userLabel)) ||
+            // a number box is a login box only when it says so (a student or ID number, a phone), or says nothing
+            (numeric && (userLabel || label.isBlank())))
+        if (!passBox && !user) return false
         // a verification code box (SMS, e-mail, authenticator) is no login: nothing from the vault is offered there
         if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return false
         if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false
         val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
+        // a password box that already has text is being typed in: the vault does not step in
+        if (passBox && currentInputConnection?.getTextBeforeCursor(1, 0)?.isNotEmpty() == true) return false
         val seen = HashSet<String>()
         val list = loginPool(info.packageName)
             // a number box offers only the logins whose user name is a number (a student or ID number, a phone number)
-            .filter { !numeric || pass || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
+            .filter { !numeric || passBox || it.user.isNotEmpty() && it.user.all { c -> c.isDigit() || c in "+ -()" } }
             .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
             .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
         if (list.isEmpty()) return false
-        vaultTexts = list.map { if (pass) it.pass else it.user }
-        val shown = list.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
+        vaultTexts = list.map { if (passBox) it.pass else it.user }
+        val shown = list.map { if (passBox) "•••••• " + it.name.ifBlank { it.user } else it.user }
         val n = maxOf(3, shown.size)
         slotWords = Array(n) { "" }
         st.slots = (shown + listOf("", "", "")).take(n)
@@ -1771,7 +1805,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // no text field to write in (a game, a screen with no field): the bar has nothing to suggest, and nothing looks like typing
         if (currentInputConnection == null || currentInputEditorInfo?.inputType == 0) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
-        if (loginSuggestions()) return
+        if (runCatching { loginSuggestions() }.getOrDefault(false)) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
         if (nameField && !st.incognito) {
