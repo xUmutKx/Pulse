@@ -79,18 +79,22 @@ fun measureApps(ctx: Context): List<AppEntry> {
         }
         out += AppEntry(a.packageName, label(a), if (st != null) st.appBytes + st.dataBytes + st.cacheBytes else apkBytes(a), false, (a.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0)
     }
+    // games hidden in Game Hub that the package list does not return at all: counted too, by their folders
+    val known = out.map { it.pkg }.toSet() + hidden.map { it.packageName }
+    val gh = ctx.getSharedPreferences("gamehub", Context.MODE_PRIVATE)
+    val extra = (gh.getStringSet("hidden", emptySet()) ?: emptySet()).filter { it !in known }
     // the hidden ones: their folders measured with root or Shizuku (one run for all of them), else only their program files
-    if (hidden.isNotEmpty()) {
+    if (hidden.isNotEmpty() || extra.isNotEmpty()) {
         val P = com.umutk.pulse.extras.blackout.Privilege
         if (P.mode == com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching { P.detect() }
         val sized = if (P.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching {
-            val script = hidden.joinToString("; ") { a ->
-                val k = a.packageName
+            val script = (hidden.map { it.packageName } + extra).joinToString("; ") { k ->
                 "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /data/user_de/0/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
             }
             P.run("renice -n 19 -p \$\$ >/dev/null 2>&1; " + script).text.lines().mapNotNull { l -> l.trim().split(' ').takeIf { it.size == 2 }?.let { it[0] to (it[1].toDoubleOrNull()?.toLong() ?: 0L) } }.toMap()
         }.getOrDefault(emptyMap()) else emptyMap()
         for (a in hidden) out += AppEntry(a.packageName, label(a), maxOf(sized[a.packageName] ?: 0L, apkBytes(a)), true)
+        for (k in extra) out += AppEntry(k, gh.getString("name_$k", null) ?: k, sized[k] ?: 0L, true)
     }
     return out
 }

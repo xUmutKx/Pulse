@@ -1,5 +1,6 @@
 package com.umutk.pulse.files.home
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.navigationBarsPadding
 import android.content.Context
 import android.content.Intent
@@ -63,6 +64,8 @@ object FilesHomeNav {
     var openDrawer by mutableStateOf(false)
     /** A folder picked in the home page's folder list: the Browse tab opens it (the home page stays put until then). */
     var pendingDir by mutableStateOf<String?>(null)
+    /** A file held on the home page's Recent row: the Browse tab opens its folder with that file picked. */
+    var pendingSelect by mutableStateOf<String?>(null)
     /** Set by the bottom bar's Search: the explorer opens its search field when it appears. */
     var openSearch by mutableStateOf(false)
     /** The Search tab searches the whole phone, not only the folder it is in. */
@@ -208,6 +211,7 @@ private fun filesSeeThrough(): Boolean =
  * the Windows looks draw it with their own panels and borders.
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: (File) -> Unit, onSettings: () -> Unit) {
     val ctx = LocalContext.current
     val mat = T.material
@@ -297,7 +301,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recentFiles, key = { it.path }) { f ->
-                        Column(Modifier.width(112.dp).clickable { onOpenFile(f) }) {
+                        Column(Modifier.width(112.dp).combinedClickable(onClick = { onOpenFile(f) }, onLongClick = { f.parentFile?.let { d -> FilesHomeNav.pendingSelect = f.path; onOpenDir(d.path) } })) {
                             Box(box(Modifier.fillMaxWidth().height(96.dp)), contentAlignment = Alignment.Center) {
                                 val th = exThumb(f)
                                 if (th != null) androidx.compose.foundation.Image(th, null, Modifier.fillMaxSize().clip(RoundedCornerShape(if (mat) 14.dp else 0.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
