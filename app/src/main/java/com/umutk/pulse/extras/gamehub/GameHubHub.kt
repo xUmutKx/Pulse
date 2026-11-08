@@ -99,10 +99,11 @@ private const val PREFS = "gamehub"
 private class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
 /** The looks of Game Hub, in the order they are offered. */
-private val THEMES = listOf("amoled", "material", "win95", "winxp", "win8", "win10", "win11")
+private val THEMES = listOf("amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
 
 private fun themeName(k: String): String = when (k) {
     "material" -> "Material"
+    "glass" -> tr("Material, transparent", "Material, şeffaf")
     "win95" -> "Windows 95"
     "winxp" -> "Windows XP"
     "win8" -> "Windows 8"
@@ -116,6 +117,8 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
     if (Build.VERSION.SDK_INT >= 31) runCatching { Color(c.getColor(res)) }.getOrDefault(fallback) else fallback
 
 private fun palOf(theme: String, c: Context): Pal = when (theme) {
+    // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
+    "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
     "material" -> Pal(
         systemColor(c, android.R.color.system_neutral1_900, Color(0xFF1C1B1F)),
@@ -134,6 +137,10 @@ private fun palOf(theme: String, c: Context): Pal = when (theme) {
 }
 
 private class GameRow(val pkg: String, val name: String)
+
+/** The ground of a page: the look's colour; the transparent look gets a soft wash of its accent under the veil. */
+private fun Modifier.hubGround(theme: String, pal: Pal): Modifier =
+    if (theme == "glass") background(Brush.linearGradient(listOf(pal.accent.copy(alpha = .55f), Color(0xFF0A0A12), pal.accent.copy(alpha = .3f)))).background(pal.bg) else background(pal.bg)
 
 private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
@@ -201,6 +208,39 @@ private fun loadGames(c: Context): List<GameRow> {
 
 /** The cover a person picked for a game (at most 3 MB). */
 private const val COVER_MAX = 3L * 1024 * 1024
+private fun playCoverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/play_" + pkg.replace('.', '_') + ".jpg")
+private fun favSet(c: Context): Set<String> = prefs(c).getStringSet("favs", emptySet()) ?: emptySet()
+private fun toggleFav(c: Context, pkg: String) {
+    prefs(c).edit().putStringSet("favs", if (pkg in favSet(c)) favSet(c) - pkg else favSet(c) + pkg).apply()
+    GameHubState.favVersion.intValue++
+}
+
+/**
+ * The store picture of a game from its Google Play page (its wide feature graphic when the page shows one), kept as the game's cover until the person picks their own.
+ * Tried once every two weeks per game; a page that cannot be read (no network, no listing) just leaves the cover as it was.
+ */
+private fun fetchPlayCover(c: Context, pkg: String): Boolean {
+    val now = System.currentTimeMillis()
+    if (now - prefs(c).getLong("pt_$pkg", 0L) < 14 * 86_400_000L) return false
+    prefs(c).edit().putLong("pt_$pkg", now).apply()
+    return runCatching {
+        val html = (java.net.URL("https://play.google.com/store/apps/details?id=$pkg&hl=en&gl=US").openConnection() as java.net.HttpURLConnection).run {
+            connectTimeout = 8000; readTimeout = 8000; setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+            try { if (responseCode != 200) return@runCatching false; inputStream.bufferedReader().use { it.readText() } } finally { disconnect() }
+        }
+        val img = Regex("https://play-lh\\.googleusercontent\\.com/([A-Za-z0-9_\\-]+)=w(\\d+)-h(\\d+)").findAll(html).firstOrNull { it.groupValues[2].toInt() >= it.groupValues[3].toInt() * 3 / 2 && it.groupValues[2].toInt() >= 400 }
+            ?: return@runCatching false
+        val url = "https://play-lh.googleusercontent.com/" + img.groupValues[1] + "=w1024"
+        val bytes = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).run {
+            connectTimeout = 8000; readTimeout = 12000
+            try { if (responseCode != 200) return@runCatching false; inputStream.use { it.readBytes() } } finally { disconnect() }
+        }
+        if (bytes.size < 4000 || bytes.size > COVER_MAX) return@runCatching false
+        playCoverFile(c, pkg).parentFile?.mkdirs(); playCoverFile(c, pkg).writeBytes(bytes)
+        true
+    }.getOrDefault(false)
+}
+
 private fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
 
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
@@ -344,6 +384,9 @@ private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHO
 
 /** Decoded pictures of the games, kept in memory: each picture is decoded once, at the size it is drawn (no decode on every scroll or return). */
 private object GameArt {
+    /** Raised when a cover has arrived from the store, so the pictures on the screen are read again. */
+    val version = androidx.compose.runtime.mutableIntStateOf(0)
+
     private val cache = android.util.LruCache<String, ImageBitmap>(120)
 
     private fun cached(key: String, make: () -> ImageBitmap?): ImageBitmap? {
@@ -364,8 +407,8 @@ private object GameArt {
 
     /** The picture the person chose (at most 3 MB), decoded at [px] wide. */
     fun cover(c: Context, pkg: String, px: Int): ImageBitmap? {
-        val f = coverFile(c, pkg).takeIf { it.isFile } ?: return null
-        return cached("c/$pkg/${f.lastModified()}/$px") { decodeFile(f.path, px) }
+        val f = coverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+        return cached("c/$pkg/${f.path.takeLast(14)}/${f.lastModified()}/$px") { decodeFile(f.path, px) }
     }
 
     /** The game's own banner from its APK (the art its developer made for the store), when the APK has one. */
@@ -443,7 +486,8 @@ private fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
     val ctx = LocalContext.current
     val apkOnly = prefs(ctx).getInt("iconMode", 0) == 1
     val px = if (wide) 960 else 600
-    val art by produceState<ImageBitmap?>(null, pkg, apkOnly, wide) {
+    val ver = GameArt.version.intValue
+    val art by produceState<ImageBitmap?>(null, pkg, apkOnly, wide, ver) {
         value = withContext(Dispatchers.IO) { (if (apkOnly) null else GameArt.cover(ctx, pkg, px)) ?: GameArt.banner(ctx, pkg, px) }
     }
     val icon by produceState<ImageBitmap?>(null, pkg) {
@@ -474,6 +518,21 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onCli
         Box(Modifier.padding(top = 4.dp).heightIn(min = 20.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .8f), fontSize = 12.sp)
+    }
+}
+
+/** One game as a wide card: the cover across, the name and the info over its bottom edge, a star for a favourite. */
+@Composable
+private fun GameBanner(g: GameRow, pal: Pal, hidden: Boolean, fav: Boolean, info: String?, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(pal.radius)).clickable(onClick = onClick)) {
+        GameCover(g.pkg, pal)
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .78f)))))
+        Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
+            Text(g.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            val sub = listOfNotNull(info, if (hidden) tr("hidden", "gizli") else null).joinToString("  ·  ")
+            if (sub.isNotEmpty()) Text(sub, color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+        }
+        if (fav) Text("★", color = Color(0xFFFFD54F), fontSize = 20.sp, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
     }
 }
 
@@ -602,12 +661,16 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
                 StatCard(pal, Modifier.weight(1f), tr("Total played", "Toplam oynama"), if (total > 0) hm(total) else "-")
                 StatCard(pal, Modifier.weight(1f), tr("Last played", "Son oynama"), if (lastUsed > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(lastUsed)) else "-")
             }
+            val favNow = GameHubState.favVersion.intValue.let { g.pkg in favSet(ctx) }
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip(pal, if (favNow) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori")) { toggleFav(ctx, g.pkg) }
+            }
+            GamePerformance(pal, g.pkg, can)
             SectionTitle(pal, tr("Cover", "Kapak"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(pal, tr("Change cover", "Kapağı değiştir")) { if (com.umutk.pulse.ads.PulseAds.ENABLED) askAd = true else pick.launch("image/*") }
                 Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
             }
-            GamePerformance(pal, g.pkg, can)
             // the game does not report achievements: these are Pulse's own marks, counted from the time played
             GameMilestones(pal, g.pkg, total)
             SectionTitle(pal, tr("Community", "Topluluk"))
@@ -696,6 +759,8 @@ private object GameHubState {
     var times: Map<String, Long>? = null
     var usage: Map<String, android.app.usage.UsageStats>? = null
     var sizes: Map<String, Long>? = null
+    /** Raised when a favourite is switched, so the library re-sorts. */
+    val favVersion = androidx.compose.runtime.mutableIntStateOf(0)
 }
 
 /**
@@ -723,6 +788,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
+    var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
+    val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
     // the library's own search: a floating button on the right opens the field under the sort row
     var libSearch by remember { mutableStateOf(false) }
     var libQuery by remember { mutableStateOf("") }
@@ -749,6 +816,19 @@ fun GameHubHub(onBack: () -> Unit) {
         sizes = z; GameHubState.sizes = z
     }
     val can = mode != Privilege.Mode.None
+    // the store pictures of the games that have no cover yet are fetched one by one in the background
+    LaunchedEffect(games.size) {
+        if (!prefs(ctx).getBoolean("playCovers", true)) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            var got = 0
+            for (g in games) {
+                if (coverFile(ctx, g.pkg).isFile || playCoverFile(ctx, g.pkg).isFile) continue
+                if (fetchPlayCover(ctx, g.pkg)) { got++; GameArt.version.intValue++ }
+                kotlinx.coroutines.delay(600)
+                if (got >= 40) break
+            }
+        }
+    }
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
     fun go(p: Int) { page = p; prefs(ctx).edit().putInt("start", p).apply(); scope.launch { drawer.close() } }
     fun setTheme(k: String) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
@@ -790,7 +870,7 @@ fun GameHubHub(onBack: () -> Unit) {
             }
         },
     ) {
-        Column(Modifier.fillMaxSize().background(pal.bg)) {
+        Column(Modifier.fillMaxSize().hubGround(theme, pal)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { FluentIcon("menu", pal.text, 24.dp) }
                 Text(
@@ -808,6 +888,18 @@ fun GameHubHub(onBack: () -> Unit) {
                         StatCard(pal, Modifier.weight(1f), tr("Games", "Oyun"), games.size.toString())
                         StatCard(pal, Modifier.weight(1f), tr("Hidden", "Gizli"), hidden.size.toString())
                         StatCard(pal, Modifier.weight(1f), tr("This week", "Bu hafta"), if (total > 0) hm(total) else "-")
+                    }
+                    // the game played last, to start again at once
+                    games.filter { (usage[it.pkg]?.lastTimeUsed ?: 0L) > 0L }.maxByOrNull { usage[it.pkg]?.lastTimeUsed ?: 0L }?.let { last ->
+                        Text(tr("Continue playing", "Oynamaya devam et"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
+                        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(pal.radius)).clickable { profile = last }) {
+                            GameCover(last.pkg, pal)
+                            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .75f)))))
+                            Row(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(last.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f))
+                                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(pal.accent).clickable { openGame(ctx, last.pkg) }.padding(horizontal = 16.dp, vertical = 8.dp)) { Text(tr("Play", "Oyna"), color = pal.bg, fontWeight = FontWeight.Bold) }
+                            }
+                        }
                     }
                     val top = games.map { it to (week[it.pkg] ?: 0L) }.filter { it.second > 0 }.sortedByDescending { it.second }.take(7)
                     Text(tr("Most played this week", "Bu hafta en çok oynanan"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
@@ -845,19 +937,27 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
+                    } else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
+                        Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, key = { it.pkg }) { g -> GameBanner(g, pal, g.pkg in hidden, g.pkg in favs, infoLine(g, usage, sizes)) { profile = g } }
                     } else LazyVerticalGrid(
                         GridCells.Adaptive(gridDpOf(tileSize).dp),
                         Modifier.fillMaxSize().padding(horizontal = 10.dp),
                         state = gridState,
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                     ) {
-                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoLine(g, usage, sizes)) { profile = g } }
+                        items(sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoLine(g, usage, sizes)) { profile = g } }
                     }
                     // the sort row, like the library bar of a store: name, play time, size
                     Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
                             Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
                         }
+                        Spacer(Modifier.weight(1f))
+                        Chip(pal, if (viewMode == 0) tr("Banners", "Bannerlar") else tr("Tiles", "Kartlar")) { viewMode = 1 - viewMode; prefs(ctx).edit().putInt("view", viewMode).apply() }
                     }
                     // the search: a round button on the right; the field opens under the sort row
                     if (libSearch) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
@@ -883,6 +983,12 @@ fun GameHubHub(onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")).forEach { (k, label) ->
                             Chip(pal, if (tileSize == k) "● $label" else label) { tileSize = k; prefs(ctx).edit().putInt("grid", k).apply() }
+                        }
+                    }
+                    Text(tr("View", "Görünüm biçimi"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to tr("Tiles", "Kartlar"), 1 to tr("Banners", "Bannerlar")).forEach { (k, label) ->
+                            Chip(pal, if (viewMode == k) "● $label" else label) { viewMode = k; prefs(ctx).edit().putInt("view", k).apply() }
                         }
                     }
                     SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true) { on ->
@@ -925,6 +1031,8 @@ fun GameHubHub(onBack: () -> Unit) {
                         scope.launch { withContext(Dispatchers.IO) { Privilege.detect() }; mode = Privilege.mode }
                     }
                     SectionTitle(pal, tr("Covers", "Kapaklar"))
+                    var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+                    SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
                     Spacer(Modifier.height(24.dp))
                 }
@@ -935,7 +1043,7 @@ fun GameHubHub(onBack: () -> Unit) {
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
-        Column(Modifier.fillMaxSize().background(pal.bg).statusBarsPadding()) {
+        Column(Modifier.fillMaxSize().hubGround(theme, pal).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { profile = null }, contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
             }
