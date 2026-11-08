@@ -162,6 +162,8 @@ object KeyboardDictionary {
         // the slips the owner's typing showed (typed -> fixed), the corrections the owner undid, and the words the owner types as they are: bundled, so a new install has them too
         runCatching { c.assets.open("kbd/habits_user_add.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos.putIfAbsent(p[0], p[1]) } } }
         runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
+        // the letters the owner presses for others (typed, meant), counted from their slips: each such swap costs a fifth of a neighbour key
+        runCatching { c.assets.open("kbd/confusion_user.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 2) confusion.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
         runCatching { c.assets.open("kbd/kbd_keep.txt").bufferedReader().useLines { it.forEach { l -> if (l.isNotBlank()) kept += l.trim().lowercase(Locale.ROOT) } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
