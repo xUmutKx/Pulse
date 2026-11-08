@@ -597,19 +597,41 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val speaker = remember { Speaker(ctx) { if (speaking) pageTurner.value?.invoke() } }
     // the words being read, as a range of the page's text: they are highlighted
     var spoken by remember { mutableStateOf(IntRange.EMPTY) }
+    // the pages of the chapter on screen and the page shown, for the speed reading to find where it stopped; the word it stopped on is marked on its page
+    val pagesNow = remember { arrayOfNulls<List<List<Para>>>(1) }
+    val shownNow = remember { intArrayOf(0) }
+    val rsvpAt = remember { intArrayOf(0) }
+    var mark by remember { mutableStateOf(Ebook.mark(ctx, start.uri)) }
     var pageCount by remember { mutableStateOf(0) }
     speaker.onRange = { s, e -> spoken = s until e }
     DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f); setOrientation(ctx, 0) } }
-    BackHandler {
-        when {
-            // back from any page of the menu (or the menu itself) goes straight to the book
-            panel.isNotEmpty() -> panel = ""
-            else -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
-        }
-    }
     fun save() {
         Ebook.savePlace(ctx, start.uri, chapter, page)
         b?.let { bk -> if (bk.chapters.isNotEmpty()) Ebook.savePct(ctx, start.uri, (chapter + 1) * 100 / bk.chapters.size) }
+    }
+    // the speed reading is closed: the page it reached is shown and the word it stopped on is marked there
+    fun closeRsvp() {
+        val pg = pagesNow[0]
+        if (pg != null && pg.isNotEmpty()) {
+            var rem = rsvpAt[0]
+            var k = shownNow[0]
+            while (k < pg.size) { val c = rsvpWords(pg[k]).size; if (rem < c) break; rem -= c; k++ }
+            if (k >= pg.size) { k = pg.size - 1; rem = 0 }
+            forward = k >= shownNow[0]
+            page = k
+            mark = intArrayOf(chapter, k, rem)
+            Ebook.saveMark(ctx, start.uri, chapter, k, rem)
+            save()
+        }
+        panel = ""
+    }
+    BackHandler {
+        when {
+            // back from any page of the menu (or the menu itself) goes straight to the book
+            panel == "rsvp" -> closeRsvp()
+            panel.isNotEmpty() -> panel = ""
+            else -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
+        }
     }
     fun pickTheme(i: Int) {
         eink = false; EbookPrefs.setEink(ctx, false)
@@ -669,6 +691,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 // a page past the end (or -1: the last page of the chapter before) is set once the chapter is laid out
                 LaunchedEffect(list) { if (list != null && list.isNotEmpty() && (page < 0 || page >= list.size)) page = list.size - 1 }
                 val shown = if (list == null) 0 else page.coerceIn(0, (list.size - 1).coerceAtLeast(0))
+                pagesNow[0] = list; shownNow[0] = shown
                 val cur = list?.getOrNull(shown).orEmpty()
                 curText[0] = cur.joinToString(" ") { it.text }
                 curFirst[0] = cur.firstOrNull()?.text.orEmpty().take(30)
@@ -716,10 +739,16 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
                             // each paragraph; the words being read are highlighted
                             var off = 0
+                            val mk = mark?.takeIf { it[0] == chapter && it[1] == shown }
+                            var seen = 0
                             cur.forEach { p ->
                                 val start = off
                                 off += p.text.length + 1
-                                Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                                // the word the speed reading stopped on: counted over the words of the page
+                                val ws = if (mk != null) Regex("\\S+").findAll(p.text).map { it.range }.toList() else emptyList()
+                                val mr = if (mk != null && mk[2] >= seen && mk[2] < seen + ws.size) ws[mk[2] - seen] else IntRange.EMPTY
+                                seen += ws.size
+                                Text(inverted(p.text, start, spoken, mr, th), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
                             }
                         }
                     }
@@ -775,7 +804,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         var off = 0
                         val offs = paras.map { p -> val o = off; off += p.text.length + 1; o }
                         itemsIndexed(paras) { ix, p ->
-                            Text(highlighted(p.text, offs[ix], spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                            Text(inverted(p.text, offs[ix], spoken, IntRange.EMPTY, th), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
                         }
                         // room at the end, so the last page can stand at the top too
                         item { Spacer(Modifier.height((maxHeight - 120.dp).coerceAtLeast(0.dp))) }
@@ -894,11 +923,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
 
         // RSVP speed reading: one word at a time, from the top of the page being read
         if (panel == "rsvp" && b != null && !b.pdf) {
-            val paras = b.chapters.getOrNull(chapter)?.paras.orEmpty()
-            val first = curFirst[0]
-            val from = if (first.isBlank()) 0 else paras.indexOfFirst { it.text.contains(first) }.coerceAtLeast(0)
-            val words = remember(chapter, from, b) { rsvpWords(paras.drop(from)) }
-            RsvpPane(words, th.ink, th.sub, th.bg, T.accent, { actAt[0] = android.os.SystemClock.uptimeMillis() }) { panel = "" }
+            val words = remember(chapter, b, pagesNow[0], shownNow[0]) { pagesNow[0].orEmpty().drop(shownNow[0]).flatMap { rsvpWords(it) } }
+            RsvpPane(words, th.ink, th.sub, th.bg, T.accent, { actAt[0] = android.os.SystemClock.uptimeMillis() }, { rsvpAt[0] = it }) { closeRsvp() }
         }
 
         // the pages of the menu and the lists: each fills the reader, with its title and a back arrow
@@ -1435,5 +1461,20 @@ private fun highlighted(text: String, start: Int, r: IntRange, color: Color): an
             val a = (r.first - start).coerceIn(0, text.length)
             val b = (r.last + 1 - start).coerceIn(0, text.length)
             if (b > a) addStyle(androidx.compose.ui.text.SpanStyle(background = color), a, b)
+        }
+    }
+
+/** The words being read aloud and the word the speed reading stopped on: the theme turned over (the ink as the ground, the ground as the ink), so it reads in every theme, AMOLED included. */
+private fun inverted(text: String, start: Int, spoken: IntRange, mark: IntRange, th: Theme): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        append(text)
+        val st = androidx.compose.ui.text.SpanStyle(background = th.ink, color = th.bg)
+        if (!spoken.isEmpty()) {
+            val a = (spoken.first - start).coerceIn(0, text.length); val e = (spoken.last + 1 - start).coerceIn(0, text.length)
+            if (e > a) addStyle(st, a, e)
+        }
+        if (!mark.isEmpty()) {
+            val a = mark.first.coerceIn(0, text.length); val e = (mark.last + 1).coerceIn(0, text.length)
+            if (e > a) addStyle(st, a, e)
         }
     }
