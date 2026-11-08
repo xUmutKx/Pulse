@@ -170,7 +170,7 @@ private fun PremiumBox() {
     var note by remember { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (on) { Text(tr("Premium is on. Thank you!", "Premium açık. Teşekkürler!"), color = Look.accent, fontSize = 14.sp); return@Column }
-        if (!Premium.codesOffered) { Text(tr("Premium comes through Google Play.", "Premium Google Play üzerinden gelir."), color = T.sub, fontSize = 13.sp); return@Column }
+        if (!Premium.codesOffered) { Text(tr("Premium comes through Google Play: buy it, or redeem a Google Play promo code in the Play Store (Profile > Payments > Redeem code).", "Premium Google Play üzerinden gelir: satın al ya da Play Store'da Google Play promosyon kodunu kullan (Profil > Ödemeler > Kod kullan)."), color = T.sub, fontSize = 13.sp); return@Column }
         PField(code, { code = it.take(24) }, "PLS-XXXX-XXXX-XXXX-XXXX", Modifier.fillMaxWidth())
         PButton(tr("Unlock", "Aç"), compact = true) {
             when (val r = Premium.redeem(ctx, code)) {
