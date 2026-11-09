@@ -103,6 +103,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
@@ -515,7 +516,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             // the grey back vanished mid-drag while the chip's own text, a separate rendered surface, stayed put a frame longer
             @Composable fun chips() = st.inline.forEach { v ->
                 key(v) {
-                    Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF232325))) {
+                    Box(Modifier.clip(RoundedCornerShape(20.dp)).background(lerp(th.key, Color(0xFF808080), .07f))) {
                         androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
                             // the chip's picture is a surface of its own: behind the keyboard window, not above it, so a chip that is
                             // scrolled half out of the bar cannot paint its text over the arrow, the close button and the suggestions
@@ -1390,6 +1391,7 @@ private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val ctxForClip = LocalContext.current
     var sel by remember { mutableStateOf(setOf<Long>()) }
     val selecting = sel.isNotEmpty()
     val now = System.currentTimeMillis()
@@ -1420,7 +1422,12 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Text(tr("All", "Tümü"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { sel = st.clipItems.map { it.id }.toSet() }.padding(8.dp))
                 Text(tr("Delete", "Sil"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipDelete(sel); sel = emptySet() }.padding(8.dp))
                 Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { sel = emptySet() }.padding(8.dp))
-            } else if (st.clipItems.any { !it.pinned }) Text(tr("Clear unpinned", "Sabitlenmeyenleri temizle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipClear() }.padding(8.dp))
+            } else {
+                // the view of the items: list, two columns, or columns sized by the pictures
+                Text(when (KeyboardPrefs.clipLayout) { "grid" -> "▦"; "photos" -> "▥"; else -> "☰" }, color = th.text, fontSize = 18.sp,
+                    modifier = Modifier.clickable { KeyboardPrefs.clipLayout = when (KeyboardPrefs.clipLayout) { "list" -> "grid"; "grid" -> "photos"; else -> "list" }; KeyboardPrefs.save(ctxForClip) }.padding(8.dp))
+                if (st.clipItems.any { !it.pinned }) Text(tr("Clear unpinned", "Sabitlenmeyenleri temizle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipClear() }.padding(8.dp))
+            }
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1435,6 +1442,25 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             }
         }
         if (st.clipItems.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(tr("Copied texts and pictures appear here", "Kopyalanan metin ve resimler burada görünür"), color = th.sub, fontSize = 14.sp) }
+        else if (KeyboardPrefs.clipLayout != "list") {
+            val tile: @Composable (ClipItem) -> Unit = { it2 ->
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (it2.id in sel) th.special else th.key)
+                    .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })) {
+                    if (it2.image != null) ClipThumb(it2.image, Modifier.fillMaxWidth(), full = true)
+                    else Text(it2.text.take(400), color = th.text, fontSize = 14.sp, maxLines = if (KeyboardPrefs.clipLayout == "photos") 8 else 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(10.dp))
+                    if (it2.pinned) Icon(kbIcon(th, "PushPin"), null, tint = th.accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(14.dp))
+                }
+            }
+            if (KeyboardPrefs.clipLayout == "photos") androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
+                androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(2), Modifier.weight(1f).fillMaxWidth().padding(horizontal = 6.dp),
+                verticalItemSpacing = 6.dp, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(st.clipItems, key = { it.id }) { tile(it) }
+            } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                androidx.compose.foundation.lazy.grid.GridCells.Fixed(2), Modifier.weight(1f).fillMaxWidth().padding(horizontal = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(st.clipItems, key = { it.id }) { tile(it) }
+            }
+        }
         else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(st.clipItems, key = { it.id }) { it2 ->
                 // roomy rows; a swipe to the right deletes the item, a swipe to the left makes a shortcut of it
@@ -1486,7 +1512,7 @@ private fun panelHeight(st: KbState, keyH: androidx.compose.ui.unit.Dp): android
 
 /** A kept picture, shown small. */
 @Composable
-private fun ClipThumb(path: String) {
+private fun ClipThumb(path: String, modifier: Modifier = Modifier, full: Boolean = false) {
     val bmp by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
@@ -1498,8 +1524,9 @@ private fun ClipThumb(path: String) {
         }
     }
     val b = bmp
-    if (b != null) androidx.compose.foundation.Image(b, null, Modifier.height(56.dp).clip(RoundedCornerShape(6.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
-    else Box(Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)).background(Color.Gray.copy(alpha = .3f)))
+    // in the grid views the picture takes the width of its tile and keeps its own shape (a tall one is tall, a wide one wide)
+    if (b != null) androidx.compose.foundation.Image(b, null, if (full) modifier.fillMaxWidth() else Modifier.height(56.dp).clip(RoundedCornerShape(6.dp)), contentScale = if (full) androidx.compose.ui.layout.ContentScale.FillWidth else androidx.compose.ui.layout.ContentScale.Fit)
+    else Box((if (full) modifier.height(90.dp) else Modifier.size(56.dp)).clip(RoundedCornerShape(6.dp)).background(Color.Gray.copy(alpha = .3f)))
 }
 
 /** Resizing on the keyboard itself: pull the top edge for the height, the bottom edge for the space below, the side edges for the space at the sides. */

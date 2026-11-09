@@ -36,7 +36,12 @@ object ClipStore {
         runCatching { file(c).writeText(JSONArray(items.map { JSONObject().put("id", it.id).put("t", it.text).put("i", it.image ?: "").put("time", it.time).put("pin", it.pinned) }).toString()) }
     }
 
-    private fun sorted(l: List<ClipItem>) = l.sortedWith(compareByDescending<ClipItem> { it.pinned }.thenByDescending { it.time })
+    /** The newest copied item (text or picture) comes first, then the pinned ones, then the rest, newest first. */
+    private fun sorted(l: List<ClipItem>): List<ClipItem> {
+        val first = l.maxByOrNull { it.time } ?: return l
+        val rest = (l - first).sortedWith(compareByDescending<ClipItem> { it.pinned }.thenByDescending { it.time })
+        return listOf(first) + rest
+    }
 
     /** The items now (old unpinned ones dropped first). */
     fun load(c: Context): List<ClipItem> {
