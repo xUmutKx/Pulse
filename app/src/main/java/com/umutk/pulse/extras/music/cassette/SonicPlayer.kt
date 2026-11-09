@@ -185,11 +185,14 @@ private fun DrawScope.drawDeck(art: ImageBitmap?, spin: Float, progress: Float, 
         drawCircle(Color(0xFF1C1C1E), r, c)
         for (k in 0..18) drawCircle(Glow.copy(alpha = if (k % 6 == 0) .16f else .06f), r * (.45f + k * .03f), c, style = Stroke(1.2f))
         if (art != null) {
-            // the cover as a square label on the record: the picture is cropped to its centre square (any shape of cover fits), never cut round
-            val s = r * .95f
+            // the cover as the record's face, round (the record's own shape), its centre square cropped from any picture
+            val s = r * 1.12f
             val m = minOf(art.width, art.height)
-            drawImage(art, srcOffset = IntOffset((art.width - m) / 2, (art.height - m) / 2), srcSize = IntSize(m, m),
-                dstOffset = IntOffset((c.x - s / 2).toInt(), (c.y - s / 2).toInt()), dstSize = IntSize(s.toInt(), s.toInt()), alpha = .92f)
+            val path = androidx.compose.ui.graphics.Path().apply { addOval(androidx.compose.ui.geometry.Rect(c, r * .98f)) }
+            clipPath(path) {
+                drawImage(art, srcOffset = IntOffset((art.width - m) / 2, (art.height - m) / 2), srcSize = IntSize(m, m),
+                    dstOffset = IntOffset((c.x - s / 2).toInt(), (c.y - s / 2).toInt()), dstSize = IntSize(s.toInt(), s.toInt()), alpha = .92f)
+            }
         } else drawCircle(SonicOrange, r * .34f, c)
         drawLine(Glow.copy(alpha = .6f), Offset(c.x, c.y - r * .9f), Offset(c.x, c.y - r * .75f), 3f, StrokeCap.Round)
     }

@@ -398,7 +398,6 @@ private enum class ThemeFamily(val en: String, val turkish: String, val look: Mu
     WINAMP("Winamp", "Winamp", MusicLook.WINAMP),
     WMP("Windows Media Player 7", "Windows Media Player 7", MusicLook.WMP),
     SKINS("Media Player skins", "Medya oynatıcı kaplamaları", MusicLook.SKINS),
-    LYRICS("Lyrics", "Sözler", MusicLook.LYRICS),
     SONIC("Sonic", "Sonic", MusicLook.SONIC),
     EXTRA("Extra themes", "Ek temalar", MusicLook.CASSETTE),
 }
@@ -433,7 +432,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
     when (family) {
         ThemeFamily.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampSkinSettings()
         ThemeFamily.WMP -> WmpSkinGrid(wmp) { wmp = it; prefs(ctx).edit().putInt("wmp_skin", it).apply() }
-        ThemeFamily.MATERIAL, ThemeFamily.LYRICS, ThemeFamily.SONIC -> familyMini(family, scheme)?.let { m ->
+        ThemeFamily.MATERIAL, ThemeFamily.SONIC -> familyMini(family, scheme)?.let { m ->
             ThemeGrid(listOf(ThemeItem(family.name, tr(family.en, family.turkish)) { MiniLook(m, Modifier.fillMaxSize()) }), family.name, onSelect = { pick(family) })
         }
         ThemeFamily.SKINS -> ImgSkinGrid(skinPick) { skinPick = it; prefs(ctx).edit().putInt("img_skin", it).apply() }
@@ -455,7 +454,6 @@ private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when 
     ThemeFamily.WINAMP -> MiniColors(SolidColor(Color(0xFF2B2B2B)), Color.Black, Color(0xFF00FF40), Color(0xFF8A8A8A))
     ThemeFamily.WMP -> wmpMini(Wmp7Skin.Default)
     ThemeFamily.SKINS -> MiniColors(SolidColor(Color(0xFFD65DA8)), Color(0xFF2AA89E), Color.White, Color(0xFFFFE0F0))
-    ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
     // Sonic: black, glowing white lines and its orange
     ThemeFamily.SONIC -> MiniColors(SolidColor(Color.Black), Color(0xFF0B0B0B), Color(0xFFF05A24), Color.White.copy(alpha = .8f))
     // the Poweramp look: black, a dark panel and its blue accent
