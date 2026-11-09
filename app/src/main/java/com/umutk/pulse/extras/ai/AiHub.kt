@@ -117,6 +117,20 @@ fun AiHub(onBack: () -> Unit) {
                             }
                         }
                     }
+                    // the mascot outside the app: floating over the other apps, and in Pulse's Island (the pill)
+                    var buddyOn by remember { mutableStateOf(AiBuddyService.enabled(c)) }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Floating mascot", "Yüzen maskot"), color = AiInk, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        PSwitch(buddyOn, { on ->
+                            if (on && !com.umutk.pulse.Compat.canOverlay(c)) {
+                                runCatching { c.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + c.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                            } else { buddyOn = on; AiBuddyService.setEnabled(c, on) }
+                        })
+                    }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { com.umutk.pulse.launchExtra(c, "com.umutk.pulse.ExtraToolActivity", "island"); scope.launch { drawer.close() } }
+                        .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("info", AiInk, 20.dp); Text(tr("Pill (Island)", "Hap (Island)"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                    }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { mascotOpen = true; scope.launch { drawer.close() } }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon("star", AiInk, 20.dp); Text(tr("Mascot", "Maskot"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
@@ -157,7 +171,7 @@ fun AiHub(onBack: () -> Unit) {
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (models) AiModelsPage()
-                else key(chat.id) { AiChat(chat, onSaved = { saveChats(c, chats) }, onBusy = { working = it }, toModels = { models = true }) }
+                else key(chat.id) { AiChat(chat, onSaved = { saveChats(c, chats) }, onBusy = { working = it; AiLive.set(c, it) }, toModels = { models = true }) }
             }
         }
     }
