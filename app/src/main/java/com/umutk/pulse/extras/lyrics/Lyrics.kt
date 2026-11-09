@@ -343,7 +343,7 @@ object Lyrics {
 
     /** LRC text gives synced lines, anything else becomes unsynced lines. */
     internal fun fromText(text: String, source: String): LyricsResult? {
-        if (text.isBlank()) return null
+        if (text.isBlank() || text.trim().equals("null", true)) return null
         val timed = parseLrc(text)
         if (timed.isNotEmpty()) return LyricsResult(timed.map { LyricLine(it.timeMs, it.text, it.words) }, true, source)
         return LyricsResult(text.lines().map { LyricLine(-1, it.trim()) }, false, source)

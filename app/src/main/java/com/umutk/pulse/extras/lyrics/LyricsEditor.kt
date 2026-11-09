@@ -40,8 +40,8 @@ import com.umutk.pulse.tr
  */
 @Composable
 fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier,
-    playing: Boolean = false, onTogglePlay: (() -> Unit)? = null) {
-    val lines = remember(res) { mutableStateListOf<LyricLine>().apply { addAll(res.lines) } }
+    playing: Boolean = false, onTogglePlay: (() -> Unit)? = null, onAi: (() -> Unit)? = null) {
+    val lines = remember(res) { mutableStateListOf<LyricLine>().apply { addAll(res.lines.filter { !it.text.trim().equals("null", true) }) } }
     val listState = rememberLazyListState()
     val current = if (res.synced) lines.indexOfLast { it.timeMs in 0..positionMs } else -1
     // while the song plays the playing line is kept in the middle of the list; paused, the list stays where it is for checking and editing
@@ -64,6 +64,8 @@ fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> 
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { PIcon("close", Color.White, 22.dp) }
             Text(tr("Edit lyrics", "Sözleri düzenle"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            // Pulse AI, from inside the editor: it listens to the song and writes the lines (with their times) in place of these
+            if (onAi != null) IconButton(onClick = onAi) { PIcon("star", Color.White, 22.dp) }
             if (onTogglePlay != null) IconButton(onClick = onTogglePlay) { PIcon(if (playing) "pause" else "play", Color.White, 22.dp) }
             IconButton(onClick = { save() }) { PIcon("check", Color.White, 22.dp) }
         }
