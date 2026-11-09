@@ -51,6 +51,11 @@ jobs:
             git init -q "$1" && git -C "$1" remote add origin "https://github.com/ggml-org/$1.git"
             git -C "$1" fetch -q --depth 1 origin "$2" && git -C "$1" checkout -q FETCH_HEAD
           done
+          # Pulse AI: only the Android CPU variants up to armv8.2 are built into the APK (the armv8.6 and armv9 ones are about 6.5 MB of
+          # the app). A phone with those features runs the armv8.2 variant, which is the same code without the newest instructions.
+          f=localai/vendor/llama.cpp/ggml/src/CMakeLists.txt
+          sed -i -E '/ggml_add_cpu_backend_variant\(android_armv(8\.6_1|9\.0_1|9\.2_1|9\.2_2)[ )]/d' "$f"
+          test "$(grep -c 'ggml_add_cpu_backend_variant(android_' "$f")" -eq 3
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9
