@@ -295,7 +295,7 @@ private fun AiSpeechPage() {
         busy = true; result = ""
         scope.launch {
             val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
-            val r = runCatching { Transcriber.lrc(c, u, lang, null, null) { s, f -> stage = s; frac = f } }
+            val r = runCatching { Transcriber.lrc(c, u, lang, null, null, { s, f -> stage = s; frac = f }) }
             poll.cancel(); busy = false
             result = r.getOrNull() ?: r.exceptionOrNull()?.message ?: tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller).")
         }
