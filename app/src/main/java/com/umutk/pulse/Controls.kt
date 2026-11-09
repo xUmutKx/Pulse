@@ -33,6 +33,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.awaitFirstDown
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -255,25 +260,92 @@ fun PNameField(value: String, onChange: (String) -> Unit, label: String, modifie
     } else PField(value, onChange, label, modifier)
 }
 
+/*
+ * Flick (inertia): with [flick] on, a quick drag keeps the value sliding after the finger lifts. It slows with friction and stops at the ends of
+ * the range; [onDone] runs when it has stopped (so a seek happens once, at the final value). A new touch stops a flick at once.
+ */
+/** A flick is only started when the finger was moving at least this many slider widths per second. */
+private const val FLICK_MIN_WIDTHS_PER_SEC = .15f
+/** How far a flick carries: the decay friction. Higher stops sooner (a flick at 2 widths/s carries about a quarter of the range at 2). */
+private const val FLICK_FRICTION = 2f
+
+/** Runs the flick: [step] gets every value on the way, [done] the stop. Cancelled by [cancel]; then [done] does not run. */
+internal class SliderFling(private val scope: kotlinx.coroutines.CoroutineScope) {
+    private var job: kotlinx.coroutines.Job? = null
+    fun cancel() { job?.cancel(); job = null }
+    /** [widthsPerSec]: the finger's speed in slider widths per second (positive is to the right, the value goes up). */
+    fun run(from: Float, widthsPerSec: Float, range: ClosedFloatingPointRange<Float>, step: (Float) -> Unit, done: () -> Unit) {
+        cancel()
+        if (kotlin.math.abs(widthsPerSec) < FLICK_MIN_WIDTHS_PER_SEC) { done(); return }
+        val span = range.endInclusive - range.start
+        job = scope.launch {
+            val a = androidx.compose.animation.core.Animatable(from.coerceIn(range.start, range.endInclusive))
+            a.updateBounds(range.start, range.endInclusive)
+            a.animateDecay(widthsPerSec * span, androidx.compose.animation.core.exponentialDecay(frictionMultiplier = FLICK_FRICTION)) { step(value) }
+            done()
+        }
+    }
+}
+
+/** Watches a finger without taking its events (the slider still gets them all): on release it reports the speed in widths per second. */
+internal fun Modifier.flickSpeed(onRelease: (Float) -> Unit): Modifier = pointerInput(Unit) {
+    val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+    awaitEachGesture {
+        tracker.resetTracking()
+        val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+        tracker.addPosition(down.uptimeMillis, down.position)
+        var pressed = true
+        while (pressed) {
+            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            event.changes.firstOrNull { it.id == down.id }?.let { if (it.pressed) tracker.addPosition(it.uptimeMillis, it.position) }
+            pressed = event.changes.any { it.pressed }
+        }
+        onRelease(tracker.calculateVelocity().x / size.width.coerceAtLeast(1))
+    }
+}
+
 @Composable
-fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, thick: Boolean = false, modifier: Modifier = Modifier, onDone: () -> Unit) {
+fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, thick: Boolean = false, modifier: Modifier = Modifier,
+    flick: Boolean = false, onFlingStep: ((Float) -> Unit)? = null, onDone: () -> Unit) {
     val t = T
     if (colorOs) { ColorOsSlider(value, onChange, range, onDone); return }
     if (oneUi) { OneUiSlider(value, onChange, range, onDone); return }
-    // thick: a wide groove and a big thumb, drawn by this function for every look (Material included)
-    if (t.material && !thick) { Slider(value, onChange, modifier = modifier, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
     // the drag gestures below use pointerInput(Unit): read the latest callbacks and range through these, not the first ones
     val curChange by rememberUpdatedState(onChange)
     val curRange by rememberUpdatedState(range)
     val curDone by rememberUpdatedState(onDone)
+    val curValue by rememberUpdatedState(value)
+    val curStep by rememberUpdatedState(onFlingStep ?: onChange)
+    val flingScope = rememberCoroutineScope()
+    val fling = remember { SliderFling(flingScope) }
+    // thick: a wide groove and a big thumb, drawn by this function for every look (Material included)
+    if (t.material && !thick) {
+        // the speed of the last release is seen by a passive watcher; the Slider's own release then starts the flick
+        val release = remember { FloatArray(1) }
+        Slider(value, onChange, modifier = if (flick) modifier.flickSpeed { release[0] = it } else modifier, valueRange = range,
+            onValueChangeFinished = {
+                if (flick) fling.run(curValue, release[0], curRange, curStep) { curDone() } else curDone()
+            },
+            colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f)))
+        return
+    }
     val frac = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
     val groove = if (thick) 12.dp else 4.dp
     val thumbW = if (thick) 22.dp else 11.dp
     val thumbH = if (thick) 30.dp else 21.dp
     BoxWithConstraints(modifier.fillMaxWidth().height(if (thick) 40.dp else 32.dp).pointerInput(Unit) {
-        detectTapGestures { o -> curChange(curRange.start + (o.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start)); curDone() }
+        detectTapGestures { o -> fling.cancel(); curChange(curRange.start + (o.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start)); curDone() }
     }.pointerInput(Unit) {
-        detectHorizontalDragGestures(onDragEnd = { curDone() }) { c, _ -> curChange(curRange.start + (c.position.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start)) }
+        val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+        detectHorizontalDragGestures(
+            onDragStart = { fling.cancel(); tracker.resetTracking() },
+            onDragEnd = {
+                if (flick) fling.run(curValue, tracker.calculateVelocity().x / size.width.coerceAtLeast(1), curRange, curStep) { curDone() } else curDone()
+            },
+        ) { c, _ ->
+            if (flick) tracker.addPosition(c.uptimeMillis, c.position)
+            curChange(curRange.start + (c.position.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start))
+        }
     }, contentAlignment = Alignment.CenterStart) {
         if (win95Authentic) { // 95 trackbar: sunken 4 px groove, raised 11x21 grey thumb
             Box(Modifier.fillMaxWidth().height(groove).background(Color(0xFFC0C0C0)).bevel(false))
