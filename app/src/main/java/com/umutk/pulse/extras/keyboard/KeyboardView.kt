@@ -229,7 +229,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     if (st.hardware && !st.hwOpen && st.panel == "keys") {
         Column(modifier.fillMaxWidth().background(th.bg).padding(bottom = if (st.trans) 18.dp else 0.dp)) {
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).then(if (st.trans) Modifier else Modifier.fillMaxHeight())) { TopBar(th, st, act, onPull = { }, onRelease = { }) }
+                Box(Modifier.weight(1f).heightIn(min = 52.dp)) { TopBar(th, st, act, onPull = { }, onRelease = { }) }
                 // the keyboard button: opens the full keyboard (for typing with the screen, and the clipboard and the rest of its keys)
                 BarIcon(th, kbIcon(th, "Keyboard")) { st.hwOpen = true }
             }
@@ -541,7 +541,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 st.slots.forEachIndexed { i, s0 ->
                     val s = if (crowded && i == 2) "" else s0
                     // the copied item and the photo in the right slot get a wider place to tap
-                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else if (s.startsWith("\u0001") || s.startsWith("\u0002")) 1.8f else (s.length / 9f).coerceIn(1f, 2.2f)
+                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else 1f
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
