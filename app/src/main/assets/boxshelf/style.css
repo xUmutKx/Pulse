@@ -1,0 +1,821 @@
+/* Layout: full-screen TV shelf — 3D coverflow centered at 42% height, title strip under it, hint bar pinned bottom. Single dark look by design. */
+:root{
+  --ink:#f3f5fb;
+  --ink-dim:rgba(243,245,251,.62);
+  --glass:rgba(8,10,20,.46);
+  --line:rgba(255,255,255,.16);
+  --tri:#3fd0b6; --sq:#ee8fd6; --cross:#86a8ff; --circ:#ff7a7a;
+  --ui:'Lexend',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --bw:240px; --bh:340px; --bd:24px; --edge:6px; --cw:240px; --ch:340px; --cd:24px; --ce:6px;
+  --case:#141418; --case-side:#0b0b0e; --spine-ink:#e6e6ee; --sel-glow:rgba(120,140,255,.45);
+  color-scheme:dark;
+}
+html,body{height:100%;background:#07070c;color:var(--ink);overflow:hidden}
+#app{position:fixed;inset:0;overflow:hidden;font-family:var(--ui);user-select:none;-webkit-user-select:none;touch-action:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:8px}
+
+/* background */
+.bg-layer{position:absolute;inset:0;opacity:0;transition:opacity .8s ease,visibility 0s .8s;visibility:hidden;overflow:hidden} /* clipped to the screen: the swatch picture is 130% wide, and without the clip every move re-drew 1.7 screens of it */
+.bg-layer.on{opacity:1;visibility:visible;transition:opacity .8s ease,visibility 0s} /* the one faded out is hidden once gone: at opacity 0 it was still drawn over the whole screen every frame */
+.bg-layer .tint{position:absolute;inset:0}
+.bg-layer img{position:absolute;left:-15%;top:-15%;width:130%;height:130%;max-width:none;object-fit:cover}
+.vignette{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 70% at 50% 42%,transparent 35%,rgba(0,0,0,.5) 100%),linear-gradient(to bottom,rgba(0,0,0,.25),transparent 20%,transparent 62%,rgba(0,0,0,.5))}
+.floor{position:absolute;left:50%;top:calc(42% + var(--bh)/2 - 10px);width:min(1400px,140vw);height:160px;transform:translateX(-50%);
+  background:radial-gradient(ellipse 14% 22% at 50% 18%,var(--sel-glow),transparent 75%),radial-gradient(ellipse 50% 30% at 50% 30%,rgba(0,0,0,.45),transparent 70%);pointer-events:none;transition:background .6s;
+  will-change:transform} /* its own layer: its glow is redrawn on every move, and sharing the vignette's layer made the screen-wide vignette redraw with it */
+
+/* HUD */
+.hud-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding-top:max(26px,env(safe-area-inset-top,0px));padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px));z-index:5}
+.sys-word{font-weight:800;font-size:clamp(22px,2.6vw,38px);letter-spacing:.06em;line-height:1;text-transform:uppercase}
+.sys-count{margin-top:8px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim);font-weight:500}
+.tabs{position:relative;display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px)}
+.tab{position:relative;z-index:1;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:500;color:var(--ink-dim);background:transparent;transition:color .35s}
+.tab.on{color:#10121a}
+/* The tab pill is two round caps and a stretchy middle, all moved with transforms only: the compositor animates them
+   smoothly even while the next shelf is being built (a width animation stalled with the main thread and wobbled) */
+.tab-pill{position:absolute;left:0;top:4px;height:0;width:0;transition:opacity .3s;pointer-events:none}
+.tab-pill i{position:absolute;left:0;top:0;height:100%;background:#ebebf0;transform-origin:0 50%;will-change:transform;
+  transition:transform .45s cubic-bezier(.3,.9,.25,1)}
+.tab-pill i.c{width:var(--ph);border-radius:50%}
+.tab-pill i.m{width:100px}
+.tabs.still .tab-pill i{transition:none}
+.brand{transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.brand.out-l,.brand.out-r{transition:transform .22s cubic-bezier(.5,0,.8,.5),opacity .2s;opacity:0}
+.brand.out-l{transform:translateX(-26px)}
+.brand.out-r{transform:translateX(26px)}
+.brand.in-l,.brand.in-r{transition:none;opacity:0}
+.brand.in-l{transform:translateX(-26px)}
+.brand.in-r{transform:translateX(26px)}
+.tab:not(.on):hover{color:var(--ink)}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.clock{font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.clock b{font-weight:700;color:var(--ink);margin-left:8px;font-size:15px}
+.counter{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.counter b{font-weight:700}
+.mini{font-size:11px;color:var(--ink-dim);display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;border:1px solid var(--line)}
+
+/* 3D scene */
+#scene{position:absolute;inset:0;perspective:1800px;perspective-origin:50% 42%;transition:transform .6s cubic-bezier(.22,.9,.25,1),opacity .35s}
+#app.details-open #scene,#app.settings-open #scene{transform:translateX(-17vw) scale(.92)}
+#app.launching #scene{opacity:0;transform:scale(1.4)}
+#track{position:absolute;left:50%;top:42%;width:0;height:0;transform-style:preserve-3d;transition:transform .3s}
+#app.covers-wait #scene{opacity:.002;transition:none} /* not quite 0: the cases get drawn (rasterised) while hidden, so they don't all have to be drawn in the frames right after it appears */ /* first start: hidden until the covers in view are ready (see holdForCovers) */
+/* console switch: the fade goes on #scene, never on #track — any opacity below 1 on the preserve-3d track makes the
+   browser flatten it, so every case changed size and angle during the fade and snapped back at the end */
+#track.swap{transform:translateY(18px)}
+#scene:has(> #track.swap){opacity:0;transition:transform .6s cubic-bezier(.22,.9,.25,1),opacity .3s}
+#track.fresh .slot,#track.fresh .box,#track.fresh .glare{transition:none!important}
+.slot{--bw:var(--cw);--bh:var(--ch);--bd:var(--cd);--edge:var(--ce);
+  position:absolute;left:calc(var(--bw)/-2);top:calc(var(--bh)/-2);transform-style:preserve-3d;
+  transition:transform .55s cubic-bezier(.22,.9,.25,1),opacity .4s;will-change:transform;cursor:pointer}
+.slot.far{opacity:0;pointer-events:none}
+.box{position:relative;width:var(--bw);height:var(--bh);transform-style:preserve-3d;transition:transform .75s cubic-bezier(.3,.95,.25,1)}
+.box.free{transition:none}
+.face{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.f-front,.f-back{inset:0;background:var(--case);padding:var(--edge);overflow:hidden}
+.f-front{transform:translateZ(calc(var(--bd)/2))}
+.f-back{transform:rotateY(180deg) translateZ(calc(var(--bd)/2))}
+.f-front img,.f-back img{width:100%;height:100%;display:block;object-fit:cover;max-width:none}
+/* clear plastic over the cover: a soft top-edge rim and a faint fresnel darkening at the far edges (static, so
+   never repainted), plus .glare — the specular band — which is its own composited layer moved by transform.
+   The band layer is 1.2 faces wide (it was 3): every new case has to draw it, and the band never reaches further than
+   ±0.5 face from its centre, so the rest was ~60% of all the drawing done per move for nothing. The stops are the same
+   band in the same place: p% of the new gradient line plus (p-50%) of the width taken off (1.8 faces × sin 104°). */
+.f-front::after,.f-back::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 18%,transparent 34%),linear-gradient(90deg,rgba(0,0,0,.14),transparent 10%,transparent 88%,rgba(0,0,0,.18))}
+.glare{position:absolute;inset:0;pointer-events:none;z-index:1;transition:transform .55s cubic-bezier(.22,.9,.25,1);
+  background:linear-gradient(104deg,transparent calc(41.3% - var(--bw)*.151948),rgba(255,255,255,.07) calc(46.3% - var(--bw)*.064622),rgba(255,255,255,.34) calc(49.7% - var(--bw)*.00524),rgba(255,255,255,.30) calc(50.3% + var(--bw)*.00524),rgba(255,255,255,.06) calc(53.3% + var(--bw)*.057636),transparent calc(58% + var(--bw)*.139723)),linear-gradient(104deg,transparent calc(54.7% + var(--bw)*.082087),rgba(255,255,255,.12) calc(56.7% + var(--bw)*.117018),transparent calc(58.3% + var(--bw)*.144962));
+  left:-10%;right:-10%;will-change:transform} /* will-change keeps its picture: without it the band was drawn again at the end of every slide (new size on screen) */
+.slot:not(.sel) .f-front::after,.slot:not(.sel) .f-back::after,.slot:not(.sel) .glare{opacity:.55}
+/* side cases sit a little darker. Done with a black film whose opacity fades (the compositor does that for free), not
+   a CSS filter on the cover: filters fading on a dozen big covers at once had to be re-drawn every frame, and when
+   scrolling quickly some covers blinked blank for a frame */
+.dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:1;transition:opacity .45s;will-change:opacity}
+.slot:not(.sel) .dim{opacity:.34} /* the same darkness the old filter + film gave */
+.f-left,.f-right{top:0;height:100%;width:var(--bd);left:calc(50% - var(--bd)/2)}
+.f-left{transform:rotateY(-90deg) translateZ(calc(var(--bw)/2));background:var(--case);display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.f-right{transform:rotateY(90deg) translateZ(calc(var(--bw)/2));background:var(--case-side)}
+.spine-band{width:100%;height:9%;flex:none;display:grid;place-items:center;font-size:calc(var(--bd)*.3);font-weight:700;letter-spacing:.02em}
+.spine-title{flex:1;writing-mode:vertical-rl;font-size:calc(var(--bd)*.46);font-weight:600;color:var(--spine-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:calc(8px*var(--os,1)) 0;max-height:88%}
+.slot.sel .f-front,.slot.sel .f-back{box-shadow:0 0 0 2px rgba(255,255,255,.7),0 0 26px 2px var(--glow),0 0 70px 6px var(--glow),0 40px 80px -20px rgba(0,0,0,.6)}
+.sel-halo{position:absolute;left:50%;top:42%;width:calc(var(--bw)*2);height:calc(var(--bh)*1.5);transform:translate(-50%,-50%);background:radial-gradient(closest-side,var(--sel-glow),transparent);filter:blur(24px);pointer-events:none;animation:breathe 3.4s ease-in-out infinite;transition:transform .6s cubic-bezier(.22,.9,.25,1),opacity .4s,background .5s}
+#app.details-open .sel-halo{transform:translate(calc(-50% - 17vw),-50%) scale(.92)}
+#app.launching .sel-halo{opacity:0}
+@keyframes breathe{50%{opacity:.55}}
+.sheen{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.sheen::after{content:"";position:absolute;top:-20%;bottom:-20%;width:42%;left:-70%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:translateX(0) skewX(-14deg)}
+.slot.landed .sheen::after{animation:sheen .85s cubic-bezier(.3,.6,.3,1)}
+/* shuffle landing: holographic foil sweep (rainbow bands + glitter) over the cover, like a rare trading card */
+.slot.holo .sheen::before{content:"";position:absolute;inset:-30%;mix-blend-mode:screen;pointer-events:none;
+  background:
+    radial-gradient(circle at 20% 30%,rgba(255,255,255,.9) 0 1px,transparent 2px),radial-gradient(circle at 70% 60%,rgba(255,255,255,.9) 0 1px,transparent 2px),radial-gradient(circle at 45% 80%,rgba(255,255,255,.8) 0 1px,transparent 2px),radial-gradient(circle at 85% 20%,rgba(255,255,255,.9) 0 1px,transparent 2px),radial-gradient(circle at 30% 65%,rgba(255,255,255,.8) 0 1px,transparent 2px),
+    linear-gradient(115deg,transparent 18%,rgba(255,70,160,.75) 30%,rgba(255,220,80,.75) 40%,rgba(90,255,200,.75) 50%,rgba(90,140,255,.75) 60%,rgba(230,90,255,.7) 70%,transparent 82%);
+  background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,260% 260%;background-position:0 0,0 0,0 0,0 0,0 0,120% 120%;
+  animation:holo 2.6s cubic-bezier(.2,.6,.2,1) forwards}
+.slot.holo .box{animation:holoPop .7s cubic-bezier(.2,1.4,.3,1)}
+.slot.holo{filter:drop-shadow(0 0 22px rgba(255,255,255,.35)) drop-shadow(0 0 60px var(--glow))}
+@keyframes holo{0%{opacity:0;background-position:0 0,0 0,0 0,0 0,0 0,120% 120%}12%{opacity:1}100%{opacity:0;background-position:0 0,0 0,0 0,0 0,0 0,-40% -40%}}
+@keyframes holoPop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+#app.shuffling .sel-halo{opacity:.4}
+.slot.rolling .box{animation:roll .32s ease-in-out infinite}
+@keyframes roll{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.f-front img,.f-back img{transition:opacity .35s}
+.slot.unreveal .f-front img{opacity:0}
+/* passing boxes during a shuffle get a short rainbow lick */
+.slot.flick .sheen::before{content:"";position:absolute;inset:-20%;mix-blend-mode:screen;pointer-events:none;
+  background:linear-gradient(115deg,transparent 25%,rgba(255,70,160,.7) 36%,rgba(255,220,80,.7) 44%,rgba(90,255,200,.7) 52%,rgba(90,140,255,.7) 60%,rgba(230,90,255,.6) 68%,transparent 78%);
+  background-size:260% 260%;animation:flick .5s ease-out forwards}
+.slot.flick{filter:drop-shadow(0 0 18px rgba(255,255,255,.3))}
+@keyframes flick{0%{opacity:0;background-position:120% 120%}20%{opacity:1}100%{opacity:0;background-position:-30% -30%}}
+/* attract mode: HUD melts away, boxes glide slowly */
+#app.attract .hud-top,#app.attract .hints,#app.attract .info,#app.attract .sel-halo{opacity:0;transition:opacity 1.6s}
+#app.attract .slot{transition:transform 2.6s cubic-bezier(.45,0,.2,1),opacity 1.4s}
+#app.attract .vignette{opacity:1}
+@keyframes sheen{to{transform:translateX(488%) skewX(-14deg)}} /* compositor-only (was animating left) */
+
+/* title strip */
+.info{position:absolute;left:0;right:0;top:calc(42% + var(--bh)/2 + 4.5vh);text-align:center;z-index:4;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));transition:opacity .3s,transform .6s cubic-bezier(.22,.9,.25,1)}
+#app.details-open .info,#app.settings-open .info{transform:translateX(-17vw);opacity:.0}
+.g-title{font-size:clamp(22px,3vw,44px);font-weight:500;letter-spacing:-.005em;text-wrap:balance;text-shadow:0 2px 20px rgba(0,0,0,.4)}
+.g-meta{margin-top:6px;font-size:clamp(11px,1vw,14px);color:var(--ink-dim);letter-spacing:.04em}
+.g-meta span+span::before{content:"·";margin:0 .6em;opacity:.7}
+.g-meta .empty-set{margin-top:10px;display:inline-flex;align-items:center;padding:7px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:var(--ink,#fff);font:inherit;font-size:clamp(12px,1.05vw,15px);letter-spacing:.02em;cursor:pointer;transition:background .15s,border-color .15s}
+.g-meta .empty-set:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4)}
+.info.swap .g-title,.info.swap .g-meta{animation:rise .45s cubic-bezier(.22,.9,.25,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* hints */
+.hints{position:absolute;left:50%;bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 12px));transform:translateX(-50%);z-index:6;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;
+  max-width:calc(100% - 32px);padding:6px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px)}
+.hints{transition:transform .6s cubic-bezier(.22,.9,.25,1)} /* (beta.10) it steps aside with a transform, not `left` (no layout every frame under its blur) */
+@media (min-width:761px){#app.details-open .hints{transform:translateX(calc(-50% - min(230px,50vw)));max-width:calc(100% - min(460px,100%) - 32px)}} /* never under the panel or off the left edge (1280×720) */
+.hint{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.hint:hover{background:rgba(255,255,255,.1)}
+.hint .keys{display:inline-flex;gap:3px}
+.g{display:inline-grid;place-items:center;min-width:22px;height:18px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,255,255,.55);font-size:10px;font-weight:600;line-height:1}
+.g.shape{border:0;padding:0;min-width:18px}
+.g.shape svg{width:19px;height:19px}
+
+.letter-flash{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-size:min(22vh,180px);font-weight:700;pointer-events:none;opacity:0;z-index:7;text-shadow:0 10px 60px rgba(0,0,0,.5)}
+.letter-flash.go{animation:flash .9s ease-out}
+/* shelf change: the new shelf's name sweeps up through the middle of the screen on a glass band */
+/* sharp artwork background */
+#app.bg-art .bg-layer img{opacity:1!important;left:0;top:0;width:100%;height:100%}
+#app.bg-art .bg-layer.poster img{left:auto;right:4vw;top:0;width:auto;height:100%;object-fit:contain;opacity:.38!important;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 45%,#000 80%,transparent);mask-image:linear-gradient(90deg,transparent,#000 45%,#000 80%,transparent)}
+#app.bg-art .bg-layer.poster .tint{opacity:1}
+/* keep the HUD and the shelf readable over busy art: darker at the top and bottom, a soft pool behind the cases */
+#app.bg-art .bg-layer::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.78),rgba(0,0,0,.5) 28%,rgba(0,0,0,.52) 60%,rgba(0,0,0,.8)),radial-gradient(ellipse 60% 50% at 50% 45%,rgba(0,0,0,.25),transparent 70%)}
+#app.bg-art .bg-layer .tint{opacity:.35}
+@keyframes flash{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}15%{opacity:.95;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.08)}}
+
+/* details */
+.details{position:absolute;top:0;right:0;bottom:0;width:min(460px,100%);z-index:8;background:rgba(8,10,18,.74);backdrop-filter:blur(26px);border-left:1px solid var(--line);
+  transform:translateX(104%);transition:transform .55s cubic-bezier(.22,.9,.25,1);overflow-y:auto;
+  padding-top:max(36px,env(safe-area-inset-top,0px));padding-bottom:110px;padding-left:32px;padding-right:max(32px,env(safe-area-inset-right,0px))}
+#app.details-open .details{transform:none}
+.d-kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim)}
+.d-title{font-size:30px;font-weight:600;margin-top:8px;line-height:1.15;text-wrap:balance}
+.d-desc{margin-top:16px;font-size:14px;line-height:1.6;color:rgba(243,245,251,.82);max-width:60ch}
+.d-grid{margin-top:22px;display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:13px}
+.d-grid dt{color:var(--ink-dim)}
+.d-grid dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.d-cmd{margin-top:22px;font:12px/1.5 ui-monospace,'Cascadia Mono',Consolas,monospace;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow-wrap:anywhere;color:#cfd6ff}
+.d-actions{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line)}
+.btn.primary{background:var(--ink);color:#10121a;border-color:transparent}
+
+/* launch */
+.launch{position:absolute;inset:0;z-index:20;background:#000;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .6s}
+#app.launching .launch{opacity:1;pointer-events:auto}
+/* coming back from a game: the shelf snaps into place under a black cover, then the cover alone fades (see prepReturn) */
+#app.returning #scene,#app.returning .sel-halo,#app.returning .bg-layer{transition:none!important}
+#app.returning .launch{opacity:1;pointer-events:auto;transition:none}
+/* in a game: the window is transparent behind it; nothing but the black layer is drawn and every animation stops */
+body.aside #app>*:not(.launch),body.aside .launch>*{visibility:hidden!important}
+body.aside .launch{background:#000!important;opacity:1!important;transition:none!important}
+body.aside *,body.aside *::before,body.aside *::after{animation-play-state:paused!important}
+.l-inner{text-align:center;padding:0 24px;max-width:640px}
+.l-emu{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-dim)}
+.l-title{font-size:clamp(24px,3.4vw,40px);font-weight:600;margin-top:10px;text-wrap:balance}
+.l-bar{margin:24px auto 0;width:220px;height:3px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.l-bar i{display:block;height:100%;width:0;background:var(--ink)}
+#app.launching .l-bar i{animation:load 1.8s cubic-bezier(.5,0,.2,1) forwards}
+@keyframes load{to{width:100%}}
+.l-cmd{margin-top:22px;font:12px/1.5 ui-monospace,Consolas,monospace;color:#9fb0ff;overflow-wrap:anywhere}
+.l-note{margin-top:26px;font-size:13px;color:var(--ink-dim);opacity:0;transition:opacity .5s}
+.l-note.on{opacity:1}
+
+.toast{position:absolute;left:50%;top:max(22px,env(safe-area-inset-top,0px));transform:translate(-50%,calc(-100% - 60px));z-index:30;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.95);color:#10121a;font-size:13px;font-weight:600;transition:transform .45s cubic-bezier(.22,.9,.25,1)}
+.toast.on{transform:translate(-50%,0)}
+/* (beta.9) a message that stays up while something works: a small turning ring before the words (only while it works) */
+.toast.work::before{content:"";display:inline-block;width:11px;height:11px;margin:0 9px -1px 0;border-radius:50%;border:2px solid rgba(16,18,26,.22);border-top-color:#10121a;animation:toastSpin .8s linear infinite}
+@keyframes toastSpin{to{transform:rotate(360deg)}}
+.toast.done{color:#0f3d24}
+
+/* original per-shelf wordmarks */
+.sys-word.wm{display:flex;flex-direction:column;align-items:flex-start;gap:7px;letter-spacing:normal}
+.wm .wm-main{display:inline-block;line-height:1;background:var(--wm-grad);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 16px var(--wm-glow));padding-right:.1em}
+.wm .wm-tag{font:600 9px/1 var(--ui);letter-spacing:.38em;text-transform:uppercase;color:var(--wm-tagc)}
+/* (beta.6) any shelf without its own lettering colours (the retro shelves from systems-extra.js, a platform's own): white,
+   never the see-through text an undefined gradient gave */
+.wm{--wm-grad:linear-gradient(180deg,#ffffff 15%,#cfd6e6 100%);--wm-glow:rgba(255,255,255,.25);--wm-tagc:#c8cfdd}
+.wm-home{--wm-grad:linear-gradient(180deg,#ffffff 10%,#c9b8ff 100%);--wm-glow:rgba(201,184,255,.4);--wm-tagc:#bdb3e6}
+/* (beta.6) the retro shelves, each in its console's colours */
+.wm-psx{--wm-grad:linear-gradient(180deg,#f2f2f5 15%,#9aa3b5 100%);--wm-glow:rgba(160,170,190,.35);--wm-tagc:#c3c9d6}
+.wm-nes{--wm-grad:linear-gradient(180deg,#ffe2e2 10%,#e4202b 95%);--wm-glow:rgba(228,32,43,.4);--wm-tagc:#f2a6aa}
+.wm-snes{--wm-grad:linear-gradient(180deg,#efeaff 10%,#8f7ff0 95%);--wm-glow:rgba(143,127,240,.4);--wm-tagc:#c4baf5}
+.wm-n64{--wm-grad:linear-gradient(180deg,#dff6e8 10%,#18a85c 95%);--wm-glow:rgba(24,168,92,.4);--wm-tagc:#9ed9b8}
+.wm-gb,.wm-gbc{--wm-grad:linear-gradient(180deg,#f1f8d2 10%,#8bac0f 95%);--wm-glow:rgba(139,172,15,.4);--wm-tagc:#c6d98a}
+.wm-gbc{--wm-grad:linear-gradient(180deg,#f6e8ff 10%,#b14fd6 95%);--wm-glow:rgba(177,79,214,.4);--wm-tagc:#d9a9ec}
+.wm-gba{--wm-grad:linear-gradient(180deg,#ece8ff 10%,#5a3ec8 95%);--wm-glow:rgba(90,62,200,.45);--wm-tagc:#b3a6ea}
+.wm-nds{--wm-grad:linear-gradient(180deg,#ffffff 10%,#a7b1bf 95%);--wm-glow:rgba(167,177,191,.35);--wm-tagc:#cdd3dc}
+.wm-megadrive{--wm-grad:linear-gradient(180deg,#ffe4e4 10%,#d81f26 95%);--wm-glow:rgba(216,31,38,.4);--wm-tagc:#f0a7aa}
+.wm-mastersystem{--wm-grad:linear-gradient(180deg,#ffe9e6 10%,#e2412f 95%);--wm-glow:rgba(226,65,47,.4);--wm-tagc:#f1b0a7}
+.wm-gamegear{--wm-grad:linear-gradient(180deg,#e6f1ff 10%,#2f6fd6 95%);--wm-glow:rgba(47,111,214,.4);--wm-tagc:#a9c5ef}
+.wm-dreamcast{--wm-grad:linear-gradient(180deg,#fff0e0 10%,#ff7a12 95%);--wm-glow:rgba(255,122,18,.4);--wm-tagc:#ffc08f}
+/* (beta.7) wave 2 */
+.wm-saturn{--wm-grad:linear-gradient(180deg,#eef0ff 10%,#3b4fc4 95%);--wm-glow:rgba(59,79,196,.42);--wm-tagc:#aeb8ec}
+.wm-pcengine{--wm-grad:linear-gradient(180deg,#fff3dc 10%,#f29a12 95%);--wm-glow:rgba(242,154,18,.4);--wm-tagc:#f6cd8a}
+.wm-neogeo{--wm-grad:linear-gradient(180deg,#fff6d8 10%,#d4a21a 95%);--wm-glow:rgba(212,162,26,.42);--wm-tagc:#ead08a}
+.wm-arcade{--wm-grad:linear-gradient(180deg,#ffe3f6 10%,#e0249a 95%);--wm-glow:rgba(224,36,154,.42);--wm-tagc:#f0a3d3}
+.wm-segacd{--wm-grad:linear-gradient(180deg,#e8f0ff 10%,#2a5bd7 95%);--wm-glow:rgba(42,91,215,.42);--wm-tagc:#a9bff0}
+.wm-sega32x{--wm-grad:linear-gradient(180deg,#ffe8e2 10%,#e8452c 95%);--wm-glow:rgba(232,69,44,.42);--wm-tagc:#f3b0a4}
+.wm-atari2600{--wm-grad:linear-gradient(180deg,#fff0e2 10%,#c8642a 95%);--wm-glow:rgba(200,100,42,.4);--wm-tagc:#e9b896}
+.wm-atarilynx{--wm-grad:linear-gradient(180deg,#e9fbff 10%,#1f9fc4 95%);--wm-glow:rgba(31,159,196,.4);--wm-tagc:#9fd6e7}
+.wm-wonderswan{--wm-grad:linear-gradient(180deg,#f3ecff 10%,#7c4fd6 95%);--wm-glow:rgba(124,79,214,.42);--wm-tagc:#c4adee}
+.wm-dos{--wm-grad:linear-gradient(180deg,#e9ffe9 10%,#2fbf4a 95%);--wm-glow:rgba(47,191,74,.4);--wm-tagc:#a3e3ae}
+.wm-home .wm-main{font-family:'Lexend',var(--ui);font-weight:800;letter-spacing:.1em;font-size:clamp(22px,2.4vw,34px)}
+/* favorite heart on the box corner */
+.slot.fav .f-front::before{content:"♥";position:absolute;right:calc(8px*var(--os,1));top:calc(8px*var(--os,1));z-index:3;width:calc(26px*var(--os,1));height:calc(26px*var(--os,1));border-radius:50%;background:rgba(10,10,16,.75);color:#ff5c8a;font-size:calc(14px*var(--os,1));line-height:calc(26px*var(--os,1));text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.wm-gc{--wm-grad:linear-gradient(180deg,#e2dbff 10%,#8b75ff 95%);--wm-glow:rgba(139,117,255,.45);--wm-tagc:#b7aaf2}
+.wm-gc .wm-main{font-family:'Chakra Petch',var(--ui);font-weight:700;letter-spacing:.14em;font-size:clamp(22px,2.4vw,34px)}
+.wm-wii{--wm-grad:linear-gradient(180deg,#ffffff 20%,#9cd2ff 100%);--wm-glow:rgba(120,190,255,.5);--wm-tagc:#bfe2ff}
+.wm-wiiu{--wm-grad:linear-gradient(180deg,#ffffff 15%,#5cc8ff 100%);--wm-glow:rgba(60,180,255,.5);--wm-tagc:#a8ddff}
+.wm-wiiu .wm-main{font-family:'Syne',var(--ui);font-weight:800;letter-spacing:.14em;font-size:clamp(24px,2.7vw,38px)}
+.wm-wii .wm-main{font-family:'Syne',var(--ui);font-weight:800;letter-spacing:.24em;font-size:clamp(24px,2.7vw,38px)}
+.wm-sw{--wm-grad:linear-gradient(95deg,#ff9a8a 0%,#ff3d55 70%);--wm-glow:rgba(255,61,85,.45);--wm-tagc:#ffb3b8}
+.wm-sw .wm-main,.wm-sw2 .wm-main{font-family:'Unbounded',var(--ui);font-weight:700;letter-spacing:.03em;font-size:clamp(22px,2.5vw,36px)}
+.wm-sw2{--wm-grad:linear-gradient(95deg,#ffb0a6 0%,#ff2a3b 60%,#4aa8ff 100%);--wm-glow:rgba(255,42,59,.45);--wm-tagc:#ffc2c7}
+.wm-psp{--wm-grad:linear-gradient(180deg,#f7f8fc 15%,#8d95a8 100%);--wm-glow:rgba(200,210,235,.3);--wm-tagc:#aab1c2}
+.wm-psp .wm-main{font-family:'Michroma',var(--ui);letter-spacing:.32em;font-size:clamp(22px,2.4vw,34px)}
+.wm-ps4{--wm-grad:linear-gradient(180deg,#eaf1ff 10%,#6aa6ff 100%);--wm-glow:rgba(106,166,255,.4);--wm-tagc:#a9c6f5}
+.wm-ps3{--wm-grad:linear-gradient(180deg,#f2f6ff 10%,#7ab4ff 100%);--wm-glow:rgba(122,180,255,.4);--wm-tagc:#b0cdf5}
+.wm-ps3 .wm-main{font-family:'Michroma',var(--ui);letter-spacing:.22em;font-size:clamp(22px,2.4vw,34px)}
+.wm-ps2{--wm-grad:linear-gradient(180deg,#eef1ff 10%,#8fa6ff 100%);--wm-glow:rgba(143,166,255,.4);--wm-tagc:#b4c0f5}
+.wm-ps2 .wm-main{font-family:'Michroma',var(--ui);letter-spacing:.2em;font-size:clamp(22px,2.4vw,34px)}
+.wm-x360{--wm-grad:linear-gradient(180deg,#eaffea 10%,#5fd35f 100%);--wm-glow:rgba(95,211,95,.4);--wm-tagc:#a9e6a9}
+.wm-x360 .wm-main{font-family:'Bungee',var(--ui);letter-spacing:.06em;font-size:clamp(22px,2.4vw,34px)}
+.wm-n3ds{--wm-grad:linear-gradient(180deg,#ff8a95 0%,#e60012 85%);--wm-glow:rgba(230,0,18,.42);--wm-tagc:#ffb3ba}
+.wm-n3ds .wm-main{font-family:'Unbounded',var(--ui);font-weight:800;letter-spacing:.02em;font-size:clamp(22px,2.5vw,36px)}
+.wm-ps4 .wm-main{font-family:'Audiowide',var(--ui);letter-spacing:.18em;font-size:clamp(22px,2.4vw,34px)}
+.wm-pc{--wm-grad:linear-gradient(180deg,#e0f0ff 15%,#5aa3e6 100%);--wm-glow:rgba(90,163,230,.4);--wm-tagc:#9cc6ec}
+/* (beta.4) the Custom shelf (PC ports, recomps, games added by hand): the PC lettering in a warm tint (without a gradient the title was drawn invisible) */
+.wm-custom{--wm-grad:linear-gradient(180deg,#fff0e0 15%,#e6955a 100%);--wm-glow:rgba(230,149,90,.4);--wm-tagc:#ecc29c}
+.wm-custom .wm-main{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:600;letter-spacing:.12em;font-size:clamp(24px,2.7vw,38px)}
+.wm-pc .wm-main{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:600;letter-spacing:.12em;font-size:clamp(24px,2.7vw,38px)}
+.wm-media{--wm-grad:linear-gradient(95deg,#efe6ff 0%,#a98bff 90%);--wm-glow:rgba(169,139,255,.45);--wm-tagc:#c9b8ff}
+.wm-media .wm-main{font-family:'DM Serif Display',Georgia,serif;font-style:italic;text-transform:none;font-size:clamp(28px,3.1vw,44px)}
+.b-mark .wm{display:flex;flex-direction:column;align-items:center;gap:16px;text-shadow:none}
+.b-mark .wm .wm-main{font-size:clamp(44px,7vw,104px);text-shadow:none;filter:drop-shadow(0 0 34px var(--wm-glow))}
+.b-mark .wm .wm-tag{font-size:12px;text-shadow:none;font-weight:600}
+.sys-logo.dark-logo,.b-mark img.dark-logo{filter:drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 0 3px rgba(255,255,255,.7)) drop-shadow(0 0 18px rgba(255,255,255,.35))}
+/* logos are sized by area, not height: a square mark grows taller, a long wordmark sits shorter, so every
+   system's logo carries the same visual weight (--ar is the trimmed image's width/height) */
+.sys-logo{--lh:clamp(40px,4.6vw,66px);--ar:2.2;display:block;height:calc(var(--lh)*clamp(.72,1.48/sqrt(var(--ar)),1.5));width:auto;max-width:34vw;object-fit:contain;filter:drop-shadow(0 4px 14px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(255,255,255,.12))}
+/* boot */
+.boot{position:absolute;inset:0;z-index:25;background:#000;opacity:0;pointer-events:none;transition:opacity .35s;--boot-a:#223;--boot-c:#cfd6ff}
+.boot.on{opacity:1;pointer-events:auto}
+.boot video{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:contain;background:#000}
+.boot-intro{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse 60% 55% at 50% 50%,var(--boot-a),#000 75%)}
+.b-ring{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;border:2px solid var(--boot-c);opacity:0}
+.boot.intro .b-ring{animation:ring 1.7s cubic-bezier(.2,.7,.2,1) .15s forwards}
+.boot.intro .r2{animation-delay:.45s}
+@keyframes ring{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(16)}}
+.b-mark{position:relative;display:grid;place-items:center;opacity:0;filter:blur(14px);transform:scale(1.12)}
+.boot.intro .b-mark{animation:mark 1.1s cubic-bezier(.2,.8,.2,1) .75s forwards}
+@keyframes mark{to{opacity:1;filter:blur(0);transform:none}}
+.b-mark span{font-size:clamp(40px,7vw,96px);font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 0 44px var(--boot-c)}
+.b-mark img{max-width:min(60vw,640px);max-height:30vh;filter:drop-shadow(0 0 30px var(--boot-c))}
+.b-sub{position:absolute;top:calc(50% + 11vh);font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--ink-dim);opacity:0}
+.boot.intro .b-sub{animation:fadein .6s 1.6s forwards}
+@keyframes fadein{to{opacity:1}}
+.b-skip{position:absolute;left:0;right:0;bottom:max(24px,env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;color:rgba(255,255,255,.45)}
+/* customize panel */
+.settings{position:absolute;top:0;right:0;bottom:0;width:min(500px,100%);z-index:9;background:rgba(8,10,18,.84);backdrop-filter:blur(26px);border-left:1px solid var(--line);transform:translateX(104%);transition:transform .55s cubic-bezier(.22,.9,.25,1);overflow-y:auto;padding-top:max(36px,env(safe-area-inset-top,0px));padding-bottom:40px;padding-left:28px;padding-right:max(28px,env(safe-area-inset-right,0px))}
+#app.settings-open .settings{transform:none}
+#app.settings-open .sel-halo{transform:translate(calc(-50% - 17vw),-50%) scale(.92)}
+#app.settings-open .hints{opacity:0;pointer-events:none}
+.set-row{margin-top:14px;padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:10px}
+.set-row.cur{border-color:rgba(255,255,255,.42)}
+.set-head{display:flex;align-items:center;gap:12px}
+.set-thumb{width:100px;height:40px;border-radius:8px;background:rgba(255,255,255,.06);display:grid;place-items:center;overflow:hidden;flex:none}
+.set-thumb img{max-width:90px;max-height:32px;object-fit:contain}
+.set-thumb span{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.set-name{font-weight:600;font-size:15px}
+.chip{padding:5px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:500}
+.chip:hover{background:rgba(255,255,255,.1)}
+#app.dragging::after{content:"Drop a logo image or boot video for this shelf";position:absolute;inset:16px;border:2px dashed rgba(255,255,255,.6);border-radius:24px;display:grid;place-items:center;text-align:center;padding:0 24px;font-size:20px;font-weight:600;background:rgba(0,0,0,.5);z-index:40;pointer-events:none}
+
+@media (max-width:760px){
+  .hud-top{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));flex-wrap:wrap}
+  .tabs{order:3;width:100%;border-radius:18px}
+  .tab{padding:5px 10px;font-size:11px}
+  .mini:not(.keep){display:none}
+  #app.details-open #scene{transform:translateY(-22vh) scale(.7)}
+  .details{width:100%;top:46%;border-left:0;border-top:1px solid var(--line);padding-top:24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+  .hint{padding:4px 7px;font-size:11px;gap:5px}
+}
+@media (prefers-reduced-motion:reduce){
+  .slot,.box,#scene,.bg-layer,.details{transition-duration:.01s!important}
+  .letter-flash.go,.info.swap .g-title,.info.swap .g-meta,.sel-halo,.slot.landed .sheen::after{animation:none}
+}
+
+/* ---------- colour themes (the wash itself is painted from app.js; these add each theme's ambient layer) ---------- */
+.theme-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;display:none}
+.theme-fx i{position:absolute;display:block}
+body.theme-midnight .bg-layer img,body.theme-aurora .bg-layer img{opacity:0}
+body.theme-midnight .vignette{background:radial-gradient(ellipse at 50% 45%,transparent 35%,rgba(0,0,0,.85))}
+body.theme-midnight .floor{opacity:.35}
+/* aurora: three soft ribbons drifting slowly (transform only, so it costs nothing per frame) */
+body.theme-aurora .theme-fx{display:block;mix-blend-mode:screen}
+body.theme-aurora .theme-fx i{left:-30%;width:160%;height:38%;border-radius:50%;filter:blur(40px);opacity:.32;will-change:transform}
+body.theme-aurora .theme-fx i:nth-child(1){top:2%;background:linear-gradient(90deg,transparent,#2cf2b4,#2c9cf2,transparent);animation:aurA 26s ease-in-out infinite alternate}
+body.theme-aurora .theme-fx i:nth-child(2){top:14%;background:linear-gradient(90deg,transparent,#8a5cff,#2ce8d0,transparent);animation:aurB 34s ease-in-out infinite alternate;opacity:.24}
+body.theme-aurora .theme-fx i:nth-child(3){top:-6%;background:linear-gradient(90deg,transparent,#3dffa0,transparent 70%);animation:aurA 41s ease-in-out infinite alternate-reverse;opacity:.18}
+@keyframes aurA{from{transform:translateX(-8%) rotate(-4deg) scaleY(.8)}to{transform:translateX(8%) rotate(3deg) scaleY(1.15)}}
+@keyframes aurB{from{transform:translateX(10%) rotate(5deg)}to{transform:translateX(-10%) rotate(-3deg) scaleY(1.2)}}
+body:not(.fx) .theme-fx i{animation:none!important}
+@media (prefers-reduced-motion:reduce){.theme-fx i{animation:none!important}}
+#app.bg-art .theme-fx{display:none}
+
+/* ---------- volume beside the clock ---------- */
+.clock-row{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.vol{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:999px;transition:background .25s}
+.vol-btn{width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--ink-dim);cursor:pointer;transition:color .2s,background .2s}
+.vol-btn svg{width:18px;height:18px}
+.vol-btn:hover,.vol-btn:focus-visible{color:var(--ink);background:rgba(255,255,255,.08);outline:none}
+.vol .vx{display:none}.vol.muted .vx{display:inline}.vol.muted .vw1,.vol.muted .vw2,.vol.low .vw2{display:none}
+.vol-range{-webkit-appearance:none;appearance:none;width:0;opacity:0;height:4px;border-radius:4px;margin:0;cursor:pointer;
+  background:linear-gradient(90deg,rgba(255,255,255,.9) var(--p,70%),rgba(255,255,255,.18) var(--p,70%));transition:width .3s cubic-bezier(.3,.9,.3,1),opacity .25s}
+.vol-range::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.vol:hover,.vol:focus-within,.vol.show{background:var(--glass)}
+.vol:hover .vol-range,.vol:focus-within .vol-range,.vol.show .vol-range{width:96px;opacity:1}
+
+/* ---------- sort & filter panel ---------- */
+.sortpanel{position:absolute;inset:0;z-index:9;display:flex;justify-content:center;align-items:flex-start;padding-top:96px;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.15) 55%,transparent);opacity:0;pointer-events:none;transition:opacity .25s}
+.sortpanel.on{opacity:1;pointer-events:auto}
+.sp-card{width:min(880px,92vw);padding:18px 20px 14px;border-radius:20px;background:rgba(14,16,24,.82);border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 30px 80px rgba(0,0,0,.5);transform:translateY(-10px);transition:transform .35s cubic-bezier(.2,.9,.25,1)}
+.sortpanel.on .sp-card{transform:none}
+/* the Wii remote's pointer (renderer: wmHand): a white glove, its fingertip on the point */
+#wmHand{position:fixed;left:0;top:0;width:52px;height:52px;margin:-5px 0 0 -18px;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .18s;will-change:transform}
+#wmHand.on{opacity:1}
+#wmHand svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 3px 6px rgba(0,0,0,.45));transition:transform .08s}
+#wmHand path{fill:#fff;stroke:#2b5fd9;stroke-width:3;stroke-linejoin:round}
+#wmHand.press svg{transform:scale(.9)}
+/* Switch 2: which build to start a game in (renderer: pickBuild) */
+.buildpick{position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s}
+.buildpick.on{opacity:1;pointer-events:auto}
+.bp-card{width:min(560px,92vw);max-height:84vh;overflow-y:auto;padding:20px 18px 14px;border-radius:20px;background:rgba(14,16,24,.9);border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 30px 80px rgba(0,0,0,.55);transform:translateY(10px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.buildpick.on .bp-card{transform:none}
+.bp-title{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);padding:0 8px}
+.bp-game{font-size:20px;font-weight:600;color:var(--ink);padding:4px 8px 12px}
+.bp-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;margin:3px 0;border:0;border-radius:14px;background:rgba(255,255,255,.04);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:background .15s,box-shadow .15s}
+.bp-row b{font-size:15px;font-weight:600}
+.bp-row span{font-size:12px;color:var(--ink-dim);flex:none}
+.bp-row.on{background:rgba(255,255,255,.92);color:#10121a;box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px var(--sel-glow,rgba(120,140,255,.4))}
+.bp-row.on span{color:#3a3f52}
+.bp-row:disabled{opacity:.38;cursor:default}
+.bp-foot{margin-top:10px;padding:0 8px;font-size:11px;color:var(--ink-dim)}
+/* (beta.5) a PC game's cover picker: the build picker's card, wider, with a grid of covers (2:3) and two action tiles */
+.coverpick .bp-card{width:min(980px,94vw)}
+.cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px;padding:4px 8px 6px}
+.cp-tile{position:relative;display:flex;flex-direction:column;gap:6px;padding:6px;border:0;border-radius:14px;background:rgba(255,255,255,.04);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:background .15s,box-shadow .15s,transform .15s}
+.cp-tile .im{aspect-ratio:2/3;border-radius:9px;background:#0b0d16 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--ink-dim)}
+.cp-tile b{font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-tile span{font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-tile.on{background:rgba(255,255,255,.92);color:#10121a;box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px var(--sel-glow,rgba(120,140,255,.4));transform:translateY(-2px)}
+.cp-tile.on span{color:#3a3f52}
+/* (beta.9) the "Add SteamGridDB" slot after the covers (no key yet): an empty, lit case like the Art Studio's */
+.cp-tile.acct .im{background:linear-gradient(165deg,rgba(107,140,255,.16),rgba(107,140,255,.03) 70%);border:1.5px dashed rgba(107,140,255,.75);box-sizing:border-box}
+.cp-tile.acct .im svg{width:44px;height:44px;padding:16px;border-radius:50%;background:rgba(107,140,255,.14);fill:none;stroke:#9fb3ff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cp-tile.acct b{color:#b9c7ff}.cp-tile.acct.on b{color:#2a3d9e}
+.cp-note{padding:6px 8px 4px;font-size:13px;color:var(--ink-dim)}
+.sp-title{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:12px}
+.sp-row{display:flex;align-items:center;gap:14px;padding:8px 10px;border-radius:14px;transition:background .2s}
+.sp-row.active{background:rgba(255,255,255,.05)}
+.sp-lbl{width:64px;flex:none;font-size:12px;color:var(--ink-dim)}
+.sp-opts{display:flex;flex-wrap:wrap;gap:6px}
+.sp-opt{padding:7px 14px;border-radius:999px;border:1px solid transparent;background:rgba(255,255,255,.05);color:var(--ink-dim);font-size:13px;font-weight:500;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.sp-opt:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+.sp-opt.on{background:rgba(255,255,255,.92);color:#10121a}
+.sp-row.active .sp-opt.on{box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px var(--sel-glow,rgba(120,140,255,.4))}
+.sp-foot{margin-top:10px;padding:0 10px;font-size:11px;color:var(--ink-dim)}
+.letter-flash.long{font-size:min(11vh,96px);white-space:nowrap}
+
+/* nothing animates behind a running game or while another window has focus */
+#app.launching .sel-halo,#app.launching .theme-fx i,body.idle-bg .sel-halo,body.idle-bg .theme-fx i{animation-play-state:paused}
+
+/* controller status beside the clock, and no mouse pointer while you're on the pad */
+.pad-stat{width:26px;height:26px;display:grid;place-items:center;color:var(--ink-dim);opacity:.35;transition:opacity .3s,color .3s}
+.pad-stat svg{width:20px;height:20px}
+.pad-stat.on{opacity:1;color:var(--ink)}
+body.pad-input,body.pad-input *{cursor:none!important}
+
+/* nothing under a full-screen overlay needs to keep breathing (it forces Inspect's backdrop blur to redraw every frame) */
+#app.inspecting .sel-halo,#app.inspecting .theme-fx i,#app.museum-open .sel-halo,#app.museum-open .theme-fx i{animation-play-state:paused}
+/* same for the theme's moving background under the blurred Details / Customize / Settings panels, and in attract mode
+   (the drift alone would keep the GPU busy for hours on an idle TV) */
+#app.details-open .theme-fx i,#app.settings-open .theme-fx i,#app.attract .theme-fx i,body:has(#setup.on) .theme-fx i{animation-play-state:paused}
+
+/* controller icons in the button bar */
+.g.ico{border:0;padding:0;min-width:0;height:auto;background:none}
+.g.ico svg{display:block;height:21px;width:auto}
+.hint .hold{display:inline-flex;align-items:center;gap:4px;margin-left:-1px;opacity:.82}
+.hint .hold i{font-style:normal;font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
+.hint .lab+.hold::before{content:"·";opacity:.45;margin-right:2px}
+/* The selected case's right side is the side that opens, not a second spine. (Cases to the right of the selection
+   turn this side towards you on the shelf, so there it keeps showing the spine.) */
+.f-right.spine2>*{transition:opacity .25s}
+.f-right.spine2::before{content:"";position:absolute;inset:0;z-index:2;opacity:0;transition:opacity .25s;pointer-events:none;
+  background:
+    linear-gradient(to right,rgba(255,255,255,.22) 0 1px,transparent 1px calc(100% - 1px),rgba(0,0,0,.4) calc(100% - 1px)), /* moulded edges */
+    linear-gradient(to right,transparent 44%,rgba(0,0,0,.38) 47%,rgba(0,0,0,.5) 50%,rgba(255,255,255,.14) 52%,transparent 56%), /* seam where the halves close */
+    linear-gradient(to bottom,rgba(255,255,255,.1),transparent 18%,transparent 82%,rgba(0,0,0,.18)), /* soft top/bottom falloff */
+    var(--case-side)}
+.slot.sel .f-right.spine2>*{opacity:0}
+.slot.sel .f-right.spine2::before{opacity:1}
+
+/* ---- loading screen (v1.8.3): the game's art washed in its console's colour, the cover floating, the console's
+   wordmark, the title and a slim glowing line. Fades to black as the game's window takes over. ---- */
+.launch{background:var(--l-t1,#05060c);--l-t0:#2a2f6e;--l-t1:#0b0d1f;--l-glow:#9d8cff;--l-case:#16161b}
+.l-bg{position:absolute;inset:0;overflow:hidden;transition:opacity .28s}
+.l-bg img{position:absolute;inset:-12%;width:124%;height:124%;max-width:none;object-fit:cover;filter:saturate(1.35) brightness(.5);opacity:.85;
+  animation:lDrift 22s ease-in-out infinite alternate;will-change:transform}
+.l-bg img:not([src]){display:none}
+.l-bg::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse 55% 50% at 50% 40%,transparent,color-mix(in srgb,var(--l-t1) 88%,transparent) 100%),
+             linear-gradient(180deg,color-mix(in srgb,var(--l-t0) 30%,transparent),color-mix(in srgb,var(--l-t1) 75%,transparent))}
+.l-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px;transition:opacity .28s,transform .28s}
+.l-card{position:relative;height:min(38vh,380px);padding:5px;border-radius:12px;background:var(--l-case);overflow:hidden;
+  box-shadow:0 34px 80px rgba(0,0,0,.55),0 0 70px color-mix(in srgb,var(--l-glow) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.12);
+  will-change:transform}
+/* the card only moves while the launch screen shows (it used to float on, unseen, the whole time) */
+#app.launching .l-card{animation:lCardIn .7s cubic-bezier(.2,.8,.2,1) both,lFloat 4.8s 0.7s ease-in-out infinite alternate}
+.l-card img{display:block;height:100%;width:auto;max-width:min(60vw,520px);object-fit:cover;border-radius:8px}
+.l-card img:not([src]){visibility:hidden;width:calc(min(38vh,380px)*.7)}
+.l-glare{position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-14deg);
+  animation:lGlare 1.1s .55s cubic-bezier(.3,.6,.3,1) both;pointer-events:none}
+.launch.no-card .l-card{display:none}
+.l-word{margin-top:clamp(18px,3.4vh,34px);animation:lUp .6s .2s cubic-bezier(.2,.8,.2,1) both}
+.l-word .wm-main{font-size:clamp(20px,2vw,28px)}
+.l-word .wm-tag{display:none}
+.l-title{font-size:clamp(20px,2.3vw,30px);font-weight:600;margin-top:6px;opacity:.95;animation:lUp .6s .28s cubic-bezier(.2,.8,.2,1) both}
+.l-bar{margin:20px auto 0;width:180px;height:2px;background:rgba(255,255,255,.12);overflow:visible}
+.l-bar i{background:linear-gradient(90deg,color-mix(in srgb,var(--l-glow) 20%,transparent),var(--l-glow));box-shadow:0 0 10px var(--l-glow),0 0 2px #fff;border-radius:2px}
+.l-emu{margin-top:12px;font-size:10.5px;letter-spacing:.28em;opacity:.7;animation:lUp .6s .36s cubic-bezier(.2,.8,.2,1) both}
+.l-cmd{display:none}
+.launch.err .l-cmd{display:block}
+.launch.ready .l-inner{opacity:0;transform:scale(1.03)}
+.launch.ready .l-bg{opacity:0}
+@keyframes lDrift{from{transform:scale(1) translate3d(0,0,0)}to{transform:scale(1.08) translate3d(-2%,-1.5%,0)}}
+@keyframes lCardIn{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes lFloat{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+@keyframes lGlare{to{left:140%}}
+@keyframes lUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.l-bg img,.l-card,.l-glare{animation:none!important}}
+
+/* the console tabs stay put in the centre whatever the brand corner shows ("GameCube" vs "PS3"): a 3-column grid
+   instead of space-between, which re-centred the tabs every time the brand's width changed */
+.hud-top{display:grid;grid-template-columns:minmax(max-content,1fr) minmax(0,auto) minmax(max-content,1fr);align-items:start}
+.hud-top>.brand{justify-self:start}
+.hud-top>.tabs{justify-self:center;min-width:0;max-width:min(100%,58vw);flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}
+/* squeezed (lots of shelves): one line that scrolls under soft faded edges, the current console kept in view; wrapping
+   onto two lines made the pill jump between rows */
+.hud-top>.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;white-space:nowrap}
+.tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 44px),transparent)}
+.tabs.more-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 44px);mask-image:linear-gradient(to right,transparent,#000 44px)}
+.tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(to right,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
+.hud-top>.right{justify-self:end}
+@media (max-width:760px){
+  .hud-top{grid-template-columns:minmax(0,1fr) auto}
+  .hud-top>.tabs{grid-column:1/-1;grid-row:2;justify-self:stretch}
+}
+
+/* controller highlight inside Details and Customize (only while the controller is in use) */
+body.pad-input .pad-focus{outline:none;box-shadow:0 0 0 2px var(--bg,#0b0c12),0 0 0 4px var(--accent,#9d8cff),0 0 18px color-mix(in srgb,var(--accent,#9d8cff) 55%,transparent);transform:scale(1.04);transition:box-shadow .15s,transform .15s}
+body.pad-input .pad-focus.chip,body.pad-input .pad-focus.d-more{transform:none}
+
+/* museum: the Room menu (Start / Tab), a panel on the right over the room */
+.mus-room{position:absolute;right:28px;top:50%;transform:translate(24px,-50%);width:min(420px,40vw);max-height:78vh;overflow:auto;z-index:6;padding:18px 18px 12px;border-radius:18px;background:rgba(10,12,20,.78);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s}
+.mus-room.on{opacity:1;transform:translate(0,-50%);pointer-events:auto}
+.mus-room .mr-head{font-weight:700;font-size:20px;letter-spacing:.04em;margin:0 6px 10px}
+.mus-room .mr-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;font-size:15px;color:rgba(255,255,255,.72)}
+.mus-room .mr-row.on{background:rgba(255,255,255,.12);color:#fff}
+.mus-room .mr-val{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
+.mus-room .mr-val i{font-style:normal;opacity:0;font-size:18px}.mus-room .mr-row.on .mr-val i{opacity:.7}
+.mus-room .mr-foot{margin:10px 6px 2px;font-size:12px;opacity:.55}
+
+/* the console fit panel sits on the left, so the console and its plate stay in view */
+.mus-room.mus-fit{right:auto;left:28px;transform:translate(-24px,-50%)}
+.mus-room.mus-fit.on{transform:translate(0,-50%)}
+.mus-room .mr-row.off{opacity:.45}
+/* the reading corner's full-screen reader */
+.lib-reader{position:fixed;inset:0;z-index:60;background:radial-gradient(ellipse at 50% 40%,#1a1c26,#06070a 75%);display:none;flex-direction:column;color:#fff}
+.lib-reader.on{display:flex;animation:lrIn .25s ease-out}
+@keyframes lrIn{from{opacity:0}to{opacity:1}}
+.lr-top{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:20px 32px 10px;font-size:18px}
+.lr-title{font-weight:700;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-page{color:rgba(255,255,255,.65);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lr-stage{position:relative;flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 24px 96px;cursor:pointer}
+.lr-pages{display:flex;height:100%;align-items:center;justify-content:center;flex:none;transition:transform .12s ease-out}
+/* the open magazine: two pages either side of the spine, and the page being turned (see rdrFlip) */
+.lr-book{position:relative;height:100%;display:flex;flex:none;perspective:2600px} /* flat (no preserve-3d): the pages, spine shade and turning sheet are layered in order instead of meeting in one plane, which made the middle of the book flicker as a page turned */
+.lr-slot{position:relative;width:50%;height:100%}
+.lr-book.lr-one .lr-slot{width:100%}.lr-book.lr-one .lr-slot.r,.lr-book.lr-one .lr-spine,.lr-book.lr-solo .lr-spine{display:none}
+.lr-slot:not(.lr-empty){box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.lr-canvas{width:100%;height:100%;display:block;object-fit:contain;background:#fff}
+.lr-spine{position:absolute;left:50%;top:0;bottom:0;width:7%;transform:translateX(-50%);pointer-events:none;z-index:4;/* above the turning page too, so the fold's shade never jumps as a page starts or lands */background:linear-gradient(90deg,transparent,rgba(0,0,0,.18) 40%,rgba(0,0,0,.32) 50%,rgba(0,0,0,.18) 60%,transparent)}
+.lr-turn{position:absolute;top:0;height:100%;width:50%;transform-style:preserve-3d;z-index:3;will-change:transform;backface-visibility:visible}
+.lr-turn.r{left:50%;transform-origin:0 50%}.lr-turn.l{left:0;transform-origin:100% 50%}.lr-turn.one{left:0;width:100%;transform-origin:0 50%}
+.lr-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:#fff;overflow:hidden}
+.lr-face.b{transform:rotateY(180deg)}.lr-face.blank{background:linear-gradient(90deg,#e9e4d8,#f6f2e8)}
+.lr-shade{position:absolute;inset:0;opacity:0;pointer-events:none;will-change:opacity}
+.lr-turn.r .f .lr-shade,.lr-turn.one .f .lr-shade{background:linear-gradient(90deg,rgba(0,0,0,.4),rgba(0,0,0,.08) 35%,rgba(255,255,255,.14) 80%,rgba(0,0,0,.2))}
+.lr-turn.r .b .lr-shade,.lr-turn.one .b .lr-shade{background:linear-gradient(270deg,rgba(0,0,0,.4),rgba(0,0,0,.08) 35%,rgba(255,255,255,.14) 80%,rgba(0,0,0,.2))}
+.lr-turn.l .f .lr-shade{background:linear-gradient(270deg,rgba(0,0,0,.4),rgba(0,0,0,.08) 35%,rgba(255,255,255,.14) 80%,rgba(0,0,0,.2))}
+.lr-turn.l .b .lr-shade{background:linear-gradient(90deg,rgba(0,0,0,.4),rgba(0,0,0,.08) 35%,rgba(255,255,255,.14) 80%,rgba(0,0,0,.2))}
+.lr-cast{position:absolute;top:0;height:100%;z-index:2;opacity:0;pointer-events:none;will-change:opacity}
+.lr-cast.r{left:50%;width:50%;background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.12) 45%,transparent 75%)}
+.lr-cast.l{left:0;width:50%;background:linear-gradient(270deg,rgba(0,0,0,.5),rgba(0,0,0,.12) 45%,transparent 75%)}
+.lr-cast.one{left:0;width:100%;background:linear-gradient(90deg,rgba(0,0,0,.45),transparent 60%)}
+.lr-wait{position:absolute;display:none;color:rgba(255,255,255,.75);font-size:18px;text-align:center;padding:0 30px}
+.lib-reader.waiting .lr-wait{display:block}
+.lib-reader.waiting .lr-pages{opacity:.35}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+/* the reading corner's finder, inside the museum */
+.mus-find{position:absolute;right:24px;top:24px;bottom:96px;width:min(720px,58vw);z-index:7;display:flex;flex-direction:column;padding:18px 20px;border-radius:18px;background:rgba(10,12,20,.9);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);opacity:0;pointer-events:none;transform:translateX(24px);transition:opacity .2s,transform .25s;color:#fff}
+.mus-find.on{opacity:1;pointer-events:auto;transform:none}
+.mf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.mf-title{font-weight:700;font-size:20px}
+.mf-body{overflow:auto;flex:1;min-height:0;padding-right:4px}
+.mus-find button:focus-visible,.mus-find input:focus-visible,.mus-find button:focus{outline:2px solid #ffd98a;outline-offset:2px}
+/* Room menu: grouped, quieter, switches for on/off */
+.mus-room .mr-group{margin:14px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+.mus-room .mr-group:first-of-type{margin-top:4px}
+.mus-room .mr-row{padding:8px 12px;font-size:14px}
+.mus-room .mr-sw{width:34px;height:20px;border-radius:999px;background:rgba(255,255,255,.16);position:relative;flex:none;transition:background .15s}
+.mus-room .mr-sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}
+.mus-room .mr-sw.on{background:#4a8cff}
+.mus-room .mr-sw.on::after{transform:translateX(14px)}
+/* Customize: tabs + rows */
+.cz-tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;margin-top:10px;scrollbar-width:thin}
+.cz-tab{flex:none;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink-dim);font:inherit;font-size:13px;cursor:pointer}
+.cz-tab.on{background:rgba(255,255,255,.92);color:#10121a;border-color:transparent;font-weight:600}
+.set-row.cz{margin-top:6px;gap:0}
+.cz-row{display:grid;grid-template-columns:132px 1fr;gap:12px;align-items:start;padding:12px 2px;border-top:1px solid var(--line)}
+.cz-l{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cz-l b{font-size:13px}.cz-l span{font-size:12px;color:var(--ink-dim)}.cz-l small{font-size:11px;color:var(--ink-dim);opacity:.8;line-height:1.35}
+.cz-btns{display:flex;flex-wrap:wrap;gap:6px}
+.cz-btns .chip{background:rgba(255,255,255,.04);color:var(--ink);cursor:pointer;font:inherit;font-size:12px;padding:6px 11px}
+.cz-btns .chip.primary{background:rgba(255,255,255,.92);color:#10121a;border-color:transparent;font-weight:600}
+.cz-toggle.on{border-color:rgba(95,224,160,.6);color:#9ff0c8}
+#customize .pad-focus{outline:2px solid #fff;outline-offset:2px}
+/* Customize → Logo → Find a logo: ScreenScraper's logos side by side, each on the dark backing the shelf shows it on */
+.cz-pick{display:grid;gap:10px;padding:2px 2px 14px}
+.cz-pnote{font-size:12px;color:var(--ink-dim);line-height:1.45}
+.cz-pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.cz-lcard{min-width:0;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font:inherit;cursor:pointer;text-align:left;transition:background .2s,border-color .2s,transform .2s cubic-bezier(.3,.9,.3,1)}
+.cz-lcard:hover,.cz-lcard.pad-focus{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.3)}
+.cz-lcard[disabled]{opacity:.55;cursor:default}
+.cz-lim{display:flex;align-items:center;justify-content:center;height:72px;min-height:72px;box-sizing:border-box;overflow:hidden;border-radius:8px;background:#0b0c14;padding:10px 12px}
+.cz-lim img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;min-width:0;min-height:0;object-fit:contain}
+.cz-lim.dark img{filter:drop-shadow(0 0 1px rgba(255,255,255,.95)) drop-shadow(0 0 3px rgba(255,255,255,.6))}
+.cz-lname{font-size:12px;color:var(--ink);padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cz-lsrc{font-size:10.5px;line-height:1.3;color:var(--ink-dim);opacity:.85;padding:0 2px;margin-top:-4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.reduce-motion .cz-lcard{transition:none}
+/* the single Menu button in the corner and its menu */
+.menu-btn{display:inline-flex;align-items:center;gap:7px;padding-left:9px}
+.mb-glyph{display:inline-flex;align-items:center}
+.mb-glyph .g{transform:scale(.85)}
+/* the app itself never scrolls (a panel scrolled into view used to drag the whole screen sideways) */
+html,body,#app{overflow:clip}
+/* the insert screen's own progress line (one screen from Play to the game) */
+.ins-bar{opacity:0;transition:opacity .4s;--l-glow:var(--accent,#9d8cff)}
+.ins-bar.on{opacity:1}
+/* ===== 1.28 themes: the moving layer is a canvas (themefx.js) ===== */
+.theme-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;image-rendering:auto}
+.theme-canvas[data-theme="arcade"]{image-rendering:pixelated}
+#app.bg-art .theme-canvas{display:none!important}
+body.theme-keys .bg-layer img,body.theme-arcade .bg-layer img{opacity:0}
+body.theme-keys .floor,body.theme-arcade .floor{opacity:.4}
+body.theme-midnight .floor{opacity:.25}
+/* arcade: fine scanlines and a curved-glass vignette over the whole backdrop */
+body.theme-arcade .theme-fx{display:block}
+body.theme-arcade .theme-fx i:nth-child(1){inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+body.theme-arcade .theme-fx i:nth-child(2){inset:0;background:radial-gradient(ellipse 120% 100% at 50% 50%,transparent 60%,rgba(0,0,0,.55))}
+body.theme-aurora .theme-fx{display:none}
+/* ===== rounded cases: rounded front corners and rounded edges on the opening side, like a real moulded keep case =====
+   --rc: corner radius of the front and back; --re: radius of the upright edges on the opening side. The spine keeps its
+   full width so spine art lines up edge to edge; it gets a curved shading instead. A shaded strip at 45° fills each
+   rounded edge on the opening side. */
+.slot{--rc:var(--crc,6px);--re:var(--cre,6px)}
+.f-front,.f-back{inset:0 var(--re) 0 0;border-radius:var(--rc)}
+.f-back{inset:0 0 0 var(--re)}
+.f-front{border-top-left-radius:calc(var(--rc)*.5);border-bottom-left-radius:calc(var(--rc)*.5)}
+.f-back{border-top-right-radius:calc(var(--rc)*.5);border-bottom-right-radius:calc(var(--rc)*.5)}
+.f-left{border-radius:calc(var(--rc)*.5)}
+.f-left::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;z-index:2;background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,.05) 18%,rgba(255,255,255,.12) 50%,rgba(0,0,0,.05) 82%,rgba(0,0,0,.3))}
+.f-right{width:calc(var(--bd) - var(--re)*2);left:calc(50% - var(--bd)/2 + var(--re));border-radius:calc(var(--rc)*.6)}
+.bev{top:0;height:100%;width:calc(var(--re)*1.42);left:calc(50% - var(--re)*.71);background:var(--case-side);border-radius:calc(var(--rc)*.8)}
+.bev::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(0,0,0,.12),rgba(255,255,255,.16) 50%,rgba(0,0,0,.22))}
+.bev-fl,.bev-bl{display:none}
+.bev-fr{transform:translate3d(calc(var(--bw)/2 - var(--re)/2),0,calc(var(--bd)/2 - var(--re)/2)) rotateY(45deg)}
+.bev-br{transform:translate3d(calc(var(--bw)/2 - var(--re)/2),0,calc(var(--bd)/-2 + var(--re)/2)) rotateY(135deg)}
+.slot:not(.sel) .bev::after{opacity:.7}
+/* the rounded edge strip and the opening-side face stop short of the front's rounded corners, so nothing pokes out past the curve */
+.bev{top:calc(var(--rc)*.55);height:calc(100% - var(--rc)*1.1);border-radius:calc(var(--re)*.5)}
+.f-right{top:calc(var(--rc)*.3);height:calc(100% - var(--rc)*.6)}
+/* both sides show a spine (the left-hand stack shows the right side), so both are full width with curved shading, and
+   the front and back are full width too: nothing to see through at the edges or corners */
+.f-front,.f-back{inset:0}
+.f-left,.f-right{width:var(--bd);left:calc(50% - var(--bd)/2);top:0;height:100%;border-radius:calc(var(--rc)*.5)}
+.f-right::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;z-index:2;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(0,0,0,.05) 18%,rgba(255,255,255,.12) 50%,rgba(0,0,0,.05) 82%,rgba(0,0,0,.28))}
+.bev{display:none!important}
+/* the spines' corners curve with the front's, so where they meet there's no square notch beside the rounded corner */
+.f-left,.f-right{border-radius:var(--rc)}
+/* close the hairline seams: the spines run a pixel past each edge so they tuck under the front and back, and their
+   ends curve tighter across the depth so the rounded corners meet without a gap */
+.f-left,.f-right{width:calc(var(--bd) + 2px);left:calc(50% - var(--bd)/2 - 1px);border-radius:calc(var(--rc)*.4) / calc(var(--rc)*.85)}
+.f-front,.f-back{inset:0 -.5px}
+/* corners: the front is rounded only on the side away from the spine you can see, and that spine is square-ended,
+   so where the front meets the spine the edge is one clean, unbroken line (no notch at the top or bottom). Cases to the
+   right of the selection show their other side, so they mirror it. */
+.f-left,.f-right{border-radius:0}
+.f-front{border-radius:0 var(--rc) var(--rc) 0}
+.f-back{border-radius:var(--rc) 0 0 var(--rc)}
+.slot.rside .f-front{border-radius:var(--rc) 0 0 var(--rc)}
+.slot.rside .f-back{border-radius:0 var(--rc) var(--rc) 0}
+
+/* ---- start-up: the Boxshelf logo while the shelf loads, then the shelf ripples in (Settings → Display → Startup) ---- */
+#splash{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 46%,#151829 0%,#07070c 72%);transition:opacity .6s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+html.no-splash #splash{display:none}
+#splash.out{opacity:0;transform:scale(1.035)}
+.sp-word{position:relative;font-family:'Lexend',var(--ui),sans-serif;font-weight:800;letter-spacing:.34em;padding-left:.34em;font-size:clamp(34px,4.2vw,70px);color:rgba(214,220,255,.82);}
+.sp-word{will-change:transform,opacity}
+.sp-line{width:min(50px,4.5vw);height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(170,186,255,.75),transparent)}
+/* ripple: the chosen case first, then outward to each side; the text and buttons last */
+#app.intro-ripple #scene{opacity:1;transition:none}
+#app.intro-ripple .slot:not(.far){animation:slotIn .75s cubic-bezier(.2,.8,.25,1) backwards;animation-delay:var(--rd,0ms)}
+@keyframes slotIn{from{opacity:0;translate:0 28px}to{opacity:1;translate:0 0}}
+#app.intro-ripple .hud-top,#app.intro-ripple #info,#app.intro-ripple #hints{animation:hudIn .6s ease-out .38s backwards}
+#app.intro-fade #scene{transition:opacity 1s ease}
+#app.intro-fade .hud-top,#app.intro-fade #info,#app.intro-fade #hints{animation:hudIn .8s ease-out .25s backwards}
+@keyframes hudIn{from{opacity:0}to{opacity:1}}
+#splash.cv .sp-word,#splash.cv .sp-line{display:none} /* drawn by its own thread instead (splash-worker.js) */
+#splash .sp-canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)} /* over the page copy, exactly where it is */
+.sp-word{color:rgba(214,220,255,.84)}
+.sp-canvas{display:block;will-change:transform}
+/* the page copy sits exactly where the logo thread draws it (centre of a 260 px tall canvas, word at 46%), so the hand-over is invisible */
+#splash{--spfs:clamp(34px,4.2vw,70px)}
+#splash .sp-word{position:absolute;left:50%;top:calc(50% - 10.4px);transform:translate(-50%,-50%);font-size:var(--spfs);line-height:1;white-space:nowrap}
+#splash .sp-line{position:absolute;left:50%;top:calc(50% - 10.4px + var(--spfs) * .78);transform:translateX(-50%)}
+
+/* the museum's TV guide (Retro TV → Y / T) */
+/* the museum's TV guide: a dark glass panel on the right (as the Room menu), the TV framed in the space to its left */
+.tv-guide{position:absolute;right:28px;top:50%;transform:translate(24px,-50%);width:min(500px,42vw);height:min(780px,84vh);display:flex;flex-direction:column;z-index:40;padding:18px 18px 0;border-radius:18px;background:rgba(10,12,20,.8);border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.55);backdrop-filter:blur(12px);color:#fff;opacity:0;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1)}
+.tv-guide.on{opacity:1;transform:translate(0,-50%)}
+.tv-guide .tg-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 6px 12px}
+.tv-guide .tg-title b{display:block;font-weight:700;font-size:22px;letter-spacing:.03em}
+.tv-guide .tg-nowline{display:block;margin-top:3px;font-size:13px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(400px,34vw)}
+.tv-guide .tg-x{flex:none;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);font-size:14px;cursor:pointer}
+.tv-guide .tg-x:hover{background:rgba(255,255,255,.18);color:#fff}
+.tv-guide .tg-tabs{display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.06)}
+.tv-guide .tg-sh{flex:none;display:inline-flex;opacity:.75;padding:0 2px}
+.tv-guide .tg-tab{flex:1 1 auto;min-width:0;padding:7px 6px;border:0;border-radius:9px;background:none;color:rgba(255,255,255,.62);font:inherit;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .15s,color .15s}
+.tv-guide .tg-tab:hover{color:#fff}
+.tv-guide .tg-tab.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 -2px 0 #4a8cff}
+.tv-guide .tg-list{flex:1 1 auto;min-height:120px;overflow:auto;margin:10px -8px 0;padding:0 8px 10px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.tv-guide .tg-sys{position:sticky;top:0;z-index:1;padding:12px 10px 6px;font-size:11px;letter-spacing:.14em;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.5);background:linear-gradient(rgba(14,16,25,.97) 70%,rgba(14,16,25,0))}
+.tv-guide .tg-row{display:flex;align-items:center;gap:12px;padding:6px 10px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.78)}
+.tv-guide .tg-row:hover{background:rgba(255,255,255,.06)}
+.tv-guide .tg-row.on{background:rgba(255,255,255,.13);color:#fff;box-shadow:inset 3px 0 0 #4a8cff}
+.tv-guide .tg-art{flex:none;width:32px;height:44px;border-radius:4px;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.08);box-shadow:0 2px 6px rgba(0,0,0,.4);font-size:13px;font-weight:700;color:rgba(255,255,255,.55)}
+.tv-guide .tg-art.ph{font-size:11px;letter-spacing:.06em}
+.tv-guide .tg-art img{width:100%;height:100%;object-fit:cover;display:block}
+.tv-guide .tg-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tv-guide .tg-txt b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-guide .tg-txt i{font-style:normal;font-size:12px;color:rgba(255,255,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-guide .tg-row.on .tg-txt i{color:rgba(255,255,255,.7)}
+.tv-guide .tg-now{display:none;flex:none;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:rgba(255,80,80,.16);color:#ff9b9b;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tv-guide .tg-now::before{content:"";width:6px;height:6px;border-radius:50%;background:#ff5a5a;box-shadow:0 0 6px #ff5a5a}
+.tv-guide .tg-row.now .tg-now{display:inline-flex}
+.tv-guide .tg-star{flex:none;border:0;background:none;padding:2px 4px;font-size:16px;line-height:1;color:rgba(255,255,255,.18);cursor:pointer;opacity:0;transition:opacity .15s,color .15s}
+.tv-guide .tg-row.on .tg-star,.tv-guide .tg-row:hover .tg-star{opacity:1}
+.tv-guide .tg-row.fav .tg-star{opacity:1;color:#ffcf5a}
+.tv-guide .tg-empty{padding:18px 10px;color:rgba(255,255,255,.65);font-size:14px;line-height:1.5}
+.tv-guide .tg-dock{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 -18px;padding:10px 18px 12px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;opacity:.85}
+.tv-guide .tg-dock .mr-k,.tv-guide .tg-sh{display:inline-flex;align-items:center;gap:4px}
+.tv-guide .tg-dock .mr-k em{font-style:normal;margin-left:3px}
+.tv-guide .g.ico svg{display:block}
+body.bss-reduce .tv-guide{transition:opacity .15s}
+
+/* Low performance level (Settings → Display → Performance): no frosted-glass blur (it is redone every frame over the
+   moving background) — the panels get a more solid backing instead — and no pulsing glow behind the selected case */
+body.perf-low *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+body.perf-low .details,body.perf-low .settings,body.perf-low .tabs,body.perf-low .hints,body.perf-low .mus-room,body.perf-low .mus-find,body.perf-low .sp-card{background:rgba(10,12,20,.9)!important}
+body.perf-low .sel-halo{animation:none!important}
+/* ---------- 1.55 Settings: Fit to TV, clock, reduce motion, dimming, hidden-game undo ---------- */
+/* Fit to TV: the interface shrinks into the middle of the screen (app.js sets --safe / --safe-inv); the backdrops and
+   the museum's 3D room are scaled back out so they still reach the edges, and the full-screen covers (museum, Inspect,
+   insert, launch, boot) paint their colour past their scaled edge so nothing of the shelf peeks round them */
+body.safe-area #app{scale:var(--safe,1);overflow:visible}
+body.safe-area #app>.bg-layer,body.safe-area #app>.theme-fx,body.safe-area #app>.theme-canvas,body.safe-area #app>.vignette,body.safe-area .mus-gl{scale:var(--safe-inv,1)}
+body.safe-area .museum{box-shadow:0 0 0 60vmax #06070c}
+body.safe-area .inspect,body.safe-area .insert{box-shadow:0 0 0 60vmax #04050a}
+body.safe-area .launch{box-shadow:0 0 0 60vmax var(--l-t1,#05060c)}
+body.safe-area #app.returning .launch,body.safe-area .boot{box-shadow:0 0 0 60vmax #000}
+body.safe-area .setup{box-shadow:0 0 0 60vmax rgba(4,5,10,.94)}
+body.safe-area .achv{box-shadow:0 0 0 60vmax rgba(5,6,12,.92)}
+.ach-hints .hint[tabindex="-1"]{cursor:default}.ach-hints .hint[tabindex="-1"]:hover{background:none} /* "Browse" is only a prompt; the others click */
+/* #app no longer clips while scaled (so the backdrops can reach the edges): panels parked just off-screen are hidden
+   once they have slid away, or they would show in the border */
+body.safe-area #app:not(.details-open) .details{visibility:hidden;transition:transform .55s cubic-bezier(.22,.9,.25,1),visibility 0s .55s}
+body.safe-area #app:not(.settings-open) .settings{visibility:hidden;transition:transform .55s cubic-bezier(.22,.9,.25,1),visibility 0s .55s}
+body.safe-area .toast:not(.on){visibility:hidden;transition:transform .45s cubic-bezier(.22,.9,.25,1),visibility 0s .45s}
+.clock.time-only b{margin-left:0}
+/* Reduce motion: no drifting backdrop layers, short fades instead of the big slides and zooms */
+body.reduce-motion .theme-fx i,body.reduce-motion .sel-halo{animation:none!important}
+body.reduce-motion #scene,body.reduce-motion .details,body.reduce-motion .settings,body.reduce-motion .info{transition-duration:.2s!important}
+body.reduce-motion #app.launching #scene{transform:none}
+body.reduce-motion #app.intro-fade #scene{transition:opacity .45s ease}
+body.reduce-motion .bs-fx{display:none}
+body.reduce-motion #app.attract .slot{transition:transform .5s ease,opacity .5s}
+/* the screen dimmer: fades in slowly, lifts quickly */
+#bsDim{position:fixed;inset:0;z-index:2147483000;background:#000;opacity:0;pointer-events:none;transition:opacity .3s ease}
+#bsDim.on{opacity:.92;pointer-events:auto;cursor:none;transition:opacity 3s ease}
+body.dimmed #app *,body.dimmed #app *::before,body.dimmed #app *::after{animation-play-state:paused!important}
+/* "Hidden: …  Undo" toast */
+.toast .t-undo{pointer-events:auto;display:inline-flex;align-items:center;gap:6px;margin-left:10px;padding:3px 10px 3px 6px;border:0;border-radius:999px;background:#10121a;color:#fff;font:inherit;font-size:12px;cursor:pointer;vertical-align:middle}
+.toast .t-undo .g{min-width:18px;height:18px;display:inline-grid;place-items:center;border-radius:5px;background:rgba(255,255,255,.18);font-size:11px}
+.toast .t-undo .g svg{width:16px;height:16px}
+
+/* "Launch command" in Details: a small arrow shows it opens */
+.d-adv summary{display:inline-flex;align-items:center;gap:6px}
+.d-adv summary::after{content:"›";font-size:15px;letter-spacing:0;line-height:1;transition:transform .25s;opacity:.8}
+.d-adv[open] summary::after{transform:rotate(90deg)}
+/* narrow screens (1280 wide): the least-used prompts step out so the hint bar stays on one line */
+@media (max-width:1440px){.hints .hint-lo{display:none}}
+body.pad-input .d-adv summary.pad-focus{border-radius:8px;width:max-content;padding:2px 8px;margin-left:-8px} /* "Launch command" is reachable from the controller too */
+
+/* (beta.7) the shelf's video preview, softly behind the cases (Settings → Video previews → Details and shelf) */
+.pv-back{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s ease;pointer-events:none}
+#app.pv-on .pv-back{opacity:.36}
+
+/* (beta.7) the shelf's note card: "a new version is out" (in the corner) and "What's new" after an update (in the middle,
+   the shelf dimmed behind). Settings' look: the dark glass panel, the blue highlight on the lit button. */
+.note-card{position:fixed;right:clamp(16px,2vw,36px);bottom:clamp(84px,11vh,120px);z-index:60;width:min(460px,calc(100% - 32px));box-sizing:border-box;padding:clamp(18px,2.2vh,24px) clamp(20px,1.8vw,26px);border-radius:20px;
+  background:linear-gradient(180deg,rgba(18,21,36,.97),rgba(11,13,22,.985));border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 60px rgba(0,0,0,.55);color:#f3f5fb;opacity:0;transform:translateY(14px);transition:opacity .26s ease,transform .26s cubic-bezier(.22,.9,.25,1)}
+.note-card.on{opacity:1;transform:none}
+.note-card.wide{left:50%;right:auto;bottom:auto;top:50%;width:min(640px,calc(100% - 32px));transform:translate(-50%,calc(-50% + 14px));box-shadow:0 0 0 100vmax rgba(4,6,12,.55),0 30px 80px rgba(0,0,0,.6)}
+.note-card.wide.on{transform:translate(-50%,-50%)}
+.nc-kick{font-size:clamp(10px,.7vw,13px);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#a9bfff}
+.nc-title{margin-top:6px;font-size:clamp(19px,1.5vw,28px);font-weight:700;line-height:1.15}
+.nc-sub{margin-top:6px;font-size:clamp(13px,.9vw,17px);color:rgba(233,236,245,.7)}
+.nc-list{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:9px}
+.nc-list li{position:relative;padding-left:18px;font-size:clamp(13px,.9vw,17px);line-height:1.45;color:rgba(243,245,251,.9)}
+.nc-list li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:#6b8cff}
+.nc-btns{display:flex;gap:10px;margin-top:clamp(16px,2vh,22px)}
+.nc-btns .btn{flex:1 1 0;min-height:clamp(42px,4.8vh,52px);border-radius:12px;font-size:clamp(13px,.9vw,16px)}
+.note-card .btn.pad-focus{outline:none;box-shadow:inset 0 0 0 2px rgba(169,191,255,.95),0 10px 30px -10px rgba(107,140,255,.8)}
+.note-card .btn.primary.pad-focus{box-shadow:0 0 0 3px #6b8cff}
+#app.note-open .hints{opacity:0;transition:opacity .2s}
+html.reduce-motion .note-card{transition:none}
+.note-card{z-index:400} /* (inside #app: over the shelf, its theme layers and the hint bar; Settings opens over it) */
+/* (beta.10) the background box art download (renderer/app.js artCardOn): a small card in the bottom-left corner, out of the
+   shelf's way. Its buttons take the mouse and touch (a controller uses the quick menu's row); hidden over the museum, Inspect,
+   Customize, a note card and a launch, under Settings */
+.art-card{position:fixed;left:max(clamp(16px,2vw,36px),env(safe-area-inset-left,0px));bottom:clamp(84px,11vh,120px);z-index:45;width:min(270px,calc(100% - 32px));box-sizing:border-box;padding:12px 14px;border-radius:16px;contain:layout;
+  background:linear-gradient(180deg,rgba(18,21,36,.94),rgba(11,13,22,.96));border:1px solid rgba(255,255,255,.1);box-shadow:0 16px 40px rgba(0,0,0,.45);color:#f3f5fb;font-size:13px;
+  opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity .26s ease,transform .26s cubic-bezier(.22,.9,.25,1)}
+.art-card.on{opacity:1;transform:none;pointer-events:auto}
+#app.museum-open .art-card,#app.inspecting .art-card,#app.launching .art-card,#app.settings-open .art-card,#app.note-open .art-card{opacity:0;pointer-events:none}
+.ac-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ac-t{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#a9bfff}
+.ac-n{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ac-bar{margin-top:8px;height:4px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+.ac-bar i{display:block;height:100%;background:#6b8cff;transform-origin:left center;transform:scaleX(0);transition:transform .4s ease}
+.art-card.paused .ac-bar i{background:rgba(169,191,255,.5)}
+.ac-btns{display:flex;gap:8px;margin-top:10px}
+.ac-b{flex:1 1 0;min-height:34px;border:0;border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.ac-b:hover{background:rgba(255,255,255,.18)}
+.ac-b[hidden],.ac-hint:empty{display:none}
+.ac-hint{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:rgba(233,236,245,.6)}
+.ac-hint .g{min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;display:inline-grid;place-items:center;border-radius:5px;background:rgba(255,255,255,.14);font-size:10px;font-weight:700}
+.ac-hint .g svg{width:14px;height:14px}
+html.reduce-motion .art-card,html.reduce-motion .ac-bar i{transition:none}

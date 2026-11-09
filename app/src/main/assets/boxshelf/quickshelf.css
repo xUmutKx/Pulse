@@ -1,0 +1,100 @@
+/* The quick menu (app.js, "The quick menu"): the Details panel's glass from the right, the shelf stepping aside the
+   same way it does for Details, the console tabs' white pill gliding down the rows, the Sort panel's chips. */
+.qm{position:absolute;top:0;right:0;bottom:0;width:min(460px,100%);z-index:9;display:flex;flex-direction:column;
+  background:rgba(8,10,18,.74);backdrop-filter:blur(26px) saturate(1.15);-webkit-backdrop-filter:blur(26px) saturate(1.15);border-left:1px solid var(--line);
+  padding-top:max(34px,env(safe-area-inset-top,0px));padding-left:28px;padding-right:max(28px,env(safe-area-inset-right,0px));
+  transform:translateX(104%);visibility:hidden;transition:transform .55s cubic-bezier(.22,.9,.25,1),visibility 0s .55s}
+#app.qm-open .qm{transform:none;visibility:visible;transition:transform .55s cubic-bezier(.22,.9,.25,1)}
+/* the shelf steps aside exactly as it does for Details (style.css), the hint bar hands over to the panel's own */
+#app.qm-open #scene{transform:translateX(-17vw) scale(.92)}
+#app.qm-open .sel-halo{transform:translate(calc(-50% - 17vw),-50%) scale(.92)}
+#app.qm-open .info{transform:translateX(-17vw);opacity:0}
+#app>.hints{transition:transform .6s cubic-bezier(.22,.9,.25,1),opacity .25s}
+/* (beta.10) beside Details the bar moves with a transform (style.css); setup.css's Details rules still say `left`: held at 50% here
+   (this file loads after it) and their offset, half the panel's width, given as the transform instead: the same place as before */
+@media (min-width:761px){#app.details-open .hints{left:50%!important;transform:translateX(calc(-50% - var(--dw,460px) / 2))}}
+#app.qm-open>.hints{opacity:0;pointer-events:none}
+
+/* the game you're on */
+.qm-game{padding:0 2px 16px}
+.qm-gtop{display:flex;gap:16px;align-items:center}
+.qm-cov{width:50px;height:68px;border-radius:5px;flex:none;object-fit:cover;background:rgba(255,255,255,.06);box-shadow:0 6px 16px -6px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.12)}
+.qm-gtx{min-width:0}
+.qm-kick{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);font-weight:500}
+.qm-gt{font-size:23px;font-weight:600;line-height:1.15;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qm-gm{font-size:13px;color:var(--ink-dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* one list; the white pill glides to the row you're on */
+.qm-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;margin:0 -14px;
+  -webkit-mask-image:linear-gradient(transparent,#000 12px,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(transparent,#000 12px,#000 calc(100% - 22px),transparent)}
+.qm-scroll::-webkit-scrollbar{display:none}
+.qm-list{position:relative;display:flex;flex-direction:column;gap:2px;padding:8px 10px 24px}
+.qm-hl{position:absolute;left:10px;right:10px;top:0;height:50px;border-radius:25px;background:#ebebf0;opacity:0;pointer-events:none;
+  box-shadow:0 8px 30px -10px var(--sel-glow,rgba(120,140,255,.55));transition:transform .32s cubic-bezier(.3,.9,.25,1),opacity .2s,background .2s,box-shadow .2s;will-change:transform}
+.qm-hl.soft{background:rgba(255,255,255,.07);box-shadow:none}
+.qm-row{position:relative;z-index:1;display:flex;align-items:center;gap:14px;height:50px;padding:0 18px;border-radius:25px;cursor:pointer;color:var(--ink);transition:color .25s}
+.qm-row svg{width:20px;height:20px;flex:none;opacity:.85}
+.qm-lbl{font-size:15px;font-weight:500;white-space:nowrap}
+.qm-val{margin-left:auto;font-size:13px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;transition:color .25s}
+.qm-chev{font-size:18px;color:rgba(243,245,251,.38);margin-left:2px;transition:transform .3s,color .25s}
+.qm-row.on{color:#10121a}.qm-row.on .qm-val{color:rgba(16,18,26,.62)}.qm-row.on .qm-chev{color:rgba(16,18,26,.5)}
+.qm-row.open .qm-chev{transform:rotate(90deg)}
+.qm-sep{height:1px;background:rgba(255,255,255,.08);margin:10px 14px;flex:none}
+/* volume, right in its row */
+.qm-vbar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.18);position:relative;margin:0 4px;cursor:pointer}
+.qm-vbar::before{content:"";position:absolute;left:0;right:0;top:-12px;bottom:-12px}
+.qm-vbar i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--ink)}
+.qm-vbar b{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--ink);opacity:0;transition:opacity .2s}
+.qm-row.on .qm-vbar{background:rgba(16,18,26,.18)}.qm-row.on .qm-vbar i,.qm-row.on .qm-vbar b{background:#10121a}.qm-row.on .qm-vbar b{opacity:1}
+.qm-num{font-size:13px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-dim)}.qm-row.on .qm-num{color:#10121a}
+/* the game's own buttons */
+.qm-acts{display:flex;gap:8px;padding:0 0 14px}
+.qm-act{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 0 10px;border-radius:16px;border:1px solid var(--line);background:none;font:inherit;font-size:12px;color:var(--ink-dim);cursor:pointer;
+  transition:background .2s,color .2s,border-color .2s,transform .2s cubic-bezier(.3,.9,.3,1),box-shadow .2s}
+.qm-act svg{width:20px;height:20px;color:var(--ink)}
+.qm-act.on{background:#ebebf0;color:#10121a;border-color:transparent;transform:translateY(-2px);box-shadow:0 8px 30px -10px var(--sel-glow,rgba(120,140,255,.55))}
+.qm-act.on svg{color:#10121a}
+.qm-act.faved svg{color:#ff5c8a;fill:#ff5c8a}
+/* an opened row: its options drop open beneath it as pills */
+/* (beta.10) its height is set at once (app.js qsFill); the pills fade and slide in with transform/opacity only (an animated
+   height laid the whole panel out every frame); instant on the handheld level and whenever the menu is repainted in place */
+.qm-sub{overflow:hidden;height:0;flex:none}
+.qm-subin{padding:6px 8px 12px 50px;display:flex;flex-direction:column;gap:12px;opacity:0;transform:translateY(-10px);transition:opacity .26s ease-out,transform .34s cubic-bezier(.3,.9,.25,1)}
+.qm-subin.in{opacity:1;transform:none}
+.qm-subin.now{transition:none}
+.qm-ll{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(243,245,251,.42);margin:0 0 7px 2px}
+.qm-opts{display:flex;flex-wrap:wrap;gap:6px}
+.qm-opt{position:relative;padding:7px 14px;border-radius:999px;border:1px solid transparent;background:rgba(255,255,255,.06);color:var(--ink-dim);font:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  transition:background .2s,color .2s,border-color .2s,transform .2s cubic-bezier(.3,.9,.3,1),box-shadow .2s;overflow:hidden}
+.qm-opt span{position:relative}
+.qm-opt.cur{color:var(--ink);border-color:var(--line)}
+.qm-opt.cur::after{content:"";position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.8}
+.qm-opt.on{background:#ebebf0;color:#10121a;border-color:transparent;box-shadow:0 6px 22px -8px var(--sel-glow,rgba(120,140,255,.55))}
+.qm-opt.big{padding:10px 16px}
+.qm-opt.sw{width:50px;height:38px;padding:0;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:#0b0c14}
+.qm-opt.sw i{position:absolute;inset:0}
+.qm-opt.sw.cur::after{bottom:4px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.7);opacity:1}
+.qm-opt.sw.on{background:#0b0c14;transform:scale(1.08);box-shadow:0 0 0 2px #ebebf0,0 8px 24px -8px var(--sel-glow,rgba(120,140,255,.55))}
+.qm-swname{font-size:12px;color:var(--ink-dim);margin:7px 0 0 2px;min-height:16px}
+.qm-opt.danger.on{background:#ffdcdc;color:#3a0d0d}
+.qm-hb{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,80,80,.42);border-radius:999px;pointer-events:none}
+.qm-note{font-size:13px;color:var(--ink-dim);line-height:1.5}
+.qm-trow{display:flex;gap:14px;align-items:center}
+.qm-ring{width:54px;height:54px;border-radius:50%;flex:none;background:conic-gradient(#ffc54d calc(var(--p)*1%),rgba(255,255,255,.12) 0);display:grid;place-items:center}
+.qm-ring b{width:44px;height:44px;border-radius:50%;background:#12141f;display:grid;place-items:center;font-size:17px;overflow:hidden}
+.qm-ring img{width:100%;height:100%;object-fit:cover}
+.qm-tt{font-size:15px;font-weight:500}.qm-ts{font-size:12px;color:var(--ink-dim);margin-top:3px}
+/* the hint bar, the shelf's, at the foot of the panel */
+.qm-hints{flex:none;align-self:center;margin:12px 0 max(24px,env(safe-area-inset-bottom,0px));display:flex;gap:4px;padding:6px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--line)}
+.qm-hints .hint{cursor:default}
+.qm-hints .hint:hover{background:none}
+/* Reduce motion / Low */
+body.reduce-motion .qm,body.reduce-motion .qm-hl,body.reduce-motion .qm-sub{transition-duration:.12s!important}
+body.perf-low .qm{background:rgba(10,12,20,.94)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+@media (max-width:760px){.qm{width:100%}}
+/* the clock, counter and Menu button sit under the panel's glass: they step out while it's open */
+.hud-top>.right{transition:opacity .3s}
+#app.qm-open .hud-top>.right{opacity:0;pointer-events:none}
+
+/* Windows' own "show animations" switch off: the same quick fades as Boxshelf's Reduce motion */
+@media (prefers-reduced-motion:reduce){.qm,.qm-hl,.qm-sub,.qm-act,.qm-opt,#app.qm-open #scene{transition-duration:.12s!important}}

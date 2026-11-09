@@ -102,12 +102,13 @@ private const val PREFS = "gamehub"
 internal class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
 /** The looks of Game Hub, in the order they are offered. */
-internal val THEMES = listOf("shelf", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
+internal val THEMES = listOf("shelf", "shelfc", "amoled", "material", "glass", "win95", "winxp", "win8", "win10", "win11")
 
 internal fun themeName(k: String): String = when (k) {
     "material" -> "Material"
     "glass" -> tr("Material, transparent", "Material, şeffaf")
-    "shelf" -> tr("Shelf (default)", "Raf (varsayılan)")
+    "shelf" -> tr("Boxshelf (default)", "Boxshelf (varsayılan)")
+    "shelfc" -> tr("Shelf, light", "Raf, hafif")
     "win95" -> "Windows 95"
     "winxp" -> "Windows XP"
     "win8" -> "Windows 8"
@@ -122,7 +123,7 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
 
 internal fun palOf(theme: String, c: Context): Pal = when (theme) {
     // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
-    "shelf" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
+    "shelf", "shelfc" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
     "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
@@ -448,7 +449,7 @@ private fun GameIcon(pkg: String, pal: Pal) {
 }
 
 /** The usage record of each app over the last [days] days: total time in the foreground and the last time it was used. */
-private fun usageOf(c: Context, days: Int): Map<String, android.app.usage.UsageStats> {
+internal fun usageOf(c: Context, days: Int): Map<String, android.app.usage.UsageStats> {
     if (Build.VERSION.SDK_INT < 22) return emptyMap()
     val usm = c.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return emptyMap()
     val end = System.currentTimeMillis()
@@ -802,6 +803,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var mode by remember { mutableStateOf(Privilege.mode) }
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
+    // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
+    val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
     var setupOpen by remember { mutableStateOf(firstUse) }
     var times by remember { mutableStateOf(GameHubState.times ?: emptyMap()) }
@@ -964,7 +967,11 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (theme == "shelf" && viewMode != 1) ShelfView(
+                    } else if (theme == "shelf" && webShelfOk) BoxshelfWeb(
+                        Modifier.fillMaxSize(), onLaunch = { pkg -> openGame(ctx, pkg) },
+                        onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
+                        onExit = { go(0) },
+                    ) else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
                     ) else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
@@ -1077,7 +1084,7 @@ fun GameHubHub(onBack: () -> Unit) {
     if (setupOpen) ShelfSetup(pal, theme, onTheme = { setTheme(it) }, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
-        if (theme == "shelf") {
+        if (theme == "shelf" || theme == "shelfc") {
             val u = usage[g.pkg]
             ShelfDetails(g, pal, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L, sizes[g.pkg] ?: 0L, g.pkg in hidden, onBack = { profile = null }, onPlay = { openGame(ctx, g.pkg) }) {
                 GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L, compact = true) { want -> setHidden(g.pkg, want) }

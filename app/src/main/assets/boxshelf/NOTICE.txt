@@ -1,0 +1,5 @@
+Boxshelf shelf screen (GPL-3.0): https://github.com/sassiestrhihno/boxshelf-source (v1.82.0-beta.10, "renderer/" and Android extras).
+Pulse shows this screen in Game Hub. Changes made for Pulse: pulse-api.js (new: answers the screen with Game Hub's games and starts them through Pulse),
+index.html (the scripts and style of the Android build, plus a "Game settings" entry), app.js (a game that comes from Pulse is called a Game,
+and the screen remembers which game its details show). The PDF reader, the Wii U manual page, the image tools, the phone companion page and the 3D-model
+optimiser were left out. Third-party parts inside: three.js (MIT), Fontsource fonts (SIL OFL 1.1); see vendor/ and fonts/LICENSES.

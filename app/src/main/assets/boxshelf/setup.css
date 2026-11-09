@@ -1,0 +1,814 @@
+/* Setup wizard, Settings, empty state and app-only additions */
+:root{--ok:#5fe0a0;--warn:#ffcf6b;--bad:#ff8a8a;--field:rgba(255,255,255,.06)}
+body{margin:0;font-family:var(--ui)}
+.hud-buttons{display:flex;gap:6px}
+.l-note b{color:var(--ink)}
+.l-err{color:var(--bad)}
+
+.empty{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:4;text-align:center;max-width:520px;padding:0 24px}
+.empty .d-actions{justify-content:center}
+
+.setup{position:absolute;inset:0;z-index:50;background:rgba(4,5,10,.94);display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.setup.on{opacity:1;pointer-events:auto}
+.su-card{width:min(1040px,calc(100vw - 32px));height:min(760px,calc(100vh - 48px));display:grid;grid-template-columns:230px minmax(0,1fr);border:1px solid var(--line);border-radius:22px;background:rgba(14,16,26,.94);overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.6)}
+.su-nav{padding:28px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.su-brand{font-weight:800;letter-spacing:.08em;font-size:13px;padding:0 12px 18px;color:var(--ink-dim);text-transform:uppercase}
+.su-step{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:13px;color:var(--ink-dim);text-align:left;width:100%}
+.su-step.on{background:rgba(255,255,255,.1);color:var(--ink)}
+.su-step:hover{color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);flex:none}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.off{background:transparent;border:1px solid rgba(255,255,255,.3)}
+.su-main{display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0}
+.su-body{padding:34px 38px;overflow-y:auto;min-width:0}
+.su-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 38px;border-top:1px solid var(--line)}
+.su-foot .grow{flex:1}
+.su-kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim)}
+.su-title{font-size:28px;font-weight:600;margin-top:8px;text-wrap:balance}
+.su-lead{margin-top:10px;font-size:14px;line-height:1.6;color:rgba(243,245,251,.8);max-width:62ch}
+.field{margin-top:26px;display:grid;gap:8px}
+.field>.lbl{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);display:flex;gap:10px;align-items:center}
+.hint-text{font-size:12px;color:var(--ink-dim);line-height:1.5}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* settings pages: one card per control */
+.su-group{margin:18px 12px 6px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+.card{margin-top:16px;padding:16px 18px 18px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid var(--line)}
+.seg{display:inline-flex;align-self:flex-start;width:max-content;max-width:100%;flex-wrap:wrap;gap:4px;padding:4px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+.seg-btn{padding:7px 14px;border-radius:9px;font-size:12px;font-weight:500;color:var(--ink-dim);border:0;background:transparent;cursor:pointer;transition:background .2s,color .2s}
+.seg-btn.on{background:rgba(255,255,255,.92);color:#10121a}
+.seg-btn:not(.on):hover,.seg-btn:focus-visible{color:var(--ink);background:rgba(255,255,255,.08);outline:none}
+.slider-lbl{color:var(--ink-dim)}
+.su-lead{font-size:13px;color:var(--ink-dim);margin:6px 0 4px}
+.text{flex:1;min-width:0;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:13px/1.3 ui-monospace,'Cascadia Mono',Consolas,monospace}
+.text:focus{outline:2px solid rgba(255,255,255,.6);outline-offset:1px}
+.btn.small{padding:8px 13px;font-size:12px}
+.btn:hover{background:rgba(255,255,255,.08)}
+.btn.primary:hover{background:#fff}
+.btn:focus-visible,.su-step:focus-visible,.chip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.btn[disabled]{opacity:.4;cursor:default}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:999px;text-transform:none}
+.badge.ok{background:rgba(95,224,160,.14);color:var(--ok)}
+.badge.warn{background:rgba(255,207,107,.14);color:var(--warn)}
+.badge.bad{background:rgba(255,138,138,.14);color:var(--bad)}
+.folder{display:flex;gap:8px;align-items:center;padding:8px 8px 8px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03)}
+.folder .p{flex:1;min-width:0;font:12px/1.4 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+.suggest{display:flex;gap:8px;align-items:center;padding:8px 8px 8px 12px;border:1px dashed rgba(255,255,255,.25);border-radius:10px}
+.suggest .p{flex:1;min-width:0;font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--ink-dim);overflow-wrap:anywhere}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:13px;cursor:pointer}
+.switch input{appearance:none;width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch input:checked{background:#4f8dff}
+.switch input:checked::after{transform:translateX(16px)}
+.switch input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+details.adv{margin-top:26px;border-top:1px solid var(--line);padding-top:16px}
+details.adv summary{cursor:pointer;font-size:13px;color:var(--ink-dim)}
+.summary-grid{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.sum{padding:16px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.sum b{display:block;font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.sum span{font-size:12px;color:var(--ink-dim)}
+.scanning{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:760px){
+  .su-card{grid-template-columns:1fr;height:calc(100vh - 24px)}
+  .su-nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:12px}
+  .su-brand{display:none}
+  .su-step{width:auto;white-space:nowrap}
+  .su-body{padding:24px 20px}
+  .su-foot{padding:14px 20px}
+}
+[hidden]{display:none!important}
+.hints{width:max-content}
+.su-ver{margin-top:auto;padding:16px 12px 0;font-size:11px;color:var(--ink-dim);letter-spacing:.04em}
+.f-left .spine-img,.f-right .spine-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}
+.f-right .spine-img{transform:scaleX(-1)}
+.info{top:calc(42% + var(--bh)/2 + 8vh)}
+/* Selected box: rim light drawn inside the face (outer shadows get clipped on big 3D boxes); glow comes from the halo behind it */
+.slot.sel .f-front,.slot.sel .f-back{box-shadow:inset 0 0 calc(22px*var(--os,1)) calc(-4px*var(--os,1)) var(--glow)!important}
+/* no hard white rim line (the 3D case in Inspect has none, so it popped on and off): the lift, halo and soft inner
+   glow show the selection. The glow fades away as Inspect picks the case up and back once it's set down again */
+.slot.sel.lift .f-front,.slot.sel.lift .f-back{box-shadow:inset 0 0 0 0 transparent!important}
+.slot.glowfade .f-front,.slot.glowfade .f-back{transition:box-shadow .3s ease}
+.sel-halo{width:calc(var(--bw)*2.6);height:calc(var(--bh)*1.9)}
+
+/* ---- smoothness: no live blur filters, fewer layers, only transform/opacity animate ---- */
+.bg-layer img{filter:none!important;opacity:.16;image-rendering:auto} /* the tiny cover swatch, upscaled: a soft accent over the system-coloured wash */
+.sel-halo{filter:none!important;will-change:opacity,transform}
+.hints{backdrop-filter:none!important;background:rgba(10,12,22,.78)!important}
+/* the top bar is see-through and takes the colour of the glow behind the shelf (no blur: that costs every frame) */
+.tabs{backdrop-filter:none!important;background:color-mix(in srgb,var(--sel-glow,rgba(120,140,255,.45)) 30%,rgba(8,10,20,.4))!important;
+  border-color:color-mix(in srgb,var(--sel-glow,rgba(120,140,255,.45)) 45%,rgba(255,255,255,.1))!important;transition:background-color .6s,border-color .6s}
+.tabs.glow-snap{transition:none!important} /* a one-degree step along the shelf: no fade (app.js landSel) */
+.details,.settings{backdrop-filter:none!important;background:rgba(9,11,19,.96)!important}
+.slot.far{visibility:hidden}
+.slot:not(.sel) .f-back{visibility:hidden}
+.slot{backface-visibility:hidden}
+.box{will-change:transform}
+.info{will-change:transform,opacity}
+
+/* ---- depth: floor reflections, shaded spines and edges ---- */
+body.fx .slot.sel .f-front{-webkit-box-reflect:below 3px linear-gradient(transparent 58%,rgba(255,255,255,.3))}
+.f-left::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.35),rgba(255,255,255,.06) 45%,rgba(0,0,0,.25))}
+.f-right.spine2{background:var(--case)!important;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.f-right.spine2::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.25),rgba(255,255,255,.06) 55%,rgba(0,0,0,.35));z-index:3}
+
+.slot.sel .f-left::after{background:linear-gradient(90deg,rgba(0,0,0,.15),rgba(255,255,255,.14) 45%,rgba(0,0,0,.2))}
+.floor{background:radial-gradient(ellipse 18% 26% at 50% 16%,var(--sel-glow),transparent 75%),radial-gradient(ellipse 55% 34% at 50% 26%,rgba(0,0,0,.55),transparent 72%)!important}
+
+/* long lists scroll inside the panel instead of pushing the footer off-screen */
+.su-card{grid-template-rows:minmax(0,1fr)}
+.su-main,.su-nav{min-height:0}
+.su-body{overscroll-behavior:contain}
+
+/* performance: cheap floor reflection for every box (a flipped, faded gradient) instead of live reflections */
+.slot .box::after{content:"";position:absolute;left:0;right:0;top:100%;height:38%;margin-top:3px;transform:translateZ(calc(var(--bd)/2));
+  background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 80%);pointer-events:none}
+body:not(.fx) .sel-halo{animation:none}
+.bg-layer{will-change:opacity}
+
+/* (side cases are darkened by .dim in style.css: a fading film, never a filter on the cover) */
+.d-how{margin-top:16px;font-size:12px;color:var(--ink-dim);line-height:1.5}
+.d-desc{max-height:34vh;overflow:auto;padding-right:6px}
+
+/* hold Start + Back on the shelf to quit */
+.quit-hold{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:60;width:min(360px,80vw);height:34px;border-radius:999px;border:1px solid var(--line);background:rgba(10,12,22,.9);overflow:hidden;opacity:0;pointer-events:none;transition:opacity .15s;display:grid;place-items:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.quit-hold.on{opacity:1}
+.quit-hold .isp-hold-bar{position:absolute;left:0;top:0;bottom:0;width:0;background:#ff8a8a;opacity:.5}
+.quit-hold span{position:relative}
+
+/* ---- details panel: hero, chips, fact tiles ---- */
+.details{padding-left:0!important;padding-right:0!important;padding-top:0!important;display:flex;flex-direction:column}
+.d-hero{position:relative;padding:max(34px,env(safe-area-inset-top,0px)) 28px 22px;overflow:hidden;border-bottom:1px solid var(--line)}
+.d-hero-bg{position:absolute;inset:-20%;background-size:cover;background-position:center;filter:blur(28px) saturate(1.4) brightness(.55);opacity:.9;transform:scale(1.1)}
+.d-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,10,18,.1),rgba(9,11,19,.85) 90%)}
+.d-hero-row{position:relative;z-index:1;display:flex;gap:18px;align-items:flex-end}
+.d-cover{width:96px;aspect-ratio:.71;object-fit:cover;border-radius:6px;box-shadow:0 14px 30px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);flex:none;background:#1a1c24}
+.d-cover[hidden]{display:none}
+.d-head{min-width:0;flex:1}
+.d-head .d-title{font-size:24px;margin-top:4px;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.d-chips{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.chipx{font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);color:#f3f5fb;white-space:nowrap}
+.chipx.score{background:rgba(255,207,107,.16);border-color:rgba(255,207,107,.35);color:#ffd98a}
+.chipx.esrb{background:rgba(255,255,255,.9);color:#111;border-color:transparent}
+.d-body{padding:20px 28px 10px;flex:1}
+.d-desc{margin-top:0;font-size:14px;line-height:1.65;color:rgba(243,245,251,.86);max-height:none;overflow:visible;padding-right:0}
+.d-desc.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+/* screenshots: a strip of thumbs; the chosen one shows large in the hero */
+.d-shots{display:flex;gap:8px;padding:12px 28px 0;overflow-x:auto;scrollbar-width:none}
+.d-shots::-webkit-scrollbar{display:none}
+.d-shots[hidden]{display:none}
+.d-shot{flex:none;width:112px;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#141722;border:1px solid var(--line);opacity:.7;transition:transform .25s,opacity .25s,box-shadow .25s;cursor:pointer}
+.d-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.d-shot.on{opacity:1;transform:scale(1.06);box-shadow:0 0 0 2px rgba(255,255,255,.8),0 8px 24px rgba(0,0,0,.5)}
+.d-hero.shot .d-hero-bg{filter:blur(0) saturate(1.1) brightness(.75);opacity:1;transform:none;inset:0;transition:filter .4s,opacity .4s}
+.d-hero.shot::after{background:linear-gradient(180deg,rgba(8,10,18,0) 30%,rgba(9,11,19,.9) 95%)}
+.d-hero{min-height:200px;display:flex;align-items:flex-end}
+.d-hist{display:flex;gap:14px;margin-top:12px;font-size:12px;color:var(--ink-dim)}
+.d-hist b{color:var(--ink);font-weight:600}
+.d-more{margin-top:6px;background:none;border:0;color:var(--ink-dim);font:600 12px var(--ui);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;padding:4px 0}
+.d-more:hover{color:#fff}
+.d-grid{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.d-grid>div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--line);min-width:0}
+.d-grid dt{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.d-grid dd{margin:3px 0 0;font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.d-grid>div.wide{grid-column:1/-1}
+.d-how{margin-top:14px;display:none}
+.d-adv{margin-top:14px}
+.d-adv summary{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);cursor:pointer;list-style:none}
+.d-adv summary::-webkit-details-marker{display:none}
+.d-adv .d-cmd{margin-top:8px}
+.details .d-actions{position:sticky;bottom:0;margin:0;padding:16px 28px 22px;background:linear-gradient(180deg,rgba(9,11,19,0),rgba(9,11,19,.96) 30%);border-top:0}
+.details .d-actions .btn{flex:1 1 auto;justify-content:center}
+
+/* ---- RetroAchievements ---- */
+.ra-pts{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.06em;color:var(--ink-dim);margin-top:6px}
+.ra-pts img{width:22px;height:22px;border-radius:50%}
+.ra-pts b{color:#ffd98a;font-weight:600}
+.d-ach{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:rgba(255,207,107,.08);border:1px solid rgba(255,207,107,.25);margin-bottom:16px}
+.ring{width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(#ffd98a calc(var(--p,0)*1%),rgba(255,255,255,.1) 0);position:relative}
+.ring::before{content:"";position:absolute;inset:5px;border-radius:50%;background:rgba(12,14,24,.98)}
+.ring span{position:relative;font-size:12px;font-weight:700;color:#ffd98a}
+.d-ach-main{flex:1;min-width:0}.d-ach-main b{font-weight:600}
+.d-ach-sub{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.achv{position:absolute;inset:0;z-index:24;background:rgba(5,6,12,.92);opacity:0;pointer-events:none;transition:opacity .3s;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;padding:max(28px,env(safe-area-inset-top,0px)) 6vw 18px}
+.achv.on{opacity:1;pointer-events:auto}
+.ach-head{display:flex;gap:18px;align-items:center;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.ach-head img{width:72px;height:72px;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.ach-head-main{flex:1;min-width:0}
+.ach-title{font-size:26px;font-weight:600;margin-top:2px}
+.ach-bar{margin-top:10px;height:6px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;max-width:520px}
+.ach-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd98a,#ffb347);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.ach-sub{margin-top:8px;font-size:12px;color:var(--ink-dim);letter-spacing:.04em}
+.ach-list{overflow-y:auto;padding:16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-content:start;scroll-behavior:smooth}
+.ach{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--line);min-width:0;scroll-margin:20px}
+.ach img{width:56px;height:56px;border-radius:8px;flex:none;background:#000}
+.ach.locked{opacity:.7}.ach.locked img{filter:grayscale(1) brightness(.85)}
+/* All / Unlocked / Locked: the quick menu's pills */
+.ach-tabs{display:flex;gap:8px;padding:14px 4px 2px}
+.ach-tab{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink-dim);font:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
+.ach-tab:hover{color:var(--ink)}
+.ach-tab.on{background:#ebebf0;color:#10121a;border-color:transparent;box-shadow:0 6px 22px -8px rgba(255,207,107,.55)}
+.ach-empty{grid-column:1/-1;padding:40px 0;text-align:center;color:var(--ink-dim);font-size:15px}
+.d-ach[data-state=err] .ring,.d-ach[data-state=none] .ring{opacity:.5}
+.ach.sel{border-color:rgba(255,217,138,.8);background:rgba(255,207,107,.12);opacity:1}
+.ach-main{min-width:0;flex:1}
+.ach-main b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ach-main span{display:block;font-size:12px;color:rgba(243,245,251,.75);line-height:1.4;margin-top:2px}
+.ach-meta{font-size:11px;color:var(--ink-dim);margin-top:4px;letter-spacing:.04em}
+.ach-pts{flex:none;font-weight:700;color:#ffd98a;font-size:13px}
+.ach-hints{justify-self:center;margin-top:12px}
+.unlocks{position:absolute;right:max(22px,env(safe-area-inset-right,0px));top:max(22px,env(safe-area-inset-top,0px));z-index:31;display:grid;gap:8px;pointer-events:none}
+.unlock{display:flex;gap:12px;align-items:center;padding:10px 14px 10px 10px;border-radius:14px;background:rgba(14,16,26,.96);border:1px solid rgba(255,217,138,.5);box-shadow:0 14px 40px rgba(0,0,0,.5);transform:translateX(120%);animation:unlockIn .5s cubic-bezier(.2,.9,.2,1) forwards,unlockOut .4s 6s ease-in forwards;min-width:300px}
+.unlock img{width:48px;height:48px;border-radius:8px}
+.unlock .k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#ffd98a}
+.unlock b{display:block;font-size:14px;font-weight:600}
+.unlock span{font-size:12px;color:var(--ink-dim)}
+@keyframes unlockIn{to{transform:none}}
+@keyframes unlockOut{to{transform:translateX(120%);opacity:0}}
+
+
+.man-recent{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:260px;overflow-y:auto}
+.man-recent-row{font-size:13px;color:var(--muted,#aab);line-height:1.4}
+.man-recent-row b{color:var(--text,#fff);font-weight:600}
+/* Settings → Box art */
+.art-box{margin-top:14px}
+.art-table{display:flex;flex-direction:column;gap:6px;margin:6px 0 14px}
+.art-row{display:grid;grid-template-columns:minmax(120px,1.3fr) repeat(4,minmax(78px,1fr)) 70px;gap:6px;align-items:stretch}
+.art-headrow{font-size:13px;color:rgba(255,255,255,.6)}
+.art-sys{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 6px}
+.art-sys span{font-size:12px;color:rgba(255,255,255,.55)}
+.art-colhead{background:none;border:1px solid transparent;color:inherit;font:inherit;font-weight:600;border-radius:8px;padding:6px;cursor:pointer}
+.art-colhead:hover,.art-colhead:focus-visible{border-color:var(--line);color:#fff}
+.art-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 4px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:rgba(255,255,255,.55);font:inherit;cursor:pointer;min-height:58px}
+.art-cell.on{background:rgba(95,160,255,.16);border-color:rgba(120,170,255,.55);color:#fff}
+.art-cell:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.art-check{font-weight:800;height:16px;line-height:16px}
+.art-count{font-size:13px;font-variant-numeric:tabular-nums}
+.art-low{font-size:11px;color:#f2c46b}
+.art-all{align-self:center}
+.art-summary{margin:12px 2px 10px;font-size:15px}
+.art-start{min-width:180px}
+.art-stage{font-size:17px;margin:4px 0 12px}
+.art-elapsed{color:rgba(255,255,255,.55);font-weight:400}
+.art-prog{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line);margin-bottom:8px}
+.art-prog-top{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.art-prog-top span{color:rgba(255,255,255,.65);font-size:13px}
+.art-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin:8px 0 6px}
+.art-fill{height:100%;background:linear-gradient(90deg,#5fa0ff,#7fd8ff);transition:width .3s}
+.art-prog.done .art-fill{background:var(--ok)}
+.art-now{font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.art-finish{display:flex;gap:16px;align-items:center;padding:16px 18px;border-radius:14px;background:rgba(95,224,160,.08);border:1px solid rgba(95,224,160,.35);margin-bottom:12px}
+.art-finish.cancelled{background:rgba(242,196,107,.08);border-color:rgba(242,196,107,.35)}
+.art-finish-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:22px;font-weight:800;background:rgba(95,224,160,.2);color:var(--ok);flex:none}
+.art-finish.cancelled .art-finish-icon{background:rgba(242,196,107,.2);color:#f2c46b}
+.art-finish-title{font-size:20px;font-weight:700;margin-bottom:2px}
+.art-res{padding:10px 12px;border-bottom:1px solid var(--line)}
+.art-res-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.art-res-top span{color:rgba(255,255,255,.7);font-size:14px}
+.art-miss{margin-top:6px;font-size:13px;color:rgba(255,255,255,.6)}
+.art-miss summary{cursor:pointer;color:#f2c46b}
+.art-box > .row{margin-top:14px}
+/* Settings → Magazines & guides: Internet Archive search */
+.ia-box{display:flex;flex-direction:column;gap:10px}
+.ia-row{gap:8px}
+.ia-input{flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--ink);font:inherit;font-size:14px}
+.ia-input:focus{outline:2px solid rgba(120,170,255,.7);outline-offset:1px}
+.ia-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ia-chips .chip{background:rgba(255,255,255,.04);color:var(--ink);cursor:pointer;font:inherit;font-size:12px}
+.ia-chips .chip:hover,.ia-chips .chip:focus-visible{background:rgba(255,255,255,.12);outline:none}
+.ia-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ia-card{display:flex;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--line)}
+.ia-thumb{width:72px;height:96px;object-fit:cover;border-radius:6px;background:rgba(255,255,255,.06);flex:none}
+.ia-meta{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.ia-title{font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ia-sub{font-size:12px;color:var(--ink-dim)}
+.ia-act{margin-top:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ia-act .art-bar{flex-basis:100%;margin:2px 0}
+/* the finder's on-screen keyboard (museum, controller): plain buttons the panel's D-pad navigation reaches */
+.ia-osk{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
+.ia-krow{display:flex;gap:6px;justify-content:center}
+.ia-key{flex:1 1 0;min-width:0;min-height:40px;padding:6px 0;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer;text-transform:none}
+.ia-key.mid{flex:1.6 1 0;font-size:13px}.ia-key.wide{flex:4 1 0;font-size:13px}.ia-key.go{flex:2 1 0;font-size:13px;background:rgba(120,170,255,.28)}
+.ia-key:hover,.ia-key:focus-visible,.ia-key:focus{background:rgba(255,255,255,.16);outline:2px solid #ffd98a;outline-offset:1px}
+.ia-type{flex:none}
+.ia-where{word-break:break-all;margin-top:6px}
+.ia-busy{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ia-jobs{color:var(--ink)}
+.ia-state{font-size:12px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+/* ---- sidebar: search, groups with icons, sub-pages (Discord-like) ---- */
+.su-nav{gap:1px}
+.su-group{margin:16px 12px 6px;font-size:11px;letter-spacing:.08em;font-weight:700}
+.su-step{gap:10px;padding:8px 10px;transition:background .15s,color .15s}
+.su-step:hover{background:rgba(255,255,255,.05)}
+.su-ico{display:inline-flex;width:18px;height:18px;flex:none;opacity:.85}
+.su-step.on .su-ico{opacity:1}
+.su-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.su-step .dot{margin-left:auto}
+.su-count{margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-dim);padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.07)}
+.su-back{margin-bottom:10px;padding:4px 0;font-size:13px;color:var(--ink-dim);background:none;border:0;cursor:pointer}
+.su-back:hover,.su-back:focus-visible{color:var(--ink)}
+/* the Consoles page */
+.con-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:16px}
+.con-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 14px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--ink);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.con-card:hover,.con-card:focus-visible{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.3);outline:none}
+.con-name{font-weight:700;font-size:15px}
+.con-emu{font-size:12px;color:var(--ink-dim)}
+.con-st{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-dim);margin-top:6px}
+.con-card.off{opacity:.6}
+/* the Windows first run (1.75): pick your consoles, finish setting up, box art */
+.wz2-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:18px}
+.wz2-grid.small{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+.wz2-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;padding:14px 44px 12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);text-align:left;cursor:pointer;opacity:.72;transition:background .15s,border-color .15s,opacity .15s}
+.wz2-card.big{min-height:86px;padding:18px 48px 14px 18px;justify-content:center}
+.wz2-card.on{opacity:1;background:rgba(95,224,160,.08);border-color:rgba(95,224,160,.55)}
+.wz2-card:hover,.wz2-card:focus-visible{opacity:1;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.35);outline:none}
+.wz2-card.on:hover,.wz2-card.on:focus-visible{background:rgba(95,224,160,.13);border-color:rgba(95,224,160,.8)}
+.wz2-tick{position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:6px;border:2px solid rgba(255,255,255,.35)}
+.wz2-card.on .wz2-tick{background:var(--ok);border-color:var(--ok)}
+.wz2-card.on .wz2-tick::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #0b1a12;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.wz2-name{font-weight:700;font-size:15px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wz2-card.big .wz2-name{font-size:18px}
+.wz2-st{font-size:12px;color:var(--ink-dim);max-width:100%}
+.wz2-st.ok{color:var(--ok)}
+.wz2-foot{margin-top:16px;font-size:13px;color:var(--ink-dim)}
+.wz2-fix{margin-top:14px;padding:6px 18px 10px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.wz2-fh{display:flex;align-items:center;gap:10px;padding:8px 0 6px}
+.wz2-fh .btn{margin-left:auto}
+.wz2-fname{font-weight:700;font-size:17px}
+.wz2-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}
+.wz2-rl{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.wz2-rl b{font-size:14px}
+.wz2-rl .wz2-st{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wz2-rr{display:flex;gap:8px;flex:none}
+.wz2-looks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.wz2-looks.off{opacity:.45}
+.wz2-look{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.wz2-look .wz2-name{white-space:normal}
+.wz2-look.on{background:rgba(95,224,160,.08);border-color:rgba(95,224,160,.65)}
+.wz2-look:not([disabled]):hover,.wz2-look:focus-visible{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.35);outline:none}
+.wz2-look[disabled]{cursor:default}
+.wz2-tag{position:absolute;top:12px;right:12px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(95,224,160,.16);color:var(--ok)}
+/* a small drawing of each look: a game case */
+.wz2-art{position:relative;width:54px;height:76px;margin-bottom:6px;border-radius:5px;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.wz2-art.original{background:linear-gradient(#e60012 0 14%,transparent 14%),radial-gradient(circle at 60% 62%,#ffd25e 0 18%,transparent 19%),linear-gradient(160deg,#3a7bd5,#2b3f8f)}
+.wz2-art.region{background:linear-gradient(#e60012 0 14%,transparent 14%),radial-gradient(circle at 50% 60%,transparent 0 30%,rgba(255,255,255,.85) 31% 34%,transparent 35%),linear-gradient(160deg,#2d9b6f,#1b5a49)}
+.wz2-art.hd{background:linear-gradient(#e60012 0 14%,transparent 14%),conic-gradient(from 210deg at 60% 62%,#ff6bd6,#7c5cff,#3ee0ff,#ffd25e,#ff6bd6)}
+.wz2-art.hd::after{content:"HD";position:absolute;right:4px;bottom:4px;font-size:10px;font-weight:800;color:#fff;background:rgba(0,0,0,.45);padding:1px 4px;border-radius:4px}
+.wz2-regions{display:flex;gap:8px;margin-top:12px}
+.wz2-prog{display:flex;align-items:center;gap:4px;font-weight:600;padding:4px 0 6px}
+.wz2-ok{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ok);color:#0b1a12;font-size:13px;font-weight:800}
+.wz2-artdone{margin-top:14px;padding:14px 18px}
+@media (max-width:760px){.wz2-looks{grid-template-columns:1fr}}
+/* Get box art / Get manuals: the same cards, a count with Select all / None, and the part chips */
+.wz2-bar{display:flex;align-items:center;gap:8px;margin-top:4px}
+.wz2-bart{margin-right:auto;font-size:13px;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+.art-box .wz2-grid{margin-top:12px}
+.wz2-sub{margin:22px 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim)}
+.wz2-chips{display:flex;flex-wrap:wrap;gap:10px}
+.wz2-chip{position:relative;display:inline-flex;align-items:center;gap:10px;padding:10px 16px 10px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;opacity:.75;transition:background .15s,border-color .15s,opacity .15s}
+.wz2-chip .wz2-tick{position:relative;top:auto;right:auto;flex:none;width:18px;height:18px;border-radius:50%}
+.wz2-chip.on{opacity:1;background:rgba(95,224,160,.08);border-color:rgba(95,224,160,.55)}
+.wz2-chip.on .wz2-tick{background:var(--ok);border-color:var(--ok)}
+.wz2-chip.on .wz2-tick::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid #0b1a12;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.wz2-chip:hover,.wz2-chip:focus-visible{opacity:1;border-color:rgba(255,255,255,.35);outline:none}
+.art-box>.card.grp{margin-top:16px}
+.art-box>details.adv{margin-top:12px}
+.art-box details.adv .art-table{margin-top:10px}
+/* the progress and results screens, in the same cards */
+.art-prog{padding:14px 18px;border-radius:14px;background:rgba(255,255,255,.03);margin-bottom:10px}
+.art-prog-top b{font-size:15px}
+.art-fill{background:linear-gradient(90deg,#4fc98c,#5fe0a0)}
+.art-res{padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);margin-bottom:10px}
+.art-finish{border-radius:16px}
+body.pad-input #setup button:focus,body.pad-input #setup input:focus,body.pad-input #setup select:focus,body.pad-input #setup summary:focus{outline:2px solid #fff;outline-offset:2px}
+/* Details: a solid footer for the buttons (the page scrolls under it, never through it), Play on its own row */
+.details .d-actions{background:rgba(10,12,20,.97);border-top:1px solid var(--line);box-shadow:0 -12px 24px rgba(0,0,0,.35);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.details .d-actions .btn{width:100%}
+.details .d-actions #dPlay{grid-column:1/-1}
+.details .d-actions [hidden]{display:none}
+.d-body{padding-bottom:28px}
+/* "Your copy": which pictures and the manual are on file */
+.d-art{margin-top:20px}
+.d-art-h{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:8px}
+.d-art-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.d-art-chip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px dashed rgba(255,255,255,.22);color:var(--ink-dim)}
+.d-art-chip.ok{border-style:solid;border-color:rgba(95,224,160,.45);color:#bff3d8;background:rgba(95,224,160,.08)}
+.d-art-sum{flex-basis:100%;font-size:12px;color:var(--ink-dim);margin-top:4px}
+.details .d-actions{margin-top:auto}
+.details{padding-bottom:0!important}.details>.d-hero,.details>.d-shots{flex-shrink:0}.details .d-body{flex:1 0 auto}.details .d-actions{flex-shrink:0}
+.art-miss.up summary{color:#9fd0ff}.art-miss.new summary{color:#9ff0c8}
+.art-glist{display:flex;flex-direction:column;gap:3px;margin-top:6px;max-height:220px;overflow:auto}
+.art-gl{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink)}.art-gl small{color:var(--ink-dim)}
+.art-miss summary:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:4px}
+body.pad-input #setup .su-scroller:focus{outline:2px solid #fff;outline-offset:3px;border-radius:8px}
+.man-recent-box summary{cursor:pointer}
+.man-recent-box .man-recent{max-height:none;overflow:visible}
+/* ===== settings pages, rebuilt as grouped rows ===== */
+.su-body{padding-bottom:40px}
+.su-kicker{font-size:11px;letter-spacing:.12em}
+.su-title{font-size:26px;letter-spacing:-.01em}
+.su-lead{max-width:60ch;margin-bottom:8px}
+.card.grp{margin-top:22px;padding:0;background:none;border:0;border-radius:0}
+.grp-head{margin:0 4px 8px}
+.grp-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.grp-d{font-size:12px;line-height:1.45;color:var(--ink-dim);margin-top:2px;max-width:64ch}
+.grp-more{font-size:12px;line-height:1.5;color:var(--ink-dim);margin-top:6px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.04);max-width:64ch}
+.grp-help{width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:none;color:var(--ink-dim);font:600 11px/1 inherit;display:inline-grid;place-items:center;cursor:pointer;padding:0}
+.grp-help:hover,.grp-help.on,.grp-help:focus-visible{color:var(--ink);border-color:rgba(255,255,255,.6);outline:none}
+.grp-box{border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);overflow:hidden}
+.grp-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 16px;min-height:60px}
+.grp-l{min-width:0;flex:1}
+.grp-t{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--ink)}
+.grp-r{flex:none;max-width:60%;display:flex;justify-content:flex-end}
+.grp-r .seg{align-self:center}
+.grp-item{padding:12px 16px}
+.grp-item+.grp-item{border-top:1px solid rgba(255,255,255,.06)}
+.grp-item>.seg{display:flex;width:fit-content}
+.grp-item>.hint-text{margin:0}
+.switch{font-weight:500}
+.slider-lbl{color:var(--ink)}
+.seg{background:rgba(0,0,0,.3);border-color:rgba(255,255,255,.08);border-radius:10px;padding:3px}
+.seg-btn{font-size:12.5px;padding:7px 13px;border-radius:7px}
+.field{margin-top:22px}
+.field>.lbl{font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);margin:0 4px 8px}
+/* rows, round 2 */
+.grp-help{all:unset;cursor:pointer;color:#8fb4ff;font-size:12px;font-weight:500;white-space:nowrap}
+.grp-help:hover,.grp-help:focus-visible{text-decoration:underline;color:#b9d0ff}
+.switch input{flex:none}
+.grp-row{box-sizing:border-box}
+.grp-row.is-sw{cursor:pointer}
+.grp-row.is-sw:hover{background:rgba(255,255,255,.025)}
+.grp-row.stack{flex-direction:column;align-items:stretch;gap:12px}
+.grp-row.stack>.grp-r{max-width:none;justify-content:flex-start}
+.grp-row+.grp-item{border-top:1px solid rgba(255,255,255,.06)}
+.grp-r .seg{flex-wrap:nowrap;white-space:nowrap}
+.grp-t{font-size:14px;font-weight:500}
+.grp-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)}
+.grp-head .grp-d{margin-top:4px}
+.grp-row.stack .grp-l{flex:none}
+.grp-item+.grp-row,.grp-row+.grp-row{border-top:1px solid rgba(255,255,255,.06)}
+.grp-row:not(.stack) .grp-r .seg{margin-left:auto}
+/* fields inside grouped rows */
+.grp-item>.field{margin:0}
+.grp-item>.field>.lbl{margin:0 0 8px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px}
+.grp-item>.field .hint-text{margin-top:8px}
+.grp-item>.field.folders>.hint-text:first-child{margin-top:0}
+.grp-item:has(>.hint-text:empty){display:none}
+.grp-row.stack .grp-r>.text{width:100%}
+.grp-r.num{align-items:center;gap:8px}
+.grp-unit{color:var(--ink-dim);font-size:13px}
+.grp-item>details.adv{margin:0}
+.grp-item>details.adv>summary{font-size:14px;font-weight:500;cursor:pointer}
+.grp-item>.row{margin:0}
+.grp-d.badge,.grp-d .badge{margin-right:6px}
+.grp-item>details.adv{border:0;padding:0}
+.start-bar .grp-t{display:block;font-weight:500}
+.start-bar .grp-r .btn{min-width:150px}
+.art-box>.card.grp:first-child{margin-top:0}
+.start-bar .art-summary{margin:0;padding:0}
+.field>.lbl{margin-bottom:0}.grp-item>.field>.lbl{margin:0}
+/* the right-hand spine reads the right way round (it was mirrored) */
+.f-right .spine-img{transform:none}
+/* spine art fills the spine exactly (it was cropped top and bottom when the spine's shape was a hair wider than the art) */
+.f-left .spine-img,.f-right .spine-img{object-fit:fill}
+.su-links{gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.su-links .hint-text{margin:0}
+
+/* ---- Details, roomier (1.62): a little wider on big screens, more air between sections, and a compact button block
+   (Play across the top, the rest in three columns) so the game's info gets the height, not the buttons ---- */
+@media (min-width:1400px){.details{width:min(520px,34vw)}}
+.details .d-hero{padding-left:32px;padding-right:32px;padding-bottom:24px}
+.details .d-cover{width:108px}
+.details .d-body{padding:22px 32px 26px}
+.details .d-ach{margin-bottom:20px}
+.details .d-desc{line-height:1.7}
+.details .d-grid{margin-top:22px;gap:10px}
+.details .d-grid>div{padding:11px 14px}
+.details .d-art{margin-top:24px}
+.details .d-adv{margin-top:18px}
+.details .d-actions{grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 32px 20px}
+.details .d-actions .btn{padding:9px 10px;font-size:12px;min-height:38px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.details .d-actions #dPlay{grid-column:1/-1;min-height:46px;font-size:14px}
+@media (min-width:1400px){#app.details-open .hints{left:calc(50% - min(272px,17vw));max-width:calc(100% - min(520px,34vw) - 32px)}}
+.details .d-actions #dGameEmu.own{border-color:rgba(255,197,77,.45);color:#ffe2a8} /* this game has its own emulator build */
+
+body.reduce-motion .ach-list{scroll-behavior:auto}
+@media (prefers-reduced-motion:reduce){.ach-list{scroll-behavior:auto}}
+/* Android wizard's Consoles page (setup.js consolesHub): big touch-sized cards for the consoles this device can play,
+   the rest folded under "More consoles" in a tighter grid. Sized for the Thor's 6" screen: three big cards per row,
+   four small ones, no endless list. */
+.con-grid.hub{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.con-grid.hub.small{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.con-card.big{min-height:104px;padding:18px 18px 14px;border-radius:16px;justify-content:center}
+.con-card.big .con-name{font-size:19px}
+.con-card.big .con-emu{font-size:13px}
+.con-grid.hub.small .con-card{min-height:72px;padding:12px 14px 10px}
+.con-grid.hub .con-card{min-width:0}
+.con-grid.hub .con-emu,.con-grid.hub .con-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.con-grid.hub .con-card:active{transform:scale(.98)}
+.con-more{display:flex;align-items:center;gap:12px;width:100%;margin-top:20px;padding:14px 18px;min-height:56px;border-radius:14px;border:1px solid var(--line);
+  background:rgba(255,255,255,.03);color:var(--ink);font-size:15px;font-weight:600;text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.con-more:hover,.con-more:focus-visible{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.3);outline:none}
+.con-more-ch{margin-left:auto;width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-3px) rotate(45deg);transition:transform .2s;opacity:.7}
+.con-more[aria-expanded="true"] .con-more-ch{transform:translateY(2px) rotate(-135deg)}
+.con-sub{margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim)}
+
+/* ---------- Windows (1.75): the setup panel in Settings' own look ----------
+   The same surface, palette, sidebar marker, focus glow and switches as Settings (settings.css #bss), so the first run,
+   the classic pages and Settings read as one app. Android keeps its own console-OS look (android.css). */
+html:not(.platform-android) .setup{--acc:#6b8cff;--acc2:#a9bfff;--ok:#45d483;--warn:#ffb547;--bad:#ff6b6b;--tint:#6a5cff;--line:rgba(255,255,255,.07);--ink:#f3f5fb;--ink-dim:#a4abbf;
+  --hl:linear-gradient(90deg,color-mix(in srgb,var(--acc) 30%,transparent),color-mix(in srgb,var(--acc) 13%,transparent));
+  --ring:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 85%,transparent),0 10px 34px -10px color-mix(in srgb,var(--acc) 70%,transparent);
+  font-family:var(--ui,'Lexend',system-ui,sans-serif);
+  background:radial-gradient(1300px 760px at 78% -12%,color-mix(in srgb,var(--tint) 24%,transparent),transparent 70%),radial-gradient(1000px 640px at 18% 118%,color-mix(in srgb,var(--tint) 12%,transparent),transparent 70%),linear-gradient(180deg,#0d0f1a,#07080e 70%)}
+html:not(.platform-android) .su-card{width:min(1180px,calc(100vw - 48px));height:min(820px,calc(100vh - 56px));grid-template-columns:260px minmax(0,1fr);background:rgba(9,10,17,.72);border-color:rgba(255,255,255,.08);border-radius:26px;box-shadow:0 40px 120px rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+html:not(.platform-android) .su-nav{background:rgba(5,6,11,.6);padding:30px 14px 22px 18px}
+html:not(.platform-android) .su-brand{letter-spacing:.22em;color:var(--ink-dim)}
+html:not(.platform-android) .su-step{position:relative;padding:10px 14px;border-radius:12px;font-size:14px;color:var(--ink-dim)}
+html:not(.platform-android) .su-step.on{color:var(--ink);background:rgba(255,255,255,.06)}
+html:not(.platform-android) .su-step.on::before{content:"";position:absolute;left:-8px;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--acc)}
+html:not(.platform-android) .su-step .dot.ok{background:var(--ok);box-shadow:0 0 8px color-mix(in srgb,var(--ok) 60%,transparent)}
+html:not(.platform-android) .su-step .dot.warn{background:var(--warn);box-shadow:0 0 8px color-mix(in srgb,var(--warn) 60%,transparent)}
+html:not(.platform-android) .su-kicker{font-weight:700;letter-spacing:.22em;color:#7c8399}
+html:not(.platform-android) .su-title{font-weight:700;font-size:32px;letter-spacing:-.015em;color:#fff}
+html:not(.platform-android) .su-lead{color:var(--ink-dim);font-size:14.5px}
+/* the focus: Settings' highlight (a soft accent fill, a bright ring and a glow) instead of a plain white outline */
+html:not(.platform-android) .setup button:focus-visible,html:not(.platform-android) .setup summary:focus-visible,
+html:not(.platform-android) body.pad-input #setup button:focus,html:not(.platform-android) body.pad-input #setup summary:focus,html:not(.platform-android) body.pad-input #setup input:focus{outline:none;box-shadow:var(--ring)}
+html:not(.platform-android) .su-step:focus-visible,html:not(.platform-android) body.pad-input #setup .su-step:focus{background:var(--hl);color:#fff}
+/* switches: Settings' pill */
+html:not(.platform-android) .setup .switch input{width:48px;height:28px;background:rgba(255,255,255,.14);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+html:not(.platform-android) .setup .switch input::after{top:3px;left:3px;width:22px;height:22px;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .34s cubic-bezier(.34,1.56,.64,1)}
+html:not(.platform-android) .setup .switch input:checked{background:linear-gradient(90deg,var(--acc),color-mix(in srgb,var(--acc) 70%,#9fd0ff))}
+html:not(.platform-android) .setup .switch input:checked::after{transform:translateX(20px)}
+/* rows and cards: Settings' grouped rows */
+html:not(.platform-android) .setup .grp-box{background:rgba(255,255,255,.03);border-color:var(--line);border-radius:16px}
+html:not(.platform-android) .setup .grp-row{min-height:64px;padding:14px 18px}
+/* ticked cards, chips and looks: the accent (green stays for "found / ready" words only) */
+html:not(.platform-android) .wz2-card,html:not(.platform-android) .wz2-look,html:not(.platform-android) .wz2-fix,html:not(.platform-android) .wz2-chip{border-color:var(--line);background:rgba(255,255,255,.03)}
+html:not(.platform-android) .wz2-card.on,html:not(.platform-android) .wz2-look.on,html:not(.platform-android) .wz2-chip.on{background:var(--hl);border-color:color-mix(in srgb,var(--acc2) 55%,transparent)}
+html:not(.platform-android) .wz2-card.on:hover,html:not(.platform-android) .wz2-card.on:focus-visible{background:var(--hl);border-color:var(--acc2)}
+html:not(.platform-android) .wz2-card:focus-visible,html:not(.platform-android) .wz2-look:focus-visible,html:not(.platform-android) .wz2-chip:focus-visible{box-shadow:var(--ring)}
+html:not(.platform-android) .wz2-card.on .wz2-tick,html:not(.platform-android) .wz2-chip.on .wz2-tick{background:var(--acc);border-color:var(--acc)}
+html:not(.platform-android) .wz2-card.on .wz2-tick::after,html:not(.platform-android) .wz2-chip.on .wz2-tick::after{border-color:#fff}
+html:not(.platform-android) .wz2-tag{background:color-mix(in srgb,var(--acc) 22%,transparent);color:var(--acc2)}
+html:not(.platform-android) .wz2-ok{background:var(--ok)}
+html:not(.platform-android) .art-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 75%,#fff 0%),var(--acc2))}
+html:not(.platform-android) .art-prog.done .art-fill{background:var(--ok)}
+html:not(.platform-android) .con-more{border-color:var(--line);background:rgba(255,255,255,.03)}
+.wz2-card.ready{cursor:default;opacity:1}
+.wz2-card.ready:hover{border-color:inherit}
+
+/* ---- Details (beta.7): the same family as Settings. Big type read from the couch, section labels, a clean list of
+   facts with hairlines (no boxes), the gliding blue highlight on the focused button, Close as a corner button, and a
+   panel wide enough to breathe. Sizes scale with the screen (clamp), so the Thor's 853-wide screen still fits; the
+   phone layout (under 761 px) keeps its own bottom sheet. ---- */
+@media (min-width:761px){
+  :root{--dw:clamp(440px,38vw,740px)}
+  .details{width:var(--dw)!important;background:linear-gradient(180deg,rgba(15,17,30,.97),rgba(9,11,19,.985))!important;
+    --dacc:#6b8cff;--dacc2:#a9bfff}
+  #app.details-open #scene{transform:translateX(calc(var(--dw) * -.5)) scale(.9)}
+  #app.details-open .sel-halo{transform:translate(calc(-50% - var(--dw) * .5),-50%) scale(.9)}
+  #app.details-open .info{transform:translateX(calc(var(--dw) * -.5))}
+  #app.details-open .hints{left:calc(50% - var(--dw) / 2)!important;max-width:calc(100% - var(--dw) - 32px)!important}
+  .hud-top .tabs{transition:transform .55s cubic-bezier(.22,.9,.25,1)}
+  #app.details-open .hud-top .tabs{opacity:0;pointer-events:none} /* (narrower screens: no room beside the console's name, so they step out) */
+  .hud-top .tabs{transition:transform .55s cubic-bezier(.22,.9,.25,1),opacity .3s}
+  .details .d-hero{min-height:clamp(210px,30vh,340px);padding:clamp(28px,3.6vh,46px) clamp(24px,2.4vw,44px) clamp(20px,2.6vh,30px)}
+  .details .d-hero-row{gap:clamp(16px,1.6vw,28px)}
+  .details .d-cover{width:clamp(108px,9vw,172px);border-radius:10px;box-shadow:0 18px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.14)}
+  .details .d-kicker{font-size:clamp(10px,.72vw,14px);font-weight:700;letter-spacing:.26em}
+  .details .d-head .d-title{font-size:clamp(24px,2.35vw,46px);font-weight:700;line-height:1.08;margin-top:6px;letter-spacing:-.01em}
+  .details .d-chips{gap:8px;margin-top:clamp(10px,1.4vh,16px)}
+  .details .chipx{font-size:clamp(11px,.72vw,14px);padding:5px 12px}
+  .details .d-hist{font-size:clamp(12px,.8vw,15px);gap:clamp(14px,1.2vw,22px);margin-top:clamp(10px,1.4vh,16px)}
+  .d-x{position:absolute;top:clamp(14px,1.8vh,22px);right:clamp(14px,1.4vw,24px);z-index:2;width:clamp(34px,2.3vw,44px);aspect-ratio:1;border-radius:50%;
+    border:1px solid rgba(255,255,255,.2);background:rgba(10,12,20,.5);color:#f3f5fb;font-size:clamp(13px,.85vw,17px);display:grid;place-items:center;cursor:pointer;padding:0}
+  .d-x:hover{background:rgba(255,255,255,.16)}
+  .details .d-body{padding:clamp(18px,2.6vh,30px) clamp(24px,2.4vw,44px) 30px}
+  .d-sec,.details .d-art-h{font-size:clamp(10px,.68vw,13px);font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim);margin:clamp(20px,2.8vh,32px) 0 clamp(8px,1.1vh,12px)}
+  .d-sec[hidden]{display:none}
+  .details .d-body>.d-sec:first-child,.details .d-ach[hidden]+.d-sec{margin-top:0}
+  .details .d-desc{font-size:clamp(14px,.95vw,18px);line-height:1.68;color:rgba(243,245,251,.88)}
+  .details .d-more{font-size:clamp(11px,.68vw,13px);margin-top:8px}
+  .details .d-grid{display:grid;grid-template-columns:1fr;gap:0;margin-top:0;border-top:1px solid rgba(255,255,255,.07)}
+  .details .d-grid>div{display:flex;justify-content:space-between;align-items:baseline;gap:18px;padding:clamp(10px,1.45vh,16px) 2px;border:0;border-bottom:1px solid rgba(255,255,255,.07);border-radius:0;background:none}
+  .details .d-grid dt{font-size:clamp(12px,.82vw,16px);letter-spacing:0;text-transform:none;color:var(--ink-dim);flex:none}
+  .details .d-grid dd{margin:0;font-size:clamp(13px,.88vw,17px);font-weight:600;text-align:right;color:#f3f5fb}
+  .details .d-grid>div.wide{flex-direction:column;align-items:flex-start;gap:4px}
+  .details .d-grid>div.wide dd{text-align:left;font-weight:500}
+  .details .d-art{margin-top:0}
+  .details .d-art-chip{font-size:clamp(11px,.74vw,14px);padding:5px 12px}
+  .details .d-art-sum{font-size:clamp(11px,.74vw,14px)}
+  .details .d-adv summary{font-size:clamp(10px,.68vw,13px)}
+  .details .d-ach{border-radius:16px;padding:clamp(12px,1.6vh,18px) clamp(14px,1.2vw,20px)}
+  /* buttons: Play across the top, the rest three to a row (a short last row shares its width), so the game's info keeps
+     the height */
+  .details .d-actions{display:flex!important;flex-wrap:wrap;gap:8px;padding:clamp(12px,1.8vh,20px) clamp(24px,2.4vw,44px) clamp(16px,2.4vh,26px)}
+  .details .d-actions .btn{flex:1 1 calc(33.333% - 8px);min-height:clamp(36px,4.1vh,48px);font-size:clamp(12px,.8vw,15px);border-radius:12px;padding:6px 10px}
+  .details .d-actions #dPlay{flex-basis:100%;min-height:clamp(46px,5.4vh,62px);font-size:clamp(15px,1.05vw,20px);font-weight:700;border-radius:14px}
+  .details .d-actions [hidden]{display:none!important}
+  /* the controller's focus: Settings' highlight (a soft accent wash, a light ring, a glow) */
+  body.pad-input .details .pad-focus:not(#dPlay){background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 32%,transparent),color-mix(in srgb,var(--dacc) 14%,transparent))!important;color:#fff!important}
+  body.pad-input .details .pad-focus{outline:none!important;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--dacc2) 90%,transparent),0 10px 34px -10px color-mix(in srgb,var(--dacc) 80%,transparent),0 0 0 1px rgba(0,0,0,.25)!important;transform:none}
+}
+@media (min-width:1600px){#app.details-open .hud-top .tabs{opacity:1;pointer-events:auto;transform:translateX(calc(var(--dw) * -.5))}} /* (wide screens: the console tabs move over with the shelf, clear of the console's name) */
+@media (min-width:761px){
+  .details .d-actions{background:rgba(11,13,22,.985)!important;border-top:1px solid rgba(255,255,255,.07)!important;box-shadow:0 -14px 28px rgba(0,0,0,.4)!important} /* (solid: the page scrolls under it, never shows through) */
+}
+/* short screens (the Thor's 480, small laptops): a compact header and a lower button block, so the game's info still shows */
+@media (min-width:761px) and (max-height:600px){
+  .details .d-hero{min-height:0;padding-top:clamp(16px,3.4vh,24px);padding-bottom:14px}
+  .details .d-cover{width:clamp(72px,8vw,96px)}
+  .details .d-head .d-title{font-size:clamp(20px,2vw,28px)}
+  .details .d-chips{margin-top:6px}.details .d-hist{margin-top:6px}
+  .details .d-body{padding-top:12px}
+  .d-sec,.details .d-art-h{margin-top:14px;margin-bottom:6px}
+  .details .d-grid>div{padding:7px 2px}
+  .details .d-actions{gap:6px;padding:10px clamp(16px,2vw,28px) 12px}
+  .details .d-actions .btn{flex-basis:calc(25% - 6px);min-height:32px;font-size:12px;padding:4px 8px}
+  .details .d-actions #dPlay{min-height:40px;font-size:15px}
+}
+
+/* (beta.7) the first run's folded More consoles: maker headings over compact tick chips */
+.wz2-chips.wz2-more{gap:8px;margin-top:10px}
+.wz2-chips.wz2-more .wz2-chip{padding:8px 14px 8px 10px;font-size:14px}
+.wz2-more-note{margin:14px 0 0;font-size:13px;color:var(--ink-dim)}
+/* (beta.7) the first run's Set up my emulators for me */
+.wz2-rec{margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 45%,transparent)}
+.wz2-auto .hint-text{margin:6px 0 10px}
+.wz2-emudone{margin-top:14px}
+.wz2-emudone{padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.wz2-emudone .wz2-pt{font-weight:500;font-size:13px;color:var(--ink-dim)}
+
+/* (beta.7) video previews: Details' 16:9 box opens under the title only once there's a picture; the shelf's own sits behind
+   the cases. Open / close is the box's row growing (grid 0fr → 1fr), the picture fades in on top of this game's art. */
+.d-media{display:grid;grid-template-rows:0fr;padding:0 28px;opacity:0;transition:grid-template-rows .38s cubic-bezier(.22,.9,.25,1),padding .38s cubic-bezier(.22,.9,.25,1),opacity .3s ease;flex-shrink:0}
+.d-media.on{grid-template-rows:1fr;padding-top:18px;opacity:1}
+.details .d-media{padding-left:32px;padding-right:32px}
+.d-media-in{position:relative;min-height:0;overflow:hidden;border-radius:14px;aspect-ratio:16/9;background:#05070d center/cover no-repeat;box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.09)}
+.d-media-in::before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%) 0 0/250% 100%;opacity:0;transition:opacity .3s}
+.d-media.on:not(.ready) .d-media-in::before{opacity:1;animation:dmShine 1.4s linear infinite}
+@keyframes dmShine{to{background-position:-250% 0}}
+.d-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s ease}
+.d-media.ready video{opacity:1}.d-media.yt video{display:none}
+.d-media-tag{position:absolute;left:12px;bottom:10px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);opacity:0;transition:opacity .4s .3s;pointer-events:none}
+.d-media.ready:not(.yt) .d-media-tag{opacity:.85}
+html.reduce-motion .d-media,html.reduce-motion .d-media video{transition:none}
+
+/* ---- (beta.7) Details redone like the big launchers' game pages: logo, a stats strip, one Play button and three small
+   ones (Manual, Inspect, More; the rest in the More menu), tabs (Overview, Media, Your copy, Info; LB / RB or Q / E), and
+   the game's fan art or preview video filling the background behind the case. ---- */
+.details .d-hero{flex-direction:column;align-items:stretch;justify-content:flex-end}
+.d-head.has-logo .d-title{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.d-logo{display:block;max-width:min(100%,380px);max-height:clamp(52px,9vh,112px);object-fit:contain;object-position:left center;margin-top:8px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.65))}
+.d-logo[hidden]{display:none}
+.d-stats{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:clamp(14px,2vh,20px)}
+.d-stats[hidden]{display:none}
+.d-stat{min-width:0;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07)}
+.d-stat span{display:block;font-size:clamp(10px,.62vw,12px);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.d-stat b{display:block;margin-top:2px;font-size:clamp(13px,.95vw,18px);font-weight:700;color:#f3f5fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.details .d-actions{position:relative!important;bottom:auto!important;display:flex!important;flex-wrap:nowrap!important;align-items:stretch;gap:8px;background:none!important;border:0!important;box-shadow:none!important}
+.details .d-actions #dPlay{flex:1 1 auto}
+.details .d-actions .d-ico{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px}
+.d-ico svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#dMoreBtn svg{fill:currentColor;stroke:none}
+.d-ico[aria-expanded="true"]{background:rgba(255,255,255,.14)}
+.d-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 28px 0;padding:10px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);animation:dMenuIn .18s ease-out}
+.d-menu[hidden]{display:none}.d-menu [hidden]{display:none!important}
+.d-menu .btn{justify-content:flex-start;text-align:left;min-height:40px;border-radius:10px}
+@keyframes dMenuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.d-tabs{position:sticky;top:0;z-index:3;display:flex;gap:clamp(16px,1.6vw,28px);margin-top:14px;padding:0 28px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(12,14,24,.97)}
+.d-tabs button{position:relative;padding:12px 0 10px;border:0;border-bottom:2px solid transparent;background:none;color:var(--ink-dim);font:inherit;font-size:clamp(12px,.82vw,16px);font-weight:600;cursor:pointer;border-radius:0}
+.d-tabs button:hover{color:#f3f5fb}
+.d-tabs button.on{color:#fff;border-bottom-color:var(--dacc,#6b8cff)}
+.d-tabs button.has::after{content:"";position:absolute;top:10px;right:-8px;width:5px;height:5px;border-radius:50%;background:var(--dacc,#6b8cff)}
+.d-tabs button[hidden]{display:none}
+.d-body .d-pane{display:none}
+.d-body[data-show="overview"]>[data-pane="overview"],.d-body[data-show="media"]>[data-pane="media"],.d-body[data-show="copy"]>[data-pane="copy"],.d-body[data-show="info"]>[data-pane="info"]{display:block;animation:dPaneIn .22s ease-out}
+@keyframes dPaneIn{from{opacity:0}to{opacity:1}}
+.d-pane>.d-sec:first-child{margin-top:0!important}
+.d-pane .d-media{padding-left:0!important;padding-right:0!important}
+.d-pane .d-media.on{padding-top:0}
+.d-pane #dTrailer{width:100%;margin-top:12px}
+.d-pane .d-shots{padding:12px 0 0;flex-wrap:wrap;overflow:visible}
+.d-shot{border:0;padding:0;background:none;cursor:pointer;font:inherit}
+.d-none{color:var(--ink-dim);font-size:clamp(13px,.85vw,16px)}
+.d-none[hidden]{display:none}
+/* the backdrop behind the case: fan art first (the video's poster), the preview once it plays; faded out toward the panel */
+#app.details-open .pv-back{-webkit-mask-image:linear-gradient(90deg,#000 0%,#000 30%,transparent calc(100% - var(--dw,460px)));mask-image:linear-gradient(90deg,#000 0%,#000 30%,transparent calc(100% - var(--dw,460px)))}
+#app.d-art-on .pv-back{opacity:.42}
+#app.pv-det .pv-back{opacity:.62}
+@media (min-width:761px){
+  .details .d-actions{padding:clamp(14px,2vh,20px) clamp(24px,2.4vw,44px) 0!important}
+  .details .d-actions .btn{flex-basis:auto;min-height:clamp(44px,5vh,58px)}
+  .details .d-actions #dPlay{flex-basis:auto}
+  .d-menu{margin-left:clamp(24px,2.4vw,44px);margin-right:clamp(24px,2.4vw,44px)}
+  .d-tabs{padding:0 clamp(24px,2.4vw,44px)}
+  .details .d-body{padding-top:clamp(16px,2.2vh,24px)}
+}
+@media (min-width:761px) and (max-height:600px){
+  .d-ico span{display:none}.details .d-actions .d-ico{padding:0 12px}
+  .d-logo{max-height:46px}
+  .d-stats{margin-top:8px}.d-stat{padding:5px 9px}.d-stat b{font-size:13px}
+  .details .d-actions{padding-top:10px!important}
+  .details .d-actions .btn{min-height:36px}
+  .d-tabs{margin-top:8px}.d-tabs button{padding:8px 0 7px;font-size:12px}
+}
+/* (beta.7) action row sizes: Play takes what's left; the three small buttons keep their own width (a general rule made every
+   button full width); facts move into Overview, the stats read clearly */
+.details .d-actions .btn{width:auto!important;min-width:0}
+.details .d-actions #dPlay{flex:1 1 0!important;min-width:40%}
+.details .d-actions .d-ico{flex:0 0 auto!important}
+.d-stat{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.1)}
+.d-stat span{color:rgba(233,236,245,.62)}
+.d-stat b{color:#fff}
+.d-stats{z-index:1} /* (above the header's art layer, like the cover and title) */
+
+/* (beta.9) first run: Accounts (setup.js acctSection). The Type button (on-screen keyboard) only shows with a controller */
+.wz2-acct .grp-title{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink)}
+.wz2-acct .grp-title .badge{font-size:11px;letter-spacing:0;text-transform:none}
+.wz2-acct .grp-head .grp-d{margin-top:4px}
+.wz2-acct .grp-r>.row{flex-wrap:nowrap;width:100%;max-width:640px}
+.wz2-acct .row .text{flex:1 1 auto;width:auto;min-width:0}
+.wz2-acct .miss{margin:6px 0 2px}
+.wz2-kb{display:none}
+body.pad-input .wz2-kb{display:inline-flex}
+.wz2-osk{margin-top:4px}
+.wz2-acct-more{margin-top:6px}
+
+/* ---- (beta.9) Details buttons in Settings' style (Windows; the Thor keeps its own): quiet at rest, Play the one lit button,
+   Manual / Inspect / More as icons that open to show their name when you're on them (so More is never cut off), and
+   Settings' highlight gliding to the button you're on (one layer, app.js dGlide). Plain gradients, no blur. ---- */
+@media (min-width:761px){
+  html:not(.platform-android) .details .d-actions{gap:6px!important;isolation:isolate}
+  html:not(.platform-android) .details .d-actions .btn{position:relative;z-index:1;height:48px;min-height:48px!important;border:0!important;border-radius:14px!important;
+    font-size:clamp(13px,.82vw,15px);font-weight:500;color:#d5d9e6;background:rgba(255,255,255,.045)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)!important;
+    transition:background .16s,color .16s,box-shadow .16s,filter .16s}
+  html:not(.platform-android) .details .d-actions .d-ico{padding:0 14px!important;gap:0!important}
+  html:not(.platform-android) .details .d-actions .d-ico svg{width:19px;height:19px;stroke-width:1.7;opacity:.9}
+  html:not(.platform-android) .details .d-actions .d-ico span{display:inline-block!important;max-width:0;opacity:0;overflow:hidden;white-space:nowrap;margin-left:0;transition:opacity .18s}
+  html:not(.platform-android) body.pad-input .details .d-actions .d-ico.pad-focus span,html:not(.platform-android) body:not(.pad-input) .details .d-actions .d-ico:hover span,
+  html:not(.platform-android) .details .d-actions .d-ico:focus-visible span,html:not(.platform-android) .details .d-actions .d-ico[aria-expanded="true"] span{max-width:180px;opacity:1;margin-left:9px}
+  /* Play: Settings' switch blue, a light top edge, a play mark */
+  html:not(.platform-android) .details .d-actions #dPlay{color:#fff!important;font-weight:600;font-size:clamp(14px,.95vw,17px);letter-spacing:.01em;gap:10px;
+    background:linear-gradient(90deg,var(--dacc),color-mix(in srgb,var(--dacc) 70%,#9fd0ff))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 26px -14px color-mix(in srgb,var(--dacc) 90%,transparent)!important}
+  html:not(.platform-android) .details .d-actions #dPlay::before{content:"";flex:none;width:0;height:0;border-left:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:2px}
+  html:not(.platform-android) body:not(.pad-input) .details .d-actions #dPlay:hover{filter:brightness(1.08)}
+  html:not(.platform-android) body.pad-input .details .d-actions #dPlay.pad-focus{background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 92%,#fff),color-mix(in srgb,var(--dacc) 62%,#bfe2ff))!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 2px rgba(255,255,255,.9),0 0 0 5px color-mix(in srgb,var(--dacc) 35%,transparent),0 14px 34px -10px color-mix(in srgb,var(--dacc) 90%,transparent)!important}
+  /* the controller's button: see-through, the gliding layer under it shows Settings' wash, ring and glow */
+  html:not(.platform-android) body.pad-input .details .d-actions .btn.pad-focus:not(#dPlay){background:transparent!important;box-shadow:none!important;color:#fff!important}
+  html:not(.platform-android) body.pad-input .details .d-actions .btn.pad-focus svg{opacity:1}
+  html:not(.platform-android) .details .d-hl{position:absolute;left:0;top:0;z-index:0;border-radius:14px;pointer-events:none;opacity:0;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 30%,transparent),color-mix(in srgb,var(--dacc) 13%,transparent));
+    box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--dacc2) 85%,transparent),0 10px 34px -10px color-mix(in srgb,var(--dacc) 70%,transparent),0 0 0 1px rgba(0,0,0,.25);
+    transition:transform .24s cubic-bezier(.2,.8,.2,1),width .24s cubic-bezier(.2,.8,.2,1),opacity .16s}
+  html:not(.platform-android) body.pad-input .details .d-hl.on{opacity:1}
+  /* the mouse: the same highlight on the button under it */
+  html:not(.platform-android) body:not(.pad-input) .details .d-actions .btn:not(#dPlay):hover,html:not(.platform-android) .details .d-actions .d-ico[aria-expanded="true"]{color:#fff;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 30%,transparent),color-mix(in srgb,var(--dacc) 13%,transparent))!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dacc2) 60%,transparent)!important}
+  /* the More menu: a quiet panel, rows that light like Settings' */
+  html:not(.platform-android) .d-menu{border:0;border-radius:16px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+  html:not(.platform-android) .d-menu .btn{border:0;min-height:44px;border-radius:12px;background:transparent;color:#d5d9e6;font-weight:500}
+  html:not(.platform-android) body:not(.pad-input) .d-menu .btn:hover{color:#fff;background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 30%,transparent),color-mix(in srgb,var(--dacc) 13%,transparent))}
+  /* tabs: Settings' menu laid sideways: a short rounded bar under the one shown, the highlight on the one you're on */
+  html:not(.platform-android) .d-tabs{gap:2px;padding-left:calc(clamp(24px,2.4vw,44px) - 12px)}
+  html:not(.platform-android) .d-tabs button{padding:9px 12px;margin:5px 0 7px;border:0!important;border-radius:10px;color:var(--ink-dim);font-weight:500;transition:color .16s,background .16s}
+  html:not(.platform-android) .d-tabs button.on{color:#fff}
+  html:not(.platform-android) .d-tabs button.on::before{content:"";position:absolute;left:12px;right:12px;bottom:-8px;height:3px;border-radius:3px;background:var(--dacc,#6b8cff)}
+  html:not(.platform-android) .d-tabs button.has::after{top:8px;right:4px}
+  html:not(.platform-android) body:not(.pad-input) .d-tabs button:hover{color:#fff;background:rgba(255,255,255,.05)}
+  html:not(.platform-android) body.pad-input .details .d-tabs button.pad-focus{color:#fff!important;background:linear-gradient(90deg,color-mix(in srgb,var(--dacc) 30%,transparent),color-mix(in srgb,var(--dacc) 13%,transparent))!important;
+    box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--dacc2) 85%,transparent),0 10px 34px -10px color-mix(in srgb,var(--dacc) 70%,transparent)!important}
+  /* Close: a quiet round button that lights the same way */
+  html:not(.platform-android) .d-x{border:0;background:rgba(10,12,20,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);transition:background .16s,box-shadow .16s}
+  html:not(.platform-android) body:not(.pad-input) .d-x:hover{background:color-mix(in srgb,var(--dacc) 28%,rgba(10,12,20,.6));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dacc2) 70%,transparent)}
+}
+@media (min-width:761px) and (max-height:600px){
+  html:not(.platform-android) .details .d-actions .btn{height:40px;min-height:40px!important;border-radius:12px!important}
+  html:not(.platform-android) .details .d-hl{border-radius:12px}
+  html:not(.platform-android) .d-tabs button{padding:7px 12px;margin:3px 0 5px}html:not(.platform-android) .d-tabs button.on::before{bottom:-6px}
+}
+html.reduce-motion .details .d-hl,body.reduce-motion .details .d-hl{transition:opacity .16s}
+/* (the highlight layer at every width: never a flex item in the row, so a narrow window's buttons never move for it) */
+html:not(.platform-android) .details .d-actions>.d-hl{position:absolute;pointer-events:none}
+@media (max-width:760px){html:not(.platform-android) .details .d-actions>.d-hl{display:none}}
+
+/* ---- (beta.9) Details on Windows (app.js MEDIA_TAB): the trailer at the top of Overview, the info under it. The box opens
+   at once with the game's art and a shimmer ("Getting the trailer…"), then the picture fades in; full screen is a small
+   pill under it, the screenshots a strip that scrolls sideways. ---- */
+.details.d-one .d-pane .d-media.on{margin-bottom:10px}
+.details.d-one .d-media.on:not(.ready) .d-media-in::after{content:"Getting the trailer…";position:absolute;left:14px;bottom:12px;padding:4px 11px;border-radius:999px;
+  font-size:12px;font-weight:600;color:#e9ecf6;background:rgba(8,10,18,.62)}
+.details.d-one .d-pane #dTrailer{display:flex;width:auto;margin:0 0 0 auto;min-height:34px;padding:0 14px;gap:8px;border:0;border-radius:999px;font-size:12.5px;font-weight:500;
+  color:#d5d9e6;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.details.d-one .d-pane #dTrailer[hidden]{display:none}
+.details.d-one .d-pane #dTrailer::before{content:"";width:12px;height:12px;flex:none;border:2px solid currentColor;border-radius:3px;
+  -webkit-mask:linear-gradient(#000 0 0) top left/5px 5px no-repeat,linear-gradient(#000 0 0) top right/5px 5px no-repeat,linear-gradient(#000 0 0) bottom left/5px 5px no-repeat,linear-gradient(#000 0 0) bottom right/5px 5px no-repeat;
+  mask:linear-gradient(#000 0 0) top left/5px 5px no-repeat,linear-gradient(#000 0 0) top right/5px 5px no-repeat,linear-gradient(#000 0 0) bottom left/5px 5px no-repeat,linear-gradient(#000 0 0) bottom right/5px 5px no-repeat}
+body:not(.pad-input) .details.d-one .d-pane #dTrailer:hover{color:#fff;background:linear-gradient(90deg,color-mix(in srgb,var(--dacc,#6b8cff) 30%,transparent),color-mix(in srgb,var(--dacc,#6b8cff) 13%,transparent))}
+/* (the strip glides: app.js centres the picture you're on with a smooth scroll; room around it so the picture's zoom and
+   the controller's ring are never cut off; a gap before About) */
+.details.d-one .d-pane .d-shots{flex-wrap:nowrap;overflow-x:auto;padding:10px 10px 12px;margin:0 -10px;scroll-behavior:smooth;overscroll-behavior-x:contain}
+.details.d-one .d-pane .d-shots:not([hidden]){margin-bottom:clamp(10px,1.6vh,18px)}
+.details.d-one .d-pane .d-shot{width:clamp(96px,7vw,132px);transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s,box-shadow .22s}
+html.reduce-motion .details.d-one .d-pane .d-shots,body.reduce-motion .details.d-one .d-pane .d-shots{scroll-behavior:auto}
