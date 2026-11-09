@@ -360,8 +360,9 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         return
     }
     val list = rememberLazyListState(); val scope = rememberCoroutineScope()
-    var zoom by remember { mutableFloatStateOf(1f) }
-    var committed by remember { mutableFloatStateOf(1f) }
+    // the page fits the screen with a little space at both sides, and can be made smaller still
+    var zoom by remember { mutableFloatStateOf(.94f) }
+    var committed by remember { mutableFloatStateOf(.94f) }
     LaunchedEffect(zoom) { delay(250); committed = zoom }
     val ctx = LocalContext.current
     val anns = remember { mutableStateListOf<PAnn>() }
@@ -421,8 +422,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     val here = list.firstVisibleItemIndex
     val acts = listOf(
         OAct(tr("Zoom in", "Yakınlaştır"), "View", Icons.Outlined.ZoomIn, cap = tr("Zoom", "Yakınlaştırma")) { zoom = (zoom * 1.25f).coerceAtMost(4f) },
-        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut, cap = tr("Zoom", "Yakınlaştırma")) { zoom = (zoom / 1.25f).coerceAtLeast(1f) },
-        OAct(tr("Fit width", "Genişliğe sığdır"), "View", Icons.Outlined.FitScreen, cap = tr("Zoom", "Yakınlaştırma"), enabled = zoom != 1f) { zoom = 1f },
+        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut, cap = tr("Zoom", "Yakınlaştırma")) { zoom = (zoom / 1.25f).coerceAtLeast(.4f) },
+        OAct(tr("Fit width", "Genişliğe sığdır"), "View", Icons.Outlined.FitScreen, cap = tr("Zoom", "Yakınlaştırma"), enabled = zoom != .94f) { zoom = .94f },
         OAct(tr("Go to page", "Sayfaya git"), "View", Icons.Outlined.FormatListNumbered, cap = tr("Pages", "Sayfalar")) { jumpText = ""; jump = true },
         OAct(tr("First", "İlk"), "View", Icons.Outlined.FirstPage, cap = tr("Pages", "Sayfalar"), enabled = here > 0) { goto(0) },
         OAct(tr("Previous", "Önceki"), "View", Icons.Outlined.KeyboardArrowUp, cap = tr("Pages", "Sayfalar"), enabled = here > 0) { goto(here - 1) },
@@ -474,13 +475,15 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
             Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(32.dp).clickable { gotoHit(curHit + 1) }.padding(4.dp), theme.pal.ink)
             Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(1f, 4f) }) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(.4f, 4f) }) {
             Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
+                Box(Modifier.width(maxOf(widthDp, widthDp * zoom)).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
                 LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(p.count) { i -> PdfPage(p, i, pagePx, anns.filter { it.page == i }, tool, cols[ci],
                         { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) },
                         sel?.takeIf { it.page == i }, { s -> sel = s },
                         if (findOn) hits.withIndex().filter { it.value.page == i }.map { it.value to (it.index == curHit) } else emptyList()) }
+                }
                 }
             }
         }
