@@ -94,28 +94,28 @@ fun AiHub(onBack: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
-            ModalDrawerSheet(drawerContainerColor = T.panel, drawerContentColor = T.text, modifier = Modifier.width(300.dp)) {
+            ModalDrawerSheet(drawerContainerColor = AiPanel, drawerContentColor = AiInk, modifier = Modifier.width(300.dp)) {
                 Column(Modifier.fillMaxHeight().statusBarsPadding().padding(vertical = 12.dp)) {
-                    Text("Pulse AI", color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Text("Pulse AI", color = AiInk, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyColumn(Modifier.weight(1f)) {
                         items(chats.toList(), key = { it.id }) { ch ->
                             val on = ch.id == cur && !models
                             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp))
-                                .background(if (on) T.text.copy(alpha = .08f) else Color.Transparent).clickable { openChat(ch.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
+                                .background(if (on) AiInk.copy(alpha = .08f) else Color.Transparent).clickable { openChat(ch.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                Text(ch.title.ifEmpty { tr("New chat", "Yeni sohbet") }, color = if (ch.title.isEmpty()) T.sub else T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Text(ch.title.ifEmpty { tr("New chat", "Yeni sohbet") }, color = if (ch.title.isEmpty()) AiSub else AiInk, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 Box(Modifier.size(32.dp).clickable {
                                     chats.remove(ch)
                                     if (chats.isEmpty()) chats.add(ChatRec(newChatId(), mutableStateListOf()))
                                     if (cur == ch.id) cur = chats.first().id
                                     saveChats(c, chats)
-                                }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 16.dp) }
+                                }, contentAlignment = Alignment.Center) { PIcon("delete", AiSub, 16.dp) }
                             }
                         }
                     }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { models = true; scope.launch { drawer.close() } }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("download", T.text, 20.dp); Text(tr("Models", "Modeller"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                        PIcon("download", AiInk, 20.dp); Text(tr("Models", "Modeller"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
                     }
                     // the + at the bottom left: a new chat
                     Box(Modifier.padding(start = 20.dp, top = 12.dp).size(50.dp).clip(CircleShape).background(Look.accent).clickable {
@@ -125,18 +125,36 @@ fun AiHub(onBack: () -> Unit) {
             }
         },
     ) {
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        var working by remember { mutableStateOf(false) }
+        var pose by remember { mutableStateOf<String?>(null) }
+        var bubble by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(pose) { if (pose != null) { delay(2600); pose = null; bubble = null } }
+        val hellos = listOf(tr("Hi!", "Selam!"), tr("I am here", "Buradayım"), tr("Go on, ask me", "Hadi sor bakalım"), tr("I run on your phone", "Telefonunda çalışıyorum"), tr("What shall we do today?", "Bugün ne yapıyoruz?"))
+        // the screen is AMOLED black, as in the Claude chat
+        Column(Modifier.fillMaxSize().background(AiBg).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
-                Text(if (models) tr("Models", "Modeller") else chat.title.ifEmpty { "Pulse AI" }, color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Box(Modifier.size(40.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { PIcon("menu", AiInk, 22.dp) }
+                // the mascot: a tap makes it do a move and say something
+                Box(Modifier.padding(start = 2.dp).size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A)).clickable { pose = MASCOT_POSES.random(); bubble = hellos.random() }, contentAlignment = Alignment.Center) {
+                    AiMascot(working, pose, Modifier.size(28.dp, 20.dp))
+                }
+                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                    Text(if (models) tr("Models", "Modeller") else chat.title.ifEmpty { "Pulse AI" }, color = AiInk, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(bubble ?: if (working) tr("Working…", "Çalışıyor…") else tr("Idle", "Boşta"), color = if (bubble != null) Look.accent else AiSub, fontSize = 12.sp, maxLines = 1)
+                }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (models) AiModelsPage()
-                else key(chat.id) { AiChat(chat, onSaved = { saveChats(c, chats) }, toModels = { models = true }) }
+                else key(chat.id) { AiChat(chat, onSaved = { saveChats(c, chats) }, onBusy = { working = it }, toModels = { models = true }) }
             }
         }
     }
 }
+
+private val AiBg = Color.Black
+private val AiInk = Color(0xFFEDEDED)
+private val AiSub = Color(0xFF9A9A9A)
+private val AiPanel = Color(0xFF111111)
 
 private fun newChatId() = System.currentTimeMillis().toString(36) + (0..999).random().toString(36)
 
@@ -188,7 +206,7 @@ private fun AiModelsPage() {
     val extras = remember(tick) { Store.extras(c) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("RAM ${gb(Device.ramBytes(c))} · Download/PulseAI", color = T.sub, fontSize = 13.sp)
+            Text("RAM ${gb(Device.ramBytes(c))} · Download/PulseAI", color = AiSub, fontSize = 13.sp)
             if (!Environment.isExternalStorageManager()) TextButton({ runCatching { c.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${c.packageName}"))) } }) {
                 Text(tr("Allow file access: models already on the phone are found", "Dosya erişimine izin ver: telefondaki modeller bulunur"), color = Look.accent, fontSize = 13.sp)
             }
@@ -196,7 +214,7 @@ private fun AiModelsPage() {
                 PField(query, { query = it }, tr("Search every GGUF on Hugging Face", "Hugging Face'teki tüm GGUF'larda ara"), Modifier.weight(1f), onDone = {
                     if (query.isNotBlank()) { searching = true; scope.launch { found = withContext(Dispatchers.IO) { runCatching { searchHf(query) }.getOrDefault(emptyList()) }; searching = false } }
                 })
-                Box(Modifier.size(44.dp).clickable { if (query.isNotBlank()) { searching = true; scope.launch { found = withContext(Dispatchers.IO) { runCatching { searchHf(query) }.getOrDefault(emptyList()) }; searching = false } } }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
+                Box(Modifier.size(44.dp).clickable { if (query.isNotBlank()) { searching = true; scope.launch { found = withContext(Dispatchers.IO) { runCatching { searchHf(query) }.getOrDefault(emptyList()) }; searching = false } } }, contentAlignment = Alignment.Center) { PIcon("search", AiInk, 22.dp) }
             }
             if (searching) PProgress(null, Modifier.fillMaxWidth().padding(top = 6.dp))
         }
@@ -215,7 +233,7 @@ private fun AiModelsPage() {
         item {
             TextButton({ pick.launch(arrayOf("*/*")) }) { Text(tr("Use a model file from the phone (.gguf / .bin)", "Telefondaki bir model dosyasını kullan (.gguf / .bin)"), color = Look.accent, fontSize = 13.sp) }
             Text(tr("Each model keeps its own licence (on its row). Abliterated models answer without the usual refusals; you are responsible for how you use them.",
-                "Her model kendi lisansını taşır (satırında). Abliterated modeller olağan retler olmadan yanıt verir; nasıl kullandığından sen sorumlusun."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(vertical = 14.dp))
+                "Her model kendi lisansını taşır (satırında). Abliterated modeller olağan retler olmadan yanıt verir; nasıl kullandığından sen sorumlusun."), color = AiSub, fontSize = 11.sp, modifier = Modifier.padding(vertical = 14.dp))
         }
     }
 }
@@ -235,17 +253,17 @@ private fun ModelRow(m: AiModel, tick: Int, suggested: Boolean, changed: () -> U
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(m.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(m.name, color = AiInk, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     if (active) PIcon("check", Look.accent, 18.dp, Modifier.padding(start = 6.dp))
                 }
                 Text(listOfNotNull(gb(m.bytes), m.license.takeIf { it != "?" }, if (m.uncensored) tr("uncensored", "sansürsüz") else null,
                     when (fit) { 2 -> tr("runs well here", "burada iyi çalışır"); 1 -> tr("runs, slowly", "çalışır, yavaş"); else -> tr("too big for this phone", "bu telefon için büyük") },
-                    if (suggested) tr("suggested", "önerilen") else null, m.note.ifEmpty { null }).joinToString(" · "), color = T.sub, fontSize = 12.sp)
+                    if (suggested) tr("suggested", "önerilen") else null, m.note.ifEmpty { null }).joinToString(" · "), color = AiSub, fontSize = 12.sp)
             }
             when {
                 p >= 1f -> Row {
                     if (!active) PButton(tr("Use", "Kullan"), compact = true) { Store.remember(c, m); Store.setActive(c, m.kind, m.id); changed() }
-                    if (m.path == null) Box(Modifier.size(40.dp).clickable { Store.delete(c, m); changed() }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 20.dp) }
+                    if (m.path == null) Box(Modifier.size(40.dp).clickable { Store.delete(c, m); changed() }, contentAlignment = Alignment.Center) { PIcon("delete", AiSub, 20.dp) }
                 }
                 p >= 0f -> Text("${(p * 100).toInt()}%", color = Look.accent, fontSize = 14.sp)
                 else -> PButton(tr("Download", "İndir"), compact = true) { if (fit > 0) { Store.remember(c, m); Store.download(c, m); p = 0f; changed() } }
@@ -286,7 +304,7 @@ private fun loadChat(c: Context): List<Msg> = runCatching {
 
 /** The chat screen: messages, the box to write in, and a file to attach. No tabs, no speech: only the chat. */
 @Composable
-private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
+private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit, toModels: () -> Unit) {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
     val msgs = chat.msgs
@@ -299,8 +317,8 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
     val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? -> if (u != null) attached = readAttachment(c, u) }
     if (Store.known(c, "chat").none { Store.has(c, it) } && Store.customUri(c, "chat") == null) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            PIcon("download", T.sub, 40.dp)
-            Text(tr("No chat model yet", "Henüz sohbet modeli yok"), color = T.text, fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
+            PIcon("download", AiSub, 40.dp)
+            Text(tr("No chat model yet", "Henüz sohbet modeli yok"), color = AiInk, fontSize = 17.sp, modifier = Modifier.padding(top = 10.dp))
             PButton(tr("Pick one", "Bir model seç"), Modifier.padding(top = 12.dp)) { toModels() }
         }
         return
@@ -310,7 +328,7 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
         val full = attached?.let { (name, text) -> "$q\n\n[${tr("File", "Dosya")}: $name]\n$text" } ?: q
         if (chat.title.isEmpty()) chat.title = q.take(40)
         msgs += Msg(true, if (attached != null) "$q\n[${attached!!.first}]" else q); input = ""; attached = null
-        val a = Msg(false, ""); msgs += a; busy = true
+        val a = Msg(false, ""); msgs += a; busy = true; onBusy(true)
         job = scope.launch {
             try {
                 if (!started) {
@@ -324,33 +342,35 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
                 if (!started) { a.text = tr("The model could not be opened. Pick another one in Models.", "Model açılamadı. Modeller'den başka birini seç."); return@launch }
                 AiEngine.ask(c, full).collect { t -> a.text += t; list.scrollToItem(msgs.size - 1) }
             } catch (e: Exception) { if (a.text.isEmpty()) a.text = tr("Error: ", "Hata: ") + (e.message ?: e.javaClass.simpleName) }
-            finally { busy = false; onSaved() }
+            finally { busy = false; onBusy(false); onSaved() }
         }
     }
     Column(Modifier.fillMaxSize()) {
         if (msgs.isEmpty()) Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            PixelMascot(Modifier.size(120.dp, 80.dp))
-            Text(tr("Ask anything", "Ne istersen sor"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
-            Text(if (busy) tr("Working…", "Çalışıyor…") else tr("Idle", "Boşta"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            AiMascot(busy, null, Modifier.size(120.dp, 84.dp))
+            Text(tr("Ask anything", "Ne istersen sor"), color = AiInk, fontSize = 22.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
+            Text(if (busy) tr("Working…", "Çalışıyor…") else tr("Idle", "Boşta"), color = AiSub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
         else LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(msgs) { m ->
                 Box(Modifier.fillMaxWidth(), contentAlignment = if (m.user) Alignment.CenterEnd else Alignment.CenterStart) {
                     SelectionContainer {
-                        Text(m.text.ifEmpty { "…" }, color = if (m.user) onAccent(Look.accent) else T.text, fontSize = 15.sp,
-                            modifier = Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(16.dp)).background(if (m.user) Look.accent else T.text.copy(alpha = .08f)).padding(12.dp))
+                        Text(m.text.ifEmpty { "…" }, color = if (m.user) onAccent(Look.accent) else AiInk, fontSize = 15.sp,
+                            modifier = Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(16.dp)).background(if (m.user) Look.accent else AiInk.copy(alpha = .08f)).padding(12.dp))
                     }
                 }
             }
         }
-        attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", T.sub, 16.dp); Text(n, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
+        attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", AiSub, 16.dp); Text(n, color = AiSub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 14.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(28.dp)).background(T.text.copy(alpha = .06f)).padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 8.dp)) {
-            PField(input, { input = it }, tr("Message", "Mesaj"), Modifier.fillMaxWidth(), onDone = { send() })
+            .clip(RoundedCornerShape(28.dp)).background(AiInk.copy(alpha = .06f)).padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 8.dp)) {
+            androidx.compose.foundation.text.BasicTextField(input, { input = it }, Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(color = AiInk, fontSize = 16.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Look.accent), maxLines = 5,
+                decorationBox = { inner -> Box { if (input.isEmpty()) Text(tr("Message", "Mesaj"), color = AiSub, fontSize = 16.sp); inner() } })
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("add", T.text, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("add", AiInk, 22.dp) }
                 Spacer(Modifier.weight(1f))
-                if (busy) Box(Modifier.size(40.dp).clip(CircleShape).background(Look.accent).clickable { job?.cancel(); busy = false }, contentAlignment = Alignment.Center) { PIcon("stop", onAccent(Look.accent), 18.dp) }
+                if (busy) Box(Modifier.size(40.dp).clip(CircleShape).background(Look.accent).clickable { job?.cancel(); busy = false; onBusy(false) }, contentAlignment = Alignment.Center) { PIcon("stop", onAccent(Look.accent), 18.dp) }
                 else Box(Modifier.size(40.dp).clip(CircleShape).background(Look.accent).clickable { send() }, contentAlignment = Alignment.Center) { PIcon("forward", onAccent(Look.accent), 20.dp) }
             }
         }
@@ -413,15 +433,3 @@ fun AiLyricsDialog(path: String, title: String, artist: String, onDone: (String?
         dismissButton = if (err == null) ({ TextButton({ com.umutk.pulse.extras.lyrics.LyricsBatchJob.cancel(c); onDone(null) }) { Text(tr("Stop", "Durdur")) } }) else null)
 }
 
-/** The small pixel mascot of the chat (drawn in the accent colour, as in the Claude chat). */
-@Composable
-private fun PixelMascot(modifier: Modifier) {
-    val col = Look.accent
-    androidx.compose.foundation.Canvas(modifier) {
-        val u = size.width / 12f
-        fun box(x: Int, y: Int, w: Int, h: Int, c: androidx.compose.ui.graphics.Color) = drawRect(c, androidx.compose.ui.geometry.Offset(x * u, y * u), androidx.compose.ui.geometry.Size(w * u, h * u))
-        box(3, 1, 6, 4, col); box(1, 2, 2, 2, col); box(9, 2, 2, 2, col)
-        box(4, 2, 1, 1, Color(0xFF222222)); box(7, 2, 1, 1, Color(0xFF222222))
-        box(3, 5, 1, 2, col); box(5, 5, 1, 2, col); box(7, 5, 1, 2, col); box(9, 5, 1, 2, col)
-    }
-}
