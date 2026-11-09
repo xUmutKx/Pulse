@@ -2352,3 +2352,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## 1.0.383
 - Game Hub: kutu iki dokunuşla açılıyor, CD basılı tutunca konsol animasyonu; oyun rehberi; SteamGridDB; AMOLED; kapak ve klavye değişiklikleri — derlenmedi
 - AI söz penceresi çökmesi düzeltildi (yüzde işareti); çökme kaydı Download/Pulse/crash.txt — derlenmedi
+
+## 1.0.384
+- Pulse AI sohbet/maskot/yüzen maskot, Sonic yuvarlak kapak, klavye pano ve çip, Office yakınlaştırma/kaydırma/arama — derlenmedi
