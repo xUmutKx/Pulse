@@ -402,7 +402,7 @@ internal fun LyricsJobProgress(showStop: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(job.now.ifEmpty { tr("Starting…", "Başlıyor…") }, color = T.text, fontSize = 14.sp, maxLines = 2)
         PProgress(job.frac, Modifier.fillMaxWidth())
-        Text("${(job.frac * 100).toInt()}%  ·  %d:%02d".format(el / 60, el % 60) + (if (job.total > 1) "  ·  ${job.done} / ${job.total}" else ""), color = T.sub, fontSize = 12.sp)
+        Text("%d%%  ·  %d:%02d".format((job.frac * 100).toInt(), el / 60, el % 60) + (if (job.total > 1) "  ·  ${job.done} / ${job.total}" else ""), color = T.sub, fontSize = 12.sp)
         val lines = job.live.lines().filter { it.startsWith("[") && it.length > 3 && it[1].isDigit() }.takeLast(6)
         if (lines.isEmpty()) Text(tr("The first lines appear after the first minute of the song.", "İlk satırlar şarkının ilk dakikasından sonra çıkar."), color = T.sub, fontSize = 12.sp)
         else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { lines.forEach { Text(it, color = T.text, fontSize = 12.sp, maxLines = 1) } }
