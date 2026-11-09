@@ -125,7 +125,7 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
 
 internal fun palOf(theme: String, c: Context): Pal = when (theme) {
     // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
-    "shelf", "shelfc" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
+    "shelf", "shelfc" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color.White, 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
     "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
@@ -1023,7 +1023,8 @@ fun GameHubHub(onBack: () -> Unit) {
                         contentColor = pal.text,
                         modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 20.dp, bottom = 96.dp),
                     ) { FluentIcon("search", pal.text, 22.dp) }
-                    FloatingActionButton(
+                    // the + waits for Boxshelf's opening animation to end (it is not drawn over the animation)
+                    if (!webShelf || ShelfIntro.done.value) FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
                         contentColor = pal.bg,
@@ -1034,9 +1035,6 @@ fun GameHubHub(onBack: () -> Unit) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
                     // the look of the cases on Boxshelf's shelf: one of its own case styles
-                    // a pure black screen behind the boxes (for an AMOLED screen)
-                    var amo by remember { mutableStateOf(prefs(ctx).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")) }
-                    Chip(pal, if (amo) "● " + tr("AMOLED black", "AMOLED siyah") else tr("AMOLED black", "AMOLED siyah")) { amo = !amo; prefs(ctx).edit().putBoolean("amoledShelf", amo).apply() }
                     // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
                     var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
                     Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
