@@ -145,6 +145,8 @@ object KeyboardPrefs {
     /** Moving colour light: 0 off, 1 around the keyboard, 2 around every key (a rainbow that runs along the keys). */
     var rgb by mutableStateOf(0)
     /** How long an unpinned clipboard item is kept, in hours (1 to 72). */
+    /** How the clipboard shows its items: list / grid (2 columns) / photos (columns sized by the picture). */
+    var clipLayout by mutableStateOf("list")
     var clipHours by mutableStateOf(168)  // hours the unpinned items stay (one week by default); 0 = for ever
     /** A comma straight before a letter inside a word is a slip: it is taken out and the word goes on. */
     var commaSlip by mutableStateOf(false)
@@ -241,7 +243,7 @@ object KeyboardPrefs {
         }
         // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
         if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }
-        haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
+        haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); clipLayout = p.getString("clipLayout", "list") ?: "list"; commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
     fun save(c: Context) {
@@ -256,7 +258,7 @@ object KeyboardPrefs {
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
-            .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putBoolean("dirLayout", dirLayout).putInt("rgb", rgb).putInt("clipKeep", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
+            .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putBoolean("dirLayout", dirLayout).putInt("rgb", rgb).putInt("clipKeep", clipHours).putString("clipLayout", clipLayout).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
 
