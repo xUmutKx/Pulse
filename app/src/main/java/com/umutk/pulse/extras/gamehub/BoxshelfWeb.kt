@@ -133,6 +133,10 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.settings.mediaPlaybackRequiresUserGesture = false
             // the page is laid out for its own sizes: the phone's font size setting must not make the writing bigger than the boxes
             w.settings.textZoom = 100
+            // a long press selects nothing (the blue selection) and opens no system menu
+            w.isLongClickable = false
+            w.setOnLongClickListener { true }
+            w.isHapticFeedbackEnabled = false
             w.settings.allowFileAccess = false
             w.settings.allowContentAccess = false
             w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit() }, { settings() }), "PulseHost")

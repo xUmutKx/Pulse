@@ -1570,11 +1570,11 @@ function showSpread(anim){
 function rdTurn(d){const n=rd.pages.length;let i=rd.i===0?(d>0?1:0):rd.i+d*2;if(i<1)i=0;if(i>=n)return void play_("error");rd.i=i;showSpread(true);play_("page")}
 // Pulse: two taps on the chosen box open it: the case swings open, then the disc comes out (what Inspect does with a game's box, here for the apps of the phone)
 function pulseOpenCase(){if(mode!=="browse")return;openInspect();if(mode!=="inspect")return;const tok=isp.tok;
-  setTimeout(()=>{if(mode==="inspect"&&isp.tok===tok&&isp.state===0)ispAdvance()},900);
-  setTimeout(()=>{if(mode==="inspect"&&isp.tok===tok&&isp.state===1)ispAdvance()},2000)}
+  // the case swings open and stays so (both insides and the disc in its tray); a tap takes the disc out, holding it plays
+  setTimeout(()=>{if(mode==="inspect"&&isp.tok===tok&&isp.state===0)ispAdvance()},900)}
 function ispAdvance(){
   if(rd.open){closeReader();return}
-  isp.tz=1;isp.tpx=isp.tpy=0;
+  isp.tz=window.PulseHost&&innerWidth<innerHeight?.5:1;isp.tpx=isp.tpy=0; /* an upright phone: the opened case is wider than the screen, so it is drawn smaller */
   const el=$("inspect");isp.last=performance.now();
   if(isp.state===0){isp.state=1;el.classList.add("open");isp.ty=Math.round(isp.ty/360)*360+18;isp.tx=-6;play_("caseOpen")}
   else if(isp.state===1){isp.state=2;el.classList.add("out");if(ispSpins()){isp.ty=isp.sy0=isp.ry;isp.tf=0}else isp.ty=Math.round(isp.ty/360)*360;isp.tx=-4;play_("discOut")} /* a disc's spin counts from here (sy0), so it lifts out without a jump */
