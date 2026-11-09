@@ -71,7 +71,6 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.GraphicEq
-import com.umutk.pulse.extras.playlists.OnlinePlaylistsHub
 import com.umutk.pulse.extras.whitenoise.WhiteNoiseHub
 import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
@@ -135,7 +134,6 @@ private sealed interface Lib {
     /** Full pages that replace the library (white noise hub, online playlists hub). */
     object WhiteNoise : Lib
     object AllSounds : Lib
-    object OnlinePlaylists : Lib
     /** The suggestions and the mix maker, each on a page of its own (they were heavy at the bottom of the library list). */
     object Suggestions : Lib
     object MixMaker : Lib
@@ -237,7 +235,6 @@ fun LibraryScreen(
         is Lib.Quick -> quickNames[n.kind]
         Lib.WhiteNoise -> tr("White noise", "Beyaz gürültü")
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
-        Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
         Lib.Radio -> tr("Radio", "Radyo")
         Lib.Suggestions -> tr("Recommendations", "Öneriler")
         Lib.MixMaker -> tr("Mix maker", "Mix yapıcı")
@@ -253,7 +250,6 @@ fun LibraryScreen(
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
-        Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
@@ -278,7 +274,6 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
-                    Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
                     Triple(Icons.Rounded.Radio, Color(0xFFD9785B), Lib.Radio to tr("Radio", "Radyo")),
                     Triple(Icons.Rounded.AutoAwesome, Color(0xFFB65BD9), Lib.Suggestions to tr("Recommendations", "Öneriler")),
                     Triple(Icons.Rounded.Tune, Color(0xFF5BD9B0), Lib.MixMaker to tr("Mix maker", "Mix yapıcı")),
@@ -340,7 +335,7 @@ fun LibraryScreen(
                 )
                 itemsIndexed(hidden) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
-            Lib.WhiteNoise, Lib.AllSounds, Lib.OnlinePlaylists, Lib.Radio -> Unit // shown above
+            Lib.WhiteNoise, Lib.AllSounds, Lib.Radio -> Unit // shown above
             Lib.Playlists -> PlaylistsPage(queue, style, onOpenFile = { node = Lib.M3u(it.path, it.name) }, onOpen = { node = Lib.Playlist(it) })
             is Lib.M3u -> {
                 val l by androidx.compose.runtime.produceState(emptyList<Track>(), n.path) {
