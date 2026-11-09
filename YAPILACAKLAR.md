@@ -2340,3 +2340,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub Raf görünümü tam: kayan raf (coverflow), kutuyu çevirip açma (kapak, kılavuz, disk), ilk kurulum penceresi. (derlenmedi)
 - Game Hub kurulum sihirbazı: 5 adım (hoş geldin, oyunlar, görünüm, kutu resimleri, erişim); yalnızca Game Hub hiç kullanılmamışsa kendiliğinden açılır, Ayarlar > Kurulum ile her zaman açılır. (derlenmedi)
 - Raf: gerçek kasa görünümü (üst bant, gerilen sırt yazısı, kapak/ikon+ad); ayrıntı sayfası dikey düzen: kasa+ad, Aç/Daha fazla, Genel ve Ayarlar sekmeleri (seçili sekmede mavi çizgi yok). (derlenmedi)
+
+## 1.0.381
+- Game Hub raf görünümü, kurulum sihirbazı ve kasa ayrıntıları; ağ türü önce modem tercihini dener; zip hatası düzeltildi; seçici ve söz özellikleri (derlendi, 1.0.381)
