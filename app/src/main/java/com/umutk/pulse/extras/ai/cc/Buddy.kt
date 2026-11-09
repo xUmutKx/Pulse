@@ -551,7 +551,6 @@ private class BuddyView(c: Context, val s: Int, val w: Int, val h: Int) : View(c
 
     override fun onDraw(cv: Canvas) {
         // phone control is being used right now (not just switched on or the service enabled): a small green dot at the top right
-        if (com.claudechat.phone.PhoneControl.inUse()) { p.style = Paint.Style.FILL; p.color = Color.rgb(76, 175, 80); cv.drawCircle(s * 0.86f, s * 0.14f, s * 0.07f, p) }
         val now = SystemClock.uptimeMillis()
         val t = (now - since) / 1000f
         var rot = 0f; var dy = 0f; var dx = 0f; var sx = 1f; var sy = 1f
