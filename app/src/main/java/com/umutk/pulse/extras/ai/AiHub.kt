@@ -363,7 +363,10 @@ private fun SongsWithoutLyrics(busy: Boolean, lang: String, onMake: (com.umutk.p
         }
         if (shown != null && shown.size > 300) Text(tr("Search to find more", "Daha fazlası için ara"), color = T.sub, fontSize = 12.sp)
     }
-}() {
+}
+
+@Composable
+private fun AiMemoryPage() {
     val c = LocalContext.current
     var facts by remember { mutableStateOf(AiMemory.facts(c)) }
     var on by remember { mutableStateOf(AiMemory.on(c)) }

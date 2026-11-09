@@ -75,7 +75,6 @@ private fun Head(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 14.d
 @Composable
 private fun Empty(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 6.dp, bottom = 6.dp), color = T.sub, fontSize = 13.sp)
 
-@Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun Entry(file: File, folder: String, date: String, onClick: () -> Unit, onLong: () -> Unit = {}) {
