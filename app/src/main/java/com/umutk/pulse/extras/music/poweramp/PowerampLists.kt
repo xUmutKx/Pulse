@@ -208,17 +208,23 @@ fun LibraryScreen(
     val root = remember(tracks) {
         tracks.map { dirOf(it.path) }.reduceOrNull(::commonDir) ?: ""
     }
-    // every page fades and rises in when it opens (the list arrives with its contents)
-    val enter = remember { Animatable(0f) }
-    LaunchedEffect(node) { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
+    // a page you open fades and rises in; going back (or coming back to the library) shows the page at once, no black frame and no fade
+    val enter = remember { Animatable(1f) }
+    var stepBack by remember { mutableStateOf(false) }
+    var mounted by remember { mutableStateOf(false) }
+    LaunchedEffect(node) {
+        if (!mounted || stepBack) { mounted = true; stepBack = false; enter.snapTo(1f) }
+        else { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
+    }
+    fun goBack(to: Lib) { stepBack = true; node = to }
     BackHandler(enabled = node != Lib.Root) {
-        node = when (val n = node) {
+        goBack(when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
             is Lib.Folder -> Lib.Folders
             is Lib.Playlist, is Lib.M3u -> Lib.Playlists
             is Lib.Group -> Lib.Cat(n.kind)
             else -> Lib.Root
-        }
+        })
     }
     val title = when (val n = node) {
         Lib.Root -> tr("Library", "Kütüphane")
@@ -255,7 +261,7 @@ fun LibraryScreen(
     Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (node != Lib.Root) {
-                IconButton(onClick = { node = Lib.Root }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
+                IconButton(onClick = { goBack(Lib.Root) }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
             }
             Text(title, color = fg, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (node == Lib.Songs) {
