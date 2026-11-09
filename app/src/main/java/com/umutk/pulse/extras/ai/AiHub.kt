@@ -406,7 +406,9 @@ private fun AiSettingsDialog(onClose: () -> Unit) {
     var buddyOn by remember { mutableStateOf(AiBuddyService.enabled(c)) }
     var bar by remember { mutableStateOf(AiBuddyService.barStyle(c)) }
     var buddySettings by remember { mutableStateOf(false) }
+    var sortOpen by remember { mutableStateOf(false) }
     if (buddySettings) AiBuddySettingsDialog { buddySettings = false; AiBuddyService.live?.refresh() }
+    if (sortOpen) PhotoSortDialog { sortOpen = false }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFF161616)).padding(vertical = 20.dp)) {
             Text(tr("Settings", "Ayarlar"), color = AiInk, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
@@ -431,24 +433,13 @@ private fun AiSettingsDialog(onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth().clickable { buddySettings = true }.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 PIcon("settings", AiInk, 20.dp); Text(tr("Mascot settings", "Maskot ayarları"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
             }
+            Row(Modifier.fillMaxWidth().clickable { sortOpen = true }.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("photos", AiInk, 20.dp); Text(tr("Sort the pictures", "Fotoğrafları sırala"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+            }
             TextButton(onClose, Modifier.align(Alignment.End).padding(end = 12.dp)) { Text(tr("Done", "Tamam"), color = AiAccent) }
         }
     }
 }
-
-/** A picture for the vision model: its name and its bytes as a JPEG no larger than 768 pixels (the model shrinks it anyway, so this is quicker). */
-private fun pictureFrom(c: Context, u: Uri): Pair<String, ByteArray>? = runCatching {
-    val name = c.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "picture"
-    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    c.contentResolver.openInputStream(u)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
-    var sample = 1
-    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 768) sample *= 2
-    val bmp = c.contentResolver.openInputStream(u)?.use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return@runCatching null
-    val out = java.io.ByteArrayOutputStream()
-    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, out)
-    bmp.recycle()
-    name to out.toByteArray()
-}.getOrNull()
 
 /** A text file for the chat: its name and up to 12 000 characters of it. */
 private fun readAttachment(c: Context, u: Uri): Pair<String, String>? = runCatching {
