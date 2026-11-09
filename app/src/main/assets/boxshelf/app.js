@@ -538,6 +538,8 @@ function updateInfo(){pvBackSchedule();
     if(es&&!(filterBy&&filterBy!=="all")){const b=document.createElement("button");b.type="button";b.className="empty-set";b.textContent=es.kind==="steam"?`Press ${okWord()} to open Steam settings`:`Press ${okWord()} to open ${es.name} settings and add a games folder`;b.addEventListener("click",()=>play());$("gMeta").appendChild(b)}
     renderHints();return}
   $("gTitle").textContent=g.title;
+  // Pulse's apps: the app's own icon beside the title (the cover is the game's own picture, never the icon)
+  if(g.pulse&&g.art&&g.art.appIcon){const im=document.createElement("img");im.className="g-ico";im.alt="";im.src=g.art.appIcon;$("gTitle").prepend(im)}
   const raw=rawItem(),meta=raw&&raw!==g?["Surprise pick · "+(raw.pick.sh||shelves[raw.pick.shelf]).name,...metaFor(g).slice(0,2),rerollWord()]:metaFor(g);
   const m=$("gMeta");m.innerHTML="";meta.forEach(t=>{const sp=document.createElement("span");sp.textContent=t;m.appendChild(sp)});
   const rise=[{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"none"}],ro={duration:450,easing:"cubic-bezier(.22,.9,.25,1)"};
@@ -1259,7 +1261,7 @@ function play(){
   // the built-in intro plays (runBoot without a video)
   if(vid){runBoot(s,()=>launchNow(g));return}
   // Pulse: the held disc goes into a console at the bottom (spins, its sound), the screen goes dark and the game starts, as a game's disc does
-  if(g.pulse){runInsert(Object.assign({},s,{id:"ps5",emulatorName:"Pulse"}),g,null,false);launchNow(g,true);return}
+  if(g.pulse){runInsert(Object.assign({},s,{id:"ps5",emulatorName:"Pulse"}),g,()=>launchNow(g),false);return}
   if(g.kind==="rom"&&s.insertAnim!==false){runInsert(s,g,null,false);launchNow(g,true);return}
   if(boot){runBoot(s,()=>launchNow(g));return}
   launchNow(g);
