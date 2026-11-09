@@ -431,6 +431,8 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         val top = flat.tops.getOrNull(matches[cur]) ?: 0
         scope.launch { list.animateScrollToItem(items.second.getOrElse(top) { 0 }) }
     }
+    // typing a word takes you to its first place at once; no hit says so ("Not found"), also for words that are inside a table
+    LaunchedEffect(matches, findOn) { if (findOn && query.isNotBlank() && matches.isNotEmpty() && cur < 0) gotoMatch(0) }
     fun save(copy: Boolean) {
         commit()
         val wr = try { w.writer() } catch (e: Exception) { toast(e.message ?: "Save failed"); return }
@@ -543,7 +545,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         Column(Modifier.fillMaxSize().imePadding()) {
             if (findOn) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 PField(query, { query = it; cur = -1 }, tr("Find", "Bul"), Modifier.weight(1f), onDone = { gotoMatch(cur + 1) })
-                Text(if (matches.isEmpty()) "0" else "${cur + 1}/${matches.size}", color = theme.pal.ink, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
+                Text(if (matches.isEmpty()) (if (query.isBlank()) "0" else tr("Not found", "Bulunamadı")) else "${cur + 1}/${matches.size}", color = theme.pal.ink, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
                 Text("Aa", color = if (OfFind.case) theme.pal.accent else theme.pal.ink.copy(alpha = .6f), fontSize = 14.sp, fontWeight = if (OfFind.case) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { OfFind.case = !OfFind.case; cur = -1 }.padding(horizontal = 8.dp, vertical = 6.dp))
                 Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(32.dp).clickable { gotoMatch(if (cur < 0) -1 else cur - 1) }.padding(4.dp), theme.pal.ink)

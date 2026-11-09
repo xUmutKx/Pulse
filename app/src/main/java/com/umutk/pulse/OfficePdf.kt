@@ -467,7 +467,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         if (findOn) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             PField(query, { query = it }, tr("Find", "Bul"), Modifier.weight(1f), onDone = { gotoHit(curHit + 1) })
             val busy = scanned < p.count && query.isNotBlank()
-            Text(if (hits.isEmpty()) (if (busy) "${scanned}/${p.count}" else "0") else "${curHit + 1}/${hits.size}${if (hits.size >= 5000) "+" else ""}${if (busy) " …" else ""}",
+            Text(if (hits.isEmpty()) (if (busy) "${scanned}/${p.count}" else if (query.isBlank()) "0" else tr("Not found", "Bulunamadı")) else "${curHit + 1}/${hits.size}${if (hits.size >= 5000) "+" else ""}${if (busy) " …" else ""}",
                 color = theme.pal.ink, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 6.dp))
             Text("Aa", color = if (OfFind.case) theme.pal.accent else theme.pal.ink.copy(alpha = .6f), fontSize = 14.sp, fontWeight = if (OfFind.case) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable { OfFind.case = !OfFind.case }.padding(horizontal = 8.dp, vertical = 6.dp))
