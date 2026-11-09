@@ -25,6 +25,8 @@ object LyricsIndex {
     private val lock = Any()
     // one background pass at a time (two scans must not read the same songs twice)
     private val pass = Mutex()
+    // songs whose lyrics changed since they were read (made, edited, found): the index reads them again on its next pass
+    private val stale = HashSet<String>()
 
     private fun file(c: Context) = File(c.filesDir, "lyrics_index.gz")
 
@@ -64,19 +66,32 @@ object LyricsIndex {
      */
     suspend fun ensure(c: Context, tracks: List<Track>, read: (String) -> String?) = withContext(Dispatchers.IO) {
         pass.withLock {
-            val todo = synchronized(lock) { load(c); tracks.map { it.path }.filter { it !in text } }
+            val todo = synchronized(lock) { load(c); tracks.map { it.path }.filter { it !in text || it in stale } }
             var n = 0
             for (p in todo) {
                 // the file is read outside the lock, so a search is never waiting for it
                 val s = runCatching { read(p) }.getOrNull().orEmpty()
                 synchronized(lock) {
                     text[p] = s
+                    stale.remove(p)
                     if (++n % 200 == 0) save(c)
                 }
             }
             if (n > 0) synchronized(lock) { save(c) }
         }
     }
+
+    /**
+     * Whether [path] has lyrics, as the index knows it: true or false, or null when the song has not been read yet (or its lyrics changed since).
+     * Instant: it never opens a song file. Everything that asks "has this song lyrics?" (the lists, the batch, the picker) asks here first.
+     */
+    fun status(c: Context, path: String): Boolean? = synchronized(lock) {
+        load(c)
+        if (path in stale) null else text[path]?.isNotEmpty()
+    }
+
+    /** The lyrics of [path] changed: the old answer is dropped, and the next pass reads the song again. */
+    fun changed(path: String) { synchronized(lock) { stale.add(path) } }
 
     /** Lyrics written next to or inside [path] as the index knows them (empty before the first pass). */
     fun has(path: String): Boolean = synchronized(lock) { text[path]?.isNotEmpty() == true }
