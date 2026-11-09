@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 class PulseApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
+        CrashSaver.install(this)
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
         CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
         // the ads start (play build) and Premium is checked with Google Play, so a reinstall gets it back
