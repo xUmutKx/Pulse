@@ -106,6 +106,15 @@ fun PlayerLyrics(
         var edited by remember(title, artist) { mutableStateOf<LyricsResult?>(null) }
         var aiRun by remember(title, artist) { mutableStateOf(false) }
         val aiOk = localPath != null && com.umutk.pulse.extras.ai.aiSupported && com.umutk.pulse.extras.music.MusicSettings.aiLyrics(ctx)
+        // the lyrics service finished this song (the AI window may have been closed meanwhile, or Back pressed): its lyrics appear here
+        val aiTick = com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick
+        val aiStart = remember { com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick }
+        androidx.compose.runtime.LaunchedEffect(aiTick) {
+            if (aiTick > aiStart && localPath != null && com.umutk.pulse.extras.lyrics.LyricsBatchJob.lastPath == localPath) {
+                val t = com.umutk.pulse.extras.lyrics.LyricsBatchJob.lastLrc
+                if (t.isNotEmpty()) Lyrics.fromText(t, "ai")?.let { edited = it } else pickRev++
+            }
+        }
         var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
         var style by remember { mutableIntStateOf(0) }
         var pull by remember { mutableFloatStateOf(0f) }

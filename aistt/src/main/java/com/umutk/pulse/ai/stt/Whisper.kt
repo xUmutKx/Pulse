@@ -56,7 +56,7 @@ object AudioDecode {
      * The song as 16 kHz mono chunks of [chunkSec] seconds. Each chunk goes to [onChunk] as soon as it is decoded, so a long song is never held in
      * memory whole (a few minutes of floats is all that is kept at a time). [onProgress] gets 0..1 of the song.
      */
-    fun pcm16kChunks(c: Context, uri: Uri, chunkSec: Int = 240, onProgress: (Float) -> Unit = {}, onChunk: (FloatArray) -> Unit) {
+    fun pcm16kChunks(c: Context, uri: Uri, chunkSec: Int = 240, onProgress: (Float) -> Unit = {}, onDuration: (Long) -> Unit = {}, onChunk: (FloatArray) -> Unit) {
         val ex = MediaExtractor()
         try {
             ex.setDataSource(c, uri, null)
@@ -64,6 +64,7 @@ object AudioDecode {
             ex.selectTrack(track)
             val fmt = ex.getTrackFormat(track)
             val durUs = if (fmt.containsKey(MediaFormat.KEY_DURATION)) fmt.getLong(MediaFormat.KEY_DURATION) else 0L
+            onDuration(durUs / 1000L)
             val codec = MediaCodec.createDecoderByType(fmt.getString(MediaFormat.KEY_MIME)!!)
             try {
                 codec.configure(fmt, null, null, 0)
