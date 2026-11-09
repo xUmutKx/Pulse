@@ -296,7 +296,8 @@ private fun AiLyricsButton(path: String, title: String, artist: String, onLyrics
     var welcome by remember { mutableStateOf(false) }
     var running by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
-    if (!com.umutk.pulse.extras.ai.aiSupported) return
+    // Pulse AI lyrics are removed: this button never shows
+    return
     // the lyrics service finished this song while the window was closed: the lyrics appear here
     val aiTick = LyricsBatchJob.doneTick
     val aiStart = remember { LyricsBatchJob.doneTick }

@@ -105,7 +105,8 @@ fun PlayerLyrics(
         // lyrics the person edited or made with Pulse AI: shown at once, before the song's file is read again
         var edited by remember(title, artist) { mutableStateOf<LyricsResult?>(null) }
         var aiRun by remember(title, artist) { mutableStateOf(false) }
-        val aiOk = localPath != null && com.umutk.pulse.extras.ai.aiSupported && com.umutk.pulse.extras.music.MusicSettings.aiLyrics(ctx)
+        // Pulse AI lyrics are removed: no AI button, no AI run (the lyrics search and the editor stay)
+        val aiOk = false
         // the lyrics service finished this song (the AI window may have been closed meanwhile, or Back pressed): its lyrics appear here
         val aiTick = com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick
         val aiStart = remember { com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick }
