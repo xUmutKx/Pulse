@@ -798,7 +798,13 @@ fun GameHubHub(onBack: () -> Unit) {
     }
     var themeOpen by remember { mutableStateOf(false) }
     val pal = palOf(theme, ctx)
-    var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
+    // 0 home, 1 library, 2 settings. The start page is only what the Settings chip says: going Back from the shelf to Home used to save Home as the start, so
+    // every later start stopped at the welcome page and the library had to be opened again (one reset of the old saved value)
+    var page by remember {
+        val p = prefs(ctx)
+        if (!p.getBoolean("startFix", false)) p.edit().putInt("start", 1).putBoolean("startFix", true).apply()
+        mutableStateOf(p.getInt("start", 1))
+    }
     var filter by remember { mutableStateOf(0) }                              // library: 0 all, 1 installed, 2 hidden
     var games by remember { mutableStateOf(GameHubState.games ?: emptyList()) }
     var hidden by remember { mutableStateOf(hiddenSet(ctx)) }
@@ -859,7 +865,7 @@ fun GameHubHub(onBack: () -> Unit) {
         }
     }
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
-    fun go(p: Int) { page = p; prefs(ctx).edit().putInt("start", p).apply(); scope.launch { drawer.close() } }
+    fun go(p: Int) { page = p; scope.launch { drawer.close() } }
     fun setTheme(k: String) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
     // back on the screen: the games shown for their start are hidden again
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
