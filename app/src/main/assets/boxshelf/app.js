@@ -1300,7 +1300,7 @@ function openInspect(){uiCrumb("Inspect");
   }}catch(err){gl=false;console.warn("3D inspect failed",err);api.log&&api.log("3D inspect failed: "+(err&&err.stack||err))}
   // the CSS case is only drawn without WebGL; don't decode its scans (or generate a back) when it's hidden
   if(!gl){$("ispFront").src=front;$("ispManual").src=rdSrc((g.art&&g.art.manual&&g.art.manual[0])||front);$("ispBack").src=backUrl(g)}else["ispFront","ispManual","ispBack"].forEach(id=>$(id).removeAttribute("src"));
-  if(gl&&!(g.art&&g.art.manual&&g.art.manual.length)&&g.kind==="rom"&&Inspect3D.setManual)makeBooklet(g).then(u=>{if(u&&u[0]&&curGame()===g&&isp.tok===tok&&mode==="inspect")Inspect3D.setManual(u[0])},()=>{}); // only into this same open: a late booklet from a closed Inspect stays off another game's case
+  if(gl&&!(g.art&&g.art.manual&&g.art.manual.length)&&(g.kind==="rom"||g.pulse)&&Inspect3D.setManual)makeBooklet(g).then(u=>{if(u&&u[0]&&curGame()===g&&isp.tok===tok&&mode==="inspect")Inspect3D.setManual(u[0])},()=>{}); // only into this same open: a late booklet from a closed Inspect stays off another game's case
   el.classList.toggle("gl",gl);
   // anything still hidden from an earlier inspect that isn't this game's box comes back (fading)
   mounted().forEach(o=>{if(o!==slots[sel]||!gl)unhold(o.el,true)});
