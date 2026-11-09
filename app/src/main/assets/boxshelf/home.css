@@ -1,0 +1,68 @@
+/* In-game Home menu (renderer/home.html). Two layouts: a guide panel on the left (default) or a centred card. */
+:root{--ink:#f3f5fb;--dim:rgba(243,245,251,.6);--line:rgba(255,255,255,.12);--accent:#9d8cff;--ui:'Lexend',system-ui,'Segoe UI',sans-serif}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:var(--ui);color:var(--ink);user-select:none;-webkit-user-select:none;cursor:none}
+*{box-sizing:border-box}
+
+/* the game behind is dimmed, never blurred (a window can't sample another app's pixels) */
+.dim{position:fixed;inset:0;background:radial-gradient(ellipse at 70% 50%,rgba(0,0,0,.25),rgba(0,0,0,.6));opacity:0;transition:opacity .28s}
+body.open .dim{opacity:1}
+
+.panel{position:fixed;left:0;top:0;bottom:0;width:min(520px,36vw);min-width:380px;display:flex;flex-direction:column;padding:34px 30px 26px;
+  background:linear-gradient(180deg,rgba(14,16,26,.97),rgba(8,9,15,.97));border-right:1px solid var(--line);box-shadow:30px 0 80px rgba(0,0,0,.55);
+  transform:translateX(-104%);transition:transform .34s cubic-bezier(.2,.9,.2,1)}
+.panel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,transparent,var(--accent),transparent);opacity:.8}
+body.open .panel{transform:none}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.clock{font-size:15px;letter-spacing:.06em;color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums;text-transform:none}
+
+.now{display:flex;gap:18px;align-items:flex-end;margin:26px 0 18px}
+.cover{flex:none;width:112px;aspect-ratio:.71;border-radius:8px;overflow:hidden;background:#1b1d27;box-shadow:0 18px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.meta{min-width:0}
+.sys{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.title{font-size:26px;font-weight:600;line-height:1.15;margin:6px 0 8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.time{font-size:13px;color:var(--dim)}
+
+.paused{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin:0 0 14px;letter-spacing:.04em}
+.paused i{width:8px;height:8px;border-radius:2px;background:linear-gradient(90deg,var(--ink) 0 35%,transparent 35% 65%,var(--ink) 65%)}
+body:not(.is-paused) .paused{visibility:hidden}
+
+.items{display:flex;flex-direction:column;gap:6px;flex:1}
+.item{position:relative;display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:14px;color:var(--dim);font-size:17px;font-weight:500;overflow:hidden;transition:background .18s,color .18s,transform .18s}
+.item svg{width:24px;height:24px;flex:none;opacity:.85}
+.item .sub{margin-left:auto;font-size:12px;color:inherit;opacity:.7;font-weight:400}
+.item.sel{background:rgba(255,255,255,.94);color:#0e1018;transform:translateX(4px);box-shadow:0 10px 30px rgba(0,0,0,.35),-6px 0 0 -2px var(--accent)}
+.item.sel svg{opacity:1}
+.item.danger.sel{background:#ffe9e9}
+.item .hold{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(229,72,77,.28)}
+.sep{height:1px;background:var(--line);margin:8px 6px}
+
+.foot{display:flex;gap:18px;font-size:12px;color:var(--dim);padding-top:16px;border-top:1px solid var(--line)}
+.foot b{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;margin-right:6px;border-radius:11px;background:rgba(255,255,255,.12);color:var(--ink);font-size:11px}
+
+/* layout B: a centred card */
+body.layout-center .panel{left:50%;top:50%;bottom:auto;width:min(760px,80vw);height:auto;max-height:86vh;border-radius:24px;border:1px solid var(--line);
+  transform:translate(-50%,-46%) scale(.96);opacity:0;transition:transform .3s cubic-bezier(.2,.9,.2,1),opacity .22s}
+body.layout-center.open .panel{transform:translate(-50%,-50%);opacity:1}
+body.layout-center .panel::before{display:none}
+body.layout-center .items{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+body.layout-center .item{flex-direction:column;align-items:flex-start;gap:20px;padding:18px;min-height:112px;border:1px solid var(--line)}
+body.layout-center .item.sel{transform:translateY(-3px)}
+body.layout-center .item .sub{margin-left:0}
+body.layout-center .sep{display:none}
+
+/* confirmation toasts after an action (shown even when the menu is closed) */
+.toast{position:fixed;left:50%;top:6vh;transform:translate(-50%,-20px);padding:12px 20px 12px 16px;border-radius:999px;background:rgba(10,12,20,.92);border:1px solid var(--line);
+  box-shadow:0 18px 40px rgba(0,0,0,.5);font-size:15px;font-weight:500;display:flex;align-items:center;gap:10px;opacity:0;transition:opacity .25s,transform .3s cubic-bezier(.2,.9,.2,1)}
+.toast::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.panel,.toast,.dim{transition:none}}
+/* Power sub-list and the shelf version of the menu */
+.subhead{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:2px 6px 8px}
+body.in-power .items{animation:subIn .22s cubic-bezier(.2,.9,.2,1)}
+@keyframes subIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+body.shelf .paused{display:none}
+body.shelf .now{margin-bottom:22px}
+.foot b.guide{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:0 8px}
+.item.sel .hold{background:linear-gradient(90deg,rgba(229,72,77,.45),rgba(229,72,77,.7));border-right:3px solid #e5484d}

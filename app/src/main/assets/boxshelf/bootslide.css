@@ -1,0 +1,148 @@
+/* The boot slide: when you press Play, a full screen in the console's own colours with its wordmark, the game's
+   cover and title and a progress line, each console with its own moving background (all original designs).
+   It stays until the game's window is up. GameCube keeps its disc-into-the-cube animation instead. */
+.insert.slide > :not(.ins-slide){display:none!important}
+.ins-slide{position:absolute;inset:0;display:none;overflow:hidden;color:var(--bs-ink);background:var(--bs-bg);
+  --bs-ink:#fff;--bs-dim:rgba(255,255,255,.7);--bs-acc:#9d8cff;--bs-bg:#0b0d1f;--bs-cover-shadow:rgba(0,0,0,.55)}
+.insert.slide .ins-slide{display:block}
+.bs-fx{position:absolute;inset:0;pointer-events:none}
+.bs-fx i,.bs-fx svg{position:absolute;display:block}
+
+/* layout: the cover on the left, the words on the right, centred together */
+.bs-row{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:clamp(32px,5vw,90px);padding:0 8vw}
+.bs-cover{flex:none;height:min(52vh,60vw);aspect-ratio:var(--bs-ratio,.71);border-radius:8px;overflow:hidden;
+  box-shadow:0 30px 70px var(--bs-cover-shadow),0 0 0 1px rgba(255,255,255,.12);transform:perspective(1400px) rotateY(14deg) translateX(-30px) scale(.94);opacity:0}
+.bs-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.ins-slide.no-cover .bs-cover{display:none}
+.bs-text{min-width:0;max-width:44vw;opacity:0;transform:translateX(24px)}
+.bs-boot{font:600 12px/1 var(--ui);letter-spacing:.32em;text-transform:uppercase;color:var(--bs-dim);margin-bottom:18px}
+.bs-word .wm-main{font-size:clamp(46px,6.2vw,96px)!important;filter:none}
+.bs-word .wm-tag{display:none}
+.bs-logo{display:block;max-height:14vh;max-width:36vw;object-fit:contain}
+.bs-title{margin-top:26px;font:700 clamp(24px,2.6vw,40px)/1.15 var(--ui);letter-spacing:-.01em;overflow-wrap:anywhere}
+.bs-emu{margin-top:10px;font:500 14px/1.3 var(--ui);color:var(--bs-dim)}
+.bs-bar{margin-top:30px;width:min(320px,30vw);height:3px;border-radius:3px;background:color-mix(in srgb,var(--bs-ink) 16%,transparent);overflow:hidden}
+.bs-bar i{display:block;height:100%;width:0;border-radius:3px;background:var(--bs-acc);box-shadow:0 0 12px var(--bs-acc)}
+.insert.slide.go .bs-bar i{animation:bsload 3.8s .2s cubic-bezier(.4,.1,.4,1) forwards,bsHeld 1.6s 4.2s ease-in-out infinite}
+@keyframes bsHeld{50%{opacity:.55}}
+
+/* entrance */
+.insert.slide.go .bs-cover{animation:bsCoverIn .9s .25s cubic-bezier(.2,.8,.2,1) forwards}
+.insert.slide.go .bs-text{animation:bsTextIn .8s .45s cubic-bezier(.2,.8,.2,1) forwards}
+.insert.slide.go .ins-slide{animation:bsBgIn .5s ease-out both}
+@keyframes bsCoverIn{to{opacity:1;transform:perspective(1400px) rotateY(8deg) translateX(0) scale(1)}}
+@keyframes bsTextIn{to{opacity:1;transform:none}}
+@keyframes bsBgIn{from{opacity:0;filter:brightness(1.6)}to{opacity:1;filter:none}}
+@keyframes bsload{from{width:0}to{width:100%}}
+@keyframes bsSpin{to{transform:rotate(360deg)}}
+@keyframes bsDrift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes bsRise{from{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}to{transform:translateY(-110vh);opacity:0}}
+@keyframes bsRing{from{transform:translate(-50%,-50%) scale(.2);opacity:.8}to{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes bsPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.9}50%{transform:translate(-50%,-50%) scale(1.12);opacity:1}}
+@keyframes bsSweep{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(260%) skewX(-20deg)}}
+
+/* ---- Wii: bright white room, soft blue rings breathing out from behind the words ---- */
+.ins-slide.bs-wii{--bs-bg:radial-gradient(ellipse 80% 70% at 50% 45%,#ffffff,#e6ebf2 70%,#d3dae4);--bs-ink:#3b414b;--bs-dim:#7d8592;--bs-acc:#34bdf2;--bs-cover-shadow:rgba(40,60,90,.28)}
+.bs-wii .bs-word .wm-main{background:linear-gradient(180deg,#9aa1ab,#6c737e);-webkit-background-clip:text;background-clip:text}
+.bs-wii .bs-fx i{left:62%;top:50%;width:46vh;height:46vh;border-radius:50%;border:2px solid rgba(52,189,242,.45);animation:bsRing 3.6s cubic-bezier(.2,.6,.3,1) infinite}
+.bs-wii .bs-fx i:nth-child(2){animation-delay:1.2s}.bs-wii .bs-fx i:nth-child(3){animation-delay:2.4s}
+.bs-wii .bs-fx i:nth-child(4){border:0;width:70vh;height:70vh;background:radial-gradient(circle,rgba(52,189,242,.16),transparent 65%);animation:bsPulse 4s ease-in-out infinite}
+
+/* ---- Wii U: deep blue, a sheet of light sweeping across, a fine dot grid ---- */
+.ins-slide.bs-wiiu{--bs-bg:linear-gradient(135deg,#0c9fe0,#0a6fc2 55%,#08458a);--bs-acc:#ffffff;--bs-dim:rgba(255,255,255,.75)}
+.bs-wiiu .bs-word .wm-main{background:#fff;-webkit-background-clip:text;background-clip:text}
+.bs-wiiu .bs-fx i:nth-child(1){inset:0;background:radial-gradient(circle,rgba(255,255,255,.18) 1px,transparent 1.6px) 0 0/22px 22px;mask:linear-gradient(180deg,transparent,#000 40%,#000 70%,transparent)}
+.bs-wiiu .bs-fx i:nth-child(2){top:-20%;bottom:-20%;left:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);animation:bsSweep 3.2s 0.4s cubic-bezier(.5,0,.3,1) infinite}
+
+/* ---- Switch: red, two rounded halves slide in from the sides and snap together, then glow ---- */
+.ins-slide.bs-sw{--bs-bg:radial-gradient(ellipse 80% 70% at 50% 40%,#ff2a3b,#e60012 55%,#a3000d);--bs-acc:#ffffff;--bs-dim:rgba(255,255,255,.8);--bs-cover-shadow:rgba(80,0,0,.45);--bs-ratio:.62}
+.bs-sw .bs-word .wm-main{background:#fff;-webkit-background-clip:text;background-clip:text}
+.bs-sw .bs-fx i:nth-child(1),.bs-sw .bs-fx i:nth-child(2){top:50%;width:13vh;height:52vh;margin-top:-26vh;border-radius:7vh;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.bs-sw .bs-fx i:nth-child(1){left:calc(50% - 13vh);border-radius:7vh 2vh 2vh 7vh;transform:translateX(-60vw)}
+.bs-sw .bs-fx i:nth-child(2){left:50%;border-radius:2vh 7vh 7vh 2vh;transform:translateX(60vw)}
+.insert.slide.go .bs-sw .bs-fx i:nth-child(1),.insert.slide.go .bs-sw .bs-fx i:nth-child(2){animation:bsSnap .55s .05s cubic-bezier(.3,1.5,.5,1) forwards,bsSnapOut .6s .9s ease-in forwards}
+.bs-sw .bs-fx i:nth-child(3){left:50%;top:50%;width:80vh;height:80vh;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 60%);transform:translate(-50%,-50%) scale(0);opacity:0}
+.insert.slide.go .bs-sw .bs-fx i:nth-child(3){animation:bsFlash .9s .55s ease-out forwards}
+.insert.slide.go .bs-sw .bs-cover{animation-delay:.95s}.insert.slide.go .bs-sw .bs-text{animation-delay:1.1s}
+@keyframes bsSnap{to{transform:translateX(0)}}
+@keyframes bsSnapOut{to{transform:scale(.6);opacity:0}}
+@keyframes bsFlash{0%{transform:translate(-50%,-50%) scale(.2);opacity:1}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+
+/* ---- PSP: black, thin silver waves rolling slowly ---- */
+.ins-slide.bs-psp{--bs-bg:radial-gradient(ellipse 90% 70% at 50% 60%,#16171d,#000 75%);--bs-acc:#d9dcea;--bs-ratio:.585}
+.bs-psp .bs-word .wm-main{background:linear-gradient(180deg,#fff,#a9adbb);-webkit-background-clip:text;background-clip:text}
+.bs-psp .bs-fx svg,.bs-ps3 .bs-fx svg{left:0;top:52%;width:200%;height:40%;animation:bsDrift 14s linear infinite;overflow:visible}
+.bs-psp .bs-fx svg:nth-child(2),.bs-ps3 .bs-fx svg:nth-child(2){top:56%;animation-duration:21s;opacity:.7}
+.bs-psp .bs-fx svg:nth-child(3),.bs-ps3 .bs-fx svg:nth-child(3){top:48%;animation-duration:31s;opacity:.45}
+.bs-psp .bs-fx path{fill:none;stroke:rgba(225,228,240,.55);stroke-width:1.4}
+
+/* ---- PS3: midnight blue, glowing ribbons of light flowing behind ---- */
+.ins-slide.bs-ps3{--bs-bg:radial-gradient(ellipse 90% 70% at 50% 40%,#173a7a,#0a1c44 50%,#030814);--bs-acc:#9cc9ff;--bs-ratio:.8}
+.bs-ps3 .bs-word .wm-main{background:linear-gradient(180deg,#fff,#b9d4ff);-webkit-background-clip:text;background-clip:text}
+.bs-ps3 .bs-fx path{fill:none;stroke:rgba(170,210,255,.5);stroke-width:2.5;filter:drop-shadow(0 0 6px rgba(140,190,255,.8))}
+
+/* ---- PS2: near-black blue, soft particles of light rising ---- */
+.ins-slide.bs-ps2{--bs-bg:radial-gradient(ellipse 80% 70% at 50% 70%,#0d2160,#040a22 55%,#000);--bs-acc:#7f9cff}
+.bs-ps2 .bs-word .wm-main{background:linear-gradient(180deg,#fff,#9fb0ff);-webkit-background-clip:text;background-clip:text}
+/* ---- PS4: blue, drifting bokeh lights ---- */
+.ins-slide.bs-ps4{--bs-bg:radial-gradient(ellipse 80% 70% at 30% 30%,#2b64d6,#0d2f7a 50%,#04102e);--bs-acc:#bcd6ff;--bs-ratio:.8}
+.bs-ps4 .bs-word .wm-main{background:#fff;-webkit-background-clip:text;background-clip:text}
+.bs-ps2 .bs-fx i,.bs-ps4 .bs-fx i{bottom:-10vh;width:1.4vh;height:1.4vh;border-radius:50%;background:rgba(160,190,255,.8);box-shadow:0 0 12px rgba(140,170,255,.9);animation:bsRise 7s linear infinite}
+.bs-ps4 .bs-fx i{width:5vh;height:5vh;background:rgba(200,220,255,.12);box-shadow:none;filter:blur(2px);animation-duration:11s}
+
+/* ---- Xbox 360: the green slide. A bright orb in the middle with rings rolling out ---- */
+.ins-slide.bs-x360{--bs-bg:radial-gradient(circle at 50% 50%,#9be86a 0,#3fb13f 18%,#127a12 45%,#063806 80%,#021a02);--bs-acc:#d8ffc8;--bs-dim:rgba(235,255,230,.8);--bs-cover-shadow:rgba(0,30,0,.5)}
+.bs-x360 .bs-word .wm-main{background:#fff;-webkit-background-clip:text;background-clip:text}
+.bs-x360 .bs-fx i{left:50%;top:50%;width:60vh;height:60vh;border-radius:50%;border:3px solid rgba(220,255,200,.35);animation:bsRing 2.8s ease-out infinite}
+.bs-x360 .bs-fx i:nth-child(2){animation-delay:.93s}.bs-x360 .bs-fx i:nth-child(3){animation-delay:1.86s}
+.bs-x360 .bs-fx i:nth-child(4){border:0;width:40vh;height:40vh;background:radial-gradient(circle,rgba(240,255,220,.55),rgba(160,240,120,.15) 45%,transparent 70%);animation:bsPulse 2.4s ease-in-out infinite}
+
+/* ---- GameCube: deep indigo; a translucent purple cube tumbles in, lands with a bounce and glows ---- */
+.ins-slide.bs-gc{--bs-bg:radial-gradient(ellipse 85% 75% at 62% 45%,#4a35a8,#24186a 45%,#0c0828 85%);--bs-acc:#c7b8ff;--bs-dim:rgba(225,215,255,.78);--bs-cover-shadow:rgba(10,0,40,.55)}
+.bs-gc .bs-word .wm-main{background:linear-gradient(180deg,#fff,#cbbfff);-webkit-background-clip:text;background-clip:text}
+/* the cube: one hexagon, its three faces shaded by a conic gradient (top light, right mid, left dark), like the boot cube */
+.bs-gc .bs-fx i:nth-child(1),.bs-gc .bs-fx i:nth-child(2){left:89%;top:46%;width:24vh;height:27.7vh;margin:-13.85vh 0 0 -12vh;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);opacity:0}
+.bs-gc .bs-fx i:nth-child(1){background:conic-gradient(from -60deg at 50% 50%,rgba(215,200,255,.5) 0 120deg,rgba(150,120,245,.42) 120deg 240deg,rgba(95,68,200,.48) 240deg 360deg);filter:drop-shadow(0 0 22px rgba(170,140,255,.55))}
+/* the second piece isn't used (an outline here drew stray lines in some renderers) */
+.bs-gc .bs-fx i:nth-child(2){display:none}
+.insert.slide.go .bs-gc .bs-fx i:nth-child(1),.insert.slide.go .bs-gc .bs-fx i:nth-child(2){animation:bsCubeIn 1.15s .1s cubic-bezier(.3,1.35,.5,1) forwards,bsCubeFloat 4s 1.4s ease-in-out infinite}
+/* a soft glow behind and a shadow on the "floor" under the cube */
+.bs-gc .bs-fx i:nth-child(3){left:89%;top:46%;width:80vh;height:80vh;border-radius:50%;background:radial-gradient(circle,rgba(170,140,255,.32),transparent 62%);transform:translate(-50%,-50%) scale(.3);opacity:0}
+.insert.slide.go .bs-gc .bs-fx i:nth-child(3){animation:bsGlowIn 1s .9s ease-out forwards,bsPulse 4s 1.9s ease-in-out infinite}
+.bs-gc .bs-fx i:nth-child(4){left:89%;top:calc(46% + 18vh);width:21vh;height:4vh;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,20,.55),transparent 70%);transform:translate(-50%,-50%) scale(.2);opacity:0}
+.insert.slide.go .bs-gc .bs-fx i:nth-child(4){animation:bsShadowIn 1.15s .1s cubic-bezier(.3,1.35,.5,1) forwards}
+@keyframes bsCubeIn{0%{opacity:0;transform:translateY(-40vh) rotate(-270deg) scale(.35)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes bsCubeFloat{0%,100%{opacity:1;transform:translateY(0)}50%{opacity:1;transform:translateY(-1.2vh)}}
+@keyframes bsGlowIn{to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes bsShadowIn{to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+
+/* ---- anything else (PC, apps, a console without its own look): the shelf's colours ---- */
+.ins-slide.bs-other{--bs-bg:radial-gradient(ellipse 80% 70% at 50% 40%,var(--bs-t0),var(--bs-t1) 75%)}
+.bs-other .bs-fx i{left:50%;top:50%;width:70vh;height:70vh;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--bs-acc) 30%,transparent),transparent 65%);animation:bsPulse 4s ease-in-out infinite}
+
+@media (prefers-reduced-motion:reduce){.ins-slide *{animation-duration:.01s!important;animation-iteration-count:1!important}}
+/* the same for Boxshelf's own Reduce motion setting (body.reduce-motion), which the rest of the app follows */
+body.reduce-motion .ins-slide *{animation-duration:.01s!important;animation-iteration-count:1!important}
+/* keep the words readable over the bright middle of the Xbox orb */
+.bs-x360 .bs-title,.bs-x360 .bs-emu,.bs-x360 .bs-boot{text-shadow:0 2px 14px rgba(0,40,0,.6)}
+.bs-x360 .bs-word .wm-main{filter:drop-shadow(0 3px 12px rgba(0,50,0,.45))!important}
+.bs-x360 .bs-fx i:nth-child(4){left:34%}
+
+/* a dark band along the bottom edge, so a taskbar that peeks over the screen while the emulator starts doesn't flash against a bright slide */
+.ins-slide::after{content:"";position:absolute;left:0;right:0;bottom:0;height:9vh;background:linear-gradient(180deg,transparent,rgba(0,0,0,.55));pointer-events:none}
+.ins-slide.bs-wii::after{background:linear-gradient(180deg,transparent,rgba(40,50,70,.35))}
+/* no brightness flash on entry (it made the whole screen repaint while Windows was rearranging windows) */
+.insert.slide.go .ins-slide{animation:bsBgIn2 .45s ease-out both}
+@keyframes bsBgIn2{from{opacity:0}to{opacity:1}}
+
+/* ---- 3DS: bright white with Nintendo red; the two screens of the clamshell open out behind the words and glow ---- */
+.ins-slide.bs-n3ds{--bs-bg:radial-gradient(ellipse 85% 75% at 50% 45%,#ffffff,#eef0f4 65%,#d9dde5);--bs-ink:#2c3038;--bs-dim:#737a87;--bs-acc:#e60012;--bs-cover-shadow:rgba(60,20,30,.28)}
+.bs-n3ds .bs-word .wm-main{background:linear-gradient(180deg,#ff3d4f,#c4000f);-webkit-background-clip:text;background-clip:text}
+.bs-n3ds .bs-fx i:nth-child(1),.bs-n3ds .bs-fx i:nth-child(2){left:50%;border-radius:2.2vh;background:linear-gradient(160deg,rgba(255,255,255,.9),rgba(230,233,240,.6));box-shadow:0 0 0 1.4vh rgba(230,0,18,.07),inset 0 0 0 2px rgba(230,0,18,.22),0 20px 50px rgba(60,20,30,.08);opacity:0}
+.bs-n3ds .bs-fx i:nth-child(1){top:8vh;width:66vh;height:40vh;margin-left:-33vh;transform-origin:50% 100%;transform:perspective(900px) rotateX(-80deg)}
+.bs-n3ds .bs-fx i:nth-child(2){top:50vh;width:54vh;height:40vh;margin-left:-27vh}
+.insert.slide.go .bs-n3ds .bs-fx i:nth-child(2){animation:bsBgIn .5s .05s ease-out forwards}
+.insert.slide.go .bs-n3ds .bs-fx i:nth-child(1){animation:bs3dsOpen .9s .25s cubic-bezier(.25,1.3,.5,1) forwards}
+.bs-n3ds .bs-fx i:nth-child(3){left:50%;top:28vh;width:90vh;height:90vh;border-radius:50%;background:radial-gradient(circle,rgba(230,0,18,.12),transparent 62%);transform:translate(-50%,-50%);animation:bsPulse 3.4s ease-in-out infinite}
+.bs-n3ds .bs-fx i:nth-child(4){display:none}
+@keyframes bs3dsOpen{to{opacity:1;transform:perspective(900px) rotateX(0)}}
