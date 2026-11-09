@@ -167,7 +167,7 @@ fun AiHub(onBack: () -> Unit) {
         var bubble by remember { mutableStateOf<String?>(null) }
         LaunchedEffect(pose) { if (pose != null) { delay(2600); pose = null; bubble = null } }
         val hellos = listOf(tr("Hi!", "Selam!"), tr("I am here", "Buradayım"), tr("Go on, ask me", "Hadi sor bakalım"), tr("I run on your phone", "Telefonunda çalışıyorum"), tr("What shall we do today?", "Bugün ne yapıyoruz?"))
-        if (mascotOpen) MascotSheet(look, { look = it; MascotStyle.save(c, it) }) { mascotOpen = false }
+        if (mascotOpen) MascotSheet(look, { look = it; MascotStyle.save(c, it); AiBuddyService.live?.refresh() }) { mascotOpen = false }
         // the screen is AMOLED black, as in the Claude chat
         Column(Modifier.fillMaxSize().background(AiBg).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

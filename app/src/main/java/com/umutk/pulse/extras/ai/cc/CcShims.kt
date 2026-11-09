@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.core.content.ContextCompat
 import com.umutk.pulse.R
 import com.umutk.pulse.extras.ai.AiLive
+import com.umutk.pulse.extras.ai.MascotStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /*
@@ -106,6 +107,7 @@ object Prefs {
 
     @Synchronized fun init(c: Context) {
         if (this::buddyX.isInitialized) return
+        CcLook.app = c.applicationContext
         sp = c.applicationContext.getSharedPreferences("ai_buddy", Context.MODE_PRIVATE)
         bashColor = S("bashColor", "current")
         black = B("black", false)
@@ -191,8 +193,22 @@ object AppState { val foreground = MutableStateFlow(false) }
 object ChatLauncher { fun open(c: Context) { AiLive.openChat(c) } }
 
 /** One orange mascot: no outfit, no body colour, no clothes. */
-object Outfit { fun skinMatrix(): FloatArray? = null; fun hat(): Int = 0; fun scene(): Int = 0 }
-object Wear { fun worn(@Suppress("UNUSED_PARAMETER") sleep: Boolean): List<Int> = emptyList() }
+/** The look chosen in Pulse AI's mascot sheet (MascotStyle): hat, body colour, face, eyes, shoes, trousers, body extra, scene, move. */
+object CcLook {
+    lateinit var app: Context
+    fun now(): MascotStyle.Look = MascotStyle.load(app)
+}
+
+object Outfit {
+    fun skinMatrix(name: String = CcLook.now().skin, hue: Float = 0f): FloatArray? = MascotStyle.skinMatrix(name, hue)
+    fun hat(): Int = MascotStyle.hatRes(CcLook.app, CcLook.now().hat)
+    fun scene(): Int = MascotStyle.sceneRes(CcLook.app, CcLook.now().scene)
+}
+
+object Wear {
+    /** The layers worn now (bottom to top); asleep the face and the eye colour are left off, as the closed eyes need. */
+    fun worn(sleep: Boolean): List<Int> = CcLook.now().let { MascotStyle.layers(CcLook.app, if (sleep) it.copy(face = "none", eyes = "dark") else it) }
+}
 object Mascots {
     fun r(id: Int): Int = id
     fun pc(@Suppress("UNUSED_PARAMETER") alt: Boolean): List<Int> = listOf(R.drawable.cc_mascot18)

@@ -116,7 +116,14 @@ class AiBuddyService : Service() {
     private fun show(st: com.umutk.pulse.extras.ai.cc.Status, det: String, last: String) {
         lastSt = st; lastDet = det; lastText = last
         com.umutk.pulse.extras.ai.cc.Prefs.buddyOn.value = enabled(this)
+        syncLook()
         overlay?.render(style(), st, det, last)
+    }
+
+    /** The chosen look (hat, colour, clothes, scene, move) reaches the parts of the overlay that read their own settings. */
+    private fun syncLook() {
+        val l = MascotStyle.load(this); val P = com.umutk.pulse.extras.ai.cc.Prefs
+        P.mascotSkin.value = l.skin; P.mascotPose.value = if (l.move == "none") "idle" else l.move; P.sceneInPill.value = if (l.scene == "none") "0" else "1"
     }
 
     /** Settings (the look, the style) changed: the overlay is drawn again. */
