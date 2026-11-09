@@ -60,8 +60,12 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
             }
             "cover" -> {
                 val pkg = parts.getOrNull(1) ?: return null
-                val f = coverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+                val f = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(f))
+            }
+            "hero" -> {
+                val pkg = parts.getOrNull(1) ?: return null
+                WebResourceResponse("image/jpeg", null, FileInputStream(steamHeroFile(c, pkg).takeIf { it.isFile } ?: return null))
             }
             else -> null
         }
@@ -76,15 +80,20 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val times = runCatching { playTimes(c, 30) }.getOrDefault(emptyMap())
         val used = runCatching { usageOf(c, 30) }.getOrDefault(emptyMap())
         val arr = JSONArray()
-        loadGames(c).forEach { g ->
-            val hasCover = coverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
+        // the same rule as the library: a hidden game shows only while "show hidden games" is on (hiding itself stays Game Hub's: pm hide, shown for its start)
+        val showHidden = prefs(c).getBoolean("showHidden", true)
+        loadGames(c).filter { showHidden || it.pkg !in hidden }.forEach { g ->
+            val hasCover = coverFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
+                .put("hero", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         return arr.toString()
     }
+    /** The case style of the shelf: the id of one of Boxshelf's own cases (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...). */
+    @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
     @JavascriptInterface fun back() { android.os.Handler(android.os.Looper.getMainLooper()).post { onBack() } }

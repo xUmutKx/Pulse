@@ -12,8 +12,13 @@
   const entry = g => ({
     kind: 'app', id: 'app-' + g.pkg, appId: g.pkg, title: g.name, path: g.pkg, pulse: true,
     hidden: !!g.hidden, minutes: Math.round((g.playMs || 0) / 60000), lastPlayed: g.lastUsed ? g.lastUsed / 1000 : 0,
-    art: Object.assign({ icon: g.icon }, g.cover ? { front: g.cover } : {}),
+    art: Object.assign({ icon: g.icon }, g.cover ? { front: g.cover } : {}, g.hero ? { hero: g.hero } : {}),
   });
+  // the look of the cases: the id of one of Boxshelf's own case styles (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...), chosen in Game Hub
+  const sid = () => { try { return (H.caseStyle && H.caseStyle()) || 'pc'; } catch (e) { return 'pc'; } };
+  const shelf = () => [{ id: sid(), kind: 'apps', name: 'Games', games: list().map(entry) }];
+  // the heading of the shelf, whatever case style it wears
+  window.PULSE_WORDMARKS = Object.fromEntries(['pc', 'custom', 'ps5', 'ps4', 'ps3', 'ps2', 'x360', 'sw', 'sw2', 'gc', 'wii', 'wiiu', 'psp', 'n3ds'].map(k => [k, ['Games', 'On this phone']]));
   api.platform = { os: 'android', caps: {} };
   // one shelf only (all the games): its tab bar has nothing to choose and lay over the boxes; the key hints (Enter, V, Q E...) mean nothing on a touch phone
   const st = document.createElement('style');
@@ -21,8 +26,8 @@
   document.head.appendChild(st);
   // the page's sounds start with the first touch (a sound context may only begin on one)
   addEventListener('pointerdown', () => { try { window.Sound && Sound.warm && Sound.warm(); } catch (e) {} }, { once: true, capture: true });
-  api.scan = async () => [{ id: 'games', kind: 'apps', name: 'Games', games: list().map(entry) }];
-  api.cachedLibrary = async () => [{ id: 'games', kind: 'apps', name: 'Games', games: list().map(entry) }];
+  api.scan = async () => shelf();
+  api.cachedLibrary = async () => shelf();
   api.launchApp = async appId => { H.launch(String(appId)); return {}; };
   api.pulseDetails = pkg => H.details(String(pkg));
   api.quit = async () => { H.back(); return true; };
