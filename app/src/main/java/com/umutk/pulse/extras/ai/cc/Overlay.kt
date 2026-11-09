@@ -209,11 +209,11 @@ class Overlay(base: Context) {
             val faces = Mascots.pc(alt).map { d(it) }
             val body: android.graphics.drawable.Drawable = if (faces.size == 1) faces[0] else android.graphics.drawable.LayerDrawable(faces.toTypedArray())
             if (hat == 0) return body
-            return android.graphics.drawable.LayerDrawable(arrayOf(body, h(hat)))
+            return android.graphics.drawable.LayerDrawable(listOfNotNull(body, h(hat)).toTypedArray())
         }
         if (errFace) { // error: crossed-out eyes
             val x = d(R.drawable.cc_mascot_x18)
-            return if (hat == 0) x else android.graphics.drawable.LayerDrawable(arrayOf(x, h(hat)))
+            return if (hat == 0) x else android.graphics.drawable.LayerDrawable(listOfNotNull(x, h(hat)).toTypedArray())
         }
         val blanket = sleep && Prefs.buddyBlanket.value == "1"   // asleep under its blanket, like the buddy
         val worn = Wear.worn(sleep)
