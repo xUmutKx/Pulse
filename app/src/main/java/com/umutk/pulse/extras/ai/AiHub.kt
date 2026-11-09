@@ -328,7 +328,12 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
         }
     }
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (msgs.isEmpty()) Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            PixelMascot(Modifier.size(120.dp, 80.dp))
+            Text(tr("Ask anything", "Ne istersen sor"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
+            Text(if (busy) tr("Working…", "Çalışıyor…") else tr("Idle", "Boşta"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        }
+        else LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(msgs) { m ->
                 Box(Modifier.fillMaxWidth(), contentAlignment = if (m.user) Alignment.CenterEnd else Alignment.CenterStart) {
                     SelectionContainer {
@@ -339,11 +344,15 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
             }
         }
         attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", T.sub, 16.dp); Text(n, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("document", T.text, 22.dp) }
-            PField(input, { input = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { send() })
-            if (busy) Box(Modifier.size(44.dp).clickable { job?.cancel(); busy = false }, contentAlignment = Alignment.Center) { PIcon("stop", Look.accent, 22.dp) }
-            else Box(Modifier.size(44.dp).clickable { send() }, contentAlignment = Alignment.Center) { PIcon("forward", Look.accent, 22.dp) }
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 14.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(28.dp)).background(T.text.copy(alpha = .06f)).padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 8.dp)) {
+            PField(input, { input = it }, tr("Message", "Mesaj"), Modifier.fillMaxWidth(), onDone = { send() })
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("add", T.text, 22.dp) }
+                Spacer(Modifier.weight(1f))
+                if (busy) Box(Modifier.size(40.dp).clip(CircleShape).background(Look.accent).clickable { job?.cancel(); busy = false }, contentAlignment = Alignment.Center) { PIcon("stop", onAccent(Look.accent), 18.dp) }
+                else Box(Modifier.size(40.dp).clip(CircleShape).background(Look.accent).clickable { send() }, contentAlignment = Alignment.Center) { PIcon("forward", onAccent(Look.accent), 20.dp) }
+            }
         }
     }
 }
@@ -402,4 +411,17 @@ fun AiLyricsDialog(path: String, title: String, artist: String, onDone: (String?
         } },
         confirmButton = { TextButton({ onDone(null) }) { Text(if (err != null) tr("Close", "Kapat") else tr("Hide", "Gizle")) } },
         dismissButton = if (err == null) ({ TextButton({ com.umutk.pulse.extras.lyrics.LyricsBatchJob.cancel(c); onDone(null) }) { Text(tr("Stop", "Durdur")) } }) else null)
+}
+
+/** The small pixel mascot of the chat (drawn in the accent colour, as in the Claude chat). */
+@Composable
+private fun PixelMascot(modifier: Modifier) {
+    val col = Look.accent
+    androidx.compose.foundation.Canvas(modifier) {
+        val u = size.width / 12f
+        fun box(x: Int, y: Int, w: Int, h: Int, c: androidx.compose.ui.graphics.Color) = drawRect(c, androidx.compose.ui.geometry.Offset(x * u, y * u), androidx.compose.ui.geometry.Size(w * u, h * u))
+        box(3, 1, 6, 4, col); box(1, 2, 2, 2, col); box(9, 2, 2, 2, col)
+        box(4, 2, 1, 1, Color(0xFF222222)); box(7, 2, 1, 1, Color(0xFF222222))
+        box(3, 5, 1, 2, col); box(5, 5, 1, 2, col); box(7, 5, 1, 2, col); box(9, 5, 1, 2, col)
+    }
 }
