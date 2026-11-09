@@ -5,18 +5,20 @@ import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 
-/** Per-theme icon packs from assets/icons/<theme>/<key>.png; null when the pack has no file for that key. */
+/** Per-theme icon packs from assets/icons/<theme>/<key>.webp (or .png); null when the pack has no file for that key. */
 object ThemeIcons {
     private val cache = HashMap<String, ImageBitmap?>()
 
     fun bitmap(context: Context, themeId: String, key: String): ImageBitmap? {
-        val path = "icons/$themeId/$key.png"
-        if (!cache.containsKey(path)) {
-            cache[path] = runCatching {
-                context.assets.open(path).use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+        // the picture is a WebP (lossless, same pixels as the PNG it came from); a PNG is still read when there is only that
+        val key0 = "icons/$themeId/$key"
+        if (!cache.containsKey(key0)) {
+            cache[key0] = runCatching {
+                (runCatching { context.assets.open("$key0.webp") }.getOrElse { context.assets.open("$key0.png") })
+                    .use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
             }.getOrNull()
         }
-        return cache[path]
+        return cache[key0]
     }
 }
 
