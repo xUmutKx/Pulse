@@ -12,7 +12,7 @@
   const entry = g => ({
     kind: 'app', id: 'app-' + g.pkg, appId: g.pkg, title: g.name, path: g.pkg, pulse: true,
     hidden: !!g.hidden, minutes: Math.round((g.playMs || 0) / 60000), lastPlayed: g.lastUsed ? g.lastUsed / 1000 : 0,
-    art: Object.assign({ icon: g.icon }, g.cover ? { front: g.cover } : {}, g.hero ? { hero: g.hero } : {}),
+    art: Object.assign({ icon: g.icon }, { front: g.cover || g.hero || g.icon }, g.hero ? { hero: g.hero } : {}),
   });
   // the look of the cases: the id of one of Boxshelf's own case styles (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...), chosen in Game Hub
   const sid = () => { try { return (H.caseStyle && H.caseStyle()) || 'pc'; } catch (e) { return 'pc'; } };

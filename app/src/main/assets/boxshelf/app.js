@@ -1304,7 +1304,7 @@ function openInspect(){uiCrumb("Inspect");
   el.classList.toggle("gl",gl);
   // anything still hidden from an earlier inspect that isn't this game's box comes back (fading)
   mounted().forEach(o=>{if(o!==slots[sel]||!gl)unhold(o.el,true)});
-  if(!gl)el.classList.add("on");el.setAttribute("aria-hidden","false");renderIspHints();sfx.flip();
+  if(!gl)el.classList.add("on");el.setAttribute("aria-hidden","false");renderIspHints();sfx.flip();pulseSideBoxes();
   cancelAnimationFrame(isp.raf);isp.lt=0;isp.raf=requestAnimationFrame(ispLoop);
 }
 // (beta.10) the game whose Details were open when Inspect or the quick menu came over them: backing out of those (Back, Esc,
@@ -1568,6 +1568,19 @@ function showSpread(anim){
   if(rd.i>=2)rdImage(rd.pages[rd.i-2]);
 }
 function rdTurn(d){const n=rd.pages.length;let i=rd.i===0?(d>0?1:0):rd.i+d*2;if(i<1)i=0;if(i>=n)return void play_("error");rd.i=i;showSpread(true);play_("page")}
+// Pulse, held upright: the next few games of the shelf stand at the right, so the others are still in sight beside the open case; a tap on one goes there
+function pulseSideBoxes(){
+  if(!window.PulseHost)return;
+  let box=document.getElementById("ispSide");
+  if(!box){box=document.createElement("div");box.id="ispSide";box.addEventListener("pointerdown",e=>e.stopPropagation());$("inspect").appendChild(box)}
+  const items=cur()?cur().items:[];
+  const pick=[];for(let k=1;k<=4&&sel+k<items.length;k++){if(items[sel+k]&&(items[sel+k].pulse||isGame(items[sel+k])))pick.push(sel+k)}
+  const portrait=innerWidth<innerHeight&&mode==="inspect"&&pick.length>0;
+  box.hidden=!portrait;
+  if(!portrait){box.innerHTML="";return}
+  box.innerHTML=pick.map(i=>{const g=items[i],a=g.art||{},src=a.front||a.hero||a.icon||"";return `<button type="button" data-i="${i}"><img alt="" src="${src}"><span></span></button>`}).join("");
+  box.querySelectorAll("button").forEach((b,k)=>{b.querySelector("span").textContent=items[pick[k]].title||"";b.onclick=e=>{e.stopPropagation();const i=+b.dataset.i;closeInspect();go(i)}});
+}
 // Pulse: two taps on the chosen box open it: the case swings open, then the disc comes out (what Inspect does with a game's box, here for the apps of the phone)
 function pulseOpenCase(){if(mode!=="browse")return;openInspect();if(mode!=="inspect")return;const tok=isp.tok;
   // the case swings open and stays so (both insides and the disc in its tray); a tap takes the disc out, holding it plays
