@@ -177,9 +177,3 @@ body.bs-still .sel-halo,body.bs-still .theme-fx i{animation-play-state:paused}
 *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 html,body,#app{-webkit-user-select:none;user-select:none}
 :focus{outline:none}
-/* Pulse, held upright: the next games stand at the right of the open case, in a column (tap one to go there) */
-#ispSide{position:absolute;right:0;top:0;bottom:0;width:30vw;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:12px max(10px,env(safe-area-inset-right,0px)) 12px 0;z-index:6;background:linear-gradient(90deg,transparent,rgba(0,0,0,.45) 40%)}
-#ispSide[hidden]{display:none}
-#ispSide button{all:unset;display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:center}
-#ispSide img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,.5)}
-#ispSide span{font-size:11px;color:#dfe6f2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
