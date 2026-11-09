@@ -305,6 +305,14 @@ private fun AiSpeechPage() {
         if (busy) return
         busy = true; result = ""
         scope.launch {
+            // the lyrics search first (the net, kept beside the song); the AI listens only when nothing is found
+            val online = withContext(Dispatchers.IO) { runCatching { com.umutk.pulse.extras.lyrics.Lyrics.forTrack(c, t.title.orEmpty(), t.artist.orEmpty(), t.album, 0L, t.path) }.getOrNull() }
+            if (online != null) {
+                com.umutk.pulse.extras.lyrics.LyricsStatus.forget(t.path)
+                result = tr("Lyrics found for ${t.title ?: t.path}", "${t.title ?: t.path} için sözler bulundu")
+                busy = false
+                return@launch
+            }
             val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
             val r = runCatching { Transcriber.lrc(c, androidx.core.content.FileProvider.getUriForFile(c, c.packageName + ".files", java.io.File(t.path)), lang, t.title, t.artist) { s, f -> stage = s; frac = f } }
             poll.cancel(); busy = false

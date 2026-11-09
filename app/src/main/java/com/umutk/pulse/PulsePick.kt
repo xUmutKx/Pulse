@@ -183,7 +183,10 @@ private object PickThumbs {
                 android.graphics.BitmapFactory.decodeFile(f.path, o)
                 var sample = 1
                 while (o.outWidth / (sample * 2) >= px && o.outHeight / (sample * 2) >= px) sample *= 2
-                android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+                val raw = android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+                // a camera photo is stored as the sensor saw it and marked with how to turn it: the thumbnail is turned the same way
+                val deg = when (runCatching { android.media.ExifInterface(f.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+                if (raw != null && deg != 0f) android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, android.graphics.Matrix().apply { postRotate(deg) }, true) else raw
             }
             ext in VID -> if (android.os.Build.VERSION.SDK_INT >= 29) android.media.ThumbnailUtils.createVideoThumbnail(f, android.util.Size(px + 32, px + 32), null)
                 else android.media.MediaMetadataRetriever().let { r -> try { r.setDataSource(f.path); r.frameAtTime } finally { r.release() } }
