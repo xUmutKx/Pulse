@@ -2044,6 +2044,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val lm = if (!fast && KeyboardPrefs.neural && lower.length >= 2 && !stretched && !keepCase) NeuralLm.get(this, nnLang) else null
         val nnScore = HashMap<String, Float>()
         var nnFix: KeyboardDictionary.Cand? = null
+        val nnT0 = System.nanoTime()
         if (lm != null) runCatching {
             // the model knows capitals and punctuation: the text before goes in as it is, and every word is weighed in the case it would be written in
             val cased = lm.cased()
@@ -2059,9 +2060,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // sentences, this took the mended ones from 69% to 83% and the wrong mends from 20% to 12%, the synthetic test from 82% to 85% (clean words: 0.1%)
             fun mine(w: String) = NN_USER * kotlin.math.ln(KeyboardDictionary.userCount(w) + 1f) / kotlin.math.ln(2f) +
                 NN_FREQ * codes.maxOf { KeyboardDictionary.baseScore(it, w) } / kotlin.math.ln(2f)
-            for (cd in pool) nnScore[cd.word] = lm.score(stt, form(cd.word)) - NN_LAM * cd.cost + mine(cd.word)
-            for (cd in comp) if (cd.word != lower && cd.word !in nnScore) nnScore[cd.word] = lm.score(stt, form(cd.word)) - NN_COMP + mine(cd.word)
+            // the typed word first: a near word that cannot come within NN_SLACK bits of the best so far (or of the lowest the typed word could be beaten at)
+            // is dropped as soon as its letters have made it too unlikely, so most near words cost one or two steps of the model, not the whole word
             val typedLm = lm.score(stt, form(lower)) + mine(lower)
+            var top = typedLm - 4f
+            fun weigh(w: String, pen: Float): Float {
+                val m = mine(w)
+                val sc = lm.score(stt, form(w), top - NN_SLACK + pen - m) - pen + m
+                if (sc > top) top = sc
+                return sc
+            }
+            for (cd in pool) nnScore[cd.word] = weigh(cd.word, NN_LAM * cd.cost)
+            for (cd in comp) if (cd.word != lower && cd.word !in nnScore) nnScore[cd.word] = weigh(cd.word, NN_COMP)
             val listed = codes.any { KeyboardDictionary.inLexicon(it, lower) }
             val best = pool.maxByOrNull { nnScore.getValue(it.word) }
             if (best != null) {
@@ -2072,6 +2082,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if ((lower.length >= 3 || diacriticOnly) && nnScore.getValue(best.word) > typedLm + margin) nnFix = best
             }
         }
+        if (lm != null) NeuralLm.took((System.nanoTime() - nnT0) / 1_000_000L)
         val fix = swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0
         val others = (comp.map { it.word } + corr.map { it.word } + nnScore.keys).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
             .let { o -> if (nnScore.isEmpty()) o else o.sortedByDescending { nnScore[it] ?: -1e9f } }
@@ -2099,6 +2110,7 @@ private const val NN_UNKNOWN = 0f
 private const val NN_SHORT = 4f
 private const val NN_USER = 3f
 private const val NN_FREQ = 1f
+private const val NN_SLACK = 4f
 
 /** A picture made of characters (block shading, several lines): not an emoji, so it is left out of the recent list. */
 private fun isArt(s: String): Boolean =
