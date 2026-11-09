@@ -280,11 +280,14 @@ fun ofKindOf(name: String, mime: String? = null): OfKind? {
 fun ofAutoHide(): Pair<Boolean, Modifier> {
     val ctx = LocalContext.current
     val on = remember { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", true) }
-    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // the top block (ribbon) hides itself in landscape only on a phone, where the screen is short; a tablet has the room and keeps it open
+    val phone = cfg.smallestScreenWidthDp < 600
     var shown by remember { mutableStateOf(false) }
     var bump by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     LaunchedEffect(bump, shown) { if (shown) { kotlinx.coroutines.delay(2000); shown = false } }
-    val mod = if (on && land) Modifier.pointerInput(Unit) {
+    val mod = if (on && land && phone) Modifier.pointerInput(Unit) {
         // watches without taking the touch: a press and release that barely moved is a tap
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -297,7 +300,7 @@ fun ofAutoHide(): Pair<Boolean, Modifier> {
             }
         }
     } else Modifier
-    return (on && land && !shown) to mod
+    return (on && land && phone && !shown) to mod
 }
 
 /** Optional own ribbon body per tab name (modern looks only); the Word screen provides its stacked Home ribbon through it. */
