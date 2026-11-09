@@ -331,7 +331,7 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
     val games = remember { loadGames(ctx) }
     var step by remember { mutableStateOf(0) }
     val last = 4
-    var art by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+    var art by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
     var iconMode by remember { mutableStateOf(prefs(ctx).getInt("iconMode", 0)) }
     var busy by remember { mutableStateOf(false) }
     var got by remember { mutableStateOf<Int?>(null) }
