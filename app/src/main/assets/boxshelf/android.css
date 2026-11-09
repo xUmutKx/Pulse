@@ -1,0 +1,168 @@
+/* Android (AYN Thor and other handhelds): added to the Android build only, after the app's own styles.
+   Frosted-glass blur (backdrop-filter) is one of the costliest effects for a phone GPU at 1080p and was the quick
+   menu's lag on the Thor; the panels get a slightly more solid background instead, the same trade the Low
+   performance level makes on PCs. */
+.platform-android *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.platform-android .qm{background:rgba(10,12,20,.94)!important}
+.platform-android .details{background:rgba(8,10,18,.9)}
+.platform-android .settings{background:rgba(8,10,18,.94)}
+.platform-android .sp-card{background:rgba(14,16,24,.94)}
+.platform-android .tabs{background:rgba(14,16,26,.72)}
+.platform-android .mus-room,.platform-android .mus-find,.platform-android .tv-guide{background:rgba(10,12,20,.92)}
+/* Handheld performance level (automatic on Android): the selection glow holds still instead of breathing, and the quick
+   menu keeps its own layer from the start so its first slide-in doesn't flash while Chromium builds it. */
+body.perf-handheld .sel-halo{animation:none!important}
+/* a few seconds without input (body.bs-still, perf-meter.js): decoration holds still, like an unfocused window */
+body.bs-still .sel-halo,body.bs-still .theme-fx i{animation-play-state:paused}
+/* never draw what's hidden: once the museum's opaque room has faded in (.6 s), the shelf under it is no longer drawn; it's
+   back at once on the way out (the museum's own fade out shows it) */
+.platform-android #app.museum-open>:not(#museum):not(#toast){visibility:hidden;transition:visibility 0s .7s}
+.platform-android .qm{will-change:transform}
+/* Swipe-to-go-back arrow (android-touch.js): a small round button that peeks in from the edge under the finger and
+   lights up once letting go would go back. Only transform and opacity ever change, so it never costs a layout. */
+#bsBackSwipe{position:fixed;left:0;top:0;width:56px;height:56px;border-radius:50%;z-index:2147483000;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(18,20,30,.92);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 6px 18px rgba(0,0,0,.45);opacity:0;transform:translate3d(-80px,0,0);contain:strict}
+#bsBackSwipe.live{will-change:transform,opacity}
+#bsBackSwipe.bbs-anim{transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s ease-out}
+#bsBackSwipe svg{position:relative;transform:translateX(-1px)}
+#bsBackSwipe .bbs-ready{position:absolute;inset:0;border-radius:50%;background:var(--cross,#86a8ff);opacity:0;transform:scale(.6);transition:opacity .12s,transform .16s cubic-bezier(.2,.8,.2,1)}
+#bsBackSwipe.on .bbs-ready{opacity:1;transform:scale(1)}
+/* the page reader (outside #app) zooms with two fingers: no browser panning or zooming there */
+.platform-android .lr-stage{touch-action:none}
+/* Details on a phone GPU: the hero picture behind it was a 28 px blur of a full-screen layer, re-blurred whenever the game
+   changed; a small dark copy, scaled up, is already soft without a live filter */
+.platform-android .d-hero-bg{filter:saturate(1.2) brightness(.5)!important}
+/* Shelf on a phone GPU (see glareAndroid in app.js). A case face with a layer of its own inside it (the glare band, the
+   dark film) has to be drawn off-screen first and then onto the screen: one extra render pass per case, every frame,
+   which on the Thor was ~6 extra passes a frame. Only the selected case and its two neighbours (.near), whose band and film
+   actually move or fade, keep those layers; further out they're painted into the face and don't animate. */
+.platform-android .slot:not(.near) .glare,.platform-android .slot:not(.near) .dim{will-change:auto;transition:none}
+/* Animations Chromium can't give the compositor run on the main thread, and while any runs the page restyles every moving
+   case and draws a frame every vsync. Two of those ran on every step: a case out of sight (.far, opacity 0) sliding along
+   with the rest, and the backdrop's delayed visibility switch. A case that stays out of sight now takes its place at once
+   (.gone, app.js place), and the faded-out backdrop is hidden by a class a timer takes off (.bg-out, app.js bgOff). */
+.platform-android .slot.far.gone{transition:opacity .4s}
+.platform-android #bgA,.platform-android #bgB{transition:opacity .8s ease}
+.platform-android #bgA.bg-out,.platform-android #bgB.bg-out{visibility:visible}
+/* Quick menu, Details and Settings on a phone GPU: the shelf steps aside without shrinking. Scaling the 3D scene made
+   Chromium redraw every case face at the new size when the slide ended (and again on the way back); a sideways move of
+   the scene's own layer (kept from the start, so it isn't made in the first frame of the slide) redraws nothing. */
+.platform-android #scene{will-change:transform}
+/* (not while launching: a game started from Details keeps the PC's zoom-out of the scene; and a narrow window keeps the
+   stacked Details layout, where the shelf moves up rather than aside) */
+.platform-android #app.qm-open:not(.launching) #scene,.platform-android #app.details-open:not(.launching) #scene,.platform-android #app.settings-open:not(.launching) #scene{transform:translateX(-17vw)}
+.platform-android #app.qm-open:not(.launching) .sel-halo,.platform-android #app.details-open:not(.launching) .sel-halo{transform:translate(calc(-50% - 17vw),-50%)}
+@media (max-width:760px){.platform-android #app.details-open:not(.launching) #scene{transform:translateY(-22vh) scale(.7)}}
+/* the menu's own layout never spills into the page's: rebuilding its rows on open only lays out the panel */
+.platform-android .qm{contain:size layout style}
+/* on a 6" screen the menu's text was hard to read: everything in it a quarter bigger (the highlight and scrolling are
+   placed from the rows' own offsets, so they follow) */
+.platform-android .qm{zoom:1.25}
+/* (0.3.3) the setup wizard: it filled two thirds of the screen at the PC's size, too small to read on a 6" screen. Now
+   it fills the screen (1440 x 810 layout, 20 px margins) at 1.3x, so every word and choice is about a third bigger */
+.platform-android .su-card{zoom:1.3;width:min(1077px,calc((100vw - 40px) / 1.3));height:min(608px,calc((100vh - 30px) / 1.3))}
+/* (0.3.4) Settings on the handheld, as the mock: two columns (sections | the page), no info column (the focused row
+   explains itself under its name), no group headings over the seven sections, a bigger sidebar */
+.platform-android .bss-root,.platform-android .bss-root.narrow,.platform-android .bss-root.studio,.platform-android .bss-root.studio.narrow{grid-template-columns:330px 1fr 0}
+.platform-android .bss-info{display:none}
+.platform-android .bss-grp{display:none}
+.platform-android .bss-side{padding:40px 0 110px 36px;gap:8px}
+.platform-android .bss-nav{height:58px;font-size:23px;margin-right:18px}
+.platform-android .bss-nav svg{width:27px;height:27px}
+.platform-android .bss-page{padding:40px 56px 118px 48px}
+.platform-android .bss-search{white-space:nowrap;margin-right:18px}
+.platform-android .bss-search .kb{display:none}
+.platform-android .bss-crumb:empty{display:none}
+.platform-android .bss-row .desc{display:none;margin-top:6px;font-size:18.5px;line-height:1.45;color:var(--dim);white-space:normal;max-width:900px}
+.platform-android .bss-row.cur .desc{display:block}
+/* (0.3.4: made to feel like the Thor's own system menu) the console-OS look for Settings: a flat, dark
+   surface (no theme glow, grain or vignette), the system font, square-ish corners, a solid white bar on the selected row
+   and section with dark text on it (no glowing ring), one blue for switches and markers, and the button hints as a flat
+   footer line at the bottom right */
+.platform-android #bss{--acc:#2f7cf6;--acc2:#8ab4ff;--hl:#eceef2;--hlRing:none;--hlGlow:none;--line:rgba(255,255,255,.075);--ink:#f4f5f7;--ink2:#dcdfe6;--dim:#9ea4b0;--faint:#737a87;font-family:Roboto,'Segoe UI',system-ui,sans-serif}
+.platform-android .bss-stage{font-family:Roboto,'Segoe UI',system-ui,sans-serif;letter-spacing:0}
+.platform-android .bss-bg{background:#141518}
+.platform-android .bss-bg::before,.platform-android .bss-bg::after{display:none}
+.platform-android .bss-side{background:#0e0f11;border-right:1px solid rgba(255,255,255,.06)}
+.platform-android .bss-brand{letter-spacing:.14em}
+.platform-android .bss-search{border-radius:8px;box-shadow:none;background:rgba(255,255,255,.06)}
+.platform-android .bss-search.cur{background:#eceef2;color:#121316;box-shadow:none}
+.platform-android .bss-nav{border-radius:6px;font-weight:500}
+.platform-android .bss-nav.on{background:rgba(255,255,255,.07);color:#fff}
+.platform-android .bss-nav.on::before{left:-12px;top:12px;bottom:12px;width:4px;border-radius:2px;background:var(--acc)}
+.platform-android .bss-nav.cur{background:#eceef2;color:#121316;box-shadow:none}
+.platform-android .bss-nav.cur .badge{color:#4b505b}
+.platform-android .bss-title{font-size:42px;letter-spacing:-.01em}
+.platform-android .bss-lead{font-size:18px;-webkit-line-clamp:1}
+.platform-android .bss-head{letter-spacing:.12em;font-size:15px;color:#8a909c}
+.platform-android .bss-head::after{background:rgba(255,255,255,.08)}
+.platform-android .bss-hl{border-radius:6px}
+.platform-android .bss-hl.grab{background:#ffcf7a;box-shadow:none}
+.platform-android .bss-row{border-radius:6px}
+.platform-android .bss-row.cur .nm,.platform-android .bss-row.cur .bss-val,.platform-android .bss-row.cur .bss-val .txt b,.platform-android .bss-row.cur .bss-val .num{color:#111216}
+.platform-android .bss-row.cur .sub,.platform-android .bss-row.cur .desc,.platform-android .bss-row.cur .bss-val .vt,.platform-android .bss-row.cur .bss-val .tv{color:#4b505b}
+.platform-android .bss-row.cur .bss-val .chev,.platform-android .bss-row.cur .bss-val .arr{color:#111216}
+.platform-android .bss-row.cur .bss-sw:not(.on){background:#c7cad1}
+.platform-android .bss-row.cur .bss-st.ok{color:#11753d}.platform-android .bss-row.cur .bss-st.warn,.platform-android .bss-row.cur .bss-st.busy{color:#8a5200}.platform-android .bss-row.cur .bss-st.bad{color:#b3261e}
+.platform-android .bss-row .desc{-webkit-line-clamp:2;display:none;-webkit-box-orient:vertical;overflow:hidden}
+.platform-android .bss-row.cur .desc{display:-webkit-box}
+.platform-android .bss-sw{box-shadow:none}
+.platform-android .bss-sw.on{background:var(--acc)}
+.platform-android .bss-sw i{box-shadow:none}
+.platform-android .bss-bar i{background:var(--acc)}
+.platform-android .bss-ctile{border-radius:8px;background:rgba(255,255,255,.04);box-shadow:none}
+.platform-android .bss-ctile.cur b,.platform-android .bss-ctile.cur em{color:#111216}
+.platform-android .bss-ctile.cur span{color:#4b505b}
+.platform-android .bss-hints{left:330px;right:40px;bottom:22px;justify-content:flex-end}
+.platform-android .bss-pill{border-radius:0;background:none;box-shadow:none;padding:0}
+.platform-android .bss-pill .h{padding:6px 10px;border-radius:6px}
+.platform-android .bss-toast{border-radius:8px}
+/* the same console-OS look for the quick menu (a solid panel: no frosted glass, which was also a full-screen blur for the
+   GPU) and the setup wizard (the focused choice is the solid white bar; the answer picked keeps a blue edge) */
+.platform-android .qm{background:#141518;backdrop-filter:none;-webkit-backdrop-filter:none;font-family:Roboto,'Segoe UI',system-ui,sans-serif}
+.platform-android .qm-hl,.platform-android .qm-row{border-radius:6px}
+.platform-android .qm-act{border-radius:8px}
+.platform-android .qm-act.on{transform:none;box-shadow:none}
+.platform-android .qm-opt{border-radius:6px}
+.platform-android #setup{font-family:Roboto,'Segoe UI',system-ui,sans-serif}
+.platform-android .su-card{border-radius:10px;background:#141518;box-shadow:none;border-color:rgba(255,255,255,.06)}
+.platform-android .su-nav{background:#0e0f11}
+.platform-android .su-step{border-radius:6px}
+.platform-android .su-step.on{background:rgba(255,255,255,.08);box-shadow:inset 4px 0 0 #2f7cf6}
+.platform-android #setup .wz-choice{border-radius:8px;border:2px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+.platform-android #setup .wz-choice.on{border-color:#2f7cf6;background:rgba(47,124,246,.12)}
+.platform-android #setup .wz-choice:hover,.platform-android #setup .wz-choice:focus-visible{background:#eceef2;border-color:#eceef2;color:#111216;outline:none}
+.platform-android #setup .wz-choice:hover span,.platform-android #setup .wz-choice:focus-visible span{color:#4b505b}
+.platform-android #setup .wz-rec{border-radius:4px;background:#2f7cf6;color:#fff}
+.platform-android #setup .btn{border-radius:8px}
+.platform-android .su-title{font-size:32px}
+.platform-android .su-lead{font-size:15.5px;line-height:1.55}
+/* Console bar (app.js renderTabs / placeStrip): only shelves with games, short names, and one strip that slides with a
+   transform to keep the current console centred. No scroll position, so switching shelves never lays the bar out
+   again; a finger drags the strip sideways (pan-y leaves vertical swipes to the page). */
+.platform-android .hud-top>.tabs.tabs-x{overflow:hidden;touch-action:pan-y}
+.platform-android .tab-strip{position:relative;display:flex;gap:2px;flex:0 0 auto;transition:transform .38s cubic-bezier(.22,.8,.24,1);will-change:transform}
+.platform-android .tab-strip.still{transition:none}
+.platform-android .tabs-x .tab{padding:6px 13px;font-size:12.5px}
+/* the bar sits in a fixed middle column: the brand corner changing width from shelf to shelf (a wide logo, a short
+   one) no longer pushes it around, so a shelf switch only moves the pill and the strip. Narrow windows (style.css
+   max-width:760px) keep their own two-row layout, where the bar gets a full row of its own. */
+@media (min-width:761px){
+  .platform-android .hud-top{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+  .platform-android .hud-top>.tabs{max-width:52vw}
+}
+
+/* Box art progress card (android-api.js, card): a small dark note in the corner while art downloads. Fixed, on its own
+   layer and contained, so its text changes never lay out or repaint the shelf; it only fades / slides by opacity and
+   transform. No backdrop blur (that would re-blur the moving shelf behind it every frame on the Thor). */
+.bs-artcard{position:fixed;right:22px;bottom:88px;z-index:25;width:290px;box-sizing:border-box;padding:10px 14px 12px;border-radius:14px;
+  background:rgba(12,14,22,.84);border:1px solid rgba(255,255,255,.09);box-shadow:0 8px 22px rgba(0,0,0,.38);color:#eceff7;
+  font:600 14px/1.3 var(--ui,system-ui),sans-serif;pointer-events:none;opacity:0;transform:translate3d(0,10px,0);
+  transition:opacity .35s ease,transform .35s ease;will-change:opacity,transform;contain:layout paint style}
+.bs-artcard.show{opacity:1;transform:translate3d(0,0,0)}
+.bs-artcard .ac-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.bs-artcard .ac-n{font-variant-numeric:tabular-nums;font-weight:500;opacity:.7;font-size:13px}
+.bs-artcard .ac-t{margin-top:3px;height:17px;font-weight:500;font-size:12.5px;opacity:.62;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bs-artcard .ac-bar{margin-top:8px;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.bs-artcard .ac-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#7fa8ff,#b6cbff);transform-origin:0 50%;transform:scaleX(0);transition:transform .4s ease}

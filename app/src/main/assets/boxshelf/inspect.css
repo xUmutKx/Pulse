@@ -1,0 +1,164 @@
+/* Inspect: turn the case in your hands, open it, take the disc out. */
+.inspect{position:absolute;inset:0;z-index:21;opacity:0;pointer-events:none;transition:opacity .3s;background:#04050a;overflow:hidden;cursor:grab;
+  --cw:300px;--ch:420px;--t:20px;--disc:200px;--case:#16161b;--case-in:#0f0f13;--case-side:#0b0b0e;--accent:#9d8cff}
+.inspect.on{opacity:1;pointer-events:auto;transition:opacity .55s}
+/* real-3D inspect stays on the shelf: the scene shows through, dimmed and softened, and the picked box lifts out of its slot */
+/* The overlay itself never fades in GL mode: the 3D case lives inside it, and fading the whole overlay faded the case
+   too (half see-through as it left the shelf, gone before it landed). Only the dim + blur behind it (::before) and the
+   hints fade, timed with the case's flight (inspect3d.js: .56s out of the shelf, .44s back). */
+.inspect.gl{opacity:1;background:none;transition:none}
+.inspect.gl::before{content:"";position:absolute;inset:0;pointer-events:none;background:rgba(3,4,8,.72);backdrop-filter:blur(9px) saturate(.6) brightness(.75);-webkit-backdrop-filter:blur(9px) saturate(.6) brightness(.75);
+  opacity:0;visibility:hidden;transition:opacity .42s cubic-bezier(.65,0,.35,1),visibility 0s .42s}
+.inspect.gl.on::before{opacity:1;visibility:visible;transition:opacity .52s cubic-bezier(.65,0,.35,1)}
+.inspect.gl>.isp-hud{opacity:0;transition:opacity .2s}
+.inspect.gl.on>.isp-hud{opacity:1;transition:opacity .35s .2s}
+.inspect.gl .ins-bg{display:none}
+body.perf-low .inspect.gl::before{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(3,4,8,.86)}
+body.reduce-motion .inspect.gl::before,body.reduce-motion .inspect.gl.on::before{transition-duration:.18s}
+/* the shelf box the 3D case stands in for. Hidden face by face (opacity on the preserve-3d .box would flatten it):
+   at once when the case takes over / lands exactly on it, fading when the two cross-fade instead */
+.slot.held .face{opacity:0;transition:none}
+.slot.unhold .face{transition:opacity .14s ease-out}
+body.reduce-motion .slot.held .face{transition:opacity .18s}
+#app.inspecting .hints,#app.inspecting .info{opacity:0}
+.inspect.dragging{cursor:grabbing}
+.isp-stage{position:absolute;inset:0;perspective:1700px;perspective-origin:50% 44%;transition:transform .24s,opacity .22s;transform:scale(.84) translateY(24px);opacity:0}
+.inspect.on .isp-stage{transform:none;opacity:1;transition:transform .65s cubic-bezier(.2,.7,.2,1),opacity .45s}
+.inspect.gl .isp-stage{transition:none;transform:none;opacity:1}
+.isp-rot{position:absolute;left:50%;top:44%;width:0;height:0;transform-style:preserve-3d;will-change:transform}
+.isp-face{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.isp-face img{display:block;width:100%;height:100%;object-fit:cover;max-width:none}
+
+.isp-case{position:absolute;left:calc(var(--cw)/-2);top:calc(var(--ch)/-2);width:var(--cw);height:var(--ch);transform-style:preserve-3d;
+  transition:transform .8s cubic-bezier(.3,0,.2,1)}
+.isp-inner{inset:0;transform:translateZ(calc(var(--t)/-2 + 1px));background:var(--case-in);border-radius:4px;box-shadow:inset 0 0 0 calc(var(--cw)*.03) var(--case),inset 0 0 60px rgba(0,0,0,.6)}
+.isp-hub{position:absolute;left:50%;top:50%;width:calc(var(--disc)*.3);height:calc(var(--disc)*.3);transform:translate(-50%,-50%);border-radius:50%;
+  background:repeating-conic-gradient(rgba(255,255,255,.2) 0 10deg,rgba(255,255,255,.05) 10deg 20deg);box-shadow:0 0 0 2px rgba(255,255,255,.1)}
+.isp-ring{position:absolute;left:50%;top:50%;width:calc(var(--disc)*1.05);height:calc(var(--disc)*1.05);transform:translate(-50%,-50%);border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.06)}
+.inspect.cart .isp-hub,.inspect.cart .isp-ring{border-radius:10px;width:calc(var(--disc)*.86);height:calc(var(--disc)*1.08);background:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.08)}
+.isp-backout{inset:0;transform:rotateY(180deg) translateZ(calc(var(--t)/2));background:var(--case);padding:calc(var(--cw)*.022);border-radius:4px}
+.isp-spine{top:0;height:100%;width:var(--t);left:calc(50% - var(--t)/2);transform:rotateY(-90deg) translateZ(calc(var(--cw)/2));background:var(--case)}
+.isp-spine span{position:absolute;inset:6% 0;writing-mode:vertical-rl;display:grid;place-items:center;font-size:calc(var(--t)*.5);font-weight:600;color:#e8e8f0;white-space:nowrap;overflow:hidden}
+.isp-spine img+span{display:none}
+.isp-edge-r{top:0;height:100%;width:var(--t);left:calc(50% - var(--t)/2);transform:rotateY(90deg) translateZ(calc(var(--cw)/2));background:linear-gradient(90deg,var(--case-side),#000)}
+.isp-edge-t,.isp-edge-b{left:0;width:100%;height:var(--t);top:calc(50% - var(--t)/2);background:var(--case-side)}
+.isp-edge-t{transform:rotateX(90deg) translateZ(calc(var(--ch)/2))}
+.isp-edge-b{transform:rotateX(-90deg) translateZ(calc(var(--ch)/2))}
+
+.isp-lid{position:absolute;inset:0;transform-origin:left center;transform-style:preserve-3d;transform:translateZ(calc(var(--t)/2));
+  transition:transform .85s cubic-bezier(.35,0,.15,1.12)}
+.inspect.open .isp-lid{transform:translateZ(calc(var(--t)/2)) rotateY(-163deg)}
+.isp-lid-front{inset:0;background:var(--case);padding:calc(var(--cw)*.022);border-radius:4px}
+.isp-lid-front::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.2),transparent 40%,transparent 80%,rgba(255,255,255,.06))}
+.isp-lid-back{inset:0;transform:rotateY(180deg);background:linear-gradient(90deg,var(--case),var(--case-in));box-shadow:inset 0 0 0 calc(var(--cw)*.03) var(--case);border-radius:4px}
+.isp-manual{position:absolute;left:9%;top:6%;right:9%;bottom:6%;border-radius:3px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+.isp-manual img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.92)}
+.isp-manual::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(255,255,255,.18),transparent 30%,rgba(0,0,0,.12))}
+.isp-lid-back .ins-clip{position:absolute;left:4%;top:18%;width:5%;height:9%;border-radius:2px;background:var(--case)}
+.isp-lid-back .ins-clip.b{top:auto;bottom:18%}
+
+/* disc (or cartridge) */
+.isp-disc{position:absolute;left:calc(var(--disc)/-2);top:calc(var(--disc)/-2);width:var(--disc);height:var(--disc);transform-style:preserve-3d;
+  transform:translateZ(calc(var(--t)/-2 + 4px));transition:transform .95s cubic-bezier(.3,0,.15,1)}
+.isp-disc-top,.isp-disc-bottom{inset:0;border-radius:50%;
+  -webkit-mask:radial-gradient(circle,transparent 0 12.5%,#000 13% 100%);mask:radial-gradient(circle,transparent 0 12.5%,#000 13% 100%)}
+.isp-disc-top{background-color:#d9dce3;background-size:cover;background-position:center;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.isp-disc-top::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,rgba(220,225,235,.9) 0 19%,rgba(255,255,255,.15) 19.5% 22%,transparent 22.5% 97%,rgba(255,255,255,.5) 97.5% 100%),
+             linear-gradient(125deg,rgba(255,255,255,.28),transparent 35%,transparent 65%,rgba(255,255,255,.12))}
+.isp-disc-bottom{transform:rotateY(180deg);
+  background:conic-gradient(from 0deg,#c9cdd6,#e9d8f2,#c8e6f5,#f3eccb,#d6f0d9,#e8d2ea,#c9cdd6),radial-gradient(circle,#e3e6ec 0 22%,#b8bcc6 23% 100%);
+  background-blend-mode:screen}
+.isp-disc-bottom::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,transparent 0 22%,rgba(255,255,255,.25) 23% 24%,transparent 25% 100%),linear-gradient(60deg,transparent 30%,rgba(255,255,255,.55) 48%,transparent 62%)}
+.inspect.out .isp-disc-top{animation:ispSpin 14s linear infinite}
+@keyframes ispSpin{to{transform:rotate(360deg)}}
+.inspect.cart .isp-disc{width:calc(var(--disc)*.78);left:calc(var(--disc)*-.39)}
+.inspect.cart .isp-disc-top,.inspect.cart .isp-disc-bottom{border-radius:10% 10% 6% 6%;-webkit-mask:none;mask:none}
+.inspect.cart .isp-disc-top{background-size:contain;background-repeat:no-repeat;background-color:#26262b}
+.inspect.cart .isp-disc-top::after{border-radius:10% 10% 6% 6%;background:linear-gradient(125deg,rgba(255,255,255,.22),transparent 40%)}
+.inspect.cart .isp-disc-bottom{background:linear-gradient(180deg,#2a2a30,#1b1b20);background-blend-mode:normal}
+.inspect.cart .isp-disc-bottom::after{border-radius:0;background:repeating-linear-gradient(90deg,#c9a24a 0 5%,transparent 5% 9%);top:auto;height:14%;left:12%;right:12%}
+.isp-shell{display:none}
+.inspect.umd .isp-shell{display:block;position:absolute;left:-9%;top:-14%;width:118%;height:128%;border-radius:18% 18% 10% 10%;background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.3);transform:translateZ(-1px)}
+
+.isp-case .isp-face{transition:opacity .6s}
+.inspect.out .isp-case .isp-face{opacity:.35}
+
+/* HUD */
+.isp-hud{position:absolute;left:0;right:0;bottom:max(26px,calc(env(safe-area-inset-bottom,0px) + 14px));display:grid;justify-items:center;gap:12px;pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.isp-title{font-size:clamp(20px,2.4vw,34px);font-weight:500;text-align:center;text-shadow:0 2px 20px rgba(0,0,0,.5)}
+.isp-step{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+.isp-hints{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px;padding:6px 8px;border-radius:999px;background:rgba(10,12,22,.78);border:1px solid var(--line);pointer-events:auto;max-width:100%}
+@media (prefers-reduced-motion:reduce){.isp-case,.isp-lid,.isp-disc{transition-duration:.01s}.inspect.out .isp-disc-top{animation:none}}
+
+/* museum: the whole collection as a shelving wall */
+.museum{position:absolute;inset:0;z-index:20;opacity:0;pointer-events:none;transition:opacity .6s,visibility 0s .6s;visibility:hidden;background:#06070c;will-change:opacity} /* its own layer: the fade runs on the graphics side. Hidden once faded out: a will-change layer at opacity 0 is still drawn, every frame, over the whole screen */
+.museum.on{opacity:1;pointer-events:auto;visibility:visible;transition:opacity .6s,visibility 0s}
+.museum.instant{transition:none} /* starting straight into the museum: black at once, under the start-up logo */
+.mus-gl{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;visibility:hidden;transition:opacity .45s ease-out,visibility 0s .45s}
+.mus-gl.on{opacity:1;visibility:visible;transition:opacity .45s ease-out} /* fades in once the room is ready (see the museum's preparation step) */
+.mus-hud{position:absolute;left:max(clamp(16px,2.4vw,32px),env(safe-area-inset-left,0px));bottom:clamp(64px,10vh,92px);z-index:2;max-width:min(34vw,560px);text-shadow:0 2px 14px rgba(0,0,0,.8)}
+.mus-kicker{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-dim)}
+.mus-title{font-weight:800;font-size:clamp(18px,2.6vw,44px);line-height:1.08;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mus-meta{margin-top:8px;font-size:13px;color:var(--ink-dim);letter-spacing:.06em}
+.mus-hints{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);transform-origin:50% 100%;z-index:2;max-width:96vw}
+/* smaller windows: the caption and button bar shrink with the window instead of covering the shelf */
+@media (max-width:1400px){.mus-hints{transform:translateX(-50%) scale(.88)}}
+@media (max-width:1100px){.mus-hints{transform:translateX(-50%) scale(.76)}.mus-kicker,.mus-meta{font-size:11px}}
+@media (max-height:700px){.mus-hud{bottom:58px}}
+.mus-skip{position:absolute;right:32px;top:30px;z-index:2;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim);opacity:0;transition:opacity .4s}
+.museum.filling .mus-skip{opacity:1}
+.museum.filling .mus-hud,.museum.filling .mus-hints{opacity:0}
+.mus-hud,.mus-hints{transition:opacity .4s}
+/* manual reader: two-page spread over the inspect scene */
+.reader{position:absolute;inset:0;z-index:4;display:grid;place-items:center;background:rgba(2,3,8,.82);opacity:0;pointer-events:none;transition:opacity .35s}
+.reader.on{opacity:1;pointer-events:auto}
+.rd-book{display:flex;justify-content:center;gap:2px;width:94vw;max-width:94vw;height:76vh;margin-bottom:10vh;perspective:1400px}
+.rd-page{height:100%;width:auto;max-width:46.5vw;min-width:0;flex:0 1 auto;object-fit:contain;background:#f4f2ec;border-radius:3px;box-shadow:0 30px 60px rgba(0,0,0,.5);will-change:transform,opacity}
+.rd-page[hidden]{display:none}
+.rd-page.flip-in{animation:rdFlip .38s cubic-bezier(.3,.6,.3,1)}
+@keyframes rdFlip{from{opacity:0;transform:rotateY(-18deg) translateX(10px)}to{opacity:1;transform:none}}
+.rd-count{display:none} /* shown in the HUD step line instead, where it can't collide with the hint bar */
+.inspect.reading .isp-rot{opacity:.2;transition:opacity .4s}
+.isp-hud{z-index:6}
+.isp-hold{position:relative;width:min(320px,70vw);height:28px;border-radius:999px;border:1px solid var(--line);background:rgba(10,12,22,.78);overflow:hidden;opacity:0;transition:opacity .2s;display:grid;place-items:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.isp-hold.on{opacity:1}
+.isp-hold-bar{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);opacity:.55}
+.isp-hold span{position:relative}
+
+/* fix: the disc/cartridge could show through the closed lid (3D sorting). Keep it hidden until the lid is swinging open. */
+.isp-disc{visibility:hidden;transition:transform .95s cubic-bezier(.3,0,.15,1),visibility 0s .55s}
+.inspect.open .isp-disc{visibility:visible;transition:transform .95s cubic-bezier(.3,0,.15,1),visibility 0s .25s}
+
+/* real-3D inspect (WebGL). The CSS case below stays as the fallback. */
+.isp-gl{position:absolute;inset:0;width:100%;height:100%;display:none;z-index:2}
+.isp-gl.on{display:block}
+.inspect.gl .isp-rot{display:none}
+.inspect.gl .isp-gl{transition:opacity .4s}
+.inspect.gl.reading .isp-gl{opacity:.18}
+
+/* CSS fallback: disc out = disc alone */
+.inspect.out .isp-case{transform:translateX(-120vw) rotateY(30deg)}
+.inspect.out .isp-disc{transform:translateZ(calc(var(--cw)*.3)) scale(1.5)}
+
+/* museum: the same hold-to-play bar, centred above the museum's hints */
+.mus-hold{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);z-index:5}
+/* the museum's hold bar: clearly filling as you hold (the fill colour wasn't defined in the museum, so it never showed) */
+.mus-hold{height:34px;width:min(360px,70vw);border-color:rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.mus-hold .isp-hold-bar{background:linear-gradient(90deg,#c9a86a,#ffe2a8);opacity:.9;box-shadow:0 0 18px rgba(255,220,160,.7)}
+.mus-hold.wrap .isp-hold-bar{background:linear-gradient(90deg,#ff4fa3,#ffd84f,#5affc8,#5a8cff,#d65aff);opacity:.95;box-shadow:0 0 22px rgba(255,255,255,.55)}
+.mus-hold span{font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+/* the museum's Room menu (1.65): Fine-tune folds its sliders under the scene; sliders show a small level bar; the selected
+   line's note, and the buttons in the controller's own pictures at the foot */
+.mus-room .mr-row{cursor:pointer}
+.mus-room .mr-row.fine{margin-left:14px;padding-left:12px;border-left:2px solid rgba(255,255,255,.12);border-radius:0 10px 10px 0}
+.mus-room .mr-row.fold .mr-val{opacity:.8;font-weight:600}
+.mus-room .mr-bar{display:inline-block;width:46px;height:4px;border-radius:2px;background:linear-gradient(90deg,#4a8cff var(--p,0%),rgba(255,255,255,.18) var(--p,0%));margin-right:4px}
+.mus-room .mr-note{margin:10px 8px 0;font-size:12px;line-height:1.4;color:rgba(255,255,255,.62)}
+.mus-room .mr-foot{display:flex;flex-wrap:wrap;gap:6px 14px;opacity:.8;font-size:12px}
+.mus-room .mr-k{display:inline-flex;align-items:center;gap:4px}
+.mus-room .mr-k em{font-style:normal;margin-left:3px}
+.mus-room .mr-k .g.ico svg{display:block}
+.mus-room .mr-dock{position:sticky;bottom:-12px;margin:8px -18px -12px;padding:2px 18px 12px;background:#0c0e17;border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -10px 14px rgba(12,14,23,.9);z-index:2}
+.mus-room .mr-dock .mr-note{margin-top:8px}

@@ -1,0 +1,612 @@
+/* Full-screen Settings (settings.js). Laid out on a 1920-wide design canvas that is scaled to the window (and by the
+   Interface size and Fit to TV settings). Every class is prefixed bss- so nothing collides with the shelf's styles.
+   One look throughout: a dark surface tinted by the theme, a clean list with hairlines, and a single gliding highlight
+   (the same family as the sidebar's selected item). */
+#bss{position:fixed;inset:0;z-index:55;display:none;overflow:hidden;font-family:var(--ui,'Lexend',system-ui,sans-serif);color:#eef0f6;user-select:none;-webkit-user-select:none;
+  --line:rgba(255,255,255,.07);--ink:#f3f5fb;--ink2:#d5d9e6;--dim:#a4abbf;--faint:#7c8399;--acc:#6b8cff;--acc2:#a9bfff;--ok:#45d483;--warn:#ffb547;--bad:#ff6b6b;--tint:#6a5cff;
+  --hl:linear-gradient(90deg,color-mix(in srgb,var(--acc) 30%,transparent),color-mix(in srgb,var(--acc) 13%,transparent));
+  --hlRing:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 85%,transparent);--hlGlow:0 10px 34px -10px color-mix(in srgb,var(--acc) 70%,transparent),0 0 0 1px rgba(0,0,0,.25)}
+#bss.on{display:block}
+/* fades in over the shelf and out to it (it used to cut in and out). The shelf behind is hidden (bss-cover) only once
+   the fade in has finished, and shown again before the fade out starts (settings.js cover), so it never flashes empty */
+#bss{opacity:0;transition:opacity .2s cubic-bezier(.4,0,.2,1),display .2s allow-discrete}
+#bss.on{opacity:1;transition:opacity .26s cubic-bezier(.4,0,.2,1),display .26s allow-discrete}
+@starting-style{#bss.on{opacity:0}}
+#bss.warm:not(.on){display:block;opacity:.004;pointer-events:none;transition:none} /* prewarm: drawn once, unseen */
+#bss:not(.on){pointer-events:none}
+body.bss-reduce #bss,body.reduce-motion #bss{transition-duration:.12s}
+#bss *{box-sizing:border-box}
+.bss-stage{position:absolute;left:0;top:0;transform-origin:0 0;font:500 16px/1.35 var(--ui,'Lexend',system-ui,sans-serif);letter-spacing:.005em}
+/* the surface: opaque, a soft glow of the theme's colour, a little grain and a vignette; only a live preview lets the shelf through */
+.bss-bg{position:absolute;inset:0;transition:opacity .35s ease;will-change:transform;transform:translateZ(0);
+  background:radial-gradient(1300px 760px at 78% -12%,color-mix(in srgb,var(--tint) 24%,transparent),transparent 70%),radial-gradient(1000px 640px at 18% 118%,color-mix(in srgb,var(--tint) 12%,transparent),transparent 70%),linear-gradient(180deg,#0d0f1a,#07080e 70%)}
+.bss-bg::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 85% 80% at 55% 45%,transparent 55%,rgba(0,0,0,.5))}
+.bss-bg::after{content:"";position:absolute;inset:0;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.bss-mus{position:absolute;inset:0;opacity:0;transition:opacity .35s,filter .35s;background:radial-gradient(ellipse 70% 60% at 62% 38%,var(--mus0,#3b2b1c),#0b0806 80%)}
+/* the Museum page keeps the usual Settings surface (the warm room tint read as a different theme); the room preview
+   only shows while peeking at it */
+.bss-stage.peek .bss-mus.on~.bss-bg{opacity:0}
+.bss-mus i{position:absolute;left:0;right:0;bottom:0;height:34%;background:var(--musFloor,#2a2520);opacity:.55;mask:linear-gradient(180deg,transparent,#000 40%)}
+.bss-root{position:absolute;inset:0;display:grid;grid-template-columns:400px 1fr 470px}
+.bss-root.narrow{grid-template-columns:360px 1fr 380px}
+.bss-root.peek~.bss-bg,.bss-stage.peek .bss-bg,.bss-stage.peek .bss-mus{opacity:.1}
+.bss-stage.peek .bss-row:not(.cur),.bss-stage.peek .bss-head,.bss-stage.peek .bss-lead,.bss-stage.peek .bss-title,.bss-stage.peek .bss-crumb{opacity:.3}
+.bss-stage.peek .bss-info{opacity:.25}
+
+/* ---------- the sidebar (the reference look) ---------- */
+.bss-side{position:relative;padding:44px 0 120px 48px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--line);min-width:0;background:rgba(5,6,11,.94)}
+.bss-side::-webkit-scrollbar{display:none}
+.bss-brand{font-weight:800;font-size:15px;line-height:1;letter-spacing:.32em;color:var(--dim);margin:0 0 18px 14px}
+.bss-search{display:flex;align-items:center;gap:12px;height:54px;margin:0 22px 10px 0;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.055);border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);font-size:20px;color:var(--faint);cursor:text;flex:none;transition:background .14s,box-shadow .14s}
+.bss-search svg{width:22px;height:22px;flex:none}
+.bss-search .q{color:var(--ink);white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.bss-search .caret{width:2px;height:24px;background:var(--acc2);animation:bssblink 1s steps(1) infinite;display:none;flex:none}
+.bss-search.typing .caret{display:block}
+.bss-search.cur{background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow);color:var(--ink)}
+.bss-search .kb{margin-left:auto;font-size:13px;color:var(--faint);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:2px 6px;flex:none}
+@keyframes bssblink{50%{opacity:0}}
+.bss-grp{font-weight:700;font-size:13px;line-height:1;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px 14px}
+.bss-nav{display:flex;align-items:center;gap:14px;height:46px;padding:0 18px;margin-right:22px;border-radius:14px;font-size:21px;color:var(--dim);cursor:pointer;position:relative;flex:none;white-space:nowrap;transition:background .14s,box-shadow .14s,color .14s}
+.bss-nav svg{width:24px;height:24px;flex:none;opacity:.8}
+.bss-nav span{overflow:hidden;text-overflow:ellipsis}
+.bss-nav .badge{margin-left:auto;font-size:15px;color:var(--faint);flex:none}
+.bss-nav .dot{margin-left:auto;width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 10px color-mix(in srgb,var(--ok) 60%,transparent)}
+.bss-nav .dot.warn{background:var(--warn);box-shadow:0 0 10px color-mix(in srgb,var(--warn) 60%,transparent)}
+.bss-nav.on{color:var(--ink);background:rgba(255,255,255,.06)}
+.bss-nav.on::before{content:"";position:absolute;left:-16px;top:10px;bottom:10px;width:4px;border-radius:4px;background:var(--acc)}
+.bss-nav.cur{background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow);color:#fff}
+.bss-nav.cur svg{opacity:1}
+.bss-nav:hover{color:var(--ink)}
+.bss-ver{margin:auto 0 0 14px;font-size:14px;color:var(--faint)}
+
+/* ---------- the page ---------- */
+.bss-page{position:relative;padding:44px 56px 122px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.bss-crumb{font-weight:700;font-size:14px;line-height:1;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:12px;white-space:pre;transition:opacity .3s}
+.bss-title{font-weight:700;font-size:46px;line-height:1.08;letter-spacing:-.015em;margin:0 0 8px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .3s}
+.bss-lead{font-size:20px;line-height:1.45;color:var(--dim);margin:0;max-width:880px;transition:opacity .3s;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bss-scroll{position:relative;flex:1;min-height:0;margin-top:22px;overflow:hidden;-webkit-mask:linear-gradient(180deg,transparent 0,#000 14px,#000 calc(100% - 26px),transparent);mask:linear-gradient(180deg,transparent 0,#000 14px,#000 calc(100% - 26px),transparent)}
+.bss-scroll.enter{animation:bssenter .16s cubic-bezier(.2,.8,.2,1)}
+@keyframes bssenter{from{opacity:.35;transform:translateY(10px)}}
+.bss-list{position:absolute;left:0;right:0;top:0;padding-top:12px;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+/* the one highlight that glides from row to row */
+.bss-hl{position:absolute;left:0;top:0;width:100%;height:76px;border-radius:16px;background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow);opacity:0;pointer-events:none;z-index:0;
+  transition:transform .14s cubic-bezier(.2,.8,.2,1),height .14s cubic-bezier(.2,.8,.2,1),width .14s cubic-bezier(.2,.8,.2,1),opacity .18s,background .2s,box-shadow .2s}
+.bss-hl.on{opacity:1}
+.bss-hl.jump{transition:opacity .18s}
+.bss-hl.grab{background:linear-gradient(90deg,rgba(255,181,71,.3),rgba(255,181,71,.1));box-shadow:inset 0 0 0 2px rgba(255,200,120,.9),0 10px 34px -10px rgba(255,181,71,.6)}
+.bss-head{display:flex;align-items:center;gap:16px;font-weight:700;font-size:14px;line-height:1;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:30px 22px 8px 22px;transition:opacity .3s}
+.bss-head::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,0))}
+.bss-head:first-child{margin-top:6px}
+.bss-head em{font-style:normal;letter-spacing:.04em;text-transform:none;font-weight:600;font-size:15px;color:var(--dim);order:2}
+.bss-row{position:relative;z-index:1;display:flex;align-items:center;gap:24px;min-height:76px;padding:10px 22px;border-radius:16px;cursor:pointer;transition:opacity .3s}
+.bss-row::after{content:"";position:absolute;left:22px;right:22px;bottom:0;height:1px;background:var(--line);transition:opacity .14s}
+.bss-row.cur::after,.bss-row.pre::after{opacity:0}
+.bss-row .lbl{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.bss-row .nm{font-size:24px;font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .14s}
+.bss-row .sub:empty{display:none}
+.bss-row .sub{font-size:16.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bss-row .sub.ok{color:var(--ok)}.bss-row .sub.bad{color:var(--bad)}.bss-row .sub.warn{color:var(--warn)}
+.bss-row .where{font-size:15.5px;color:var(--faint);letter-spacing:.03em}
+.bss-row .nm mark{background:none;color:var(--acc2);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
+.bss-row.cur .nm{color:#fff}
+.bss-row.dis .nm{color:var(--dim)}
+.bss-row .chg{width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;opacity:0;margin-left:-14px;transition:opacity .2s}
+.bss-row.changed .chg{opacity:.9}
+.bss-row.press{animation:bsspress .16s ease-out}
+@keyframes bsspress{40%{transform:scale(.985)}}
+.bss-row.flash{animation:bssflash 1.2s ease-out}
+@keyframes bssflash{0%,30%{box-shadow:0 0 0 6px rgba(143,176,255,.5)}100%{box-shadow:0 0 0 0 rgba(143,176,255,0)}}
+/* values */
+.bss-val{display:flex;align-items:center;justify-content:flex-end;gap:14px;font-size:22px;font-weight:600;color:#c9cee0;flex:none;max-width:60%;min-width:0;transition:color .14s}
+.bss-row.cur .bss-val{color:#fff}
+.bss-val .vt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-weight:500;color:var(--dim)}
+.bss-row.cur .bss-val .vt{color:#e9ecf6}
+.bss-val .vt.path{font-weight:500;font-size:19px;letter-spacing:.01em;direction:ltr}
+.bss-val .vt.ph{color:var(--faint);font-style:normal}
+.bss-val .vt.warn,.bss-row.cur .bss-val .vt.warn{color:var(--warn)}
+.bss-val .chev{font-size:34px;line-height:1;font-weight:400;color:rgba(255,255,255,.28);margin:-4px -4px 0 2px;transition:color .14s,transform .14s}
+.bss-row.cur .bss-val .chev{color:rgba(255,255,255,.95);transform:translateX(2px)}
+.bss-val .arr{font-size:34px;line-height:1;font-weight:400;color:#fff;opacity:0;margin-top:-4px;transition:opacity .14s,transform .14s}
+.bss-row.cur .bss-val .arr{opacity:.9}.bss-row.cur .bss-val .arr.off{opacity:.18}
+.bss-val .txt{min-width:220px;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.bss-val .txt b{display:inline-block;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.bss-val .txt b.sl{animation:bssvl .18s cubic-bezier(.2,.8,.2,1)}.bss-val .txt b.sr{animation:bssvr .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes bssvl{from{opacity:0;transform:translateX(-16px)}}@keyframes bssvr{from{opacity:0;transform:translateX(16px)}}
+.bss-val .num{min-width:96px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bss-val .tv{min-width:44px;text-align:right;font-weight:500;color:var(--dim)}
+.bss-row.cur .bss-val .tv{color:#e9ecf6}
+.bss-sw{position:relative;width:76px;height:42px;border-radius:999px;background:rgba(255,255,255,.14);box-shadow:inset 0 1px 3px rgba(0,0,0,.35);flex:none;transition:background .22s}
+.bss-sw i{position:absolute;top:4px;left:4px;width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .34s cubic-bezier(.34,1.56,.64,1)}
+.bss-sw.on{background:linear-gradient(90deg,var(--acc),color-mix(in srgb,var(--acc) 70%,#9fd0ff))}
+.bss-sw.on i{transform:translateX(34px)}
+.bss-bar{position:relative;width:250px;height:10px;border-radius:10px;background:rgba(255,255,255,.12);flex:none}
+.bss-bar i{position:absolute;inset:0;border-radius:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 75%,#fff 0%),var(--acc2));transform-origin:0 50%;transition:transform .14s cubic-bezier(.2,.8,.2,1)}
+.bss-bar b{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:left .14s cubic-bezier(.2,.8,.2,1),transform .14s}
+.bss-row.cur .bss-bar b{transform:scale(1.08)}
+/* status chips */
+.bss-st{display:inline-flex;align-items:center;gap:10px;font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.bss-st i{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-style:normal;font-size:14px;font-weight:800;color:#06210f}
+.bss-st.ok{color:#8ff0b5}.bss-st.ok i{background:var(--ok)}.bss-st.ok i::before{content:"✓"}
+.bss-st.bad{color:#ff9a9a}.bss-st.bad i{background:var(--bad);color:#2a0606}.bss-st.bad i::before{content:"✕"}
+.bss-st.none{color:var(--dim);font-weight:500}.bss-st.none i{width:10px;height:10px;background:#6c7388;margin:0 7px}
+.bss-st.warn{color:#ffd08a}.bss-st.warn i{background:var(--warn);color:#2a1800}.bss-st.warn i::before{content:"!"}
+.bss-st.busy{color:#ffd08a}.bss-st.busy i{width:18px;height:18px;margin:0 3px;background:none;border:2.5px solid var(--warn);border-right-color:transparent;animation:bssspin .8s linear infinite}
+@keyframes bssspin{to{transform:rotate(360deg)}}
+/* text being typed */
+.bss-edit{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Lexend',sans-serif);color:#fff;background:rgba(0,0,0,.4);border:0;box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;outline:none}
+.bss-editv{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Lexend',sans-serif);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;white-space:pre;overflow:hidden;display:flex;justify-content:flex-end}
+.bss-editv .c{width:2px;height:24px;background:var(--acc2);animation:bssblink 1s steps(1) infinite;flex:none;align-self:center}
+.bss-row.editing .bss-val{min-width:0;flex:1;max-width:66%}
+/* theme tiles */
+.bss-tiles{display:flex;gap:10px;flex:0 1 auto;min-width:0;padding:6px 0} /* tiles narrow a little rather than spill out of the row (Extra large on a 16:9 screen) */
+.bss-tile{position:relative;flex:0 1 auto;min-width:64px;width:112px;height:80px;border-radius:14px;overflow:hidden;opacity:.6;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);transition:opacity .18s,transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .18s}
+.bss-tile .sw2{position:absolute;inset:0}
+.bss-tile span{position:absolute;left:0;right:0;bottom:0;padding:16px 9px 6px;font-size:14px;font-weight:600;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.75));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bss-tile.on{opacity:1;transform:translateY(-3px);box-shadow:inset 0 0 0 2px #fff,0 10px 26px -8px rgba(0,0,0,.6)}
+.bss-row.theme{min-height:118px}
+.bss-row.theme .lbl{min-width:120px}
+/* the console grid */
+.bss-consoles{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:8px}
+.bss-ctile{position:relative;padding:20px 22px;border-radius:16px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);cursor:pointer;min-width:0;transition:background .14s}
+.bss-ctile:hover{background:rgba(255,255,255,.06)}
+.bss-ctile.cur{background:transparent;box-shadow:none}
+.bss-ctile b{display:block;font-size:24px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bss-ctile span{color:var(--dim);font-size:17px}
+.bss-ctile em{display:flex;align-items:center;gap:9px;font-style:normal;color:var(--ink2);font-size:16px;margin-top:12px;white-space:nowrap;overflow:hidden}
+.bss-ctile em::before{content:"";width:9px;height:9px;border-radius:50%;background:#6c7388;flex:none}
+.bss-ctile.ok em::before{background:var(--ok);box-shadow:0 0 8px color-mix(in srgb,var(--ok) 60%,transparent)}.bss-ctile.warn em::before{background:var(--warn)}.bss-ctile.off{opacity:.6}
+.bss-empty{padding:40px 22px;font-size:22px;color:var(--dim)}
+
+/* ---------- the info panel ---------- */
+.bss-info{padding:186px 56px 130px 36px;transition:opacity .3s;min-width:0}
+.bss-root.narrow .bss-info{padding:186px 32px 130px 22px}
+.bss-card{border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:30px 32px}
+.bss-card h3{margin:0 0 14px;font-size:30px;font-weight:700;letter-spacing:-.01em;color:#fff;overflow-wrap:anywhere;line-height:1.15}
+.bss-card p{margin:0;font-size:21px;line-height:1.5;color:#cdd2e1;white-space:pre-line}
+.bss-istat:empty{display:none}
+.bss-istat{margin-top:18px}
+.bss-istat .bss-st{white-space:normal}
+.bss-more{display:none;margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);font-size:19px;color:#c2c8d8;line-height:1.55;white-space:pre-line}
+.bss-info.open .bss-more{display:block}
+.bss-meta{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.bss-meta:empty{display:none}
+.bss-meta div{display:flex;align-items:center;gap:10px;font-size:17px;color:var(--dim)}
+.bss-meta div::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.8;flex:none}
+.bss-meta .chg{color:#ffc978}.bss-meta .pv{color:var(--acc2)}.bss-meta .ok{color:#8ff0b5}.bss-meta .bad{color:#ff9a9a}
+
+/* ---------- the on-screen keyboard ---------- */
+.bss-osk{position:absolute;left:400px;right:0;bottom:0;padding:22px 56px 118px;background:linear-gradient(180deg,rgba(12,14,24,.97),#090a12);border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -20px 50px rgba(0,0,0,.45);transform:translateY(105%);visibility:hidden;transition:transform .22s cubic-bezier(.2,.8,.2,1),visibility 0s .22s;z-index:3}
+.bss-osk.on{transform:none;visibility:visible;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.bss-krow{display:flex;gap:10px;justify-content:center;margin-bottom:10px}
+.bss-key{min-width:76px;height:62px;padding:0 14px;border-radius:14px;background:rgba(255,255,255,.065);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);display:grid;place-items:center;font-size:24px;font-weight:500;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:background .1s,box-shadow .1s,transform .1s}
+.bss-key.wide{min-width:220px}.bss-key.mid{min-width:126px;font-size:19px}
+.bss-key:hover{background:rgba(255,255,255,.11)}
+.bss-key.cur{background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow);color:#fff;transform:translateY(-1px)}
+.bss-key.go{background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 95%,#fff),var(--acc));color:#fff}
+.bss-key.go.cur{box-shadow:inset 0 0 0 2px #fff,var(--hlGlow)}
+.bss-key.lit{color:var(--acc2);box-shadow:inset 0 0 0 1px var(--acc2)}
+
+/* ---------- the hint bar: the shelf's glass pill, at couch size ---------- */
+.bss-hints{position:absolute;left:400px;right:0;bottom:26px;display:flex;justify-content:center;pointer-events:none;z-index:4;transition:opacity .3s}
+.bss-pill{display:inline-flex;align-items:center;gap:4px;padding:7px 9px;border-radius:999px;background:rgba(14,16,28,.82);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 12px 30px -10px rgba(0,0,0,.6);pointer-events:auto;max-width:calc(100% - 40px);overflow:hidden}
+.bss-pill .h{display:inline-flex;align-items:center;gap:10px;padding:7px 15px;border-radius:999px;font-size:18px;font-weight:500;color:#dfe3ee;white-space:nowrap;cursor:pointer;transition:background .12s}
+.bss-pill .h:hover{background:rgba(255,255,255,.09)}
+.bss-pill .sep{width:1px;height:22px;background:rgba(255,255,255,.14);margin:0 4px;flex:none}
+.bss-pill .ks{display:inline-flex;gap:4px;align-items:center}
+.bss-g{display:inline-grid;place-items:center;flex:none}
+.bss-g svg{display:block;width:30px;height:30px}
+.bss-g.wide svg{width:auto;height:28px}
+.bss-kc{display:inline-grid;place-items:center;min-width:32px;height:30px;padding:0 9px;border-radius:7px;border:1.5px solid rgba(255,255,255,.55);font-size:14px;font-weight:600;line-height:1;color:#fff;flex:none}
+.bss-toast{position:absolute;left:50%;top:40px;transform:translate(-50%,-20px);opacity:0;padding:13px 26px;border-radius:999px;background:rgba(18,20,32,.96);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 14px 34px -12px rgba(0,0,0,.7);font-size:19px;transition:opacity .25s,transform .25s;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:6}
+.bss-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- Large / Extra large: a narrower canvas ---------- */
+.bss-root.narrow .bss-side{padding:36px 0 110px 36px}
+.bss-root.narrow .bss-nav{height:42px;font-size:19px;margin-right:16px;padding:0 14px}
+.bss-root.narrow .bss-grp{margin:10px 0 4px 12px}
+.bss-root.narrow .bss-search{margin-right:16px}
+.bss-root.narrow .bss-page{padding:40px 36px 118px}
+.bss-root.narrow .bss-row{gap:16px;padding:10px 18px}
+.bss-root.narrow .bss-row::after{left:18px;right:18px}
+.bss-root.narrow .bss-row .nm{white-space:normal}
+.bss-root.narrow .bss-val .txt{min-width:150px}
+.bss-root.narrow .bss-bar{width:160px}
+.bss-root.narrow .bss-tile{width:84px;height:72px}.bss-root.narrow .bss-tile span{font-size:12.5px;padding:14px 7px 5px}
+.bss-root.narrow .bss-hints,.bss-root.narrow .bss-osk{left:360px}
+.bss-root.narrow .bss-pill .h{padding:6px 11px;font-size:16.5px;gap:8px}
+.bss-root.narrow .bss-pill .h.wide-only{display:none}
+.bss-root.narrow .bss-consoles{grid-template-columns:repeat(3,1fr)}
+.bss-root.narrow .bss-osk{padding:18px 24px 112px}
+.bss-root.narrow .bss-key{min-width:56px;height:56px;font-size:21px;padding:0 8px}
+.bss-root.narrow .bss-key.wide{min-width:150px}.bss-root.narrow .bss-key.mid{min-width:90px;font-size:17px}
+.bss-root.narrow .bss-krow{gap:8px;margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){.bss-list,.bss-osk,.bss-hl{transition:none}.bss-scroll.enter,.bss-row.press,.bss-val .txt b{animation:none}}
+body.bss-reduce .bss-list,body.bss-reduce .bss-osk,body.bss-reduce .bss-hl{transition:none}
+body.bss-reduce .bss-scroll.enter,body.bss-reduce .bss-row.press,body.bss-reduce .bss-val .txt b{animation:none}
+
+/* while Settings covers the screen the shelf behind isn't painted at all (it comes back for a live preview) */
+body.bss-cover #app>:not(#bss):not(#setup):not(#toast):not(.bg-layer):not(.theme-fx):not(.theme-canvas):not(.vignette){visibility:hidden}
+
+/* Fit to TV: #app is scaled by --safe (style.css); Settings fills the screen itself and shrinks only its content (fit()) */
+body.safe-area #app>#bss{scale:var(--safe-inv,1)}
+
+/* ---------- Art Studio (1.67, settings.js "Art Studio"): sub-views of Art & manuals, laid out like the owner's mockup
+   (scratchpad/studio/art-studio-mockup.html) on the same tokens. The page takes the info column's room; grids are
+   absolutely placed tiles (only the rows in view exist) moved with transforms; pictures fade in over placeholders of
+   the same size, so nothing shifts when a thumbnail lands. ---------- */
+.bss-root.studio{grid-template-columns:400px 1fr 0}
+.bss-root.studio.narrow{grid-template-columns:360px 1fr 0}
+.bss-root.studio .bss-info{display:none}
+.bss-root.studio .bss-page{padding-right:60px}
+.bss-root.studio .bss-scroll{display:none}
+.bss-root.studio .bss-lead{-webkit-line-clamp:1;max-width:none}
+.bss-root.studio .bss-crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsa-pre .bsa-fc{font-size:12px}
+.bsa{display:none;position:relative;flex:1;min-height:0;margin-top:26px}
+.bss-root.studio .bsa{display:block}
+.bsa.enter{animation:bssenter .16s cubic-bezier(.2,.8,.2,1)}
+.bsa-empty{padding:40px 6px;font-size:21px;color:var(--dim);max-width:900px}
+.bsa-empty.card{padding:30px 32px;border-radius:20px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);margin-top:4px}
+.bsa-empty.card b{display:block;font-size:23px;color:var(--ink);margin-bottom:8px}
+.bsa-empty.card p{margin:0 0 20px;font-size:18px;line-height:1.5}
+.bsa-empty .btn{display:inline-flex;align-items:center;height:46px;padding:0 22px;border-radius:999px;background:#ebebf0;color:#10121a;font-size:17px;font-weight:600;cursor:pointer;box-shadow:0 10px 30px -10px rgba(110,130,255,.6)}
+/* pictures: a placeholder underneath, the image fades in on top */
+.bsa img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .28s ease;display:block}
+.bsa img.on{opacity:1}.bsa img.now{transition:none}.bsa img.bad{display:none}
+.bsa-ph{position:absolute;inset:0;display:flex;align-items:flex-end;padding:10% 9%;background:radial-gradient(circle at 70% 25%,rgba(255,255,255,.08),transparent 60%),linear-gradient(160deg,#1c2034,#0b0d16);color:rgba(255,255,255,.55);font-weight:700;font-size:15px;line-height:1.15}
+.bsa-ph span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bsa-ph.wait{overflow:hidden}
+.bsa-ph.wait::after{content:"";position:absolute;top:0;bottom:0;left:0;width:100%;background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.06) 50%,transparent 80%);animation:bsashim 1.3s linear infinite;will-change:transform}
+@keyframes bsashim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.bsa-ph.disc{border-radius:50%;background:radial-gradient(circle,#0b0d16 0 9%,rgba(220,225,235,.25) 9.5% 15%,#1c2034 15.5%,#0e1120 72%)}
+.bsa-ph.spine{align-items:center;justify-content:center;padding:0;writing-mode:vertical-rl;font-size:12px;letter-spacing:.06em;color:#fff;background:#1b1b22;text-transform:uppercase}
+.bsa-ph.mini{background:linear-gradient(160deg,#20243a,#0b0d16)}
+/* the job pill (a shelf style re-fetching in the background) */
+.bsa-job{position:absolute;right:56px;top:44px;display:none;align-items:center;gap:12px;padding:12px 18px 14px;border-radius:14px;background:rgba(10,12,22,.9);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);font-size:16px;color:var(--ink2);z-index:3;cursor:pointer;overflow:hidden;max-width:620px;white-space:nowrap}
+.bsa-job.on{display:flex}
+.bss-root.studio .bsa-job{right:60px}
+.bsa-job .sp{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc2);animation:bssspin .8s linear infinite;flex:none}
+.bsa-job.end .sp{animation:none;border-color:var(--ok)}
+.bsa-job .t{overflow:hidden;text-overflow:ellipsis}
+.bsa-job .x{color:var(--faint);font-size:14px}.bsa-job:hover .x{color:#fff}.bsa-job.end .x{display:none}
+.bsa-job .bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.06)}
+.bsa-job .bar i{position:absolute;inset:0;background:var(--acc2);transform-origin:0 50%;transform:scaleX(0);transition:transform .3s}
+/* the sidebar's consoles under Art & manuals */
+.bss-subnav{display:none;margin:4px 22px 6px 18px;padding-left:16px;border-left:1px solid rgba(255,255,255,.14);flex-direction:column;gap:2px;flex:none}
+.bss-subnav.on{display:flex}
+.bss-snav{display:flex;align-items:center;gap:12px;height:38px;padding:0 14px;border-radius:12px;font-size:17px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.bss-snav:hover{color:#fff;background:rgba(255,255,255,.04)}
+.bss-snav .dot{width:8px;height:8px;border-radius:50%;background:var(--acc2);opacity:.55;flex:none}
+.bss-snav .n{margin-left:auto;font-size:14px;color:var(--faint)}
+.bss-snav.cur{background:rgba(255,255,255,.06);color:#fff}.bss-snav.cur .dot{opacity:1;background:var(--acc)}
+/* pills (filters, the shelf style button) */
+.bsa-top{height:104px}
+.bsa-pills{display:flex;gap:10px;align-items:center}
+.bsa-sp{flex:1}
+.bsa-pill{display:flex;align-items:center;gap:10px;height:46px;padding:0 20px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);background:rgba(255,255,255,.04);font-size:17px;color:var(--ink2);font-weight:500;cursor:pointer;white-space:nowrap;transition:background .14s,box-shadow .14s,color .14s}
+.bsa-pill .c{font-size:13px;color:var(--faint)}
+.bsa-pill svg{width:20px;height:20px}
+.bsa-pill b{font-weight:600;color:#fff}
+.bsa-pill.on{background:#ebebf0;color:#10121a;box-shadow:0 10px 30px -10px rgba(110,130,255,.6)}.bsa-pill.on .c{color:rgba(16,18,26,.6)}
+.bsa-pill.cur{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 85%,transparent),var(--hlGlow);background:var(--hl);color:#fff}
+.bsa-pill.on.cur{background:#fff;color:#10121a;box-shadow:inset 0 0 0 2px var(--acc2),0 10px 30px -10px rgba(110,130,255,.8)}
+.bsa-legend{display:flex;gap:22px;margin-top:14px;font-size:14px;color:var(--dim);align-items:center;height:22px}
+.bsa-legend span{display:flex;align-items:center;gap:8px}.bsa-legend .k{color:var(--faint)}
+.bsa-legend i{width:16px;height:12px;border-radius:4px;display:inline-block;background:rgba(69,212,131,.35)}
+.bsa-legend i.lo{background:rgba(255,181,71,.35)}.bsa-legend i.miss{background:none;box-shadow:inset 0 0 0 1.5px #ff8f8f}.bsa-legend i.lk{background:rgba(107,140,255,.35);box-shadow:inset 0 0 0 1.5px var(--acc2)}
+/* the games grid */
+/* no mask on the scrolling grids: a mask makes the compositor draw every tile layer into an offscreen surface on each
+   frame of a scroll (software compositing: 41 → 56 fps on a held d-pad, 600 games). The edges fade with two overlays in
+   the page's own background colours instead */
+.bsa-vp{position:absolute;left:-14px;right:-14px;top:104px;bottom:0;overflow:hidden;padding:0 14px}
+.bsa-vp::before,.bsa-vp::after,.bsa-cvp::before,.bsa-cvp::after{content:"";position:absolute;left:0;right:0;z-index:3;pointer-events:none}
+/* each strip is painted with the page background itself (.bss-bg's gradients, lined up with the stage through --fx / --fy0
+   / --fy1 / --fw / --fh, set once per build by fadeFix in settings.js; the flat grey stands in for its 3.5% noise) and masked from opaque to clear. A static strip:
+   its mask is painted once, never per frame */
+.bsa-vp::before,.bsa-vp::after,.bsa-cvp::before,.bsa-cvp::after{
+  background:linear-gradient(rgba(128,128,128,.03),rgba(128,128,128,.03)),radial-gradient(ellipse 85% 80% at 55% 45%,transparent 55%,rgba(0,0,0,.5)),radial-gradient(1300px 760px at 78% -12%,color-mix(in srgb,var(--tint) 24%,transparent),transparent 70%),radial-gradient(1000px 640px at 18% 118%,color-mix(in srgb,var(--tint) 12%,transparent),transparent 70%),linear-gradient(180deg,#0d0f1a,#07080e 70%);
+  background-size:calc(var(--fw,1920) * 1px) calc(var(--fh,1080) * 1px);background-repeat:no-repeat}
+.bsa-vp::before,.bsa-cvp::before{top:0;height:12px;background-position:calc(var(--fx,0) * -1px) calc(var(--fy0,0) * -1px);-webkit-mask:linear-gradient(#000,transparent);mask:linear-gradient(#000,transparent)}
+.bsa-vp::after,.bsa-cvp::after{bottom:0;height:34px;background-position:calc(var(--fx,0) * -1px) calc(var(--fy1,0) * -1px);-webkit-mask:linear-gradient(transparent,#000);mask:linear-gradient(transparent,#000)}
+.bsa-grid{position:relative;margin-top:14px;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+/* each tile (and card) is its own layer: one added while the grid scrolls doesn't make the others draw again */
+.bsa-grid,.bsa-cgrid{will-change:transform}
+.bsa-tile,.bsa-card{will-change:transform;contain:layout paint style}
+.bsa-tile{position:absolute;left:0;top:0;cursor:pointer}
+.bsa-tile .in{position:relative;border-radius:14px;padding:10px 10px 12px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line)}
+.bsa-tile{z-index:1}
+.bsa-thl,.bsa-chl{position:absolute;left:0;top:0;z-index:0;pointer-events:none;opacity:0;will-change:transform;transition:transform .14s cubic-bezier(.2,.8,.2,1),opacity .14s}
+.bsa-thl{border-radius:14px;background:color-mix(in srgb,var(--acc) 14%,transparent);box-shadow:inset 0 0 0 2px rgba(169,191,255,.9),0 16px 40px -14px rgba(107,140,255,.7)}
+.bsa-chl{border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 2px rgba(255,255,255,.9),0 18px 44px -14px color-mix(in srgb,var(--acc) 75%,transparent)}
+.bsa-thl.on,.bsa-chl{opacity:1}
+.bsa-tile .cv{position:relative;border-radius:6px;overflow:hidden;background:#0b0d16}
+.bsa-tile .t{font-size:15px;font-weight:500;margin-top:9px;overflow:hidden;color:var(--ink2);height:40px;line-height:20px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere} /* (1.80: two lines before the ellipsis) */
+.bsa-tile.sel .t{color:#fff}
+.bsa-tile .lock{position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:50%;background:rgba(10,12,20,.85);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.2);color:#fff;z-index:1}
+.bsa-tile .lock svg{width:14px;height:14px}
+.bsa-tile .slots{display:flex;gap:5px;margin-top:8px}
+.bsa-tile .sl{flex:1;height:23px;border-radius:6px;display:grid;place-items:center;font-size:11.5px;font-weight:700;letter-spacing:.04em;background:rgba(69,212,131,.16);color:#7fe3a9}
+.bsa-tile .sl.miss{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,107,107,.7);color:#ff8f8f}
+.bsa-tile .sl.lo{background:rgba(255,181,71,.16);color:#ffc977}
+.bsa-tile .sl.lk{background:rgba(107,140,255,.2);color:var(--acc2);box-shadow:inset 0 0 0 1.5px rgba(169,191,255,.6)}
+/* (1.80) each part as a little picture of itself plus a mark (✓ ! × •): readable without the letters or the colours */
+.bsa-tile .sl{display:flex;align-items:center;justify-content:center;gap:3px;height:26px}
+.bsa-tile .sl svg{width:15px;height:15px;flex:none}
+.bsa-tile .sl b{font-size:12px;font-weight:700;line-height:1;width:8px;text-align:center}
+.bsa-tile .sl:not(.miss) svg{fill:color-mix(in srgb,currentColor 30%,transparent)}
+.bsa-tile .sl.miss{box-shadow:inset 0 0 0 1.5px rgba(255,107,107,.7);background-image:repeating-linear-gradient(135deg,rgba(255,107,107,.08) 0 4px,transparent 4px 8px)}
+.bsa-legend .pk{display:flex;gap:14px;color:var(--ink2)}
+.bsa-legend .pk em{font-style:normal;display:flex;align-items:center;gap:6px}
+.bsa-legend .pk svg{width:16px;height:16px}
+.bsa-legend .st b{display:inline-grid;place-items:center;width:20px;height:18px;border-radius:5px;font-size:12px;background:rgba(69,212,131,.16);color:#7fe3a9}
+.bsa-legend .st.lo b{background:rgba(255,181,71,.16);color:#ffc977}
+.bsa-legend .st.miss b{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,107,107,.7);color:#ff8f8f}
+.bsa-legend .st.lk b{background:rgba(107,140,255,.2);color:var(--acc2)}
+.bsa-legend .pk+.st{margin-left:10px;padding-left:22px;border-left:1px solid var(--line)}
+/* the highlighted game's strip under the grid */
+.bsa-gi{position:absolute;left:0;right:0;bottom:0;height:42px;display:flex;align-items:center;gap:16px;padding:0 16px;border-radius:12px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--line);font-size:15px;color:var(--dim);overflow:hidden;white-space:nowrap}
+.bsa-gi:empty{opacity:0}
+.bsa-gi b{color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+.bsa-gi span{flex:none}
+.bsa-pill.zero{opacity:.45}
+.bsa-pill.fix{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc2) 70%,transparent);color:#fff;background:color-mix(in srgb,var(--acc) 22%,transparent)}
+/* fake covers on the style cards */
+.bsa-fc{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:10% 8%;font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);line-height:1.02;font-size:13px;
+  background:radial-gradient(circle at 70% 30%,hsl(var(--h),85%,60%),transparent 60%),linear-gradient(160deg,hsl(var(--h),58%,30%),#05060c)}
+.bsa-fc .ban{position:absolute;left:0;right:0;top:0;height:13%;display:flex;align-items:center;padding-left:6%;font-size:.62em;font-weight:700;letter-spacing:.05em;text-shadow:none}
+.bsa-fc .tag{position:absolute;left:6%;top:5%;font-size:.48em;font-weight:700;letter-spacing:.12em;opacity:.85}
+.bsa-fc .ban+.tag{top:17%}
+.bsa-fc.scan{filter:blur(.5px) saturate(.85) contrast(.95)}
+.bsa-fc.scan::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px)}
+.bsa-fc.jp{background:radial-gradient(circle at 70% 35%,hsl(var(--h),72%,62%),transparent 62%),linear-gradient(160deg,#f5f1e6,#e2dccb);color:#111;text-shadow:none}
+/* the shelf style screen */
+.bsa-presets{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:6px}
+.bsa-pre{position:relative;border-radius:20px;padding:14px 14px 18px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;transition:transform .16s cubic-bezier(.2,.8,.2,1),background .14s,box-shadow .14s;min-width:0}
+.bsa-pre.sel{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 2px #fff,0 18px 44px -14px color-mix(in srgb,var(--acc) 75%,transparent);transform:translateY(-4px)}
+.bsa-pre .im{height:230px;border-radius:12px;overflow:hidden;position:relative;display:flex;gap:6px;padding:10px;background:rgba(0,0,0,.25)}
+.bsa-pre .im .c{flex:1;border-radius:5px;position:relative;overflow:hidden}
+.bsa-pre b{display:block;font-size:22px;margin-top:14px;color:#fff}.bsa-pre>span{display:block;font-size:15px;color:var(--dim);margin-top:5px;line-height:1.45}
+.bsa-pre .use{position:absolute;top:24px;right:24px;font-size:11px;font-weight:700;letter-spacing:.1em;padding:5px 9px;border-radius:999px;background:#ebebf0;color:#10121a;z-index:1;display:none}
+.bsa-pre.inuse .use{display:block}
+.bsa-pre .opt{display:flex;gap:6px;margin-top:12px}
+.bsa-pre .opt i{font-style:normal;font-size:14px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--ink2);transition:background .14s,box-shadow .14s}
+.bsa-pre .opt i.on{background:#ebebf0;color:#10121a;font-weight:600}
+.bsa-pre .opt i.cur{box-shadow:0 0 0 2px var(--acc2)}
+.bsa-perpart{margin-top:30px;border-radius:20px;padding:20px 24px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line)}
+.bsa-perpart h3{margin:0 0 4px;font-size:22px;color:#fff}.bsa-perpart h3 small{font-size:14px;color:var(--faint);font-weight:500}
+.bsa-perpart p{margin:0 0 16px;font-size:15px;color:var(--dim)}
+.bsa-pp{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.bsa-ppi{padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.04);cursor:pointer;transition:background .14s,box-shadow .14s}
+.bsa-ppi.cur{box-shadow:var(--hlRing);background:var(--hl)}
+.bsa-ppi .k{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.bsa-ppi .v{font-size:19px;font-weight:600;margin-top:6px;display:flex;align-items:center;gap:8px;color:#fff;white-space:nowrap}.bsa-ppi .v small{font-size:13px;color:var(--faint);font-weight:500}
+.bsa-ppi.follow:not(.cur) .v span{color:var(--ink2)}
+/* the case preview */
+.bsa-pv{position:relative;border-radius:22px;background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--acc) 14%,transparent),transparent 65%),rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;align-items:center;padding:26px 26px 22px;min-width:0;height:100%;max-height:640px}
+.bsa-pv .k{align-self:flex-start;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.bsa-scene{position:relative;perspective:1400px;width:100%;height:430px;display:grid;place-items:center;flex:none}
+.bsa-turn{transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,.7,.2,1);cursor:pointer}
+.bsa-turn.turned{transform:rotateY(180deg)}
+/* (beta.9) the case takes the shape of the game's front art (--ar, its width : height, set by casePaint), at the same
+   height, never wider than --mw: a 3DS, PSP, Switch, Blu-ray or cartridge box shows whole instead of cropped to a DVD case */
+.bsa-case{--h:350px;--ar:.714;--mw:340px;position:relative;width:min(calc(var(--h) * var(--ar)),var(--mw));height:calc(min(calc(var(--h) * var(--ar)),var(--mw)) / var(--ar));transform-style:preserve-3d;animation:bsaturn 9s ease-in-out infinite;transition:width .25s,height .25s}
+@keyframes bsaturn{0%,100%{transform:rotateY(-24deg) rotateX(6deg)}50%{transform:rotateY(18deg) rotateX(4deg)}}
+.bsa-case>div{position:absolute;overflow:hidden;background:#15161c}
+.bsa-case .f{inset:0;border-radius:6px;transform:translateZ(14px);box-shadow:0 0 0 3px #1b1b1f}
+.bsa-case .s{top:0;left:-14px;width:28px;height:100%;transform:rotateY(-90deg)}
+.bsa-case .bk{inset:0;border-radius:6px;transform:rotateY(180deg) translateZ(14px);box-shadow:0 0 0 3px #1b1b1f}
+.bsa-ph.back{background:linear-gradient(160deg,#1a1d2c,#0b0d16)}
+.bsa-disc{position:absolute;right:6%;bottom:2%;width:118px;height:118px;border-radius:50%;overflow:hidden;box-shadow:0 10px 24px rgba(0,0,0,.55),inset 0 0 0 2px rgba(255,255,255,.15);animation:bsaspin 8s linear infinite;transition:width .3s,height .3s,right .3s,bottom .3s}
+.bsa-disc img{border-radius:50%}
+.bsa-disc.none{display:none}
+.bsa-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 30deg,rgba(255,255,255,0),rgba(255,255,255,.2),rgba(255,255,255,0) 30%,rgba(255,255,255,.16) 55%,rgba(255,255,255,0) 70%);pointer-events:none}
+.bsa-disc.big{right:calc(50% - 160px);bottom:calc(50% - 160px);width:320px;height:320px;cursor:pointer}
+.bsa-disc.still{animation-play-state:paused}
+.discmode .bsa-turn{display:none}
+@keyframes bsaspin{to{transform:rotate(360deg)}}
+.bsa-shadow{width:260px;height:26px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.55),transparent 70%);margin-top:-20px;flex:none}
+.bsa-pv .what{font-size:22px;font-weight:600;margin-top:16px;text-align:center;color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:29px}
+.bsa-pv .why{font-size:15px;color:var(--dim);margin-top:6px;text-align:center;line-height:1.5;max-width:440px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bsa-ghl{position:absolute;left:0;top:0;right:0;height:76px;border-radius:16px;background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow);transition:transform .14s cubic-bezier(.2,.8,.2,1);pointer-events:none;z-index:0}
+.bsa-card.dk .use{left:auto;right:16px;top:16px}
+/* 1.68: the whole-game lock switch (under the picker's parts list); action cards after the candidates */
+.bsa-glock{position:relative;display:flex;align-items:center;gap:16px;height:84px;padding:0 20px;margin-bottom:12px;border-radius:16px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;transition:background .14s,box-shadow .14s}
+.bsa-glock.cur{background:var(--hl);box-shadow:var(--hlRing),var(--hlGlow)}
+.bsa-glock .ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);color:var(--dim);flex:none;transition:background .14s,color .14s}.bsa-glock .ic svg{width:18px;height:18px}
+.bsa-glock.on .ic{background:rgba(107,140,255,.25);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(169,191,255,.7)}
+.bsa-glock .tx{min-width:0;flex:1}.bsa-glock .tx b{display:block;font-size:21px;color:var(--ink2)}.bsa-glock.cur .tx b,.bsa-glock.on .tx b{color:#fff}
+.bsa-glock .tx span{display:block;font-size:13.5px;color:var(--dim);line-height:1.35;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bsa-glock.busy .tx span{color:var(--warn)}
+.bsa-glock .sw{position:relative;width:58px;height:32px;border-radius:999px;background:rgba(255,255,255,.12);flex:none;transition:background .16s}
+.bsa-glock .sw i{position:absolute;left:4px;top:4px;width:24px;height:24px;border-radius:50%;background:#cfd2dc;transition:transform .18s cubic-bezier(.2,.8,.2,1),background .16s}
+.bsa-glock.on .sw{background:var(--acc2)}.bsa-glock.on .sw i{transform:translateX(26px);background:#fff}
+.bsa-glock .v{width:34px;font-size:15px;font-weight:600;color:var(--dim);flex:none}.bsa-glock.on .v{color:#fff}
+/* the shelf-style screen: pictures kept because they may be the user's */
+/* a locked game on the grid */
+.bsa-tile .in.fz{box-shadow:inset 0 0 0 1.5px rgba(169,191,255,.45)}
+.bsa-legend .lki{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(10,12,20,.85);box-shadow:0 0 0 1px rgba(255,255,255,.25);color:#fff}.bsa-legend .lki svg{width:10px;height:10px}
+/* Pick exact */
+.bsa-pk{display:grid;height:100%}
+.bsa-parts{position:relative;display:flex;flex-direction:column;gap:10px}
+.bsa-parts .bsa-ghl{height:92px}
+/* the parts column has the cursor (left from the cards): the ring is on the part; otherwise the current part is only lit */
+.bsa-parts .bsa-ghl:not(.focus){box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18)}.bsa-pk.inparts .bsa-cgrid .bsa-chl{transition:opacity .14s}
+.bsa-part{position:relative;z-index:1;display:flex;align-items:center;gap:14px;height:92px;padding:0 16px;border-radius:16px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;flex:none}
+.bsa-part.on{background:transparent;box-shadow:none}
+.bsa-part .th{position:relative;width:46px;height:64px;border-radius:5px;overflow:hidden;flex:none;background:#0b0d16}
+.bsa-part .th.tall{width:16px;margin:0 15px}.bsa-part .th.round{width:54px;height:54px;border-radius:50%}
+.bsa-part .tx{min-width:0;flex:1}
+.bsa-part .nm{font-size:19px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bsa-part.on .nm{color:#fff}
+.bsa-part .st{font-size:13.5px;line-height:1.3;color:var(--dim);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bsa-part .badge{max-width:96px;overflow:hidden;text-overflow:ellipsis}
+.bsa-part .badge,.bsa-card .use{font-size:11px;font-weight:700;letter-spacing:.08em;padding:4px 8px;border-radius:999px;text-transform:uppercase;white-space:nowrap;flex:none}
+.b-ok{background:rgba(69,212,131,.15);color:#7fe3a9}.b-alt{background:rgba(107,140,255,.18);color:var(--acc2)}.b-miss{background:rgba(255,107,107,.15);color:#ff9a9a}.b-lock{background:rgba(255,255,255,.1);color:#fff}.b-lo{background:rgba(255,181,71,.16);color:#ffc977}
+.bsa-cw{min-width:0;position:relative}
+.bsa-ch{display:flex;align-items:baseline;justify-content:space-between;gap:16px;height:34px;margin-bottom:16px}
+.bsa-ch h3{margin:0;font-size:25px;font-weight:600;color:#fff;white-space:nowrap}.bsa-ch span{font-size:14.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsa-cvp{position:absolute;left:-14px;right:-14px;top:96px;bottom:0;padding:0 14px;overflow:hidden}
+.bsa-cgrid{position:relative;margin-top:14px;transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.bsa-card{position:absolute;left:0;top:0;cursor:pointer}
+.bsa-card{z-index:1}
+.bsa-card .in{position:relative;height:100%;padding:12px;border-radius:18px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.bsa-card .im{position:relative;border-radius:8px;overflow:hidden;background:#0b0d16}
+.bsa-card .im.disc{border-radius:50%;box-shadow:0 10px 22px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.12)}
+.bsa-card .im img{object-fit:contain}.bsa-card .im.disc img{object-fit:cover}
+.bsa-card .ed{font-size:16px;font-weight:600;margin-top:10px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsa-card .src{font-size:13px;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bsa-card .meta{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bsa-card .use{position:absolute;top:20px;left:20px;background:#ebebf0;color:#10121a;display:none;z-index:1}
+.bsa-card .use.on{display:block}
+.bsa-card .chip{font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--ink2);white-space:nowrap}
+.bsa-card .chip.hd{background:rgba(107,140,255,.2);color:var(--acc2)}.bsa-card .chip.reg{background:rgba(255,255,255,.1)}.bsa-card .chip.warn{background:rgba(255,181,71,.16);color:#ffc977}.bsa-card .chip.sp{background:rgba(216,177,58,.18);color:#f0d27a}
+.bsa-card .chip.wait{color:var(--faint)}
+.bsa-card.failed .im,.bsa-card.failed .ed,.bsa-card.failed .src{opacity:.4}
+.bsa-card .q{display:flex;gap:3px;margin-left:auto;align-items:center}.bsa-card .q i{width:7px;height:7px;border-radius:2px;background:rgba(255,255,255,.18)}.bsa-card .q i.f{background:var(--acc2)}
+/* Large / Extra large (narrower canvas) */
+.bss-root.narrow .bsa-pre .bsa-fc{font-size:10px}
+.bss-root.narrow .bsa-presets{gap:12px}.bss-root.narrow .bsa-pre .im{height:190px}.bss-root.narrow .bsa-pre b{font-size:19px}.bss-root.narrow .bsa-pre>span{font-size:13.5px}
+.bss-root.narrow .bsa-pre .opt i{padding:6px 8px;font-size:12.5px}
+.bss-root.narrow .bsa-scene{height:380px}.bss-root.narrow .bsa-case{--h:308px;--mw:300px}
+.bss-root.narrow .bsa-pill{padding:0 14px;font-size:15.5px}
+.bss-root.narrow .bsa-part{padding:0 12px;gap:10px}.bss-root.narrow .bsa-part .nm{font-size:17px}
+@media (prefers-reduced-motion:reduce){.bsa-case,.bsa-disc,.bsa-ph.wait::after{animation:none}.bsa-grid,.bsa-cgrid,.bsa-turn{transition:none}}
+body.bss-reduce .bsa-case,body.bss-reduce .bsa-disc,body.bss-reduce .bsa-ph.wait::after{animation:none}
+body.bss-reduce .bsa-grid,body.bss-reduce .bsa-cgrid{transition:none}
+/* Pick exact for the disc (mockup screen 4): a full-width row of big discs; the chosen one spins (X stops it) */
+.bsa-card.dk .in{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 14px 14px}
+.bsa-card.dk .im{flex:none}
+.bsa-card.dk .ed,.bsa-card.dk .src{max-width:100%}
+.bsa-card.dk .meta{justify-content:center}.bsa-card.dk .q{margin-left:4px}
+.bsa-card.dk.sel .im.disc img{animation:bsaspin 8s linear infinite}
+.bsa-cgrid.still .bsa-card.dk.sel .im.disc img{animation-play-state:paused}
+.bsa-chl.dk{border-radius:20px}
+/* next to its neighbours: this game's spine among the games beside it on the shelf (mockup screen 2) */
+.bsa-pk .bsa-pv{max-height:none}
+.bsa-pv.nb .bsa-scene{height:380px}
+.bsa-nb{display:none;flex-direction:column;align-items:center;margin-top:auto;padding-top:14px}
+.bsa-nb.on{display:flex}
+.bsa-nb .row{display:flex;gap:6px;align-items:flex-end;height:156px}
+.bsa-nb .sp{position:relative;width:26px;height:146px;border-radius:3px;overflow:hidden;background:#1b1b22;box-shadow:0 0 0 1px rgba(255,255,255,.08);opacity:.75}
+.bsa-nb .sp .bsa-ph.spine{font-size:9px}
+.bsa-nb .sp.me{width:30px;height:156px;opacity:1;box-shadow:0 0 0 2px #fff,0 8px 22px -6px color-mix(in srgb,var(--acc) 80%,transparent)}
+.bsa-nb .cap{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:12px}
+/* the sidebar's console list: a console re-fetching */
+.bss-snav.job .n{color:var(--acc2)}.bss-snav.job .dot{opacity:1;background:transparent;border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc2);width:10px;height:10px;box-sizing:border-box;animation:bssspin .8s linear infinite}
+body.bss-reduce .bsa-card.dk.sel .im.disc img{animation:none}
+
+.bsa-glock.mini{height:auto;min-height:84px;margin:6px 0 0;padding:12px 14px;gap:12px;flex:none}
+.bsa-glock.mini .tx b{font-size:17px}.bsa-glock.mini .tx span{font-size:12.5px}.bsa-glock.mini .ic{width:34px;height:34px}.bsa-glock.mini .sw{width:50px;height:28px}.bsa-glock.mini .sw i{width:20px;height:20px}.bsa-glock.mini.on .sw i{transform:translateX(22px)}.bsa-glock.mini .v{display:none}
+.bsa-glock:hover{background:rgba(255,255,255,.06)}
+.bsa-card .in.act .im{display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14);border:0}
+.bsa-card .in.act .im span{font-size:54px;font-weight:300;color:var(--dim)}.bsa-card.sel .in.act .im span{color:#fff}
+.bsa-card .in.act .im.disc{border-radius:50%}
+/* (beta.9) the "add an account" slot: an empty, dashed blue slot that stands out from My picture / Undo (static: no animation) */
+.bsa-card .in.act.acct .im{background:linear-gradient(165deg,rgba(107,140,255,.16),rgba(107,140,255,.03) 70%);box-shadow:inset 0 0 0 1.5px rgba(107,140,255,.22);border:1.5px dashed rgba(107,140,255,.75)}
+.bsa-card .in.act.acct .im span{display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:rgba(107,140,255,.14);color:#9fb3ff}
+.bsa-card.sel .in.act.acct .im{border-color:#6b8cff;background:linear-gradient(165deg,rgba(107,140,255,.28),rgba(107,140,255,.06) 70%)}.bsa-card.sel .in.act.acct .im span{color:#fff;background:rgba(107,140,255,.3)}
+.bsa-card .in.act.acct .ed{color:#b9c7ff}.bsa-card.sel .in.act.acct .ed{color:#fff}
+/* Settings → Museum: the preview's Retro TV (stand, size, place) and the scene's own light, so every change shows at once */
+.bss-mtv{position:absolute;left:var(--x,70%);bottom:14%;width:calc(8.5vw * var(--s,1));aspect-ratio:1.28;transform:translateX(-50%);display:none;transition:left .45s,width .45s,bottom .45s}
+.bss-mus.tv .bss-mtv{display:block}
+.bss-mtv s{position:absolute;inset:0;border-radius:9%;background:linear-gradient(180deg,#34353b,#1d1e22);box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.bss-mtv s::after{content:"";position:absolute;left:8%;top:13%;width:68%;height:72%;border-radius:14%/18%;background:radial-gradient(ellipse at 40% 35%,#d8e6ff,#6f8fd0 55%,#22304a);box-shadow:0 0 calc(34px * var(--k,.6)) rgba(150,185,255,calc(.75 * var(--k,.6)));opacity:calc(.55 + .45 * var(--k,.6))}
+.bss-mtv u{position:absolute;left:-7%;right:-7%;top:100%;height:58%;border-radius:2px;background:linear-gradient(180deg,#5a3a22 0 10%,transparent 10% 30%,#4a2f1c 30% 38%,transparent 38%),linear-gradient(90deg,#8a8f99 0 4%,transparent 4% 96%,#8a8f99 96%)}
+.bss-mtv[data-stand=cabinet] u{left:-24%;right:-24%;height:44%;background:linear-gradient(180deg,#5a3a22,#3e2817);box-shadow:inset 0 -10px 0 rgba(0,0,0,.35)}
+.bss-mtv[data-stand=floor]{aspect-ratio:1.05;bottom:9%}.bss-mtv[data-stand=floor] s{background:linear-gradient(180deg,#5a3a22,#3e2817)}.bss-mtv[data-stand=floor] s::after{height:52%;width:62%;left:7%;top:8%}
+.bss-mtv[data-stand=floor] u{left:6%;right:6%;height:10%;background:linear-gradient(90deg,#3e2817 0 6%,transparent 6% 94%,#3e2817 94%)}
+.bss-mtv[data-stand=wall]{bottom:40%}.bss-mtv[data-stand=wall] u{display:none}
+.bss-mus[data-scene=neon]{box-shadow:inset 80px 0 120px -40px rgba(255,47,180,.45),inset -80px 0 120px -40px rgba(34,216,255,.45)}
+.bss-mus[data-scene=spotlit]::before{content:"";position:absolute;left:30%;top:0;width:40%;height:80%;background:radial-gradient(ellipse 50% 100% at 50% 0,rgba(255,240,214,.35),transparent 70%)}
+.bss-mus[data-scene=lightsout] .bss-mtv s::after{box-shadow:0 0 calc(60px * var(--k,.6) + 20px) rgba(150,185,255,.8)}
+.bss-stage.peek .bss-mus.on{opacity:1} /* on the Museum page a peek shows the room preview (the shelf behind isn't the room) */
+
+/* spines: each version lies on its side across the card (spines are ~1:13, upright they'd be a hairline), and the
+   preview shows the chosen spine standing up big; X turns back to the whole case */
+.bsa-card .im.sp img{position:absolute;left:50%;top:50%;width:76px;height:var(--L,260px);max-width:none;transform:translate(-50%,-50%) rotate(-90deg);object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+.bsa-card .im.sp{background:linear-gradient(180deg,#0b0d16,#121524)}
+.bsa-spinebig{display:none;position:absolute;left:50%;top:50%;width:46px;height:calc(100% - 26px);transform:translate(-50%,-50%);border-radius:3px;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);background:#15161c}
+.bsa-spinebig img{width:100%;height:100%;object-fit:fill}
+.spinemode .bsa-turn{display:none}.spinemode .bsa-spinebig{display:block}.spinemode .bsa-disc{display:none}
+.bss-root.narrow .bsa-spinebig{height:350px;width:38px}
+/* Settings → Phone companion: the pairing card (QR code, address, PIN). Not a row: nothing on it to select */
+.bss-pairbox{position:relative;z-index:1;margin:4px 0 14px;padding:22px 24px;border-radius:18px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09)}
+.bss-pair{display:flex;gap:30px;align-items:center}
+.bss-pair .qr{flex:none;width:232px;height:232px;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.bss-pair .qr svg{display:block;width:100%;height:100%}
+.bss-pair .pt{min-width:0;display:flex;flex-direction:column;gap:6px}
+.bss-pair .lbl{color:var(--dim);font-size:17px}
+.bss-pair .url{font-size:28px;font-weight:700;word-break:break-all;color:#fff}
+.bss-pair .pin{font-size:50px;line-height:1.1;font-weight:800;letter-spacing:.12em;font-variant-numeric:tabular-nums;color:#fff}
+.bss-pair .note{color:var(--faint);font-size:15px;line-height:1.4;margin-top:6px}
+.bss-pair .warn,.bss-pairmsg.bad{color:#ffd08a}
+.bss-pairmsg{color:var(--dim);font-size:18px;line-height:1.4}
+/* the parts list has the cursor: the versions wait, slightly dimmed and without a ring, until A opens them */
+.bsa-cvp{transition:opacity .18s,filter .18s}.bsa-pk.inparts .bsa-cvp{opacity:.55;filter:saturate(.75)}.bsa-pk.inparts .bsa-card.sel{box-shadow:none}
+/* Manual Studio (Art & manuals → <console> manuals, Details → Choose manual…, the box art picker's Manual row): the same
+   frame as the art picker; a manual's first page stands where the case is */
+.bsa-pk.onman .bsa-cgrid{visibility:hidden}
+.bsa-part.man .th .bsa-ph{align-items:center;justify-content:center;padding:0;font-size:22px}
+.bsm-pv{justify-content:flex-start}
+.bsm-page{position:relative;width:min(100%,380px);aspect-ratio:7/10;margin-top:18px;border-radius:8px;overflow:hidden;background:#0b0d16;box-shadow:0 26px 60px -22px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06);flex:none;max-height:62%}
+.bsm-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .2s}.bsm-page img.on{opacity:1}.bsm-page img.now{transition:none}
+.bsm-pk .bsa-card .im img{object-fit:contain;background:#0b0d16}
+.bsm-pref{margin-top:2px;padding:12px 20px;border-radius:14px;font-size:14.5px;color:var(--dim);background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;line-height:1.35}
+.bsm-pref:hover{color:#fff}
+.bsm-prefs{grid-template-columns:repeat(4,1fr)}
+.bsm-prefs .bsa-pre .im{height:120px;display:grid;place-items:center;padding:0}
+.bsm-flag{font-size:40px;font-weight:800;letter-spacing:.04em;color:#fff;opacity:.9}
+.bsm-note{margin-top:22px;max-width:1100px;font-size:15.5px;line-height:1.5;color:var(--dim)}
+/* 1.72: the picker's filter row (fixed height: chips coming and going never move the grid) */
+.bsa-flt{display:flex;align-items:center;gap:8px;height:36px;margin-top:-6px;overflow:hidden;white-space:nowrap}
+.bsa-flt i{font-style:normal;font-size:14px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--ink2);cursor:pointer;transition:background .14s,box-shadow .14s,color .14s;flex:none}
+.bsa-flt i:hover{color:#fff}.bsa-flt i.on{background:#ebebf0;color:#10121a;font-weight:600}.bsa-flt i.clr{background:none;color:var(--dim);box-shadow:inset 0 0 0 1px var(--line)}
+.bsa-flt i.cur{box-shadow:0 0 0 2px var(--acc2);color:#fff}.bsa-flt i.on.cur{color:#10121a;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--acc2)}
+.bsa-flt .k{margin-left:auto;font-size:13px;color:var(--faint);display:flex;align-items:center;gap:6px;flex:none}.bsa-flt .k.none{margin-left:0}
+.bsa-flt .k .bss-g,.bsa-flt .k .bss-kc{transform:scale(.85)}
+/* Matching sets: the row at the top of the parts list, and a set's card (front · spine · back · disc in one picture) */
+.bsa-part .th.bsa-sx4{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px;background:rgba(107,140,255,.12)}.bsa-part .th.bsa-sx4 i{border-radius:2px;background:rgba(169,191,255,.45)}.bsa-part .th.bsa-sx4 i:last-child{border-radius:50%}
+.bsa-card .im.sx{display:grid;grid-template-columns:5fr 1fr 5fr;grid-template-rows:1fr auto;gap:6px;padding:8px;background:#0b0d16;border-radius:8px}
+.bsa-card .im.sx>i{position:relative;overflow:hidden;border-radius:4px;background:#15161c;min-height:0}
+.bsa-card .im.sx>i.d{grid-column:1/4;justify-self:center;width:34%;aspect-ratio:1;border-radius:50%}
+.bsa-card .im.sx>i img{object-fit:cover}
+.bsa-pre .opt.so{flex-wrap:wrap;row-gap:6px} /* Complete sets: USA / Europe / Japan / HD wrap inside the card */
+/* Switch / 3DS (1.73.5): the "disc" part is a cartridge, so its pictures are shown whole, not cut to a spinning circle */
+.bsa-pk.cart .bsa-card .im.disc,.bsa-pk.cart .bsa-card .in.act .im.disc,.bsa-pk.cart .bsa-ph.disc{border-radius:10px}
+.bsa-pk.cart .bsa-card .im.disc{box-shadow:none;background:transparent}
+.bsa-pk.cart .bsa-card .im.disc img{object-fit:contain;animation:none}
+.bsa-pk.cart .bsa-ph.disc{background:linear-gradient(160deg,#2a2c38,#161823)}
+.bsa-disc.cart{border-radius:8px;animation:none;box-shadow:none;overflow:visible}
+.bsa-disc.cart img{border-radius:0;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.5))}
+.bsa-disc.cart::after{display:none}
+.bsa-pk.cart .bsa-part .th.round{width:46px;height:60px;border-radius:5px;background:transparent}.bsa-pk.cart .bsa-part .th.round img{object-fit:contain}
+
+/* ---------- 1.80: the game's art page — parts as tabs across the top, the case on the left, the versions on the right ---------- */
+.bsa-pk.ptabs{grid-template-rows:68px minmax(0,1fr);row-gap:18px;column-gap:30px}
+.bsa-pk.ptabs .bsa-parts{grid-column:1/-1;grid-row:1;flex-direction:row;gap:10px;align-items:stretch;height:68px}
+.bsa-pk.ptabs .bsa-pv{grid-column:1;grid-row:2;min-height:0}
+.bsa-pk.ptabs .bsa-cw{grid-column:2;grid-row:2;min-height:0}
+.bsa-pk.ptabs .bsa-part{flex:1 1 0;min-width:0;height:68px;padding:0 12px;gap:10px;border-radius:14px}
+.bsa-pk.ptabs .bsa-part .th{width:32px;height:46px;border-radius:4px}
+.bsa-pk.ptabs .bsa-part .th.tall{width:11px;margin:0 10px}
+.bsa-pk.ptabs .bsa-part .th.round{width:40px;height:40px}
+.bsa-pk.ptabs.cart .bsa-part .th.round{width:34px;height:44px}
+.bsa-pk.ptabs .bsa-part .nm{font-size:16.5px}
+.bsa-pk.ptabs .bsa-part .st{font-size:12.5px;margin-top:1px;-webkit-line-clamp:1}
+.bsa-pk.ptabs .bsa-part .badge{display:none}
+.bsa-pk.ptabs .bsa-parts .bsa-ghl{height:68px;right:auto;width:0;border-radius:14px;transition:transform .14s cubic-bezier(.2,.8,.2,1),width .14s cubic-bezier(.2,.8,.2,1)}
+.bsa-pk.ptabs .bsa-glock.mini{flex:0 0 auto;margin:0;min-height:0;height:68px;padding:0 14px;gap:10px;border-radius:14px}
+.bsa-pk.ptabs .bsa-glock.mini .tx span{display:none}
+.bsa-pk.ptabs .bsa-glock.mini .tx b{font-size:15.5px;white-space:nowrap}
+.bsa-pk.ptabs .bsa-card .in{padding:10px;border-radius:14px}
+.bsa-pk.ptabs .bsa-card .ed{font-size:15px;margin-top:8px}
+.bsa-pk.ptabs .bsa-card .meta{margin-top:5px;gap:6px;flex-wrap:nowrap;overflow:hidden}
+.bsa-pk.ptabs .bsa-card .meta .src{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto;margin:0}
+.bsa-pk.ptabs .bsa-card .meta .chip{font-size:11.5px;padding:3px 8px;flex:none}
+.bsa-pk.ptabs .bsa-card .meta .chip.sz{margin-left:auto}
+.bsa-pk.ptabs .bsa-card .use{top:16px;left:16px}
+.bsa-card .use.best{background:color-mix(in srgb,var(--acc) 85%,#000);color:#fff}
+/* the picture in use now, small, in the case panel's corner while another version is being tried */
+.bsa-now{position:absolute;top:18px;right:18px;z-index:2;display:none;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.bsa-now.on{display:flex}
+.bsa-now .im{position:relative;width:62px;height:88px;border-radius:5px;overflow:hidden;background:#0b0d16;box-shadow:0 0 0 1px rgba(255,255,255,.18);opacity:.8}
+.bsa-now .im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

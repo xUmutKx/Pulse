@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' bsfile: data: blob: https://archive.org https://*.archive.org https://media.retroachievements.org https://images.launchbox-app.com https://shared.cloudflare.steamstatic.com https://cdn.cloudflare.steamstatic.com https://shared.akamai.steamstatic.com https://cdn.akamai.steamstatic.com https://shared.fastly.steamstatic.com; media-src 'self' bsfile: blob:; connect-src 'self' bsfile: blob:">
+<title>Boxshelf</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="setup.css">
+<link rel="stylesheet" href="settings.css">
+<link rel="stylesheet" href="insert.css">
+<link rel="stylesheet" href="bootslide.css">
+<link rel="stylesheet" href="inspect.css">
+<link rel="stylesheet" href="quickshelf.css">
+<link rel="stylesheet" href="themes-extra.css">
+<link rel="stylesheet" href="android.css">
+<script src="splash.js"></script>
+</head>
+<body>
+<div id="splash" aria-hidden="true"><div class="sp-word">BOXSHELF</div><div class="sp-line"></div></div>
+<script src="splash-start.js"></script>
+<div id="app">
+  <div class="bg-layer on" id="bgA"><div class="tint"></div><img alt=""></div>
+  <div class="bg-layer" id="bgB"><div class="tint"></div><img alt=""></div>
+  <div class="theme-fx" id="themeFx" aria-hidden="true"><i></i><i></i><i></i></div>
+  <video class="pv-back" id="pvBack" muted playsinline loop preload="none" aria-hidden="true"></video>
+  <div class="vignette"></div>
+  <div class="floor"></div>
+  <div class="sel-halo"></div>
+
+  <div id="scene"><div id="track"></div></div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="d-kicker">Nothing on the shelf yet</div>
+    <div class="d-title">Connect your emulators and game folders</div>
+    <p class="d-desc">Setup finds what it can and lets you browse for the rest.</p>
+    <div class="d-actions"><button class="btn primary" type="button" id="emptySetup">Run setup</button></div>
+  </div>
+
+  <header class="hud-top">
+    <div class="brand" id="brand">
+      <div class="sys-word" id="sysWord"></div><img class="sys-logo" id="sysLogo" alt="" hidden>
+      <div class="sys-count" id="sysCount"></div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Systems"></nav>
+    <div class="right">
+      <div class="clock-row">
+        <div class="vol" id="vol"><button class="vol-btn" id="volBtn" type="button" aria-label="Mute or unmute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="vw1" d="M16 9.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="vw2" d="M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="vx" d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+          <input class="vol-range" id="volRange" type="range" min="0" max="1" step="0.05" aria-label="Volume"></div>
+        <div class="pad-stat" id="padStat" title="No controller" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7.5 7h9a4.5 4.5 0 0 1 4.4 3.6l1 5.2a2.6 2.6 0 0 1-4.6 2.1L15.5 16h-7l-1.8 1.9a2.6 2.6 0 0 1-4.6-2.1l1-5.2A4.5 4.5 0 0 1 7.5 7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 10v3M6.5 11.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="15.5" cy="10.8" r="1" fill="currentColor"/><circle cx="17.2" cy="12.6" r="1" fill="currentColor"/></svg></div>
+        <div class="clock" id="clock" aria-live="off"></div>
+      </div>
+      <div class="counter" id="counter"></div><div class="ra-pts" id="raPts" hidden></div>
+      <div class="hud-buttons">
+        <button class="mini keep menu-btn" id="menuBtn" type="button" aria-haspopup="menu"><span class="mb-glyph" id="menuGlyph"></span>Menu</button>
+        <button class="mini keep" id="sortBtn" type="button" hidden>Sort</button>
+        <button class="mini keep" id="museumBtn" type="button" hidden>Museum</button>
+        <button class="mini keep" id="themeBtn" type="button" hidden>Customize</button>
+        <button class="mini keep" id="settingsBtn" type="button" hidden>Settings</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="info" id="info">
+    <div class="g-title" id="gTitle"></div>
+    <div class="g-meta" id="gMeta"></div>
+  </div>
+
+  <div class="letter-flash" id="letterFlash"></div>
+  <div class="sortpanel" id="sortPanel" aria-hidden="true">
+    <div class="sp-card" role="dialog" aria-label="Sort and filter">
+      <div class="sp-title">Arrange your shelves</div>
+      <div class="sp-row" data-row="0"><div class="sp-lbl">Sort by</div><div class="sp-opts" id="spSort"></div></div>
+      <div class="sp-row" data-row="1"><div class="sp-lbl">Show</div><div class="sp-opts" id="spFilter"></div></div>
+      <div class="sp-foot" id="spFoot"></div>
+    </div>
+  </div>
+  <nav class="hints" id="hints" aria-label="Controls"></nav>
+
+  <aside class="details" id="details" aria-hidden="true">
+    <div class="d-hero"><div class="d-hero-bg" id="dHeroBg"></div>
+      <button class="d-x" type="button" id="dClose" aria-label="Close" title="Close (B / Esc)">✕</button>
+      <div class="d-hero-row"><img class="d-cover" id="dCover" alt=""><div class="d-head">
+        <div class="d-kicker" id="dKicker"></div>
+        <img class="d-logo" id="dLogo" alt="" hidden>
+        <div class="d-title" id="dTitle"></div>
+        <div class="d-chips" id="dChips"></div>
+      </div></div>
+      <div class="d-stats" id="dStats"></div>
+    </div>
+    <div class="d-actions">
+      <button class="btn primary" type="button" id="dPlay">Play</button>
+      <button class="btn d-ico" type="button" id="dManual" title="Read the manual"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg><span>Read manual</span></button>
+      <button class="btn d-ico" type="button" id="dInspect" title="Hold the case: open it, read the booklet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg><span>Inspect</span></button>
+      <button class="btn d-ico" type="button" id="dMoreBtn" title="More: box art, rename, collections, emulator…" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
+    </div>
+    <div class="d-menu" id="dMenu" role="menu" hidden>
+      <button class="btn" type="button" id="dPulse">Game settings</button>
+      <button class="btn" type="button" id="dEmu">Open emulator</button>
+      <span id="dActEnd" hidden></span>
+    </div>
+    <div class="d-tabs" id="dTabs" role="tablist">
+      <button type="button" role="tab" data-tab="overview" class="on">Overview</button>
+      <button type="button" role="tab" data-tab="media" id="dTabMedia">Media</button>
+      <button type="button" role="tab" data-tab="copy" id="dTabCopy">Your copy</button>
+    </div>
+    <div class="d-body" data-show="overview">
+      <div class="d-pane" data-pane="overview">
+        <div class="d-ach" id="dAch" hidden><div class="ring" id="dRing"><span id="dRingTxt"></span></div><div class="d-ach-main"><b id="dAchTitle">Achievements</b><div class="d-ach-sub" id="dAchSub"></div></div><button class="btn small" type="button" id="dAchBtn">See all</button></div>
+        <div class="d-sec" id="dSecAbout">About this game</div>
+        <p class="d-desc clamp" id="dDesc"></p>
+        <button class="d-more" id="dMore" type="button" hidden>Read more</button>
+        <div class="d-sec" id="dSecInfo">Game info</div>
+        <dl class="d-grid" id="dGrid"></dl>
+        <p class="d-how" id="dHow"></p>
+        <details class="d-adv"><summary>Launch command</summary><div class="d-cmd" id="dCmd"></div></details>
+      </div>
+      <div class="d-pane" data-pane="media">
+        <div class="d-media" id="dMedia" aria-hidden="true"><div class="d-media-in" id="dMediaIn"><video id="dVideo" muted playsinline loop preload="none"></video><span class="d-media-tag" id="dMediaTag"></span></div></div>
+        <button class="btn" type="button" id="dTrailer" hidden>Watch the trailer full screen</button>
+        <div class="d-shots" id="dShots" hidden></div>
+        <p class="d-none" id="dNoMedia" hidden>No preview, trailer or screenshots for this game yet.</p>
+      </div>
+      <div class="d-pane" data-pane="copy">
+        <div class="d-art" id="dArt" hidden><div class="d-art-h">Your copy</div><div class="d-art-row" id="dArtRow"></div></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="inspect" id="inspect" aria-hidden="true">
+    <div class="ins-bg"><img alt=""></div>
+    <div class="isp-stage">
+      <div class="isp-rot" id="ispRot">
+        <div class="isp-case">
+          <div class="isp-face isp-inner"><div class="isp-ring"></div><div class="isp-hub"></div></div>
+          <div class="isp-face isp-backout"><img alt="" id="ispBack"></div>
+          <div class="isp-face isp-spine"><img alt="" id="ispSpine"><span id="ispSpineText"></span></div>
+          <div class="isp-face isp-edge-r"></div><div class="isp-face isp-edge-t"></div><div class="isp-face isp-edge-b"></div>
+          <div class="isp-lid">
+            <div class="isp-face isp-lid-front"><img alt="" id="ispFront"></div>
+            <div class="isp-face isp-lid-back"><div class="isp-manual"><img alt="" id="ispManual"></div><div class="ins-clip"></div><div class="ins-clip b"></div></div>
+          </div>
+        </div>
+        <div class="isp-disc"><div class="isp-shell"></div><div class="isp-face isp-disc-top" id="ispDiscTop"></div><div class="isp-face isp-disc-bottom"></div></div>
+      </div>
+    </div>
+    <div class="reader" id="reader" aria-hidden="true">
+      <div class="rd-book" id="rdBook"><img class="rd-page" id="rdLeft" alt=""><img class="rd-page" id="rdRight" alt=""></div>
+      <div class="rd-count" id="rdCount"></div>
+    </div>
+    <div class="isp-hud"><div class="isp-hold" id="ispHold"><div class="isp-hold-bar" id="ispHoldBar"></div><span>Starting…</span></div><div class="isp-step" id="ispStep"></div><div class="isp-title" id="ispTitle"></div><nav class="isp-hints" id="ispHints" aria-label="Inspect controls"></nav></div>
+  </div>
+
+  <div class="insert" id="insert" aria-hidden="true">
+    <div class="ins-bg"><img alt=""></div>
+    <div class="ins-slide" id="bslide">
+      <div class="bs-fx" id="bsFx"></div>
+      <div class="bs-row">
+        <div class="bs-cover"><img id="bsCover" alt=""></div>
+        <div class="bs-text">
+          <div class="bs-boot" id="bsBoot"></div>
+          <div class="bs-word" id="bsWord"></div><img class="bs-logo" id="bsLogo" alt="" hidden>
+          <div class="bs-title" id="bsTitle"></div>
+          <div class="bs-emu" id="bsEmu"></div>
+          <div class="bs-bar" id="bsBar"><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="ins-stage">
+      <div class="ins-case"><div class="ins-inner"><div class="ins-hub"></div><div class="ins-shade"></div></div><div class="ins-edge"></div><div class="ins-lid"><div class="ins-lid-front"><img alt=""></div><div class="ins-lid-back"><div class="ins-manual"></div><div class="ins-clip"></div><div class="ins-clip b"></div></div></div></div>
+      <div class="ins-media"><div class="ins-shell"></div><div class="ins-label"></div><div class="ins-glint"></div></div>
+      <div class="ins-console"><img class="ins-console-img" alt=""><div class="ins-slot"></div><div class="ins-light"></div></div>
+      <div class="ins-cube" id="insCube">
+        <div class="cube-f cube-top">
+          <div class="cube-well"><div class="cube-spindle"></div><div class="cube-disc" id="cubeDisc"></div><div class="cube-well-shade"></div></div>
+          <div class="cube-lid"><div class="cube-lid-top"><div class="cube-lid-badge"></div></div><div class="cube-lid-under"></div></div>
+          <div class="cube-open-btn"></div>
+        </div>
+        <div class="cube-f cube-front"><div class="cube-lip"></div><div class="cube-power"></div><div class="cube-led"></div><div class="cube-vent"></div></div>
+        <div class="cube-f cube-left"></div>
+        <div class="cube-f cube-right"></div>
+        <div class="cube-shadow"></div>
+      </div>
+      <div class="ins-dock" id="insDock">
+        <div class="dock-f dock-top"><div class="dock-slot" id="dockSlot"></div></div>
+        <div class="dock-f dock-front"><div class="dock-led"></div><div class="dock-grill"></div></div>
+        <div class="dock-f dock-left"></div><div class="dock-f dock-right"></div>
+        <div class="cube-shadow"></div>
+      </div>
+      <div class="ins-deck" id="insDeck">
+        <div class="deck-f deck-top"><div class="deck-well" id="deckWell"><div class="deck-spindle"></div><div class="deck-disc" id="deckDisc"></div></div><div class="deck-hatch"><div class="deck-hatch-top"></div><div class="deck-hatch-under"></div></div><div class="deck-grip a"></div><div class="deck-grip b"></div></div>
+        <div class="deck-f deck-front"><div class="deck-slot" id="deckSlot"></div><div class="deck-door"></div><div class="deck-led"></div><div class="deck-line"></div></div>
+        <div class="deck-f deck-left"></div><div class="deck-f deck-right"></div>
+        <div class="deck-tray" id="deckTray"><div class="tray-f tray-top"><div class="tray-well"><div class="deck-spindle"></div><div class="deck-disc tray-disc" id="trayDisc"></div></div></div><div class="tray-f tray-front"><div class="tray-btn"></div></div><div class="tray-f tray-l"></div><div class="tray-f tray-r"></div></div>
+        <div class="cube-shadow"></div>
+      </div>
+    </div>
+    <div class="ins-text"><span class="l-emu" id="insEmu"></span><div class="l-title" id="insTitle"></div></div>
+  </div>
+
+  <div class="launch" id="launch">
+    <div class="l-bg"><img alt="" id="lBg"></div>
+    <div class="l-inner">
+      <div class="l-card" id="lCard"><img alt="" id="lCover"><i class="l-glare"></i></div>
+      <div class="l-word" id="lWord"></div>
+      <div class="l-title" id="lTitle"></div>
+      <div class="l-bar"><i></i></div>
+      <div class="l-emu" id="lEmu"></div>
+      <div class="l-cmd" id="lCmd"></div>
+      <div class="l-note" id="lNote"></div>
+    </div>
+  </div>
+
+  <aside class="settings" id="customize" aria-hidden="true">
+    <div class="d-kicker">Customize</div>
+    <div class="d-title">Your consoles' look</div>
+    <p class="d-desc">Logos, 3D consoles and boot videos, one system at a time. <span id="czSwitch">Q / E switch system.</span> You can also drag a file onto the shelf: an image becomes that shelf's logo, a video its boot animation.</p>
+    <div id="setRows"></div>
+    <div class="d-cmd" id="themePathNote"></div>
+    <div class="d-actions"><button class="btn" type="button" id="setClose">Close</button></div>
+  </aside>
+
+  <div class="boot" id="boot" aria-hidden="true">
+    <video id="bootVideo" playsinline preload="auto" hidden></video>
+    <div class="boot-intro" id="bootIntro"><div class="b-ring"></div><div class="b-ring r2"></div><div class="b-mark"><img id="bootLogo" alt="" hidden><span id="bootWord"></span></div><div class="b-sub">Boxshelf</div></div>
+    <div class="b-skip">Press Enter, Esc, Cross or Circle to skip</div>
+  </div>
+
+  <div class="setup" id="setup" aria-hidden="true">
+    <div class="su-card" role="dialog" aria-modal="true" aria-labelledby="suTitle">
+      <nav class="su-nav" id="suNav"></nav>
+      <div class="su-main">
+        <div class="su-body" id="suBody"></div>
+        <div class="su-foot" id="suFoot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="achv" id="achv" aria-hidden="true">
+    <div class="ach-head"><img id="achIcon" alt="" hidden><div class="ach-head-main"><div class="d-kicker">RetroAchievements</div><div class="ach-title" id="achTitle"></div><div class="ach-bar"><i id="achBar"></i></div><div class="ach-sub" id="achSub"></div></div></div>
+    <div class="ach-tabs" id="achTabs"></div>
+    <div class="ach-list" id="achList"></div>
+    <nav class="hints ach-hints" id="achHints"></nav>
+  </div>
+  <div class="museum" id="museum" aria-hidden="true">
+    <div class="mus-hud"><div class="mus-kicker" id="musRow"></div><div class="mus-title" id="musTitle"></div><div class="mus-meta" id="musMeta"></div></div>
+    <nav class="hints mus-hints" id="musHints" aria-label="Museum controls"></nav>
+    <div class="mus-skip" id="musSkip">Any button skips</div>
+  </div>
+  <div class="unlocks" id="unlocks"></div>
+  <div class="quit-hold" id="quitHold"><div class="isp-hold-bar" id="quitBar"></div><span>Keep holding to quit Boxshelf</span></div>
+  <div class="toast" id="toast"></div>
+</div>
+<script src="perf.js"></script>
+<script src="vendor/three.bundle.js"></script>
+<script src="consolefit.js"></script>
+<script src="model.js"></script>
+<script src="inspect3d.js"></script>
+<script src="museum.js"></script>
+<script src="mock.js"></script>
+<script src="pulse-api.js"></script>
+<script src="platform.js"></script>
+<script src="themes-extra.js"></script>
+<script src="songs.js"></script>
+<script src="sound.js"></script>
+<script src="covers.js"></script>
+<script src="setup.js"></script>
+<script src="settings.js"></script>
+<script src="themefx.js"></script>
+<script src="companion/tv-input.js"></script>
+<script src="whatsnew.js"></script>
+<script src="systems-extra.js"></script>
+<script src="android-touch.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
