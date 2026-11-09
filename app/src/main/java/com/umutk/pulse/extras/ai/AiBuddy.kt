@@ -45,6 +45,8 @@ object AiLive {
         val app = c.applicationContext
         working = w
         AiBuddyService.live?.setWorking(w, lastAnswer)
+        // the bar: Pulse's Island unless another bar style (Claude Chat's pill, line, curtain) is chosen
+        if (AiBuddyService.barStyle(app) != "island") return
         val island = IslandService.live ?: return
         val orange = 0xFFD97757.toInt()
         island.post(IslandItem("ai", "ai", "Pulse AI", if (w) tr("Working…", "Çalışıyor…") else tr("Done", "Bitti"), icon = mascotBitmap(app), color = orange, prio = 3,
@@ -57,22 +59,30 @@ object AiLive {
     }
 }
 
-/** Hosts the floating mascot: the walking, draggable, talking buddy copied from Claude Chat (cc/Buddy.kt). */
+/** Hosts the Claude Chat overlay (cc/Overlay.kt: the pill, line and curtain, and the walking buddy in it) for Pulse AI. */
 class AiBuddyService : Service() {
     companion object {
         @Volatile var live: AiBuddyService? = null
         private fun sp(c: Context) = c.applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE)
         fun enabled(c: Context) = sp(c).getBoolean("buddy", false)
-        fun setEnabled(c: Context, on: Boolean) {
-            sp(c).edit().putBoolean("buddy", on).apply()
-            if (on) { val i = Intent(c, AiBuddyService::class.java); if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
+        /** island (Pulse's own), pill, line, curtain (Claude Chat's), off. */
+        fun barStyle(c: Context) = sp(c).getString("bar", "island") ?: "island"
+        fun setBarStyle(c: Context, v: String) { sp(c).edit().putString("bar", v).apply(); live?.refresh() }
+        /** The service runs when the floating mascot is on or a Claude Chat bar style is chosen. */
+        fun update(c: Context) {
+            if (enabled(c) || barStyle(c) in setOf("pill", "line", "curtain")) { val i = Intent(c, AiBuddyService::class.java); if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) }
             else c.stopService(Intent(c, AiBuddyService::class.java))
         }
+        fun setEnabled(c: Context, on: Boolean) { sp(c).edit().putBoolean("buddy", on).apply(); if (live != null) live?.refresh(); update(c) }
     }
 
     private val main = Handler(Looper.getMainLooper())
-    private var buddy: com.umutk.pulse.extras.ai.cc.Buddy? = null
+    private var overlay: com.umutk.pulse.extras.ai.cc.Overlay? = null
     private val ch = "ai_buddy"
+    private var lastSt = com.umutk.pulse.extras.ai.cc.Status.Idle
+    private var lastDet = ""
+    private var lastText = ""
+    private val settle = Runnable { show(com.umutk.pulse.extras.ai.cc.Status.Idle, "", "") }
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -87,26 +97,43 @@ class AiBuddyService : Service() {
         if (Build.VERSION.SDK_INT >= 29) startForeground(7461, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(7461, n)
         if (!com.umutk.pulse.Compat.canOverlay(this)) { applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE).edit().putBoolean("buddy", false).apply(); stopSelf(); return }
         com.umutk.pulse.extras.ai.cc.Prefs.init(this)
-        buddy = com.umutk.pulse.extras.ai.cc.Buddy(this).also { it.render(com.umutk.pulse.extras.ai.cc.Status.Idle, "", "") }
+        overlay = com.umutk.pulse.extras.ai.cc.Overlay(this)
+        refresh()
         if (AiLive.working) setWorking(true, "")
     }
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
-        if (i?.action == "stop") { applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE).edit().putBoolean("buddy", false).apply(); stopSelf() }
+        if (i?.action == "stop") {
+            applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE).edit().putBoolean("buddy", false).putString("bar", "island").apply()
+            stopSelf()
+        }
         return START_STICKY
     }
 
-    /** The model starts answering (the mascot works and says so) or is done (it is happy and shows the answer in a speech bubble). */
+    /** The overlay's style from the choices: the bar style of Claude Chat (or none when Pulse's Island is the bar), and the floating mascot on or off. */
+    private fun style(): String = barStyle(this).let { if (it in setOf("pill", "line", "curtain")) it else "off" }
+
+    private fun show(st: com.umutk.pulse.extras.ai.cc.Status, det: String, last: String) {
+        lastSt = st; lastDet = det; lastText = last
+        com.umutk.pulse.extras.ai.cc.Prefs.buddyOn.value = enabled(this)
+        overlay?.render(style(), st, det, last)
+    }
+
+    /** Settings (the look, the style) changed: the overlay is drawn again. */
+    fun refresh() { main.post { com.umutk.pulse.extras.ai.cc.Prefs.init(this); com.umutk.pulse.extras.ai.cc.Prefs.buddyOn.value = enabled(this); overlay?.hide(); show(lastSt, lastDet, lastText) } }
+
+    /** The model starts answering (the mascot works and says so) or is done (happy, the answer in a speech bubble), then settles back to idle. */
     fun setWorking(w: Boolean, last: String) {
         main.post {
-            val b = buddy ?: return@post
-            if (w) b.render(com.umutk.pulse.extras.ai.cc.Status.Working, tr("Working…", "Çalışıyorum…"), "")
-            else b.render(com.umutk.pulse.extras.ai.cc.Status.Done, "", last)
+            main.removeCallbacks(settle)
+            if (w) show(com.umutk.pulse.extras.ai.cc.Status.Working, tr("Working…", "Çalışıyor…"), "")
+            else { show(com.umutk.pulse.extras.ai.cc.Status.Done, "", last); main.postDelayed(settle, 6000) }
         }
     }
 
     override fun onDestroy() {
-        buddy?.hide(); buddy = null; live = null
+        main.removeCallbacksAndMessages(null)
+        overlay?.hide(); overlay = null; live = null
         super.onDestroy()
     }
 }
