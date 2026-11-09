@@ -21,7 +21,6 @@
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is so many stuff all sticked together actually for my own usage than turned into a general project wich includes a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
-<details><summary><b>📚 Everything in Pulse</b></summary>
 
 <details><summary><b>🎨 Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
@@ -90,7 +89,6 @@
 </details>
 
 
-</details>
 
 <details><summary><b>✨ Features</b></summary>
 
