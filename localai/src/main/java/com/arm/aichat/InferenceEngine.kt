@@ -31,6 +31,16 @@ interface InferenceEngine {
     fun sendUserPrompt(message: String, predictLength: Int = DEFAULT_PREDICT_LENGTH): Flow<String>
 
     /**
+     * Loads the vision projector (the mmproj file) of the loaded model. True when the model can see pictures.
+     */
+    suspend fun loadProjector(projectorPath: String): Boolean
+
+    /**
+     * Sends a user prompt together with a picture (JPEG or PNG bytes) to the loaded vision model.
+     */
+    fun sendUserPromptWithImage(message: String, image: ByteArray, predictLength: Int = DEFAULT_PREDICT_LENGTH): Flow<String>
+
+    /**
      * Runs a benchmark with the specified parameters.
      */
     suspend fun bench(pp: Int, tg: Int, pl: Int, nr: Int = 1): String

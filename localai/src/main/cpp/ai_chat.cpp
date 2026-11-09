@@ -10,6 +10,8 @@
 #include "chat.h"
 #include "common.h"
 #include "llama.h"
+#include "mtmd.h"
+#include "mtmd-helper.h"
 
 template<class T>
 static std::string join(const std::vector<T> &values, const std::string &delim) {
@@ -38,6 +40,8 @@ static llama_context                    * g_context;
 static common_batch                       g_batch;
 static common_chat_templates_ptr          g_chat_templates;
 static common_sampler                   * g_sampler;
+// Pulse AI: the vision part (llama.cpp mtmd) of a vision model, loaded from its mmproj file; null for text-only models
+static mtmd_context                     * g_mtmd;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -449,6 +453,102 @@ Java_com_arm_aichat_internal_InferenceEngineImpl_processUserPrompt(
     return 0;
 }
 
+/**
+ * Pulse AI: loads the vision projector (the mmproj file of a vision model) for the model that is loaded.
+ * 0 when it is there and the model can see; 1 no model, 2 the file could not be opened, 3 the model has no vision.
+ */
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_arm_aichat_internal_InferenceEngineImpl_projector(JNIEnv *env, jobject /*unused*/, jstring jproj_path) {
+    if (!g_model) { return 1; }
+    if (g_mtmd) { mtmd_free(g_mtmd); g_mtmd = nullptr; }
+
+    const auto *proj_path = env->GetStringUTFChars(jproj_path, nullptr);
+    mtmd_context_params mparams = mtmd_context_params_default();
+    mparams.n_threads = std::max(N_THREADS_MIN, std::min(N_THREADS_MAX, (int) sysconf(_SC_NPROCESSORS_ONLN) - N_THREADS_HEADROOM));
+    mparams.warmup = false;
+    g_mtmd = mtmd_init_from_file(proj_path, g_model, mparams);
+    env->ReleaseStringUTFChars(jproj_path, proj_path);
+    if (!g_mtmd) {
+        LOGe("%s: could not open the vision projector", __func__);
+        return 2;
+    }
+    if (!mtmd_support_vision(g_mtmd)) {
+        LOGe("%s: the model has no vision", __func__);
+        mtmd_free(g_mtmd);
+        g_mtmd = nullptr;
+        return 3;
+    }
+    LOGi("%s: vision projector loaded", __func__);
+    return 0;
+}
+
+/**
+ * Pulse AI: one user turn with a picture. The picture (any JPEG/PNG bytes, decoded here) goes in before the text, at the
+ * media marker of the model. Returns 0 when the picture is in the context, else an error code (see the Kotlin side).
+ */
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_arm_aichat_internal_InferenceEngineImpl_processUserPromptImage(
+        JNIEnv *env,
+        jobject /*unused*/,
+        jstring juser_prompt,
+        jbyteArray jimage,
+        jint n_predict
+) {
+    reset_short_term_states();
+    if (!g_mtmd) { LOGe("%s: no vision projector loaded", __func__); return 4; }
+
+    // Decode the picture
+    const jsize n_bytes = env->GetArrayLength(jimage);
+    jbyte *bytes = env->GetByteArrayElements(jimage, nullptr);
+    mtmd_helper_bitmap_wrapper wrap = mtmd_helper_bitmap_init_from_buf(
+            g_mtmd, reinterpret_cast<const unsigned char *>(bytes), (size_t) n_bytes, false, mtmd_helper_init_opt_default());
+    env->ReleaseByteArrayElements(jimage, bytes, JNI_ABORT);
+    if (!wrap.bitmap) { LOGe("%s: the picture could not be decoded", __func__); return 5; }
+    mtmd_bitmap *bitmap = wrap.bitmap;
+
+    // The text, with the marker in front of it; the chat template goes around both like any other turn
+    const auto *user_prompt = env->GetStringUTFChars(juser_prompt, nullptr);
+    const std::string text_in = std::string(mtmd_get_marker(g_mtmd)) + "\n" + user_prompt;
+    env->ReleaseStringUTFChars(juser_prompt, user_prompt);
+
+    const bool has_chat_template = common_chat_templates_was_explicit(g_chat_templates.get());
+    const std::string formatted = has_chat_template ? chat_add_and_format(ROLE_USER, text_in) : text_in;
+
+    mtmd_input_text text{formatted.c_str(), formatted.size(), has_chat_template, has_chat_template};
+    mtmd_input_chunks *chunks = mtmd_input_chunks_init();
+    const mtmd_bitmap *bitmaps[1] = {bitmap};
+    const int32_t tokenized = mtmd_tokenize(g_mtmd, chunks, &text, bitmaps, 1);
+    mtmd_bitmap_free(bitmap);
+    if (tokenized != 0) {
+        LOGe("%s: tokenizing the picture and text failed: %d", __func__, tokenized);
+        mtmd_input_chunks_free(chunks);
+        return 6;
+    }
+
+    // The picture must fit into what is left of the context (no shifting here)
+    const int n_tokens = (int) mtmd_helper_get_n_tokens(chunks);
+    if (current_position + n_tokens >= DEFAULT_CONTEXT_SIZE - OVERFLOW_HEADROOM) {
+        LOGe("%s: the picture does not fit into the context: %d tokens at %d", __func__, n_tokens, current_position);
+        mtmd_input_chunks_free(chunks);
+        return 7;
+    }
+
+    // Decode the text and the picture's embeddings; the last one gives the logits the answer starts from
+    llama_pos new_position = current_position;
+    const int32_t evaluated = mtmd_helper_eval_chunks(g_mtmd, g_context, chunks, current_position, 0, BATCH_SIZE, true, &new_position);
+    mtmd_input_chunks_free(chunks);
+    if (evaluated != 0) {
+        LOGe("%s: evaluating the picture failed: %d", __func__, evaluated);
+        return 8;
+    }
+
+    current_position = new_position;
+    stop_generation_position = current_position + n_predict;
+    return 0;
+}
+
 static bool is_valid_utf8(const char *string) {
     if (!string) { return true; }
 
@@ -552,6 +652,7 @@ Java_com_arm_aichat_internal_InferenceEngineImpl_unload(JNIEnv * /*unused*/, job
 
     // Free up resources
     common_sampler_free(g_sampler);
+    if (g_mtmd) { mtmd_free(g_mtmd); g_mtmd = nullptr; }
     g_chat_templates.reset();
     g_batch = common_batch();
     llama_free(g_context);

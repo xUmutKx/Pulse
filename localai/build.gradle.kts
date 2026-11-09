@@ -20,7 +20,7 @@ android {
                 abiFilters += listOf("arm64-v8a")
                 arguments += listOf(
                     "-DLLAMA_SRC=$vendor/llama.cpp",
-                    "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON", "-DLLAMA_BUILD_APP=OFF", "-DLLAMA_BUILD_COMMON=ON", "-DLLAMA_OPENSSL=OFF", "-DLLAMA_CURL=OFF",
+                    "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON", "-DLLAMA_BUILD_APP=OFF", "-DLLAMA_BUILD_COMMON=ON", "-DLLAMA_BUILD_MTMD=ON", "-DMTMD_VIDEO=OFF", "-DLLAMA_OPENSSL=OFF", "-DLLAMA_CURL=OFF",
                     "-DGGML_NATIVE=OFF", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DGGML_LLAMAFILE=OFF",
                 )
             }
