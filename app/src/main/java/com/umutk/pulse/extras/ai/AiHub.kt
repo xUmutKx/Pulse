@@ -20,6 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -73,19 +82,67 @@ fun AiHub(onBack: () -> Unit) {
         return
     }
     if (!welcomed) { AiWelcome { sp.edit().putBoolean("welcomed", true).apply(); welcomed = true }; return }
-    var tab by rememberSaveable { mutableStateOf(if (Store.known(c, "chat").any { Store.has(c, it) } || Store.customUri(c, "chat") != null) "chat" else "models") }
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-            Text("Pulse AI", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("chat" to tr("Chat", "Sohbet"), "models" to tr("Models", "Modeller"), "speech" to tr("Lyrics and speech", "Söz ve ses"), "memory" to tr("Memory", "Hafıza")).forEach { (k, l) -> PChip(tab == k, l) { tab = k } }
-        }
-        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
-            when (tab) { "chat" -> AiChat { tab = "models" }; "models" -> AiModelsPage(); "speech" -> AiSpeechPage(); else -> AiMemoryPage() }
+    // the chats kept on the phone: a drawer (the menu at the top left) lists them; the + at its bottom starts a new one
+    val chats = remember { mutableStateListOf<ChatRec>().apply { addAll(chatsOf(c)); if (isEmpty()) add(ChatRec(newChatId(), mutableStateListOf())) } }
+    var cur by rememberSaveable { mutableStateOf(chats.first().id) }
+    var models by rememberSaveable { mutableStateOf(false) }
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    BackHandler { if (drawer.isOpen) scope.launch { drawer.close() } else if (models) models = false else onBack() }
+    val chat = chats.firstOrNull { it.id == cur } ?: chats.first().also { cur = it.id }
+    fun openChat(id: String) { cur = id; models = false; scope.launch { drawer.close() } }
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        drawerContent = {
+            ModalDrawerSheet(drawerContainerColor = T.panel, drawerContentColor = T.text, modifier = Modifier.width(300.dp)) {
+                Column(Modifier.fillMaxHeight().statusBarsPadding().padding(vertical = 12.dp)) {
+                    Text("Pulse AI", color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(chats.toList(), key = { it.id }) { ch ->
+                            val on = ch.id == cur && !models
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp))
+                                .background(if (on) T.text.copy(alpha = .08f) else Color.Transparent).clickable { openChat(ch.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(ch.title.ifEmpty { tr("New chat", "Yeni sohbet") }, color = if (ch.title.isEmpty()) T.sub else T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Box(Modifier.size(32.dp).clickable {
+                                    chats.remove(ch)
+                                    if (chats.isEmpty()) chats.add(ChatRec(newChatId(), mutableStateListOf()))
+                                    if (cur == ch.id) cur = chats.first().id
+                                    saveChats(c, chats)
+                                }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 16.dp) }
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { models = true; scope.launch { drawer.close() } }
+                        .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("download", T.text, 20.dp); Text(tr("Models", "Modeller"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                    }
+                    // the + at the bottom left: a new chat
+                    Box(Modifier.padding(start = 20.dp, top = 12.dp).size(50.dp).clip(CircleShape).background(Look.accent).clickable {
+                        val n = ChatRec(newChatId(), mutableStateListOf()); chats.add(0, n); openChat(n.id)
+                    }, contentAlignment = Alignment.Center) { PIcon("add", onAccent(Look.accent), 24.dp) }
+                }
+            }
+        },
+    ) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
+                Text(if (models) tr("Models", "Modeller") else chat.title.ifEmpty { "Pulse AI" }, color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                if (models) AiModelsPage()
+                else key(chat.id) { AiChat(chat, onSaved = { saveChats(c, chats) }, toModels = { models = true }) }
+            }
         }
     }
+}
+
+private fun newChatId() = System.currentTimeMillis().toString(36) + (0..999).random().toString(36)
+
+/** A chat: its id, its title (its first question) and its messages. */
+private class ChatRec(val id: String, val msgs: androidx.compose.runtime.snapshots.SnapshotStateList<Msg>) {
+    var title by mutableStateOf(msgs.firstOrNull { it.user }?.text?.take(40).orEmpty())
 }
 
 @Composable
@@ -201,19 +258,38 @@ private fun ModelRow(m: AiModel, tick: Int, suggested: Boolean, changed: () -> U
 /** One message; the chat is kept on the phone between starts (the last 60). */
 private class Msg(val user: Boolean, text: String) { var text by mutableStateOf(text) }
 
-private fun saveChat(c: Context, l: List<Msg>) {
-    val a = JSONArray(); l.takeLast(60).forEach { a.put(JSONObject().put("u", it.user).put("t", it.text)) }
-    c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).edit().putString("last", a.toString()).apply()
+/** Every chat kept on the phone (the last 40, each with its last 60 messages). The chat kept from the earlier single-chat version comes first. */
+private fun chatsOf(c: Context): List<ChatRec> {
+    val out = mutableListOf<ChatRec>()
+    runCatching {
+        val a = JSONArray(c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).getString("chats", "[]"))
+        for (i in 0 until a.length()) {
+            val o = a.getJSONObject(i); val m = o.getJSONArray("m")
+            out += ChatRec(o.getString("id"), (0 until m.length()).map { k -> m.getJSONObject(k).let { Msg(it.getBoolean("u"), it.getString("t")) } }.toMutableStateList())
+        }
+    }
+    if (out.isEmpty()) runCatching { loadChat(c) }.getOrDefault(emptyList()).takeIf { it.isNotEmpty() }?.let { old -> out += ChatRec(newChatId(), old.toMutableStateList()) }
+    return out
+}
+
+private fun saveChats(c: Context, l: List<ChatRec>) {
+    val a = JSONArray()
+    l.take(40).forEach { ch ->
+        val m = JSONArray(); ch.msgs.takeLast(60).forEach { m.put(JSONObject().put("u", it.user).put("t", it.text)) }
+        a.put(JSONObject().put("id", ch.id).put("t", ch.title).put("m", m))
+    }
+    c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).edit().putString("chats", a.toString()).apply()
 }
 private fun loadChat(c: Context): List<Msg> = runCatching {
     val a = JSONArray(c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).getString("last", "[]")); (0 until a.length()).map { Msg(a.getJSONObject(it).getBoolean("u"), a.getJSONObject(it).getString("t")) }
 }.getOrDefault(emptyList())
 
+/** The chat screen: messages, the box to write in, and a file to attach. No tabs, no speech: only the chat. */
 @Composable
-private fun AiChat(toModels: () -> Unit) {
+private fun AiChat(chat: ChatRec, onSaved: () -> Unit, toModels: () -> Unit) {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
-    val msgs = remember { mutableStateListOf<Msg>().apply { addAll(loadChat(c)) } }
+    val msgs = chat.msgs
     var input by remember { mutableStateOf("") }
     var attached by remember { mutableStateOf<Pair<String, String>?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -232,6 +308,7 @@ private fun AiChat(toModels: () -> Unit) {
     fun send() {
         val q = input.trim(); if (q.isEmpty() || busy) return
         val full = attached?.let { (name, text) -> "$q\n\n[${tr("File", "Dosya")}: $name]\n$text" } ?: q
+        if (chat.title.isEmpty()) chat.title = q.take(40)
         msgs += Msg(true, if (attached != null) "$q\n[${attached!!.first}]" else q); input = ""; attached = null
         val a = Msg(false, ""); msgs += a; busy = true
         job = scope.launch {
@@ -247,13 +324,10 @@ private fun AiChat(toModels: () -> Unit) {
                 if (!started) { a.text = tr("The model could not be opened. Pick another one in Models.", "Model açılamadı. Modeller'den başka birini seç."); return@launch }
                 AiEngine.ask(c, full).collect { t -> a.text += t; list.scrollToItem(msgs.size - 1) }
             } catch (e: Exception) { if (a.text.isEmpty()) a.text = tr("Error: ", "Hata: ") + (e.message ?: e.javaClass.simpleName) }
-            finally { busy = false; saveChat(c, msgs) }
+            finally { busy = false; onSaved() }
         }
     }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.End) {
-            TextButton({ job?.cancel(); msgs.clear(); started = false; saveChat(c, msgs) }) { Text(tr("New chat", "Yeni sohbet"), color = Look.accent) }
-        }
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(msgs) { m ->
                 Box(Modifier.fillMaxWidth(), contentAlignment = if (m.user) Alignment.CenterEnd else Alignment.CenterStart) {
@@ -264,7 +338,7 @@ private fun AiChat(toModels: () -> Unit) {
                 }
             }
         }
-        attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", T.sub, 16.dp); Text(n, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp)) } }
+        attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", T.sub, 16.dp); Text(n, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
         Row(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("document", T.text, 22.dp) }
             PField(input, { input = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { send() })
@@ -281,117 +355,6 @@ private fun readAttachment(c: Context, u: Uri): Pair<String, String>? = runCatch
     name to String(bytes, Charsets.UTF_8).replace("\u0000", "").take(12_000)
 }.getOrNull()
 
-@Composable
-private fun AiSpeechPage() {
-    val c = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var result by remember { mutableStateOf("") }
-    var stage by remember { mutableStateOf("") }
-    var frac by remember { mutableFloatStateOf(0f) }
-    var busy by remember { mutableStateOf(false) }
-    var lang by remember { mutableStateOf("auto") }
-    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
-        if (u == null) return@rememberLauncherForActivityResult
-        busy = true; result = ""
-        scope.launch {
-            val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
-            val r = runCatching { Transcriber.lrc(c, u, lang, null, null, { s, f -> stage = s; frac = f }) }
-            poll.cancel(); busy = false
-            result = r.getOrNull() ?: r.exceptionOrNull()?.message ?: tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller).")
-        }
-    }
-    // a song from the list: the background service takes it (the lyrics search first, then the AI); it goes on when this page is left, and a second song waits its turn
-    fun makeFor(t: com.umutk.pulse.extras.music.Track) {
-        if (!Transcriber.ready(c)) { result = tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller)."); return }
-        result = ""
-        com.umutk.pulse.extras.lyrics.LyricsBatchJob.startOne(c, t.path, t.title ?: java.io.File(t.path).nameWithoutExtension, t.artist.orEmpty())
-    }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PCard {
-            Text(tr("A song or a recording becomes timed lyrics (LRC). In the music player the AI button of the lyrics does this for the song that is playing.",
-                "Bir şarkı ya da kayıt zamanlı sözlere (LRC) dönüşür. Müzik çalarda sözlerin AI tuşu bunu çalan şarkı için yapar."), color = T.sub, fontSize = 13.sp)
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("auto" to tr("Auto", "Otomatik"), "tr" to "Türkçe", "en" to "English").forEach { (k, l) -> PChip(lang == k, l) { lang = k } }
-            }
-            PButton(tr("Pick a song", "Şarkı seç"), Modifier.padding(top = 8.dp)) { if (!busy) pick.launch(arrayOf("audio/*", "video/*")) }
-        }
-        // what the background service is doing for the songs of the list (and the batch): how far, how long, the lines found so far
-        if (com.umutk.pulse.extras.lyrics.LyricsBatchJob.busy) PCard { LyricsJobProgress(showStop = true) }
-        if (busy) PCard {
-            Text(stage, color = T.text, fontSize = 14.sp)
-            PProgress(frac, Modifier.fillMaxWidth().padding(top = 8.dp))
-            TextButton({ Transcriber.stop() }) { Text(tr("Stop", "Durdur"), color = Look.accent) }
-        }
-        if (result.isNotEmpty()) PCard {
-            SelectionContainer { Text(result, color = T.text, fontSize = 13.sp) }
-            TextButton({ c.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, result), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text(tr("Share", "Paylaş"), color = Look.accent) }
-        }
-        SongsWithoutLyrics(false, lang) { t -> makeFor(t) }
-    }
-}
-
-/** The songs that have no lyrics yet, at the bottom of the speech page: a search box, and a tap makes the lyrics of that song. */
-@Composable
-private fun SongsWithoutLyrics(busy: Boolean, lang: String, onMake: (com.umutk.pulse.extras.music.Track) -> Unit) {
-    val c = LocalContext.current
-    val tracks by com.umutk.pulse.extras.music.MusicLibrary.tracks.collectAsState()
-    var rows by remember { mutableStateOf<List<com.umutk.pulse.extras.music.Track>?>(null) }
-    var query by remember { mutableStateOf("") }
-    LaunchedEffect(tracks, com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick) {
-        rows = withContext(Dispatchers.IO) { tracks.filter { !it.path.contains("://") && !com.umutk.pulse.extras.lyrics.LyricsStatus.has(c, it.path, it.artist.orEmpty(), it.title.orEmpty()) } }
-    }
-    val q = query.trim()
-    val shown = rows?.filter { q.isEmpty() || (it.title ?: "").contains(q, true) || it.artist.orEmpty().contains(q, true) || it.path.contains(q, true) }
-    PCard {
-        Text(tr("Songs without lyrics", "Sözü olmayan şarkılar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(tr("${rows?.size ?: 0} songs", "${rows?.size ?: 0} şarkı"), color = T.sub, fontSize = 12.sp)
-        com.umutk.pulse.PField(query, { query = it }, tr("Search", "Ara"), Modifier.padding(top = 8.dp))
-        if (shown == null) PLoader(Modifier.padding(top = 10.dp).size(24.dp))
-        else shown.take(300).forEach { t ->
-            Column(Modifier.fillMaxWidth().clickable(enabled = !busy) { onMake(t) }.padding(vertical = 8.dp)) {
-                Text(t.title ?: java.io.File(t.path).nameWithoutExtension, color = T.text, fontSize = 14.sp, maxLines = 1)
-                Text(t.artist.orEmpty(), color = T.sub, fontSize = 12.sp, maxLines = 1)
-            }
-        }
-        if (shown != null && shown.size > 300) Text(tr("Search to find more", "Daha fazlası için ara"), color = T.sub, fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun AiMemoryPage() {
-    val c = LocalContext.current
-    var facts by remember { mutableStateOf(AiMemory.facts(c)) }
-    var on by remember { mutableStateOf(AiMemory.on(c)) }
-    var add by remember { mutableStateOf("") }
-    var sys by remember { mutableStateOf(c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).getString("system", "") ?: "") }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Every new chat knows these", "Her yeni sohbet bunları bilir"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                PSwitch(on, { on = it; AiMemory.setOn(c, it) })
-            }
-            facts.forEachIndexed { i, f ->
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(f, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    Box(Modifier.size(36.dp).clickable { facts = facts.filterIndexed { j, _ -> j != i }; AiMemory.set(c, facts) }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 18.dp) }
-                }
-            }
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                PField(add, { add = it }, tr("My name is…, I work as…, answer briefly…", "Adım…, işim…, kısa yanıt ver…"), Modifier.weight(1f), onDone = { if (add.isNotBlank()) { facts = facts + add.trim(); AiMemory.set(c, facts); add = "" } })
-                Box(Modifier.size(44.dp).clickable { if (add.isNotBlank()) { facts = facts + add.trim(); AiMemory.set(c, facts); add = "" } }, contentAlignment = Alignment.Center) { PIcon("add", Look.accent, 22.dp) }
-            }
-        }
-        PCard {
-            Text(tr("Instructions of every chat (empty: the default)", "Her sohbetin talimatı (boş: varsayılan)"), color = T.text, fontSize = 15.sp)
-            PField(sys, { sys = it; c.getSharedPreferences("ai_chat", Context.MODE_PRIVATE).edit().putString("system", it.ifBlank { null }).apply() }, tr("You are…", "Sen…"), Modifier.fillMaxWidth().padding(top = 6.dp))
-        }
-    }
-}
-
-/**
- * What the lyrics service is doing now, to be seen: the song, how far it is (the whole song, not only the minute being listened to), how long it
- * has been going, and the lines found so far (the newest at the bottom; the first ones come after the first minute of the song).
- */
 @Composable
 internal fun LyricsJobProgress(showStop: Boolean) {
     val c = LocalContext.current
