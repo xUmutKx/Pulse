@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -973,7 +974,8 @@ fun GameHubHub(onBack: () -> Unit) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
                     } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle) { BoxshelfWeb(
-                        Modifier.fillMaxSize(),
+                        // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
+                        Modifier.fillMaxSize().navigationBarsPadding(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
@@ -1013,13 +1015,13 @@ fun GameHubHub(onBack: () -> Unit) {
                         onClick = { libSearch = !libSearch; if (!libSearch) libQuery = "" },
                         containerColor = pal.card,
                         contentColor = pal.text,
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 96.dp),
+                        modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 20.dp, bottom = 96.dp),
                     ) { FluentIcon("search", pal.text, 22.dp) }
                     FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
                         contentColor = pal.bg,
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+                        modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp),
                     ) { FluentIcon("add", pal.bg, 24.dp) }
                 }
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
