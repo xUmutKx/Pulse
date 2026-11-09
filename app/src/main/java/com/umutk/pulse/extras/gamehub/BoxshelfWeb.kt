@@ -113,6 +113,8 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
     val settings by rememberUpdatedState(onSettings)
+    // Back on the bare shelf leaves Game Hub itself (to whatever was before it): the shelf's own Back handler steps aside first, then the system's goes on
+    var leaving by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val holder = remember { arrayOfNulls<WebView>(1) }
     androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.launcher.LauncherSounds.preloadAlways(ctx, "win11") }
     val owner = LocalLifecycleOwner.current
@@ -126,7 +128,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
         onDispose { owner.lifecycle.removeObserver(obs); holder[0]?.destroy(); holder[0] = null }
     }
     // Back: Esc into the page; the page decides (it closes a panel, a case, a menu); at the top it asks Pulse to leave
-    BackHandler { holder[0]?.evaluateJavascript("window.__pulseBack&&window.__pulseBack()", null) }
+    BackHandler(enabled = !leaving) { holder[0]?.evaluateJavascript("window.__pulseBack&&window.__pulseBack()", null) }
     AndroidView(modifier = modifier.fillMaxSize(), factory = { c ->
         WebView(c).also { w ->
             holder[0] = w
@@ -142,7 +144,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.isHapticFeedbackEnabled = false
             w.settings.allowFileAccess = false
             w.settings.allowContentAccess = false
-            w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit() }, { settings() }), "PulseHost")
+            w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
             w.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? = serve(c, request.url)
             }

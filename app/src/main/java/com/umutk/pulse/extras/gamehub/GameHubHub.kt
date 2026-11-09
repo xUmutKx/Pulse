@@ -985,7 +985,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
-                        onExit = { go(0) },
+                        onExit = { },
                         onSettings = { go(2) },
                     ) } else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
