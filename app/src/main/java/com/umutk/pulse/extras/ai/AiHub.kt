@@ -320,11 +320,14 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
     val msgs = chat.msgs
     var input by remember { mutableStateOf("") }
     var attached by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var picture by remember { mutableStateOf<Pair<String, ByteArray>?>(null) }
     var busy by remember { mutableStateOf(false) }
     var started by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
     val list = rememberLazyListState()
-    val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? -> if (u != null) attached = readAttachment(c, u) }
+    val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
+        if (u != null) { if ((c.contentResolver.getType(u) ?: "").startsWith("image/")) picture = pictureFrom(c, u) else attached = readAttachment(c, u) }
+    }
     if (Store.known(c, "chat").none { Store.has(c, it) } && Store.customUri(c, "chat") == null) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             PIcon("download", AiSub, 40.dp)
@@ -335,9 +338,10 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
     }
     fun send() {
         val q = input.trim(); if (q.isEmpty() || busy) return
+        val pic = picture; picture = null
         val full = attached?.let { (name, text) -> "$q\n\n[${tr("File", "Dosya")}: $name]\n$text" } ?: q
         if (chat.title.isEmpty()) chat.title = q.take(40)
-        msgs += Msg(true, if (attached != null) "$q\n[${attached!!.first}]" else q); input = ""; attached = null
+        msgs += Msg(true, if (pic != null) "$q\n[${pic.first}]" else if (attached != null) "$q\n[${attached!!.first}]" else q); input = ""; attached = null
         val a = Msg(false, ""); msgs += a; busy = true; onBusy(true)
         job = scope.launch {
             try {
@@ -350,7 +354,9 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
                     a.text = ""
                 }
                 if (!started) { a.text = tr("The model could not be opened. Pick another one in Models.", "Model açılamadı. Modeller'den başka birini seç."); return@launch }
-                AiEngine.ask(c, full).collect { t -> a.text += t; list.scrollToItem(0) }
+                if (pic != null && !AiEngine.vision) { a.text = tr("This model cannot see pictures. Pick a vision model in Models.", "Bu model resim göremiyor. Modeller'den görsel bir model seç."); return@launch }
+                val answer = if (pic != null) AiEngine.askPicture(c, full, pic.second) else AiEngine.ask(c, full)
+                answer.collect { t -> a.text += t; list.scrollToItem(0) }
             } catch (e: Exception) { if (a.text.isEmpty()) a.text = tr("Error: ", "Hata: ") + (e.message ?: e.javaClass.simpleName) }
             finally { busy = false; AiLive.lastAnswer = a.text; onBusy(false); onSaved() }
         }
@@ -378,6 +384,7 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
                 }
             }
         }
+        picture?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { picture = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", AiSub, 16.dp); Text(n, color = AiSub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
         attached?.let { (n, _) -> Row(Modifier.padding(horizontal = 16.dp).clickable { attached = null }, verticalAlignment = Alignment.CenterVertically) { PIcon("document", AiSub, 16.dp); Text(n, color = AiSub, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp)) } }
         Row(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Bottom) {
             Box(Modifier.size(44.dp).clip(CircleShape).background(AiInk.copy(alpha = .08f)).clickable { pickFile.launch(arrayOf("text/*", "application/json", "application/xml", "*/*")) }, contentAlignment = Alignment.Center) { PIcon("add", AiInk, 22.dp) }
@@ -428,6 +435,20 @@ private fun AiSettingsDialog(onClose: () -> Unit) {
         }
     }
 }
+
+/** A picture for the vision model: its name and its bytes as a JPEG no larger than 768 pixels (the model shrinks it anyway, so this is quicker). */
+private fun pictureFrom(c: Context, u: Uri): Pair<String, ByteArray>? = runCatching {
+    val name = c.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "picture"
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    c.contentResolver.openInputStream(u)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 768) sample *= 2
+    val bmp = c.contentResolver.openInputStream(u)?.use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return@runCatching null
+    val out = java.io.ByteArrayOutputStream()
+    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, out)
+    bmp.recycle()
+    name to out.toByteArray()
+}.getOrNull()
 
 /** A text file for the chat: its name and up to 12 000 characters of it. */
 private fun readAttachment(c: Context, u: Uri): Pair<String, String>? = runCatching {
