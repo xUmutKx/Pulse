@@ -990,8 +990,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     ) {
                         items(sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoLine(g, usage, sizes)) { profile = g } }
                     }
+                    // Boxshelf's own screen has its own sort and search: Game Hub's bar and search are for the other shelves
+                    val webShelf = theme == "shelf" && webShelfOk
                     // the sort row, like the library bar of a store: name, play time, size
-                    Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!webShelf) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
                             Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
                         }
@@ -999,9 +1001,9 @@ fun GameHubHub(onBack: () -> Unit) {
                         Chip(pal, if (viewMode == 0) tr("Banners", "Bannerlar") else tr("Tiles", "Kartlar")) { viewMode = 1 - viewMode; prefs(ctx).edit().putInt("view", viewMode).apply() }
                     }
                     // the search: a round button on the right; the field opens under the sort row
-                    if (libSearch) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
+                    if (libSearch && !webShelf) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
                         Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 56.dp))
-                    FloatingActionButton(
+                    if (!webShelf) FloatingActionButton(
                         onClick = { libSearch = !libSearch; if (!libSearch) libQuery = "" },
                         containerColor = pal.card,
                         contentColor = pal.text,
