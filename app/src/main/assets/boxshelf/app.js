@@ -1899,7 +1899,7 @@ function runBoot(s,done){
     const p=v.play();if(p&&p.then)p.then(stale,()=>{if(!live())return;v.muted=true;const q=v.play();if(q&&q.then)q.then(stale,intro)})}
   else intro();
 }
-function endBoot(cancel){if(mode!=="boot")return;bootRun++;clearTimeout(bootT);const b=$("boot"),v=$("bootVideo");b.classList.remove("on","intro");b.setAttribute("aria-hidden","true");v.onended=v.onerror=null;try{v.pause();v.removeAttribute("src");v.load()}catch(e){} /* drop the video: nothing left to decode or play */const d=bootDone;bootDone=null;mode=(!cancel&&d)?"launch":"browse";if(cancel)musLaunch=null;if(!cancel&&d)setTimeout(d,200)}
+function endBoot(cancel){try{if(window.PulseHost&&PulseHost.introDone)PulseHost.introDone()}catch(e){}if(mode!=="boot")return;bootRun++;clearTimeout(bootT);const b=$("boot"),v=$("bootVideo");b.classList.remove("on","intro");b.setAttribute("aria-hidden","true");v.onended=v.onerror=null;try{v.pause();v.removeAttribute("src");v.load()}catch(e){} /* drop the video: nothing left to decode or play */const d=bootDone;bootDone=null;mode=(!cancel&&d)?"launch":"browse";if(cancel)musLaunch=null;if(!cancel&&d)setTimeout(d,200)}
 
 /* ---------- customize (logos + boot videos on disk) ---------- */
 const THEME_IDS=[["gc","GameCube",true],["wii","Wii",true],["wiiu","Wii U",true],["sw","Switch",true],...(ANDROID?[]:[["sw2","Switch 2",true]]),["psp","PSP",true],["ps2","PS2",true],["ps3","PS3",true],["ps4","PS4",true],["ps5","PS5",true],["x360","Xbox 360",true],["n3ds","3DS",true],["pc","PC",false],["media","Media",false]];

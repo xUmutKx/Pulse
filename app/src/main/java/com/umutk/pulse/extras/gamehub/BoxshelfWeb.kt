@@ -73,8 +73,12 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
     }.getOrNull()
 }
 
+/** Whether Boxshelf's opening animation has ended (the page says so); the shelf's + waits for it. A fallback shows it after a few seconds anyway. */
+internal object ShelfIntro { val done = androidx.compose.runtime.mutableStateOf(false) }
+
 /** What the page can ask Pulse for. */
 private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDetails: (String) -> Unit, val onBack: () -> Unit, val onSettings: () -> Unit) {
+    @JavascriptInterface fun introDone() { android.os.Handler(android.os.Looper.getMainLooper()).post { ShelfIntro.done.value = true } }
     @JavascriptInterface
     fun games(): String {
         val hidden = hiddenSet(c)
@@ -112,6 +116,9 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
 @Composable
 internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit, onExit: () -> Unit, onSettings: () -> Unit = {}) {
     val ctx = LocalContext.current
+    // each time the shelf opens, its opening animation comes first: the + waits for the page to say it ended (or a few seconds)
+    androidx.compose.runtime.DisposableEffect(Unit) { ShelfIntro.done.value = false; onDispose { ShelfIntro.done.value = false } }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(4000); ShelfIntro.done.value = true }
     val launch by rememberUpdatedState(onLaunch)
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
