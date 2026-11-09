@@ -343,6 +343,8 @@ function mount(s){
       <div class="face f-left"><div class="spine-band"></div><div class="spine-title"></div></div><div class="face f-right spine2"><div class="spine-band"></div><div class="spine-title"></div></div><div class="face bev bev-fl"></div><div class="face bev bev-fr"></div><div class="face bev bev-bl"></div><div class="face bev bev-br"></div></div>`;
   const os=cur()===HOME?stOf(g):sh;if(os!==sh){slot.style.setProperty("--bw",`calc(var(--ch) * ${os.ratio})`);slot.style.setProperty("--bd",`calc(var(--ch) * ${os.ratio*os.depth})`);slot.style.setProperty("--edge",`calc(var(--ch) * ${os.ratio*os.edge})`);slot.style.setProperty("--rc",`calc(var(--ch) * ${os.ratio*(os.rc||.03)})`);slot.style.setProperty("--re",`calc(var(--ch) * ${os.ratio*os.depth*(os.re||.3)})`);slot.style.setProperty("--case",os.caseColor);slot.style.setProperty("--case-side",os.caseSide);slot.style.setProperty("--spine-ink",os.spineInk)}
   if(isFav(g))slot.classList.add("fav");
+  // Pulse's own app icon, small under the cover, on a store picture (a cover made from the icon already has it)
+  if(g.pulse&&g.art&&g.art.appIcon&&g.art.front&&!g.art.gen){const bi=document.createElement("img");bi.className="cover-ico";bi.alt="";bi.draggable=false;bi.src=g.art.appIcon;slot.querySelector(".f-front").appendChild(bi)}
   slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=os.spineBand.bg;band.style.color=os.spineBand.fg;band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":os.spineBand.label});
   slot.querySelectorAll(".spine-title").forEach(t=>t.textContent=g.title);
   // (beta.10) Android: the spine's small copy sized like the front's (thumb), not the 1024 px display copy, on every case made
@@ -1915,7 +1917,7 @@ function iconNext(){
   const go=()=>{if(!revealedAt||performance.now()-revealedAt<2000||mode==="launch"){setTimeout(iconNext,500);return} /* not while the shelf is still coming in */
     const j=iconQ.shift();if(!j){iconRun=false;return}
     if(j.g.art.front){iconNext();return}
-    Covers.iconFront(j.style,j.g,j.g.art.appIcon).then(url=>{if(url){j.g.art.front=url;const i=cur()&&cur().items.indexOf(j.g);if(i>=0&&slots[i]&&slots[i].img)slots[i].img.src=url}}).finally(()=>setTimeout(iconNext,60))};
+    Covers.iconFront(j.style,j.g,j.g.art.appIcon).then(url=>{if(url){j.g.art.front=url;j.g.art.gen=1;const i=cur()&&cur().items.indexOf(j.g);if(i>=0&&slots[i]&&slots[i].img)slots[i].img.src=url}}).finally(()=>setTimeout(iconNext,60))};
   window.requestIdleCallback?requestIdleCallback(go,{timeout:1500}):setTimeout(go,50)}
 /* ---------- RetroAchievements ---------- */
 const RA={on:false,systems:[],shelf:{},game:new Map(),profile:null};
