@@ -32,7 +32,7 @@ object Transcriber {
      * [stage] gets the step and 0..1 while it works (the listening step reads [progress]). Returns the LRC text, or null without a model or when stopped.
      * The song is read and listened to in chunks of four minutes, so a long song never fills the memory at once; the times carry on from one chunk to the next.
      */
-    suspend fun lrc(c: Context, audio: Uri, lang: String, title: String?, artist: String?, stage: (String, Float) -> Unit): String? = withContext(Dispatchers.Default) {
+    suspend fun lrc(c: Context, audio: Uri, lang: String, title: String?, artist: String?, stage: (String, Float) -> Unit, onLines: (String) -> Unit = {}): String? = withContext(Dispatchers.Default) {
         if (!aiSupported) return@withContext null
         var pfd: ParcelFileDescriptor? = null
         stopped = false
@@ -45,11 +45,15 @@ object Transcriber {
                 val segs = ArrayList<Segment>()
                 var offsetMs = 0L
                 try {
-                    AudioDecode.pcm16kChunks(c, audio, 240, { stage(tr("Reading the song", "Şarkı okunuyor"), it) }) { chunk ->
+                    doneChunks = 0; totalChunks = 1
+                    AudioDecode.pcm16kChunks(c, audio, CHUNK_SEC, { }, { ms -> totalChunks = kotlin.math.ceil(ms / (CHUNK_SEC * 1000.0)).toInt().coerceAtLeast(1) }) { chunk ->
                         if (stopped) throw Stopped()
-                        stage(LISTENING, 0f)
+                        stage(LISTENING, progress())
                         w.transcribe(chunk, lang, prompt).forEach { sg -> segs += Segment(sg.startMs + offsetMs, sg.endMs + offsetMs, sg.text) }
                         offsetMs += chunk.size * 1000L / 16000
+                        doneChunks++
+                        // the lines found so far, as they come: a minute of the song at a time
+                        onLines(toLrc(segs, title, artist))
                     }
                 } catch (e: Stopped) { return@use null }
                 if (stopped) null else toLrc(segs, title, artist)
@@ -61,7 +65,10 @@ object Transcriber {
     private class Stopped : Exception("stopped")
 
     val LISTENING get() = tr("Listening", "Dinleniyor")
-    /** 0..1 of the listening step. */
-    fun progress(): Float = runCatching { Whisper.progress() / 100f }.getOrDefault(0f)
+    private const val CHUNK_SEC = 60
+    @Volatile private var doneChunks = 0
+    @Volatile private var totalChunks = 1
+    /** 0..1 of the whole song: the minutes done, and how far the minute being listened to is. */
+    fun progress(): Float = runCatching { ((doneChunks + Whisper.progress() / 100f) / totalChunks).coerceIn(0f, 1f) }.getOrDefault(0f)
     fun stop() { stopped = true; runCatching { Whisper.abort() } }
 }
