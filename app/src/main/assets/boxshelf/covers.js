@@ -173,7 +173,7 @@ function iconFront(style,game,iconUrl){
       const t=document.createElement("canvas");t.width=t.height=8;const tx=t.getContext("2d",{willReadFrequently:true});tx.drawImage(im,0,0,8,8);const d=tx.getImageData(0,0,8,8).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<40)continue;r+=d[i];g+=d[i+1];b+=d[i+2];n++}
       if(n){r/=n;g/=n;b/=n}else{r=g=b=90}
       // a few different covers, the same one for the same game every time (picked by its title): gradient, blurred poster, sticker on colour, split
-      let hsh=0;for(let k=0;k<game.title.length;k++)hsh=(hsh*31+game.title.charCodeAt(k))|0;const v=Math.abs(hsh)%4;
+      let hsh=0;for(let k=0;k<game.title.length;k++)hsh=(hsh*31+game.title.charCodeAt(k))|0;const v=Math.abs(hsh)%6;
       const size=W*.56,ar=im.width/im.height,iw=ar>=1?size:size*ar,ih=ar>=1?size/ar:size;
       const rgb=(a,f=1)=>`rgba(${r*f|0},${g*f|0},${b*f|0},${a})`;
       let bandH=0;
@@ -193,10 +193,27 @@ function iconFront(style,game,iconUrl){
         const st=W*.5;ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=24;ctx.shadowOffsetY=10;ctx.fillStyle="#fff";
         ctx.beginPath();ctx.roundRect?ctx.roundRect(W/2-st/2-W*.04,Hh*.44-st/2-W*.04,st+W*.08,st+W*.08,st*.2):ctx.rect(W/2-st/2,Hh*.44-st/2,st,st);ctx.fill();ctx.restore();
         ctx.drawImage(im,W/2-st*.42,Hh*.44-st*.42,st*.84,st*.84);
-      } else { // split: the icon's colour on top, dark below; the icon overlaps the line between them
+      } else if(v===3){ // split: the icon's colour on top, dark below; the icon overlaps the line between them
         ctx.fillStyle=rgb(1,.75);ctx.fillRect(0,0,W,Hh*.56);ctx.fillStyle=rgb(1,.1);ctx.fillRect(0,Hh*.56,W,Hh*.44);
         const d2=W*.56;ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=26;ctx.shadowOffsetY=10;
         ctx.beginPath();ctx.arc(W/2,Hh*.5,d2/2,0,Math.PI*2);ctx.closePath();ctx.clip();ctx.drawImage(im,W/2-d2/2,Hh*.5-d2/2,d2,d2);ctx.restore();
+      } else if(v===4){ // a CD: a silver disc with a rainbow sheen and the icon as its label, on a dark ground
+        ctx.fillStyle=rgb(1,.12);ctx.fillRect(0,0,W,Hh);
+        const cdR=W*.37,cx=W/2,cy=Hh*.44;ctx.save();ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=30;ctx.shadowOffsetY=12;
+        const disc=ctx.createLinearGradient(cx-cdR,cy-cdR,cx+cdR,cy+cdR);disc.addColorStop(0,"#e8ecf2");disc.addColorStop(.5,"#9aa3b0");disc.addColorStop(1,"#f4f6fa");
+        ctx.fillStyle=disc;ctx.beginPath();ctx.arc(cx,cy,cdR,0,Math.PI*2);ctx.fill();ctx.restore();
+        const sheen=ctx.createConicGradient?ctx.createConicGradient(0,cx,cy):null;
+        if(sheen){["#ff5fa2","#ffd35f","#5fff9a","#5fd4ff","#b05fff","#ff5fa2"].forEach((c,k,a)=>sheen.addColorStop(k/(a.length-1),c));ctx.globalAlpha=.22;ctx.fillStyle=sheen;ctx.beginPath();ctx.arc(cx,cy,cdR,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
+        ctx.strokeStyle="rgba(0,0,0,.12)";for(let rr=cdR*.4;rr<cdR;rr+=cdR*.05){ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);ctx.stroke()}
+        const lab=cdR*.5;ctx.save();ctx.beginPath();ctx.arc(cx,cy,lab,0,Math.PI*2);ctx.clip();ctx.drawImage(im,cx-lab,cy-lab,lab*2,lab*2);ctx.restore();
+        ctx.fillStyle="#111";ctx.beginPath();ctx.arc(cx,cy,cdR*.08,0,Math.PI*2);ctx.fill();
+      } else { // halftone dots, a thin frame and a corner tag; the icon in a round frame
+        ctx.fillStyle=rgb(1,.3);ctx.fillRect(0,0,W,Hh);
+        ctx.fillStyle="rgba(255,255,255,.12)";for(let y=8;y<Hh;y+=18)for(let x=(y/18%2)*9+8;x<W;x+=18){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill()}
+        const rr2=W*.36;ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=24;ctx.shadowOffsetY=10;ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.arc(W/2,Hh*.44,rr2,0,Math.PI*2);ctx.fill();ctx.restore();
+        ctx.save();ctx.beginPath();ctx.arc(W/2,Hh*.44,rr2*.9,0,Math.PI*2);ctx.clip();ctx.drawImage(im,W/2-rr2*.9,Hh*.44-rr2*.9,rr2*1.8,rr2*1.8);ctx.restore();
+        ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=3;ctx.strokeRect(10,10,W-20,Hh-20);
+        ctx.fillStyle=rgb(1,1.2);ctx.beginPath();ctx.moveTo(W-70,10);ctx.lineTo(W-10,10);ctx.lineTo(W-10,70);ctx.closePath();ctx.fill();
       }
       ctx.shadowColor="transparent";
       ctx.textAlign="center";ctx.textBaseline="alphabetic";let fs=W*.1;ctx.font=`700 ${fs}px Lexend, sans-serif`;while(ctx.measureText(game.title).width>W*.86&&fs>14){fs*=.94;ctx.font=`700 ${fs}px Lexend, sans-serif`}
