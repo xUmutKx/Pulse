@@ -1,5 +1,7 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -143,7 +145,7 @@ class ImageViewActivity : ComponentActivity() {
             if (PhotosPrefs.amoled && th.material) Look.resolved = PhotosPrefs.black(th)
             var viewing by remember { mutableStateOf(!gallery) }
             if (viewing) ImgViewerScreen(items, startIdx) { if (gallery) { viewing = false; items.clear() } else finish() }
-            else PhotosGalleryScreen { l, i -> items.clear(); items.addAll(l); startIdx = i; viewing = true }
+            else androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { PhotosGalleryScreen { l, i -> items.clear(); items.addAll(l); startIdx = i; viewing = true } }
         } }
     }
 
