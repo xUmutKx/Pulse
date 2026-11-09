@@ -179,7 +179,9 @@ function iconFront(style,game,iconUrl){
       ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=30;ctx.shadowOffsetY=12;ctx.drawImage(im,(W-iw)/2,bandH+(Hh-bandH)*.42-ih/2,iw,ih);ctx.shadowColor="transparent";
       ctx.textAlign="center";ctx.textBaseline="alphabetic";let fs=W*.1;ctx.font=`700 ${fs}px Lexend, sans-serif`;while(ctx.measureText(game.title).width>W*.86&&fs>14){fs*=.94;ctx.font=`700 ${fs}px Lexend, sans-serif`}
       ctx.fillStyle="rgba(255,255,255,.96)";ctx.fillText(game.title,W/2,Hh*.84);
-      ctx.fillStyle="rgba(255,255,255,.45)";ctx.font=`500 ${W*.04}px Lexend, sans-serif`;ctx.fillText((game.kind==="emulator"?"EMULATOR":"APP").toUpperCase(),W/2,Hh*.84+W*.07);
+      // a small app icon under the title (the app's own icon, as the shelf's title line shows it)
+      if(game.kind==="app"){const is=W*.075;ctx.save();ctx.shadowColor="rgba(0,0,0,.45)";ctx.shadowBlur=10;ctx.shadowOffsetY=3;ctx.drawImage(im,W/2-is/2,Hh*.84+W*.035,is,is);ctx.restore()}
+      else{ctx.fillStyle="rgba(255,255,255,.45)";ctx.font=`500 ${W*.04}px Lexend, sans-serif`;ctx.fillText("EMULATOR",W/2,Hh*.84+W*.07)}
       // encoded off the screen's thread (a JPEG encode here took tens of ms); kept as a blob: address for the session
       const w=encoder();if(!w){resolve(c.toDataURL("image/jpeg",.9));return}
       createImageBitmap(c).then(bm=>new Promise(res=>{const id=++encId;encCb.set(id,res);w.postMessage({id,bm},[bm])})).then(blob=>{const u=blob?URL.createObjectURL(blob):c.toDataURL("image/jpeg",.9);c.width=c.height=0;resolve(u)},()=>resolve(c.toDataURL("image/jpeg",.9))); /* worker trouble: encode here instead */
