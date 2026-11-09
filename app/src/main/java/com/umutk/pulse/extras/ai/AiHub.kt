@@ -368,7 +368,7 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
                 if (!started) { a.text = tr("The model could not be opened. Pick another one in Models.", "Model açılamadı. Modeller'den başka birini seç."); return@launch }
                 AiEngine.ask(c, full).collect { t -> a.text += t; list.scrollToItem(msgs.size - 1) }
             } catch (e: Exception) { if (a.text.isEmpty()) a.text = tr("Error: ", "Hata: ") + (e.message ?: e.javaClass.simpleName) }
-            finally { busy = false; onBusy(false); onSaved() }
+            finally { busy = false; AiLive.lastAnswer = a.text; onBusy(false); onSaved() }
         }
     }
     Column(Modifier.fillMaxSize()) {
