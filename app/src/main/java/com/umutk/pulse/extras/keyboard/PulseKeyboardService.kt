@@ -774,15 +774,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
         // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
         var timedOut = false
+        var pending: java.util.concurrent.Future<String?>? = null
         val pwNow = prevWord; val pw2Now = prevWord2; val upNow = st.shift > 0; val codeNow = st.lang; val locNow = lang.locale; val ctxNow = lmCtx
         var t = if (inAddr || typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
         if (t == null && correct && !inAddr && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
             t = runCatching {
-                // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
+                // never longer than a few frames: the work runs on its own thread and is waited for only briefly, so typing cannot hang here. When it is not
+                // done in time it is NOT thrown away: the same work goes on and mends the word the moment it is ready (lateFix), so the word is not left to be mended later
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
-                val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
-                try { f.get(260, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); timedOut = true; null }
+                val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2, ctxText = ctxNow).third }
+                try { f.get(150, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { pending = f; timedOut = true; null }
             }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
@@ -843,31 +845,42 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
         // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
-        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow, ctxNow)
+        if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow, ctxNow, pending)
         return true
     }
 
     /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
-    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean, ctx: String = lmCtx) {
+    private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean, ctx: String = lmCtx, pending: java.util.concurrent.Future<String?>? = null) {
         if (!KeyboardPrefs.autocorrect || !KeyboardPrefs.suggestions) return
         scope.launch {
-            val fix = withContext(Dispatchers.Default) { KeyboardDictionary.uncancelled { runCatching { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third }.getOrNull() } } ?: return@launch
+            // the work that was already running goes on (nothing is started again); a new run only when there was none
+            val fix = withContext(Dispatchers.Default) {
+                runCatching { pending?.get(3, java.util.concurrent.TimeUnit.SECONDS) ?: KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
+            } ?: return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
             if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
             val key = typed + tail
-            // the word may have been left while typing went on: wait (a few seconds at most) for a moment with no word open, then mend it where it stands
-            // (the words typed after it are put back behind it), so the correction no longer needs a pause or a tap
+            // the word is mended where it stands, at once: while the next word is being typed too (its letters, still open, are put back behind the mended word
+            // as the open word), or when the next word is closed. Only when something else is going on (a selection, another edit) does it wait a moment.
             var tries = 0
-            while (word.isNotEmpty() && tries++ < 30) kotlinx.coroutines.delay(100)
-            val c = currentInputConnection ?: return@launch
-            if (word.isNotEmpty() || st.plain) return@launch
-            val before = c.getTextBeforeCursor(160, 0)?.toString() ?: return@launch
-            val at = before.lastIndexOf(key)
-            if (at < 0) return@launch
-            val rest = before.substring(at + key.length)
-            if (rest.length > 60) return@launch
-            c.beginBatchEdit(); c.deleteSurroundingText(key.length + rest.length, 0); c.commitText(fix + tail + rest, 1); c.endBatchEdit()
-            if (rest.isEmpty()) { lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis() }
+            while (tries++ < 30) {
+                val c = currentInputConnection ?: return@launch
+                if (st.plain) return@launch
+                val before = c.getTextBeforeCursor(160, 0)?.toString() ?: return@launch
+                val at = before.lastIndexOf(key)
+                if (at < 0) return@launch
+                val rest = before.substring(at + key.length)
+                if (rest.length > 60) return@launch
+                val open = word.toString()
+                if (open.isEmpty() || rest == open) {
+                    c.beginBatchEdit(); c.deleteSurroundingText(key.length + rest.length, 0); c.commitText(fix + tail, 1)
+                    if (rest.isNotEmpty()) { if (open.isEmpty()) c.commitText(rest, 1) else c.setComposingText(open, 1) }
+                    c.endBatchEdit()
+                    if (rest.isEmpty()) { lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis() }
+                    return@launch
+                }
+                kotlinx.coroutines.delay(60)
+            }
         }
     }
 
@@ -1912,7 +1925,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
-            kotlinx.coroutines.delay(100)
+            kotlinx.coroutines.delay(60)
             if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
