@@ -180,3 +180,5 @@ html,body,#app{-webkit-user-select:none;user-select:none}
 
 /* Pulse: the app's icon beside the game's title */
 .g-ico{width:1.05em;height:1.05em;border-radius:5px;vertical-align:-0.12em;margin-right:.35em;object-fit:cover}
+/* a small app icon under a store cover (Pulse games) */
+.f-front img.cover-ico{position:absolute;inset:auto;left:50%;top:auto;bottom:7%;right:auto;transform:translateX(-50%);width:15%;height:auto;object-fit:contain;aspect-ratio:1;border-radius:20%;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;z-index:2}
