@@ -136,7 +136,8 @@ private fun MusicHubBody(onBack: () -> Unit) {
     // songs without a cover get one in the background, whether or not they are played (see CoverFetch.backfill)
     LaunchedEffect(library) { CoverFetch.backfill(ctx, library); OnlineTags.backfill(ctx, library); com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(ctx, library); com.umutk.pulse.extras.lyrics.LyricsAuto.ensure(ctx) }
     androidx.compose.runtime.LaunchedEffect(Unit) { ExtraThemes.load(ctx) }
-    var look by remember { mutableStateOf(runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(MusicLook.MATERIAL)) }
+    // the Lyrics look is gone: a player still set to it opens on Poweramp; the default is Poweramp too
+    var look by remember { mutableStateOf(runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(MusicLook.POWERAMP).let { if (it == MusicLook.LYRICS) MusicLook.POWERAMP else it }) }
     var artBg by remember { mutableStateOf(prefs(ctx).getBoolean("artBg", false)) }
     var lyrics by remember { mutableStateOf(false) }
     var nowPlaying by remember { mutableStateOf(false) } // Material's full-screen player is open
