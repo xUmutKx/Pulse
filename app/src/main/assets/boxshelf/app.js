@@ -348,7 +348,7 @@ function mount(s){
   // (beta.10) Android: the spine's small copy sized like the front's (thumb), not the 1024 px display copy, on every case made
   if(g.art&&g.art.spine){const su=ANDROID?thumb(g.art.spine,bh*OS):g.art.spine;slot.querySelectorAll(".f-left,.f-right").forEach(face=>{const sp=new Image();sp.className="spine-img";sp.alt="";sp.draggable=false;sp.decoding="async";sp.src=su;sp.onerror=()=>sp.remove();face.appendChild(sp)})}
   slot.style.setProperty("--glow",hsl(g.hue,90,62));
-  slot.addEventListener("click",()=>{if(dragMoved||(mode!=="browse"&&mode!=="details"))return; /* (beta.8: not under a note card, Sort, Achievements or Customize) */if(i===sel){flip()}else{setInput("pointer");go(i)}});
+  slot.addEventListener("click",()=>{if(dragMoved||(mode!=="browse"&&mode!=="details"))return; /* (beta.8: not under a note card, Sort, Achievements or Customize) */if(i===sel){if(window.PulseHost){const n=performance.now();if(n-(slot._t||0)<340){slot._t=0;clearTimeout(slot._ft);pulseOpenCase()}else{slot._t=n;clearTimeout(slot._ft);slot._ft=setTimeout(flip,350)}}else flip()}else{setInput("pointer");go(i)}});
   // keep DOM order = shelf order so stacking stays predictable
   const next=slots.slice(i+1).find(o=>o.el);track.insertBefore(slot,next?next.el:null);
   Object.assign(s,{glareFar:false,glareSide:0,el:slot,box:slot.firstElementChild,img:slot.querySelector(".f-front img"),glare:slot.querySelector(".glare"),back:slot.querySelector(".f-back"),drawn:false,backDrawn:false,fresh:true});
@@ -1273,7 +1273,7 @@ function slotPose(s){if(!s||!s.el||!s.el.isConnected||!s.img)return null;const f
 function relight(e){if(!e||!e.classList.contains("lift"))return;e.classList.add("glowfade");e.classList.remove("lift");clearTimeout(e._gl);e._gl=setTimeout(()=>e.classList.remove("glowfade"),450)}
 function unhold(e,fade){if(!e)return;if(!e.classList.contains("held")){relight(e);return}if(fade){e.classList.add("unhold");clearTimeout(e._uh);e._uh=setTimeout(()=>e.classList.remove("unhold"),260)}e.classList.remove("held");relight(e)}
 function openInspect(){uiCrumb("Inspect");
-  const g=curGame(),s=pickShelf();if(!g||g.kind!=="rom"||sysBusy()||(mode!=="browse"&&mode!=="details"))return;
+  const g=curGame(),s=pickShelf();if(!g||(g.kind!=="rom"&&!g.pulse)||sysBusy()||(mode!=="browse"&&mode!=="details"))return;
   detailsBack=mode==="details"?g:null;closeDetails(true);mode="inspect";clearTimeout(isp.wd);const tok=++isp.tok;
   const el=$("inspect"),style=STYLE[s.id]||STYLE.media,m=MEDIA[s.id]||MEDIA.wii;
   const ch=Math.min(innerHeight*.58,innerWidth*.34/style.ratio),cw=ch*style.ratio;
@@ -1568,6 +1568,10 @@ function showSpread(anim){
   if(rd.i>=2)rdImage(rd.pages[rd.i-2]);
 }
 function rdTurn(d){const n=rd.pages.length;let i=rd.i===0?(d>0?1:0):rd.i+d*2;if(i<1)i=0;if(i>=n)return void play_("error");rd.i=i;showSpread(true);play_("page")}
+// Pulse: two taps on the chosen box open it: the case swings open, then the disc comes out (what Inspect does with a game's box, here for the apps of the phone)
+function pulseOpenCase(){if(mode!=="browse")return;openInspect();if(mode!=="inspect")return;const tok=isp.tok;
+  setTimeout(()=>{if(mode==="inspect"&&isp.tok===tok&&isp.state===0)ispAdvance()},900);
+  setTimeout(()=>{if(mode==="inspect"&&isp.tok===tok&&isp.state===1)ispAdvance()},2000)}
 function ispAdvance(){
   if(rd.open){closeReader();return}
   isp.tz=1;isp.tpx=isp.tpy=0;
