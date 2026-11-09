@@ -2297,7 +2297,7 @@ function qsPick(){const x=qm.rows[qm.r];if(!x)return;const r=x.r;
   if(r.id==="upd"){qsUpdCheck();return}
   if(r.id==="acts"){const b=x.el.children[qm.ac];if(b)qsAct(b.dataset.k);return}
   if(r.id==="vol"){const v=curVol();setVol(v>0?0:(volPrev||.7));if(curVol()>0)play_("tick",{dir:1});qsSoft();return}
-  if(r.id==="set"){qmClose(true);play_("open");Setup.open();return}
+  if(r.id==="set"){qmClose(true);play_("open");if(window.PulseHost&&PulseHost.settings){PulseHost.settings();return}Setup.open();return}
   if(r.id==="mus"){qmClose(true);openMuseum();return}
   if(r.id==="studio"){const g=qsGame();qmClose(true);if(g&&ANDROID){play_("panel");Setup.open({page:"artstudio",systemId:shelfFor(g).id});return} /* (Android: the console's whole studio) */if(g)artStudioFor(g);return}
   if(r.id==="cz3d"){const e=qsCzShelf();qmClose(true);play_("open");if(e)custSel=e[0];czPick=null;openCustomize();return}
@@ -3797,12 +3797,12 @@ function revealShelf(){
   try{localStorage.setItem("bootIntro",st)}catch{}
   const reveal=()=>{if(revealDone)return;revealDone=true;
     const rT=performance.now();
-    if(st==="ripple"){mounted().forEach(s=>{const d=Math.abs(slots.indexOf(s)-sel);s.el.style.setProperty("--rd",Math.min(9,d)*70+"ms")})}
+    if(st==="ripple"){mounted().forEach(s=>{const d=Math.abs(slots.indexOf(s)-sel);s.el.style.setProperty("--rd",Math.min(9,d)*22+"ms")})}
     if(st!=="off"&&!startIntoMuseum())app.classList.add("intro-"+st); // straight into the museum: no ripple under its fade
     app.classList.remove("covers-wait");
     const splashOut=()=>{if(sp&&!sp.classList.contains("out")){sp.classList.add("out");setTimeout(()=>{sp.remove();try{S&&S.worker.terminate()}catch{}},900)}};
     revealedAt=performance.now();bootMark("reveal("+Math.round(revealedAt-rT)+"ms)");
-    setTimeout(()=>{app.classList.remove("intro-ripple","intro-fade");mounted().forEach(s=>s.el.style.removeProperty("--rd"))},1700);
+    setTimeout(()=>{app.classList.remove("intro-ripple","intro-fade");mounted().forEach(s=>s.el.style.removeProperty("--rd"))},window.PulseHost?900:1700);
     // Open into → Museum: the logo stays up while the room is built behind it and hands over straight to the museum
     // (it used to fade out to the shelf first, then the museum faded in over it)
     if(sp&&startIntoMuseum()&&mode==="browse"&&!sysBusy()){openInto="done";const m=$("museum");m.classList.add("instant");musBootSplash=()=>{musBootSplash=null;m.classList.remove("instant");splashOut()};openMuseum();
@@ -3813,8 +3813,8 @@ function revealShelf(){
   // busy part of the launch over, then the shelf comes in. A short pause first lets the last of the loading settle.
   let fired=false;const fire=d=>{if(fired)return;fired=true;if(d&&d.frames)bootMark(`logo ${d.frames}f avg${d.avg}ms max${d.max}ms slow${d.slow}`);reveal()};
   setTimeout(()=>{
-    if(S&&S.ready){S.onDone=fire;S.worker.postMessage({play:true});setTimeout(()=>fire(null),2200)}
-    else fire(null)},Math.max(150,600-(performance.now()-SPLASH_T0)))}
+    if(S&&S.ready){S.onDone=fire;S.worker.postMessage({play:true});setTimeout(()=>fire(null),window.PulseHost?650:2200)}
+    else fire(null)},Math.max(60,(window.PulseHost?200:600)-(performance.now()-SPLASH_T0)))}
 function holdForCovers(){
   coversShownOnce=true;app.classList.add("covers-wait");const t0=performance.now();
   const show=()=>{if(shelfShown)return;shelfShown=true;bootMark(performance.now()-t0>900?"shown-timeout":"shown");revealShelf()};
