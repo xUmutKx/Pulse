@@ -482,7 +482,7 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
         } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            // the buttons on the left, the number of songs at the right end
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
                 Icon(if (cols == 1) Icons.Rounded.ViewList else Icons.Rounded.GridView, tr("View", "Görünüm"), tint = style.accent, modifier = Modifier.size(22.dp))
@@ -490,6 +490,8 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             }
             ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
             ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            Spacer(Modifier.weight(1f))
+            Text("${items.size}", color = style.textDim, fontSize = 13.sp)
         }
     }
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
