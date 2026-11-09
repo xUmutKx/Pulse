@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // Excel viewer / editor: owned by the Excel agent. Model, parser, formulas and writer live in OfficeExcelModel.kt.
@@ -262,13 +263,17 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
         touch()
     }
     fun findNext(q: String) {
-        if (q.isEmpty()) return
+        if (q.isBlank()) return
         val keys = sh.cells.keys.sorted(); val cur = xKey(st.r, st.c)
-        val hit = (keys.filter { it > cur } + keys.filter { it <= cur }).firstOrNull { xRaw(sh.cells[it]).contains(q, true) }
+        // capitals and the Turkish letters do not matter ("ogrenci" finds "ÖĞRENCİ"); the next hit after the chosen cell, then round from the top
+        val hit = (keys.filter { it > cur } + keys.filter { it <= cur }).firstOrNull { OfFind.starts(xRaw(sh.cells[it]), q).isNotEmpty() }
         if (hit == null) { toast(tr("Not found", "Bulunamadı")); return }
-        st.pick(xRow(hit), xCol(hit)); val hc = xCol(hit)
-        st.gx = ((0 until hc).sumOf { ((sh.colW[it] ?: 8.43f) * 7f + 5f).toDouble() }.toFloat() * dens * st.zoom - 60f * dens).coerceAtLeast(0f)
-        st.gy = (xRow(hit) * 20f * dens * st.zoom - 60f * dens).coerceAtLeast(0f)
+        st.pick(xRow(hit), xCol(hit)); val hc = xCol(hit); val hr = xRow(hit)
+        // the hit comes into view where the rows and columns really are (a row takes the height the file gives it)
+        var x = 0f; for (c in 0 until hc) x += ((sh.colW[c] ?: 8.43f) * 7f + 5f) * dens * st.zoom
+        var y = 0f; for (r in 0 until hr) y += (sh.rowHt[r]?.let { h -> h * 20f / 15f } ?: 20f) * dens * st.zoom
+        st.gx = (x - 60f * dens).coerceAtLeast(0f)
+        st.gy = (y - 60f * dens).coerceAtLeast(0f)
     }
     fun delRC(row: Boolean) { val a = if (row) st.r1 else st.c1; xDelete(sh, row, a, (if (row) st.rb else st.cb) - a + 1); touch(); st.pick(st.r1, st.c1) }
     fun insertPic(uri: android.net.Uri) {
@@ -643,6 +648,10 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
     val colX = remember(sh, st.ver, z, d, nCols) { FloatArray(nCols + 1).also { for (c in 0 until nCols) it[c + 1] = it[c] + ((sh.colW[c] ?: 8.43f) * 7f + 5f) * d * z } }
     val covered = remember(sh, st.ver) { HashSet<Long>().also { s -> for (m in sh.merges) { if ((m[2] - m[0] + 1).toLong() * (m[3] - m[1] + 1) > 10000) continue; for (r in m[0]..m[2]) for (c in m[1]..m[3]) if (r != m[0] || c != m[1]) s.add(xKey(r, c)) } } }
     var vp by remember { mutableStateOf(IntSize.Zero) }
+    // a flick keeps the sheet moving and slows down by itself (like the other viewers), in both directions
+    val flingScope = androidx.compose.runtime.rememberCoroutineScope()
+    val flingJobs = remember { arrayOfNulls<kotlinx.coroutines.Job>(2) }
+    val vt = remember { androidx.compose.ui.input.pointer.util.VelocityTracker() }
     val rowH = 20f * d * z; val hdrW = if (ro) 0f else 34f * d; val hdrH = if (ro) 0f else 20f * d
     // where each row starts: a row takes the height the file gives it (points, the default 15 is the 20 units of this screen)
     val rowY = remember(sh, st.ver, z, d, nRows) { FloatArray(nRows + 1).also { for (i in 0 until nRows) it[i + 1] = it[i] + (sh.rowHt[i]?.let { h -> h * 20f / 15f } ?: 20f) * d * z } }
@@ -697,6 +706,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             val da = FloatArray(4); var pic: XPic? = null
             detectDragGestures(
                 onDragStart = { o ->
+                    flingJobs.forEach { it?.cancel() }; vt.resetTracking()
                     mode = 0; pic = null
                     if (!ro) {
                         val sp = st.pic?.takeIf { !it.deleted }
@@ -711,7 +721,16 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                         }
                     }
                 },
-                onDragEnd = { if (mode == 1 || mode == 2) { pic?.moved = true; onPic() }; mode = 0 },
+                onDragEnd = {
+                    if (mode == 1 || mode == 2) { pic?.moved = true; onPic() }
+                    if (mode == 0) {
+                        val v = vt.calculateVelocity()
+                        val bounds = lim.copyOf()
+                        flingJobs[0] = flingScope.launch { val a = androidx.compose.animation.core.Animatable(st.gx); a.updateBounds(0f, bounds[0]); a.animateDecay(-v.x, androidx.compose.animation.core.exponentialDecay()) { st.gx = value } }
+                        flingJobs[1] = flingScope.launch { val a = androidx.compose.animation.core.Animatable(st.gy); a.updateBounds(0f, bounds[1]); a.animateDecay(-v.y, androidx.compose.animation.core.exponentialDecay()) { st.gy = value } }
+                    }
+                    mode = 0
+                },
                 onDragCancel = { mode = 0 },
             ) { ch, drag ->
                 ch.consume()
@@ -720,7 +739,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                         da[0] += sx; da[2] += sx; da[1] += sy; da[3] += sy; pic?.let { applyRect(it, da) }; st.pv++ }
                     2 -> { da[2] += drag.x; da[3] += drag.y; pic?.let { applyRect(it, da) }; st.pv++ }
                     3 -> { val (r, c) = cellOf(ch.position); st.r2 = r; st.c2 = c }
-                    else -> { st.gx = (st.gx - drag.x).coerceIn(0f, lim[0]); st.gy = (st.gy - drag.y).coerceIn(0f, lim[1]) }
+                    else -> { vt.addPosition(ch.uptimeMillis, ch.position); st.gx = (st.gx - drag.x).coerceIn(0f, lim[0]); st.gy = (st.gy - drag.y).coerceIn(0f, lim[1]) }
                 }
             }
         }
