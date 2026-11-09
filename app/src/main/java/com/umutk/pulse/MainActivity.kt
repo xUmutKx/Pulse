@@ -377,7 +377,7 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
         }
         androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
             // below the status bar and the clock, so the back arrow and title stay reachable
-            Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
                     if (sub.isEmpty()) Text("Files", color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))

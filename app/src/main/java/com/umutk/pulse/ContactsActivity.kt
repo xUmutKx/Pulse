@@ -1,5 +1,8 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,7 +17,7 @@ class ContactsActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         @Suppress("DEPRECATION") overridePendingTransition(0, 0) // standalone start: no open animation
         ctHandle(intent)
-        setContent { LookHost(transparent = false, lookId = if (CtPrefs.amoled && CtPrefs.look == "material") "amoled" else CtPrefs.look) { LookFade { CtRoot() } } }
+        setContent { LookHost(transparent = false, lookId = if (CtPrefs.amoled && CtPrefs.look == "material") "amoled" else CtPrefs.look) { th -> LookFade { androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { CtRoot() } } } }
     }
 
     override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); setIntent(intent); ctHandle(intent) }
