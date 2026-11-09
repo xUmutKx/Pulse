@@ -624,6 +624,8 @@
         <!-- compress in the background (features/ExplorerZip.kt) -->
         <!-- Pulse AI lyrics for the songs that have none, in the background (extras/lyrics/LyricsBatch.kt) -->
         <service android:name="com.umutk.pulse.extras.lyrics.LyricsBatchService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <!-- Pulse AI's floating mascot over the other apps (extras/ai/AiBuddy.kt) -->
+        <service android:name="com.umutk.pulse.extras.ai.AiBuddyService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.extras.music.CoverRepairService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.FileOpService" android:exported="false" android:foregroundServiceType="dataSync" />
