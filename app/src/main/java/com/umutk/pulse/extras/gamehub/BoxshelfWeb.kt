@@ -121,7 +121,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     }
     // Back: Esc into the page; the page decides (it closes a panel, a case, a menu); at the top it asks Pulse to leave
     BackHandler { holder[0]?.evaluateJavascript("window.__pulseBack&&window.__pulseBack()", null) }
-    AndroidView(modifier.fillMaxSize(), factory = { c ->
+    AndroidView(modifier = modifier.fillMaxSize(), factory = { c ->
         WebView(c).also { w ->
             holder[0] = w
             w.setBackgroundColor(android.graphics.Color.BLACK)
