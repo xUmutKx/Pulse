@@ -78,6 +78,8 @@ internal object LyricsStatus {
     private val seen = ConcurrentHashMap<String, Pair<Long, Boolean>>()
 
     fun has(c: Context, path: String, artist: String, title: String): Boolean {
+        // the index (read in the background after each scan, kept on the phone) answers at once; a song it has not read yet is read here
+        LyricsIndex.status(c, path)?.let { return it }
         val m = File(path).lastModified()
         seen[path]?.takeIf { it.first == m }?.let { return it.second }
         val v = Lyrics.hasLocal(c, path, artist, title)
@@ -85,7 +87,7 @@ internal object LyricsStatus {
         return v
     }
 
-    fun forget(path: String) { seen.remove(path) }
+    fun forget(path: String) { seen.remove(path); LyricsIndex.changed(path) }
 }
 
 /**
@@ -156,6 +158,8 @@ class LyricsBatchService : Service() {
                     .setAutoCancel(true).setContentTitle(tr("Lyrics finished", "Sözler bitti"))
                     .setContentText(tr("${LyricsBatchJob.done} songs got lyrics", "${LyricsBatchJob.done} şarkıya söz yazıldı")).build())
             }
+            // the songs that got lyrics are read into the index again (in the background)
+            runCatching { Lyrics.warmIndex(app, MusicLibrary.tracks.value) }
             stopForeground(true)
             stopSelf()
         }
