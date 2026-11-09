@@ -69,7 +69,7 @@ fun LyricsLibrary() {
             PProgress(if (total > 0) done.toFloat() / total else 0f, Modifier.fillMaxWidth())
             Text(tr("It goes on in the background, also when the app is closed. Long songs take a few minutes each.",
                 "Arka planda sürer, uygulama kapalıyken de. Uzun şarkılar her biri birkaç dakika sürer."), color = T.sub, fontSize = 12.sp)
-        } else if (missing > 0) {
+        } else if (false && missing > 0) { // Pulse AI lyrics are removed: no batch button
             PButton(tr("Make lyrics for all", "Hepsi için söz yap"), Modifier.fillMaxWidth()) {
                 if (!LyricsBatchJob.start(ctx, tracks.filter { st?.get(it.path) == false }) && !Transcriber.ready(ctx)) launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai")
             }
