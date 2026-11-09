@@ -48,6 +48,8 @@ fun LyricsLibrary() {
     val busy = LyricsBatchJob.busy
     val done = LyricsBatchJob.done
     val total = LyricsBatchJob.total
+    // the background index reads the songs that are new or changed (it keeps its answers on the phone, so the next time nothing is read again)
+    androidx.compose.runtime.LaunchedEffect(tracks, done) { runCatching { Lyrics.warmIndex(ctx, tracks) } }
     // the status of every song, read off the main thread; it is read again when the batch moves on
     val status by produceState<Map<String, Boolean>?>(null, tracks, done, busy) {
         value = withContext(Dispatchers.IO) { tracks.associate { it.path to LyricsStatus.has(ctx, it.path, it.artist.orEmpty(), it.title.orEmpty()) } }
