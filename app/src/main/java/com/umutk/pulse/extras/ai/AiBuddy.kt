@@ -35,6 +35,8 @@ import com.umutk.pulse.tr
  */
 object AiLive {
     @Volatile var working = false; private set
+    /** The last answer (the speech bubble of the floating mascot shows it when the model is done). */
+    @Volatile var lastAnswer = ""
 
     fun openChat(c: Context) { com.umutk.pulse.launchExtra(c, "com.umutk.pulse.ExtraToolActivity", "ai") }
 
@@ -42,7 +44,7 @@ object AiLive {
     fun set(c: Context, w: Boolean) {
         val app = c.applicationContext
         working = w
-        AiBuddyService.live?.setWorking(w)
+        AiBuddyService.live?.setWorking(w, lastAnswer)
         val island = IslandService.live ?: return
         val orange = 0xFFD97757.toInt()
         island.post(IslandItem("ai", "ai", "Pulse AI", if (w) tr("Working…", "Çalışıyor…") else tr("Done", "Bitti"), icon = mascotBitmap(app), color = orange, prio = 3,
@@ -55,6 +57,7 @@ object AiLive {
     }
 }
 
+/** Hosts the floating mascot: the walking, draggable, talking buddy copied from Claude Chat (cc/Buddy.kt). */
 class AiBuddyService : Service() {
     companion object {
         @Volatile var live: AiBuddyService? = null
@@ -68,9 +71,7 @@ class AiBuddyService : Service() {
     }
 
     private val main = Handler(Looper.getMainLooper())
-    private lateinit var wm: WindowManager
-    private var view: BuddyView? = null
-    private lateinit var lp: WindowManager.LayoutParams
+    private var buddy: com.umutk.pulse.extras.ai.cc.Buddy? = null
     private val ch = "ai_buddy"
 
     override fun onBind(i: Intent?): IBinder? = null
@@ -84,96 +85,28 @@ class AiBuddyService : Service() {
         val n: Notification = NotificationCompat.Builder(this, ch).setSmallIcon(android.R.drawable.stat_notify_chat).setOngoing(true).setSilent(true)
             .setContentTitle(tr("Pulse AI mascot", "Pulse AI maskotu")).addAction(0, tr("Stop", "Durdur"), stop).build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(7461, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(7461, n)
-        if (!com.umutk.pulse.Compat.canOverlay(this)) { sp().edit().putBoolean("buddy", false).apply(); stopSelf(); return }
-        wm = getSystemService(WindowManager::class.java)
-        add()
-        view?.dance(AiLive.working)
+        if (!com.umutk.pulse.Compat.canOverlay(this)) { applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE).edit().putBoolean("buddy", false).apply(); stopSelf(); return }
+        com.umutk.pulse.extras.ai.cc.Prefs.init(this)
+        buddy = com.umutk.pulse.extras.ai.cc.Buddy(this).also { it.render(com.umutk.pulse.extras.ai.cc.Status.Idle, "", "") }
+        if (AiLive.working) setWorking(true, "")
     }
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int): Int {
-        if (i?.action == "stop") { sp().edit().putBoolean("buddy", false).apply(); stopSelf() }
+        if (i?.action == "stop") { applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE).edit().putBoolean("buddy", false).apply(); stopSelf() }
         return START_STICKY
     }
 
-    private fun sp() = applicationContext.getSharedPreferences("ai_overlay", Context.MODE_PRIVATE)
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun screenW() = resources.displayMetrics.widthPixels
-    private fun screenH() = resources.displayMetrics.heightPixels
-
-    private fun add() {
-        val w = dp(54); val h = dp(49)
-        val v = BuddyView(this)
-        view = v
-        val type = if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
-        lp = WindowManager.LayoutParams(w, h, type, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT)
-        lp.gravity = Gravity.TOP or Gravity.START
-        lp.x = sp().getInt("x", screenW() - w); lp.y = sp().getInt("y", (screenH() * 0.4f).toInt())
-        var dx = 0f; var dy = 0f; var sx = 0; var sy = 0; var moved = false
-        val slop = dp(8)
-        v.setOnTouchListener { _, e ->
-            when (e.action) {
-                MotionEvent.ACTION_DOWN -> { dx = e.rawX; dy = e.rawY; sx = lp.x; sy = lp.y; moved = false }
-                MotionEvent.ACTION_MOVE -> {
-                    if (!moved && (Math.abs(e.rawX - dx) > slop || Math.abs(e.rawY - dy) > slop)) moved = true
-                    if (moved) { lp.x = (sx + (e.rawX - dx)).toInt().coerceIn(0, screenW() - w); lp.y = (sy + (e.rawY - dy)).toInt().coerceIn(0, screenH() - h); runCatching { wm.updateViewLayout(v, lp) } }
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (!moved) AiLive.openChat(this)
-                    else {
-                        // it settles at the nearest side
-                        val to = if (lp.x + w / 2 < screenW() / 2) 0 else screenW() - w
-                        android.animation.ValueAnimator.ofInt(lp.x, to).apply {
-                            duration = 180
-                            addUpdateListener { lp.x = it.animatedValue as Int; runCatching { wm.updateViewLayout(v, lp) } }
-                            addListener(object : android.animation.AnimatorListenerAdapter() { override fun onAnimationEnd(a: android.animation.Animator) { sp().edit().putInt("x", lp.x).putInt("y", lp.y).apply() } })
-                        }.start()
-                    }
-                }
-            }
-            true
+    /** The model starts answering (the mascot works and says so) or is done (it is happy and shows the answer in a speech bubble). */
+    fun setWorking(w: Boolean, last: String) {
+        main.post {
+            val b = buddy ?: return@post
+            if (w) b.render(com.umutk.pulse.extras.ai.cc.Status.Working, tr("Working…", "Çalışıyorum…"), "")
+            else b.render(com.umutk.pulse.extras.ai.cc.Status.Done, "", last)
         }
-        runCatching { wm.addView(v, lp) }.onFailure { stopSelf() }
     }
-
-    fun setWorking(w: Boolean) { main.post { view?.dance(w) } }
 
     override fun onDestroy() {
-        view?.let { v -> v.stop(); runCatching { wm.removeView(v) } }
-        view = null; live = null
+        buddy?.hide(); buddy = null; live = null
         super.onDestroy()
-    }
-}
-
-/** The original orange mascot: it blinks now and then; while the model works it dances (centre, tilt left, centre, tilt right). */
-private class BuddyView(c: Context) : View(c) {
-    private val awake = ContextCompat.getDrawable(c, R.drawable.cc_mascot18)!!.mutate()
-    private val asleep = ContextCompat.getDrawable(c, R.drawable.cc_mascot_sleep18)!!.mutate()
-    private val main = Handler(Looper.getMainLooper())
-    private var closed = false
-    private var working = false
-    private var frame = 0
-    private val rot = floatArrayOf(0f, -12f, 0f, 12f)
-    private val up = floatArrayOf(1f, 0f, 1f, 0f)
-    private val tick = object : Runnable {
-        override fun run() { frame = (frame + 1) % 4; invalidate(); main.postDelayed(this, 280) }
-    }
-    private val blink = object : Runnable {
-        override fun run() {
-            if (!working) { closed = true; invalidate(); main.postDelayed({ closed = false; invalidate() }, 140) }
-            main.postDelayed(this, 2200L + (0..3800).random())
-        }
-    }
-    init { main.postDelayed(blink, 2200) }
-
-    fun dance(on: Boolean) { if (on == working) return; working = on; main.removeCallbacks(tick); frame = 0; if (on) main.post(tick) else invalidate() }
-    fun stop() { main.removeCallbacksAndMessages(null) }
-
-    override fun onDraw(cv: Canvas) {
-        val d = if (closed && !working) asleep else awake
-        d.setBounds(0, 0, width, height)
-        cv.save()
-        if (working) { cv.rotate(rot[frame], width / 2f, height.toFloat()); cv.translate(0f, -up[frame] * 4f * resources.displayMetrics.density) }
-        d.draw(cv)
-        cv.restore()
     }
 }
