@@ -14,7 +14,7 @@ internal object NeuralLm {
     private val missing = ConcurrentHashMap.newKeySet<String>()
     private const val SMALL_NS = 600_000L
     /** The model's average time for a word (ms) above which it is left out for this run. */
-    private const val SLOW_MS = 90f
+    private const val SLOW_MS = 60f
     @Volatile private var avgMs = 0f
     @Volatile private var off = false
 

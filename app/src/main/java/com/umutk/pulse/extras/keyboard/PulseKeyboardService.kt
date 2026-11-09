@@ -2066,7 +2066,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             fun form(w: String) = if (capFirst) w.replaceFirstChar { it.titlecase(loc) } else w
             val wider = if (lower.length >= 3 && limit < NN_REACH) candCodes.flatMap { KeyboardDictionary.correct(it, lower, NN_REACH, 6, tc) } else emptyList()
             val pool = (corr + wider).filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) && kotlin.math.abs(it.word.length - lower.length) <= 2 }
-                .sortedBy { it.cost }.distinctBy { it.word }.take(10)
+                .sortedBy { it.cost }.distinctBy { it.word }.take(6)
             // the words the person writes weigh a little more (log2 of how often), but a learned word is not taken as a real one: typos left
             // uncorrected were learned too ("öok", "dğzelt"), and they must still be mended
             // the person's own count and the word's count in the language both weigh in (log2): tested on the owner's 1500 real slips with their own
