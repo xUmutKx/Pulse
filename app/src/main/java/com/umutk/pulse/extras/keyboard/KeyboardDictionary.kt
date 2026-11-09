@@ -705,21 +705,35 @@ object KeyboardDictionary {
         if (keyW <= 0f) return
         keyCounts[ch] = (keyCounts[ch] ?: 0) + 1
         val b = bias.getOrPut(ch) { FloatArray(2) }
-        b[0] = (b[0] * .98f + ((p.x - center.x) / keyW) * .02f).coerceIn(-.4f, .4f)
-        b[1] = (b[1] * .98f + ((p.y - center.y) / keyW) * .02f).coerceIn(-.4f, .4f)
+        val dx = (p.x - center.x) / keyW; val dy = (p.y - center.y) / keyW
+        // how widely this person's touches scatter around the drifted centre of the key (the variance of the touch model, per key)
+        val rx = dx - b[0]; val ry = dy - b[1]
+        spread[ch] = ((spread[ch] ?: TOUCH_VAR) * .98f + ((rx * rx + ry * ry) / 2f) * .02f).coerceIn(.03f, .2f)
+        b[0] = (b[0] * .98f + dx * .02f).coerceIn(-.4f, .4f)
+        b[1] = (b[1] * .98f + dy * .02f).coerceIn(-.4f, .4f)
     }
+
+    private const val TOUCH_VAR = .09f   // about a third of a key width of scatter, until the person's own is known
+    private val spread = ConcurrentHashMap<Char, Float>()   // per key: variance of the touches around the key's centre, in key widths squared
 
     private fun touchSub(i: Int, a: Char, b: Char, tc: TouchCtx): Float {
         if (a == b) return 0f
         val p = tc.pts.getOrNull(i) ?: return sub(a, b)
-        val c = tc.centers[b] ?: return sub(a, b)
+        val cb = tc.centers[b] ?: return sub(a, b)
         val bi = bias[a]
         val px = p.x - (bi?.get(0) ?: 0f) * tc.keyW; val py = p.y - (bi?.get(1) ?: 0f) * tc.keyW
-        val dx = (px - c.x) / tc.keyW; val dy = (py - c.y) / tc.keyW
-        val d = sqrt(dx * dx + dy * dy)
         val base = sub(a, b)
-        // the accent-only difference stays cheap; otherwise the cost follows the distance of the touch from the other key
-        return if (base <= .15f) base else (.15f + .85f * (d / 1.6f) * (d / 1.6f)).coerceIn(.15f, 1f)
+        // the accent-only difference stays cheap
+        if (base <= .15f) return base
+        val ex = (px - cb.x) / tc.keyW; val ey = (py - cb.y) / tc.keyW
+        val db2 = ex * ex + ey * ey
+        val ca = tc.centers[a]
+        val da2 = if (ca != null) { val fx = (px - ca.x) / tc.keyW; val fy = (py - ca.y) / tc.keyW; fx * fx + fy * fy } else 0f
+        val sa = spread[a] ?: TOUCH_VAR; val sb = spread[b] ?: TOUCH_VAR
+        // how much likelier the touch is for key b than for the key that was hit (two gaussians, one per key): in the middle of the hit key the
+        // other letter costs a lot, near the edge between the two keys it costs little
+        val llr = (db2 / (2f * sb) + ln(sb)) - (da2 / (2f * sa) + ln(sa))
+        return (.15f + llr / 8f).coerceIn(.15f, 1f)
     }
 
     // letters this person mistypes for others (typed, meant), learned from the suggestions tapped; "ds" is one they named (d for s, as in -din for -sin)
