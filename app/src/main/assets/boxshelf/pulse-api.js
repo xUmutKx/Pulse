@@ -24,6 +24,14 @@
   const st = document.createElement('style');
   st.textContent = '#tabs,#hints{display:none!important}';
   document.head.appendChild(st);
+  // AMOLED black (Game Hub settings, or Pulse's AMOLED look): a pure black screen, no coloured backdrop, glow or floor; only the boxes light it
+  try {
+    if (H.amoled && H.amoled()) {
+      const am = document.createElement('style');
+      am.textContent = 'html,body,#app{background:#000!important;background-image:none!important}#app::before,#app::after,body::before,body::after,.theme-canvas,.bg-layer,.theme-fx,.vignette,.sel-halo,.floor,.pv-back{display:none!important;background:none!important}';
+      document.head.appendChild(am);
+    }
+  } catch (e) {}
   // the page's sounds start with the first touch (a sound context may only begin on one)
   addEventListener('pointerdown', () => { try { window.Sound && Sound.warm && Sound.warm(); } catch (e) {} }, { once: true, capture: true });
   api.scan = async () => shelf();
