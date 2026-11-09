@@ -879,7 +879,7 @@ function descFor(g){
   if(g.kind==="setup"&&g.addGames)return "Puts more games on the Custom shelf: several programs at once, a whole folder of games, or your Playnite library.";
   if(g.kind==="setup")return `No games found for ${s.name} yet. Opens its page in Settings, where you can pick the folder your games are in.`;
   if(g.kind==="emulator")return `Opens ${s.emulatorName} on its own so you can change controllers, graphics and other settings. Close it to come back here.`;
-  if(g.kind==="app")return `Opens ${g.title}. Close it to come back to the shelf.`;
+  if(g.kind==="app")return (g.pulse&&window.__pulseGuide&&window.__pulseGuide(g))||`Opens ${g.title}. Close it to come back to the shelf.`;
   if(g.kind==="steam")return PC_HOW[g.source]||"Starts through Steam, so updates, cloud saves and the Steam overlay work as usual.";
   return g.kind==="rom"?"":`Opens ${g.title}.`;
 }
@@ -891,7 +891,7 @@ function fillDetails(){
   // screen readers and whenever there's no logo
   {const lg=$("dLogo"),head=lg.closest(".d-head"),u=g.kind==="rom"&&!ANDROID&&g.info&&g.info.logo||"";head.classList.remove("has-logo");lg.hidden=true;lg.onload=lg.onerror=null;
     if(u){lg.alt=g.title;lg.onload=()=>{if(curGame()===g&&lg.naturalWidth>8){lg.hidden=false;head.classList.add("has-logo")}};lg.onerror=()=>{lg.hidden=true};if(lg.getAttribute("src")!==u)lg.src=u;else if(lg.complete&&lg.naturalWidth)lg.onload()}else lg.removeAttribute("src")}
-  const desc=descFor(g)||"";const dd0=$("dDesc");dd0.textContent=desc;dd0.hidden=!desc;dd0.classList.add("clamp");{const sa=$("dSecAbout");if(sa)sa.hidden=!desc||g.kind!=="rom"&&g.kind!=="steam"} /* (beta.7: section labels, only over a section with something in it) */
+  const desc=descFor(g)||"";const dd0=$("dDesc");dd0.textContent=desc;dd0.hidden=!desc;dd0.classList.add("clamp");{const sa=$("dSecAbout");if(sa)sa.hidden=!desc||g.kind!=="rom"&&g.kind!=="steam"&&!g.guideOn} /* (beta.7: section labels, only over a section with something in it) */
   const more=$("dMore");more.hidden=true;more.textContent="Read more";requestAnimationFrame(()=>{more.hidden=!desc||dd0.scrollHeight<=dd0.clientHeight+4});
   // hero: cover + blurred backdrop; chips for the glanceable facts
   const front=frontUrl(g);$("dCover").src=thumb(front,420);{const hb=$("dHeroBg"),hsrc=(g.art&&(g.art.hero||g.art.front))||front;hb.style.backgroundImage=`url("${thumb(hsrc,g.art&&g.art.hero?768:256)}")`;if(window.bsPlatform&&bsPlatform.os==="android"&&hsrc)tinyBlur(hsrc,d=>{if(d&&curGame()===g&&!hb.closest(".shot"))hb.style.backgroundImage=`url("${d}")`})} /* Android: the 18×24 soft copy the shelf background already uses, so no live 28 px blur filter (android.css) */

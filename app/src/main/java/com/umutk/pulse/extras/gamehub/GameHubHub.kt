@@ -204,12 +204,12 @@ internal fun loadGames(c: Context): List<GameRow> {
     val installed = runCatching {
         pm.getInstalledApplications(0)
             .filter { ai -> ai.packageName != c.packageName && Build.VERSION.SDK_INT >= 26 && ai.category == ApplicationInfo.CATEGORY_GAME }
-            .map { ai -> GameRow(ai.packageName, pm.getApplicationLabel(ai).toString()) }
+            .map { ai -> GameRow(ai.packageName, prettyName(c, ai.packageName, pm.getApplicationLabel(ai).toString())) }
     }.getOrDefault(emptyList())
     val seen = installed.map { it.pkg }.toSet()
-    val hiddenRows = hiddenSet(c).filter { it !in seen }.map { GameRow(it, prefs(c).getString("name_$it", null) ?: it) }
+    val hiddenRows = hiddenSet(c).filter { it !in seen }.map { GameRow(it, prettyName(c, it, prefs(c).getString("name_$it", null) ?: it)) }
     val added = customSet(c).filter { it !in seen && it !in hiddenSet(c) }.mapNotNull { pkg ->
-        runCatching { GameRow(pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()) }.getOrNull()
+        runCatching { GameRow(pkg, prettyName(c, pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString())) }.getOrNull()
     }
     return (installed + hiddenRows + added).distinctBy { it.pkg }.sortedBy { it.name.lowercase() }
 }

@@ -61,4 +61,8 @@ internal fun fetchSteamArt(c: Context, g: GameRow): Boolean {
 }
 
 /** The best picture there is for the game: Steam's art first, then the store picture of Google Play. */
-internal fun fetchBestCover(c: Context, g: GameRow): Boolean = fetchSteamArt(c, g) || (!playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg))
+internal fun fetchBestCover(c: Context, g: GameRow): Boolean {
+    // a game that only has its package id for a name ("com.Hakita.ULTRAKIL") is looked up by the title of its store page
+    val named = if (looksLikePackage(g.name)) GameRow(g.pkg, fetchPlayTitle(c, g.pkg) ?: g.name) else g
+    return fetchSteamArt(c, named) || (!playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg))
+}
