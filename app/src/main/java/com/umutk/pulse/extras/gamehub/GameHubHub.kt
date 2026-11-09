@@ -1611,7 +1611,7 @@ class GameMenuService : android.app.Service() {
         val pct = bat?.let { 100 * it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0
         val temp = (bat?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
         val mi = android.app.ActivityManager.MemoryInfo().also { (getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }
-        col.addView(label("$pct%  ·  %.1f \u00B0C  ·  %.1f GB".format(temp, mi.availMem / 1_073_741_824.0), 13f, if (temp >= 43f || pct <= 15) 0xFFFF6E6E.toInt() else 0xFFB0B0B0.toInt()))
+        col.addView(label("%d%%  ·  %.1f \u00B0C  ·  %.1f GB".format(pct, temp, mi.availMem / 1_073_741_824.0), 13f, if (temp >= 43f || pct <= 15) 0xFFFF6E6E.toInt() else 0xFFB0B0B0.toInt()))
         // do not disturb
         val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
         lateinit var dnd: android.widget.TextView
