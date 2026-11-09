@@ -30,6 +30,22 @@
   api.cachedLibrary = async () => shelf();
   api.launchApp = async appId => { H.launch(String(appId)); return {}; };
   api.pulseDetails = pkg => H.details(String(pkg));
+  // the game's guide for Details (what the game is: Steam's page, or its Google Play page): kept after the first read; it appears a moment after Details opens
+  window.__pulseGuide = g => {
+    const id = String(g.appId), t = H.guideCached ? H.guideCached(id) : '';
+    if (t) { g.guideOn = true; return t; }
+    if (H.guideFetch && !g.__gTry) {
+      g.__gTry = 1; H.guideFetch(id); let n = 0;
+      const iv = setInterval(() => {
+        const x = H.guideCached(id);
+        if (x || ++n > 25) {
+          clearInterval(iv);
+          if (x) { g.guideOn = true; const d = document.getElementById('dDesc'); if (d && window.__pulseCur && window.__pulseCur.appId === g.appId) { d.textContent = x; d.hidden = false; const sa = document.getElementById('dSecAbout'); if (sa) sa.hidden = false; } }
+        }
+      }, 1000);
+    }
+    return '';
+  };
   api.quit = async () => { H.back(); return true; };
   // the platform's own "exited": Pulse tells the page when the game has closed and Boxshelf is on the screen again
   window.__pulseExited = () => { try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {} };
