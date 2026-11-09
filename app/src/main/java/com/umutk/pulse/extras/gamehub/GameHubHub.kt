@@ -852,7 +852,7 @@ fun GameHubHub(onBack: () -> Unit) {
     val can = mode != Privilege.Mode.None
     // the store pictures of the games that have no cover yet are fetched one by one in the background
     LaunchedEffect(games.size) {
-        if (!prefs(ctx).getBoolean("playCovers", true)) return@LaunchedEffect
+        if (!prefs(ctx).getBoolean("playCovers", false)) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             var got = 0
             for (g in games) {
@@ -1100,7 +1100,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         scope.launch { withContext(Dispatchers.IO) { Privilege.detect() }; mode = Privilege.mode }
                     }
                     SectionTitle(pal, tr("Covers", "Kapaklar"))
-                    var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+                    var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
                     SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
                     Spacer(Modifier.height(24.dp))
