@@ -2355,3 +2355,11 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## 1.0.384
 - Pulse AI sohbet/maskot/yüzen maskot, Sonic yuvarlak kapak, klavye pano ve çip, Office yakınlaştırma/kaydırma/arama — derlenmedi
+
+## Pulse AI (derlenmedi)
+- Cevaplar Markdown: başlık, liste, kod bloğu (kopyala düğmeli), kalın/italik/satır içi kod; her cevabın altında Kopyala.
+- Cevap uzunluğu 1024 -> 2048 token (cevap ortasında kesilme).
+- Boşta maskot sabit; sadece yazarken dans eder. Maskota dokununca sayfası açılır.
+- Çekmecede Maskot/Yüzen maskot/Çubuk satırları kalktı; tek "Ayarlar" penceresinde toplandı, çubuk seçimi Pulse AI turuncusu.
+- Giriş alanı tek satırda: + , yazı kutusu, gönder.
+- Vision (resimli) model desteği: henüz yok.
