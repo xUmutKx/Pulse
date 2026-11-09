@@ -65,7 +65,7 @@ internal object GameGuide {
                 if (System.currentTimeMillis() - p.getLong("guideTry_$pkg", 0L) < 7L * 86_400_000L) return@Thread
                 p.edit().putLong("guideTry_$pkg", System.currentTimeMillis()).apply()
                 val title = if (looksLikePackage(name)) (fetchPlayTitle(app, pkg) ?: name) else name
-                val text = steamGuide(title) ?: playGuide(pkg) ?: return@Thread
+                val text = steamGuide(title) ?: wikiGuide(title) ?: playGuide(pkg) ?: return@Thread
                 file(app, pkg).apply { parentFile?.mkdirs(); writeText(text) }
             } finally { busy.remove(pkg) }
         }.start()
@@ -86,6 +86,17 @@ internal object GameGuide {
             if (dev.isNotEmpty()) append("\nDeveloper: ").append(dev.joinToString(", "))
             if (date.isNotBlank()) append("\nReleased: ").append(date)
         }
+    }.getOrNull()
+
+    /** Wikipedia's summary of the game (only a page that says it is a video game). */
+    private fun wikiGuide(name: String): String? = runCatching {
+        for (t in listOf("$name (video game)", name)) {
+            val q = java.net.URLEncoder.encode(t.replace(' ', '_'), "UTF-8").replace("+", "%20")
+            val j = JSONObject(httpText("https://en.wikipedia.org/api/rest_v1/page/summary/$q", 400_000) ?: continue)
+            val ex = j.optString("extract").trim()
+            if (j.optString("type") == "standard" && ex.length > 40 && (j.optString("description") + ex).contains("video game", true)) return@runCatching ex
+        }
+        null
     }.getOrNull()
 
     private fun playGuide(pkg: String): String? = runCatching {

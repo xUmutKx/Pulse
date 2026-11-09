@@ -1034,6 +1034,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
                     // the look of the cases on Boxshelf's shelf: one of its own case styles
+                    // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
+                    var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
+                    Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    PField(sgKey, { sgKey = it; prefs(ctx).edit().putString("sgdbKey", it.trim()).apply() }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp))
                     Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->
