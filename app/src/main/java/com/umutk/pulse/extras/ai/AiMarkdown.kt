@@ -92,7 +92,7 @@ private fun parseMd(src: String): List<MdBlock> {
 }
 
 /** Bold (**x**), italic (*x*) and code (`x`) inside one line. */
-private fun inline(s: String): AnnotatedString = buildAnnotatedString {
+private fun inlineMd(s: String): AnnotatedString = buildAnnotatedString {
     var i = 0
     while (i < s.length) {
         when {
@@ -127,14 +127,14 @@ internal fun AiMarkdown(text: String, color: Color, modifier: Modifier = Modifie
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         parseMd(text).forEach { b ->
             when (b) {
-                is MdBlock.Head -> Text(inline(b.text), color = color,
+                is MdBlock.Head -> Text(inlineMd(b.text), color = color,
                     fontSize = when (b.level) { 1 -> 20.sp; 2 -> 18.sp; else -> 16.sp }, fontWeight = FontWeight.SemiBold)
-                is MdBlock.Para -> Text(inline(b.lines.joinToString("\n")), color = color, fontSize = 15.sp, lineHeight = 22.sp)
+                is MdBlock.Para -> Text(inlineMd(b.lines.joinToString("\n")), color = color, fontSize = 15.sp, lineHeight = 22.sp)
                 is MdBlock.Bullet -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     b.items.forEachIndexed { k, it ->
                         Row(verticalAlignment = Alignment.Top) {
                             Text(if (b.ordered) "${k + 1}." else "•", color = color, fontSize = 15.sp, modifier = Modifier.padding(end = 8.dp))
-                            Text(inline(it), color = color, fontSize = 15.sp, lineHeight = 22.sp)
+                            Text(inlineMd(it), color = color, fontSize = 15.sp, lineHeight = 22.sp)
                         }
                     }
                 }
