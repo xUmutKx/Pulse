@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -415,7 +416,7 @@ internal object GameArt {
 
     /** The picture the person chose (at most 3 MB), decoded at [px] wide. */
     fun cover(c: Context, pkg: String, px: Int): ImageBitmap? {
-        val f = coverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+        val f = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
         return cached("c/$pkg/${f.path.takeLast(14)}/${f.lastModified()}/$px") { decodeFile(f.path, px) }
     }
 
@@ -804,6 +805,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
+    var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
     var setupOpen by remember { mutableStateOf(firstUse) }
@@ -847,8 +849,9 @@ fun GameHubHub(onBack: () -> Unit) {
         withContext(Dispatchers.IO) {
             var got = 0
             for (g in games) {
-                if (coverFile(ctx, g.pkg).isFile || playCoverFile(ctx, g.pkg).isFile) continue
-                if (fetchPlayCover(ctx, g.pkg)) { got++; GameArt.version.intValue++ }
+                // a cover the person chose, or Steam's art, is final; a game with only the Google Play picture asks Steam once more (a week apart)
+                if (coverFile(ctx, g.pkg).isFile || steamCoverFile(ctx, g.pkg).isFile) continue
+                if (fetchBestCover(ctx, g)) { got++; GameArt.version.intValue++ }
                 kotlinx.coroutines.delay(600)
                 if (got >= 40) break
             }
@@ -967,13 +970,13 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (theme == "shelf" && webShelfOk) BoxshelfWeb(
+                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle) { BoxshelfWeb(
                         Modifier.fillMaxSize(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onExit = { go(0) },
-                    ) else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
+                    ) } else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
                     ) else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
@@ -1019,6 +1022,13 @@ fun GameHubHub(onBack: () -> Unit) {
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
+                    // the look of the cases on Boxshelf's shelf: one of its own case styles
+                    Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->
+                            Chip(pal, if (caseStyle == k) "● $label" else label) { caseStyle = k; prefs(ctx).edit().putString("caseStyle", k).apply() }
+                        }
+                    }
                     SectionTitle(pal, tr("Setup", "Kurulum"))
                     Chip(pal, tr("Open the setup", "Kurulumu aç")) { setupOpen = true }
                     SectionTitle(pal, tr("Library", "Kütüphane"))

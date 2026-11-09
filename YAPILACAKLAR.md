@@ -2344,3 +2344,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## 1.0.381
 - Game Hub raf görünümü, kurulum sihirbazı ve kasa ayrıntıları; ağ türü önce modem tercihini dener; zip hatası düzeltildi; seçici ve söz özellikleri (derlendi, 1.0.381)
 - Game Hub: Boxshelf'in gerçek arayüzü (WebView, assets/boxshelf) varsayılan raf oldu; oyunlar Pulse verisiyle, Oyna Pulse ile başlatır, Ayrıntılar > Daha fazla > Game settings Pulse oyun ayarlarını açar. Hafif Compose raf "Raf, hafif" teması olarak durur. Sözler düzenleyicisinde AI. (derlenmedi)
+- Game Hub Boxshelf rafı: Steam kapak/hero verisi (adı aynı olan oyunlar için), yoksa Google Play resmi; kasa stili seçilebilir (PC/Steam varsayılan, Özel, PS5, PS4, Xbox 360, Switch) — "APP" bandı yok; gizleme/istatistik/başlatma Pulse ile. (derlenmedi)
