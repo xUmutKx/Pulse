@@ -1258,6 +1258,8 @@ function play(){
   // covers the emulator starting (it stays until the game's window is up, then fades to black), and with the slide off
   // the built-in intro plays (runBoot without a video)
   if(vid){runBoot(s,()=>launchNow(g));return}
+  // Pulse: the held disc goes into a console at the bottom (spins, its sound), the screen goes dark and the game starts, as a game's disc does
+  if(g.pulse){runInsert(Object.assign({},s,{id:"ps5",emulatorName:"Pulse"}),g,null,false);launchNow(g,true);return}
   if(g.kind==="rom"&&s.insertAnim!==false){runInsert(s,g,null,false);launchNow(g,true);return}
   if(boot){runBoot(s,()=>launchNow(g));return}
   launchNow(g);
@@ -1652,7 +1654,7 @@ addEventListener("unhandledrejection",e=>{try{api.log&&api.log(`rejection: ${e.r
 const MEDIA={gc:{kind:"disc",size:.62,drive:"top"},wii:{kind:"disc",size:.86,drive:"front"},wiiu:{kind:"disc",size:.84,drive:"front"},psp:{kind:"umd",size:.66,drive:"hatch"},sw:{kind:"cart",size:.5,drive:"slot"},sw2:{kind:"cart",size:.5,drive:"slot"},n3ds:{kind:"cart",size:.5,drive:"slot"},ps3:{kind:"disc",size:.78,drive:"front"},ps4:{kind:"disc",size:.78,drive:"front"},ps5:{kind:"disc",size:.78,drive:"front"},x360:{kind:"disc",size:.8,drive:"tray"},ps2:{kind:"disc",size:.8,drive:"tray"}};
 if(window.BS_SYSTEMS_EXTRA)Object.assign(MEDIA,BS_SYSTEMS_EXTRA.media||{});
 const DECK={front:"frontslot",tray:"trayload",hatch:"hatchload"};
-let insertT=null,insertSeatAt=0,slideEndAt=0;const INSERT_3D=false;
+let insertT=null,insertSeatAt=0,slideEndAt=0;const INSERT_3D=!!window.PulseHost;
 // Every console boots on its own full-screen slide (see bootslide.css). The old disc-into-the-console animation (runInsert below)
 // is kept, unused, for the museum's planned 3D load-into-the-console.
 const SLIDE_LOOKS=new Set(["gc","wii","wiiu","sw","psp","ps3","ps2","ps4","ps5","x360","n3ds"]);
