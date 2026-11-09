@@ -194,6 +194,20 @@ internal class InferenceEngineImpl private constructor(
         }
 
     /**
+     * Forgets the conversation and starts a new one with the system prompt (the model stays loaded)
+     */
+    override suspend fun restartConversation(systemPrompt: String) =
+        withContext(llamaDispatcher) {
+            check(_state.value is InferenceEngine.State.ModelReady) {
+                "Cannot restart conversation in ${_state.value.javaClass.simpleName}!"
+            }
+            _state.value = InferenceEngine.State.ProcessingSystemPrompt
+            val result = processSystemPrompt(systemPrompt)
+            _state.value = InferenceEngine.State.ModelReady
+            if (result != 0) throw IllegalStateException("Conversation not restarted ($result)")
+        }
+
+    /**
      * Process the plain text system prompt
      *
      * TODO-han.yin: return error code if system prompt not correct processed?
