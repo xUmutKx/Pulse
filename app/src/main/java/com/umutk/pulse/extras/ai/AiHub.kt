@@ -119,6 +119,9 @@ fun AiHub(onBack: () -> Unit) {
                     }
                     // the mascot outside the app: floating over the other apps, and in Pulse's Island (the pill)
                     var buddyOn by remember { mutableStateOf(AiBuddyService.enabled(c)) }
+                    var bar by remember { mutableStateOf(AiBuddyService.barStyle(c)) }
+                    var buddySettings by remember { mutableStateOf(false) }
+                    if (buddySettings) AiBuddySettingsDialog { buddySettings = false; AiBuddyService.live?.refresh() }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr("Floating mascot", "Yüzen maskot"), color = AiInk, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         PSwitch(buddyOn, { on ->
@@ -127,9 +130,20 @@ fun AiHub(onBack: () -> Unit) {
                             } else { buddyOn = on; AiBuddyService.setEnabled(c, on) }
                         })
                     }
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { com.umutk.pulse.launchExtra(c, "com.umutk.pulse.ExtraToolActivity", "island"); scope.launch { drawer.close() } }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { buddySettings = true }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("info", AiInk, 20.dp); Text(tr("Pill (Island)", "Hap (Island)"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                        PIcon("settings", AiInk, 20.dp); Text(tr("Mascot settings", "Maskot ayarları"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                    }
+                    // the bar over the screen: Pulse's Island, or Claude Chat's pill / line / curtain
+                    Text(tr("Bar", "Çubuk"), color = AiSub, fontSize = 12.sp, modifier = Modifier.padding(start = 24.dp, top = 8.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("island" to "Island", "pill" to tr("Pill", "Hap"), "line" to tr("Line", "Çizgi"), "curtain" to tr("Curtain", "Perde"), "off" to tr("Off", "Kapalı")).forEach { (k, l) ->
+                            Text(l, color = if (bar == k) Color.Black else AiInk, fontSize = 13.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (bar == k) Look.accent else Color(0xFF2A2A2A)).clickable {
+                                    if (k in setOf("pill", "line", "curtain") && !com.umutk.pulse.Compat.canOverlay(c)) runCatching { c.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + c.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                                    else { bar = k; AiBuddyService.setBarStyle(c, k); AiBuddyService.update(c) }
+                                }.padding(horizontal = 12.dp, vertical = 6.dp))
+                        }
                     }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { mascotOpen = true; scope.launch { drawer.close() } }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
