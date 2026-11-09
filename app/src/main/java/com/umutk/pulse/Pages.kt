@@ -64,7 +64,10 @@ private val iconCache = java.util.concurrent.ConcurrentHashMap<String, androidx.
 /** The app's own launcher icon, loaded off the main thread and cached. The generic icon is only a fallback for packages that cannot be resolved. */
 private fun loadAppIcon(ctx: android.content.Context, pkg: String): androidx.compose.ui.graphics.ImageBitmap? = iconCache[pkg] ?: try {
     ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap().also { iconCache[pkg] = it }
-} catch (e: Exception) { null }
+} catch (e: Exception) {
+    // an app hidden by Game Hub has no icon from the system any more: the copy Game Hub kept is used
+    runCatching { android.graphics.BitmapFactory.decodeFile(java.io.File(ctx.noBackupFilesDir, "gamehub/icon_" + pkg.replace('.', '_') + ".png").path)?.asImageBitmap()?.also { iconCache[pkg] = it } }.getOrNull()
+}
 
 @Composable
 fun AppIcon(name: String, size: androidx.compose.ui.unit.Dp = 28.dp) {
