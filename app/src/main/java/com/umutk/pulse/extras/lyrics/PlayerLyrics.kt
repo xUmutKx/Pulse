@@ -133,7 +133,8 @@ fun PlayerLyrics(
             val res = edited ?: res0
             when {
                 res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp),
-                    playing = playing, onTogglePlay = onTogglePlay)
+                    playing = playing, onTogglePlay = onTogglePlay,
+                    onAi = if (aiOk) ({ if (com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) aiRun = true else com.umutk.pulse.launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai") }) else null)
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
                 res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { bmp -> shareGate { LyricsShare.share(ctx, bmp) } }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
@@ -186,6 +187,8 @@ fun PlayerLyrics(
                     field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
                     Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
                         .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
+                    Text(tr("Write the lyrics", "Sözleri yaz"), color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
+                        .background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { edited = LyricsResult(emptyList(), false, "edited"); mode = 3 }.padding(horizontal = 20.dp, vertical = 9.dp))
                     if (aiOk) Row(Modifier.padding(top = 10.dp).background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
                         .clickable { if (com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) aiRun = true else com.umutk.pulse.launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai") }
                         .padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
