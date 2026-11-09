@@ -2348,3 +2348,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## 1.0.382
 - Game Hub Boxshelf rafı (WebView), Steam kapak/hero, kasa stili; AI söz penceresi canlı ilerleme ve arka plan; kalıcı söz dizini; klavye eşit öneriler; seçici EXIF; ikon yapıcıda hazır stiller ve ana uygulama ikonu (derlendi, 1.0.382)
+
+## 1.0.383
+- Game Hub: kutu iki dokunuşla açılıyor, CD basılı tutunca konsol animasyonu; oyun rehberi; SteamGridDB; AMOLED; kapak ve klavye değişiklikleri — derlenmedi
