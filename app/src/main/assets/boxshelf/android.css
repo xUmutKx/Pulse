@@ -173,3 +173,7 @@ body.bs-still .sel-halo,body.bs-still .theme-fx i{animation-play-state:paused}
 .platform-android .info{top:calc(42% + var(--bh)/2 + 10vh)}
 /* a phone held upright: the menu panel is as wide as the screen already, zoomed it ran out past the left edge (its icons were cut off) */
 @media (max-width:600px){.platform-android .qm{zoom:1;box-sizing:border-box}}
+/* Pulse: a touch on the page never paints the blue tap box or selects text (a long press made a blue selection) */
+*{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html,body,#app{-webkit-user-select:none;user-select:none}
+:focus{outline:none}
