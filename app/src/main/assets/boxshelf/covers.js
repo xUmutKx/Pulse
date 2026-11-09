@@ -172,11 +172,33 @@ function iconFront(style,game,iconUrl){
       // average icon colour for the tint
       const t=document.createElement("canvas");t.width=t.height=8;const tx=t.getContext("2d",{willReadFrequently:true});tx.drawImage(im,0,0,8,8);const d=tx.getImageData(0,0,8,8).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<40)continue;r+=d[i];g+=d[i+1];b+=d[i+2];n++}
       if(n){r/=n;g/=n;b/=n}else{r=g=b=90}
-      const bg=ctx.createLinearGradient(0,0,0,Hh);bg.addColorStop(0,`rgb(${r*.35|0},${g*.35|0},${b*.35|0})`);bg.addColorStop(1,`rgb(${r*.12|0},${g*.12|0},${b*.12|0})`);ctx.fillStyle=bg;ctx.fillRect(0,0,W,Hh);
-      const glow=ctx.createRadialGradient(W/2,Hh*.42,10,W/2,Hh*.42,W*.6);glow.addColorStop(0,`rgba(${r|0},${g|0},${b|0},.45)`);glow.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,W,Hh);
-      const bandH=band(ctx,W,Hh,style,"");
+      // a few different covers, the same one for the same game every time (picked by its title): gradient, blurred poster, sticker on colour, split
+      let hsh=0;for(let k=0;k<game.title.length;k++)hsh=(hsh*31+game.title.charCodeAt(k))|0;const v=Math.abs(hsh)%4;
       const size=W*.56,ar=im.width/im.height,iw=ar>=1?size:size*ar,ih=ar>=1?size/ar:size;
-      ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=30;ctx.shadowOffsetY=12;ctx.drawImage(im,(W-iw)/2,bandH+(Hh-bandH)*.42-ih/2,iw,ih);ctx.shadowColor="transparent";
+      const rgb=(a,f=1)=>`rgba(${r*f|0},${g*f|0},${b*f|0},${a})`;
+      let bandH=0;
+      if(v===0){ // gradient, glow, the icon in the middle
+        const bg=ctx.createLinearGradient(0,0,0,Hh);bg.addColorStop(0,rgb(1,.35));bg.addColorStop(1,rgb(1,.12));ctx.fillStyle=bg;ctx.fillRect(0,0,W,Hh);
+        const glow=ctx.createRadialGradient(W/2,Hh*.42,10,W/2,Hh*.42,W*.6);glow.addColorStop(0,rgb(.45));glow.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,W,Hh);
+        ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=30;ctx.shadowOffsetY=12;ctx.drawImage(im,(W-iw)/2,Hh*.42-ih/2,iw,ih);
+      } else if(v===1){ // the icon blown up behind, blurred and dark; a sharp tile of the icon in the middle
+        ctx.filter="blur(22px) brightness(.55)";const cw=Hh*ar>W?W*1.3:W*1.3;ctx.drawImage(im,W/2-cw/2,Hh/2-cw/2,cw,cw);ctx.filter="none";
+        ctx.fillStyle="rgba(0,0,0,.35)";ctx.fillRect(0,0,W,Hh);
+        const tile=W*.5;ctx.save();ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=36;ctx.shadowOffsetY=14;
+        ctx.beginPath();ctx.roundRect?ctx.roundRect(W/2-tile/2,Hh*.42-tile/2,tile,tile,tile*.22):ctx.rect(W/2-tile/2,Hh*.42-tile/2,tile,tile);ctx.clip();ctx.drawImage(im,W/2-tile/2,Hh*.42-tile/2,tile,tile);ctx.restore();
+      } else if(v===2){ // a solid colour with light stripes; the icon on a white sticker, the title on a band at the top
+        ctx.fillStyle=rgb(1,.5);ctx.fillRect(0,0,W,Hh);
+        ctx.fillStyle="rgba(255,255,255,.08)";for(let k=-Hh;k<W+Hh;k+=W*.18){ctx.beginPath();ctx.moveTo(k,0);ctx.lineTo(k+W*.09,0);ctx.lineTo(k+W*.09+Hh*.6,Hh);ctx.lineTo(k+Hh*.6,Hh);ctx.closePath();ctx.fill()}
+        bandH=Hh*.2;ctx.fillStyle="rgba(0,0,0,.45)";ctx.fillRect(0,0,W,bandH);
+        const st=W*.5;ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=24;ctx.shadowOffsetY=10;ctx.fillStyle="#fff";
+        ctx.beginPath();ctx.roundRect?ctx.roundRect(W/2-st/2-W*.04,Hh*.44-st/2-W*.04,st+W*.08,st+W*.08,st*.2):ctx.rect(W/2-st/2,Hh*.44-st/2,st,st);ctx.fill();ctx.restore();
+        ctx.drawImage(im,W/2-st*.42,Hh*.44-st*.42,st*.84,st*.84);
+      } else { // split: the icon's colour on top, dark below; the icon overlaps the line between them
+        ctx.fillStyle=rgb(1,.75);ctx.fillRect(0,0,W,Hh*.56);ctx.fillStyle=rgb(1,.1);ctx.fillRect(0,Hh*.56,W,Hh*.44);
+        const d2=W*.56;ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=26;ctx.shadowOffsetY=10;
+        ctx.beginPath();ctx.arc(W/2,Hh*.5,d2/2,0,Math.PI*2);ctx.closePath();ctx.clip();ctx.drawImage(im,W/2-d2/2,Hh*.5-d2/2,d2,d2);ctx.restore();
+      }
+      ctx.shadowColor="transparent";
       ctx.textAlign="center";ctx.textBaseline="alphabetic";let fs=W*.1;ctx.font=`700 ${fs}px Lexend, sans-serif`;while(ctx.measureText(game.title).width>W*.86&&fs>14){fs*=.94;ctx.font=`700 ${fs}px Lexend, sans-serif`}
       ctx.fillStyle="rgba(255,255,255,.96)";ctx.fillText(game.title,W/2,Hh*.84);
       // a small app icon under the title (the app's own icon, as the shelf's title line shows it)
