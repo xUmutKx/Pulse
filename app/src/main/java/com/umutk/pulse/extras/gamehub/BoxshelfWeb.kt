@@ -93,6 +93,9 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         return arr.toString()
     }
     /** The case style of the shelf: the id of one of Boxshelf's own cases (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...). */
+    /** The guide kept for a game (empty until it was read), and the start of reading it in the background. */
+    @JavascriptInterface fun guideCached(pkg: String): String = GameGuide.cached(c, pkg)
+    @JavascriptInterface fun guideFetch(pkg: String) { GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
