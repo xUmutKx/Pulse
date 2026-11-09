@@ -1781,7 +1781,7 @@ function showLaunch(label,title,cmd){
   $("lEmu").textContent=label;$("lTitle").textContent=title;$("lCmd").textContent=cmd||"";
   const el=$("launch"),ctx=launchCtx||{},g=ctx.g,s=ctx.s,st=(s&&STYLE[s.id])||STYLE.media,[t0,t1]=st.tint||["#2a2f6e","#0b0d1f"];
   el.classList.remove("ready","err","no-card");el.style.setProperty("--l-t0",t0);el.style.setProperty("--l-t1",t1);el.style.setProperty("--l-glow",st.glow||"#9d8cff");el.style.setProperty("--l-case",st.caseColor||"#16161b");
-  const front=g?(g.kind==="rom"||g.kind==="steam"?frontUrl(g):(g.art&&(g.art.front||g.art.icon))):null;
+  const front=g?(g.kind==="rom"||g.kind==="steam"?frontUrl(g):(g.art&&(g.art.front||g.art.appIcon))):null;
   el.classList.toggle("no-card",!front);$("lCover").src=front?thumb(front,768):"";
   $("lBg").removeAttribute("src");tinyBlur(g&&((g.art&&(g.art.hero||g.art.front))||front),d=>{if(d)$("lBg").src=d});
   if(s&&s.kind==="console")renderWordmark($("lWord"),s.id,s.name,"l-word ");else{$("lWord").className="l-word";$("lWord").textContent=s&&s.kind==="steam"?(s.id==="pc"?"PC":s.name):s&&s.name||""}
@@ -1908,14 +1908,14 @@ async function reloadThemes(){themes=await api.themes().catch(()=>({}))||{};appl
 let iconQ=[],iconRun=false;
 function iconCovers(){
   const seen=new Set(iconQ.map(x=>x.g));const order=[cur(),...shelves.filter(s=>s!==cur())].filter(Boolean);
-  order.forEach(sh=>sh.items.forEach(g=>{if(!g.art||!g.art.icon||g.art.front||seen.has(g))return;seen.add(g);iconQ.push({g,style:STYLE[sh.id]||STYLE.media})}));
+  order.forEach(sh=>sh.items.forEach(g=>{if(!g.art||!g.art.appIcon||g.art.front||seen.has(g))return;seen.add(g);iconQ.push({g,style:STYLE[sh.id]||STYLE.media})}));
   if(!iconRun&&iconQ.length){iconRun=true;iconNext()}
 }
 function iconNext(){
   const go=()=>{if(!revealedAt||performance.now()-revealedAt<2000||mode==="launch"){setTimeout(iconNext,500);return} /* not while the shelf is still coming in */
     const j=iconQ.shift();if(!j){iconRun=false;return}
     if(j.g.art.front){iconNext();return}
-    Covers.iconFront(j.style,j.g,j.g.art.icon).then(url=>{if(url){j.g.art.front=url;const i=cur()&&cur().items.indexOf(j.g);if(i>=0&&slots[i]&&slots[i].img)slots[i].img.src=url}}).finally(()=>setTimeout(iconNext,60))};
+    Covers.iconFront(j.style,j.g,j.g.art.appIcon).then(url=>{if(url){j.g.art.front=url;const i=cur()&&cur().items.indexOf(j.g);if(i>=0&&slots[i]&&slots[i].img)slots[i].img.src=url}}).finally(()=>setTimeout(iconNext,60))};
   window.requestIdleCallback?requestIdleCallback(go,{timeout:1500}):setTimeout(go,50)}
 /* ---------- RetroAchievements ---------- */
 const RA={on:false,systems:[],shelf:{},game:new Map(),profile:null};
@@ -3868,7 +3868,7 @@ async function refresh(keepPlace,lib){
   if(!keepPlace&&!coversShownOnce)holdForCovers();
   // the background scan came back with changes somewhere else: the shelf in view is the same, so keep its cases as
   // they are (rebuilding it made every case and cover load in again, a visible stutter right after startup)
-  const slotSig=l=>l.map(g=>g.id+"|"+g.title+"|"+(g.art&&(g.art.icon?"i:"+g.art.icon:g.art.front)||"")+"|"+(g.art&&g.art.spine||"")+"|"+(isFav(g)?1:0)).join("\n");
+  const slotSig=l=>l.map(g=>g.id+"|"+g.title+"|"+(g.art&&(g.art.appIcon?"i:"+g.art.appIcon:g.art.front)||"")+"|"+(g.art&&g.art.spine||"")+"|"+(isFav(g)?1:0)).join("\n");
   if(keepPlace&&slots.length&&cur()&&cur().items.length===slots.length&&slotSig(cur().items)===slotSig(slots.map(x=>x.g))&&sel===slots.findIndex(x=>x.g.id===prevItem)){cur().items.forEach((g,i)=>{const o=slots[i].g;if(o.kind==="random"&&g.kind==="random"){cur().items[i]=o;return} /* keep the Shuffle tile's own object: it holds the pick being shown (and its fold-away timer) */if(o.art&&o.art.icon&&o.art.front&&g.art&&!g.art.front)g.art.front=o.art.front;slots[i].g=g});renderTabs();updateInfo();bootMark("kept-shelf")}
   else{flipped=false;spin=0;spinT=0;cancelAnimationFrame(spinRaf);spinRaf=0;build()}preloadModel();iconCovers();raShelfLoad();tuneTo(cur());ambient(true);loadHistory();
   if(qm.open)qsSoft(); // the start-up background rescan landed under an open quick menu: its game card and rows follow (and a theme preview comes back)
