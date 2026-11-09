@@ -2363,3 +2363,10 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Çekmecede Maskot/Yüzen maskot/Çubuk satırları kalktı; tek "Ayarlar" penceresinde toplandı, çubuk seçimi Pulse AI turuncusu.
 - Giriş alanı tek satırda: + , yazı kutusu, gönder.
 - Vision (resimli) model desteği: henüz yok.
+
+## Pulse AI: görsel model ve fotoğraf sıralama (derlenmedi)
+- llama.cpp mtmd (commit a691b234) native köprüye bağlandı: projector yükleme ve resimli soru.
+- Modeller: SmolVLM 500M vision (hızlı), Gemma 3 4B vision; mmproj dosyası modelle birlikte iner.
+- Sohbette + ile resim eklenir (görsel model seçiliyse).
+- Ayarlar > Fotoğrafları sırala: en yeni 300 fotoğraf etiketlenir, albümler (insanlar, yemek, hayvan ...) gösterilir.
+- Derleme ve cihazda deneme yapılmadı; SmolVLM ve Gemma için hız ölçülmedi.
