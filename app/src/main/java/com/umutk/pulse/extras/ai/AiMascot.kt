@@ -72,15 +72,12 @@ internal fun MascotView(look: MascotStyle.Look, modifier: Modifier, closedEyes: 
     }
 }
 
-/** [working]: the model is answering (it dances); [pose]: a move now (a tap); otherwise the move chosen for waiting, or only blinking. */
+/** Idle: still (no blinking, no move). [working]: the model is answering, it dances. [pose] is a one-off move (none is used now). */
 @Composable
 internal fun AiMascot(look: MascotStyle.Look, working: Boolean, pose: String?, modifier: Modifier) {
-    var closed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(2200L + (0..3800).random()); closed = true; kotlinx.coroutines.delay(140); closed = false } }
-    val move = pose ?: look.move.takeIf { it != "none" && !working }
-    if (move != null) {
-        val k by rememberInfiniteTransition(label = "pose").animateFloat(0f, 1f, infiniteRepeatable(tween(poseMs(move), easing = LinearEasing), RepeatMode.Restart), label = "k")
-        MascotView(look, modifier.graphicsLayer { applyPose(this, move, k) })
+    if (pose != null) {
+        val k by rememberInfiniteTransition(label = "pose").animateFloat(0f, 1f, infiniteRepeatable(tween(poseMs(pose), easing = LinearEasing), RepeatMode.Restart), label = "k")
+        MascotView(look, modifier.graphicsLayer { applyPose(this, pose, k) })
         return
     }
     if (working) {
@@ -89,5 +86,5 @@ internal fun AiMascot(look: MascotStyle.Look, working: Boolean, pose: String?, m
         MascotView(look, modifier.graphicsLayer { rotationZ = DANCE_ROT[frame]; translationY = -DANCE_UP[frame] * 3.dp.toPx() })
         return
     }
-    MascotView(look, modifier, closedEyes = closed)
+    MascotView(look, modifier)
 }
