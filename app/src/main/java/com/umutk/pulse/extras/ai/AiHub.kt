@@ -10,6 +10,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -68,6 +70,7 @@ import org.json.JSONObject
  * (Material, AMOLED black, the Windows looks) with Pulse's own controls. Ideas from Pumpkin: picks by the phone's memory with "runs well /
  * slowly / too big", a search of every GGUF on Hugging Face, models already on the phone, a memory of the person, the chat kept between starts.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AiHub(onBack: () -> Unit) {
     val c = LocalContext.current
@@ -86,6 +89,7 @@ fun AiHub(onBack: () -> Unit) {
     val chats = remember { mutableStateListOf<ChatRec>().apply { addAll(chatsOf(c)); if (isEmpty()) add(ChatRec(newChatId(), mutableStateListOf())) } }
     var cur by rememberSaveable { mutableStateOf(chats.first().id) }
     var models by rememberSaveable { mutableStateOf(false) }
+    var mascotOpen by remember { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     BackHandler { if (drawer.isOpen) scope.launch { drawer.close() } else if (models) models = false else onBack() }
@@ -113,6 +117,10 @@ fun AiHub(onBack: () -> Unit) {
                             }
                         }
                     }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { mascotOpen = true; scope.launch { drawer.close() } }
+                        .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("star", AiInk, 20.dp); Text(tr("Mascot", "Maskot"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                    }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { models = true; scope.launch { drawer.close() } }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon("download", AiInk, 20.dp); Text(tr("Models", "Modeller"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
@@ -126,17 +134,21 @@ fun AiHub(onBack: () -> Unit) {
         },
     ) {
         var working by remember { mutableStateOf(false) }
+        var look by remember { mutableStateOf(MascotStyle.load(c)) }
         var pose by remember { mutableStateOf<String?>(null) }
         var bubble by remember { mutableStateOf<String?>(null) }
         LaunchedEffect(pose) { if (pose != null) { delay(2600); pose = null; bubble = null } }
         val hellos = listOf(tr("Hi!", "Selam!"), tr("I am here", "Buradayım"), tr("Go on, ask me", "Hadi sor bakalım"), tr("I run on your phone", "Telefonunda çalışıyorum"), tr("What shall we do today?", "Bugün ne yapıyoruz?"))
+        if (mascotOpen) MascotSheet(look, { look = it; MascotStyle.save(c, it) }) { mascotOpen = false }
         // the screen is AMOLED black, as in the Claude chat
         Column(Modifier.fillMaxSize().background(AiBg).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { PIcon("menu", AiInk, 22.dp) }
                 // the mascot: a tap makes it do a move and say something
-                Box(Modifier.padding(start = 2.dp).size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A)).clickable { pose = MASCOT_POSES.random(); bubble = hellos.random() }, contentAlignment = Alignment.Center) {
-                    AiMascot(working, pose, Modifier.size(28.dp, 20.dp))
+                Box(Modifier.padding(start = 2.dp).size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A))
+                    .combinedClickable(onClick = { pose = MASCOT_POSES.random(); bubble = hellos.random() }, onLongClick = { mascotOpen = true }), contentAlignment = Alignment.Center) {
+                    if (look.scene != "none") MascotView(look, Modifier.matchParentSize(), scene = true)
+                    AiMascot(look, working, pose, Modifier.size(32.dp, 29.dp))
                 }
                 Column(Modifier.weight(1f).padding(start = 10.dp)) {
                     Text(if (models) tr("Models", "Modeller") else chat.title.ifEmpty { "Pulse AI" }, color = AiInk, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -347,7 +359,7 @@ private fun AiChat(chat: ChatRec, onSaved: () -> Unit, onBusy: (Boolean) -> Unit
     }
     Column(Modifier.fillMaxSize()) {
         if (msgs.isEmpty()) Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            AiMascot(busy, null, Modifier.size(120.dp, 84.dp))
+            AiMascot(MascotStyle.load(c), busy, null, Modifier.size(120.dp, 108.dp))
             Text(tr("Ask anything", "Ne istersen sor"), color = AiInk, fontSize = 22.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
             Text(if (busy) tr("Working…", "Çalışıyor…") else tr("Idle", "Boşta"), color = AiSub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
