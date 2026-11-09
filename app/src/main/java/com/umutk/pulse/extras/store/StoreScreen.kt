@@ -420,7 +420,9 @@ private fun builtinRows(): List<BuiltinRow> {
 @Composable
 internal fun builtinIconRows(): List<IconRow> {
     val ctx = LocalContext.current
-    return builtinRows().map { r -> IconRow(r.place ?: r.name, r.name, r.icon, android.content.Intent().setClassName(ctx, r.cls).also { i -> r.route?.let { i.putExtra("route", it) } }) }
+    // Pulse itself first: its own icon can be made here too (put on the home screen as a shortcut), like the icons of the extra apps
+    val own = IconRow("pulse", "Pulse", "home", android.content.Intent(ctx, com.umutk.pulse.MainActivity::class.java))
+    return listOf(own) + builtinRows().map { r -> IconRow(r.place ?: r.name, r.name, r.icon, android.content.Intent().setClassName(ctx, r.cls).also { i -> r.route?.let { i.putExtra("route", it) } }) }
 }
 
 /** The icon key of a row: in Windows 11 the Fluent picture of the tool or app ("tool:clock" -> tool_clock, "app:BrowserLauncher" -> extraBrowser), else the row's own key. */
