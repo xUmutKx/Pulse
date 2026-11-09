@@ -785,7 +785,14 @@ fun GameHubHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawer = rememberDrawerState(DrawerValue.Closed)
-    var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "shelf") ?: "shelf") }
+    // nothing saved yet: Game Hub is used for the first time (read before anything below saves a choice)
+    val firstUse = remember { prefs(ctx).all.isEmpty() }
+    // the shelf is the look for everyone, once; the other looks stay in the list and are chosen again from there
+    var theme by remember {
+        val p = prefs(ctx)
+        if (!p.getBoolean("shelfDefault", false)) p.edit().putString("theme", "shelf").putBoolean("shelfDefault", true).apply()
+        mutableStateOf(p.getString("theme", "shelf") ?: "shelf")
+    }
     var themeOpen by remember { mutableStateOf(false) }
     val pal = palOf(theme, ctx)
     var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
@@ -796,7 +803,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
-    var setupOpen by remember { mutableStateOf(prefs(ctx).all.isEmpty()) }
+    var setupOpen by remember { mutableStateOf(firstUse) }
     var times by remember { mutableStateOf(GameHubState.times ?: emptyMap()) }
     var usage by remember { mutableStateOf(GameHubState.usage ?: emptyMap()) }
     var sort by remember { mutableStateOf(prefs(ctx).getInt("sort", 0)) }   // 0 name, 1 play time, 2 size

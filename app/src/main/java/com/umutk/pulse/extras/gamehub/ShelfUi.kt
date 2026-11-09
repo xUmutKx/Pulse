@@ -145,7 +145,13 @@ private fun BoxArt(g: GameRow, pal: Pal, hidden: Boolean, modifier: Modifier = M
 private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times: Map<String, Long>, onOpen: (GameRow) -> Unit, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
     val scope = rememberCoroutineScope()
     val pager = rememberPagerState { games.size }
-    Column(Modifier.fillMaxSize().padding(top = 56.dp, bottom = 92.dp)) {
+    Column(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(pal.accent.copy(alpha = .22f), Color.Transparent), radius = 900f)).padding(top = 56.dp, bottom = 92.dp)) {
+        // the heading, as on Boxshelf's shelf
+        Column(Modifier.padding(start = 20.dp, bottom = 4.dp)) {
+            Text(tr("Games", "Oyunlar"), color = pal.text, fontSize = 34.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontFamily = androidx.compose.ui.text.font.FontFamily.Serif)
+            Text(tr("ON THIS DEVICE", "BU TELEFONDA"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp)
+            Text(tr("${games.size} GAMES", "${games.size} OYUN"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp)
+        }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val cardW = minOf(maxWidth * 0.5f, maxHeight * 0.64f)
             HorizontalPager(
@@ -159,18 +165,22 @@ private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times
                             // how far this page is from the middle, in pages (negative on the right)
                             val d = ((pager.currentPage - page) + pager.currentPageOffsetFraction).coerceIn(-2f, 2f)
                             val far = kotlin.math.abs(d).coerceAtMost(1.5f)
-                            rotationY = d * 38f
-                            scaleX = 1f - 0.18f * far; scaleY = scaleX
-                            alpha = 1f - 0.22f * far
-                            translationX = d * cardW.toPx() * 0.2f
+                            // the boxes beside the middle one turn far enough to show their spines, and are tucked close, as on a real shelf
+                            rotationY = d * 58f
+                            scaleX = 1f - 0.16f * far; scaleY = scaleX
+                            alpha = 1f - 0.2f * far
+                            val ad = kotlin.math.abs(d)
+                            val tuck = if (ad <= 1f) 0.34f * ad else 0.34f + 0.46f * (ad - 1f)
+                            translationX = (if (d < 0f) -1f else 1f) * tuck * cardW.toPx()
                             cameraDistance = 18f * density
                         }
                         .clickable { if (page == pager.currentPage) onOpen(g) else scope.launch { pager.animateScrollToPage(page) } },
                 ) { BoxArt(g, pal, g.pkg in hidden, Modifier.fillMaxSize()) }
             }
         }
-        // the plank, with a soft shadow under the boxes
+        // the plank, and the floor's reflected glow under it
         Box(Modifier.fillMaxWidth().height(14.dp).background(WOOD))
+        Box(Modifier.fillMaxWidth().height(22.dp).background(Brush.verticalGradient(listOf(pal.accent.copy(alpha = .18f), Color.Transparent))))
         val cur = games.getOrNull(pager.currentPage)
         if (cur != null) Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(cur.name, color = pal.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 24.dp))

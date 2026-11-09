@@ -36,6 +36,8 @@ object LyricsBatchJob {
     var done by mutableIntStateOf(0)
     var total by mutableIntStateOf(0)
     var now by mutableStateOf("")
+    /** How many songs got their lyrics from the search (the rest were listened to). */
+    var found by mutableIntStateOf(0)
 
     private const val PREF = "lyrics_batch"
     private fun sp(c: Context) = c.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
@@ -53,12 +55,12 @@ object LyricsBatchJob {
     /** Starts the batch for [songs] (the ones without lyrics). False when it cannot start: no speech model, nothing to do, or it runs already. */
     fun start(c: Context, songs: List<Track>): Boolean {
         val app = c.applicationContext
-        if (busy || !com.umutk.pulse.extras.ai.aiSupported || !Transcriber.ready(app)) return false
+        if (busy) return false
         val rows = songs.filter { !it.path.contains("://") && File(it.path).isFile }
             .map { listOf(it.path, clean(it.title ?: File(it.path).nameWithoutExtension), clean(it.artist.orEmpty())) }
         if (rows.isEmpty()) return false
         saveQueue(app, rows)
-        busy = true; done = 0; total = rows.size; now = ""
+        busy = true; done = 0; found = 0; total = rows.size; now = ""
         val started = runCatching { ContextCompat.startForegroundService(app, Intent(app, LyricsBatchService::class.java)) }.isSuccess
         if (!started) busy = false
         return started
@@ -126,17 +128,20 @@ class LyricsBatchService : Service() {
         try {
             while (true) {
                 currentCoroutineContext().ensureActive()
-                if (!Transcriber.ready(app)) break
                 val row = LyricsBatchJob.queue(app).firstOrNull() ?: break
                 val path = row[0]; val title = row[1]; val artist = row[2]
                 LyricsBatchJob.now = title
                 update()
                 try {
                     if (!LyricsStatus.has(app, path, artist, title) && File(path).isFile) {
+                        // first the lyrics search (the same as when a song is opened: the net, kept beside the song); the AI listens only to what it does not find
+                        val found = runCatching { Lyrics.forTrack(app, title, artist, null, 0L, path) }.getOrNull()
+                        if (found != null) { LyricsStatus.forget(path); LyricsBatchJob.found++ } else if (Transcriber.ready(app)) {
                         val uri = FileProvider.getUriForFile(app, app.packageName + ".files", File(path))
                         val lrc = Transcriber.lrc(app, uri, "auto", title, artist) { s, _ -> LyricsBatchJob.now = "$title · $s" }
                         lrc?.let { Lyrics.fromText(it, "ai") }?.let { r -> Lyrics.saveEdited(path, r) }
                         LyricsStatus.forget(path)
+                        }
                     }
                 } catch (e: CancellationException) { throw e } catch (e: Exception) { }
                 LyricsBatchJob.saveQueue(app, LyricsBatchJob.queue(app).drop(1))
