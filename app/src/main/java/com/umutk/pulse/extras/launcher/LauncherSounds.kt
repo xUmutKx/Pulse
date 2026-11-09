@@ -57,6 +57,19 @@ object LauncherSounds {
         clicks[lookId] = pool!!.load(c, res, 1)
     }
 
+    /** Loads the look's click whatever the launcher's sound setting says (for screens that keep their own switch, like Game Hub's shelf). */
+    fun preloadAlways(c: Context, lookId: String) {
+        val res = clickRes(key(lookId)).takeIf { it != 0 } ?: return
+        if (pool == null) pool = SoundPool.Builder().setMaxStreams(3).setAudioAttributes(attrs).build()
+        clicks.getOrPut("always:$lookId") { pool!!.load(c, res, 1) }
+    }
+
+    /** The look's click, played whatever the launcher's sound setting says. */
+    fun clickAlways(c: Context, lookId: String) {
+        preloadAlways(c, lookId)
+        clicks["always:$lookId"]?.let { pool?.play(it, 1f, 1f, 1, 0, 1f) }
+    }
+
     /** The look's click when something opens. */
     fun click(lookId: String) {
         if (!LauncherPrefs.sounds) return

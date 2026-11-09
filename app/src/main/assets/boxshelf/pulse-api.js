@@ -15,6 +15,12 @@
     art: Object.assign({ icon: g.icon }, g.cover ? { front: g.cover } : {}),
   });
   api.platform = { os: 'android', caps: {} };
+  // one shelf only (all the games): its tab bar has nothing to choose and lay over the boxes; the key hints (Enter, V, Q E...) mean nothing on a touch phone
+  const st = document.createElement('style');
+  st.textContent = '#tabs,#hints{display:none!important}';
+  document.head.appendChild(st);
+  // the page's sounds start with the first touch (a sound context may only begin on one)
+  addEventListener('pointerdown', () => { try { window.Sound && Sound.warm && Sound.warm(); } catch (e) {} }, { once: true, capture: true });
   api.scan = async () => [{ id: 'games', kind: 'apps', name: 'Games', games: list().map(entry) }];
   api.cachedLibrary = async () => [{ id: 'games', kind: 'apps', name: 'Games', games: list().map(entry) }];
   api.launchApp = async appId => { H.launch(String(appId)); return {}; };

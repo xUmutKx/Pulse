@@ -99,6 +99,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
     val holder = remember { arrayOfNulls<WebView>(1) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.launcher.LauncherSounds.preloadAlways(ctx, "win11") }
     val owner = LocalLifecycleOwner.current
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {

@@ -968,8 +968,10 @@ fun GameHubHub(onBack: () -> Unit) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
                     } else if (theme == "shelf" && webShelfOk) BoxshelfWeb(
-                        Modifier.fillMaxSize(), onLaunch = { pkg -> openGame(ctx, pkg) },
-                        onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
+                        Modifier.fillMaxSize(),
+                        // the Windows 11 click of the launcher's sounds when a game starts or its settings open
+                        onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
+                        onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onExit = { go(0) },
                     ) else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
