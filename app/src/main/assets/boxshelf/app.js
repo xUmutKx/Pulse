@@ -382,7 +382,9 @@ function place(s,i,win,inv){
   // Selected game sits forward with clear space on each side; the rest recede in a tight angled stack.
   // The selected box turns slightly so you see its spine and thickness; side boxes turn 60° so their spines read like a shelf.
   let x=0,z=bw*1.05,ry=22;
-  if(d!==0){x=sg*(bw*1.22+(ad-1)*(bw*.22+bd*.9));z=-bw*.7-ad*6;ry=-sg*60}
+  // Pulse, held upright: the box in front is wide on a narrow screen, so the others stand closer (a small gap, like a row of cassettes), and several show at the sides
+  const tight=!!window.PulseHost&&innerWidth<innerHeight;
+  if(d!==0){x=sg*(tight?bw*.9+(ad-1)*(bw*.1+bd*.45):bw*1.22+(ad-1)*(bw*.22+bd*.9));z=-bw*.7-ad*6;ry=-sg*60}
   // (Android) a case already out of sight (.far, its fade-out over, or built there) that stays out of sight takes its new
   // place at once (.gone: no transform transition). Chromium runs an animation of something invisible on the main thread,
   // not the compositor, so that one hidden case made the page restyle and draw a frame every vsync for the whole slide
@@ -1304,7 +1306,7 @@ function openInspect(){uiCrumb("Inspect");
   el.classList.toggle("gl",gl);
   // anything still hidden from an earlier inspect that isn't this game's box comes back (fading)
   mounted().forEach(o=>{if(o!==slots[sel]||!gl)unhold(o.el,true)});
-  if(!gl)el.classList.add("on");el.setAttribute("aria-hidden","false");renderIspHints();sfx.flip();pulseSideBoxes();
+  if(!gl)el.classList.add("on");el.setAttribute("aria-hidden","false");renderIspHints();sfx.flip();
   cancelAnimationFrame(isp.raf);isp.lt=0;isp.raf=requestAnimationFrame(ispLoop);
 }
 // (beta.10) the game whose Details were open when Inspect or the quick menu came over them: backing out of those (Back, Esc,
@@ -1568,19 +1570,6 @@ function showSpread(anim){
   if(rd.i>=2)rdImage(rd.pages[rd.i-2]);
 }
 function rdTurn(d){const n=rd.pages.length;let i=rd.i===0?(d>0?1:0):rd.i+d*2;if(i<1)i=0;if(i>=n)return void play_("error");rd.i=i;showSpread(true);play_("page")}
-// Pulse, held upright: the next few games of the shelf stand at the right, so the others are still in sight beside the open case; a tap on one goes there
-function pulseSideBoxes(){
-  if(!window.PulseHost)return;
-  let box=document.getElementById("ispSide");
-  if(!box){box=document.createElement("div");box.id="ispSide";box.addEventListener("pointerdown",e=>e.stopPropagation());$("inspect").appendChild(box)}
-  const items=cur()?cur().items:[];
-  const pick=[];for(let k=1;k<=4&&sel+k<items.length;k++){if(items[sel+k]&&(items[sel+k].pulse||isGame(items[sel+k])))pick.push(sel+k)}
-  const portrait=innerWidth<innerHeight&&mode==="inspect"&&pick.length>0;
-  box.hidden=!portrait;
-  if(!portrait){box.innerHTML="";return}
-  box.innerHTML=pick.map(i=>{const g=items[i],a=g.art||{},src=a.front||a.hero||a.icon||"";return `<button type="button" data-i="${i}"><img alt="" src="${src}"><span></span></button>`}).join("");
-  box.querySelectorAll("button").forEach((b,k)=>{b.querySelector("span").textContent=items[pick[k]].title||"";b.onclick=e=>{e.stopPropagation();const i=+b.dataset.i;closeInspect();go(i)}});
-}
 // Pulse: two taps on the chosen box open it: the case swings open, then the disc comes out (what Inspect does with a game's box, here for the apps of the phone)
 function pulseOpenCase(){if(mode!=="browse")return;openInspect();if(mode!=="inspect")return;const tok=isp.tok;
   // the case swings open and stays so (both insides and the disc in its tray); a tap takes the disc out, holding it plays
