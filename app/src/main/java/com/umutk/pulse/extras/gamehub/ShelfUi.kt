@@ -371,7 +371,7 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
                         if (art) {
                             ShelfPill(if (busy) tr("Fetching…", "Getiriliyor…") else tr("Fetch the box art now", "Kutu resimlerini şimdi getir"), false, pal) {
                                 if (!busy) { busy = true; scope.launch {
-                                    got = withContext(Dispatchers.IO) { var n = 0; for (g in games) if (!coverFile(ctx, g.pkg).isFile && !playCoverFile(ctx, g.pkg).isFile && fetchPlayCover(ctx, g.pkg)) n++; n }
+                                    got = withContext(Dispatchers.IO) { var n = 0; for (g in games) if (!coverFile(ctx, g.pkg).isFile && !steamCoverFile(ctx, g.pkg).isFile && fetchBestCover(ctx, g)) n++; n }
                                     GameArt.version.intValue++; busy = false
                                 } }
                             }

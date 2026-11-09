@@ -28,6 +28,7 @@ const STYLE={
   media:{id:"media",rc:0.03,re:0.18,hue:285,ratio:.71,depth:.06,edge:.02,caseColor:"#1a1c24",caseSide:"#0e0f14",spineInk:"#e8e8f0",band:{bg:"#1a1c24",fg:"#9aa3b8",label:"APP"},spineBand:{bg:"#2a2d38",fg:"#c8cede",label:"APP"},tint:["#2a3550","#0a0d16"],glow:"#b9a6ff"}
 };
 const WORDMARKS={home:["Home","Continue & favorites"],gc:["GameCube","Home console"],wii:["Wii","Motion console"],wiiu:["Wii U","Home console"],sw:["Switch","Hybrid console"],sw2:["Switch 2","Hybrid console"],psp:["PSP","Handheld"],ps3:["PS3","Home console"],ps4:["PS4","Home console"],ps5:["PS5","Home console"],x360:["Xbox 360","Home console"],n3ds:["3DS","Handheld"],ps2:["PS2","Home console"],pc:["PC","Steam, Epic & more"],custom:["Custom","PC ports & recomps"],media:["Media","Streaming"]};
+if(window.PULSE_WORDMARKS)Object.assign(WORDMARKS,window.PULSE_WORDMARKS); /* Pulse: the heading words of the one shelf of games */
 if(window.BS_SYSTEMS_EXTRA){Object.assign(STYLE,BS_SYSTEMS_EXTRA.style||{});Object.assign(WORDMARKS,BS_SYSTEMS_EXTRA.wordmarks||{})} // extra shelves (renderer/systems-extra.js)
 const APP_HUE={stremio:265,nuvio:200};
 
