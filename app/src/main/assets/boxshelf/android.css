@@ -177,3 +177,6 @@ body.bs-still .sel-halo,body.bs-still .theme-fx i{animation-play-state:paused}
 *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 html,body,#app{-webkit-user-select:none;user-select:none}
 :focus{outline:none}
+
+/* Pulse: the app's icon beside the game's title */
+.g-ico{width:1.05em;height:1.05em;border-radius:5px;vertical-align:-0.12em;margin-right:.35em;object-fit:cover}
