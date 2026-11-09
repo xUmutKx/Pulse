@@ -6,15 +6,12 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The keyboard's neural language models ([CharLm]), loaded once from the assets, and the state of the text before the word.
  *
- * Two sizes can ship for a language: the large one (lm_xx_L.bin) and the small one (lm_xx.bin). Each is timed on the phone when it is loaded; the large
- * one is used where one step is quick, the small one where only that is, and on a phone too slow for both the keyboard uses its word rules alone (no
- * lag is ever traded for the model). It also watches itself: if the model's work for a word keeps taking too long, it is left out until the next start.
+ * The model (lm_xx.bin, 256) is timed on the phone when it is loaded; on a phone too slow for it the keyboard uses its word rules alone (no lag is ever
+ * traded for the model). A larger 512 model was tried: too slow even for a fast phone, so it is not shipped. It also watches itself: if the model's work for a word keeps taking too long, it is left out until the next start.
  */
 internal object NeuralLm {
     private val models = ConcurrentHashMap<String, CharLm>()
     private val missing = ConcurrentHashMap.newKeySet<String>()
-    /** A step of the large model may take this long (ns): about 40 steps are made for a word, so the whole word stays well under a frame or two. */
-    private const val LARGE_NS = 1_500_000L
     private const val SMALL_NS = 600_000L
     /** The model's average time for a word (ms) above which it is left out for this run. */
     private const val SLOW_MS = 90f
@@ -33,7 +30,7 @@ internal object NeuralLm {
         models[lang]?.let { return it }
         if (lang in missing) return null
         return synchronized(this) {
-            models[lang] ?: (load(c, "lm_${lang}_L.bin", LARGE_NS) ?: load(c, "lm_$lang.bin", SMALL_NS))?.also { models[lang] = it } ?: run { missing += lang; null }
+            models[lang] ?: load(c, "lm_$lang.bin", SMALL_NS)?.also { models[lang] = it } ?: run { missing += lang; null }
         }
     }
 
