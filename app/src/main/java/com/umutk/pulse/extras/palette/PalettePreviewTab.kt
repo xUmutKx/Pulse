@@ -133,7 +133,11 @@ private fun WallpaperTab(st: PaletteState) {
     SectionTitle(tr("Wallpaper style", "Duvar kağıdı stili"))
     ChipRow { WallpaperStyle.entries.forEach { s -> PChip(spec.wallpaperStyle == s, nice(s.name)) { st.update("wallpaper style") { it.copy(wallpaperStyle = s) } } } }
     ChipRow {
-        ActionChip(tr("Generate", "Üret")) { st.generateWallpaper(1080, 2340) }
+        ActionChip(tr("Generate", "Üret")) {
+            // the picture is made for the screen as it is turned now (a tablet in landscape gets a landscape picture, a phone a portrait one)
+            val dm = ctx.resources.displayMetrics
+            st.generateWallpaper(dm.widthPixels.coerceAtLeast(1), dm.heightPixels.coerceAtLeast(1))
+        }
         ActionChip(tr("Set as live wallpaper", "Canlı duvar kağıdı yap")) {
             runCatching {
                 ctx.startActivity(android.content.Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
