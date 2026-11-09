@@ -1034,6 +1034,9 @@ fun GameHubHub(onBack: () -> Unit) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
                     // the look of the cases on Boxshelf's shelf: one of its own case styles
+                    // a pure black screen behind the boxes (for an AMOLED screen)
+                    var amo by remember { mutableStateOf(prefs(ctx).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")) }
+                    Chip(pal, if (amo) "● " + tr("AMOLED black", "AMOLED siyah") else tr("AMOLED black", "AMOLED siyah")) { amo = !amo; prefs(ctx).edit().putBoolean("amoledShelf", amo).apply() }
                     // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
                     var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
                     Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
