@@ -20,7 +20,12 @@ class AiModel(
     val license: String, val uncensored: Boolean = false, val note: String = "",
     /** A file found on the phone or from a search: its path or URI, not in the catalog. */
     val path: String? = null,
+    /** A vision model: the file that lets it see pictures (llama.cpp's mmproj), downloaded with the model. */
+    val projector: Projector? = null,
 )
+
+/** The vision part of a vision model: its file, where it comes from and its size. */
+class Projector(val file: String, val url: String, val bytes: Long)
 
 private fun hf(repo: String, file: String) = "https://huggingface.co/$repo/resolve/main/$file"
 
@@ -42,6 +47,11 @@ val CHAT_MODELS = listOf(
     AiModel("qwen3-4b-abl", "chat", "Qwen 3 4B abliterated", "Qwen3-4B-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen3-4B-abliterated-GGUF", "Qwen3-4B-abliterated.Q4_K_M.gguf"), 2_497_280_704, "Apache 2.0", uncensored = true),
     AiModel("qwen25-7b", "chat", "Qwen 2.5 7B", "Qwen2.5-7B-Instruct-Q4_K_M.gguf", hf("bartowski/Qwen2.5-7B-Instruct-GGUF", "Qwen2.5-7B-Instruct-Q4_K_M.gguf"), 4_683_074_240, "Apache 2.0",
         note = "12 GB phones and up"),
+    // vision: these see pictures (the picture goes in with the question); the small one answers quickest
+    AiModel("smolvlm-500m-vision", "chat", "SmolVLM 500M vision", "SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "SmolVLM-500M-Instruct-Q8_0.gguf"), 436_806_912, "Apache 2.0",
+        note = "Sees pictures, quickest", projector = Projector("mmproj-SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "mmproj-SmolVLM-500M-Instruct-Q8_0.gguf"), 108_783_360)),
+    AiModel("gemma3-4b-vision", "chat", "Gemma 3 4B vision", "gemma-3-4b-it-Q4_K_M.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "gemma-3-4b-it-Q4_K_M.gguf"), 2_489_757_856, "Gemma terms",
+        note = "Sees pictures, better answers", projector = Projector("mmproj-gemma-3-4b-it-f16.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "mmproj-model-f16.gguf"), 851_251_104)),
 )
 
 /** Speech to text (whisper.cpp ggml files): for timed lyrics and voice. */
@@ -58,7 +68,7 @@ object Device {
     /** How a model fits this phone: 2 recommended, 1 runs, 0 too big. A loaded model takes about its file size plus a fifth in memory. */
     fun fit(c: Context, m: AiModel): Int {
         val ram = ramBytes(c).toDouble()
-        val need = m.bytes * 1.25
+        val need = (m.bytes + (m.projector?.bytes ?: 0L)) * 1.25
         return when { need <= ram * .28 -> 2; need <= ram * .45 -> 1; else -> 0 }
     }
     /** The best model this phone runs well. */
@@ -84,8 +94,14 @@ object Store {
         val file = fileOf(m)
         file.parentFile?.mkdirs()
         jobs.remove(m.id)?.cancel()
-        jobs[m.id] = scope.launch { runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, m.url, file, m.bytes) {} } }
+        jobs[m.id] = scope.launch {
+            runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, m.url, file, m.bytes) {} }
+            m.projector?.let { p -> runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, p.url, projectorFile(p), p.bytes) {} } }
+        }
     }
+
+    /** The vision part of a vision model, in the same folder. */
+    fun projectorFile(p: Projector) = File(dir, p.file)
 
     /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. */
     fun progress(c: Context, m: AiModel): Float {
@@ -103,6 +119,7 @@ object Store {
         m.path?.let { return File(it).isFile }
         val f = fileOf(m)
         if (!f.isFile || f.length() < m.bytes * 98 / 100) return false
+        m.projector?.let { p -> projectorFile(p).let { pf -> if (!pf.isFile || pf.length() < p.bytes * 98 / 100) return false } }
         return com.umutk.pulse.features.Downloads.tasks.value.none { it.file.path == f.path && it.state.value == com.umutk.pulse.features.DlState.RUNNING }
     }
 
@@ -110,6 +127,7 @@ object Store {
         jobs.remove(m.id)?.cancel()
         com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path }?.let { com.umutk.pulse.features.Downloads.remove(it) }
         runCatching { fileOf(m).delete() }
+        m.projector?.let { p -> runCatching { projectorFile(p).delete() } }
         sp(c).edit().remove("dl_${m.id}").apply()
     }
 
