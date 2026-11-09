@@ -194,7 +194,7 @@ object ChatLauncher { fun open(c: Context) { AiLive.openChat(c) } }
 
 /** One orange mascot: no outfit, no body colour, no clothes. */
 /** The look chosen in Pulse AI's mascot sheet (MascotStyle): hat, body colour, face, eyes, shoes, trousers, body extra, scene, move. */
-object CcLook {
+internal object CcLook {
     lateinit var app: Context
     fun now(): MascotStyle.Look = MascotStyle.load(app)
 }
@@ -209,7 +209,7 @@ object Wear {
     /** The layers worn now (bottom to top); asleep the face and the eye colour are left off, as the closed eyes need. */
     fun worn(sleep: Boolean): List<Int> = CcLook.now().let { MascotStyle.layers(CcLook.app, if (sleep) it.copy(face = "none", eyes = "dark") else it) }
 }
-object Mascots {
+internal object Mascots {
     fun r(id: Int): Int = id
     fun pc(@Suppress("UNUSED_PARAMETER") alt: Boolean): List<Int> = listOf(R.drawable.cc_mascot18)
     fun hat(c: Context, id: Int): Drawable? = ContextCompat.getDrawable(c, id)?.mutate()

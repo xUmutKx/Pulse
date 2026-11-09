@@ -223,7 +223,7 @@ class Overlay(base: Context) {
         layers.add(d(if (sleep) Mascots.r(R.drawable.cc_mascot_sleep18) else Mascots.r(R.drawable.cc_mascot18)))
         worn.forEach { layers.add(androidx.core.content.ContextCompat.getDrawable(ctx, it)!!.mutate()) }
         if (blanket) layers.add(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.cc_blanket)!!.mutate())
-        if (hat != 0) layers.add(h(hat))
+        if (hat != 0) h(hat)?.let { layers.add(it) }
         return android.graphics.drawable.LayerDrawable(layers.toTypedArray())
     }
 
