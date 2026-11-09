@@ -166,3 +166,10 @@ body.bs-still .sel-halo,body.bs-still .theme-fx i{animation-play-state:paused}
 .bs-artcard .ac-t{margin-top:3px;height:17px;font-weight:500;font-size:12.5px;opacity:.62;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bs-artcard .ac-bar{margin-top:8px;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
 .bs-artcard .ac-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#7fa8ff,#b6cbff);transform-origin:0 50%;transform:scaleX(0);transition:transform .4s ease}
+
+/* Pulse (Game Hub): the key hints (Move / Enter / Select / Esc Close, Enter Open / V Inspect ...) are for a keyboard or a pad; on a phone they only lay over the screen */
+.hints,.qm-hints,.ach-hints,.mus-hints,.lr-hints,.isp-hints{display:none!important}
+/* the title under the selected case sits further down, so a tall cover (Steam's 2:3 picture) never touches it */
+.platform-android .info{top:calc(42% + var(--bh)/2 + 10vh)}
+/* a phone held upright: the menu panel is as wide as the screen already, zoomed it ran out past the left edge (its icons were cut off) */
+@media (max-width:600px){.platform-android .qm{zoom:1;box-sizing:border-box}}
