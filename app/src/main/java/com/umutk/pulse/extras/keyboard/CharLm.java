@@ -85,9 +85,17 @@ public final class CharLm {
     /** One character in: the state [st] moves on (in place). [tmp] holds 3H floats. */
     private void step(float[] st, int c, float[] tmp) {
         int g = 3 * h;
+        final byte[] w = this.w;
+        final int h4 = h & ~3;
         for (int r = 0; r < g; r++) {
-            int base = r * h; float s = 0f;
-            for (int j = 0; j < h; j++) s += w[base + j] * st[j];
+            int base = r * h; float s0 = 0f, s1 = 0f, s2 = 0f, s3 = 0f;
+            // four sums at once: the loop needs fewer jumps and the sums do not wait for each other
+            for (int j = 0; j < h4; j += 4) {
+                s0 += w[base + j] * st[j]; s1 += w[base + j + 1] * st[j + 1];
+                s2 += w[base + j + 2] * st[j + 2]; s3 += w[base + j + 3] * st[j + 3];
+            }
+            float s = (s0 + s1) + (s2 + s3);
+            for (int j = h4; j < h; j++) s += w[base + j] * st[j];
             tmp[r] = s * ws[r] + bh[r];
         }
         int xb = c * g;
@@ -122,16 +130,44 @@ public final class CharLm {
         return st;
     }
 
+    /** The state [st] after [more] was read too (a new state; [st] is not changed). */
+    public float[] advance(float[] st, CharSequence more) {
+        float[] r = st.clone(); float[] tmp = new float[3 * h];
+        for (int i = 0; i < more.length(); i++) step(r, index(more.charAt(i)), tmp);
+        return r;
+    }
+
     /** log2 of the chance that [word] and then a space come after [ctx] (a state from [state]; it is not changed). */
-    public float score(float[] ctx, CharSequence word) {
+    public float score(float[] ctx, CharSequence word) { return score(ctx, word, Float.NEGATIVE_INFINITY); }
+
+    /**
+     * The same, but it stops as soon as the sum so far (it only ever falls) is below [floor]: the word cannot reach the floor any more, and the sum so far
+     * (higher than the real one) is returned. A word that is still above the floor at its end gets its exact score.
+     */
+    public float score(float[] ctx, CharSequence word, float floor) {
         float[] st = ctx.clone(); float[] tmp = new float[3 * h]; float[] lg = new float[v];
         float s = 0f;
         int n = word.length();
         for (int i = 0; i <= n; i++) {
             int c = i < n ? index(word.charAt(i)) : space;
             s += logp(st, c, lg);
+            if (s < floor) return s;
             if (i < n) step(st, c, tmp);
         }
         return s;
+    }
+
+    /** How long one step takes on this phone, in nanoseconds (the median of a few runs after a warm-up): the keyboard uses the model only where this is small. */
+    public long stepNanos() {
+        float[] st = new float[h]; float[] tmp = new float[3 * h];
+        for (int i = 0; i < 60; i++) step(st, i % v, tmp);
+        long[] t = new long[7];
+        for (int k = 0; k < t.length; k++) {
+            long a = System.nanoTime();
+            for (int i = 0; i < 24; i++) step(st, (i * 7) % v, tmp);
+            t[k] = (System.nanoTime() - a) / 24;
+        }
+        java.util.Arrays.sort(t);
+        return t[t.length / 2];
     }
 }
