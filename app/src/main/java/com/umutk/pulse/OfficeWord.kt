@@ -75,6 +75,10 @@ import java.util.IdentityHashMap
 
 // Word viewer / editor. Model + parsing in OfficeWordModel.kt.
 
+/** The zoom that fits the page to the screen with a little space at both sides, and the smallest zoom. */
+private const val WORD_FIT = .94f
+private const val WORD_MIN = .3f
+
 /** The Word window in the look chosen for it: shared chrome (tabs / menus per look) plus a zoom slider bar when [onZoom] is given. */
 @Composable
 fun WordChrome(theme: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, zoom: Float = 1f, onZoom: ((Float) -> Unit)? = null, homeRibbon: (@Composable () -> Unit)? = null, content: @Composable BoxScope.() -> Unit) =
@@ -148,21 +152,21 @@ private fun StyleChip(pal: OfPal, a: OAct) =
 @Composable
 private fun WordZoomBar(t: OfTheme, zoom: Float, onZoom: (Float) -> Unit) {
     val pal = t.pal; val upd = rememberUpdatedState(onZoom)
-    fun at(x: Float, w: Int) = (.5f * Math.pow(8.0, (x / w).coerceIn(0f, 1f).toDouble()).toFloat())
+    fun at(x: Float, w: Int) = (WORD_MIN * Math.pow((4f / WORD_MIN).toDouble(), (x / w).coerceIn(0f, 1f).toDouble()).toFloat())
     Row(Modifier.fillMaxWidth().height(28.dp).background(pal.statusBg).then(if (t.base == "95") Modifier.bevel(true) else Modifier.border(1.dp, pal.line)).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-        Icon(Icons.Outlined.Remove, null, Modifier.size(22.dp).clickable { onZoom((zoom / 1.15f).coerceIn(.5f, 4f)) }, pal.statusInk)
+        Icon(Icons.Outlined.Remove, null, Modifier.size(22.dp).clickable { onZoom((zoom / 1.15f).coerceIn(WORD_MIN, 4f)) }, pal.statusInk)
         Canvas(Modifier.width(140.dp).height(28.dp)
             .pointerInput(Unit) { detectTapGestures { upd.value(at(it.x, size.width)) } }
             .pointerInput(Unit) { detectHorizontalDragGestures { ch, _ -> upd.value(at(ch.position.x, size.width)) } }) {
             val y = size.height / 2; val d = density
             drawRect(pal.statusInk.copy(alpha = .5f), Offset(6 * d, y - d), Size(size.width - 12 * d, 2 * d))
-            val f = (Math.log((zoom / .5f).toDouble()) / Math.log(8.0)).toFloat().coerceIn(0f, 1f)
+            val f = (Math.log((zoom / WORD_MIN).toDouble()) / Math.log((4f / WORD_MIN).toDouble())).toFloat().coerceIn(0f, 1f)
             val x = 6 * d + f * (size.width - 12 * d)
             if (t.classic) { drawRect(if (t.base == "95") Color(0xFFC0C0C0) else Color(0xFFECE9D8), Offset(x - 4 * d, y - 8 * d), Size(8 * d, 16 * d)); drawRect(Color(0xFF404040), Offset(x - 4 * d, y - 8 * d), Size(8 * d, 16 * d), style = androidx.compose.ui.graphics.drawscope.Stroke(d)) }
             else drawCircle(pal.accent, 7 * d, Offset(x, y))
         }
-        Icon(Icons.Outlined.Add, null, Modifier.size(22.dp).clickable { onZoom((zoom * 1.15f).coerceIn(.5f, 4f)) }, pal.statusInk)
+        Icon(Icons.Outlined.Add, null, Modifier.size(22.dp).clickable { onZoom((zoom * 1.15f).coerceIn(WORD_MIN, 4f)) }, pal.statusInk)
         Text("${(zoom * 100).toInt()}%", color = pal.statusInk, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp).width(36.dp))
     }
 }
@@ -368,7 +372,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
     var ver by remember { mutableIntStateOf(0) }
     var sel by remember { mutableIntStateOf(-1) }
     var ed by remember { mutableStateOf(TextFieldValue("")) }
-    var zoom by remember { mutableFloatStateOf(1f) }
+    var zoom by remember { mutableFloatStateOf(WORD_FIT) }
     var findOn by remember { mutableStateOf(false) }; var query by remember { mutableStateOf("") }; var cur by remember { mutableIntStateOf(-1) }
     var countDlg by remember { mutableStateOf(false) }
     var pick by remember { mutableIntStateOf(0) } // 1 size, 2 colour, 3 highlight
@@ -517,8 +521,8 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         OAct(tr("Wide margins", "Geniş kenarlık"), "Layout", Icons.Outlined.Straighten, enabled = w.fmt == "docx" && E) { mut { _, _ -> w.setMargins(2160) } },
         OAct(tr("Present", "Sunum"), "View", Icons.Outlined.Slideshow) { commit(); sel = -1; present = true },
         OAct(tr("Zoom in", "Yakınlaştır"), "View", Icons.Outlined.ZoomIn) { zoom = (zoom * 1.2f).coerceAtMost(4f) },
-        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut) { zoom = (zoom / 1.2f).coerceAtLeast(.5f) },
-        OAct("100%", "View", Icons.Outlined.Fullscreen) { zoom = 1f },
+        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut) { zoom = (zoom / 1.2f).coerceAtLeast(WORD_MIN) },
+        OAct(tr("Fit", "Sığdır"), "View", Icons.Outlined.Fullscreen) { zoom = WORD_FIT },
         OAct(tr("Find", "Bul"), "View", Icons.Outlined.Search, on = findOn, png = "search") { findOn = !findOn },
     ).let { if (w.fmt == "docx" && E) it else it.filter { a -> a.group != "Layout" } }.filter { inTbl || it.group != "Table" }
 
@@ -546,7 +550,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
                 Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(32.dp).clickable { gotoMatch(cur + 1) }.padding(4.dp), theme.pal.ink)
                 Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)
             }
-            Box(Modifier.weight(1f).fillMaxWidth().ofPinch { zoom = (zoom * it).coerceIn(.5f, 4f) }) {
+            Box(Modifier.weight(1f).fillMaxWidth().ofPinch { zoom = (zoom * it).coerceIn(WORD_MIN, 4f) }) {
                 Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
                     Column(Modifier.width(maxOf(screenW, pageDp).dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         if (theme.classic) WRuler(theme, scale, pg)
