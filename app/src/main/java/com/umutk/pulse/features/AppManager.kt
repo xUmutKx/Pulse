@@ -102,6 +102,8 @@ private class AmRow(
     val disabled: Boolean,
     val restricted: Boolean,
     val module: Boolean,
+    /** Hidden by Game Hub (pm hide): the phone's list leaves it out, so it is shown from Game Hub's own record. */
+    val hidden: Boolean = false,
 )
 
 // Background-run app op: anything other than ALLOWED means the system restricts it.
@@ -113,7 +115,16 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
     val pm = ctx.packageManager
     val lastUsed = if (Extra.usageGranted(ctx)) lastUsedByPackage(ctx) else emptyMap()
     val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-    return pm.getInstalledPackages(PackageManager.GET_META_DATA).mapNotNull { p ->
+    val listed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+    val names = listed.map { it.packageName }.toHashSet()
+    // the apps Game Hub hid with pm hide are missing from the list above: they are added from Game Hub's record, so they stay visible here
+    val gameHub = ctx.getSharedPreferences("gamehub", Context.MODE_PRIVATE)
+    val hiddenRows = (gameHub.getStringSet("hidden", emptySet()) ?: emptySet()).filter { it !in names }.map { pkg ->
+        AmRow(pkg = pkg, label = gameHub.getString("name_$pkg", null) ?: pkg, version = "", sizeBytes = 0L, installed = 0L, updated = 0L,
+            frozen = false, running = false, updatedSystem = false, installer = null, lastUsed = lastUsed[pkg], system = false, disabled = false,
+            restricted = false, module = false, hidden = true)
+    }
+    return listed.mapNotNull { p ->
         // extra modules from the Extra Apps store stay out of the app list
         if (com.umutk.pulse.extras.store.StoreInstaller.isStoreInstalled(ctx, p.packageName)) return@mapNotNull null
         val ai = p.applicationInfo ?: return@mapNotNull null
@@ -135,7 +146,7 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
             restricted = isRestrictedInBackground(ops, ai),
             module = isXposedModule(ai),
         )
-    }
+    }.plus(hiddenRows)
 }
 
 private fun lastUsedByPackage(ctx: Context): Map<String, Long> {
@@ -371,7 +382,12 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
         items(shown, key = { it.pkg }) { a ->
             // a tap opens the app's details (or picks it once something is picked); a long press picks
             val on = a.pkg in picked
-            PCard(Modifier.combinedClickable(onClick = { if (picked.isNotEmpty()) picked = if (on) picked - a.pkg else picked + a.pkg else onOpen(a.pkg) },
+            PCard(Modifier.combinedClickable(onClick = {
+                    if (picked.isNotEmpty()) picked = if (on) picked - a.pkg else picked + a.pkg
+                    // a hidden app has no page of its own on the phone: a tap shows it again (through Game Hub's own way: root or Shizuku)
+                    else if (a.hidden) { val ok = com.umutk.pulse.extras.gamehub.setGameHidden(ctx, a.pkg, false, quiet = true); Toast.makeText(ctx, if (ok) tr("Shown again", "Yeniden gösterildi") else tr("Could not show it: root or Shizuku is needed", "Gösterilemedi: root ya da Shizuku gerekli"), Toast.LENGTH_SHORT).show(); if (ok) rows = rows?.filterNot { it.pkg == a.pkg } }
+                    else onOpen(a.pkg)
+                },
                 onLongClick = { picked = if (on) picked - a.pkg else picked + a.pkg }).then(if (on) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(a.pkg, 36.dp)
@@ -386,6 +402,7 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                             "%.1f MB".format(a.sizeBytes / 1048576f),
                             "Disabled".takeIf { a.disabled },
                             "Restricted".takeIf { a.restricted },
+                            tr("Hidden by Game Hub", "Game Hub'da gizli").takeIf { a.hidden },
                         )
                         Text(tags.joinToString(" · "), color = T.sub, fontSize = 11.sp, maxLines = 1)
                     }
