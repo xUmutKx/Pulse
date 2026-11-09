@@ -882,6 +882,8 @@ fun GameHubHub(onBack: () -> Unit) {
 
     ModalNavigationDrawer(
         drawerState = drawer,
+        // the shelf's own swipes (between the games, turning a case) are not taken by the side menu
+        gesturesEnabled = !(page == 1 && theme == "shelf" && webShelfOk) || drawer.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = pal.card, drawerContentColor = pal.text) {
                 Text("Game Hub", color = pal.text, fontSize = 20.sp, modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 12.dp))
@@ -899,7 +901,7 @@ fun GameHubHub(onBack: () -> Unit) {
         },
     ) {
         Column(Modifier.fillMaxSize().hubGround(theme, pal)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!(page == 1 && theme == "shelf" && webShelfOk)) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { FluentIcon("menu", pal.text, 24.dp) }
                 Text(
                     when (page) { 0 -> tr("Home", "Ana sayfa"); 2 -> tr("Settings", "Ayarlar"); else -> when (filter) { 1 -> tr("Installed", "Yüklü"); 2 -> tr("Hidden", "Gizli"); else -> tr("Library", "Kütüphane") } },
@@ -976,6 +978,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onExit = { go(0) },
+                        onSettings = { go(2) },
                     ) } else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },

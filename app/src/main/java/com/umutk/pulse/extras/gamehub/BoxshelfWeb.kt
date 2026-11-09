@@ -73,7 +73,7 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
 }
 
 /** What the page can ask Pulse for. */
-private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDetails: (String) -> Unit, val onBack: () -> Unit) {
+private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDetails: (String) -> Unit, val onBack: () -> Unit, val onSettings: () -> Unit) {
     @JavascriptInterface
     fun games(): String {
         val hidden = hiddenSet(c)
@@ -96,17 +96,20 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
+    /** The Settings row of the shelf's menu: Game Hub's own settings (theme, case style, setup). */
+    @JavascriptInterface fun settings() { android.os.Handler(android.os.Looper.getMainLooper()).post { onSettings() } }
     @JavascriptInterface fun back() { android.os.Handler(android.os.Looper.getMainLooper()).post { onBack() } }
 }
 
 /** The WebView of the shelf. [onLaunch] starts a game, [onDetails] opens Pulse's page for it. Back goes one step back inside the shelf (Esc), as Boxshelf does. */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit, onExit: () -> Unit) {
+internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit, onExit: () -> Unit, onSettings: () -> Unit = {}) {
     val ctx = LocalContext.current
     val launch by rememberUpdatedState(onLaunch)
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
+    val settings by rememberUpdatedState(onSettings)
     val holder = remember { arrayOfNulls<WebView>(1) }
     androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.launcher.LauncherSounds.preloadAlways(ctx, "win11") }
     val owner = LocalLifecycleOwner.current
@@ -128,9 +131,11 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.settings.javaScriptEnabled = true
             w.settings.domStorageEnabled = true
             w.settings.mediaPlaybackRequiresUserGesture = false
+            // the page is laid out for its own sizes: the phone's font size setting must not make the writing bigger than the boxes
+            w.settings.textZoom = 100
             w.settings.allowFileAccess = false
             w.settings.allowContentAccess = false
-            w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit() }), "PulseHost")
+            w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit() }, { settings() }), "PulseHost")
             w.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? = serve(c, request.url)
             }
