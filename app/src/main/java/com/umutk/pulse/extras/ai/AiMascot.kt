@@ -8,6 +8,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,22 +56,38 @@ private fun applyPose(l: GraphicsLayerScope, p: String, t: Float) {
 private val DANCE_ROT = floatArrayOf(0f, -12f, 0f, 12f)
 private val DANCE_UP = floatArrayOf(1f, 0f, 1f, 0f)
 
-/** [working]: the model is answering (it dances); [pose]: a move chosen by a tap (null = none). */
+/** The mascot in its look, still (lists and previews): the body in its colour, the layers, the hat. [scene] draws the scene behind it. */
 @Composable
-internal fun AiMascot(working: Boolean, pose: String?, modifier: Modifier) {
+internal fun MascotView(look: MascotStyle.Look, modifier: Modifier, closedEyes: Boolean = false, scene: Boolean = false) {
+    val c = LocalContext.current
+    val tint = remember(look.skin) { MascotStyle.skinMatrix(look.skin)?.let { ColorFilter.colorMatrix(ColorMatrix(it)) } }
+    val layers = remember(look) { MascotStyle.layers(c, look) }
+    val hat = remember(look.hat) { MascotStyle.hatRes(c, look.hat) }
+    val bg = remember(look.scene) { MascotStyle.sceneRes(c, look.scene) }
+    Box(modifier) {
+        if (scene && bg != 0) Image(painterResource(bg), null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        Image(painterResource(if (closedEyes) R.drawable.cc_mascot_sleep18 else R.drawable.cc_mascot18), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit, colorFilter = tint)
+        layers.forEach { Image(painterResource(it), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit) }
+        if (hat != 0) Image(painterResource(hat), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit)
+    }
+}
+
+/** [working]: the model is answering (it dances); [pose]: a move now (a tap); otherwise the move chosen for waiting, or only blinking. */
+@Composable
+internal fun AiMascot(look: MascotStyle.Look, working: Boolean, pose: String?, modifier: Modifier) {
     var closed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(2200L + (0..3800).random()); closed = true; kotlinx.coroutines.delay(140); closed = false } }
-    val img = if (closed && !working && pose == null) R.drawable.ai_mascot_sleep else R.drawable.ai_mascot
-    if (pose != null) {
-        val k by rememberInfiniteTransition(label = "pose").animateFloat(0f, 1f, infiniteRepeatable(tween(poseMs(pose), easing = LinearEasing), RepeatMode.Restart), label = "k")
-        Box(modifier.graphicsLayer { applyPose(this, pose, k) }) { Image(painterResource(img), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit) }
+    val move = pose ?: look.move.takeIf { it != "none" && !working }
+    if (move != null) {
+        val k by rememberInfiniteTransition(label = "pose").animateFloat(0f, 1f, infiniteRepeatable(tween(poseMs(move), easing = LinearEasing), RepeatMode.Restart), label = "k")
+        MascotView(look, modifier.graphicsLayer { applyPose(this, move, k) })
         return
     }
     if (working) {
         var frame by remember { mutableStateOf(0) }
         LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(280L); frame = (frame + 1) % DANCE_ROT.size } }
-        Box(modifier.graphicsLayer { rotationZ = DANCE_ROT[frame]; translationY = -DANCE_UP[frame] * 3.dp.toPx() }) { Image(painterResource(img), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit) }
+        MascotView(look, modifier.graphicsLayer { rotationZ = DANCE_ROT[frame]; translationY = -DANCE_UP[frame] * 3.dp.toPx() })
         return
     }
-    Image(painterResource(img), null, modifier, contentScale = ContentScale.Fit)
+    MascotView(look, modifier, closedEyes = closed)
 }
