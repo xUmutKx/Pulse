@@ -2370,3 +2370,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Sohbette + ile resim eklenir (görsel model seçiliyse).
 - Ayarlar > Fotoğrafları sırala: en yeni 300 fotoğraf etiketlenir, albümler (insanlar, yemek, hayvan ...) gösterilir.
 - Derleme ve cihazda deneme yapılmadı; SmolVLM ve Gemma için hız ölçülmedi.
+
+## 1.0.386 (derlendi)
+- Pulse AI: Markdown cevaplar, kopyala, cevap kesilmesi giderildi, maskot sabit, ayarlar tek pencerede, siyah ve beyaz tema.
+- Pulse AI: görsel modeller (SmolVLM 500M, Gemma 3 4B), resim ekleme, fotoğraf sıralama.
+- Müzik: kütüphane düğmeleri sola, sayı sağa; çevrimiçi çalma listesi kaldırıldı; ilerleme çubuğunda flick; geri dönüşte siyah kare yok.
+- Sonic: plak kapağı yuvarlak.
+- Game Hub: beyaz vurgu, AMOLED anahtarı kaldırıldı, + açılış animasyonunu bekliyor, kapak otomatik çekilmiyor.
+- Uygulama yöneticisi: Game Hub'ın gizlediği uygulamalar listeleniyor.
+- Boyut: gym 200 egzersiz, ikonlar WebP, CPU varyantları azaltıldı.
