@@ -103,14 +103,19 @@ object Store {
     /** The vision part of a vision model, in the same folder. */
     fun projectorFile(p: Projector) = File(dir, p.file)
 
-    /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. */
+    /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. A vision model's projector is the second part. */
     fun progress(c: Context, m: AiModel): Float {
         if (has(c, m)) return 1f
-        val t = com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path } ?: return -1f
+        val p = m.projector
+        val mainDone = fileOf(m).isFile && fileOf(m).length() >= m.bytes * 98 / 100
+        val second = p != null && mainDone
+        val file = if (second) projectorFile(p!!) else fileOf(m)
+        val total = if (second) p!!.bytes else m.bytes
+        val t = com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == file.path } ?: return if (second) 0f else -1f
         return when (t.state.value) {
             com.umutk.pulse.features.DlState.DONE -> 1f
             com.umutk.pulse.features.DlState.FAILED -> -1f
-            else -> (t.done.value.toFloat() / (t.total.value.takeIf { it > 0 } ?: m.bytes)).coerceIn(0f, .999f)
+            else -> (t.done.value.toFloat() / (t.total.value.takeIf { it > 0 } ?: total)).coerceIn(0f, .999f)
         }
     }
 

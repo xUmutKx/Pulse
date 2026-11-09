@@ -14,6 +14,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
@@ -143,7 +146,8 @@ fun AiHub(onBack: () -> Unit) {
                 // the mascot: a tap opens its sheet (the look, the scene); it dances only while the model works
                 Box(Modifier.padding(start = 2.dp).size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A))
                     .clickable { mascotOpen = true }, contentAlignment = Alignment.Center) {
-                    if (look.scene != "none") MascotView(look, Modifier.matchParentSize(), scene = true)
+                    // the scene only behind the mascot: the mascot keeps its size with or without a scene
+                    MascotStyle.sceneRes(c, look.scene).takeIf { it != 0 }?.let { Image(painterResource(it), null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
                     AiMascot(look, working, null, Modifier.size(32.dp, 29.dp))
                 }
                 Column(Modifier.weight(1f).padding(start = 10.dp)) {
