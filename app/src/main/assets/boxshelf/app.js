@@ -308,7 +308,8 @@ function sampleHueHere(url,cb){
 /* ---------- build & layout ---------- */
 function measure(){
   const s=st(),vw=innerWidth,vh=innerHeight;
-  bh=vw<760?Math.min(vh*.32,vw*.42/s.ratio):Math.min(vh*.4,vw*.22/s.ratio,fxOn?620:520);
+  // Pulse, held upright: the boxes fill the screen (the page was built for a landscape TV; a tall phone screen had half of it empty)
+  bh=vw<760?(window.PulseHost&&vw<vh?Math.min(vh*.44,vw*.56/s.ratio):Math.min(vh*.32,vw*.42/s.ratio)):Math.min(vh*.4,vw*.22/s.ratio,fxOn?620:520);
   bw=bh*s.ratio;bd=bw*s.depth;
   const a=app.style;a.setProperty("--bw",bw+"px");a.setProperty("--bh",bh+"px");a.setProperty("--bd",bd+"px");a.setProperty("--edge",(bw*s.edge)+"px");
   // Cases are laid out OS× larger and scaled back down in their transform. Chrome rasterises a layer under
@@ -384,7 +385,7 @@ function place(s,i,win,inv){
   let x=0,z=bw*1.05,ry=22;
   // Pulse, held upright: the box in front is wide on a narrow screen, so the others stand closer (a small gap, like a row of cassettes), and several show at the sides
   const tight=!!window.PulseHost&&innerWidth<innerHeight;
-  if(d!==0){x=sg*(tight?bw*.9+(ad-1)*(bw*.1+bd*.45):bw*1.22+(ad-1)*(bw*.22+bd*.9));z=-bw*.7-ad*6;ry=-sg*60}
+  if(d!==0){x=sg*(tight?bw*.78+(ad-1)*(bw*.1+bd*.45):bw*1.22+(ad-1)*(bw*.22+bd*.9));z=-bw*.7-ad*6;ry=-sg*60}
   // (Android) a case already out of sight (.far, its fade-out over, or built there) that stays out of sight takes its new
   // place at once (.gone: no transform transition). Chromium runs an animation of something invisible on the main thread,
   // not the compositor, so that one hidden case made the page restyle and draw a frame every vsync for the whole slide

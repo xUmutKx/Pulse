@@ -96,6 +96,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     /** The guide kept for a game (empty until it was read), and the start of reading it in the background. */
     @JavascriptInterface fun guideCached(pkg: String): String = GameGuide.cached(c, pkg)
     @JavascriptInterface fun guideFetch(pkg: String) { GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
+    /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
+    @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
