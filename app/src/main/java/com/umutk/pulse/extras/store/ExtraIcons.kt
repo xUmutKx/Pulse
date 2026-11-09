@@ -165,6 +165,8 @@ internal fun ExtraIcon(key: String, size: Dp, fallback: @Composable () -> Unit) 
 }
 
 private val BG_SWATCHES = listOf(0xFF000000, 0xFF121212, 0xFFFFFFFF, 0xFF0B1A3A, 0xFF1B5E20, 0xFF4A148C, 0xFFB71C1C, 0xFF00B0FF).map { it.toInt() }
+/** The colours of the Material Glass presets: a frosted, lit disc in the colour, with a white glyph. */
+private val GLASS_COLORS = listOf(0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047, 0xFF00897B, 0xFF1E88E5, 0xFF8E24AA, 0xFFEC407A).map { it.toInt() }
 private val INK_SWATCHES = listOf(0xFFFFFFFF, 0xFF00E5FF, 0xFF76FF03, 0xFFFFD600, 0xFFFF6D00, 0xFFFF4081, 0xFFB388FF, 0xFF000000).map { it.toInt() }
 
 /**
@@ -233,6 +235,16 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         }
                     }
                 } else {
+                    // presets: one tap sets the style and the colours (AMOLED black, Material Glass, light, dark), then each part can still be changed below
+                    Text(tr("Presets", "Hazır stiller"), color = T.sub, fontSize = 12.sp)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PChip(style == "line" && bg == 0xFF000000.toInt(), "AMOLED") { style = "line"; bg = 0xFF000000.toInt(); ink = Look.accent.toArgb(); makeNow() }
+                        PChip(style == "glass" && bg == Look.accent.toArgb(), tr("Material Glass", "Material Cam")) { style = "glass"; bg = Look.accent.toArgb(); ink = 0xFFFFFFFF.toInt(); makeNow() }
+                        PChip(style == "line" && bg == 0xFFFFFFFF.toInt(), tr("Light", "Açık")) { style = "line"; bg = 0xFFFFFFFF.toInt(); ink = 0xFF000000.toInt(); makeNow() }
+                        PChip(style == "line" && bg == 0xFF121212.toInt(), tr("Dark", "Koyu")) { style = "line"; bg = 0xFF121212.toInt(); ink = 0xFFFFFFFF.toInt(); makeNow() }
+                    }
+                    Text(tr("Glass colour", "Cam rengi"), color = T.sub, fontSize = 12.sp)
+                    Swatches(GLASS_COLORS + Look.accent.toArgb(), if (style == "glass") bg else 0) { style = "glass"; bg = it; ink = 0xFFFFFFFF.toInt(); makeNow() }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PChip(style == "line", tr("Line", "Çizgi")) { style = "line"; makeNow() }
                         PChip(style == "glass", tr("Glass", "Cam")) { style = "glass"; if (bg == 0xFF000000.toInt()) bg = Look.accent.toArgb(); if (ink == bg) ink = 0xFFFFFFFF.toInt(); makeNow() }
@@ -297,7 +309,13 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ExtraIcon(r.key, 36.dp) { Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(r.glyph, T.text, 26.dp) } }
+                    ExtraIcon(r.key, 36.dp) {
+                        if (r.key == "pulse") {
+                            // Pulse's own icon, as the launcher shows it
+                            val own = remember { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+                            if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
+                        } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(r.glyph, T.text, 26.dp) }
+                    }
                     Spacer(Modifier.width(12.dp))
                     Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                     PIcon("chevron", T.sub, 18.dp)
