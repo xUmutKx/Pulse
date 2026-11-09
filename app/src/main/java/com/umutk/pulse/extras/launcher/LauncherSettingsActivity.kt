@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,7 +19,7 @@ class LauncherSettingsActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            LookHost(lookId = LauncherPrefs.look) { LauncherSettings(back = { finish() }) }
+            LookHost(lookId = LauncherPrefs.look) { th -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { LauncherSettings(back = { finish() }) } }
         }
     }
 
