@@ -32,15 +32,35 @@ private fun httpBytes(url: String, max: Int = 3 * 1024 * 1024): ByteArray? = run
     }
 }.getOrNull()
 
-/** The Steam app whose name is the game's name (same words, case and marks aside), or null. */
+private val STOP = setOf("and", "of", "in", "on", "a", "an", "edition", "game", "free", "online", "hd", "remastered", "definitive", "deluxe", "pro")
+private fun tokens(s: String) = normName(s).split(' ').filter { it.isNotEmpty() && it !in STOP }.toSet()
+
+/** The part of a name before a subtitle ("Asphalt 9: Legends" -> "Asphalt 9"). */
+private fun mainTitle(name: String) = name.substringBefore(':').substringBefore(" - ").trim()
+
+private fun storeSearch(term: String): org.json.JSONArray? {
+    val q = URLEncoder.encode(term.replace(Regex("[\u2122\u00AE\u00A9]"), "").trim(), "UTF-8")
+    val body = httpBytes("https://store.steampowered.com/api/storesearch/?term=$q&l=english&cc=us", 600_000)?.toString(Charsets.UTF_8) ?: return null
+    return JSONObject(body).optJSONArray("items")
+}
+
+/** The Steam app that is this game: the same words (case and marks aside), or one whose words nearly all agree (a subtitle more or less); null when none. */
 internal fun steamAppId(name: String): String? = runCatching {
-    val q = URLEncoder.encode(name.replace(Regex("[\\u2122\\u00AE\\u00A9]"), "").trim(), "UTF-8")
-    val body = httpBytes("https://store.steampowered.com/api/storesearch/?term=$q&l=english&cc=us", 600_000)?.toString(Charsets.UTF_8) ?: return@runCatching null
-    val items = JSONObject(body).optJSONArray("items") ?: return@runCatching null
-    val want = normName(name)
-    for (i in 0 until items.length()) {
-        val o = items.getJSONObject(i)
-        if (normName(o.optString("name")) == want) return@runCatching o.optInt("id").toString()
+    val want = normName(name); val wt = tokens(name)
+    for (term in listOf(name, mainTitle(name)).distinct()) {
+        val items = storeSearch(term) ?: continue
+        var best: String? = null; var bestScore = 0.0
+        for (i in 0 until items.length()) {
+            val o = items.getJSONObject(i)
+            val n = o.optString("name")
+            if (normName(n) == want) return@runCatching o.optInt("id").toString()
+            val ot = tokens(n)
+            if (wt.isEmpty() || ot.isEmpty()) continue
+            // the words the two names share, over all the words of either (Jaccard); a single-word name must match exactly (the loop above)
+            val j = wt.intersect(ot).size.toDouble() / wt.union(ot).size
+            if (wt.size >= 2 && j > bestScore) { bestScore = j; best = o.optInt("id").toString() }
+        }
+        if (best != null && bestScore >= 0.6) return@runCatching best
     }
     null
 }.getOrNull()
@@ -61,8 +81,31 @@ internal fun fetchSteamArt(c: Context, g: GameRow): Boolean {
 }
 
 /** The best picture there is for the game: Steam's art first, then the store picture of Google Play. */
+/** SteamGridDB (the cover source Boxshelf itself uses besides Steam): the person's own free key, set in Game Hub's settings; the best 600x900 picture for the game. */
+internal fun sgdbKey(c: Context): String = prefs(c).getString("sgdbKey", "").orEmpty().trim()
+
+private fun sgdbGet(url: String, key: String): ByteArray? = runCatching {
+    (URL(url).openConnection() as HttpURLConnection).run {
+        connectTimeout = 8000; readTimeout = 12000
+        setRequestProperty("Authorization", "Bearer $key"); setRequestProperty("User-Agent", "Pulse")
+        try { if (responseCode != 200) return@runCatching null; inputStream.use { it.readBytes() } } finally { disconnect() }
+    }
+}.getOrNull()
+
+internal fun fetchSgdbCover(c: Context, g: GameRow): Boolean = runCatching {
+    val key = sgdbKey(c); if (key.isEmpty()) return@runCatching false
+    val q = URLEncoder.encode(g.name, "UTF-8").replace("+", "%20")
+    val id = JSONObject(sgdbGet("https://www.steamgriddb.com/api/v2/search/autocomplete/$q", key)?.toString(Charsets.UTF_8) ?: return@runCatching false)
+        .optJSONArray("data")?.optJSONObject(0)?.optInt("id", 0)?.takeIf { it > 0 } ?: return@runCatching false
+    val url = JSONObject(sgdbGet("https://www.steamgriddb.com/api/v2/grids/game/$id?dimensions=600x900&types=static&nsfw=false", key)?.toString(Charsets.UTF_8) ?: return@runCatching false)
+        .optJSONArray("data")?.optJSONObject(0)?.optString("url").orEmpty().takeIf { it.startsWith("https://") } ?: return@runCatching false
+    val bytes = httpBytes(url) ?: return@runCatching false
+    steamCoverFile(c, g.pkg).apply { parentFile?.mkdirs(); writeBytes(bytes) }
+    true
+}.getOrDefault(false)
+
 internal fun fetchBestCover(c: Context, g: GameRow): Boolean {
     // a game that only has its package id for a name ("com.Hakita.ULTRAKIL") is looked up by the title of its store page
     val named = if (looksLikePackage(g.name)) GameRow(g.pkg, fetchPlayTitle(c, g.pkg) ?: g.name) else g
-    return fetchSteamArt(c, named) || (!playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg))
+    return fetchSteamArt(c, named) || fetchSgdbCover(c, named) || (!playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg))
 }
