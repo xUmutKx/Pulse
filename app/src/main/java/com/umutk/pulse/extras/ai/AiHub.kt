@@ -300,29 +300,11 @@ private fun AiSpeechPage() {
             result = r.getOrNull() ?: r.exceptionOrNull()?.message ?: tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller).")
         }
     }
-    // a song from the list: its lyrics are listened to, kept with the song, and the list drops it
+    // a song from the list: the background service takes it (the lyrics search first, then the AI); it goes on when this page is left, and a second song waits its turn
     fun makeFor(t: com.umutk.pulse.extras.music.Track) {
-        if (busy) return
-        busy = true; result = ""
-        scope.launch {
-            // the lyrics search first (the net, kept beside the song); the AI listens only when nothing is found
-            val online = withContext(Dispatchers.IO) { runCatching { com.umutk.pulse.extras.lyrics.Lyrics.forTrack(c, t.title.orEmpty(), t.artist.orEmpty(), t.album, 0L, t.path) }.getOrNull() }
-            if (online != null) {
-                com.umutk.pulse.extras.lyrics.LyricsStatus.forget(t.path)
-                result = tr("Lyrics found for ${t.title ?: t.path}", "${t.title ?: t.path} için sözler bulundu")
-                busy = false
-                return@launch
-            }
-            val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
-            val r = runCatching { Transcriber.lrc(c, androidx.core.content.FileProvider.getUriForFile(c, c.packageName + ".files", java.io.File(t.path)), lang, t.title, t.artist) { s, f -> stage = s; frac = f } }
-            poll.cancel(); busy = false
-            val lrc = r.getOrNull()
-            if (lrc != null) {
-                com.umutk.pulse.extras.lyrics.Lyrics.fromText(lrc, "ai")?.let { com.umutk.pulse.extras.lyrics.Lyrics.saveEdited(t.path, it) }
-                com.umutk.pulse.extras.lyrics.LyricsStatus.forget(t.path)
-                result = tr("Lyrics made for ${t.title ?: t.path}", "${t.title ?: t.path} için sözler yapıldı")
-            } else result = r.exceptionOrNull()?.message ?: tr("No lyrics were made", "Söz oluşturulamadı")
-        }
+        if (!Transcriber.ready(c)) { result = tr("Download a speech model first (Models).", "Önce bir ses modeli indir (Modeller)."); return }
+        result = ""
+        com.umutk.pulse.extras.lyrics.LyricsBatchJob.startOne(c, t.path, t.title ?: java.io.File(t.path).nameWithoutExtension, t.artist.orEmpty())
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PCard {
@@ -333,6 +315,8 @@ private fun AiSpeechPage() {
             }
             PButton(tr("Pick a song", "Şarkı seç"), Modifier.padding(top = 8.dp)) { if (!busy) pick.launch(arrayOf("audio/*", "video/*")) }
         }
+        // what the background service is doing for the songs of the list (and the batch): how far, how long, the lines found so far
+        if (com.umutk.pulse.extras.lyrics.LyricsBatchJob.busy) PCard { LyricsJobProgress(showStop = true) }
         if (busy) PCard {
             Text(stage, color = T.text, fontSize = 14.sp)
             PProgress(frac, Modifier.fillMaxWidth().padding(top = 8.dp))
@@ -342,7 +326,7 @@ private fun AiSpeechPage() {
             SelectionContainer { Text(result, color = T.text, fontSize = 13.sp) }
             TextButton({ c.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, result), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text(tr("Share", "Paylaş"), color = Look.accent) }
         }
-        SongsWithoutLyrics(busy, lang) { t -> makeFor(t) }
+        SongsWithoutLyrics(false, lang) { t -> makeFor(t) }
     }
 }
 
@@ -353,7 +337,7 @@ private fun SongsWithoutLyrics(busy: Boolean, lang: String, onMake: (com.umutk.p
     val tracks by com.umutk.pulse.extras.music.MusicLibrary.tracks.collectAsState()
     var rows by remember { mutableStateOf<List<com.umutk.pulse.extras.music.Track>?>(null) }
     var query by remember { mutableStateOf("") }
-    LaunchedEffect(tracks) {
+    LaunchedEffect(tracks, com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick) {
         rows = withContext(Dispatchers.IO) { tracks.filter { !it.path.contains("://") && !com.umutk.pulse.extras.lyrics.LyricsStatus.has(c, it.path, it.artist.orEmpty(), it.title.orEmpty()) } }
     }
     val q = query.trim()
@@ -404,30 +388,55 @@ private fun AiMemoryPage() {
     }
 }
 
-/** The lyrics' AI step inside Pulse: a small window that listens to the song and gives back the LRC. */
+/**
+ * What the lyrics service is doing now, to be seen: the song, how far it is (the whole song, not only the minute being listened to), how long it
+ * has been going, and the lines found so far (the newest at the bottom; the first ones come after the first minute of the song).
+ */
+@Composable
+internal fun LyricsJobProgress(showStop: Boolean) {
+    val c = LocalContext.current
+    val job = com.umutk.pulse.extras.lyrics.LyricsBatchJob
+    var tick by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { tick = System.currentTimeMillis(); delay(1000) } }
+    val el = ((tick - job.startedAt) / 1000).coerceAtLeast(0)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(job.now.ifEmpty { tr("Starting…", "Başlıyor…") }, color = T.text, fontSize = 14.sp, maxLines = 2)
+        PProgress(job.frac, Modifier.fillMaxWidth())
+        Text("${(job.frac * 100).toInt()}%  ·  %d:%02d".format(el / 60, el % 60) + (if (job.total > 1) "  ·  ${job.done} / ${job.total}" else ""), color = T.sub, fontSize = 12.sp)
+        val lines = job.live.lines().filter { it.startsWith("[") && it.length > 3 && it[1].isDigit() }.takeLast(6)
+        if (lines.isEmpty()) Text(tr("The first lines appear after the first minute of the song.", "İlk satırlar şarkının ilk dakikasından sonra çıkar."), color = T.sub, fontSize = 12.sp)
+        else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { lines.forEach { Text(it, color = T.text, fontSize = 12.sp, maxLines = 1) } }
+        if (showStop) TextButton({ com.umutk.pulse.extras.lyrics.LyricsBatchJob.cancel(c) }) { Text(tr("Stop", "Durdur"), color = Look.accent) }
+    }
+}
+
+/**
+ * The lyrics' AI step inside Pulse: a window that shows what the AI is doing (how far, how long, the lines as they come). The work itself runs in the
+ * background service, so Hide (or Back) only closes this window: it goes on, a notification shows it, and the lyrics appear where they were asked for when
+ * they are ready. Stop ends it. [onDone] gets the LRC text when the song is finished (empty when the lyrics came from the search), null when this window closes first.
+ */
 @Composable
 fun AiLyricsDialog(path: String, title: String, artist: String, onDone: (String?) -> Unit) {
     val c = LocalContext.current
-    var stage by remember { mutableStateOf("") }
-    var frac by remember { mutableFloatStateOf(0f) }
     var err by remember { mutableStateOf<String?>(null) }
+    val startTick = remember { com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick }
     LaunchedEffect(path) {
-        val poll = launch { while (isActive) { if (stage == Transcriber.LISTENING) frac = Transcriber.progress(); delay(500) } }
-        val uri = androidx.core.content.FileProvider.getUriForFile(c, c.packageName + ".files", java.io.File(path))
-        val r = runCatching { Transcriber.lrc(c, uri, "auto", title, artist) { s, f -> stage = s; frac = f } }
-        poll.cancel()
-        val lrc = r.getOrNull()
-        if (lrc != null) onDone(lrc) else err = r.exceptionOrNull()?.message ?: tr("No speech model yet: Pulse AI > Models (Whisper medium is good with songs).", "Henüz ses modeli yok: Pulse AI > Modeller (şarkılarda Whisper medium iyidir).")
+        if (!Transcriber.ready(c)) { err = tr("No speech model yet: Pulse AI > Models (Whisper medium is good with songs).", "Henüz ses modeli yok: Pulse AI > Modeller (şarkılarda Whisper medium iyidir)."); return@LaunchedEffect }
+        com.umutk.pulse.extras.lyrics.LyricsBatchJob.startOne(c, path, title, artist)
     }
-    WinAlert(onDismissRequest = { Transcriber.stop(); onDone(null) },
+    val tick = com.umutk.pulse.extras.lyrics.LyricsBatchJob.doneTick
+    LaunchedEffect(tick) {
+        if (tick > startTick && com.umutk.pulse.extras.lyrics.LyricsBatchJob.lastPath == path) onDone(com.umutk.pulse.extras.lyrics.LyricsBatchJob.lastLrc)
+    }
+    WinAlert(onDismissRequest = { onDone(null) },
         title = { Text(tr("Timed lyrics", "Zamanlı sözler")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val e = err
             if (e != null) Text(e) else {
-                Text(stage)
-                PProgress(frac, Modifier.fillMaxWidth())
-                Text(tr("This runs on the phone and can take a few minutes.", "Bu telefonda çalışır, birkaç dakika sürebilir."), color = T.sub, fontSize = 12.sp)
+                LyricsJobProgress(showStop = false)
+                Text(tr("You can close this window: it goes on in the background and the lyrics appear when it is done.", "Bu pencereyi kapatabilirsin: arka planda sürer, bitince sözler gelir."), color = T.sub, fontSize = 12.sp)
             }
         } },
-        confirmButton = { TextButton({ Transcriber.stop(); onDone(null) }) { Text(if (err != null) tr("Close", "Kapat") else tr("Cancel", "İptal")) } })
+        confirmButton = { TextButton({ onDone(null) }) { Text(if (err != null) tr("Close", "Kapat") else tr("Hide", "Gizle")) } },
+        dismissButton = if (err == null) ({ TextButton({ com.umutk.pulse.extras.lyrics.LyricsBatchJob.cancel(c); onDone(null) }) { Text(tr("Stop", "Durdur")) } }) else null)
 }

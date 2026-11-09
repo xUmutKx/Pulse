@@ -297,6 +297,12 @@ private fun AiLyricsButton(path: String, title: String, artist: String, onLyrics
     var running by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     if (!com.umutk.pulse.extras.ai.aiSupported) return
+    // the lyrics service finished this song while the window was closed: the lyrics appear here
+    val aiTick = LyricsBatchJob.doneTick
+    val aiStart = remember { LyricsBatchJob.doneTick }
+    androidx.compose.runtime.LaunchedEffect(aiTick) {
+        if (aiTick > aiStart && LyricsBatchJob.lastPath == path && LyricsBatchJob.lastLrc.isNotEmpty()) Lyrics.fromText(LyricsBatchJob.lastLrc, "ai")?.let { onLyrics(it) }
+    }
     val ready = remember(welcome, running) { com.umutk.pulse.extras.ai.Transcriber.ready(ctx) }
     Row(Modifier.padding(top = 10.dp).background(Color.White.copy(alpha = .14f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
         .clickable { if (!sp.getBoolean("welcomed", false) || !ready) welcome = true else running = true }.padding(horizontal = 18.dp, vertical = 9.dp),

@@ -38,6 +38,17 @@ object LyricsBatchJob {
     var now by mutableStateOf("")
     /** How many songs got their lyrics from the search (the rest were listened to). */
     var found by mutableIntStateOf(0)
+    // what the song being worked on shows: how far it is (0..1), what the AI is doing, and the lines it has found so far (LRC text)
+    var frac by mutableStateOf(0f)
+    var step by mutableStateOf("")
+    var live by mutableStateOf("")
+    var startedAt by mutableStateOf(0L)
+    /** The song that was finished last, its lyrics (LRC text; empty when they came from the search), and a count that changes with each one: screens watch it. */
+    var lastPath by mutableStateOf("")
+    var lastLrc by mutableStateOf("")
+    var doneTick by mutableIntStateOf(0)
+    /** The path of the song being worked on now. */
+    var nowPath by mutableStateOf("")
 
     private const val PREF = "lyrics_batch"
     private fun sp(c: Context) = c.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
@@ -64,6 +75,22 @@ object LyricsBatchJob {
         val started = runCatching { ContextCompat.startForegroundService(app, Intent(app, LyricsBatchService::class.java)) }.isSuccess
         if (!started) busy = false
         return started
+    }
+
+    /**
+     * One song, now: it goes to the front of the queue (the batch, if one runs, takes it next; otherwise it starts alone). It runs in the background
+     * service, so leaving the screen or pressing Back does not stop it; screens show [frac], [step] and [live], and see [doneTick] change when it is done.
+     */
+    fun startOne(c: Context, path: String, title: String, artist: String): Boolean {
+        val app = c.applicationContext
+        val row = listOf(path, clean(title), clean(artist))
+        if (busy) {
+            // already in the queue (or being worked on): nothing to add
+            if (nowPath == path || queue(app).any { it[0] == path }) return true
+            saveQueue(app, listOf(row) + queue(app)); total++
+            return true
+        }
+        return start(app, listOf(Track(path = path, title = title, artist = artist)))
     }
 
     /** Stops the batch: the songs still waiting are dropped, the one being listened to is left as it is. */
@@ -133,6 +160,9 @@ class LyricsBatchService : Service() {
                 val row = LyricsBatchJob.queue(app).firstOrNull() ?: break
                 val path = row[0]; val title = row[1]; val artist = row[2]
                 LyricsBatchJob.now = title
+                LyricsBatchJob.nowPath = path
+                LyricsBatchJob.frac = 0f; LyricsBatchJob.step = ""; LyricsBatchJob.live = ""; LyricsBatchJob.startedAt = System.currentTimeMillis()
+                var madeLrc = ""
                 update()
                 try {
                     if (!LyricsStatus.has(app, path, artist, title) && File(path).isFile) {
@@ -140,13 +170,20 @@ class LyricsBatchService : Service() {
                         val found = runCatching { Lyrics.forTrack(app, title, artist, null, 0L, path) }.getOrNull()
                         if (found != null) { LyricsStatus.forget(path); LyricsBatchJob.found++ } else if (Transcriber.ready(app)) {
                         val uri = FileProvider.getUriForFile(app, app.packageName + ".files", File(path))
-                        val lrc = Transcriber.lrc(app, uri, "auto", title, artist) { s, _ -> LyricsBatchJob.now = "$title · $s" }
+                        // the progress of the song is read while it is listened to
+                        val poll = scope.launch { while (true) { LyricsBatchJob.frac = Transcriber.progress(); kotlinx.coroutines.delay(500) } }
+                        val lrc = try {
+                            Transcriber.lrc(app, uri, "auto", title, artist, { s, _ -> LyricsBatchJob.step = s; LyricsBatchJob.now = "$title · $s" }, { lines -> LyricsBatchJob.live = lines })
+                        } finally { poll.cancel() }
+                        madeLrc = lrc.orEmpty()
                         lrc?.let { Lyrics.fromText(it, "ai") }?.let { r -> Lyrics.saveEdited(path, r) }
                         LyricsStatus.forget(path)
                         }
                     }
                 } catch (e: CancellationException) { throw e } catch (e: Exception) { }
                 LyricsBatchJob.saveQueue(app, LyricsBatchJob.queue(app).drop(1))
+                LyricsBatchJob.frac = 1f
+                LyricsBatchJob.lastPath = path; LyricsBatchJob.lastLrc = madeLrc; LyricsBatchJob.doneTick++
                 LyricsBatchJob.done++
                 update()
             }
