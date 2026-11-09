@@ -43,7 +43,7 @@ object AiEngine {
         true
     }
 
-    fun ask(c: Context, text: String, max: Int = 1024): Flow<String> = engine(c).sendUserPrompt(text, max)
+    fun ask(c: Context, text: String, max: Int = 2048): Flow<String> = engine(c).sendUserPrompt(text, max)
 
     /** One answer to one question in a fresh conversation (the text tools). */
     suspend fun once(c: Context, system: String, text: String, max: Int = 512): String? {
