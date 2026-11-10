@@ -132,7 +132,16 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     DisposableEffect(owner) {
         val obs = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_RESUME) holder[0]?.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
-            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause() else if (e == Lifecycle.Event.ON_RESUME) holder[0]?.onResume()
+            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause()
+            else if (e == Lifecycle.Event.ON_RESUME) {
+                val w = holder[0] ?: return@LifecycleEventObserver
+                w.onResume()
+                // back from a game the picture can stay black until something redraws it: the layer is reset and the page is laid out again
+                w.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                w.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                w.invalidate(); w.requestLayout()
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ w.invalidate(); w.requestLayout() }, 300L)
+            }
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs); holder[0]?.destroy(); holder[0] = null }
