@@ -119,18 +119,16 @@ object ExtraIcons {
         return tinted(d.toBitmap(px, px, Bitmap.Config.ARGB_8888), t)
     }
 
-    /** The Material glass look of a pack picture: the maker's glass disc in the colour (the accent when [hex] is empty), the picture drawn white on it. */
+    /** The Material glass look of a pack picture: the maker's glass disc in the colour (the accent when [hex] is empty), the picture in its own colours on it. */
     fun glassPicture(d: android.graphics.drawable.Drawable, hex: String, px: Int): Bitmap {
         val colour = hex.takeIf { it.length == 8 }?.toLong(16)?.toInt() ?: Look.accent.toArgb()
         val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val cv = Canvas(b)
         val f = px.toFloat()
         glassDisc(cv, RectF(0f, 0f, f, f), f * .24f, colour, f)
-        val inset = (px * .24f).toInt()
+        val inset = (px * .2f).toInt()
         d.setBounds(inset, inset, px - inset, px - inset)
-        d.colorFilter = android.graphics.PorterDuffColorFilter(0xFFFFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
         d.draw(cv)
-        d.colorFilter = null
         return b
     }
 
@@ -267,14 +265,12 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
                     PChip(tab == "pack", tr("Icon pack", "İkon paketi")) { tab = "pack" }
+                    if (tab == "pack") packs.forEach { pk -> PChip(pack == pk.pkg, pk.label) { pack = pk.pkg } }
                     PChip(tab == "make", tr("Maker", "Üretici")) { tab = "make"; makeNow() }
                 }
                 if (tab == "pack") {
                     if (packs.isEmpty()) Text(tr("No icon pack is installed", "Yüklü ikon paketi yok"), color = T.sub, fontSize = 13.sp)
                     else {
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            packs.forEach { pk -> PChip(pack == pk.pkg, pk.label) { pack = pk.pkg } }
-                        }
                         Text(tr("Look", "Görünüm"), color = T.sub, fontSize = 12.sp)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             PChip(tint.isEmpty(), tr("Original", "Orijinal")) { setTint("") }
