@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import android.content.Context
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -408,12 +409,12 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
  * Open button and More, then two tabs: Overview (what it is and the facts) and Settings (the game's own settings). No stripe marks the chosen tab;
  * it is shown by its weight and a soft pill.
  */
-@Composable
 /** Deletes the game (uninstalls the app): the system's own dialog asks first. */
 internal fun uninstallGame(c: Context, pkg: String) {
     runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
+@Composable
 internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, size: Long, hidden: Boolean, onBack: () -> Unit, onPlay: () -> Unit, settings: @Composable () -> Unit) {
     val ctx = LocalContext.current
     var tab by remember(g.pkg) { mutableStateOf(0) }
