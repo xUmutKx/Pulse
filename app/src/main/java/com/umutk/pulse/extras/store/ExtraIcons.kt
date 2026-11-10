@@ -403,7 +403,12 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
                             if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
                         } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
                             // the five extra apps that have a picture of their own (from an icon pack), else the glyph
-                            PACK_DEFAULTS[r.key]?.let { res -> Image(painterResource(res), r.name, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp))) } ?: PIcon(r.glyph, T.text, 26.dp)
+                            // a rounded, see-through tile behind the picture (the glass look's tile, without a colour)
+                            PACK_DEFAULTS[r.key]?.let { res ->
+                                Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                                    Image(painterResource(res), r.name, Modifier.size(28.dp))
+                                }
+                            } ?: PIcon(r.glyph, T.text, 26.dp)
                         }
                     }
                     Spacer(Modifier.width(12.dp))
