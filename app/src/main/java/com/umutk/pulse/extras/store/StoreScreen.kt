@@ -426,7 +426,17 @@ internal fun builtinIconRows(): List<IconRow> {
 }
 
 /** The icon key of a row: in Windows 11 the Fluent picture of the tool or app ("tool:clock" -> tool_clock, "app:BrowserLauncher" -> extraBrowser), else the row's own key. */
-private fun rowKey(r: BuiltinRow): String = r.icon   // the Fluent line icons of the list, the same in every look
+private fun rowKey(r: BuiltinRow): String {
+    if (!(T.id == "win11" && !T.material)) return r.icon
+    val p = r.place ?: return r.icon
+    // Good Lock has no tool_ glyph of its own: the Fluent grid stands for it (as in the ⋮ menu's icon map)
+    val k = when {
+        p == "tool:goodlock" -> "gridView"
+        p.startsWith("tool:") -> "tool_" + p.removePrefix("tool:")
+        else -> "extra" + p.removePrefix("app:").removeSuffix("Launcher")
+    }
+    return if (com.umutk.pulse.FluentFilled.map.containsKey(k) || com.umutk.pulse.FluentPaths.map.containsKey(k)) k else r.icon
+}
 
 /** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
 object ExtraRowsHidden {
