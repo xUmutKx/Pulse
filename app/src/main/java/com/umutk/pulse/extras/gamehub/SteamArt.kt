@@ -77,6 +77,7 @@ internal fun fetchSteamArt(c: Context, g: GameRow): Boolean {
     steamCoverFile(c, g.pkg).apply { parentFile?.mkdirs(); writeBytes(cover) }
     httpBytes(base + "library_hero.jpg")?.let { steamHeroFile(c, g.pkg).writeBytes(it) }
     httpBytes(base + "logo.png", 1_000_000)?.let { steamLogoFile(c, g.pkg).writeBytes(it) }
+    runCatching { fetchSteamShots(c, g.pkg, id) } // the screenshots for the back of the box (a miss keeps the ones there are)
     return true
 }
 
@@ -115,4 +116,17 @@ internal fun fetchBestCover(c: Context, g: GameRow): Boolean {
         if (fetchSteamArt(c, alt) || fetchSgdbCover(c, alt)) return true
     }
     return !playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg)
+}
+
+internal fun steamShotFile(c: Context, pkg: String, k: Int) = File(c.filesDir, "gamehub/shot_" + pkg.replace('.', '_') + "_$k.jpg")
+
+/** Up to four of the Steam store's screenshots (the 600 px ones), for the back of the box. */
+internal fun fetchSteamShots(c: Context, pkg: String, id: String) {
+    val body = httpBytes("https://store.steampowered.com/api/appdetails?appids=$id&filters=screenshots", 600_000)?.toString(Charsets.UTF_8) ?: return
+    val shots = JSONObject(body).optJSONObject(id)?.optJSONObject("data")?.optJSONArray("screenshots") ?: return
+    for (k in 0 until minOf(4, shots.length())) {
+        val url = shots.getJSONObject(k).optString("path_thumbnail")
+        if (url.isEmpty()) continue
+        httpBytes(url, 2_000_000)?.let { steamShotFile(c, pkg, k).apply { parentFile?.mkdirs(); writeBytes(it) } }
+    }
 }
