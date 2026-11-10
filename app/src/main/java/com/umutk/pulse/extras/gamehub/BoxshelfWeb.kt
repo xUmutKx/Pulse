@@ -64,6 +64,11 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val f = coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(f))
             }
+            "shot" -> {
+                val pkg = parts.getOrNull(1) ?: return null
+                val k = parts.getOrNull(2)?.toIntOrNull() ?: return null
+                WebResourceResponse("image/jpeg", null, FileInputStream(steamShotFile(c, pkg, k).takeIf { it.isFile } ?: return null))
+            }
             "hero" -> {
                 val pkg = parts.getOrNull(1) ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(steamHeroFile(c, pkg).takeIf { it.isFile } ?: return null))
@@ -99,6 +104,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("hero", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
                 // the disc inside the case is the game's wide picture, so it is not the same picture as the front cover
                 .put("disc", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
+                // the Steam screenshots for the back of the box (up to four; none until the covers were looked for)
+                .put("shots", JSONArray((0 until 4).filter { steamShotFile(c, g.pkg, it).isFile }.map { "https://$HOST/shot/${g.pkg}/$it" }))
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         return arr.toString()
