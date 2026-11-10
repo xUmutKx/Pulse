@@ -201,3 +201,8 @@ html,body,#app{-webkit-user-select:none;user-select:none}
   .platform-android .bss-row .nm{font-size:18px;white-space:normal}
   .platform-android .bss-row .sub{font-size:14px;white-space:normal}
 }
+/* (Customize > Theme tiles on the phone) each tile is a small static swatch: no transitions, no shadows, no per-tile paint
+   layers, so opening the grid and moving through it does not repaint the other tiles */
+.platform-android .qm-opt.sw{transition:none!important;box-shadow:none!important;will-change:auto;contain:strict;backface-visibility:hidden}
+.platform-android .qm-opt.sw i{transition:none!important;animation:none!important}
+.platform-android .qm-opt.sw.on{box-shadow:none!important}
