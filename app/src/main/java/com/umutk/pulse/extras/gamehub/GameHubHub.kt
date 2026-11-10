@@ -125,7 +125,7 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
 
 internal fun palOf(theme: String, c: Context): Pal = when (theme) {
     // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
-    "shelf", "shelfc" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color.White, 14.dp)
+    "shelf", "shelfc" -> Pal(Color(0xFF000000), Color(0xFF141414), Color.White, Color(0xFF9A9A9A), Color.White, 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
     "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
@@ -1054,7 +1054,9 @@ fun GameHubHub(onBack: () -> Unit) {
                     // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
                     var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
                     Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-                    PField(sgKey, { sgKey = it; prefs(ctx).edit().putString("sgdbKey", it.trim()).apply() }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                    // the key is typed in memory and saved when the typing is done (or the page is left): no write on every key
+                    DisposableEffect(Unit) { onDispose { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() } }
+                    PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->
