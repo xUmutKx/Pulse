@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.key.isAltPressed
@@ -456,6 +457,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var arcInfo by remember { mutableStateOf<String?>(null) }
     // an HTML page shown in the app
     var htmlView by remember { mutableStateOf<File?>(null) }
+    var binView by remember { mutableStateOf<File?>(null) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
@@ -615,8 +617,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         // a video plays in Pulse's own player straight away; "Open as" holds the gallery and the other apps
         if (!FilesPrefs.openAsk && f.extension.lowercase() in EX_VIDEO) { recents = exAddRecent(ctx, f); if (exOpenInPulseVideo(ctx, f)) return }
         if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
-        // web pages show in the app (a file with no extension that holds a page too)
-        if (f.extension.lowercase() in setOf("html", "htm", "xhtml") || (f.extension.isEmpty() && exLooksHtml(f))) { recents = exAddRecent(ctx, f); htmlView = f; return }
+        // web pages show in the app (a file with no extension that holds a page too; SVG and MHTML pages too)
+        if (f.extension.lowercase() in setOf("html", "htm", "xhtml", "svg", "mht", "mhtml") || (f.extension.isEmpty() && exLooksHtml(f))) { recents = exAddRecent(ctx, f); htmlView = f; return }
+        // program and binary files (Dalvik .dex, .so, .class ...): their header, the text inside them and a hex view
+        if (f.extension.lowercase() in EX_BIN) { recents = exAddRecent(ctx, f); binView = f; return }
         // music files play right here, in a thin player at the bottom, not in another app
         if (f.extension.lowercase() in EX_AUDIO) { recents = exAddRecent(ctx, f); ExAudio.play(f); return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
@@ -1267,6 +1271,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     if (recentView) RecentScreen({ openFile(it) }, { recentView = false }, { f -> f.parentFile?.let { d -> com.umutk.pulse.files.home.FilesHomeNav.pendingDir = d.path; com.umutk.pulse.files.home.FilesHomeNav.pendingSelect = f.path; recentView = false } })
     ExMiniPlayer()
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
+    binView?.let { b -> ExBinViewer(b) { binView = null } }
     arcInfo?.let { p ->
         val af = arcFile
         val all = arcAll.orEmpty()
@@ -2220,6 +2225,62 @@ private fun ExToolbar(onTab: (String) -> Unit, onLong: (String) -> Unit) {
 }
 
 /** A file of no known extension that starts like a web page. */
+/** Program and binary files the Files app opens in its own viewer (not in another app). */
+internal val EX_BIN = setOf("dex", "odex", "vdex", "oat", "so", "class", "bin", "elf")
+
+/** Dalvik (.dex) header counts and the text inside any binary file, with a hex view of its start. */
+@Composable
+private fun ExBinViewer(f: File, onClose: () -> Unit) {
+    val info by produceState<List<String>?>(null, f) { value = withContext(Dispatchers.IO) { binInfo(f) } }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(T.bg)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(f.name, Modifier.weight(1f), color = T.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("✕", Modifier.clickable { onClose() }.padding(horizontal = 12.dp, vertical = 8.dp), color = T.text, fontSize = 18.sp)
+            }
+            val lines = info
+            if (lines == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("Reading…", "Okunuyor…"), color = T.sub) }
+            else LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                items(lines) { l -> Text(l, color = if (l.startsWith("#")) Look.accent else T.text, fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(vertical = 1.dp)) }
+            }
+        }
+    }
+}
+
+/** The lines of the binary view: the header (for a .dex: its version and the counts), the readable text inside (up to 3000), the hex of the first 4 KB. */
+private fun binInfo(f: File): List<String> {
+    val out = ArrayList<String>()
+    val bytes = runCatching { f.inputStream().use { it.readNBytes(8 * 1024 * 1024) } }.getOrDefault(ByteArray(0))
+    fun le(o: Int): Long = if (o + 4 <= bytes.size) ((bytes[o].toLong() and 0xff) or ((bytes[o + 1].toLong() and 0xff) shl 8) or ((bytes[o + 2].toLong() and 0xff) shl 16) or ((bytes[o + 3].toLong() and 0xff) shl 24)) else 0L
+    out += "# " + tr("File", "Dosya") + ": " + f.name + "  ·  " + exSize(f.length())
+    if (bytes.size >= 8 && String(bytes, 0, 4, Charsets.US_ASCII) == "dex\n") {
+        out += "# " + tr("Dalvik (dex) file, version ", "Dalvik (dex) dosyası, sürüm ") + String(bytes, 4, 3, Charsets.US_ASCII)
+        out += tr("Strings: ", "Metin: ") + le(56) + "   " + tr("Types: ", "Tür: ") + le(64) + "   " + tr("Prototypes: ", "Prototip: ") + le(72)
+        out += tr("Fields: ", "Alan: ") + le(80) + "   " + tr("Methods: ", "Metot: ") + le(88) + "   " + tr("Classes: ", "Sınıf: ") + le(96)
+        out += tr("File size in header: ", "Başlıktaki boyut: ") + exSize(le(32))
+    } else if (bytes.size >= 4 && bytes[0] == 0x7f.toByte() && bytes[1] == 'E'.code.toByte()) {
+        out += "# " + tr("ELF program (a native library or program)", "ELF programı (yerel kütüphane ya da program)")
+    }
+    out += "# " + tr("Text inside the file", "Dosyanın içindeki metin")
+    val run = StringBuilder(); var count = 0
+    for (b in bytes) {
+        val c = b.toInt() and 0xff
+        if (c in 0x20..0x7e) run.append(c.toChar())
+        else { if (run.length >= 4 && count < 3000) { out += run.toString(); count++ }; run.setLength(0) }
+    }
+    out += "# " + tr("Hex (first 4 KB)", "Hex (ilk 4 KB)")
+    val n = minOf(bytes.size, 4096)
+    var i = 0
+    while (i < n) {
+        val end = minOf(i + 16, n)
+        val hex = (i until end).joinToString(" ") { "%02x".format(bytes[it].toInt() and 0xff) }
+        val asc = (i until end).joinToString("") { val c = bytes[it].toInt() and 0xff; if (c in 0x20..0x7e) c.toChar().toString() else "." }
+        out += "%08x  %-47s %s".format(i, hex, asc)
+        i = end
+    }
+    return out
+}
+
 private fun exLooksHtml(f: File): Boolean = runCatching {
     f.inputStream().use { i -> val b = ByteArray(600); val n = i.read(b); n > 0 && String(b, 0, n, Charsets.UTF_8).trimStart().lowercase().let { it.startsWith("<!doctype html") || it.startsWith("<html") || it.contains("<head") || it.contains("<body") } }
 }.getOrDefault(false)
@@ -2236,10 +2297,10 @@ private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
             }
             androidx.compose.ui.viewinterop.AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
                 android.webkit.WebView(c).apply {
-                    settings.javaScriptEnabled = false; settings.allowFileAccess = true; settings.allowContentAccess = false
+                    settings.javaScriptEnabled = true; settings.allowFileAccess = true; settings.allowContentAccess = false
                     setBackgroundColor(android.graphics.Color.WHITE)
-                    val text = runCatching { f.readText() }.getOrDefault("")
-                    loadDataWithBaseURL("file://" + (f.parent ?: "") + "/", text, "text/html", "utf-8", null)
+                    // the page is loaded as the file itself: the WebView reads the MIME type from it (MHTML too), and its pictures and styles beside it load
+                    loadUrl("file://" + f.absolutePath)
                 }
             })
         }
