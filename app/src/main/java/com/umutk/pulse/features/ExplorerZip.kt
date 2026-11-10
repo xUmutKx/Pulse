@@ -231,7 +231,7 @@ private fun sevenZWrite(job: ZipJob) {
     org.apache.commons.compress.archivers.sevenz.SevenZOutputFile(job.target).use { z ->
         // LZMA2 at a quick preset: far faster than the default, a little bigger
         // the fastest LZMA2 setting on a phone: quicker than preset 3, the archive a little bigger
-        z.setContentMethods(listOf(org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration(org.apache.commons.compress.archivers.sevenz.SevenZMethod.LZMA2, org.tukaani.xz.LZMA2Options().apply { setPreset(0); mode = org.tukaani.xz.LZMA2Options.MODE_FAST }
+        z.setContentMethods(listOf(org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration(org.apache.commons.compress.archivers.sevenz.SevenZMethod.LZMA2, org.tukaani.xz.LZMA2Options().apply { setPreset(0); mode = org.tukaani.xz.LZMA2Options.MODE_FAST })))
         for (f in job.files) {
             val root = f.parentFile ?: job.target.absoluteFile.parentFile
             f.walkTopDown().forEach { e ->
