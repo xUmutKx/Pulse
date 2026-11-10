@@ -375,6 +375,8 @@ private fun Swatches(colors: List<Int>, picked: Int, onPick: (Int) -> Unit) {
 }
 
 /** One row of the icon page: an app, the look's icon key for it, and what starts it (for the home-screen shortcut). */
+/** Material pastel tiles behind the extra apps' icons (a row always gets the same one). */
+private val PASTELS = listOf(0xFFEADDFF, 0xFFFFD8E4, 0xFFD0E4FF, 0xFFC4EED0, 0xFFFFE4C4, 0xFFFFF3B0, 0xFFD4F1F4, 0xFFF7D6E6).map { Color(it) }
 /** The default pictures of Files, Photos, Calendar, Contacts and Browser (drawable-nodpi, taken from an icon pack). */
 private val PACK_DEFAULTS = mapOf(
     "app:FilesLauncher" to com.umutk.pulse.R.drawable.pack_files,
@@ -401,14 +403,9 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
                             // Pulse's own icon, as the launcher shows it
                             val own = remember { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
                             if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
-                        } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                            // the five extra apps that have a picture of their own (from an icon pack), else the glyph
-                            // a rounded, see-through tile behind the picture (the glass look's tile, without a colour)
-                            PACK_DEFAULTS[r.key]?.let { res ->
-                                Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                                    Image(painterResource(res), r.name, Modifier.size(28.dp))
-                                }
-                            } ?: PIcon(r.glyph, T.text, 26.dp)
+                        } else Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(PASTELS[r.key.hashCode().mod(PASTELS.size)]), contentAlignment = Alignment.Center) {
+                            // every row has its pastel Material tile; the picture or the glyph sits on it
+                            PACK_DEFAULTS[r.key]?.let { res -> Image(painterResource(res), r.name, Modifier.size(28.dp)) } ?: PIcon(r.glyph, Color(0xFF1C1B1F), 22.dp)
                         }
                     }
                     Spacer(Modifier.width(12.dp))
