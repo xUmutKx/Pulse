@@ -39,6 +39,9 @@ internal object CaseCover {
         return file(c, pkg, one)
     }
 
+    /** The shelf group of [pkg] in the mix: its box's colour (the order of [MIX]); 0 for every game outside the mix. */
+    fun groupOf(c: Context, pkg: String): Int = if (style(c) == "mix") MIX.indexOf(mixMap(c)[pkg] ?: "steam").coerceAtLeast(0) else 0
+
     private fun mixMap(c: Context): Map<String, String> =
         (sp(c).getString("boxMix", "") ?: "").split(';').mapNotNull { e -> e.split('=').takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
 
