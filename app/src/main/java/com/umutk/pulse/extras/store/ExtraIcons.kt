@@ -119,12 +119,19 @@ object ExtraIcons {
         return tinted(d.toBitmap(px, px, Bitmap.Config.ARGB_8888), t)
     }
 
-    /** The Material glass look of a picture: its shape as a glass tile in the colour (ARGB hex, the accent when empty), the picture in white. */
+    /** The Material glass look of a pack picture: the maker's glass disc in the colour (the accent when [hex] is empty), the picture drawn white on it. */
     fun glassPicture(d: android.graphics.drawable.Drawable, hex: String, px: Int): Bitmap {
         val colour = hex.takeIf { it.length == 8 }?.toLong(16)?.toInt() ?: Look.accent.toArgb()
-        val glyph = com.umutk.pulse.extras.palette.core.icon.GlyphExtractor.extract(d, 192)
-        val style = com.umutk.pulse.extras.palette.core.icon.StyleCatalog.get("material_glass")
-        return com.umutk.pulse.extras.palette.core.icon.StyledRenderer.render(com.umutk.pulse.extras.palette.core.icon.ThemeSpec(), style, glyph.mask, colour, 0xFFFFFFFF.toInt(), px)
+        val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val cv = Canvas(b)
+        val f = px.toFloat()
+        glassDisc(cv, RectF(0f, 0f, f, f), f * .24f, colour, f)
+        val inset = (px * .24f).toInt()
+        d.setBounds(inset, inset, px - inset, px - inset)
+        d.colorFilter = android.graphics.PorterDuffColorFilter(0xFFFFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+        d.draw(cv)
+        d.colorFilter = null
+        return b
     }
 
     fun makeSpec(style: String, glyph: String, bg: Int, ink: Int, shape: String) =
@@ -138,18 +145,7 @@ object ExtraIcons {
         val pt = Paint(Paint.ANTI_ALIAS_FLAG)
         val r = RectF(0f, 0f, px.toFloat(), px.toFloat())
         val rad = when (shape) { "circle" -> px / 2f; "square" -> px * .08f; else -> px * .24f }
-        if (style == "glass") {
-            // a lit disc: the colour, lighter at the top left and deeper at the bottom right, a soft white sheen at the top and a thin bright rim
-            val light = blend(bg, 0xFFFFFFFF.toInt(), .35f); val deep = blend(bg, 0xFF000000.toInt(), .35f)
-            pt.shader = LinearGradient(0f, 0f, px.toFloat(), px.toFloat(), light, deep, Shader.TileMode.CLAMP)
-            cv.drawRoundRect(r, rad, rad, pt)
-            pt.shader = RadialGradient(px * .3f, px * .12f, px * .75f, 0x66FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
-            cv.drawRoundRect(r, rad, rad, pt)
-            pt.shader = null; pt.style = Paint.Style.STROKE; pt.strokeWidth = px * .018f; pt.color = 0x55FFFFFF
-            val ri = RectF(r).apply { inset(pt.strokeWidth / 2, pt.strokeWidth / 2) }
-            cv.drawRoundRect(ri, rad, rad, pt)
-            pt.style = Paint.Style.FILL
-        } else {
+        if (style == "glass") glassDisc(cv, r, rad, bg, px.toFloat()) else {
             pt.color = bg; cv.drawRoundRect(r, rad, rad, pt)
         }
         // the glyph: 56% of the icon, centred; the glass one gets a faint shadow under it
@@ -162,6 +158,19 @@ object ExtraIcons {
         pt.color = ink; gl.forEach { cv.drawPath(it, pt) }
         cv.restore()
         return b
+    }
+
+    /** The Material glass disc: the colour, lighter at the top left and deeper at the bottom right, a soft white sheen and a thin bright rim. Outside it stays see-through. */
+    private fun glassDisc(cv: Canvas, r: RectF, rad: Float, bg: Int, px: Float) {
+        val pt = Paint(Paint.ANTI_ALIAS_FLAG)
+        val light = blend(bg, 0xFFFFFFFF.toInt(), .35f); val deep = blend(bg, 0xFF000000.toInt(), .35f)
+        pt.shader = LinearGradient(0f, 0f, px, px, light, deep, Shader.TileMode.CLAMP)
+        cv.drawRoundRect(r, rad, rad, pt)
+        pt.shader = RadialGradient(px * .3f, px * .12f, px * .75f, 0x66FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+        cv.drawRoundRect(r, rad, rad, pt)
+        pt.shader = null; pt.style = Paint.Style.STROKE; pt.strokeWidth = px * .018f; pt.color = 0x55FFFFFF
+        val ri = RectF(r).apply { inset(pt.strokeWidth / 2, pt.strokeWidth / 2) }
+        cv.drawRoundRect(ri, rad, rad, pt)
     }
 
     private fun blend(a: Int, b: Int, t: Float): Int {
