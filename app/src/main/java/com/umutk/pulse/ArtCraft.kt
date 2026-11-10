@@ -116,7 +116,7 @@ object ArtCraft {
                 list.forEach { item ->
                     val bmp = bundledIcon(c, item.app)
                     if (bmp != null) { val col = dominant(bmp); ui { icons[item.app] = bmp.asImageBitmap(); colors[item.app] = col } }
-                    else if (!fileFor(c, item).exists()) fetchIcon(item)
+                    else if (!fileFor(c, item).exists()) fetchIcon(c, item)
                 }
             } catch (e: Exception) {
                 ui { status = tr("Could not read the release list: ", "Sürüm listesi okunamadı: ") + (e.message ?: "") }
@@ -173,6 +173,19 @@ object ArtCraft {
 
     // ---- icon without downloading the APK: the zip directory and one PNG are read with HTTP range requests ----
 
+    /** Downloads the whole APK (once) and reads its icon the way the system does, which covers the icons the quick reads cannot find. */
+    private fun fullIcon(c: Context, item: Item) {
+        try {
+            val f = fileFor(c, item)
+            if (!f.exists() || f.length() == 0L) {
+                f.parentFile?.mkdirs()
+                (java.net.URL(item.url).openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 60000; instanceFollowRedirects = true }
+                    .inputStream.use { ins -> f.outputStream().use { ins.copyTo(it) } }
+            }
+            readIcon(c, f, item.app)
+        } catch (e: Exception) { }
+    }
+
     private fun ranged(url: String, from: Long, to: Long): ByteArray {
         val con = URL(url).openConnection() as HttpURLConnection
         con.instanceFollowRedirects = true; con.connectTimeout = 15000; con.readTimeout = 30000
@@ -181,16 +194,17 @@ object ArtCraft {
         return con.inputStream.use { it.readBytes() }
     }
 
-    fun fetchIcon(item: Item) {
+    /** The icon of an app that has no bundled one: a plain launcher PNG is read from the APK over HTTP; when there is none (adaptive or vector icons), the APK is downloaded and its icon read. */
+    fun fetchIcon(c: Context, item: Item) {
         Thread {
             try {
-                if (item.size <= 0) return@Thread
+                if (item.size <= 0) { fullIcon(c, item); return@Thread }
                 val tailLen = minOf(65557L, item.size)
                 val tail = ranged(item.url, item.size - tailLen, item.size - 1)
                 val tb = ByteBuffer.wrap(tail).order(ByteOrder.LITTLE_ENDIAN)
                 var e = tail.size - 22
                 while (e >= 0 && tb.getInt(e) != 0x06054b50) e--
-                if (e < 0) return@Thread
+                if (e < 0) { fullIcon(c, item); return@Thread }
                 val cdSize = tb.getInt(e + 12).toLong() and 0xffffffffL
                 val cdOff = tb.getInt(e + 16).toLong() and 0xffffffffL
                 val cd = ranged(item.url, cdOff, cdOff + cdSize - 1)
@@ -215,7 +229,7 @@ object ArtCraft {
                     }
                     p += 46 + nl + el + cl
                 }
-                val (_, loc, info) = best ?: return@Thread
+                val (_, loc, info) = best ?: run { fullIcon(c, item); return@Thread }
                 val lh = ranged(item.url, loc, loc + 29)
                 val lb = ByteBuffer.wrap(lh).order(ByteOrder.LITTLE_ENDIAN)
                 val start = loc + 30 + (lb.getShort(26).toInt() and 0xffff) + (lb.getShort(28).toInt() and 0xffff)
@@ -226,7 +240,7 @@ object ArtCraft {
                     while (n < out.size && !inf.finished()) { val k = inf.inflate(out, n, out.size - n); if (k == 0 && (inf.finished() || inf.needsInput())) break; n += k }
                     inf.end(); out.copyOf(n)
                 } else data
-                val raw = BitmapFactory.decodeByteArray(png, 0, png.size) ?: return@Thread
+                val raw = BitmapFactory.decodeByteArray(png, 0, png.size) ?: run { fullIcon(c, item); return@Thread }
                 val col = dominant(raw)
                 ui { icons[item.app] = raw.asImageBitmap(); colors[item.app] = col }
             } catch (e: Exception) { }
