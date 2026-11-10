@@ -102,7 +102,7 @@ object ExtraIcons {
         val b = runCatching {
             when (p.getOrNull(0)) {
                 "pack" -> packPicture(c, p[1], p[2], p.getOrElse(3) { "" }, px)
-                "glass" -> defaultGlass(c, p[1], p.getOrNull(2)?.ifEmpty { null }, colourOf(p.getOrElse(3) { "" }), px)
+                "glass" -> defaultGlass(c, p[1], p.getOrNull(2)?.ifEmpty { null }, colourOf(p.getOrElse(3) { "" }), px, p.getOrNull(4)?.toIntOrNull() ?: 1)
                 "make" -> make(c, p[1], p[2], p[3].toLong(16).toInt(), p[4].toLong(16).toInt(), p.getOrElse(5) { "squircle" }, px)
                 else -> null
             }
@@ -142,8 +142,12 @@ object ExtraIcons {
     private fun resBitmap(c: Context, id: Int): Bitmap? =
         layerCache.get(id) ?: runCatching { android.graphics.BitmapFactory.decodeResource(c.resources, id) }.getOrNull()?.also { layerCache.put(id, it) }
 
-    /** The Material glass icon of [glyph] (an alpha mask at the icon's full size) in [colour], at [px] pixels. */
-    fun glass(c: Context, glyph: Bitmap?, colour: Int, px: Int): Bitmap? {
+    /** The three strengths of the glass colour: soft, vivid (the default) and more vivid (how much white the body and the glyph keep). */
+    private val LEVELS = listOf(.55f to .45f, .2f to .25f, 0f to .15f)
+
+    /** The Material glass icon of [glyph] (an alpha mask at the icon's full size) in [colour] at strength [level] (0 soft, 1 vivid, 2 more vivid), at [px] pixels. */
+    fun glass(c: Context, glyph: Bitmap?, colour: Int, px: Int, level: Int = 1): Bitmap? {
+        val (bodyWhite, glyphWhite) = LEVELS[level.coerceIn(0, 2)]
         val body = resBitmap(c, com.umutk.pulse.R.drawable.gl_bg) ?: return null
         val light = resBitmap(c, com.umutk.pulse.R.drawable.gl_light)
         val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
@@ -154,9 +158,9 @@ object ExtraIcons {
             pt.colorFilter = android.graphics.PorterDuffColorFilter(tint, android.graphics.PorterDuff.Mode.SRC_IN)
             cv.drawBitmap(b, null, dst, pt)
         }
-        layer(body, blend(colour, WHITE, .2f))
+        layer(body, blend(colour, WHITE, bodyWhite))
         if (light != null) layer(light, WHITE)
-        if (glyph != null) layer(glyph, blend(colour, WHITE, .25f))
+        if (glyph != null) layer(glyph, blend(colour, WHITE, glyphWhite))
         return out
     }
 
@@ -239,15 +243,20 @@ object ExtraIcons {
         private set
     var glassColour by mutableIntStateOf(0xFFB388FF.toInt())
         private set
-    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", false); glassColour = s.getInt("colour", 0xFFB388FF.toInt()) }
-    fun setGlass(c: Context, on: Boolean, colour: Int) { glassOn = on; glassColour = colour; lookSp(c).edit().putBoolean("on", on).putInt("colour", colour).apply() }
+    var glassLevel by mutableIntStateOf(1)
+        private set
+    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", false); glassColour = s.getInt("colour", 0xFFB388FF.toInt()); glassLevel = s.getInt("level", 1) }
+    fun setGlass(c: Context, on: Boolean, colour: Int, level: Int = glassLevel) {
+        glassOn = on; glassColour = colour; glassLevel = level
+        lookSp(c).edit().putBoolean("on", on).putInt("colour", colour).putInt("level", level).apply()
+    }
 
     /** The default glass icon of row [key] ([glyph]: its Fluent glyph, for a row the glass pack has no glyph for), or null when there is no glyph. */
-    fun defaultGlass(c: Context, key: String, glyph: String?, colour: Int, px: Int): Bitmap? {
-        val ck = "default|$key|$glyph|$colour@$px"
+    fun defaultGlass(c: Context, key: String, glyph: String?, colour: Int, px: Int, level: Int = 1): Bitmap? {
+        val ck = "default|$key|$glyph|$colour|$level@$px"
         cache.get(ck)?.let { return it }
         val g = (if (key == "pulse") pulseGlyph() else null) ?: GLASS_GLYPHS[key]?.let { resBitmap(c, it) } ?: glyph?.let { fluentGlyph(it) } ?: return null
-        return glass(c, g, colour, px)?.also { cache.put(ck, it) }
+        return glass(c, g, colour, px, level)?.also { cache.put(ck, it) }
     }
 
     fun makeSpec(style: String, glyph: String, bg: Int, ink: Int, shape: String) =
@@ -298,8 +307,9 @@ internal fun ExtraIcon(key: String, size: Dp, glyph: String? = null, fallback: @
     if (spec == null) {
         val on = ExtraIcons.glassOn
         val colour = ExtraIcons.glassColour
-        val def by produceState<Bitmap?>(null, key, glyph, on, colour) {
-            value = if (on) withContext(Dispatchers.Default) { ExtraIcons.defaultGlass(ctx, key, glyph, colour, 192) } else null
+        val level = ExtraIcons.glassLevel
+        val def by produceState<Bitmap?>(null, key, glyph, on, colour, level) {
+            value = if (on) withContext(Dispatchers.Default) { ExtraIcons.defaultGlass(ctx, key, glyph, colour, 192, level) } else null
         }
         val d = def
         if (d != null) Image(d.asImageBitmap(), null, Modifier.size(size)) else fallback()
@@ -327,8 +337,9 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
     var tab by remember { mutableStateOf(when { current?.startsWith("pack") == true -> "pack"; current?.startsWith("glass") == true -> "glass"; else -> "make" }) }
     // Material glass for this app: its glass glyph in a colour
     var gCol by remember { mutableIntStateOf(current?.split('|')?.takeIf { it[0] == "glass" }?.getOrNull(3)?.let { ExtraIcons.colourOf(it) } ?: ExtraIcons.glassColour) }
+    var gLevel by remember { mutableIntStateOf(current?.split('|')?.takeIf { it[0] == "glass" }?.getOrNull(4)?.toIntOrNull() ?: ExtraIcons.glassLevel) }
     var spec by remember { mutableStateOf(current) }
-    fun glassNow() { spec = "glass|$key|$glyph|${"%08x".format(gCol)}" }
+    fun glassNow() { spec = "glass|$key|$glyph|${"%08x".format(gCol)}|$gLevel" }
     // icon pack
     val packs = remember { InstalledIconPacks.list(ctx) }
     var pack by remember { mutableStateOf(current?.split('|')?.takeIf { it[0] == "pack" }?.get(1) ?: packs.firstOrNull()?.pkg) }
@@ -388,6 +399,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                     PChip(tab == "make", tr("Maker", "Üretici")) { tab = "make"; makeNow() }
                 }
                 if (tab == "glass") {
+                    GlassLevels(gLevel) { gLevel = it; glassNow() }
                     Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
                     Swatches(GLASS_TINTS + Look.accent.toArgb(), gCol) { gCol = it; glassNow() }
                     ColourPicker(gCol) { gCol = it; glassNow() }
@@ -496,6 +508,14 @@ private fun Swatches(colors: List<Int>, picked: Int, onPick: (Int) -> Unit) {
     }
 }
 
+/** The strength of the glass colour: soft, vivid, more vivid. */
+@Composable
+private fun GlassLevels(level: Int, onPick: (Int) -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(tr("Soft", "Yumuşak"), tr("Vivid", "Canlı"), tr("More vivid", "Daha canlı")).forEachIndexed { i, l -> PChip(level == i, l) { onPick(i) } }
+    }
+}
+
 /** A colour picker: saturation (across) and brightness (down) in the square, the hue on the bar under it; a drag or a tap sets it. */
 @Composable
 internal fun ColourPicker(colour: Int, onChange: (Int) -> Unit) {
@@ -548,6 +568,8 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
                 PChip(ExtraIcons.glassOn, tr("Material glass", "Material cam")) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour) }
             }
             if (ExtraIcons.glassOn) {
+                GlassLevels(ExtraIcons.glassLevel) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour, it) }
+                Spacer(Modifier.height(8.dp))
                 Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
                 Spacer(Modifier.height(8.dp))
                 ColourPicker(ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
