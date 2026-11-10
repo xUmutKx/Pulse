@@ -2388,3 +2388,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: çift tık istatistik, oyunu sil, kapak ara, siyah-beyaz tema, SteamGridDB anahtarı.
 - Bluetooth otomatik müzik: bağlantı hazır olunca, bir kez, başka bir şey çalmıyorken.
 - Telefon dikey: ayar sayfaları ve konsol görünümü sığıyor.
+
+## 1.0.388 (derlendi)
+- Ekstra uygulamalar: ikon paketinde Material cam ve renk; varsayılan ikon eski haline döndü.
+- Game Hub: kapak aramasi arka planda (CoverService), bildirim ve ilerleme.
