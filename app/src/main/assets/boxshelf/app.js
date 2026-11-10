@@ -1684,9 +1684,9 @@ function runSlide(s,g,done,hideAfter){
   const bar=$("bsBar").querySelector("i");bar.style.animation="none";void bar.offsetWidth;bar.style.animation="";
   el.classList.add("on");el.setAttribute("aria-hidden","false");void el.offsetWidth;el.classList.add("go");
   lastGoAt=performance.now();play_("go");setTimeout(()=>play_("boot"),700);rumble(.4,.25,90);
-  slideEndAt=performance.now()+(reduced()?600:4000); // the line is full here: the boot sound fades out with it
-  clearTimeout(insertT);insertT=setTimeout(()=>{if(hideAfter)hideInsert();if(done)done()},reduced()?300:2200);
-  insertSeatAt=performance.now()+(reduced()?250:500); // the emulator starts right away under the slide; Boxshelf keeps the slide up a fixed ~4 s so the line fills
+  slideEndAt=performance.now()+(reduced()?300:1000); // the line is full here: the boot sound fades out with it (about 2/5 of the old slide)
+  clearTimeout(insertT);insertT=setTimeout(()=>{if(hideAfter)hideInsert();if(done)done()},reduced()?300:880);
+  insertSeatAt=performance.now()+(reduced()?150:200); // the emulator starts right away under the slide; Boxshelf keeps the slide up a fixed ~4 s so the line fills
 }
 function runInsert(s,g,done,hideAfter){
   if(!INSERT_3D){runSlide(s,g,done,hideAfter);return}
