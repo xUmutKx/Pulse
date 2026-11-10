@@ -23,7 +23,7 @@
 .bs-emu{margin-top:10px;font:500 14px/1.3 var(--ui);color:var(--bs-dim)}
 .bs-bar{margin-top:30px;width:min(320px,30vw);height:3px;border-radius:3px;background:color-mix(in srgb,var(--bs-ink) 16%,transparent);overflow:hidden}
 .bs-bar i{display:block;height:100%;width:0;border-radius:3px;background:var(--bs-acc);box-shadow:0 0 12px var(--bs-acc)}
-.insert.slide.go .bs-bar i{animation:bsload 3.8s .2s cubic-bezier(.4,.1,.4,1) forwards,bsHeld 1.6s 4.2s ease-in-out infinite}
+.insert.slide.go .bs-bar i{animation:bsload .78s .08s cubic-bezier(.4,.1,.4,1) forwards,bsHeld .6s .86s ease-in-out infinite}
 @keyframes bsHeld{50%{opacity:.55}}
 
 /* entrance */
