@@ -239,13 +239,13 @@ object ExtraIcons {
 
     // the look of the rows that have no choice: the look's own icon, or (an extra choice on the App icons page) Material glass in one colour
     private fun lookSp(c: Context) = c.getSharedPreferences("extra_icons_look", Context.MODE_PRIVATE)
-    var glassOn by mutableStateOf(false)
+    var glassOn by mutableStateOf(true)
         private set
     var glassColour by mutableIntStateOf(0xFFB388FF.toInt())
         private set
     var glassLevel by mutableIntStateOf(1)
         private set
-    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", false); glassColour = s.getInt("colour", 0xFFB388FF.toInt()); glassLevel = s.getInt("level", 1) }
+    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", true); glassColour = s.getInt("colour", 0xFFB388FF.toInt()); glassLevel = s.getInt("level", 1) }
     fun setGlass(c: Context, on: Boolean, colour: Int, level: Int = glassLevel) {
         glassOn = on; glassColour = colour; glassLevel = level
         lookSp(c).edit().putBoolean("on", on).putInt("colour", colour).putInt("level", level).apply()
@@ -562,18 +562,12 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         StoreHeader(tr("App icons", "Uygulama ikonları"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            // the default look of every row without a choice: Material glass in one colour, or the look's own icon
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PChip(!ExtraIcons.glassOn, tr("Default", "Varsayılan")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
-                PChip(ExtraIcons.glassOn, tr("Material glass", "Material cam")) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour) }
-            }
-            if (ExtraIcons.glassOn) {
-                GlassLevels(ExtraIcons.glassLevel) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour, it) }
-                Spacer(Modifier.height(8.dp))
-                Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
-                Spacer(Modifier.height(8.dp))
-                ColourPicker(ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
-            }
+            // every app's default icon is Material glass; the strength and the colour are set here, and an app can still choose its own in its chooser
+            GlassLevels(ExtraIcons.glassLevel) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour, it) }
+            Spacer(Modifier.height(8.dp))
+            Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
+            Spacer(Modifier.height(8.dp))
+            ColourPicker(ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
             Spacer(Modifier.height(6.dp))
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
