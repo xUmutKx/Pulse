@@ -4,11 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.RadialGradient
 import android.graphics.RectF
-import android.graphics.Shader
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -42,8 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +69,8 @@ import kotlinx.coroutines.withContext
  * Icons chosen by hand for the extra apps (and, from Palette, for any app):
  *  - "pack|<package>|<drawable>": a picture from an icon pack installed on the phone (read from that pack at run time, nothing is copied into Pulse);
  *  - "make|<style>|<glyph>|<background>|<ink>|<shape>": drawn by Pulse's icon maker from its own Fluent glyphs (MIT): "line" is a line icon on a plain
- *    background (black by default, the Blaux Black look), "glass" a frosted, lit disc in the chosen colour with a white glyph (the Material glass look).
+ *    background (black by default, the Blaux Black look), "glass" the Material glass look (see [glass]).
+ * Rows without a choice show the default look: Material glass in one colour for every row (set on the App icons page), or the look's own icon.
  * The choice is shown in the Extra apps list and can be put on the home screen as a shortcut with that picture.
  */
 object ExtraIcons {
@@ -80,7 +78,7 @@ object ExtraIcons {
     /** The chosen specs by row key, as state: the list redraws when one changes. */
     val specs = mutableStateMapOf<String, String>()
     private var loaded = false
-    fun load(c: Context) { if (loaded) return; loaded = true; sp(c).all.forEach { (k, v) -> (v as? String)?.let { specs[k] = it } } }
+    fun load(c: Context) { if (loaded) return; loaded = true; sp(c).all.forEach { (k, v) -> (v as? String)?.let { specs[k] = it } }; loadLook(c) }
     fun set(c: Context, key: String, spec: String?) {
         if (spec.isNullOrEmpty()) { specs.remove(key); sp(c).edit().remove(key).apply() } else { specs[key] = spec; sp(c).edit().putString(key, spec).apply() }
     }
@@ -95,7 +93,7 @@ object ExtraIcons {
         val b = runCatching {
             when (p.getOrNull(0)) {
                 "pack" -> packPicture(c, p[1], p[2], p.getOrElse(3) { "" }, px)
-                "make" -> make(p[1], p[2], p[3].toLong(16).toInt(), p[4].toLong(16).toInt(), p.getOrElse(5) { "squircle" }, px)
+                "make" -> make(c, p[1], p[2], p[3].toLong(16).toInt(), p[4].toLong(16).toInt(), p.getOrElse(5) { "squircle" }, px)
                 else -> null
             }
         }.getOrNull()
@@ -114,63 +112,142 @@ object ExtraIcons {
         return out
     }
 
-    /** A pack picture in its look: "glass:<colour>" is the Material glass tile (transparent around it), the other looks as [tinted]. */
+    /** A pack picture in its look: "glass:<colour>" is Material glass (the shape of the pack picture as the glyph), the other looks as [tinted]. */
     fun packPicture(c: Context, pkg: String, name: String, t: String, px: Int): Bitmap? {
         val d = IconPackCache.get(c, pkg)?.drawable(name) ?: return null
-        if (t.startsWith("glass")) return glassPicture(d, t.substringAfter(':', ""), px)
+        if (t.startsWith("glass")) return glass(c, packGlyph(d), colourOf(t.substringAfter(':', "")), px)
         return tinted(d.toBitmap(px, px, Bitmap.Config.ARGB_8888), t)
     }
 
-    /** The Material glass look of a pack picture: the maker's glass disc in the colour (the accent when [hex] is empty), the picture in its own colours on it. */
-    fun glassPicture(d: android.graphics.drawable.Drawable, hex: String, px: Int): Bitmap {
-        val colour = hex.takeIf { it.length == 8 }?.toLong(16)?.toInt() ?: Look.accent.toArgb()
+    /** An ARGB colour from 8 hex digits, the accent when it is not one. */
+    fun colourOf(hex: String): Int = hex.takeIf { it.length == 8 }?.toLongOrNull(16)?.toInt() ?: Look.accent.toArgb()
+
+    /*
+     * Material glass, drawn the way the glass icon pack draws its icons: three pictures over one another at the same size, each tinted.
+     *  gl_bg: the frosted body (white, about half see-through, a soft squircle); gl_light: its bright rim and sheen; then the glyph (a white mask
+     *  with the glyph already at its place) in a light tone of the colour. The body takes a lighter tone of the colour, so the glass is tinted
+     *  and what is behind it shows through.
+     */
+    private val layerCache = android.util.LruCache<Int, Bitmap>(48)
+    private fun resBitmap(c: Context, id: Int): Bitmap? =
+        layerCache.get(id) ?: runCatching { android.graphics.BitmapFactory.decodeResource(c.resources, id) }.getOrNull()?.also { layerCache.put(id, it) }
+
+    /** The Material glass icon of [glyph] (an alpha mask at the icon's full size) in [colour], at [px] pixels. */
+    fun glass(c: Context, glyph: Bitmap?, colour: Int, px: Int): Bitmap? {
+        val body = resBitmap(c, com.umutk.pulse.R.drawable.gl_bg) ?: return null
+        val light = resBitmap(c, com.umutk.pulse.R.drawable.gl_light)
+        val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val cv = Canvas(out)
+        val dst = android.graphics.Rect(0, 0, px, px)
+        val pt = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        fun layer(b: Bitmap, tint: Int) {
+            pt.colorFilter = android.graphics.PorterDuffColorFilter(tint, android.graphics.PorterDuff.Mode.SRC_IN)
+            cv.drawBitmap(b, null, dst, pt)
+        }
+        layer(body, blend(colour, WHITE, .55f))
+        if (light != null) layer(light, WHITE)
+        if (glyph != null) layer(glyph, blend(colour, WHITE, .45f))
+        return out
+    }
+
+    private const val WHITE = 0xFFFFFFFF.toInt()
+
+    /** A Fluent glyph as a white mask at its place in the glass (the size of the pack's own glyphs). The holes of a glyph stay holes. */
+    fun fluentGlyph(glyph: String, px: Int = 256): Bitmap? {
+        val paths = com.umutk.pulse.FluentPaths.map[glyph] ?: return null
         val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val cv = Canvas(b)
-        val f = px.toFloat()
-        glassDisc(cv, RectF(0f, 0f, f, f), f * .24f, colour, f)
-        val inset = (px * .2f).toInt()
-        d.setBounds(inset, inset, px - inset, px - inset)
-        d.draw(cv)
+        val pt = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = WHITE }
+        val s = px * .56f / 24f
+        cv.translate((px - 24f * s) / 2f, (px - 24f * s) / 2f); cv.scale(s, s)
+        paths.forEach { d ->
+            runCatching { androidx.core.graphics.PathParser.createPathFromPathData(d) }.getOrNull()
+                ?.let { it.fillType = android.graphics.Path.FillType.EVEN_ODD; cv.drawPath(it, pt) }
+        }
         return b
+    }
+
+    /** The shape of a pack picture as a white mask, found against the picture's own backplate and placed like the pack's glyphs. */
+    private fun packGlyph(d: android.graphics.drawable.Drawable, px: Int = 256): Bitmap {
+        val m = com.umutk.pulse.extras.palette.core.icon.GlyphExtractor.extract(d, 192).mask
+        val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val side = (px * .47f).toInt(); val o = (px - side) / 2
+        Canvas(b).drawBitmap(m, null, android.graphics.Rect(o, o, o + side, o + side), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        return b
+    }
+
+    /** The glyph of each extra app in the glass look (from the glass icon pack); a row that has none here uses its Fluent glyph. */
+    private val GLASS_GLYPHS: Map<String, Int> by lazy {
+        mapOf(
+            "pulse" to com.umutk.pulse.R.drawable.gl_pulse,
+            "app:MusicLauncher" to com.umutk.pulse.R.drawable.gl_music,
+            "app:VideoLauncher" to com.umutk.pulse.R.drawable.gl_video,
+            "app:FilesLauncher" to com.umutk.pulse.R.drawable.gl_files,
+            "app:PhotosLauncher" to com.umutk.pulse.R.drawable.gl_photos,
+            "app:CalendarLauncher" to com.umutk.pulse.R.drawable.gl_calendar,
+            "app:ContactsLauncher" to com.umutk.pulse.R.drawable.gl_contacts,
+            "app:ArtCraftLauncher" to com.umutk.pulse.R.drawable.gl_art,
+            "app:BrowserLauncher" to com.umutk.pulse.R.drawable.gl_browser,
+            "app:OfficeLauncher" to com.umutk.pulse.R.drawable.gl_office,
+            "tool:office" to com.umutk.pulse.R.drawable.gl_office,
+            "app:MessagesLauncher" to com.umutk.pulse.R.drawable.gl_messages,
+            "tool:launcher" to com.umutk.pulse.R.drawable.gl_launcher,
+            "app:PaletteLauncher" to com.umutk.pulse.R.drawable.gl_palette,
+            "tool:troubleshoot" to com.umutk.pulse.R.drawable.gl_troubleshoot,
+            "app:ScreenRecLauncher" to com.umutk.pulse.R.drawable.gl_screenrec,
+            "app:CalculatorLauncher" to com.umutk.pulse.R.drawable.gl_calculator,
+            "app:GameHubLauncher" to com.umutk.pulse.R.drawable.gl_gamehub,
+            "app:ClockLauncher" to com.umutk.pulse.R.drawable.gl_clock,
+            "app:EbookLauncher" to com.umutk.pulse.R.drawable.gl_books,
+            "app:PaintLauncher" to com.umutk.pulse.R.drawable.gl_paint,
+            "app:BlackOutLauncher" to com.umutk.pulse.R.drawable.gl_blackout,
+            "app:VoiceLauncher" to com.umutk.pulse.R.drawable.gl_voice,
+            "app:NotesLauncher" to com.umutk.pulse.R.drawable.gl_notes,
+            "app:WeatherLauncher" to com.umutk.pulse.R.drawable.gl_weather,
+            "tool:download" to com.umutk.pulse.R.drawable.gl_download,
+            "tool:health" to com.umutk.pulse.R.drawable.gl_health,
+            "tool:installer" to com.umutk.pulse.R.drawable.gl_installer,
+            "tool:goodlock" to com.umutk.pulse.R.drawable.gl_goodlock,
+        )
+    }
+
+    // the default look of the rows that have no choice: Material glass in one colour (on unless turned off on the App icons page)
+    private fun lookSp(c: Context) = c.getSharedPreferences("extra_icons_look", Context.MODE_PRIVATE)
+    var glassOn by mutableStateOf(true)
+        private set
+    var glassColour by mutableIntStateOf(0xFFB388FF.toInt())
+        private set
+    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", true); glassColour = s.getInt("colour", 0xFFB388FF.toInt()) }
+    fun setGlass(c: Context, on: Boolean, colour: Int) { glassOn = on; glassColour = colour; lookSp(c).edit().putBoolean("on", on).putInt("colour", colour).apply() }
+
+    /** The default glass icon of row [key] ([glyph]: its Fluent glyph, for a row the glass pack has no glyph for), or null when there is no glyph. */
+    fun defaultGlass(c: Context, key: String, glyph: String?, colour: Int, px: Int): Bitmap? {
+        val ck = "default|$key|$glyph|$colour@$px"
+        cache.get(ck)?.let { return it }
+        val g = GLASS_GLYPHS[key]?.let { resBitmap(c, it) } ?: glyph?.let { fluentGlyph(it) } ?: return null
+        return glass(c, g, colour, px)?.also { cache.put(ck, it) }
     }
 
     fun makeSpec(style: String, glyph: String, bg: Int, ink: Int, shape: String) =
         "make|$style|$glyph|${Integer.toHexString(bg)}|${Integer.toHexString(ink)}|$shape"
 
-    /** The icon maker: a Fluent glyph (24-unit paths) on a background shape, as a line icon or a glass disc. */
-    fun make(style: String, glyph: String, bg: Int, ink: Int, shape: String, px: Int): Bitmap? {
+    /** The icon maker: a Fluent glyph (24-unit paths) as a line icon on a background shape, or in Material glass ([glass]) in the colour [bg]. */
+    fun make(c: Context, style: String, glyph: String, bg: Int, ink: Int, shape: String, px: Int): Bitmap? {
+        if (style == "glass") return glass(c, fluentGlyph(glyph) ?: return null, bg, px)
         val paths = com.umutk.pulse.FluentPaths.map[glyph] ?: return null
         val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val cv = Canvas(b)
         val pt = Paint(Paint.ANTI_ALIAS_FLAG)
         val r = RectF(0f, 0f, px.toFloat(), px.toFloat())
         val rad = when (shape) { "circle" -> px / 2f; "square" -> px * .08f; else -> px * .24f }
-        if (style == "glass") glassDisc(cv, r, rad, bg, px.toFloat()) else {
-            pt.color = bg; cv.drawRoundRect(r, rad, rad, pt)
-        }
-        // the glyph: 56% of the icon, centred; the glass one gets a faint shadow under it
+        pt.color = bg; cv.drawRoundRect(r, rad, rad, pt)
+        // the glyph: 56% of the icon, centred
         val s = px * .56f / 24f
         cv.save(); cv.translate((px - 24f * s) / 2f, (px - 24f * s) / 2f); cv.scale(s, s)
-        val gl = paths.mapNotNull { runCatching { androidx.core.graphics.PathParser.createPathFromPathData(it) }.getOrNull() }
-        if (style == "glass") {
-            pt.color = 0x33000000; cv.save(); cv.translate(.35f, .5f); gl.forEach { cv.drawPath(it, pt) }; cv.restore()
-        }
-        pt.color = ink; gl.forEach { cv.drawPath(it, pt) }
+        pt.color = ink
+        paths.forEach { d -> runCatching { androidx.core.graphics.PathParser.createPathFromPathData(d) }.getOrNull()?.let { cv.drawPath(it, pt) } }
         cv.restore()
         return b
-    }
-
-    /** The Material glass disc: the colour, lighter at the top left and deeper at the bottom right, a soft white sheen and a thin bright rim. Outside it stays see-through. */
-    private fun glassDisc(cv: Canvas, r: RectF, rad: Float, bg: Int, px: Float) {
-        val pt = Paint(Paint.ANTI_ALIAS_FLAG)
-        val light = blend(bg, 0xFFFFFFFF.toInt(), .35f); val deep = blend(bg, 0xFF000000.toInt(), .35f)
-        pt.shader = LinearGradient(0f, 0f, px, px, light, deep, Shader.TileMode.CLAMP)
-        cv.drawRoundRect(r, rad, rad, pt)
-        pt.shader = RadialGradient(px * .3f, px * .12f, px * .75f, 0x66FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
-        cv.drawRoundRect(r, rad, rad, pt)
-        pt.shader = null; pt.style = Paint.Style.STROKE; pt.strokeWidth = px * .018f; pt.color = 0x55FFFFFF
-        val ri = RectF(r).apply { inset(pt.strokeWidth / 2, pt.strokeWidth / 2) }
-        cv.drawRoundRect(ri, rad, rad, pt)
     }
 
     private fun blend(a: Int, b: Int, t: Float): Int {
@@ -187,13 +264,25 @@ object ExtraIcons {
     }
 }
 
-/** The chosen picture of row [key] at [size], or [fallback] (the look's own icon) when none is chosen. */
+/**
+ * The chosen picture of row [key] at [size]. With none chosen: the default Material glass icon (its glyph from the glass pack, else [glyph], a Fluent
+ * glyph), or [fallback] (the look's own icon) when the glass default is off or there is no glyph.
+ */
 @Composable
-internal fun ExtraIcon(key: String, size: Dp, fallback: @Composable () -> Unit) {
+internal fun ExtraIcon(key: String, size: Dp, glyph: String? = null, fallback: @Composable () -> Unit) {
     val ctx = LocalContext.current
     remember { ExtraIcons.load(ctx) }
     val spec = ExtraIcons.specs[key]
-    if (spec == null) { fallback(); return }
+    if (spec == null) {
+        val on = ExtraIcons.glassOn
+        val colour = ExtraIcons.glassColour
+        val def by produceState<Bitmap?>(null, key, glyph, on, colour) {
+            value = if (on) withContext(Dispatchers.Default) { ExtraIcons.defaultGlass(ctx, key, glyph, colour, 192) } else null
+        }
+        val d = def
+        if (d != null) Image(d.asImageBitmap(), null, Modifier.size(size)) else fallback()
+        return
+    }
     val bmp by produceState<Bitmap?>(null, spec) { value = withContext(Dispatchers.Default) { ExtraIcons.render(ctx, spec) } }
     val b = bmp
     if (b != null) Image(b.asImageBitmap(), null, Modifier.size(size)) else fallback()
@@ -202,6 +291,8 @@ internal fun ExtraIcon(key: String, size: Dp, fallback: @Composable () -> Unit) 
 private val BG_SWATCHES = listOf(0xFF000000, 0xFF121212, 0xFFFFFFFF, 0xFF0B1A3A, 0xFF1B5E20, 0xFF4A148C, 0xFFB71C1C, 0xFF00B0FF).map { it.toInt() }
 /** The colours of the Material Glass presets: a frosted, lit disc in the colour, with a white glyph. */
 private val GLASS_COLORS = listOf(0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047, 0xFF00897B, 0xFF1E88E5, 0xFF8E24AA, 0xFFEC407A).map { it.toInt() }
+/** The Material colours of the glass look (lavender first, the default). */
+private val GLASS_TINTS = listOf(0xFFB388FF, 0xFFFF80AB, 0xFFEA80FC, 0xFF8C9EFF, 0xFF82B1FF, 0xFF80D8FF, 0xFFA7FFEB, 0xFFB9F6CA, 0xFFFFE57F, 0xFFFFD180, 0xFFFF9E80, 0xFFFFFFFF).map { it.toInt() }
 private val INK_SWATCHES = listOf(0xFFFFFFFF, 0xFF00E5FF, 0xFF76FF03, 0xFFFFD600, 0xFFFF6D00, 0xFFFF4081, 0xFFB388FF, 0xFF000000).map { it.toInt() }
 
 /**
@@ -386,22 +477,21 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         StoreHeader(tr("App icons", "Uygulama ikonları"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            // the default look of every row without a choice: Material glass in one colour, or the look's own icon
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PChip(ExtraIcons.glassOn, tr("Material glass", "Material cam")) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour) }
+                PChip(!ExtraIcons.glassOn, tr("Plain", "Sade")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
+            }
+            if (ExtraIcons.glassOn) Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
+            Spacer(Modifier.height(6.dp))
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ExtraIcon(r.key, 36.dp) {
+                    ExtraIcon(r.key, 44.dp, r.glyph) {
                         if (r.key == "pulse") {
                             // Pulse's own icon, as the launcher shows it
                             val own = remember { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
-                            if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
-                        } else Box(
-                            Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
-                                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .28f), Color.White.copy(alpha = .06f))))
-                                .border(1.dp, Color.White.copy(alpha = .3f), RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // the frosted glass tile: a see-through rounded tile with a light rim; the picture of the pack where there is one, else the glyph in white
-                            PACK_DEFAULTS[r.key]?.let { res -> Image(painterResource(res), r.name, Modifier.size(28.dp)) } ?: PIcon(r.glyph, Color.White, 22.dp)
-                        }
+                            if (own != null) Image(own, null, Modifier.size(44.dp).clip(RoundedCornerShape(11.dp)))
+                        } else Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(r.glyph, T.text, 28.dp) }
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))

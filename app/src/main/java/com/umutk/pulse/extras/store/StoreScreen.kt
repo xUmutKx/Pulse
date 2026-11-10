@@ -483,7 +483,7 @@ private fun BuiltinRows() {
                     hidden = if (isHidden) hidden - key else hidden + key
                     ExtraRowsHidden.save(ctx, hidden)
                 }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    ExtraIcon(r.place ?: r.name, 34.dp) { PIcon(rowKey(r), T.text, 34.dp) }
+                    ExtraIcon(r.place ?: r.name, 34.dp, r.icon) { PIcon(rowKey(r), T.text, 34.dp) }
                     Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
                 }
             }
@@ -496,7 +496,7 @@ private fun BuiltinRows() {
             hidden = if (isHidden) hidden - key else hidden + key
             ExtraRowsHidden.save(ctx, hidden)
         }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            ExtraIcon(r.place ?: r.name, 26.dp) { PIcon(rowKey(r), T.text, 26.dp) }
+            ExtraIcon(r.place ?: r.name, 26.dp, r.icon) { PIcon(rowKey(r), T.text, 26.dp) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
