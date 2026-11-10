@@ -90,7 +90,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val arr = JSONArray()
         // the same rule as the library: a hidden game shows only while "show hidden games" is on (hiding itself stays Game Hub's: pm hide, shown for its start)
         val showHidden = prefs(c).getBoolean("showHidden", true)
-        loadGames(c).filter { showHidden || it.pkg !in hidden }.forEach { g ->
+        // in the mix the shelf is in colour groups (Steam, PS5, Switch, Xbox Series), each group in the order of the library
+        loadGames(c).filter { showHidden || it.pkg !in hidden }.sortedBy { CaseCover.groupOf(c, it.pkg) }.forEach { g ->
             val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
