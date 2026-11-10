@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.webkit.JavascriptInterface
+import com.umutk.pulse.Compat
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -128,10 +129,19 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             "start" -> p.getInt(key, 1).toString()
             "showHidden" -> p.getBoolean(key, true).toString()
             "playCovers" -> p.getBoolean(key, false).toString()
+            "boxStyle" -> CaseCover.style(c)
+            "menu" -> GameMenuService.enabled(c).toString()
+            "coversRunning" -> CoverJob.running.value.toString()
             else -> ""
         }
     }
     @JavascriptInterface fun ghSet(key: String, value: String) {
+        // the box style applies to every game's box (made again in the background); the menu asks for its permissions first
+        if (key == "boxStyle") {
+            if (value in CaseCover.STYLES) { CaseCover.setStyle(c, value); val pkgs = loadGames(c).map { it.pkg }; Thread { CaseCover.applyAll(c, pkgs, value) }.start() }
+            return
+        }
+        if (key == "menu") { setMenu(value == "true"); return }
         val e = prefs(c).edit()
         when (key) {
             "caseStyle", "sgdbKey" -> e.putString(key, value)
@@ -140,6 +150,29 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             else -> return
         }
         e.apply()
+    }
+    private fun setMenu(on: Boolean) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            if (on && !Compat.canOverlay(c)) {
+                runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + c.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                return@post
+            }
+            if (on && !usageAllowed(c)) {
+                runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                return@post
+            }
+            prefs(c).edit().putBoolean("menu", on).apply()
+            if (on) GameMenuService.start(c) else GameMenuService.stop(c)
+        }
+    }
+    /** Game Hub's cover search, started and stopped from Boxshelf's Settings page (the key is needed first, as on the Game Hub page). */
+    @JavascriptInterface fun ghRun(action: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            when (action) {
+                "lookCovers" -> if (sgdbKey(c).isNotEmpty()) CoverJob.start(c, loadGames(c))
+                "stopCovers" -> CoverJob.cancel()
+            }
+        }
     }
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
