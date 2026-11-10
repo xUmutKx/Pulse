@@ -736,7 +736,7 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     val hiddenList = hiddenPkgs.map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }
     val visible = apps.filter { it.pkg !in hiddenPkgs && it.name.contains(query, true) }
     fun changed() { hiddenPkgs = hiddenSet(ctx); tick++; onChanged() }
-    Dialog(onDismissRequest = onClose) {
+    Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
             item { Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp) }
             item {
@@ -750,20 +750,36 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
                     GameIcon(h.pkg, pal)
                     Spacer(Modifier.width(10.dp))
                     Text(h.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    PSwitch(true, { want -> if (!want && setGameHidden(ctx, h.pkg, false)) changed() })
+                    GhSwitch(true, pal) { want -> if (!want && setGameHidden(ctx, h.pkg, false)) changed() }
                 }
             }
-            item { PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
+            item { GhField(query, { query = it }, tr("Search apps", "Uygulama ara"), pal, Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
             items(visible, key = { it.pkg }) { a ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     GameIcon(a.pkg, pal)
                     Spacer(Modifier.width(10.dp))
                     Text(a.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    PSwitch(false, { want -> if (want && setGameHidden(ctx, a.pkg, true)) changed() })
+                    GhSwitch(false, pal) { want -> if (want && setGameHidden(ctx, a.pkg, true)) changed() }
                 }
             }
         }
     }
+}
+
+/** A switch in the Game Hub look: on = the look's text colour, the thumb in the look's ground colour. */
+@Composable
+private fun GhSwitch(on: Boolean, pal: Pal, onChange: (Boolean) -> Unit) {
+    androidx.compose.material3.Switch(checked = on, onCheckedChange = onChange, colors = androidx.compose.material3.SwitchDefaults.colors(
+        checkedThumbColor = pal.bg, checkedTrackColor = pal.text, checkedBorderColor = pal.text,
+        uncheckedThumbColor = pal.sub, uncheckedTrackColor = pal.card, uncheckedBorderColor = pal.sub))
+}
+
+/** A text field in the Game Hub look (its text, its line and its cursor follow the look). */
+@Composable
+private fun GhField(value: String, onChange: (String) -> Unit, label: String, pal: Pal, modifier: Modifier = Modifier) {
+    androidx.compose.material3.OutlinedTextField(value, onChange, modifier, singleLine = true, label = { Text(label, color = pal.sub) },
+        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = pal.text, unfocusedTextColor = pal.text,
+            focusedBorderColor = pal.text, unfocusedBorderColor = pal.sub, cursorColor = pal.text, focusedContainerColor = pal.bg, unfocusedContainerColor = pal.bg))
 }
 
 private val PAGE_TITLES = listOf("Home", "Library", "Settings")
