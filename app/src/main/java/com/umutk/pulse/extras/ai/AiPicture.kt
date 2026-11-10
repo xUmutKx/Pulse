@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 
 /** A picture for the vision model: its bytes as a JPEG no larger than 768 pixels (the model shrinks it anyway, so this is quicker). */
-/** A picture for the vision model: its bytes as a JPEG no larger than 768 pixels (the model shrinks it anyway, so this is quicker). */
 internal fun pictureFrom(c: Context, u: Uri): Pair<String, ByteArray>? = runCatching {
     val name = c.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "picture"
     val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
