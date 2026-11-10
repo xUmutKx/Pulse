@@ -84,6 +84,12 @@ const A=(label,btn,info,run,x={})=>({t:"action",label,btn,info,run,...x});
 const F=(label,path,kind,info,x={})=>({t:"path",label,kind,info,...bindv(path,""),d:undefined,...x});
 const X=(label,path,info,x={})=>({t:"text",label,info,...bindv(path,""),d:undefined,...x});
 const H=(text,x={})=>({t:"head",text,...x});
+// Game Hub's own settings: the values live in Game Hub's preferences (api.ghGet / api.ghSet), typed like the page that shows them
+const ghv=(key,def)=>{const conv=v=>typeof def==="number"?Number(v):typeof def==="boolean"?v==="true":v;
+  return {path:"gh."+key,d:def,get:()=>{const v=api.ghGet?api.ghGet(key):"";return v===""||v==null?def:conv(v)},set:v=>{if(api.ghSet)api.ghSet(key,typeof v==="boolean"?String(v):v)}}};
+const GHC=(label,key,opts,def,info,x={})=>({t:"choice",label,opts,info,...ghv(key,def),...x});
+const GHT=(label,key,def,info,x={})=>({t:"toggle",label,info,...ghv(key,def),...x});
+const GHX=(label,key,info,x={})=>({t:"text",label,info,...ghv(key,""),d:undefined,...x});
 // a sub-page inside a section (the rarely-used rows, so each page stays short): the row opens {kind:"more",id}, B comes
 // back to it. MORE is rebuilt with SECTIONS (build()); search and the deep links look inside these pages too.
 let MORE={};
@@ -351,6 +357,21 @@ function build(){
     svcRow("fanart","Official disc art and logos for the museum's movie shelves.","api key movies fanart"),
     svcRow("steamgriddb","Community-made posters, offered in Art Studio next to the real box scans.","api key steamgriddb steam grid posters art studio"),
     svcRow("screenscraper","Box fronts, backs, full wraps (for spines) and disc / cartridge art by region, offered in Art Studio.","screenscraper screen scraper account art studio box back spine disc"),
+  ]},
+  {g:"Game Hub",id:"gamehub",name:"Game Hub",ic:"games",lead:"Game Hub's own settings: the library, the icons, the covers and the start page. The same values as in Game Hub.",rows:[
+    H("Library"),
+    GHC("Tile size","grid",[[0,"Small"],[1,"Medium"],[2,"Large"]],0,"The size of each game in the library."),
+    GHC("View","view",[[0,"Tiles"],[1,"Banners"]],0,"Tiles or wide banners in the library."),
+    GHT("Show hidden games in All games","showHidden",true,"Hidden games are listed in All games too."),
+    H("Icons"),
+    GHC("Icons","iconMode",[[0,"Cover, else APK icon"],[1,"APK icon only"]],0,"What each game shows: its cover, or its app icon when it has none."),
+    H("Start page"),
+    GHC("Start page","start",[[0,"Home"],[1,"Library"]],1,"The page Game Hub opens on."),
+    H("Covers"),
+    GHT("Fetch covers from Google Play","playCovers",false,"A cover from Google Play when Steam has none."),
+    GHX("SteamGridDB key (more covers)","sgdbKey","Your own free SteamGridDB key, for more covers. Stored on this device.",{secret:true,ph:"Not set"}),
+    H("Case style"),
+    GHC("Case style","caseStyle",[["pc","PC / Steam"],["custom","Custom"],["ps5","PS5"],["ps4","PS4"],["x360","Xbox 360"],["sw","Switch"]],"pc","The box style of the games on the shelf."),
   ]},
   {g:"System",id:"phone",name:"Phone companion",ic:"phone",dot:()=>phone&&phone.on?"ok":phone&&phone.enabled&&phone.error?"warn":null,lead:"Browse your games on your phone, start one on the TV, read its manual, and use the phone as a remote and keyboard. The phone has to be on the same Wi-Fi as this PC.",rows:[
     {t:"toggle",label:"Phone companion",info:"Runs a small web page on your home network for paired phones. Only phones that scanned the code (or typed the PIN) can use it; nothing is reachable from the internet. Windows may ask the first time whether to allow Boxshelf on your network: choose Private networks.",get:()=>!!(phone&&phone.enabled),set:setPhone,nosave:true,keys:"phone mobile remote companion qr pair wifi app",when:()=>!!api.companionSet},
