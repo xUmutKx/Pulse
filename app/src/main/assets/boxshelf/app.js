@@ -546,6 +546,7 @@ function updateInfo(){pvBackSchedule();
     renderHints();return}
   $("gTitle").textContent=g.title;
   // Pulse's apps: the app's own icon beside the title (the cover is the game's own picture, never the icon)
+  if(g.pulse&&g.art&&g.art.appIcon){const im=document.createElement("img");im.className="g-ico";im.alt="";im.src=g.art.appIcon;$("gTitle").prepend(im)}
   const raw=rawItem(),meta=raw&&raw!==g?["Surprise pick · "+(raw.pick.sh||shelves[raw.pick.shelf]).name,...metaFor(g).slice(0,2),rerollWord()]:metaFor(g);
   const m=$("gMeta");m.innerHTML="";meta.forEach(t=>{const sp=document.createElement("span");sp.textContent=t;m.appendChild(sp)});
   const rise=[{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"none"}],ro={duration:450,easing:"cubic-bezier(.22,.9,.25,1)"};
