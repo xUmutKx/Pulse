@@ -444,6 +444,26 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
                 ShelfPill(if (fav) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori"), false, pal) { toggleFav(ctx, g.pkg); fav = g.pkg in favSet(ctx) }
                 ShelfPill(tr("Data folder", "Data klasörü"), false, pal) { openDataFolder(ctx, g.pkg) }
             }
+            // this game's cover, looked for by its name (SteamGridDB with the key, then Steam)
+            var looking by remember(g.pkg) { mutableStateOf(false) }
+            var coverMsg by remember(g.pkg) { mutableStateOf("") }
+            val lookScope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.card).clickable {
+                    if (!looking) {
+                        if (sgdbKey(ctx).isEmpty() && !steamCoverFile(ctx, g.pkg).isFile) { coverMsg = tr("Enter the SteamGridDB key in Game Hub settings first", "Önce Game Hub ayarlarında SteamGridDB anahtarını gir"); return@clickable }
+                        looking = true; coverMsg = ""
+                        lookScope.launch {
+                            val ok = withContext(kotlinx.coroutines.Dispatchers.IO) { fetchBestCover(ctx, g) }
+                            looking = false
+                            if (ok) { GameArt.version.intValue++; coverMsg = tr("Cover found", "Kapak bulundu") } else coverMsg = tr("No cover found for this game", "Bu oyun için kapak bulunamadı")
+                        }
+                    }
+                }.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
+                    Text(if (looking) tr("Looking…", "Aranıyor…") else tr("Look for cover", "Kapak ara"), color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (coverMsg.isNotEmpty()) Text(coverMsg, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.card).clickable { uninstallGame(ctx, g.pkg) }.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
                     Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
