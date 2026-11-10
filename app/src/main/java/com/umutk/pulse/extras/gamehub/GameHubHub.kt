@@ -94,6 +94,7 @@ import com.umutk.pulse.PSwitch
 import com.umutk.pulse.extras.blackout.Privilege
 import com.umutk.pulse.Compat
 import com.umutk.pulse.tr
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1121,27 +1122,27 @@ fun GameHubHub(onBack: () -> Unit) {
                     var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
                     SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
-                    // the covers of every game that has none: from SteamGridDB (with the key above) and Steam, by the game's name
-                    var lookBusy by remember { mutableStateOf(false) }
+                    // the covers of every game that has none: from SteamGridDB (with the key above) and Steam, by the game's name; it runs in the background (CoverJob)
                     var lookMsg by remember { mutableStateOf("") }
-                    Chip(pal, if (lookBusy) tr("Looking…", "Aranıyor…") else tr("Look for covers", "Kapak ara")) {
-                        if (!lookBusy) {
-                            if (sgdbKey(ctx).isEmpty()) { lookMsg = tr("Enter the SteamGridDB key first (it adds more covers)", "Önce SteamGridDB anahtarını gir (daha çok kapak için)"); return@Chip }
-                            lookBusy = true; lookMsg = ""
-                            scope.launch {
-                                val got = withContext(Dispatchers.IO) {
-                                    var n = 0
-                                    for (g in games) {
-                                        if (coverFile(ctx, g.pkg).isFile) continue   // a cover the person chose is kept
-                                        if (fetchBestCover(ctx, g)) { n++; GameArt.version.intValue++ }
-                                    }
-                                    n
-                                }
-                                lookBusy = false
-                                lookMsg = if (got > 0) tr("$got covers found", "$got kapak bulundu") else tr("No covers found for these games", "Bu oyunlar için kapak bulunamadı")
-                            }
+                    val lookRunning by CoverJob.running.collectAsState()
+                    val lookDone by CoverJob.done.collectAsState()
+                    val lookTotal by CoverJob.total.collectAsState()
+                    val lookFound by CoverJob.found.collectAsState()
+                    Chip(pal, if (lookRunning) tr("Stop", "Durdur") else tr("Look for covers", "Kapak ara")) {
+                        if (lookRunning) CoverJob.cancel()
+                        else if (sgdbKey(ctx).isEmpty()) lookMsg = tr("Enter the SteamGridDB key first (it adds more covers)", "Önce SteamGridDB anahtarını gir (daha çok kapak için)")
+                        else {
+                            lookMsg = ""
+                            CoverJob.start(ctx, games)
                         }
                     }
+                    if (lookRunning) {
+                        Text(tr("Looking… $lookDone of $lookTotal · $lookFound covers", "Aranıyor… $lookDone / $lookTotal · $lookFound kapak"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(pal.sub.copy(alpha = .25f))) {
+                            Box(Modifier.fillMaxWidth(if (lookTotal > 0) lookDone.toFloat() / lookTotal else 0f).height(4.dp).background(pal.accent))
+                        }
+                    }
+                    if (!lookRunning && lookTotal > 0) Text(tr("$lookFound covers found", "$lookFound kapak bulundu"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     if (lookMsg.isNotEmpty()) Text(lookMsg, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     Spacer(Modifier.height(24.dp))
                 }

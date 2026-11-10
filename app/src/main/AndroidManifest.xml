@@ -627,6 +627,7 @@
         <!-- Pulse AI's floating mascot over the other apps (extras/ai/AiBuddy.kt) -->
         <service android:name="com.umutk.pulse.extras.ai.AiBuddyService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.extras.music.CoverRepairService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name="com.umutk.pulse.extras.gamehub.CoverService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.FileOpService" android:exported="false" android:foregroundServiceType="dataSync" />
         <!-- Relay (extras/relay): keeps the phone listening for files and text from paired devices while the app is closed -->
