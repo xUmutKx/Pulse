@@ -350,7 +350,6 @@ function mount(s){
   const os=cur()===HOME?stOf(g):sh;if(os!==sh){slot.style.setProperty("--bw",`calc(var(--ch) * ${os.ratio})`);slot.style.setProperty("--bd",`calc(var(--ch) * ${os.ratio*os.depth})`);slot.style.setProperty("--edge",`calc(var(--ch) * ${os.ratio*os.edge})`);slot.style.setProperty("--rc",`calc(var(--ch) * ${os.ratio*(os.rc||.03)})`);slot.style.setProperty("--re",`calc(var(--ch) * ${os.ratio*os.depth*(os.re||.3)})`);slot.style.setProperty("--case",os.caseColor);slot.style.setProperty("--case-side",os.caseSide);slot.style.setProperty("--spine-ink",os.spineInk)}
   if(isFav(g))slot.classList.add("fav");
   // Pulse's own app icon, small under the cover, on a store picture (a cover made from the icon already has it)
-  if(g.pulse&&g.art&&g.art.appIcon&&g.art.front&&!g.art.gen){const bi=document.createElement("img");bi.className="cover-ico";bi.alt="";bi.draggable=false;bi.src=g.art.appIcon;slot.querySelector(".f-front").appendChild(bi)}
   slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=os.spineBand.bg;band.style.color=os.spineBand.fg;band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":os.spineBand.label});
   slot.querySelectorAll(".spine-title").forEach(t=>t.textContent=g.title);
   // (beta.10) Android: the spine's small copy sized like the front's (thumb), not the 1024 px display copy, on every case made
@@ -547,7 +546,6 @@ function updateInfo(){pvBackSchedule();
     renderHints();return}
   $("gTitle").textContent=g.title;
   // Pulse's apps: the app's own icon beside the title (the cover is the game's own picture, never the icon)
-  if(g.pulse&&g.art&&g.art.appIcon){const im=document.createElement("img");im.className="g-ico";im.alt="";im.src=g.art.appIcon;$("gTitle").prepend(im)}
   const raw=rawItem(),meta=raw&&raw!==g?["Surprise pick · "+(raw.pick.sh||shelves[raw.pick.shelf]).name,...metaFor(g).slice(0,2),rerollWord()]:metaFor(g);
   const m=$("gMeta");m.innerHTML="";meta.forEach(t=>{const sp=document.createElement("span");sp.textContent=t;m.appendChild(sp)});
   const rise=[{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"none"}],ro={duration:450,easing:"cubic-bezier(.22,.9,.25,1)"};
