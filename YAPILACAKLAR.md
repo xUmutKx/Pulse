@@ -2379,3 +2379,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: beyaz vurgu, AMOLED anahtarı kaldırıldı, + açılış animasyonunu bekliyor, kapak otomatik çekilmiyor.
 - Uygulama yöneticisi: Game Hub'ın gizlediği uygulamalar listeleniyor.
 - Boyut: gym 200 egzersiz, ikonlar WebP, CPU varyantları azaltıldı.
+
+## 1.0.387 (derlendi)
+- Pulse AI: model ayarı, resim albümleme kaldırıldı, çekmece Modeller geri geldi.
+- Dosyalar: dex görüntüleyici, HTML/SVG/MHTML, zip ve 7z düzeltmeleri, yeni sıkıştırma eski sonucu temizliyor.
+- İkon paketi: siyah beyaz ve renk seçimi, siyah önizleme.
+- ArtCraft: eksik ikonlar APK'dan.
+- Game Hub: çift tık istatistik, oyunu sil, kapak ara, siyah-beyaz tema, SteamGridDB anahtarı.
+- Bluetooth otomatik müzik: bağlantı hazır olunca, bir kez, başka bir şey çalmıyorken.
+- Telefon dikey: ayar sayfaları ve konsol görünümü sığıyor.
