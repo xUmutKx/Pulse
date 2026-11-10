@@ -154,34 +154,32 @@ private fun splitVolumes(archive: File, size: Long, cancelled: () -> Boolean) {
 private fun zipWrite(job: ZipJob) {
     if (job.kind == "7z") return sevenZWrite(job)
     if (job.password.isNotEmpty()) return zip4jWrite(job)
-    val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(threads)
-    try {
-        val creator = org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator(
-            pool,
-            org.apache.commons.compress.parallel.ScatterGatherBackingStoreSupplier { org.apache.commons.compress.parallel.FileBasedScatterGatherBackingStore(File.createTempFile("pzip", ".tmp")) },
-            3,
-        )
+    // the zip is written with the phone's own zip classes (java.util.zip): the commons-compress parallel writer threw
+    // ExceptionInInitializerError on some phones. One file after the other; the progress is counted as the bytes are read.
+    ZipOutputStream(java.io.BufferedOutputStream(job.target.outputStream(), 256 * 1024)).use { zos ->
         for (f in job.files) {
             val root = f.parentFile ?: job.target.absoluteFile.parentFile
             f.walkTopDown().forEach { e ->
                 if (job.cancelled) throw ZipCancelled()
                 val rel = e.relativeTo(root).path.replace(File.separatorChar, '/')
-                val ze = org.apache.commons.compress.archivers.zip.ZipArchiveEntry(if (e.isDirectory) "$rel/" else rel)
+                val ze = ZipEntry(if (e.isDirectory) "$rel/" else rel)
                 ze.time = e.lastModified()
                 if (e.isDirectory) {
-                    ze.method = ZipEntry.STORED
-                    creator.addArchiveEntry(ze, org.apache.commons.compress.parallel.InputStreamSupplier { java.io.ByteArrayInputStream(ByteArray(0)) })
+                    zos.putNextEntry(ze); zos.closeEntry()
                 } else {
-                    ze.method = if (e.extension.lowercase() in ZIP_PACKED) ZipEntry.STORED else ZipEntry.DEFLATED
-                    creator.addArchiveEntry(ze, org.apache.commons.compress.parallel.InputStreamSupplier { CountingIn(e, job) })
+                    if (e.extension.lowercase() in ZIP_PACKED) {
+                        // a stored entry must say its size and checksum before its data
+                        val crc = java.util.zip.CRC32()
+                        e.inputStream().buffered().use { ins -> val buf = ByteArray(64 * 1024); while (true) { val n = ins.read(buf); if (n < 0) break; crc.update(buf, 0, n) } }
+                        ze.method = ZipEntry.STORED; ze.size = e.length(); ze.compressedSize = e.length(); ze.crc = crc.value
+                    } else ze.method = ZipEntry.DEFLATED
+                    zos.putNextEntry(ze)
+                    CountingIn(e, job).use { ins -> ins.copyTo(zos) }
+                    zos.closeEntry()
                 }
             }
         }
-        try {
-            org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream(job.target).use { zos -> creator.writeTo(zos) }
-        } catch (x: java.util.concurrent.ExecutionException) { throw (x.cause ?: x) }
-    } finally { pool.shutdownNow() }
+    }
 }
 
 /** A zip with a password: AES-256 encrypted entries, written by zip4j one item after the other; the progress is read from its monitor by a helper thread. */
