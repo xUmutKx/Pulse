@@ -369,27 +369,6 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         if (spec != null && pv != null) Image(pv.asImageBitmap(), null, Modifier.size(64.dp)) else PIcon(glyph, Color.White, 40.dp)
                     }
                 }
-                // the review: the same icon in each look, on black (a tap picks that look)
-                val variants = remember(spec, glyphKey, tab) {
-                    val s = spec
-                    if (s != null && s.startsWith("pack|")) {
-                        val base = s.split('|').take(3).joinToString("|")
-                        listOf(tr("Colour", "Renkli") to base, tr("B&W", "Siyah beyaz") to "$base|bw",
-                            tr("Accent", "Vurgu") to "$base|${"%08x".format(Look.accent.toArgb())}", tr("White", "Beyaz") to "$base|ffffffff",
-                            tr("Material glass", "Material cam") to "$base|glass:${"%08x".format(Look.accent.toArgb())}")
-                    } else listOf("AMOLED" to ExtraIcons.makeSpec("line", glyphKey, 0xFF000000.toInt(), Look.accent.toArgb(), "squircle"),
-                        "Material Glass" to ExtraIcons.makeSpec("glass", glyphKey, Look.accent.toArgb(), 0xFFFFFFFF.toInt(), "squircle"),
-                        tr("Light", "Açık") to ExtraIcons.makeSpec("line", glyphKey, 0xFFFFFFFF.toInt(), 0xFF000000.toInt(), "squircle"),
-                        tr("Dark", "Koyu") to ExtraIcons.makeSpec("line", glyphKey, 0xFF121212.toInt(), 0xFFFFFFFF.toInt(), "squircle"))
-                }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    variants.forEach { (label, vs) ->
-                        Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable { spec = vs }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            ReviewIcon(ctx, vs, 52.dp)
-                            Text(label, color = if (spec == vs) Look.accent else T.sub, fontSize = 11.sp, maxLines = 1)
-                        }
-                    }
-                }
                 // the three choices on their own row (scrolls when narrow), so no label is squeezed into a column
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
@@ -414,6 +393,11 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         }
                         Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
                         Swatches((GLASS_COLORS + Look.accent.toArgb() + 0xFFFFFFFF.toInt()), if (tint.startsWith("glass")) glassArgb else if (tint.length == 8) tint.toLong(16).toInt() else 0) { c ->
+                            val hex = "%08x".format(c)
+                            setTint(if (tint.startsWith("glass")) "glass:$hex" else hex)
+                        }
+                        // any colour of its own, for every look of the picture
+                        ColourPicker(if (tint.startsWith("glass")) glassArgb else if (tint.length == 8) tint.toLong(16).toInt() else Look.accent.toArgb()) { c ->
                             val hex = "%08x".format(c)
                             setTint(if (tint.startsWith("glass")) "glass:$hex" else hex)
                         }
