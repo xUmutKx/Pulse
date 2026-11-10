@@ -270,6 +270,12 @@ function ambient(on){mmWant=!!on;if(!window.Sound)return;const m=mmPick(),lv=mmV
 const sfx={tick:(dir)=>play_("tick",{dir}),flip:()=>play_("flip"),sys:(dir)=>play_("shelf",{dir}),go:()=>play_("go"),back:()=>play_("back")};
 
 /* ---------- cover images ---------- */
+// a Pulse app with no picture of its own gets the cover with its own icon as the picture inside (one of the six designs, by its title):
+// never the generic cover with the play button
+function appFrontAsync(style,g){
+  if(g&&g.pulse&&g.art&&g.art.appIcon&&!g.art.front)return Covers.iconFront(style,g,g.art.appIcon).then(u=>u||Covers.frontAsync(style,g),()=>Covers.frontAsync(style,g));
+  return Covers.frontAsync(style,g);
+}
 function frontUrl(g){return (g.art&&g.art.front)||Covers.front(stOf(g),g)}
 function backUrl(g){
   if(g.art&&g.art.back)return g.art.back;
@@ -418,17 +424,17 @@ function glareAndroid(s,ad,sg,x,ry){
 }
 // Real covers load asynchronously; generated covers are drawn a few per frame so moving never stutters.
 let coverQ=[],coverQRunning=false;
-function setFront(s,g,url,made){if(url&&url.then){const img=s.img;s.coverP=url;url.then(u=>{if(s.img===img&&s.coverP===url&&u)setFront(s,g,u,made)});return}s.coverP=null;url=made?url:thumb(url,bh*OS);s.img.decoding="async";s.img.onerror=made?null:()=>{s.img.onerror=null;setFront(s,g,ANDROID&&Covers.frontAsync?Covers.frontAsync(stOf(g),g):Covers.front(stOf(g),g),true)};s.img.src=url} /* (a picture that won't load: the made-up cover is encoded in the worker, not on this thread mid-slide; made: never retried) */
+function setFront(s,g,url,made){if(url&&url.then){const img=s.img;s.coverP=url;url.then(u=>{if(s.img===img&&s.coverP===url&&u)setFront(s,g,u,made)});return}s.coverP=null;url=made?url:thumb(url,bh*OS);s.img.decoding="async";s.img.onerror=made?null:()=>{s.img.onerror=null;setFront(s,g,ANDROID&&Covers.frontAsync?appFrontAsync(stOf(g),g):Covers.front(stOf(g),g),true)};s.img.src=url} /* (a picture that won't load: the made-up cover is encoded in the worker, not on this thread mid-slide; made: never retried) */
 function queueCover(s,g,dist){
   if(g.art&&g.art.front){setFront(s,g,g.art.front);return}
-  if(dist===0){setFront(s,g,Covers.frontAsync(stOf(g),g));return}
+  if(dist===0){setFront(s,g,appFrontAsync(stOf(g),g));return}
   coverQ.push({s,g,dist});coverQ.sort((a,b)=>a.dist-b.dist);
   if(!coverQRunning){coverQRunning=true;requestAnimationFrame(drainCovers)}
 }
 function drainCovers(){
   const t0=performance.now();
   // one generated cover per frame at most (a single one can take most of a frame); skip ones already scrolled away
-  while(coverQ.length&&performance.now()-t0<4){const {s,g}=coverQ.shift();if(s.el&&s.el.isConnected){setFront(s,g,Covers.frontAsync(stOf(g),g));break}}
+  while(coverQ.length&&performance.now()-t0<4){const {s,g}=coverQ.shift();if(s.el&&s.el.isConnected){setFront(s,g,appFrontAsync(stOf(g),g));break}}
   if(coverQ.length)requestAnimationFrame(drainCovers);else coverQRunning=false;
 }
 // Android: covers arriving from the background box art fetch go onto the cases one at a time, nearest the selection first.
@@ -645,7 +651,7 @@ function updateBg(){
       const show=()=>{if(curGame()===g){a.classList.add("on");bgOff(b)}};(im.decode?im.decode():Promise.resolve()).then(show,show);return}
     a.classList.remove("poster");
     // (Android: a game with no cover picture blurs the made-up cover from the worker's copy, never a fresh synchronous encode)
-    const src=(g.art&&g.art.hero)||(ANDROID&&!(g.art&&g.art.front)?Covers.frontAsync(stOf(g),g):frontUrl(g));
+    const src=(g.art&&g.art.hero)||(ANDROID&&!(g.art&&g.art.front)?appFrontAsync(stOf(g),g):frontUrl(g));
     const blur=u=>tinyBlur(u,d=>{if(curGame()!==g)return;const im=a.querySelector("img");im.src=d||"";a.classList.add("on");bgOff(b)});
     if(src&&src.then)src.then(blur,()=>blur(frontUrl(g)));else blur(src);
   },ANDROID?620:120); /* Android: once the slide (.55 s) has landed. Two screen-sized layers redrawn and cross-fading under the moving cases cost the Thor frames mid-slide; a held stick now changes the backdrop only when you stop */
@@ -852,7 +858,7 @@ function prefetchShelf(sh){
 // the covers around the selection: generated ones drawn now, real ones decoded (or give up after `ms`)
 function coversReady(ms){
   const near=slots.filter(s=>s.el&&Math.abs(s.i-sel)<=4);
-  for(let k=coverQ.length-1;k>=0;k--){const q=coverQ[k];if(Math.abs(q.s.i-sel)<=4){coverQ.splice(k,1);if(q.s.el)setFront(q.s,q.g,Covers.frontAsync(stOf(q.g),q.g))}}
+  for(let k=coverQ.length-1;k>=0;k--){const q=coverQ[k];if(Math.abs(q.s.i-sel)<=4){coverQ.splice(k,1);if(q.s.el)setFront(q.s,q.g,appFrontAsync(stOf(q.g),q.g))}}
   const decoded=()=>Promise.all(near.map(s=>s.img).filter(im=>im&&im.getAttribute("src")).map(im=>im.decode().catch(()=>{})));
   return Promise.race([Promise.all(near.map(s=>s.coverP)).then(decoded),wait(ms)]);
 }
@@ -1410,7 +1416,7 @@ function makeBooklet(g){
       const b=await bookletJpeg(c);c.width=c.height=0;urls.push(URL.createObjectURL(b))};
     const wrap=(x,text,X,Y,maxW,lh,maxLines)=>{const words=String(text||"").split(/\s+/);let line="",y=Y,n=0;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){x.fillText(line,X,y);y+=lh;line=w;if(++n>=maxLines-1)break}else line=t}if(line&&n<maxLines){x.fillText(n>=maxLines-1&&words.length>0?line+"…":line,X,y);y+=lh}return y};
     const band=x=>{x.fillStyle=st.caseColor||"#222";x.fillRect(0,0,W,90);x.fillStyle=(st.band&&st.band.fg)||"#fff";x.font="700 34px Lexend, sans-serif";x.fillText((sh&&sh.name||"").toUpperCase(),48,58)};
-    const front=await load((g.art&&g.art.front)||await Covers.frontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
+    const front=await load((g.art&&g.art.front)||await appFrontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
     // the front, laid out like an original instruction booklet: the box art full-bleed under a thin console band,
     // and a footer strip with "INSTRUCTION BOOKLET" and the console's name, the way the real ones are printed. A small
     // Boxshelf mark in the strip says it's ours, not a scan.
@@ -1894,7 +1900,8 @@ function runBoot(s,done){
   renderWordmark($("bootWord"),s.id,s.name,"");$("bootWord").hidden=!!t.logo;$("bootLogo").hidden=!t.logo;if(t.logo)cleanLogo(t.logo).then(r=>{$("bootLogo").src=r.url;$("bootLogo").classList.toggle("dark-logo",!!r.dark)});
   b.classList.remove("intro");b.classList.add("on");b.setAttribute("aria-hidden","false");
   const intro=()=>{if(!live())return;v.hidden=true;$("bootIntro").hidden=false;void b.offsetWidth;b.classList.add("intro");chime();clearTimeout(bootT);bootT=setTimeout(()=>endBoot(),3100+bootHold())};
-  if(t.boot){$("bootIntro").hidden=true;v.hidden=false;v.src=t.boot;v.muted=!soundOn;applySinkTo(v);v.onended=()=>{if(live())endBoot()};v.onerror=intro;
+  if(t.boot){clearTimeout(bootT);bootT=setTimeout(()=>{if(live())endBoot()},12000); /* a video that never ends (or never starts) must not keep the screen black */
+    $("bootIntro").hidden=true;v.hidden=false;v.src=t.boot;v.muted=!soundOn;applySinkTo(v);v.onended=()=>{if(live())endBoot()};v.onerror=intro;
     const stale=()=>{if(!live())try{v.pause()}catch(e){}}; // a play() that resolves after the boot was skipped must not keep playing hidden
     const p=v.play();if(p&&p.then)p.then(stale,()=>{if(!live())return;v.muted=true;const q=v.play();if(q&&q.then)q.then(stale,intro)})}
   else intro();
@@ -2417,7 +2424,7 @@ function flick(el){if(!el)return;el.classList.remove("flick");void el.offsetWidt
 const coverOf=(sh,g)=>(g.art&&g.art.front)||Covers.front(STYLE[sh.id]||STYLE.media,g);
 const preload=url=>new Promise(r=>{const im=new Image();im.onload=()=>{if(im.decode)im.decode().then(r,r);else r()};im.onerror=()=>r();im.src=url;setTimeout(r,900)}); // (beta.10) decoded too, so the swap costs nothing
 // (beta.10) a reel face's URL: real box art as is; a made-up cover encoded in the worker (never Covers.front mid-roll)
-const coverAsync=(sh,g)=>(g.art&&g.art.front)?Promise.resolve(g.art.front):Covers.frontAsync(STYLE[sh.id]||STYLE.media,g).catch(()=>coverOf(sh,g));
+const coverAsync=(sh,g)=>(g.art&&g.art.front)?Promise.resolve(g.art.front):appFrontAsync(STYLE[sh.id]||STYLE.media,g).catch(()=>coverOf(sh,g));
 // Slot machine on the "Surprise me" tile: its cover flips through random games (from every shelf, or this one),
 // slowing down until it stops on the pick. The tile then shows that game; A plays it, R rolls again.
 async function shuffle(){
@@ -2778,7 +2785,7 @@ function musFindKey(k){const IA=window.BoxshelfIA;if(k==="back"){if(IA&&IA.back&
 let Shelf_setMusLight=null;
 function museumData(){
   return allShelves.filter(sh=>(sh.kind==="console"||sh.kind==="steam")&&sh.items.some(isGame)).map(sh=>({id:sh.id,name:sh.name,style:STYLE[sh.id]||STYLE.media,
-    games:sh.items.filter(isGame).map(g=>{const h=HIST[g.id],i=g.info||{};return {id:g.id,title:g.title,front:()=>{const u=g.art&&g.art.front;if(!u)return Covers.frontAsync(stOf(g),g);return /^bsfile:/.test(u)?u+(u.includes("?")?"&":"?")+"t=768":u} /* generated covers: a Promise, encoded off the main thread */,spine:g.art&&g.art.spine||null,year:yearOf(g)||null,
+    games:sh.items.filter(isGame).map(g=>{const h=HIST[g.id],i=g.info||{};return {id:g.id,title:g.title,front:()=>{const u=g.art&&g.art.front;if(!u)return appFrontAsync(stOf(g),g);return /^bsfile:/.test(u)?u+(u.includes("?")?"&":"?")+"t=768":u} /* generated covers: a Promise, encoded off the main thread */,spine:g.art&&g.art.spine||null,year:yearOf(g)||null,
       dev:i.dev||null,pub:i.pub||null,genre:genreOf(g),rating:i.rating?+i.rating:null,metacritic:i.metacritic||null,group:groupOf(g),
       hours:h&&h.count?fmtPlay(h.ms)+" played":null,plays:h&&h.count||0,added:g.added||0,manual:!!(g.art&&g.art.manual&&g.art.manual.length),manualPage:g.art&&g.art.manual&&g.art.manual[0]||null,manualPages:g.art&&g.art.manual||[],back:g.art&&g.art.back?(/^bsfile:/.test(g.art.back)?g.art.back+(g.art.back.includes("?")?"&":"?")+"t=1024":g.art.back):null,disc:g.art&&g.art.disc||null,boxFull:!!(g.art&&g.art.front&&g.art.back&&g.art.spine),players:i.players||null,esrb:i.esrb||null,media:(MEDIA[sh.id]||{}).kind||"disc",mediaSize:(MEDIA[sh.id]||{}).size||0,last:h&&h.last?fmtDay(h.last/1000):null,fav:isFav(g),_g:g,_sh:sh}}),
     console:{model:themes[sh.id]&&themes[sh.id].model||BUILTIN_MODEL[sh.id]||null,opts:modelOpts(sh.id),controller:themes[sh.id]&&themes[sh.id].controller||null}}));
@@ -4079,7 +4086,7 @@ window.Shelf._dim=()=>dimStart(); // test hook: dim the screen now
 function bsSelectSoon(){if(!window.bsPlatform||bsPlatform.os!=="android")return; /* only the Android build has a second screen: Windows keeps no timer */clearTimeout(bsSelectSoon.t);bsSelectSoon.t=setTimeout(()=>{const g=curGame();dispatchEvent(new CustomEvent("bs-select",{detail:{id:g?String(g.id!=null?g.id:g.title):""}}))},380)}
 window.Shelf.bottomInfo=async g0=>{const g=g0||curGame();if(!g)return null; /* (the museum asks about the case it has chosen) */
   const sh=shelfFor(g)||{},st=stOf(g),i=g.info||{},h=histOf(g),a=g.art||{},game=isGame(g),r=game?raFor(g):null,md=MEDIA[sh.id]||{};
-  let front=a.front||a.icon||null;if(!front){try{front=await Covers.frontAsync(st,g)}catch{front=null}} // the cover the shelf made up for it (encoded off the main thread, usually cached already)
+  let front=a.front||a.icon||null;if(!front){try{front=await appFrontAsync(st,g)}catch{front=null}} // the cover the shelf made up for it (encoded off the main thread, usually cached already)
   return {id:String(g.id!=null?g.id:g.title),kind:g.kind,title:g.title||"",system:{id:sh.id||"",name:sh.name||""},hue:g.hue!=null?g.hue:st.hue,
     style:{ratio:st.ratio,depth:st.depth,rc:st.rc,re:st.re,edge:st.edge,pack:st.pack||(st.rc<=.012?(st.depth<.1?"jewel":"box"):"keep") /* a moulded keep case, a CD jewel case or a printed card box (systems-extra.js presets) */,caseColor:st.caseColor,caseSide:st.caseSide,spineInk:st.spineInk,band:st.band||null,spineBand:st.spineBand||null,glow:st.glow,tint:st.tint||null},
     media:{kind:md.kind||"disc",size:md.size||.62},
