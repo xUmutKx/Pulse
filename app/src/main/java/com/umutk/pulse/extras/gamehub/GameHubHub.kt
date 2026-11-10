@@ -1122,6 +1122,25 @@ fun GameHubHub(onBack: () -> Unit) {
                     var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
                     SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
+                    // the box style: the Steam cover (the default), or the game's picture in a console's case (the frame and its logo come with it)
+                    var boxStyle by remember { mutableStateOf(CaseCover.style(ctx)) }
+                    var boxBusy by remember { mutableStateOf(false) }
+                    Text(tr("Box style", "Kutu tarzı"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("steam" to tr("Steam", "Steam"), "ps5" to "PS5", "ps4" to "PS4", "ps3" to "PS3", "switch" to "Switch", "switch2" to "Switch 2",
+                            "xbox360" to "Xbox 360", "xboxone" to "Xbox One", "xboxseries" to "Xbox Series").forEach { (st, label) ->
+                            Chip(pal, (if (boxStyle == st) "✓ " else "") + label) {
+                                if (!boxBusy && boxStyle != st) {
+                                    boxStyle = st; CaseCover.setStyle(ctx, st); boxBusy = true
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { CaseCover.applyAll(ctx, games.map { it.pkg }, st) }
+                                        GameArt.version.intValue++; boxBusy = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (boxBusy) Text(tr("Making the boxes…", "Kutular hazırlanıyor…"), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                     // the covers of every game that has none: from SteamGridDB (with the key above) and Steam, by the game's name; it runs in the background (CoverJob)
                     var lookMsg by remember { mutableStateOf("") }
                     val lookRunning by CoverJob.running.collectAsState()

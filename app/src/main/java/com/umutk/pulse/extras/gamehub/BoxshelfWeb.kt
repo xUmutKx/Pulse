@@ -61,7 +61,7 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
             }
             "cover" -> {
                 val pkg = parts.getOrNull(1) ?: return null
-                val f = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+                val f = coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(f))
             }
             "hero" -> {
@@ -72,6 +72,9 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
         }
     }.getOrNull()
 }
+
+/** The game's box in the chosen console case (none for the Steam style). */
+internal fun caseFile(c: Context, pkg: String): java.io.File = CaseCover.style(c).let { st -> if (st == "steam") java.io.File(c.filesDir, "none") else CaseCover.file(c, pkg, st) }
 
 /** Whether Boxshelf's opening animation has ended (the page says so); the shelf's + waits for it. A fallback shows it after a few seconds anyway. */
 internal object ShelfIntro { val done = androidx.compose.runtime.mutableStateOf(false) }
@@ -88,7 +91,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         // the same rule as the library: a hidden game shows only while "show hidden games" is on (hiding itself stays Game Hub's: pm hide, shown for its start)
         val showHidden = prefs(c).getBoolean("showHidden", true)
         loadGames(c).filter { showHidden || it.pkg !in hidden }.forEach { g ->
-            val hasCover = coverFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
+            val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
