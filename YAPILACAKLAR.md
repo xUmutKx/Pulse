@@ -2395,3 +2395,9 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## 1.0.389 (derlendi)
 - Ekstra uygulamalar: Material cam isteğe bağlı (tümü ya da tek tek), üç seviye, renk seçici; Pulse nabız simgesi; klavye harfsiz.
+
+## 1.0.390 (derlendi)
+- Game Hub: kutu tarzları (PS5/PS4/PS3/Switch/Switch 2/Xbox), karışık mod ve renk grupları, disk görseli, kapak aramasında kısa ad.
+- Gym: tek egzersiz sayfası, hareket görseli, sütun adları.
+- Ekstra uygulamalar: ızgara Fluent, kutu seçici, uygulama kendi sayfasını açar, cam varsayılan değil.
+- Ayarlar: dikey telefonda tek sütun.
