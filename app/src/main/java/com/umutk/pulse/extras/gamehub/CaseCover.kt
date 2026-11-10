@@ -15,7 +15,9 @@ import java.io.FileOutputStream
  * The frames are from the steam-case-covers project (GPL-3.0); the windows are its measured positions (600 x 900 px).
  */
 internal object CaseCover {
-    val STYLES = listOf("steam", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries")
+    val STYLES = listOf("steam", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
+    /** The mix: the games are dealt evenly to these (a shuffled order, so it is not sorted by name); each keeps its box. */
+    val MIX = listOf("steam", "ps5", "switch", "xboxseries")
     private val WINDOWS = mapOf(
         "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
@@ -28,6 +30,17 @@ internal object CaseCover {
     fun setStyle(c: Context, s: String) { sp(c).edit().putString("boxStyle", s).apply() }
 
     fun file(c: Context, pkg: String, style: String): File = File(c.filesDir, "gamehub/case_" + pkg.replace('.', '_') + "_$style.jpg")
+
+    /** The box of [pkg] in the chosen style, or null for the Steam cover. In the mix each game has its own style (see [applyAll]). */
+    fun fileFor(c: Context, pkg: String): File? {
+        val st = style(c)
+        val one = if (st == "mix") mixMap(c)[pkg] ?: return null else st
+        if (one == "steam") return null
+        return file(c, pkg, one)
+    }
+
+    private fun mixMap(c: Context): Map<String, String> =
+        (sp(c).getString("boxMix", "") ?: "").split(';').mapNotNull { e -> e.split('=').takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
 
     /** The box picture of [art] in [style], 600 x 900. [art] is cropped to fill the case's window. */
     fun compose(c: Context, art: Bitmap, style: String): Bitmap? {
@@ -62,6 +75,13 @@ internal object CaseCover {
 
     /** Makes the box of every game that has a Steam picture, in the chosen style. */
     fun applyAll(c: Context, pkgs: List<String>, style: String): Int {
+        if (style == "mix") {
+            // shuffled by a hash of the package (the same order every time), then dealt round the MIX styles: an even share of each
+            val order = pkgs.distinct().sortedBy { it.hashCode() }
+            val map = order.mapIndexed { i, pkg -> pkg to MIX[i % MIX.size] }.toMap()
+            sp(c).edit().putString("boxMix", map.entries.joinToString(";") { "${it.key}=${it.value}" }).apply()
+            return map.count { (pkg, st) -> make(c, pkg, st) }
+        }
         var n = 0
         for (pkg in pkgs) if (make(c, pkg, style)) n++
         return n

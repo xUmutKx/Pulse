@@ -1128,7 +1128,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     Text(tr("Box style", "Kutu tarzı"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("steam" to tr("Steam", "Steam"), "ps5" to "PS5", "ps4" to "PS4", "ps3" to "PS3", "switch" to "Switch", "switch2" to "Switch 2",
-                            "xbox360" to "Xbox 360", "xboxone" to "Xbox One", "xboxseries" to "Xbox Series").forEach { (st, label) ->
+                            "xbox360" to "Xbox 360", "xboxone" to "Xbox One", "xboxseries" to "Xbox Series", "mix" to tr("Mix (even)", "Karışık (eşit)")).forEach { (st, label) ->
                             Chip(pal, (if (boxStyle == st) "✓ " else "") + label) {
                                 if (!boxBusy && boxStyle != st) {
                                     boxStyle = st; CaseCover.setStyle(ctx, st); boxBusy = true
