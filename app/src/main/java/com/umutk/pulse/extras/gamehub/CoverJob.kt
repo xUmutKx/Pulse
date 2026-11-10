@@ -34,7 +34,7 @@ object CoverJob {
     private var job: Job? = null
 
     /** Looks for the covers of the games that have none. Does nothing while a search is running. */
-    fun start(c: Context, games: List<GameRow>) {
+    internal fun start(c: Context, games: List<GameRow>) {
         if (running.value) return
         val app = c.applicationContext
         val todo = games.filter { !coverFile(app, it.pkg).isFile }
