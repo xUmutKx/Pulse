@@ -121,7 +121,7 @@ fun GymScreen(onBack: () -> Unit, startTab: Int = 0) {
 
 @Composable
 private fun GNum(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(value, onChange, modifier, singleLine = true, label = { Text(label, fontSize = 11.sp) },
+    OutlinedTextField(value, onChange, modifier, singleLine = true,
         textStyle = TextStyle(color = T.text, fontSize = 14.sp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }
 
@@ -293,11 +293,11 @@ private fun TrainTab(open: (GymEx) -> Unit) {
     val elapsed = if (start > 0) ((now.coerceAtLeast(System.currentTimeMillis()) - start) / 1000L).toInt() else 0
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Session", "Antrenman") + (if (start > 0) "  " + hm(elapsed) else ""), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text(tr("Rest", "Dinlenme") + " ", color = T.sub, fontSize = 12.sp)
+            Text(tr("Workout", "Antrenman") + (if (start > 0) " · " + hm(elapsed) else ""), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
+        Text(tr("Rest after each set", "Her setten sonra dinlenme"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(45, 60, 90, 120, 180, 240).forEach { s -> PChip(rest == s, if (s < 60) "${s}s" else "${s / 60}:%02d".format(s % 60)) { rest = s; GymStore.setRestSec(ctx, s) } }
+            listOf(45, 60, 90, 120, 180, 240).forEach { s -> PChip(rest == s, if (s < 60) "$s s" else if (s % 60 == 0) "${s / 60} min" else "${s / 60}:%02d".format(s % 60)) { rest = s; GymStore.setRestSec(ctx, s) } }
         }
     }
     items.toList().forEachIndexed { ii, it0 ->
@@ -313,13 +313,19 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                 }
                 Text("✕", color = T.sub, fontSize = 18.sp, modifier = Modifier.clickable { items.removeAt(ii); if (items.isEmpty()) { GymStore.clearDraft(ctx); start = 0L } else save() }.padding(10.dp))
             }
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(tr("Set", "Set"), color = T.sub, fontSize = 11.sp, modifier = Modifier.width(28.dp))
+                Text(tr("Weight (kg)", "Ağırlık (kg)"), color = T.sub, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(tr("Reps", "Tekrar"), color = T.sub, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(tr("Done", "Bitti"), color = T.sub, fontSize = 11.sp, modifier = Modifier.width(40.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
             it0.sets.forEachIndexed { si, s ->
-                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${si + 1}", color = T.sub, fontSize = 14.sp, modifier = Modifier.width(20.dp))
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("${si + 1}", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(28.dp))
                     var wt by remember(s) { mutableStateOf(if (s.w > 0f) fmtW(s.w) else "") }
                     var rp by remember(s) { mutableStateOf(if (s.r > 0) s.r.toString() else "") }
-                    GNum(wt, { wt = it; s.w = it.replace(',', '.').toFloatOrNull() ?: 0f; save() }, "kg", Modifier.weight(1f))
-                    GNum(rp, { rp = it.filter { c -> c.isDigit() }; s.r = rp.toIntOrNull() ?: 0; save() }, tr("reps", "tekrar"), Modifier.weight(1f))
+                    GNum(wt, { wt = it; s.w = it.replace(',', '.').toFloatOrNull() ?: 0f; save() }, "", Modifier.weight(1f))
+                    GNum(rp, { rp = it.filter { c -> c.isDigit() }; s.r = rp.toIntOrNull() ?: 0; save() }, "", Modifier.weight(1f))
                     Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(if (s.done) Look.accent else T.text.copy(alpha = .1f)).clickable {
                         ensureStart(); s.done = !s.done
                         if (s.done) { restEnd = System.currentTimeMillis() + rest * 1000L; now = System.currentTimeMillis() }
@@ -328,8 +334,8 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                 }
             }
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton(tr("+ set", "+ set"), compact = true) { val last = it0.sets.lastOrNull(); it0.sets.add(GSet(last?.w ?: 0f, last?.r ?: 0)); save() }
-                if (it0.sets.size > 1) PButton(tr("− set", "− set"), compact = true) { it0.sets.removeAt(it0.sets.lastIndex); save() }
+                PButton(tr("Add set", "Set ekle"), compact = true) { val last = it0.sets.lastOrNull(); it0.sets.add(GSet(last?.w ?: 0f, last?.r ?: 0)); save() }
+                if (it0.sets.size > 1) PButton(tr("Remove last set", "Son seti sil"), compact = true) { it0.sets.removeAt(it0.sets.lastIndex); save() }
             }
         }
     }
@@ -353,7 +359,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
         text = { PField(routineName, { routineName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth()) },
         confirmButton = { PButton(tr("Save", "Kaydet")) { if (routineName.isNotBlank()) { GymStore.addRoutine(ctx, routineName.trim(), items.map { it.ex to it.sets.size }); routineName = ""; naming = false; msg = tr("Routine saved.", "Rutin kaydedildi.") } } },
         dismissButton = { PButton(tr("Cancel", "Vazgeç")) { naming = false } })
-    PButton(tr("Save as a routine", "Rutin olarak kaydet"), compact = true) { naming = true }
+    PButton(tr("Save these exercises as a routine", "Bu egzersizleri rutin olarak kaydet"), compact = true) { naming = true }
     if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 13.sp)
 }
 
