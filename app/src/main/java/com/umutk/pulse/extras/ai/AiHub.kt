@@ -124,6 +124,11 @@ fun AiHub(onBack: () -> Unit) {
                             }
                         }
                     }
+                    // the models: the chat model is picked here (its Use button), and the vision ones take pictures
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { models = true; scope.launch { drawer.close() } }
+                        .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("download", AiInk, 20.dp); Text(tr("Models", "Modeller"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+                    }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).clickable { settingsOpen = true }
                         .padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon("settings", AiInk, 20.dp); Text(tr("Settings", "Ayarlar"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
