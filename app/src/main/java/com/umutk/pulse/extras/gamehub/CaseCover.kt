@@ -17,7 +17,7 @@ import java.io.FileOutputStream
 internal object CaseCover {
     val STYLES = listOf("steam", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
     /** The mix: the games are dealt evenly to these (a shuffled order, so it is not sorted by name); each keeps its box. */
-    val MIX = listOf("steam", "ps5", "switch", "xboxseries")
+    val MIX = listOf("steam", "ps5", "switch")
     private val WINDOWS = mapOf(
         "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
@@ -43,7 +43,8 @@ internal object CaseCover {
     fun groupOf(c: Context, pkg: String): Int = if (style(c) == "mix") MIX.indexOf(mixMap(c)[pkg] ?: "steam").coerceAtLeast(0) else 0
 
     private fun mixMap(c: Context): Map<String, String> =
-        (sp(c).getString("boxMix", "") ?: "").split(';').mapNotNull { e -> e.split('=').takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap()
+        // (a mix saved before a style left the mix, e.g. the Xbox frame, is dropped: that game shows its Steam cover)
+        (sp(c).getString("boxMix", "") ?: "").split(';').mapNotNull { e -> e.split('=').takeIf { it.size == 2 }?.let { it[0] to it[1] } }.filter { it.second in MIX }.toMap()
 
     /** The box picture of [art] in [style], 600 x 900. [art] is cropped to fill the case's window. */
     fun compose(c: Context, art: Bitmap, style: String): Bitmap? {
