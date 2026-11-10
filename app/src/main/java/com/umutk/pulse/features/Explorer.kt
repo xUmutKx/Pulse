@@ -1419,7 +1419,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
 
     zipAsk?.let { files ->
-        ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes, pw -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind, bytes, pw) }
+        ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes, pw -> zipAsk = null; note = ""; ZipJobs.clearLast(); ZipJobs.start(ctx, files, name, dir, kind, bytes, pw) }
     }
     shareSheet?.let { picks ->
         ExShareSheet(picks, { shareSheet = null }, { note = it })
