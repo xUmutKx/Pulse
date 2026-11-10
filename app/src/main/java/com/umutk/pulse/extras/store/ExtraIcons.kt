@@ -41,6 +41,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -93,6 +102,7 @@ object ExtraIcons {
         val b = runCatching {
             when (p.getOrNull(0)) {
                 "pack" -> packPicture(c, p[1], p[2], p.getOrElse(3) { "" }, px)
+                "glass" -> defaultGlass(c, p[1], p.getOrNull(2)?.ifEmpty { null }, colourOf(p.getOrElse(3) { "" }), px)
                 "make" -> make(c, p[1], p[2], p[3].toLong(16).toInt(), p[4].toLong(16).toInt(), p.getOrElse(5) { "squircle" }, px)
                 else -> null
             }
@@ -125,7 +135,7 @@ object ExtraIcons {
     /*
      * Material glass, drawn the way the glass icon pack draws its icons: three pictures over one another at the same size, each tinted.
      *  gl_bg: the frosted body (white, about half see-through, a soft squircle); gl_light: its bright rim and sheen; then the glyph (a white mask
-     *  with the glyph already at its place) in a light tone of the colour. The body takes a lighter tone of the colour, so the glass is tinted
+     *  with the glyph already at its place) in a light tone of the colour. The body takes the colour, a little lighter, so the glass is tinted
      *  and what is behind it shows through.
      */
     private val layerCache = android.util.LruCache<Int, Bitmap>(48)
@@ -144,9 +154,9 @@ object ExtraIcons {
             pt.colorFilter = android.graphics.PorterDuffColorFilter(tint, android.graphics.PorterDuff.Mode.SRC_IN)
             cv.drawBitmap(b, null, dst, pt)
         }
-        layer(body, blend(colour, WHITE, .55f))
+        layer(body, blend(colour, WHITE, .2f))
         if (light != null) layer(light, WHITE)
-        if (glyph != null) layer(glyph, blend(colour, WHITE, .45f))
+        if (glyph != null) layer(glyph, blend(colour, WHITE, .25f))
         return out
     }
 
@@ -167,6 +177,19 @@ object ExtraIcons {
         return b
     }
 
+    /** Pulse's own mark, the heartbeat line of its logo, as a glyph mask (drawn as a thick round line, the size of the pack's glyphs). */
+    fun pulseGlyph(px: Int = 256): Bitmap {
+        val b = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val cv = Canvas(b)
+        val s = px * .56f / 24f
+        cv.translate((px - 24f * s) / 2f, (px - 24f * s) / 2f); cv.scale(s, s)
+        val path = androidx.core.graphics.PathParser.createPathFromPathData("M2,12.5h4.2l2.3,-6l4.4,11.5l2.6,-7l1.6,1.5H22")
+        cv.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = WHITE; style = Paint.Style.STROKE; strokeWidth = 2.4f; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+        })
+        return b
+    }
+
     /** The shape of a pack picture as a white mask, found against the picture's own backplate and placed like the pack's glyphs. */
     private fun packGlyph(d: android.graphics.drawable.Drawable, px: Int = 256): Bitmap {
         val m = com.umutk.pulse.extras.palette.core.icon.GlyphExtractor.extract(d, 192).mask
@@ -179,7 +202,6 @@ object ExtraIcons {
     /** The glyph of each extra app in the glass look (from the glass icon pack); a row that has none here uses its Fluent glyph. */
     private val GLASS_GLYPHS: Map<String, Int> by lazy {
         mapOf(
-            "pulse" to com.umutk.pulse.R.drawable.gl_pulse,
             "app:MusicLauncher" to com.umutk.pulse.R.drawable.gl_music,
             "app:VideoLauncher" to com.umutk.pulse.R.drawable.gl_video,
             "app:FilesLauncher" to com.umutk.pulse.R.drawable.gl_files,
@@ -211,20 +233,20 @@ object ExtraIcons {
         )
     }
 
-    // the default look of the rows that have no choice: Material glass in one colour (on unless turned off on the App icons page)
+    // the look of the rows that have no choice: the look's own icon, or (an extra choice on the App icons page) Material glass in one colour
     private fun lookSp(c: Context) = c.getSharedPreferences("extra_icons_look", Context.MODE_PRIVATE)
-    var glassOn by mutableStateOf(true)
+    var glassOn by mutableStateOf(false)
         private set
     var glassColour by mutableIntStateOf(0xFFB388FF.toInt())
         private set
-    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", true); glassColour = s.getInt("colour", 0xFFB388FF.toInt()) }
+    private fun loadLook(c: Context) { val s = lookSp(c); glassOn = s.getBoolean("on", false); glassColour = s.getInt("colour", 0xFFB388FF.toInt()) }
     fun setGlass(c: Context, on: Boolean, colour: Int) { glassOn = on; glassColour = colour; lookSp(c).edit().putBoolean("on", on).putInt("colour", colour).apply() }
 
     /** The default glass icon of row [key] ([glyph]: its Fluent glyph, for a row the glass pack has no glyph for), or null when there is no glyph. */
     fun defaultGlass(c: Context, key: String, glyph: String?, colour: Int, px: Int): Bitmap? {
         val ck = "default|$key|$glyph|$colour@$px"
         cache.get(ck)?.let { return it }
-        val g = GLASS_GLYPHS[key]?.let { resBitmap(c, it) } ?: glyph?.let { fluentGlyph(it) } ?: return null
+        val g = (if (key == "pulse") pulseGlyph() else null) ?: GLASS_GLYPHS[key]?.let { resBitmap(c, it) } ?: glyph?.let { fluentGlyph(it) } ?: return null
         return glass(c, g, colour, px)?.also { cache.put(ck, it) }
     }
 
@@ -300,10 +322,13 @@ private val INK_SWATCHES = listOf(0xFFFFFFFF, 0xFF00E5FF, 0xFF76FF03, 0xFFFFD600
  * or one made by the icon maker. [onSave] gets the spec (null = default); [onPin] puts it on the home screen.
  */
 @Composable
-internal fun IconChooser(name: String, glyph: String, current: String?, onDismiss: () -> Unit, onSave: (String?) -> Unit, onPin: ((Bitmap) -> Unit)?) {
+internal fun IconChooser(name: String, glyph: String, current: String?, onDismiss: () -> Unit, onSave: (String?) -> Unit, onPin: ((Bitmap) -> Unit)?, key: String = "") {
     val ctx = LocalContext.current
-    var tab by remember { mutableStateOf(if (current?.startsWith("pack") == true) "pack" else "make") }
+    var tab by remember { mutableStateOf(when { current?.startsWith("pack") == true -> "pack"; current?.startsWith("glass") == true -> "glass"; else -> "make" }) }
+    // Material glass for this app: its glass glyph in a colour
+    var gCol by remember { mutableIntStateOf(current?.split('|')?.takeIf { it[0] == "glass" }?.getOrNull(3)?.let { ExtraIcons.colourOf(it) } ?: ExtraIcons.glassColour) }
     var spec by remember { mutableStateOf(current) }
+    fun glassNow() { spec = "glass|$key|$glyph|${"%08x".format(gCol)}" }
     // icon pack
     val packs = remember { InstalledIconPacks.list(ctx) }
     var pack by remember { mutableStateOf(current?.split('|')?.takeIf { it[0] == "pack" }?.get(1) ?: packs.firstOrNull()?.pkg) }
@@ -359,9 +384,14 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                     PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
                     PChip(tab == "pack", tr("Icon pack", "İkon paketi")) { tab = "pack" }
                     if (tab == "pack") packs.forEach { pk -> PChip(pack == pk.pkg, pk.label) { pack = pk.pkg } }
+                    PChip(tab == "glass", tr("Material glass", "Material cam")) { tab = "glass"; glassNow() }
                     PChip(tab == "make", tr("Maker", "Üretici")) { tab = "make"; makeNow() }
                 }
-                if (tab == "pack") {
+                if (tab == "glass") {
+                    Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
+                    Swatches(GLASS_TINTS + Look.accent.toArgb(), gCol) { gCol = it; glassNow() }
+                    ColourPicker(gCol) { gCol = it; glassNow() }
+                } else if (tab == "pack") {
                     if (packs.isEmpty()) Text(tr("No icon pack is installed", "Yüklü ikon paketi yok"), color = T.sub, fontSize = 13.sp)
                     else {
                         Text(tr("Look", "Görünüm"), color = T.sub, fontSize = 12.sp)
@@ -466,6 +496,41 @@ private fun Swatches(colors: List<Int>, picked: Int, onPick: (Int) -> Unit) {
     }
 }
 
+/** A colour picker: saturation (across) and brightness (down) in the square, the hue on the bar under it; a drag or a tap sets it. */
+@Composable
+internal fun ColourPicker(colour: Int, onChange: (Int) -> Unit) {
+    val change by rememberUpdatedState(onChange)
+    val start = remember { FloatArray(3).also { android.graphics.Color.colorToHSV(colour, it) } }
+    var h by remember { mutableFloatStateOf(start[0]) }
+    var sat by remember { mutableFloatStateOf(start[1]) }
+    var v by remember { mutableFloatStateOf(start[2]) }
+    fun now() = android.graphics.Color.HSVToColor(floatArrayOf(h, sat, v))
+    // a preset picked outside: the picker follows it
+    LaunchedEffect(colour) { if (now() != colour) { val a = FloatArray(3); android.graphics.Color.colorToHSV(colour, a); h = a[0]; sat = a[1]; v = a[2] } }
+    fun setSv(x: Float, y: Float, w: Float, hgt: Float) { sat = (x / w).coerceIn(0f, 1f); v = 1f - (y / hgt).coerceIn(0f, 1f); change(now()) }
+    fun setHue(x: Float, w: Float) { h = (x / w * 360f).coerceIn(0f, 359.9f); change(now()) }
+    val hueColour = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, 1f, 1f)))
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(12.dp))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White, hueColour)))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
+            .pointerInput(Unit) { detectTapGestures { o -> setSv(o.x, o.y, size.width.toFloat(), size.height.toFloat()) } }
+            .pointerInput(Unit) { detectDragGestures { ch, _ -> ch.consume(); setSv(ch.position.x, ch.position.y, size.width.toFloat(), size.height.toFloat()) } }
+            .drawWithContent {
+                drawContent()
+                drawCircle(Color.White, 9.dp.toPx(), Offset(sat * size.width, (1f - v) * size.height), style = Stroke(2.5.dp.toPx()))
+            })
+        Box(Modifier.fillMaxWidth().height(24.dp).clip(RoundedCornerShape(12.dp))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient((0..6).map { Color(android.graphics.Color.HSVToColor(floatArrayOf(it * 60f % 360f, 1f, 1f))) }))
+            .pointerInput(Unit) { detectTapGestures { o -> setHue(o.x, size.width.toFloat()) } }
+            .pointerInput(Unit) { detectDragGestures { ch, _ -> ch.consume(); setHue(ch.position.x, size.width.toFloat()) } }
+            .drawWithContent {
+                drawContent()
+                drawCircle(Color.White, 10.dp.toPx(), Offset(h / 360f * size.width, size.height / 2f), style = Stroke(2.5.dp.toPx()))
+            })
+    }
+}
+
 /** One row of the icon page: an app, the look's icon key for it, and what starts it (for the home-screen shortcut). */
 internal class IconRow(val key: String, val name: String, val glyph: String, val intent: Intent)
 
@@ -479,10 +544,14 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             // the default look of every row without a choice: Material glass in one colour, or the look's own icon
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PChip(!ExtraIcons.glassOn, tr("Default", "Varsayılan")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
                 PChip(ExtraIcons.glassOn, tr("Material glass", "Material cam")) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour) }
-                PChip(!ExtraIcons.glassOn, tr("Plain", "Sade")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
             }
-            if (ExtraIcons.glassOn) Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
+            if (ExtraIcons.glassOn) {
+                Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
+                Spacer(Modifier.height(8.dp))
+                ColourPicker(ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
+            }
             Spacer(Modifier.height(6.dp))
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -504,6 +573,7 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
     edit?.let { r ->
         IconChooser(r.name, r.glyph, ExtraIcons.specs[r.key], onDismiss = { edit = null },
             onSave = { ExtraIcons.set(ctx, r.key, it); edit = null },
-            onPin = { b -> if (!ExtraIcons.pin(ctx, r.key, r.name, b, Intent(r.intent))) android.widget.Toast.makeText(ctx, tr("The launcher does not take shortcuts", "Başlatıcı kısayol kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show() })
+            onPin = { b -> if (!ExtraIcons.pin(ctx, r.key, r.name, b, Intent(r.intent))) android.widget.Toast.makeText(ctx, tr("The launcher does not take shortcuts", "Başlatıcı kısayol kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show() },
+            key = r.key)
     }
 }
