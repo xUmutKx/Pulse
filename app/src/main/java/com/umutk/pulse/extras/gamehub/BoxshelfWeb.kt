@@ -136,19 +136,11 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     val owner = LocalLifecycleOwner.current
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {
-        var wasPaused = false
         val obs = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_RESUME) holder[0]?.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
-            if (e == Lifecycle.Event.ON_PAUSE) { wasPaused = true; holder[0]?.onPause() }
+            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause()
             else if (e == Lifecycle.Event.ON_RESUME) {
                 val w = holder[0] ?: return@LifecycleEventObserver
-                // safety net: back from a game the page must answer at once; if its renderer does not answer, the page is loaded again
-                // (the shelf comes back from its start) instead of a black screen that stays until Game Hub is restarted
-                if (wasPaused) {
-                    val answered = java.util.concurrent.atomic.AtomicBoolean(false)
-                    w.evaluateJavascript("1") { answered.set(true) }
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!answered.get()) w.reload() }, 2500L)
-                }
                 w.onResume()
                 // back from a game the picture can stay black until something redraws it: the layer is reset and the page is laid out again
                 w.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
