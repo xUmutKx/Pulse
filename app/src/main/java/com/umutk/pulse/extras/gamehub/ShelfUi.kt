@@ -144,6 +144,7 @@ private fun BoxArt(g: GameRow, pal: Pal, hidden: Boolean, modifier: Modifier = M
 
 /** The shelf as a row you swipe along: the box in the middle stands square, the ones beside it turn away and sink back. */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times: Map<String, Long>, onOpen: (GameRow) -> Unit, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
     val scope = rememberCoroutineScope()
     val pager = rememberPagerState { games.size }
