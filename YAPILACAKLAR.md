@@ -2392,3 +2392,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## 1.0.388 (derlendi)
 - Ekstra uygulamalar: ikon paketinde Material cam ve renk; varsayılan ikon eski haline döndü.
 - Game Hub: kapak aramasi arka planda (CoverService), bildirim ve ilerleme.
+
+## 1.0.389 (derlendi)
+- Ekstra uygulamalar: Material cam isteğe bağlı (tümü ya da tek tek), üç seviye, renk seçici; Pulse nabız simgesi; klavye harfsiz.
