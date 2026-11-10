@@ -17,7 +17,7 @@ import java.io.FileOutputStream
 internal object CaseCover {
     val STYLES = listOf("steam", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
     /** The mix: the games are dealt evenly to these (a shuffled order, so it is not sorted by name); each keeps its box. */
-    val MIX = listOf("steam", "ps5", "switch")
+    val MIX = listOf("steam")
     private val WINDOWS = mapOf(
         "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
