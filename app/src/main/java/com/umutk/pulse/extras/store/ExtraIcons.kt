@@ -92,7 +92,7 @@ object ExtraIcons {
         val p = spec.split('|')
         val b = runCatching {
             when (p.getOrNull(0)) {
-                "pack" -> IconPackCache.get(c, p[1])?.drawable(p[2])?.toBitmap(px, px, Bitmap.Config.ARGB_8888)?.let { tinted(it, p.getOrElse(3) { "" }) }
+                "pack" -> packPicture(c, p[1], p[2], p.getOrElse(3) { "" }, px)
                 "make" -> make(p[1], p[2], p[3].toLong(16).toInt(), p[4].toLong(16).toInt(), p.getOrElse(5) { "squircle" }, px)
                 else -> null
             }
@@ -110,6 +110,21 @@ object ExtraIcons {
         val out = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
         Canvas(out).drawBitmap(b, 0f, 0f, pt)
         return out
+    }
+
+    /** A pack picture in its look: "glass:<colour>" is the Material glass tile (transparent around it), the other looks as [tinted]. */
+    fun packPicture(c: Context, pkg: String, name: String, t: String, px: Int): Bitmap? {
+        val d = IconPackCache.get(c, pkg)?.drawable(name) ?: return null
+        if (t.startsWith("glass")) return glassPicture(d, t.substringAfter(':', ""), px)
+        return tinted(d.toBitmap(px, px, Bitmap.Config.ARGB_8888), t)
+    }
+
+    /** The Material glass look of a picture: its shape as a glass tile in the colour (ARGB hex, the accent when empty), the picture in white. */
+    fun glassPicture(d: android.graphics.drawable.Drawable, hex: String, px: Int): Bitmap {
+        val colour = hex.takeIf { it.length == 8 }?.toLong(16)?.toInt() ?: Look.accent.toArgb()
+        val glyph = com.umutk.pulse.extras.palette.core.icon.GlyphExtractor.extract(d, 192)
+        val style = com.umutk.pulse.extras.palette.core.icon.StyleCatalog.get("material_glass")
+        return com.umutk.pulse.extras.palette.core.icon.StyledRenderer.render(com.umutk.pulse.extras.palette.core.icon.ThemeSpec(), style, glyph.mask, colour, 0xFFFFFFFF.toInt(), px)
     }
 
     fun makeSpec(style: String, glyph: String, bg: Int, ink: Int, shape: String) =
@@ -196,6 +211,8 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
     // the colour of the pack pictures: the picture as it is, grey, or one colour
     var tint by remember { mutableStateOf(current?.split('|')?.takeIf { it[0] == "pack" }?.getOrNull(3) ?: "") }
     fun tinted(base: String?, t: String): String? = base?.takeIf { it.startsWith("pack|") }?.split('|')?.take(3)?.joinToString("|")?.let { if (t.isEmpty()) it else "$it|$t" }
+    fun setTint(t: String) { tint = t; spec = tinted(spec, t) ?: spec }
+    val glassArgb = tint.substringAfter("glass:", "").takeIf { it.length == 8 }?.toLong(16)?.toInt() ?: Look.accent.toArgb()
     // maker
     val p0 = current?.split('|')?.takeIf { it[0] == "make" }
     var style by remember { mutableStateOf(p0?.get(1) ?: "line") }
@@ -211,7 +228,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
         text = {
             Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(if (spec?.contains("glass") == true) Color.Transparent else Color.Black), contentAlignment = Alignment.Center) {
                         val pv = preview
                         if (spec != null && pv != null) Image(pv.asImageBitmap(), null, Modifier.size(64.dp)) else PIcon(glyph, Color.White, 40.dp)
                     }
@@ -222,7 +239,8 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                     if (s != null && s.startsWith("pack|")) {
                         val base = s.split('|').take(3).joinToString("|")
                         listOf(tr("Colour", "Renkli") to base, tr("B&W", "Siyah beyaz") to "$base|bw",
-                            tr("Accent", "Vurgu") to "$base|${"%08x".format(Look.accent.toArgb())}", tr("White", "Beyaz") to "$base|ffffffff")
+                            tr("Accent", "Vurgu") to "$base|${"%08x".format(Look.accent.toArgb())}", tr("White", "Beyaz") to "$base|ffffffff",
+                            tr("Material glass", "Material cam") to "$base|glass:${"%08x".format(Look.accent.toArgb())}")
                     } else listOf("AMOLED" to ExtraIcons.makeSpec("line", glyphKey, 0xFF000000.toInt(), Look.accent.toArgb(), "squircle"),
                         "Material Glass" to ExtraIcons.makeSpec("glass", glyphKey, Look.accent.toArgb(), 0xFFFFFFFF.toInt(), "squircle"),
                         tr("Light", "Açık") to ExtraIcons.makeSpec("line", glyphKey, 0xFFFFFFFF.toInt(), 0xFF000000.toInt(), "squircle"),
@@ -248,13 +266,16 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             packs.forEach { pk -> PChip(pack == pk.pkg, pk.label) { pack = pk.pkg } }
                         }
-                        Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
+                        Text(tr("Look", "Görünüm"), color = T.sub, fontSize = 12.sp)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PChip(tint.isEmpty(), tr("Original", "Orijinal")) { tint = ""; spec = tinted(spec, tint) ?: spec }
-                            PChip(tint == "bw", tr("Black & white", "Siyah beyaz")) { tint = "bw"; spec = tinted(spec, tint) ?: spec }
+                            PChip(tint.isEmpty(), tr("Original", "Orijinal")) { setTint("") }
+                            PChip(tint == "bw", tr("Black & white", "Siyah beyaz")) { setTint("bw") }
+                            PChip(tint.startsWith("glass"), tr("Material glass", "Material cam")) { setTint("glass:" + "%08x".format(glassArgb)) }
                         }
-                        Swatches((GLASS_COLORS + Look.accent.toArgb() + 0xFFFFFFFF.toInt()), if (tint.length == 8) tint.toLong(16).toInt() else 0) { c ->
-                            tint = "%08x".format(c); spec = tinted(spec, tint) ?: spec
+                        Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
+                        Swatches((GLASS_COLORS + Look.accent.toArgb() + 0xFFFFFFFF.toInt()), if (tint.startsWith("glass")) glassArgb else if (tint.length == 8) tint.toLong(16).toInt() else 0) { c ->
+                            val hex = "%08x".format(c)
+                            setTint(if (tint.startsWith("glass")) "glass:$hex" else hex)
                         }
                         PField(query, { query = it }, tr("Search: ice cream, dondurma…", "Ara: dondurma, ice cream…"), Modifier.fillMaxWidth())
                         val pk = pack
@@ -267,7 +288,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                                 line.forEach { n ->
                                     val s = "pack|$pk|$n" + (if (tint.isEmpty()) "" else "|$tint")
                                     val bm by produceState<Bitmap?>(null, s) { value = withContext(Dispatchers.Default) { ExtraIcons.render(ctx, s, 128) } }
-                                    Box(Modifier.weight(1f).padding(3.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black)
+                                    Box(Modifier.weight(1f).padding(3.dp).clip(RoundedCornerShape(12.dp)).background(if (tint.startsWith("glass")) Color.Transparent else Color.Black)
                                         .border(if (spec == s) 2.dp else 0.dp, Look.accent, RoundedCornerShape(12.dp)).clickable { spec = s }.padding(4.dp), contentAlignment = Alignment.Center) {
                                         bm?.let { Image(it.asImageBitmap(), n, Modifier.size(44.dp)) } ?: Spacer(Modifier.size(44.dp))
                                     }
@@ -333,7 +354,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
 @Composable
 private fun ReviewIcon(ctx: Context, spec: String, size: Dp) {
     val bm by produceState<Bitmap?>(null, spec) { value = withContext(Dispatchers.Default) { ExtraIcons.render(ctx, spec, 128) } }
-    Box(Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(Color.Black), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(if (spec.contains("glass")) Color.Transparent else Color.Black), contentAlignment = Alignment.Center) {
         bm?.let { Image(it.asImageBitmap(), null, Modifier.size(size - 8.dp)) }
     }
 }
