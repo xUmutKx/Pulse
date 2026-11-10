@@ -1383,7 +1383,7 @@ private fun GameProfile(pal: Pal, pkg: String, can: Boolean) {
     }
 }
 
-private fun usageAllowed(c: Context): Boolean = runCatching {
+internal fun usageAllowed(c: Context): Boolean = runCatching {
     val ops = c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
     ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) == android.app.AppOpsManager.MODE_ALLOWED
 }.getOrDefault(false)

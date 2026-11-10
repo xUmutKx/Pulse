@@ -370,8 +370,12 @@ function build(){
     H("Covers"),
     GHT("Fetch covers from Google Play","playCovers",false,"A cover from Google Play when Steam has none."),
     GHX("SteamGridDB key (more covers)","sgdbKey","Your own free SteamGridDB key, for more covers. Stored on this device.",{secret:true,ph:"Not set"}),
+    A("Look for covers",()=>api.ghGet&&api.ghGet("coversRunning")==="true"?"Stop":"Look for covers","Finds the covers of your games on the internet, in the background. Needs the SteamGridDB key.",()=>{if(api.ghRun)api.ghRun(api.ghGet&&api.ghGet("coversRunning")==="true"?"stopCovers":"lookCovers")},{keys:"covers look search steamgriddb"}),
     H("Case style"),
-    GHC("Case style","caseStyle",[["pc","PC / Steam"],["custom","Custom"],["ps5","PS5"],["ps4","PS4"],["x360","Xbox 360"],["sw","Switch"]],"pc","The box style of the games on the shelf."),
+    GHC("Case style","caseStyle",[["pc","PC / Steam"],["custom","Custom"],["ps5","PS5"],["ps4","PS4"],["x360","Xbox 360"],["sw","Switch"]],"pc","The case of the games on the shelf."),
+    GHC("Box style","boxStyle",[["steam","Steam"],["ps5","PS5"],["ps4","PS4"],["ps3","PS3"],["switch","Switch"],["switch2","Switch 2"],["xbox360","Xbox 360"],["xboxone","Xbox One"],["xboxseries","Xbox Series"],["mix","Mix (even)"]],"steam","The box of each game's cover. Changing it makes the boxes again."),
+    H("In-game menu"),
+    GHT("Show the menu over a game","menu",false,"The Pulse menu over a running game (needs the overlay and usage permissions)."),
   ]},
   {g:"System",id:"phone",name:"Phone companion",ic:"phone",dot:()=>phone&&phone.on?"ok":phone&&phone.enabled&&phone.error?"warn":null,lead:"Browse your games on your phone, start one on the TV, read its manual, and use the phone as a remote and keyboard. The phone has to be on the same Wi-Fi as this PC.",rows:[
     {t:"toggle",label:"Phone companion",info:"Runs a small web page on your home network for paired phones. Only phones that scanned the code (or typed the PIN) can use it; nothing is reachable from the internet. Windows may ask the first time whether to allow Boxshelf on your network: choose Private networks.",get:()=>!!(phone&&phone.enabled),set:setPhone,nosave:true,keys:"phone mobile remote companion qr pair wifi app",when:()=>!!api.companionSet},
