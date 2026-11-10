@@ -395,7 +395,7 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
                             // Pulse's own icon, as the launcher shows it
                             val own = remember { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
                             if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
-                        } else Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color.Black), contentAlignment = Alignment.Center) { PIcon(r.glyph, Color.White, 24.dp) }
+                        } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(r.glyph, T.text, 26.dp) }
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
