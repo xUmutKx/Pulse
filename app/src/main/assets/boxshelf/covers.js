@@ -273,5 +273,15 @@ function setupFront(style){
   ctx.fillStyle="rgba(255,255,255,.45)";ctx.font=`500 ${W*.04}px Lexend, sans-serif`;ctx.fillText("OPEN SETTINGS",W/2,Hh*.84+W*.07);
   const url=c.toDataURL("image/jpeg",.92);c.width=c.height=0;if(!document.fonts||document.fonts.check(`700 ${W*.1}px Lexend`))setupCache.set(style.id,url);return url;
 }
-window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront};
+// the average colour of a cover, for the spine's band (the spine matches the front); cached per picture, null when it can't be read
+const tintCache=new Map();
+function coverTint(url){
+  if(!url)return Promise.resolve(null);if(tintCache.has(url))return Promise.resolve(tintCache.get(url));
+  return new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";
+    im.onload=()=>{try{const t=document.createElement("canvas");t.width=t.height=8;const tx=t.getContext("2d",{willReadFrequently:true});tx.drawImage(im,0,0,8,8);const d=tx.getImageData(0,0,8,8).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<40)continue;r+=d[i];g+=d[i+1];b+=d[i+2];n++}
+      if(n){r/=n;g/=n;b/=n}else{r=g=b=40}
+      const v={bg:`rgb(${r|0},${g|0},${b|0})`,fg:(r*.299+g*.587+b*.114)>150?"#111":"#fff"};tintCache.set(url,v);res(v)}catch{res(null)}};
+    im.onerror=()=>res(null);im.src=url});
+}
+window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront,coverTint};
 })();
