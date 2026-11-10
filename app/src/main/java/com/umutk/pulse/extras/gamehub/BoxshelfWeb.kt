@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.webkit.JavascriptInterface
 import com.umutk.pulse.Compat
+import com.umutk.pulse.extras.blackout.Privilege
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -132,6 +133,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             "boxStyle" -> CaseCover.style(c)
             "menu" -> GameMenuService.enabled(c).toString()
             "coversRunning" -> CoverJob.running.value.toString()
+            "theme" -> p.getString(key, "shelf") ?: "shelf"
+            "access" -> Privilege.mode.name
             else -> ""
         }
     }
@@ -142,6 +145,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             return
         }
         if (key == "menu") { setMenu(value == "true"); return }
+        if (key == "theme") { if (value in THEMES) prefs(c).edit().putString("theme", value).apply(); return }
         val e = prefs(c).edit()
         when (key) {
             "caseStyle", "sgdbKey" -> e.putString(key, value)
@@ -171,6 +175,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             when (action) {
                 "lookCovers" -> if (sgdbKey(c).isNotEmpty()) CoverJob.start(c, loadGames(c))
                 "stopCovers" -> CoverJob.cancel()
+                "checkAccess" -> Thread { Privilege.detect() }.start()
             }
         }
     }
