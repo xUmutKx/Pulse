@@ -74,7 +74,7 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
 }
 
 /** The game's box in the chosen console case (none for the Steam style). */
-internal fun caseFile(c: Context, pkg: String): java.io.File = CaseCover.style(c).let { st -> if (st == "steam") java.io.File(c.filesDir, "none") else CaseCover.file(c, pkg, st) }
+internal fun caseFile(c: Context, pkg: String): java.io.File = CaseCover.fileFor(c, pkg) ?: java.io.File(c.filesDir, "none")
 
 /** Whether Boxshelf's opening animation has ended (the page says so); the shelf's + waits for it. A fallback shows it after a few seconds anyway. */
 internal object ShelfIntro { val done = androidx.compose.runtime.mutableStateOf(false) }
