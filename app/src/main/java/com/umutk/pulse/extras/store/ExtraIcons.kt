@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
@@ -392,9 +393,14 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
                             // Pulse's own icon, as the launcher shows it
                             val own = remember { runCatching { ctx.packageManager.getApplicationIcon(ctx.packageName).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
                             if (own != null) Image(own, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
-                        } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                            // no tile: the picture of the pack where there is one (Files, Photos, Calendar, Contacts, Browser), else the app's glyph
-                            PACK_DEFAULTS[r.key]?.let { res -> Image(painterResource(res), r.name, Modifier.size(36.dp)) } ?: PIcon(r.glyph, T.text, 26.dp)
+                        } else Box(
+                            Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .28f), Color.White.copy(alpha = .06f))))
+                                .border(1.dp, Color.White.copy(alpha = .3f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // the frosted glass tile: a see-through rounded tile with a light rim; the picture of the pack where there is one, else the glyph in white
+                            PACK_DEFAULTS[r.key]?.let { res -> Image(painterResource(res), r.name, Modifier.size(28.dp)) } ?: PIcon(r.glyph, Color.White, 22.dp)
                         }
                     }
                     Spacer(Modifier.width(12.dp))
