@@ -30,7 +30,7 @@ class BluetoothAutoplayReceiver : BroadcastReceiver() {
         val pending = goAsync()
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try { startIfQuiet(ctx) } finally { pending.finish() }
-        }, 3000L)
+        }, 1500L)
     }
 
     /** Starts the music only when the headphones are the output now, nothing else is playing or in a call, and it was not started a minute ago. */
