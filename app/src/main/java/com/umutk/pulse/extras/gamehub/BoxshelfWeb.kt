@@ -117,6 +117,30 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
     @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
+    // Game Hub's own settings, read and written from Boxshelf's Settings page: only these keys, each in the type and with the
+    // default the Game Hub page uses (the same preferences, so both pages show the same values)
+    @JavascriptInterface fun ghGet(key: String): String {
+        val p = prefs(c)
+        return when (key) {
+            "caseStyle" -> p.getString(key, "pc") ?: "pc"
+            "sgdbKey" -> p.getString(key, "") ?: ""
+            "grid", "view", "iconMode" -> p.getInt(key, 0).toString()
+            "start" -> p.getInt(key, 1).toString()
+            "showHidden" -> p.getBoolean(key, true).toString()
+            "playCovers" -> p.getBoolean(key, false).toString()
+            else -> ""
+        }
+    }
+    @JavascriptInterface fun ghSet(key: String, value: String) {
+        val e = prefs(c).edit()
+        when (key) {
+            "caseStyle", "sgdbKey" -> e.putString(key, value)
+            "grid", "view", "iconMode", "start" -> e.putInt(key, value.toIntOrNull() ?: 0)
+            "showHidden", "playCovers" -> e.putBoolean(key, value == "true")
+            else -> return
+        }
+        e.apply()
+    }
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
     /** The Settings row of the shelf's menu: Game Hub's own settings (theme, case style, setup). */

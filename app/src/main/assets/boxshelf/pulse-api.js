@@ -8,6 +8,9 @@
   const H = window.PulseHost;
   if (!H || !window.boxshelf) return;
   const api = window.boxshelf;
+  // Game Hub's own settings (the keys the Game Hub page uses), read and written where the Compose page keeps them
+  api.ghGet = k => { try { return H.ghGet(k); } catch (e) { return ''; } };
+  api.ghSet = (k, v) => { try { H.ghSet(k, String(v)); } catch (e) {} };
   const list = () => { try { return JSON.parse(H.games()); } catch (e) { return []; } };
   const entry = g => ({
     kind: 'app', id: 'app-' + g.pkg, appId: g.pkg, title: g.name, path: g.pkg, pulse: true,
