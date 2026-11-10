@@ -101,7 +101,7 @@ fun AiHub(onBack: () -> Unit) {
     BackHandler { if (drawer.isOpen) scope.launch { drawer.close() } else if (models) models = false else onBack() }
     val chat = chats.firstOrNull { it.id == cur } ?: chats.first().also { cur = it.id }
     fun openChat(id: String) { cur = id; models = false; scope.launch { drawer.close() } }
-    if (settingsOpen) AiSettingsDialog { settingsOpen = false }
+    if (settingsOpen) AiSettingsDialog(onClose = { settingsOpen = false }, onModels = { settingsOpen = false; models = true })
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
@@ -418,14 +418,12 @@ private fun AiSwitch(on: Boolean, onChange: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun AiSettingsDialog(onClose: () -> Unit) {
+private fun AiSettingsDialog(onClose: () -> Unit, onModels: () -> Unit) {
     val c = LocalContext.current
     var buddyOn by remember { mutableStateOf(AiBuddyService.enabled(c)) }
     var bar by remember { mutableStateOf(AiBuddyService.barStyle(c)) }
     var buddySettings by remember { mutableStateOf(false) }
-    var sortOpen by remember { mutableStateOf(false) }
     if (buddySettings) AiBuddySettingsDialog { buddySettings = false; AiBuddyService.live?.refresh() }
-    if (sortOpen) PhotoSortDialog { sortOpen = false }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFF161616)).padding(vertical = 20.dp)) {
             Text(tr("Settings", "Ayarlar"), color = AiInk, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp))
@@ -450,8 +448,13 @@ private fun AiSettingsDialog(onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth().clickable { buddySettings = true }.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 PIcon("settings", AiInk, 20.dp); Text(tr("Mascot settings", "Maskot ayarları"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
             }
-            Row(Modifier.fillMaxWidth().clickable { sortOpen = true }.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon("photos", AiInk, 20.dp); Text(tr("Sort the pictures", "Fotoğrafları sırala"), color = AiInk, fontSize = 15.sp, modifier = Modifier.padding(start = 12.dp))
+            // the model in use; a tap opens the Models page (pick, download or remove a model there)
+            Row(Modifier.fillMaxWidth().clickable { onModels() }.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("download", AiInk, 20.dp)
+                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    Text(tr("Model", "Model"), color = AiInk, fontSize = 15.sp)
+                    Text(AiEngine.chosenModel(LocalContext.current)?.name ?: tr("none chosen", "seçilmedi"), color = AiSub, fontSize = 12.sp)
+                }
             }
             TextButton(onClose, Modifier.align(Alignment.End).padding(end = 12.dp)) { Text(tr("Done", "Tamam"), color = AiAccent) }
         }
