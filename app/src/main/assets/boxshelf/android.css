@@ -182,3 +182,22 @@ html,body,#app{-webkit-user-select:none;user-select:none}
 .g-ico{width:1.05em;height:1.05em;border-radius:5px;vertical-align:-0.12em;margin-right:.35em;object-fit:cover}
 /* a small app icon under a store cover (Pulse games) */
 .f-front img.cover-ico{position:absolute;inset:auto;left:50%;top:auto;bottom:7%;right:auto;transform:translateX(-50%);width:15%;height:auto;object-fit:contain;aspect-ratio:1;border-radius:20%;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;z-index:2}
+/* (phone, held upright) Settings, Accounts & services, RetroAchievements and the other pages: the sections become a row of
+   tabs across the top, the page takes the whole width below it (the side-by-side layout is for the tablet and the landscape phone) */
+@media (orientation: portrait){
+  .platform-android .bss-root,.platform-android .bss-root.narrow,.platform-android .bss-root.studio,.platform-android .bss-root.studio.narrow{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .platform-android .bss-side{flex-direction:row;align-items:center;overflow-x:auto;overflow-y:hidden;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 8px;gap:8px;border-right:0;border-bottom:1px solid var(--line);background:rgba(5,6,11,.96)}
+  .platform-android .bss-search,.platform-android .bss-hints{display:none!important}
+  .platform-android .bss-nav{height:44px;font-size:17px;margin-right:0;padding:0 14px;flex:none;white-space:nowrap}
+  .platform-android .bss-nav.on::before{display:none}
+  .platform-android .bss-nav svg{width:20px;height:20px}
+  .platform-android .bss-page{padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 24px);min-height:0;overflow:hidden}
+  .platform-android .bss-crumb{font-size:11px;margin-bottom:6px}
+  .platform-android .bss-title{font-size:28px;white-space:normal}
+  .platform-android .bss-lead{font-size:14px;line-height:1.4}
+  .platform-android .bss-head{margin:16px 6px 6px}
+  .platform-android .bss-row{min-height:60px;padding:8px 6px;gap:12px}
+  .platform-android .bss-row::after{left:6px;right:6px}
+  .platform-android .bss-row .nm{font-size:18px;white-space:normal}
+  .platform-android .bss-row .sub{font-size:14px;white-space:normal}
+}
