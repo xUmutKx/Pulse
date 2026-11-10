@@ -218,3 +218,10 @@ html,body,#app{-webkit-user-select:none;user-select:none}
   .platform-android .cz-tabs{margin-left:0;margin-right:0}
   .platform-android .bss-title,.platform-android h1,.platform-android .bss-lead,.platform-android .set-title{white-space:normal;overflow-wrap:anywhere}
 }
+
+/* Customize on the phone (portrait): the panel fills the screen and is centred, with its own side margins; nothing of it sits off the left edge. */
+@media (orientation: portrait){
+  .platform-android #customize.settings{left:0;right:0;width:100%;max-width:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box;margin:0;transform:translateX(104%)}
+  .platform-android #app.settings-open #customize.settings{transform:none}
+  .platform-android #customize #setRows,.platform-android #customize .d-desc,.platform-android #customize .d-title{min-width:0;max-width:100%;margin-left:0;margin-right:0}
+}
