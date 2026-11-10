@@ -107,5 +107,12 @@ internal fun fetchSgdbCover(c: Context, g: GameRow): Boolean = runCatching {
 internal fun fetchBestCover(c: Context, g: GameRow): Boolean {
     // a game that only has its package id for a name ("com.Hakita.ULTRAKIL") is looked up by the title of its store page
     val named = if (looksLikePackage(g.name)) GameRow(g.pkg, fetchPlayTitle(c, g.pkg) ?: g.name) else g
-    return fetchSteamArt(c, named) || fetchSgdbCover(c, named) || (!playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg))
+    if (fetchSteamArt(c, named) || fetchSgdbCover(c, named)) return true
+    // the name as the store has it: "MiSide Android Beta" is "MiSide" (platform, edition and version words are dropped)
+    val short = named.name.replace(Regex("(?i)\\b(android|beta|demo|early access|edition|version|port|remastered|alpha)\\b"), " ").replace(Regex("\\s+"), " ").trim()
+    if (short.isNotEmpty() && short != named.name) {
+        val alt = GameRow(g.pkg, short)
+        if (fetchSteamArt(c, alt) || fetchSgdbCover(c, alt)) return true
+    }
+    return !playCoverFile(c, g.pkg).isFile && fetchPlayCover(c, g.pkg)
 }

@@ -93,6 +93,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
                 .put("hero", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
+                // the disc inside the case is the game's wide picture, so it is not the same picture as the front cover
+                .put("disc", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         return arr.toString()
