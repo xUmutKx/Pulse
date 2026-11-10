@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -174,7 +175,8 @@ private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times
                             translationX = (if (d < 0f) -1f else 1f) * tuck * cardW.toPx()
                             cameraDistance = 18f * density
                         }
-                        .clickable { if (page == pager.currentPage) onOpen(g) else scope.launch { pager.animateScrollToPage(page) } },
+                        .combinedClickable(onClick = { if (page == pager.currentPage) onOpen(g) else scope.launch { pager.animateScrollToPage(page) } },
+                            onDoubleClick = { if (page == pager.currentPage) onDetails(g) }),
                 ) { BoxArt(g, pal, g.pkg in hidden, Modifier.fillMaxSize()) }
             }
         }
@@ -407,6 +409,11 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
  * it is shown by its weight and a soft pill.
  */
 @Composable
+/** Deletes the game (uninstalls the app): the system's own dialog asks first. */
+internal fun uninstallGame(c: Context, pkg: String) {
+    runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, size: Long, hidden: Boolean, onBack: () -> Unit, onPlay: () -> Unit, settings: @Composable () -> Unit) {
     val ctx = LocalContext.current
     var tab by remember(g.pkg) { mutableStateOf(0) }
@@ -436,6 +443,11 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
                 ShelfPill(tr("Add to home", "Ana ekrana ekle"), false, pal) { pinGame(ctx, g.pkg) }
                 ShelfPill(if (fav) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori"), false, pal) { toggleFav(ctx, g.pkg); fav = g.pkg in favSet(ctx) }
                 ShelfPill(tr("Data folder", "Data klasörü"), false, pal) { openDataFolder(ctx, g.pkg) }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.card).clickable { uninstallGame(ctx, g.pkg) }.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
+                    Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
             Row(Modifier.padding(top = 18.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(tr("Overview", "Genel"), tr("Settings", "Ayarlar")).forEachIndexed { i, label ->

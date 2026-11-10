@@ -1126,6 +1126,11 @@ fun GameHubHub(onBack: () -> Unit) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 val u = usage[g.pkg]
                 GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L) { want -> setHidden(g.pkg, want) }
+                // deleting the game: the system's uninstall dialog asks first
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clip(RoundedCornerShape(14.dp)).background(pal.card)
+                    .clickable { uninstallGame(ctx, g.pkg) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
                 // the size of the app, and its data folder opened straight in Pulse's Files
                 Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Size", "Boyut"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.weight(1f))
