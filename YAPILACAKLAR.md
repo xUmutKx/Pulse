@@ -2401,3 +2401,9 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Gym: tek egzersiz sayfası, hareket görseli, sütun adları.
 - Ekstra uygulamalar: ızgara Fluent, kutu seçici, uygulama kendi sayfasını açar, cam varsayılan değil.
 - Ayarlar: dikey telefonda tek sütun.
+
+## 1.0.391 (derlenmedi → derlendi)
+- Game Hub ayarları Boxshelf ayarlarına taşındı (Game Hub bölümü: görünüm, kurulum, erişim, kütüphane, simgeler, kapaklar, kutu tarzı, oyun içi menü).
+- Kutu arkası oyunun Steam ekran görüntüleri; yan bant kapak renginden.
+- Karışık modda Xbox/konsol çerçeveleri yok; kapak üstünde uygulama simgesi yok.
+- Açılış ekranı yaklaşık 2/5 süre.
