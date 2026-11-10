@@ -2172,8 +2172,12 @@ function fit(){if(!stage)return;const u=[1,1.15,1.3].includes(+gp("ui.uiScale"))
   // (the handheld: a 6" screen at arm's length, so a quarter bigger again, but never narrower than a 1300-wide page)
   // (0.3.4: with no info column the page has room for bigger still: 1.45x, never narrower than a 1100-wide page)
   const hh=!!(window.bsPlatform&&bsPlatform.os==="android"),s=Math.min(Math.min(innerWidth/1920,innerHeight/1080)*u*(hh?1.45:1),hh?innerWidth/1100:Infinity),W=innerWidth/s,Hh=innerHeight/s;
-  stage.style.width=W+"px";stage.style.height=Hh+"px";stage.style.transform=`scale(${s})`;
-  E.root.classList.toggle("narrow",W<1760);E.root.style.transform=safe<1?`scale(${safe})`:"";E.root.style.transformOrigin="50% 50%";listSig="";sGeo=null;sSig="";E.side._sk=""}
+  // a phone held upright: the page is laid out for a 820-wide screen (one column, the menu on top), so its writing stays readable
+  const phone=hh&&innerWidth<innerHeight&&innerWidth<820;
+  const sp=phone?innerWidth/820:s,PW=phone?820:W,PH=phone?innerHeight/sp:Hh;
+  stage.style.width=PW+"px";stage.style.height=PH+"px";stage.style.transform=`scale(${sp})`;
+  E.root.classList.toggle("phone",phone);
+  E.root.classList.toggle("narrow",PW<1760);E.root.style.transform=safe<1?`scale(${safe})`:"";E.root.style.transformOrigin="50% 50%";listSig="";sGeo=null;sSig="";E.side._sk=""}
 let sideNavs=[],sideSig="";
 // written only when it changes (it ran on every move: a new search box each time, and the sidebar laid out again)
 function renderSearchBox(){const sb=E.side.querySelector(".bss-search");if(!sb)return;const cn="bss-search"+(focus==="search"?" cur":"")+(results&&focus!=="side"?" typing":"");if(sb.className!==cn)sb.className=cn;
