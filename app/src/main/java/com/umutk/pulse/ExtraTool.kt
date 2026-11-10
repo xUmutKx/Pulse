@@ -197,7 +197,7 @@ open class ExtraToolActivity : ComponentActivity() {
         enter()
         setContent {
             var look by remember { mutableStateOf(store?.get(this@ExtraToolActivity) ?: ExtraToolLook.get(this@ExtraToolActivity)) }
-            var route by rememberSaveable { mutableStateOf(start) }
+            var route by rememberSaveable(start) { mutableStateOf(start) }
             val back: () -> Unit = { if (route != start) route = start else finish() }
             val control = remember(look) {
                 ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it) }
