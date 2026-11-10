@@ -358,7 +358,13 @@ function build(){
     svcRow("steamgriddb","Community-made posters, offered in Art Studio next to the real box scans.","api key steamgriddb steam grid posters art studio"),
     svcRow("screenscraper","Box fronts, backs, full wraps (for spines) and disc / cartridge art by region, offered in Art Studio.","screenscraper screen scraper account art studio box back spine disc"),
   ]},
-  {g:"Game Hub",id:"gamehub",name:"Game Hub",ic:"games",lead:"Game Hub's own settings: the library, the icons, the covers and the start page. The same values as in Game Hub.",rows:[
+  {g:"Game Hub",id:"gamehub",name:"Game Hub",ic:"games",lead:"Game Hub's own settings: the look, the library, the icons, the covers, the access and the setup. The same values as in Game Hub.",rows:[
+    H("Look"),
+    GHC("Look","theme",[["shelf","Boxshelf (default)"],["shelfc","Shelf, light"],["amoled","Amoled"],["material","Material"],["glass","Material, transparent"],["win95","Windows 95"],["winxp","Windows XP"],["win8","Windows 8"],["win10","Windows 10"],["win11","Windows 11"]],"shelf","The look of Game Hub's own pages."),
+    H("Setup"),
+    A("Setup","Open","Opens Boxshelf's setup: your emulators, game folders and first choices.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(window.Setup&&Setup.open)Setup.open({wizard:true})},300)},{keys:"setup wizard emulators folders"}),
+    H("Access"),
+    A("Root or Shizuku",()=>{const m=api.ghGet?api.ghGet("access"):"None";return m==="Root"?"Root is on":m==="Shizuku"?"Shizuku is on":"Not connected"},"Root or Shizuku lets Game Hub hide games and switch background apps. Check again after you connect one.",()=>{if(api.ghRun)api.ghRun("checkAccess")},{keys:"root shizuku access"}),
     H("Library"),
     GHC("Tile size","grid",[[0,"Small"],[1,"Medium"],[2,"Large"]],0,"The size of each game in the library."),
     GHC("View","view",[[0,"Tiles"],[1,"Banners"]],0,"Tiles or wide banners in the library."),
