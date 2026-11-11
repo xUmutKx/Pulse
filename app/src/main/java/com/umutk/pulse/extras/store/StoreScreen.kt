@@ -452,7 +452,7 @@ object ExtraRowsHidden {
     fun setMenuOn(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("menu_on", on).apply() }
     /** An app that has its own launcher icon switched on is started from its icon, so it is not listed here. */
     fun launcherIconOn(c: android.content.Context, alias: String): Boolean =
-        c.packageManager.getComponentEnabledSetting(android.content.ComponentName(c, "com.umutk.pulse.$alias")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        LauncherGlass.shown(c, alias)
 }
 
 @OptIn(ExperimentalFoundationApi::class)

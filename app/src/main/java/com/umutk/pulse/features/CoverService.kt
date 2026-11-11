@@ -214,7 +214,9 @@ class CoverService : Service() {
 
     /** Closes the cover, then opens notification history through its launcher alias (ExtraToolActivity.routeOf maps it to "notifhist"). */
     private fun openNotifHist() {
-        startActivity(Intent().setComponent(ComponentName(this, "com.umutk.pulse.NotifHistLauncher")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        // the line icon's alias, or its glass twin when the home-screen icons are glass (only the one that is switched on can be started)
+        for (n in listOf("com.umutk.pulse.NotifHistLauncher", "com.umutk.pulse.GlassNotifHistLauncher"))
+            if (runCatching { startActivity(Intent().setComponent(ComponentName(this, n)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) break
         stopSelf()
     }
 

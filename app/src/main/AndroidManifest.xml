@@ -123,6 +123,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".IconGlass" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_pulse_glass" android:roundIcon="@drawable/launch_pulse_glass" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".IconWin95" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_95" android:roundIcon="@mipmap/ic_ti_95" android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -190,6 +196,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassFilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@drawable/launch_files_glass" android:roundIcon="@drawable/launch_files_glass" android:label="@string/files_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <!-- Pulse Calendar: own launcher entry and task -->
         <activity android:name=".CalendarActivity" android:process=":calendar" android:exported="true" android:label="Calendar" android:icon="@mipmap/ic_calendar" android:roundIcon="@mipmap/ic_calendar" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.calendar" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
                     <intent-filter>
@@ -224,6 +236,12 @@
             </intent-filter>
         </activity>
         <activity-alias android:name=".CalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@drawable/launch_calendar" android:roundIcon="@drawable/launch_calendar" android:label="Calendar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassCalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@drawable/launch_calendar_glass" android:roundIcon="@drawable/launch_calendar_glass" android:label="Calendar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -293,9 +311,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassContactsLauncher" android:enabled="false" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@drawable/launch_contacts_glass" android:roundIcon="@drawable/launch_contacts_glass" android:label="@string/contacts_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
         <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
         <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft_glass" android:roundIcon="@drawable/launch_artcraft_glass" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -333,6 +363,12 @@
             </intent-filter>
         </activity>
         <activity-alias android:name=".PhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@drawable/launch_photos" android:roundIcon="@drawable/launch_photos" android:label="@string/photos_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@drawable/launch_photos_glass" android:roundIcon="@drawable/launch_photos_glass" android:label="@string/photos_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -879,6 +915,12 @@
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
         <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_island" android:roundIcon="@drawable/launch_island" android:label="Island">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassIslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_island_glass" android:roundIcon="@drawable/launch_island_glass" android:label="Island">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1522,7 +1564,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassMusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_music_glass" android:roundIcon="@drawable/launch_music_glass" android:label="Music Player">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".VideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_video" android:roundIcon="@drawable/launch_video" android:label="Video Player">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:mimeType="video/*"/></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassVideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_video_glass" android:roundIcon="@drawable/launch_video_glass" android:label="Video Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1535,7 +1590,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassWhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_noise_glass" android:roundIcon="@drawable/launch_noise_glass" android:label="White Noise">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".VoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_voice" android:roundIcon="@drawable/launch_voice" android:label="Voice Recorder">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassVoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_voice_glass" android:roundIcon="@drawable/launch_voice_glass" android:label="Voice Recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1547,7 +1614,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassNotesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notes_glass" android:roundIcon="@drawable/launch_notes_glass" android:label="Notes">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_paint" android:roundIcon="@drawable/launch_paint" android:label="Paint">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_paint_glass" android:roundIcon="@drawable/launch_paint_glass" android:label="Paint">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1559,7 +1638,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassBrowserLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_browser_glass" android:roundIcon="@drawable/launch_browser_glass" android:label="Browser">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_office" android:roundIcon="@drawable/launch_office" android:label="Office">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassOfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_office_glass" android:roundIcon="@drawable/launch_office_glass" android:label="Office">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1571,7 +1662,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassCalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_calc_glass" android:roundIcon="@drawable/launch_calc_glass" android:label="Calculator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_clock" android:roundIcon="@drawable/launch_clock" android:label="Clock">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_clock_glass" android:roundIcon="@drawable/launch_clock_glass" android:label="Clock">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1583,7 +1686,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassEbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_books_glass" android:roundIcon="@drawable/launch_books_glass" android:label="Books">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_tempmail" android:roundIcon="@drawable/launch_tempmail" android:label="TempMail">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassTempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_tempmail_glass" android:roundIcon="@drawable/launch_tempmail_glass" android:label="TempMail">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1595,13 +1710,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassKeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_keyboard_glass" android:roundIcon="@drawable/launch_keyboard_glass" android:label="Keyboard">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".AiLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_ai" android:roundIcon="@drawable/launch_ai" android:label="Pulse AI">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassAiLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_ai_glass" android:roundIcon="@drawable/launch_ai_glass" android:label="Pulse AI">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_weather" android:roundIcon="@drawable/launch_weather" android:label="Weather">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassWeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_weather_glass" android:roundIcon="@drawable/launch_weather_glass" android:label="Weather">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1614,7 +1747,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassMessagesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_messages_glass" android:roundIcon="@drawable/launch_messages_glass" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_screenrec" android:roundIcon="@drawable/launch_screenrec" android:label="Screen recorder">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_screenrec_glass" android:roundIcon="@drawable/launch_screenrec_glass" android:label="Screen recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1626,7 +1771,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassNotifHistLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notifhist_glass" android:roundIcon="@drawable/launch_notifhist_glass" android:label="Notification history">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".ExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_store" android:roundIcon="@drawable/launch_store" android:label="Store">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_store_glass" android:roundIcon="@drawable/launch_store_glass" android:label="Store">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1638,13 +1795,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassLocalSendLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_localsend_glass" android:roundIcon="@drawable/launch_localsend_glass" android:label="LocalSend">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_palette" android:roundIcon="@drawable/launch_palette" android:label="Palette">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassPaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_palette_glass" android:roundIcon="@drawable/launch_palette_glass" android:label="Palette">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".GameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_gamehub" android:roundIcon="@drawable/launch_gamehub" android:label="Game Hub">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassGameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_gamehub_glass" android:roundIcon="@drawable/launch_gamehub_glass" android:label="Game Hub">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1657,6 +1832,12 @@
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout" android:roundIcon="@drawable/launch_blackout" android:label="BlackOut">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassBlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout_glass" android:roundIcon="@drawable/launch_blackout_glass" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

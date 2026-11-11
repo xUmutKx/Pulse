@@ -546,6 +546,13 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         StoreHeader(tr("App icons", "Uygulama ikonları"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            // the icons on the HOME SCREEN (the app icons of the phone's launcher): line icons or blue Material glass; a tablet starts with glass
+            var homeGlass by remember { mutableStateOf(LauncherGlass.glassOn(ctx)) }
+            Text(tr("Home screen icons", "Ana ekran ikonları"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PChip(!homeGlass, tr("Line", "Çizgi")) { homeGlass = false; LauncherGlass.setGlass(ctx, false) }
+                PChip(homeGlass, tr("Material glass", "Material cam")) { homeGlass = true; LauncherGlass.setGlass(ctx, true) }
+            }
             // the default look of every row without a choice: Material glass in one colour, or the look's own icon
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PChip(!ExtraIcons.glassOn, tr("Default", "Varsayılan")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
