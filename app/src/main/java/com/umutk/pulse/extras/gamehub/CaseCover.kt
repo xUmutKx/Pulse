@@ -40,6 +40,9 @@ internal object CaseCover {
     }
 
     /** The shelf group of [pkg] in the mix: its box's colour (the order of [MIX]); 0 for every game outside the mix. */
+    /** The box style of [pkg] (the one its box is made in): the chosen style, or in the mix the game's own style. */
+    fun styleOf(c: Context, pkg: String): String = if (style(c) == "mix") (mixMap(c)[pkg] ?: "steam") else style(c)
+
     fun groupOf(c: Context, pkg: String): Int = if (style(c) == "mix") MIX.indexOf(mixMap(c)[pkg] ?: "steam").coerceAtLeast(0) else 0
 
     private fun mixMap(c: Context): Map<String, String> =
