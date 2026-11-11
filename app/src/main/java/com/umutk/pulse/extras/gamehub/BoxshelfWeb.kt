@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.webkit.JavascriptInterface
+import com.umutk.pulse.Compat
+import com.umutk.pulse.extras.blackout.Privilege
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -61,8 +63,13 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
             }
             "cover" -> {
                 val pkg = parts.getOrNull(1) ?: return null
-                val f = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+                val f = coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(f))
+            }
+            "shot" -> {
+                val pkg = parts.getOrNull(1) ?: return null
+                val k = parts.getOrNull(2)?.toIntOrNull() ?: return null
+                WebResourceResponse("image/jpeg", null, FileInputStream(steamShotFile(c, pkg, k).takeIf { it.isFile } ?: return null))
             }
             "hero" -> {
                 val pkg = parts.getOrNull(1) ?: return null
@@ -73,8 +80,21 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
     }.getOrNull()
 }
 
+/** Counts the changes the web shelf must read again (the boxes were made in another style, covers were found): the shelf is keyed by it. */
+internal object ShelfSync {
+    val rev = androidx.compose.runtime.mutableIntStateOf(0)
+    fun bump() { android.os.Handler(android.os.Looper.getMainLooper()).post { rev.intValue++ } }
+}
+
+/** The game's box in the chosen console case (none for the Steam style). */
+internal fun caseFile(c: Context, pkg: String): java.io.File = CaseCover.fileFor(c, pkg) ?: java.io.File(c.filesDir, "none")
+
+/** Whether Boxshelf's opening animation has ended (the page says so); the shelf's + waits for it. A fallback shows it after a few seconds anyway. */
+internal object ShelfIntro { val done = androidx.compose.runtime.mutableStateOf(false) }
+
 /** What the page can ask Pulse for. */
 private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDetails: (String) -> Unit, val onBack: () -> Unit, val onSettings: () -> Unit) {
+    @JavascriptInterface fun introDone() { android.os.Handler(android.os.Looper.getMainLooper()).post { ShelfIntro.done.value = true } }
     @JavascriptInterface
     fun games(): String {
         val hidden = hiddenSet(c)
@@ -83,12 +103,19 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val arr = JSONArray()
         // the same rule as the library: a hidden game shows only while "show hidden games" is on (hiding itself stays Game Hub's: pm hide, shown for its start)
         val showHidden = prefs(c).getBoolean("showHidden", true)
-        loadGames(c).filter { showHidden || it.pkg !in hidden }.forEach { g ->
-            val hasCover = coverFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
+        // in the mix the shelf is in colour groups (Steam, PS5, Switch, Xbox Series), each group in the order of the library
+        loadGames(c).filter { showHidden || it.pkg !in hidden }.sortedBy { CaseCover.groupOf(c, it.pkg) }.forEach { g ->
+            val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
                 .put("hero", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
+                // the disc inside the case is the game's wide picture, so it is not the same picture as the front cover
+                .put("disc", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
+                // the Steam screenshots for the back of the box (up to four; none until the covers were looked for)
+                // the box style the game's box is made in: the spine says its console (Steam: the shelf's own PC spine)
+                .put("box", CaseCover.styleOf(c, g.pkg))
+                .put("shots", JSONArray((0 until 4).filter { steamShotFile(c, g.pkg, it).isFile }.map { "https://$HOST/shot/${g.pkg}/$it" }))
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         return arr.toString()
@@ -100,6 +127,66 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
     @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
+    // Game Hub's own settings, read and written from Boxshelf's Settings page: only these keys, each in the type and with the
+    // default the Game Hub page uses (the same preferences, so both pages show the same values)
+    @JavascriptInterface fun ghGet(key: String): String {
+        val p = prefs(c)
+        return when (key) {
+            "caseStyle" -> p.getString(key, "pc") ?: "pc"
+            "sgdbKey" -> p.getString(key, "") ?: ""
+            "grid", "view", "iconMode" -> p.getInt(key, 0).toString()
+            "start" -> p.getInt(key, 1).toString()
+            "showHidden" -> p.getBoolean(key, true).toString()
+            "playCovers" -> p.getBoolean(key, false).toString()
+            "boxStyle" -> CaseCover.style(c)
+            "menu" -> GameMenuService.enabled(c).toString()
+            "coversRunning" -> CoverJob.running.value.toString()
+            "theme" -> p.getString(key, "shelf") ?: "shelf"
+            "access" -> Privilege.mode.name
+            else -> ""
+        }
+    }
+    @JavascriptInterface fun ghSet(key: String, value: String) {
+        // the box style applies to every game's box (made again in the background); the menu asks for its permissions first
+        if (key == "boxStyle") {
+            if (value in CaseCover.STYLES) { CaseCover.setStyle(c, value); val pkgs = loadGames(c).map { it.pkg }; Thread { CaseCover.applyAll(c, pkgs, value); ShelfSync.bump() }.start() }
+            return
+        }
+        if (key == "menu") { setMenu(value == "true"); return }
+        if (key == "theme") { if (value in THEMES) prefs(c).edit().putString("theme", value).apply(); return }
+        val e = prefs(c).edit()
+        when (key) {
+            "caseStyle", "sgdbKey" -> e.putString(key, value)
+            "grid", "view", "iconMode", "start" -> e.putInt(key, value.toIntOrNull() ?: 0)
+            "showHidden", "playCovers" -> e.putBoolean(key, value == "true")
+            else -> return
+        }
+        e.apply()
+    }
+    private fun setMenu(on: Boolean) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            if (on && !Compat.canOverlay(c)) {
+                runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + c.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                return@post
+            }
+            if (on && !usageAllowed(c)) {
+                runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                return@post
+            }
+            prefs(c).edit().putBoolean("menu", on).apply()
+            if (on) GameMenuService.start(c) else GameMenuService.stop(c)
+        }
+    }
+    /** Game Hub's cover search, started and stopped from Boxshelf's Settings page (the key is needed first, as on the Game Hub page). */
+    @JavascriptInterface fun ghRun(action: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            when (action) {
+                "lookCovers" -> if (sgdbKey(c).isNotEmpty()) CoverJob.start(c, loadGames(c))
+                "stopCovers" -> CoverJob.cancel()
+                "checkAccess" -> Thread { Privilege.detect() }.start()
+            }
+        }
+    }
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
     /** The Settings row of the shelf's menu: Game Hub's own settings (theme, case style, setup). */
@@ -112,6 +199,9 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
 @Composable
 internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit, onExit: () -> Unit, onSettings: () -> Unit = {}) {
     val ctx = LocalContext.current
+    // each time the shelf opens, its opening animation comes first: the + waits for the page to say it ended (or a few seconds)
+    androidx.compose.runtime.DisposableEffect(Unit) { ShelfIntro.done.value = false; onDispose { ShelfIntro.done.value = false } }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(4000); ShelfIntro.done.value = true }
     val launch by rememberUpdatedState(onLaunch)
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
@@ -124,8 +214,25 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_RESUME) holder[0]?.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
-            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause() else if (e == Lifecycle.Event.ON_RESUME) holder[0]?.onResume()
+            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause()
+            else if (e == Lifecycle.Event.ON_RESUME) {
+                val w = holder[0] ?: return@LifecycleEventObserver
+                w.onResume()
+                // the page's return step (the shelf comes back) runs once the page is running again: its timers and frames were stopped while it was away
+                w.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
+                // back from a game the picture can stay black until something redraws it (a touch did): the layer is reset, and the view is drawn
+                // again several times while the window comes back (the first draws can land before it is in front), the page nudged to paint too
+                w.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                w.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                w.invalidate(); w.requestLayout()
+                val h = android.os.Handler(android.os.Looper.getMainLooper())
+                for (d in longArrayOf(100L, 250L, 500L, 900L, 1500L, 2300L)) h.postDelayed({
+                    if (holder[0] !== w) return@postDelayed
+                    w.invalidate()
+                    w.evaluateJavascript("document.documentElement.style.opacity='.999';requestAnimationFrame(function(){document.documentElement.style.opacity=''})", null)
+                    if (d == 250L || d == 900L) { w.visibility = android.view.View.INVISIBLE; h.postDelayed({ if (holder[0] === w) w.visibility = android.view.View.VISIBLE }, 40L) }
+                }, d)
+            }
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs); holder[0]?.destroy(); holder[0] = null }

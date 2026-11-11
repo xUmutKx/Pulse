@@ -30,6 +30,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -76,7 +78,9 @@ fun SonicPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Trac
     // the arm swings in when a record plays, and back to its rest when it stops
     val arm by animateFloatAsState(if (st.isPlaying || pos > 0) 1f else 0f, tween(700), label = "arm")
     val cur = st.current
-    val art = rememberTrackArt(cur)
+    val artSquare = rememberTrackArt(cur)
+    // the cover cut round once (not clipped on every frame): the record's label is a circle
+    val art = remember(artSquare) { artSquare?.let { roundCover(it) } }
     val albums = remember(library) { library.groupBy { it.album ?: "?" }.entries.map { it.key to it.value }.sortedBy { it.first.lowercase() } }
     val albumOf = cur?.album ?: "?"
     val tracks = remember(st.queue, albumOf) { st.queue.filter { (it.album ?: "?") == albumOf }.ifEmpty { st.queue } }
@@ -185,14 +189,9 @@ private fun DrawScope.drawDeck(art: ImageBitmap?, spin: Float, progress: Float, 
         drawCircle(Color(0xFF1C1C1E), r, c)
         for (k in 0..18) drawCircle(Glow.copy(alpha = if (k % 6 == 0) .16f else .06f), r * (.45f + k * .03f), c, style = Stroke(1.2f))
         if (art != null) {
-            // the cover as the record's face, round (the record's own shape), its centre square cropped from any picture
+            // the cover as the record's label: a round picture, its centre square cut from the cover
             val s = r * 1.12f
-            val m = minOf(art.width, art.height)
-            val path = androidx.compose.ui.graphics.Path().apply { addOval(androidx.compose.ui.geometry.Rect(c, r * .98f)) }
-            clipPath(path) {
-                drawImage(art, srcOffset = IntOffset((art.width - m) / 2, (art.height - m) / 2), srcSize = IntSize(m, m),
-                    dstOffset = IntOffset((c.x - s / 2).toInt(), (c.y - s / 2).toInt()), dstSize = IntSize(s.toInt(), s.toInt()), alpha = .92f)
-            }
+            drawImage(art, dstOffset = IntOffset((c.x - s / 2).toInt(), (c.y - s / 2).toInt()), dstSize = IntSize(s.toInt(), s.toInt()), alpha = .92f)
         } else drawCircle(SonicOrange, r * .34f, c)
         drawLine(Glow.copy(alpha = .6f), Offset(c.x, c.y - r * .9f), Offset(c.x, c.y - r * .75f), 3f, StrokeCap.Round)
     }
@@ -230,3 +229,17 @@ private fun DrawScope.drawDeck(art: ImageBitmap?, spin: Float, progress: Float, 
     // the little status lamp and the name plate
     drawCircle(if (playing) SonicOrange else Color(0xFF5A3A2A), h * .012f, Offset(l + w * .02f, h * .065f))
 }
+
+/** The cover's centre square, cut into a circle (transparent outside), for the record's label. */
+private fun roundCover(src: ImageBitmap): ImageBitmap? = runCatching {
+    val bmp = src.asAndroidBitmap()
+    val m = minOf(bmp.width, bmp.height)
+    val out = android.graphics.Bitmap.createBitmap(m, m, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(out)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    canvas.drawCircle(m / 2f, m / 2f, m / 2f, paint)
+    paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
+    canvas.drawBitmap(bmp, android.graphics.Rect((bmp.width - m) / 2, (bmp.height - m) / 2, (bmp.width + m) / 2, (bmp.height + m) / 2),
+        android.graphics.Rect(0, 0, m, m), paint)
+    out.asImageBitmap()
+}.getOrNull()

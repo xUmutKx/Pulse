@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -121,7 +124,7 @@ fun GymScreen(onBack: () -> Unit, startTab: Int = 0) {
 
 @Composable
 private fun GNum(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(value, onChange, modifier, singleLine = true, label = { Text(label, fontSize = 11.sp) },
+    OutlinedTextField(value, onChange, modifier, singleLine = true,
         textStyle = TextStyle(color = T.text, fontSize = 14.sp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
 }
 
@@ -293,33 +296,53 @@ private fun TrainTab(open: (GymEx) -> Unit) {
     val elapsed = if (start > 0) ((now.coerceAtLeast(System.currentTimeMillis()) - start) / 1000L).toInt() else 0
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Session", "Antrenman") + (if (start > 0) "  " + hm(elapsed) else ""), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text(tr("Rest", "Dinlenme") + " ", color = T.sub, fontSize = 12.sp)
+            Text(tr("Workout", "Antrenman") + (if (start > 0) " · " + hm(elapsed) else ""), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
+        Text(tr("Rest after each set", "Her setten sonra dinlenme"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(45, 60, 90, 120, 180, 240).forEach { s -> PChip(rest == s, if (s < 60) "${s}s" else "${s / 60}:%02d".format(s % 60)) { rest = s; GymStore.setRestSec(ctx, s) } }
+            listOf(45, 60, 90, 120, 180, 240).forEach { s -> PChip(rest == s, if (s < 60) "$s s" else if (s % 60 == 0) "${s / 60} min" else "${s / 60}:%02d".format(s % 60)) { rest = s; GymStore.setRestSec(ctx, s) } }
         }
     }
-    items.toList().forEachIndexed { ii, it0 ->
+    // one exercise per page: swipe (or the arrows) to the next; the picture moves, so the movement is seen while it is done
+    val list = items.toList()
+    val pager = rememberPagerState(pageCount = { list.size })
+    if (pager.currentPage > list.lastIndex) LaunchedEffect(list.size) { pager.scrollToPage(list.lastIndex) }
+    // a page is as tall as the screen allows and scrolls inside itself when its sets run long
+    HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(720.dp), pageSpacing = 12.dp, verticalAlignment = Alignment.Top) { page ->
+        val it0 = list.getOrNull(page) ?: return@HorizontalPager
         val ex = exercises.firstOrNull { e -> e.id == it0.ex }
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(T.text.copy(alpha = .06f)).clickable { ex?.let(open) }, contentAlignment = Alignment.Center) { if (ex != null && ex.art.isNotBlank()) ArtView(ex.art, 40.dp) }
-                Column(Modifier.padding(start = 10.dp).weight(1f)) {
-                    Text(ex?.name ?: it0.ex, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 2)
-                    val rec = remember(it0.ex) { GymStore.record(ctx, it0.ex) }
-                    if (rec > 0f) Text(tr("Record", "Rekor") + ": ${fmtW(rec)} kg", color = T.sub, fontSize = 11.sp)
-                    GymCoach.target(ctx, it0.ex)?.let { tg -> Text(tr("Try", "Dene") + ": " + (if (tg.first > 0f) fmtW(tg.first) + " kg × " else "") + tg.second, color = Look.accent, fontSize = 11.sp) }
-                }
-                Text("✕", color = T.sub, fontSize = 18.sp, modifier = Modifier.clickable { items.removeAt(ii); if (items.isEmpty()) { GymStore.clearDraft(ctx); start = 0L } else save() }.padding(10.dp))
+                Text("${page + 1} / ${list.size}", color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("✕", color = T.sub, fontSize = 18.sp, modifier = Modifier.clickable { items.removeAt(page); if (items.isEmpty()) { GymStore.clearDraft(ctx); start = 0L } else save() }.padding(10.dp))
+            }
+            // the movement: the picture plays its two frames, tap it for the full exercise
+            Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(14.dp)).background(T.text.copy(alpha = .06f)).clickable { ex?.let(open) }, contentAlignment = Alignment.Center) {
+                if (ex != null && ex.art.isNotBlank()) ArtView(ex.art, 150.dp) else PIcon("heart", T.sub, 40.dp)
+            }
+            Text(ex?.name ?: it0.ex, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+            if (ex != null) Text(GymData.muscleName(ex.primary) + (if (ex.secondary.isNotEmpty()) " · " + ex.secondary.joinToString(", ") { GymData.muscleName(it) } else ""), color = T.sub, fontSize = 13.sp)
+            GymCoach.target(ctx, it0.ex)?.let { tg -> Text(tr("Try", "Dene") + ": " + (if (tg.first > 0f) fmtW(tg.first) + " kg × " else "") + tg.second, color = Look.accent, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
+            val rec = remember(it0.ex) { GymStore.record(ctx, it0.ex) }
+            if (rec > 0f) Text(tr("Record", "Rekor") + ": ${fmtW(rec)} kg", color = T.sub, fontSize = 12.sp)
+            // how to do it: the first steps, one per line
+            if (ex != null && ex.steps.isNotEmpty()) Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                ex.steps.take(3).forEachIndexed { i, st -> Text("${i + 1}. $st", color = T.text, fontSize = 13.sp) }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Set", "Set"), color = T.sub, fontSize = 11.sp, modifier = Modifier.width(28.dp))
+                Text(tr("Weight (kg)", "Ağırlık (kg)"), color = T.sub, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(tr("Reps", "Tekrar"), color = T.sub, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                Text(tr("Done", "Bitti"), color = T.sub, fontSize = 11.sp, modifier = Modifier.width(40.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
             it0.sets.forEachIndexed { si, s ->
-                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${si + 1}", color = T.sub, fontSize = 14.sp, modifier = Modifier.width(20.dp))
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("${si + 1}", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(28.dp))
                     var wt by remember(s) { mutableStateOf(if (s.w > 0f) fmtW(s.w) else "") }
                     var rp by remember(s) { mutableStateOf(if (s.r > 0) s.r.toString() else "") }
-                    GNum(wt, { wt = it; s.w = it.replace(',', '.').toFloatOrNull() ?: 0f; save() }, "kg", Modifier.weight(1f))
-                    GNum(rp, { rp = it.filter { c -> c.isDigit() }; s.r = rp.toIntOrNull() ?: 0; save() }, tr("reps", "tekrar"), Modifier.weight(1f))
+                    GNum(wt, { wt = it; s.w = it.replace(',', '.').toFloatOrNull() ?: 0f; save() }, "", Modifier.weight(1f))
+                    GNum(rp, { rp = it.filter { c -> c.isDigit() }; s.r = rp.toIntOrNull() ?: 0; save() }, "", Modifier.weight(1f))
                     Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(if (s.done) Look.accent else T.text.copy(alpha = .1f)).clickable {
                         ensureStart(); s.done = !s.done
                         if (s.done) { restEnd = System.currentTimeMillis() + rest * 1000L; now = System.currentTimeMillis() }
@@ -328,10 +351,21 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                 }
             }
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton(tr("+ set", "+ set"), compact = true) { val last = it0.sets.lastOrNull(); it0.sets.add(GSet(last?.w ?: 0f, last?.r ?: 0)); save() }
-                if (it0.sets.size > 1) PButton(tr("− set", "− set"), compact = true) { it0.sets.removeAt(it0.sets.lastIndex); save() }
+                PButton(tr("Add set", "Set ekle"), compact = true) { val last = it0.sets.lastOrNull(); it0.sets.add(GSet(last?.w ?: 0f, last?.r ?: 0)); save() }
+                if (it0.sets.size > 1) PButton(tr("Remove last set", "Son seti sil"), compact = true) { it0.sets.removeAt(it0.sets.lastIndex); save() }
             }
         }
+        }
+    }
+    // the dots and the arrows: which exercise this is, and the way to the next one
+    if (list.size > 1) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        PButton(tr("Previous", "Önceki"), compact = true) { if (pager.currentPage > 0) scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            list.indices.forEach { i ->
+                Box(Modifier.size(if (i == pager.currentPage) 10.dp else 7.dp).clip(CircleShape).background(if (i == pager.currentPage) Look.accent else T.sub.copy(alpha = .4f)))
+            }
+        }
+        PButton(tr("Next", "Sonraki"), compact = true) { if (pager.currentPage < list.lastIndex) scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PButton(tr("Add exercise", "Egzersiz ekle"), Modifier.weight(1f)) { picking = true }
@@ -353,7 +387,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
         text = { PField(routineName, { routineName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth()) },
         confirmButton = { PButton(tr("Save", "Kaydet")) { if (routineName.isNotBlank()) { GymStore.addRoutine(ctx, routineName.trim(), items.map { it.ex to it.sets.size }); routineName = ""; naming = false; msg = tr("Routine saved.", "Rutin kaydedildi.") } } },
         dismissButton = { PButton(tr("Cancel", "Vazgeç")) { naming = false } })
-    PButton(tr("Save as a routine", "Rutin olarak kaydet"), compact = true) { naming = true }
+    PButton(tr("Save these exercises as a routine", "Bu egzersizleri rutin olarak kaydet"), compact = true) { naming = true }
     if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 13.sp)
 }
 

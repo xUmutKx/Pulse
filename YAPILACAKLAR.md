@@ -2355,3 +2355,76 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## 1.0.384
 - Pulse AI sohbet/maskot/yüzen maskot, Sonic yuvarlak kapak, klavye pano ve çip, Office yakınlaştırma/kaydırma/arama — derlenmedi
+
+## Pulse AI (derlenmedi)
+- Cevaplar Markdown: başlık, liste, kod bloğu (kopyala düğmeli), kalın/italik/satır içi kod; her cevabın altında Kopyala.
+- Cevap uzunluğu 1024 -> 2048 token (cevap ortasında kesilme).
+- Boşta maskot sabit; sadece yazarken dans eder. Maskota dokununca sayfası açılır.
+- Çekmecede Maskot/Yüzen maskot/Çubuk satırları kalktı; tek "Ayarlar" penceresinde toplandı, çubuk seçimi Pulse AI turuncusu.
+- Giriş alanı tek satırda: + , yazı kutusu, gönder.
+- Vision (resimli) model desteği: henüz yok.
+
+## Pulse AI: görsel model ve fotoğraf sıralama (derlenmedi)
+- llama.cpp mtmd (commit a691b234) native köprüye bağlandı: projector yükleme ve resimli soru.
+- Modeller: SmolVLM 500M vision (hızlı), Gemma 3 4B vision; mmproj dosyası modelle birlikte iner.
+- Sohbette + ile resim eklenir (görsel model seçiliyse).
+- Ayarlar > Fotoğrafları sırala: en yeni 300 fotoğraf etiketlenir, albümler (insanlar, yemek, hayvan ...) gösterilir.
+- Derleme ve cihazda deneme yapılmadı; SmolVLM ve Gemma için hız ölçülmedi.
+
+## 1.0.386 (derlendi)
+- Pulse AI: Markdown cevaplar, kopyala, cevap kesilmesi giderildi, maskot sabit, ayarlar tek pencerede, siyah ve beyaz tema.
+- Pulse AI: görsel modeller (SmolVLM 500M, Gemma 3 4B), resim ekleme, fotoğraf sıralama.
+- Müzik: kütüphane düğmeleri sola, sayı sağa; çevrimiçi çalma listesi kaldırıldı; ilerleme çubuğunda flick; geri dönüşte siyah kare yok.
+- Sonic: plak kapağı yuvarlak.
+- Game Hub: beyaz vurgu, AMOLED anahtarı kaldırıldı, + açılış animasyonunu bekliyor, kapak otomatik çekilmiyor.
+- Uygulama yöneticisi: Game Hub'ın gizlediği uygulamalar listeleniyor.
+- Boyut: gym 200 egzersiz, ikonlar WebP, CPU varyantları azaltıldı.
+
+## 1.0.387 (derlendi)
+- Pulse AI: model ayarı, resim albümleme kaldırıldı, çekmece Modeller geri geldi.
+- Dosyalar: dex görüntüleyici, HTML/SVG/MHTML, zip ve 7z düzeltmeleri, yeni sıkıştırma eski sonucu temizliyor.
+- İkon paketi: siyah beyaz ve renk seçimi, siyah önizleme.
+- ArtCraft: eksik ikonlar APK'dan.
+- Game Hub: çift tık istatistik, oyunu sil, kapak ara, siyah-beyaz tema, SteamGridDB anahtarı.
+- Bluetooth otomatik müzik: bağlantı hazır olunca, bir kez, başka bir şey çalmıyorken.
+- Telefon dikey: ayar sayfaları ve konsol görünümü sığıyor.
+
+## 1.0.388 (derlendi)
+- Ekstra uygulamalar: ikon paketinde Material cam ve renk; varsayılan ikon eski haline döndü.
+- Game Hub: kapak aramasi arka planda (CoverService), bildirim ve ilerleme.
+
+## 1.0.389 (derlendi)
+- Ekstra uygulamalar: Material cam isteğe bağlı (tümü ya da tek tek), üç seviye, renk seçici; Pulse nabız simgesi; klavye harfsiz.
+
+## 1.0.390 (derlendi)
+- Game Hub: kutu tarzları (PS5/PS4/PS3/Switch/Switch 2/Xbox), karışık mod ve renk grupları, disk görseli, kapak aramasında kısa ad.
+- Gym: tek egzersiz sayfası, hareket görseli, sütun adları.
+- Ekstra uygulamalar: ızgara Fluent, kutu seçici, uygulama kendi sayfasını açar, cam varsayılan değil.
+- Ayarlar: dikey telefonda tek sütun.
+
+## 1.0.391 (derlenmedi → derlendi)
+- Game Hub ayarları Boxshelf ayarlarına taşındı (Game Hub bölümü: görünüm, kurulum, erişim, kütüphane, simgeler, kapaklar, kutu tarzı, oyun içi menü).
+- Kutu arkası oyunun Steam ekran görüntüleri; yan bant kapak renginden.
+- Karışık modda Xbox/konsol çerçeveleri yok; kapak üstünde uygulama simgesi yok.
+- Açılış ekranı yaklaşık 2/5 süre.
+
+## 1.0.392 (derlendi)
+- Game Hub: karışık kutular yeniden Steam/PS5/Switch/Xbox Series; yan etiket ve arka yüz konsol renginde.
+- Açık kutuda basılı tutma ile disk çıkar, konsola sürükle: oyun başlar; dışarı bırakılırsa disk geri girer.
+- Oyundan dönüş: siyah kapak ve dönüş adımı Android'de de çalışır.
+- Game Hub ayarları Boxshelf ayarlarında.
+- Pulse AI: beş küçük sansürsüz sohbet modeli, Görsel bölümü ve iki sansürsüz görsel model.
+- Excel: Excel 2003 XML dosyaları açılır.
+- Güncelleme sonrası "Ne yeni" listesi bu sürümün notları.
+
+## 1.0.393 (derlendi)
+- Ana ekran ikonları: her ekstra uygulama ve Pulse için çizgi ve 6 Material cam rengi; ikon seçicide "Ana ekrana uygula".
+- Tablette ilk açılışta mavi cam, telefonda çizgi.
+- Game Hub: karışık kutular, yan ve arka yüz konsol renginde, disk çıkarma ve sürükleme, dönüşte raf.
+- Pulse AI: beş küçük sansürsüz model, Görsel bölümü ve iki sansürsüz görsel model.
+- Excel 2003 XML dosyaları açılıyor.
+- Güncelleme sonrası "Ne yeni" listesi bu sürümün notları.
+
+## 1.0.394 (derlendi)
+- Game Hub: kutu tarzı değişince raf yenilenir; yan yüzde konsol işareti; disk çıkarma ve sürükleme (3B tuvali) ve konsol çizimleri.
+- Oyundan dönüşte karartma (dim) temizlenir ve görünüm yeniden çizilir.

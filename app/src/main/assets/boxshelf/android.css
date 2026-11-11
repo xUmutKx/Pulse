@@ -182,3 +182,59 @@ html,body,#app{-webkit-user-select:none;user-select:none}
 .g-ico{width:1.05em;height:1.05em;border-radius:5px;vertical-align:-0.12em;margin-right:.35em;object-fit:cover}
 /* a small app icon under a store cover (Pulse games) */
 .f-front img.cover-ico{position:absolute;inset:auto;left:50%;top:auto;bottom:7%;right:auto;transform:translateX(-50%);width:15%;height:auto;object-fit:contain;aspect-ratio:1;border-radius:20%;box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none;z-index:2}
+/* (phone, held upright) Settings, Accounts & services, RetroAchievements and the other pages: the sections become a row of
+   tabs across the top, the page takes the whole width below it (the side-by-side layout is for the tablet and the landscape phone) */
+@media (orientation: portrait){
+  .platform-android .bss-root,.platform-android .bss-root.narrow,.platform-android .bss-root.studio,.platform-android .bss-root.studio.narrow{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .platform-android .bss-side{flex-direction:row;align-items:center;overflow-x:auto;overflow-y:hidden;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 8px;gap:8px;border-right:0;border-bottom:1px solid var(--line);background:rgba(5,6,11,.96)}
+  .platform-android .bss-search,.platform-android .bss-hints{display:none!important}
+  .platform-android .bss-nav{height:44px;font-size:17px;margin-right:0;padding:0 14px;flex:none;white-space:nowrap}
+  .platform-android .bss-nav.on::before{display:none}
+  .platform-android .bss-nav svg{width:20px;height:20px}
+  .platform-android .bss-page{padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 24px);min-height:0;overflow:hidden}
+  .platform-android .bss-crumb{font-size:11px;margin-bottom:6px}
+  .platform-android .bss-title{font-size:28px;white-space:normal}
+  .platform-android .bss-lead{font-size:14px;line-height:1.4}
+  .platform-android .bss-head{margin:16px 6px 6px}
+  .platform-android .bss-row{min-height:60px;padding:8px 6px;gap:12px}
+  .platform-android .bss-row::after{left:6px;right:6px}
+  .platform-android .bss-row .nm{font-size:18px;white-space:normal}
+  .platform-android .bss-row .sub{font-size:14px;white-space:normal}
+}
+/* (Customize > Theme tiles on the phone) each tile is a small static swatch: no transitions, no shadows, no per-tile paint
+   layers, so opening the grid and moving through it does not repaint the other tiles */
+.platform-android .qm-opt.sw{transition:none!important;box-shadow:none!important;will-change:auto;contain:strict;backface-visibility:hidden}
+.platform-android .qm-opt.sw i{transition:none!important;animation:none!important}
+.platform-android .qm-opt.sw.on{box-shadow:none!important}
+/* (phone, held upright) Customize per console (logo, 3D console, boot video, files): one column, the buttons wrap under their text,
+   nothing is wider than the screen (the desktop grid of 132 px label + page cut the page off at both edges) */
+@media (orientation: portrait){
+  .platform-android .set-row,.platform-android .set-row.cz,.platform-android .cz-pick{max-width:100%;min-width:0;box-sizing:border-box;margin-left:0;margin-right:0}
+  .platform-android .cz-row{grid-template-columns:1fr;gap:8px;padding:12px 0}
+  .platform-android .cz-l b{font-size:16px}.platform-android .cz-l span{font-size:14px}.platform-android .cz-l small{font-size:12.5px}
+  .platform-android .cz-btns{flex-wrap:wrap}
+  .platform-android .cz-btns .chip{font-size:14px;padding:9px 14px}
+  .platform-android .cz-pcards{grid-template-columns:1fr 1fr}
+  .platform-android .cz-tabs{margin-left:0;margin-right:0}
+  .platform-android .bss-title,.platform-android h1,.platform-android .bss-lead,.platform-android .set-title{white-space:normal;overflow-wrap:anywhere}
+}
+
+/* Customize on the phone (portrait): the panel fills the screen and is centred, with its own side margins; nothing of it sits off the left edge. */
+@media (orientation: portrait){
+  .platform-android #customize.settings{left:0;right:0;width:100%;max-width:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box;margin:0;transform:translateX(104%)}
+  .platform-android #app.settings-open #customize.settings{transform:none}
+  .platform-android #customize #setRows,.platform-android #customize .d-desc,.platform-android #customize .d-title{min-width:0;max-width:100%;margin-left:0;margin-right:0}
+}
+
+/* Settings on a phone held upright (settings.js sets .phone): one column, the menu is a row of tabs on top, the page takes the width,
+   and the info column is not shown. */
+.platform-android .bss-root.phone{grid-template-columns:1fr!important;grid-template-rows:auto 1fr;}
+.platform-android .bss-root.phone .bss-side{flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:18px 14px 8px;gap:8px;border-right:0;border-bottom:1px solid rgba(255,255,255,.07);align-items:center}
+.platform-android .bss-root.phone .bss-nav{height:auto;padding:10px 14px;margin-right:0;font-size:17px;white-space:nowrap;flex:0 0 auto}
+.platform-android .bss-root.phone .bss-search{display:none}
+.platform-android .bss-root.phone .bss-info{display:none}
+.platform-android .bss-root.phone .bss-page{padding:16px 16px 110px;grid-column:1}
+
+/* a box's spine mark (the console's picture instead of its name) */
+.spine-band.has-mark{display:flex;align-items:center;justify-content:center}
+.spine-band.has-mark svg{width:90%;height:auto;max-height:94%;display:block}

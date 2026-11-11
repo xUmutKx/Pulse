@@ -94,6 +94,7 @@ import com.umutk.pulse.PSwitch
 import com.umutk.pulse.extras.blackout.Privilege
 import com.umutk.pulse.Compat
 import com.umutk.pulse.tr
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -125,7 +126,7 @@ private fun systemColor(c: Context, res: Int, fallback: Color): Color =
 
 internal fun palOf(theme: String, c: Context): Pal = when (theme) {
     // the shelf: a dark room, warm wood-brown cards and an amber accent (the look of a game shelf with the box art standing on it)
-    "shelf", "shelfc" -> Pal(Color(0xFF0E0B09), Color(0xFF2A211B), Color(0xFFF4E9DC), Color(0xFFA89684), Color(0xFFF2A54A), 14.dp)
+    "shelf", "shelfc" -> Pal(Color(0xFF000000), Color(0xFF141414), Color.White, Color(0xFF9A9A9A), Color.White, 14.dp)
     // Material, see-through: a light veil for the ground and frosted cards, over a soft colour wash drawn behind the page
     "glass" -> Pal(Color(0x33000000), Color(0x40FFFFFF), Color.White, Color(0xFFD6D6DC), systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)), 20.dp)
     // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
@@ -736,7 +737,7 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     val hiddenList = hiddenPkgs.map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }
     val visible = apps.filter { it.pkg !in hiddenPkgs && it.name.contains(query, true) }
     fun changed() { hiddenPkgs = hiddenSet(ctx); tick++; onChanged() }
-    Dialog(onDismissRequest = onClose) {
+    Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
             item { Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp) }
             item {
@@ -750,20 +751,36 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
                     GameIcon(h.pkg, pal)
                     Spacer(Modifier.width(10.dp))
                     Text(h.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    PSwitch(true, { want -> if (!want && setGameHidden(ctx, h.pkg, false)) changed() })
+                    GhSwitch(true, pal) { want -> if (!want && setGameHidden(ctx, h.pkg, false)) changed() }
                 }
             }
-            item { PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
+            item { GhField(query, { query = it }, tr("Search apps", "Uygulama ara"), pal, Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
             items(visible, key = { it.pkg }) { a ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     GameIcon(a.pkg, pal)
                     Spacer(Modifier.width(10.dp))
                     Text(a.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    PSwitch(false, { want -> if (want && setGameHidden(ctx, a.pkg, true)) changed() })
+                    GhSwitch(false, pal) { want -> if (want && setGameHidden(ctx, a.pkg, true)) changed() }
                 }
             }
         }
     }
+}
+
+/** A switch in the Game Hub look: on = the look's text colour, the thumb in the look's ground colour. */
+@Composable
+private fun GhSwitch(on: Boolean, pal: Pal, onChange: (Boolean) -> Unit) {
+    androidx.compose.material3.Switch(checked = on, onCheckedChange = onChange, colors = androidx.compose.material3.SwitchDefaults.colors(
+        checkedThumbColor = pal.bg, checkedTrackColor = pal.text, checkedBorderColor = pal.text,
+        uncheckedThumbColor = pal.sub, uncheckedTrackColor = pal.card, uncheckedBorderColor = pal.sub))
+}
+
+/** A text field in the Game Hub look (its text, its line and its cursor follow the look). */
+@Composable
+private fun GhField(value: String, onChange: (String) -> Unit, label: String, pal: Pal, modifier: Modifier = Modifier) {
+    androidx.compose.material3.OutlinedTextField(value, onChange, modifier, singleLine = true, label = { Text(label, color = pal.sub) },
+        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = pal.text, unfocusedTextColor = pal.text,
+            focusedBorderColor = pal.text, unfocusedBorderColor = pal.sub, cursorColor = pal.text, focusedContainerColor = pal.bg, unfocusedContainerColor = pal.bg))
 }
 
 private val PAGE_TITLES = listOf("Home", "Library", "Settings")
@@ -852,7 +869,7 @@ fun GameHubHub(onBack: () -> Unit) {
     val can = mode != Privilege.Mode.None
     // the store pictures of the games that have no cover yet are fetched one by one in the background
     LaunchedEffect(games.size) {
-        if (!prefs(ctx).getBoolean("playCovers", true)) return@LaunchedEffect
+        if (!prefs(ctx).getBoolean("playCovers", false)) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             var got = 0
             for (g in games) {
@@ -979,7 +996,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle) { BoxshelfWeb(
+                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         Modifier.fillMaxSize().navigationBarsPadding(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
@@ -1023,7 +1040,8 @@ fun GameHubHub(onBack: () -> Unit) {
                         contentColor = pal.text,
                         modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 20.dp, bottom = 96.dp),
                     ) { FluentIcon("search", pal.text, 22.dp) }
-                    FloatingActionButton(
+                    // the + waits for Boxshelf's opening animation to end (it is not drawn over the animation)
+                    if (!webShelf || ShelfIntro.done.value) FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
                         contentColor = pal.bg,
@@ -1034,13 +1052,12 @@ fun GameHubHub(onBack: () -> Unit) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
                     ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
                     // the look of the cases on Boxshelf's shelf: one of its own case styles
-                    // a pure black screen behind the boxes (for an AMOLED screen)
-                    var amo by remember { mutableStateOf(prefs(ctx).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")) }
-                    Chip(pal, if (amo) "● " + tr("AMOLED black", "AMOLED siyah") else tr("AMOLED black", "AMOLED siyah")) { amo = !amo; prefs(ctx).edit().putBoolean("amoledShelf", amo).apply() }
                     // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
                     var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
                     Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-                    PField(sgKey, { sgKey = it; prefs(ctx).edit().putString("sgdbKey", it.trim()).apply() }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                    // the key is typed in memory and saved when the typing is done (or the page is left): no write on every key
+                    DisposableEffect(Unit) { onDispose { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() } }
+                    PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->
@@ -1102,9 +1119,50 @@ fun GameHubHub(onBack: () -> Unit) {
                         scope.launch { withContext(Dispatchers.IO) { Privilege.detect() }; mode = Privilege.mode }
                     }
                     SectionTitle(pal, tr("Covers", "Kapaklar"))
-                    var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+                    var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
                     SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
+                    // the box style: the Steam cover (the default), or the game's picture in a console's case (the frame and its logo come with it)
+                    var boxStyle by remember { mutableStateOf(CaseCover.style(ctx)) }
+                    var boxBusy by remember { mutableStateOf(false) }
+                    Text(tr("Box style", "Kutu tarzı"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("steam" to tr("Steam", "Steam"), "ps5" to "PS5", "ps4" to "PS4", "ps3" to "PS3", "switch" to "Switch", "switch2" to "Switch 2",
+                            "xbox360" to "Xbox 360", "xboxone" to "Xbox One", "xboxseries" to "Xbox Series", "mix" to tr("Mix (even)", "Karışık (eşit)")).forEach { (st, label) ->
+                            Chip(pal, (if (boxStyle == st) "✓ " else "") + label) {
+                                if (!boxBusy && boxStyle != st) {
+                                    boxStyle = st; CaseCover.setStyle(ctx, st); boxBusy = true
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) { CaseCover.applyAll(ctx, games.map { it.pkg }, st) }
+                                        GameArt.version.intValue++; ShelfSync.bump(); boxBusy = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (boxBusy) Text(tr("Making the boxes…", "Kutular hazırlanıyor…"), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    // the covers of every game that has none: from SteamGridDB (with the key above) and Steam, by the game's name; it runs in the background (CoverJob)
+                    var lookMsg by remember { mutableStateOf("") }
+                    val lookRunning by CoverJob.running.collectAsState()
+                    val lookDone by CoverJob.done.collectAsState()
+                    val lookTotal by CoverJob.total.collectAsState()
+                    val lookFound by CoverJob.found.collectAsState()
+                    Chip(pal, if (lookRunning) tr("Stop", "Durdur") else tr("Look for covers", "Kapak ara")) {
+                        if (lookRunning) CoverJob.cancel()
+                        else if (sgdbKey(ctx).isEmpty()) lookMsg = tr("Enter the SteamGridDB key first (it adds more covers)", "Önce SteamGridDB anahtarını gir (daha çok kapak için)")
+                        else {
+                            lookMsg = ""
+                            CoverJob.start(ctx, games)
+                        }
+                    }
+                    if (lookRunning) {
+                        Text(tr("Looking… $lookDone of $lookTotal · $lookFound covers", "Aranıyor… $lookDone / $lookTotal · $lookFound kapak"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(pal.sub.copy(alpha = .25f))) {
+                            Box(Modifier.fillMaxWidth(if (lookTotal > 0) lookDone.toFloat() / lookTotal else 0f).height(4.dp).background(pal.accent))
+                        }
+                    }
+                    if (!lookRunning && lookTotal > 0) Text(tr("$lookFound covers found", "$lookFound kapak bulundu"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    if (lookMsg.isNotEmpty()) Text(lookMsg, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     Spacer(Modifier.height(24.dp))
                 }
             }
@@ -1128,6 +1186,11 @@ fun GameHubHub(onBack: () -> Unit) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 val u = usage[g.pkg]
                 GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L) { want -> setHidden(g.pkg, want) }
+                // deleting the game: the system's uninstall dialog asks first
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clip(RoundedCornerShape(14.dp)).background(pal.card)
+                    .clickable { uninstallGame(ctx, g.pkg) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
                 // the size of the app, and its data folder opened straight in Pulse's Files
                 Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Size", "Boyut"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -1320,7 +1383,7 @@ private fun GameProfile(pal: Pal, pkg: String, can: Boolean) {
     }
 }
 
-private fun usageAllowed(c: Context): Boolean = runCatching {
+internal fun usageAllowed(c: Context): Boolean = runCatching {
     val ops = c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
     ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) == android.app.AppOpsManager.MODE_ALLOWED
 }.getOrDefault(false)

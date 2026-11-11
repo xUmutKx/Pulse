@@ -20,7 +20,12 @@ class AiModel(
     val license: String, val uncensored: Boolean = false, val note: String = "",
     /** A file found on the phone or from a search: its path or URI, not in the catalog. */
     val path: String? = null,
+    /** A vision model: the file that lets it see pictures (llama.cpp's mmproj), downloaded with the model. */
+    val projector: Projector? = null,
 )
+
+/** The vision part of a vision model: its file, where it comes from and its size. */
+class Projector(val file: String, val url: String, val bytes: Long)
 
 private fun hf(repo: String, file: String) = "https://huggingface.co/$repo/resolve/main/$file"
 
@@ -42,6 +47,23 @@ val CHAT_MODELS = listOf(
     AiModel("qwen3-4b-abl", "chat", "Qwen 3 4B abliterated", "Qwen3-4B-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen3-4B-abliterated-GGUF", "Qwen3-4B-abliterated.Q4_K_M.gguf"), 2_497_280_704, "Apache 2.0", uncensored = true),
     AiModel("qwen25-7b", "chat", "Qwen 2.5 7B", "Qwen2.5-7B-Instruct-Q4_K_M.gguf", hf("bartowski/Qwen2.5-7B-Instruct-GGUF", "Qwen2.5-7B-Instruct-Q4_K_M.gguf"), 4_683_074_240, "Apache 2.0",
         note = "12 GB phones and up"),
+    // small uncensored (abliterated) chat models, from the smallest up; the same chat as the others
+    AiModel("qwen25-05b-abl", "chat", "Qwen 2.5 0.5B abliterated", "Qwen2.5-0.5B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-0.5B-Instruct-abliterated-GGUF", "Qwen2.5-0.5B-Instruct-abliterated.Q4_K_M.gguf"), 397_808_512, "Apache 2.0", uncensored = true,
+        note = "Very small, quick on any phone"),
+    AiModel("qwen25-15b-abl", "chat", "Qwen 2.5 1.5B abliterated", "Qwen2.5-1.5B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-1.5B-Instruct-abliterated-GGUF", "Qwen2.5-1.5B-Instruct-abliterated.Q4_K_M.gguf"), 986_049_088, "Apache 2.0", uncensored = true),
+    AiModel("smollm2-17b-abl", "chat", "SmolLM2 1.7B abliterated", "smollm2-1.7b-abliterated.Q4_K_M.gguf", hf("mradermacher/smollm2-1.7b-abliterated-GGUF", "smollm2-1.7b-abliterated.Q4_K_M.gguf"), 1_055_610_464, "Apache 2.0", uncensored = true),
+    AiModel("qwen25-3b-abl", "chat", "Qwen 2.5 3B abliterated", "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF", "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf"), 1_929_903_520, "Qwen research licence", uncensored = true),
+    AiModel("qwen3-4b-2507-abl", "chat", "Qwen 3 4B 2507 abliterated", "Huihui-Qwen3-4B-Instruct-2507-abliterated.Q4_K_M.gguf", hf("mradermacher/Huihui-Qwen3-4B-Instruct-2507-abliterated-GGUF", "Huihui-Qwen3-4B-Instruct-2507-abliterated.Q4_K_M.gguf"), 2_497_281_312, "Apache 2.0", uncensored = true),
+    // vision: these see pictures (the picture goes in with the question); the small one answers quickest
+    AiModel("smolvlm-500m-vision", "chat", "SmolVLM 500M vision", "SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "SmolVLM-500M-Instruct-Q8_0.gguf"), 436_806_912, "Apache 2.0",
+        note = "Sees pictures, quickest", projector = Projector("mmproj-SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "mmproj-SmolVLM-500M-Instruct-Q8_0.gguf"), 108_783_360)),
+    AiModel("gemma3-4b-vision", "chat", "Gemma 3 4B vision", "gemma-3-4b-it-Q4_K_M.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "gemma-3-4b-it-Q4_K_M.gguf"), 2_489_757_856, "Gemma terms",
+        note = "Sees pictures, better answers", projector = Projector("mmproj-gemma-3-4b-it-f16.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "mmproj-model-f16.gguf"), 851_251_104)),
+    // uncensored vision models: they see pictures and answer without the usual refusals
+    AiModel("qwen3vl-4b-abl", "chat", "Qwen 3 VL 4B abliterated", "Qwen3-VL-4B-Instruct-c_abliterated-v2.Q4_K_M.gguf", hf("mradermacher/Qwen3-VL-4B-Instruct-c_abliterated-v2-GGUF", "Qwen3-VL-4B-Instruct-c_abliterated-v2.Q4_K_M.gguf"), 2_497_282_848, "Apache 2.0", uncensored = true,
+        note = "Sees pictures, uncensored", projector = Projector("Qwen3-VL-4B-Instruct-c_abliterated-v2.mmproj-Q8_0.gguf", hf("mradermacher/Qwen3-VL-4B-Instruct-c_abliterated-v2-GGUF", "Qwen3-VL-4B-Instruct-c_abliterated-v2.mmproj-Q8_0.gguf"), 453_974_944)),
+    AiModel("qwen25vl-7b-abl", "chat", "Qwen 2.5 VL 7B abliterated", "Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF", "Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf"), 4_683_073_952, "Apache 2.0", uncensored = true,
+        note = "Sees pictures, 12 GB phones and up", projector = Projector("Qwen2.5-VL-7B-Instruct-abliterated.mmproj-Q8_0.gguf", hf("mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF", "Qwen2.5-VL-7B-Instruct-abliterated.mmproj-Q8_0.gguf"), 853_119_712)),
 )
 
 /** Speech to text (whisper.cpp ggml files): for timed lyrics and voice. */
@@ -58,7 +80,7 @@ object Device {
     /** How a model fits this phone: 2 recommended, 1 runs, 0 too big. A loaded model takes about its file size plus a fifth in memory. */
     fun fit(c: Context, m: AiModel): Int {
         val ram = ramBytes(c).toDouble()
-        val need = m.bytes * 1.25
+        val need = (m.bytes + (m.projector?.bytes ?: 0L)) * 1.25
         return when { need <= ram * .28 -> 2; need <= ram * .45 -> 1; else -> 0 }
     }
     /** The best model this phone runs well. */
@@ -84,17 +106,28 @@ object Store {
         val file = fileOf(m)
         file.parentFile?.mkdirs()
         jobs.remove(m.id)?.cancel()
-        jobs[m.id] = scope.launch { runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, m.url, file, m.bytes) {} } }
+        jobs[m.id] = scope.launch {
+            runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, m.url, file, m.bytes) {} }
+            m.projector?.let { p -> runCatching { com.umutk.pulse.features.Downloads.fetchFile(app, p.url, projectorFile(p), p.bytes) {} } }
+        }
     }
 
-    /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. */
+    /** The vision part of a vision model, in the same folder. */
+    fun projectorFile(p: Projector) = File(dir, p.file)
+
+    /** 0..1 while downloading, 1 when the file is there, -1 when not started or failed. A vision model's projector is the second part. */
     fun progress(c: Context, m: AiModel): Float {
         if (has(c, m)) return 1f
-        val t = com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path } ?: return -1f
+        val p = m.projector
+        val mainDone = fileOf(m).isFile && fileOf(m).length() >= m.bytes * 98 / 100
+        val second = p != null && mainDone
+        val file = if (second) projectorFile(p!!) else fileOf(m)
+        val total = if (second) p!!.bytes else m.bytes
+        val t = com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == file.path } ?: return if (second) 0f else -1f
         return when (t.state.value) {
             com.umutk.pulse.features.DlState.DONE -> 1f
             com.umutk.pulse.features.DlState.FAILED -> -1f
-            else -> (t.done.value.toFloat() / (t.total.value.takeIf { it > 0 } ?: m.bytes)).coerceIn(0f, .999f)
+            else -> (t.done.value.toFloat() / (t.total.value.takeIf { it > 0 } ?: total)).coerceIn(0f, .999f)
         }
     }
 
@@ -103,6 +136,7 @@ object Store {
         m.path?.let { return File(it).isFile }
         val f = fileOf(m)
         if (!f.isFile || f.length() < m.bytes * 98 / 100) return false
+        m.projector?.let { p -> projectorFile(p).let { pf -> if (!pf.isFile || pf.length() < p.bytes * 98 / 100) return false } }
         return com.umutk.pulse.features.Downloads.tasks.value.none { it.file.path == f.path && it.state.value == com.umutk.pulse.features.DlState.RUNNING }
     }
 
@@ -110,6 +144,7 @@ object Store {
         jobs.remove(m.id)?.cancel()
         com.umutk.pulse.features.Downloads.tasks.value.firstOrNull { it.file.path == fileOf(m).path }?.let { com.umutk.pulse.features.Downloads.remove(it) }
         runCatching { fileOf(m).delete() }
+        m.projector?.let { p -> runCatching { projectorFile(p).delete() } }
         sp(c).edit().remove("dl_${m.id}").apply()
     }
 

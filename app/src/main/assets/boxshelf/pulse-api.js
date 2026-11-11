@@ -8,9 +8,16 @@
   const H = window.PulseHost;
   if (!H || !window.boxshelf) return;
   const api = window.boxshelf;
+  // Game Hub's own settings (the keys the Game Hub page uses), read and written where the Compose page keeps them
+  api.ghGet = k => { try { return H.ghGet(k); } catch (e) { return ''; } };
+  api.ghSet = (k, v) => { try { H.ghSet(k, String(v)); } catch (e) {} };
   const list = () => { try { return JSON.parse(H.games()); } catch (e) { return []; } };
   const entry = g => ({
     kind: 'app', id: 'app-' + g.pkg, appId: g.pkg, title: g.name, path: g.pkg, pulse: true,
+    // the Steam screenshots for the back of the box (up to four URLs; none until the covers were looked for)
+    shots: Array.isArray(g.shots) ? g.shots : [],
+    // the box style of the game's box: its spine says that console
+    box: g.box || 'steam',
     hidden: !!g.hidden, minutes: Math.round((g.playMs || 0) / 60000), lastPlayed: g.lastUsed ? g.lastUsed / 1000 : 0,
     // the picture of a game is its cover from the internet (Steam, SteamGridDB, Google Play) or its wide art; the app's icon is never used as the cover
     // appIcon is only for the title line (not 'icon': the shelf builds a cover from that one when there is none)
@@ -58,7 +65,14 @@
   };
   api.quit = async () => { H.back(); return true; };
   // the platform's own "exited": Pulse tells the page when the game has closed and Boxshelf is on the screen again
-  window.__pulseExited = () => { try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {} };
+  // the desktop's "run quitting" step (the shelf is covered in black, then comes back): Android has no such event, so it runs
+  // here, the moment Pulse is in front again, right before the "exited" step that brings the shelf back
+  const onQuit = api.onRunQuitting;
+  api.onRunQuitting = fn => { window.__bsQuit = fn; return onQuit ? onQuit(fn) : () => {}; };
+  window.__pulseExited = () => {
+    try { window.__bsQuit && window.__bsQuit(); } catch (e) {}
+    try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {}
+  };
   // Details > More > Game settings: Pulse's own page of the game (performance, profile, cover)
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dPulse'); if (b && window.__pulseCur) api.pulseDetails(window.__pulseCur.appId); }, true);
   // Back (Android's back button): on the bare shelf Pulse leaves it; on any other screen (details, a case in hand, a menu, a list) the page goes one step back

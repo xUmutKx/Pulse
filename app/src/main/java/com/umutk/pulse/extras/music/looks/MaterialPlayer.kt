@@ -510,11 +510,15 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     val glide by androidx.compose.animation.core.animateFloatAsState(pos.toFloat(), tween(420, easing = androidx.compose.animation.core.LinearEasing), label = "seekGlide")
                     // the thumb is pulled along by the finger on a spring: it lags a little, overshoots and settles, so the bar feels elastic and slippery
                     val elastic = remember { androidx.compose.animation.core.Animatable(0f) }
+                    // a quick flick carries the bar on with inertia (it slows and stops at the ends); the seek happens once, where it stops
                     PSlider((if (dragging) elastic.value else glide).coerceIn(0f, d.toFloat()), {
                         val first = !dragging
                         dragging = true; pos = it.toInt()
                         scope.launch { if (first) elastic.snapTo(glide); elastic.animateTo(it, spring(dampingRatio = .5f, stiffness = Spring.StiffnessMediumLow)) }
-                    }, 0f..d.toFloat()) { engine.seekTo(pos); scope.launch { elastic.animateTo(pos.toFloat(), spring(dampingRatio = .6f, stiffness = Spring.StiffnessLow)); dragging = false } }
+                    }, 0f..d.toFloat(), flick = true, onFlingStep = { v ->
+                        dragging = true; pos = v.toInt()
+                        scope.launch { elastic.snapTo(v) }
+                    }) { engine.seekTo(pos); scope.launch { elastic.animateTo(pos.toFloat(), spring(dampingRatio = .6f, stiffness = Spring.StiffnessLow)); dragging = false } }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }

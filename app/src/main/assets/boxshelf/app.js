@@ -270,10 +270,24 @@ function ambient(on){mmWant=!!on;if(!window.Sound)return;const m=mmPick(),lv=mmV
 const sfx={tick:(dir)=>play_("tick",{dir}),flip:()=>play_("flip"),sys:(dir)=>play_("shelf",{dir}),go:()=>play_("go"),back:()=>play_("back")};
 
 /* ---------- cover images ---------- */
+// a Pulse app with no picture of its own gets the cover with its own icon as the picture inside (one of the six designs, by its title):
+// never the generic cover with the play button
+function appFrontAsync(style,g){
+  if(g&&g.pulse&&g.art&&g.art.appIcon&&!g.art.front)return Covers.iconFront(style,g,g.art.appIcon).then(u=>u||Covers.frontAsync(style,g),()=>Covers.frontAsync(style,g));
+  return Covers.frontAsync(style,g);
+}
 function frontUrl(g){return (g.art&&g.art.front)||Covers.front(stOf(g),g)}
+// the console mark on a box's spine: small line pictures (Xbox's sphere, PlayStation's four buttons, Switch's two Joy-Cons), in the band's ink
+const BOX_ICON={
+  xbox:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.6 6.8c2.3 2.1 3.6 3.6 5.4 5.7 1.8-2.1 3.1-3.6 5.4-5.7M6.6 17.2c2.3-2.1 3.6-3.6 5.4-5.7 1.8 2.1 3.1 3.6 5.4 5.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  ps:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6l2.8 4.8H9.2z"/><circle cx="19.2" cy="12" r="2.7"/><path d="M9.8 17.8l4.4 4.4M14.2 17.8l-4.4 4.4"/><rect x="2.3" y="9.4" width="5.3" height="5.3" rx=".6"/></g></svg>',
+  switch:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3.4" width="6.2" height="17.2" rx="3"/><rect x="14.8" y="3.4" width="6.2" height="17.2" rx="3"/></g><circle cx="6.1" cy="8.4" r="1.3" fill="currentColor"/><circle cx="17.9" cy="15.6" r="1.3" fill="currentColor"/></svg>'
+};
+// the style a game's back is drawn in: a Game Hub box's own console (its colours, band and label), else the shelf's style
+function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];return g&&g.pulse&&id&&STYLE[id]?STYLE[id]:stOf(g)}
 function backUrl(g){
   if(g.art&&g.art.back)return g.art.back;
-  return Covers.back(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview);
+  return Covers.back(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview);
 }
 // Sample a real cover's average color so the glow matches it.
 const hueCache=new Map();
@@ -344,8 +358,14 @@ function mount(s){
   const os=cur()===HOME?stOf(g):sh;if(os!==sh){slot.style.setProperty("--bw",`calc(var(--ch) * ${os.ratio})`);slot.style.setProperty("--bd",`calc(var(--ch) * ${os.ratio*os.depth})`);slot.style.setProperty("--edge",`calc(var(--ch) * ${os.ratio*os.edge})`);slot.style.setProperty("--rc",`calc(var(--ch) * ${os.ratio*(os.rc||.03)})`);slot.style.setProperty("--re",`calc(var(--ch) * ${os.ratio*os.depth*(os.re||.3)})`);slot.style.setProperty("--case",os.caseColor);slot.style.setProperty("--case-side",os.caseSide);slot.style.setProperty("--spine-ink",os.spineInk)}
   if(isFav(g))slot.classList.add("fav");
   // Pulse's own app icon, small under the cover, on a store picture (a cover made from the icon already has it)
-  if(g.pulse&&g.art&&g.art.appIcon&&g.art.front&&!g.art.gen){const bi=document.createElement("img");bi.className="cover-ico";bi.alt="";bi.draggable=false;bi.src=g.art.appIcon;slot.querySelector(".f-front").appendChild(bi)}
-  slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=os.spineBand.bg;band.style.color=os.spineBand.fg;band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":os.spineBand.label});
+  // a Game Hub box's spine is its own console: that console's colours and label (the Steam box keeps the shelf's PC spine)
+  const BOXST={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"},BOXLAB={ps5:"PS5",ps4:"PS4",ps3:"PS3",switch:"SWITCH",switch2:"SWITCH 2",xbox360:"XBOX 360",xboxone:"XBOX ONE",xboxseries:"XBOX SERIES"};
+  const boxSt=g.pulse&&g.box&&BOXST[g.box]&&STYLE[BOXST[g.box]]&&STYLE[BOXST[g.box]].spineBand;
+  const sb=boxSt||os.spineBand;
+  const boxMark=boxSt&&g.kind!=="emulator"&&g.kind!=="setup"?BOX_ICON[/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":"switch"]:null;
+  slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=sb.bg;band.style.color=sb.fg;if(boxMark){band.innerHTML=boxMark;band.classList.add("has-mark")}else{band.classList.remove("has-mark");band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":(boxSt&&BOXLAB[g.box]||os.spineBand.label)}});
+  // a Steam box's spine takes the colour of the game's own cover (the front), once it is read
+  if(!boxSt&&g.art&&g.art.front&&!g.art.gen&&window.Covers&&Covers.coverTint&&g.kind!=="emulator"&&g.kind!=="setup")Covers.coverTint(g.art.front).then(t=>{if(!t||!slot.isConnected)return;slot.querySelectorAll(".spine-band").forEach(b=>{b.style.background=t.bg;b.style.color=t.fg})});
   slot.querySelectorAll(".spine-title").forEach(t=>t.textContent=g.title);
   // (beta.10) Android: the spine's small copy sized like the front's (thumb), not the 1024 px display copy, on every case made
   if(g.art&&g.art.spine){const su=ANDROID?thumb(g.art.spine,bh*OS):g.art.spine;slot.querySelectorAll(".f-left,.f-right").forEach(face=>{const sp=new Image();sp.className="spine-img";sp.alt="";sp.draggable=false;sp.decoding="async";sp.src=su;sp.onerror=()=>sp.remove();face.appendChild(sp)})}
@@ -418,17 +438,17 @@ function glareAndroid(s,ad,sg,x,ry){
 }
 // Real covers load asynchronously; generated covers are drawn a few per frame so moving never stutters.
 let coverQ=[],coverQRunning=false;
-function setFront(s,g,url,made){if(url&&url.then){const img=s.img;s.coverP=url;url.then(u=>{if(s.img===img&&s.coverP===url&&u)setFront(s,g,u,made)});return}s.coverP=null;url=made?url:thumb(url,bh*OS);s.img.decoding="async";s.img.onerror=made?null:()=>{s.img.onerror=null;setFront(s,g,ANDROID&&Covers.frontAsync?Covers.frontAsync(stOf(g),g):Covers.front(stOf(g),g),true)};s.img.src=url} /* (a picture that won't load: the made-up cover is encoded in the worker, not on this thread mid-slide; made: never retried) */
+function setFront(s,g,url,made){if(url&&url.then){const img=s.img;s.coverP=url;url.then(u=>{if(s.img===img&&s.coverP===url&&u)setFront(s,g,u,made)});return}s.coverP=null;url=made?url:thumb(url,bh*OS);s.img.decoding="async";s.img.onerror=made?null:()=>{s.img.onerror=null;setFront(s,g,ANDROID&&Covers.frontAsync?appFrontAsync(stOf(g),g):Covers.front(stOf(g),g),true)};s.img.src=url} /* (a picture that won't load: the made-up cover is encoded in the worker, not on this thread mid-slide; made: never retried) */
 function queueCover(s,g,dist){
   if(g.art&&g.art.front){setFront(s,g,g.art.front);return}
-  if(dist===0){setFront(s,g,Covers.frontAsync(stOf(g),g));return}
+  if(dist===0){setFront(s,g,appFrontAsync(stOf(g),g));return}
   coverQ.push({s,g,dist});coverQ.sort((a,b)=>a.dist-b.dist);
   if(!coverQRunning){coverQRunning=true;requestAnimationFrame(drainCovers)}
 }
 function drainCovers(){
   const t0=performance.now();
   // one generated cover per frame at most (a single one can take most of a frame); skip ones already scrolled away
-  while(coverQ.length&&performance.now()-t0<4){const {s,g}=coverQ.shift();if(s.el&&s.el.isConnected){setFront(s,g,Covers.frontAsync(stOf(g),g));break}}
+  while(coverQ.length&&performance.now()-t0<4){const {s,g}=coverQ.shift();if(s.el&&s.el.isConnected){setFront(s,g,appFrontAsync(stOf(g),g));break}}
   if(coverQ.length)requestAnimationFrame(drainCovers);else coverQRunning=false;
 }
 // Android: covers arriving from the background box art fetch go onto the cases one at a time, nearest the selection first.
@@ -458,11 +478,11 @@ function ensureBack(onlyReal){
   // on settle only real back art is attached; a generated back (10–90 ms of drawing) waits until you actually flip
   if(onlyReal){const g0=curGame();if(!g0||!(g0.art&&g0.art.back))return}
   s.backDrawn=true;
-  const g=curGame(),img=new Image();img.alt="";img.draggable=false;img.decoding="async";img.onerror=()=>{img.onerror=null;img.src=Covers.back(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview)};
+  const g=curGame(),img=new Image();img.alt="";img.draggable=false;img.decoding="async";img.onerror=()=>{img.onerror=null;img.src=Covers.back(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview)};
   // (beta.9) a made-up back not ready yet: its JPEG is encoded in the worker and the picture goes in a moment later
   // (the flip never waits for it; prepBack usually made it while you were resting on the game)
-  if((g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(stOf(g),g))img.src=backUrl(g);
-  else Covers.backAsync(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).then(u=>{if(u&&!img.src)img.src=u}).catch(()=>{img.src=backUrl(g)});
+  if((g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(backStyleOf(g),g))img.src=backUrl(g);
+  else Covers.backAsync(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).then(u=>{if(u&&!img.src)img.src=u}).catch(()=>{img.src=backUrl(g)});
   s.back.appendChild(img);
 }
 // (beta.9) Details' backdrop: a screenshot is decoded off the main thread first, then put in (if that game is still open)
@@ -472,8 +492,8 @@ function heroBgSoon(u,g){heroBgWant=u;const im=new Image();im.decoding="async";i
   (im.decode?im.decode():Promise.resolve()).then(put,put)}
 // (beta.9) rest on a game with no back art of its own and its made-up back is made in idle time (requestIdleCallback
 // waits for a still shelf, perf.js), so the first flip shows it at once instead of drawing it then
-function prepBack(s,g){if(!g||(g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(stOf(g),g))return;
-  const run=()=>{if(slots[sel]!==s||curGame()!==g||s.backDrawn)return;Covers.backAsync(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).catch(()=>{})};
+function prepBack(s,g){if(!g||(g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(backStyleOf(g),g))return;
+  const run=()=>{if(slots[sel]!==s||curGame()!==g||s.backDrawn)return;Covers.backAsync(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).catch(()=>{})};
   if(window.requestIdleCallback)requestIdleCallback(run,{timeout:3000});else setTimeout(run,250)}
 // A tiny copy of the cover, scaled up, makes a smooth blurred background without an expensive blur filter.
 const tinyCache=new Map();
@@ -645,7 +665,7 @@ function updateBg(){
       const show=()=>{if(curGame()===g){a.classList.add("on");bgOff(b)}};(im.decode?im.decode():Promise.resolve()).then(show,show);return}
     a.classList.remove("poster");
     // (Android: a game with no cover picture blurs the made-up cover from the worker's copy, never a fresh synchronous encode)
-    const src=(g.art&&g.art.hero)||(ANDROID&&!(g.art&&g.art.front)?Covers.frontAsync(stOf(g),g):frontUrl(g));
+    const src=(g.art&&g.art.hero)||(ANDROID&&!(g.art&&g.art.front)?appFrontAsync(stOf(g),g):frontUrl(g));
     const blur=u=>tinyBlur(u,d=>{if(curGame()!==g)return;const im=a.querySelector("img");im.src=d||"";a.classList.add("on");bgOff(b)});
     if(src&&src.then)src.then(blur,()=>blur(frontUrl(g)));else blur(src);
   },ANDROID?620:120); /* Android: once the slide (.55 s) has landed. Two screen-sized layers redrawn and cross-fading under the moving cases cost the Thor frames mid-slide; a held stick now changes the backdrop only when you stop */
@@ -852,7 +872,7 @@ function prefetchShelf(sh){
 // the covers around the selection: generated ones drawn now, real ones decoded (or give up after `ms`)
 function coversReady(ms){
   const near=slots.filter(s=>s.el&&Math.abs(s.i-sel)<=4);
-  for(let k=coverQ.length-1;k>=0;k--){const q=coverQ[k];if(Math.abs(q.s.i-sel)<=4){coverQ.splice(k,1);if(q.s.el)setFront(q.s,q.g,Covers.frontAsync(stOf(q.g),q.g))}}
+  for(let k=coverQ.length-1;k>=0;k--){const q=coverQ[k];if(Math.abs(q.s.i-sel)<=4){coverQ.splice(k,1);if(q.s.el)setFront(q.s,q.g,appFrontAsync(stOf(q.g),q.g))}}
   const decoded=()=>Promise.all(near.map(s=>s.img).filter(im=>im&&im.getAttribute("src")).map(im=>im.decode().catch(()=>{})));
   return Promise.race([Promise.all(near.map(s=>s.coverP)).then(decoded),wait(ms)]);
 }
@@ -1320,6 +1340,7 @@ function openInspect(){uiCrumb("Inspect");
 let detailsBack=null;
 function detailsReturn(){const g=detailsBack;detailsBack=null;if(g&&mode==="browse"&&!qm.open&&!sysBusy()&&curGame()===g)openDetails()}
 function closeInspect(){
+  resetEject(); // a disc out of the box goes back in when Inspect closes
   // the manual reader open on top (a phone companion's Play can close Inspect from under it): shut it too, or the paused 3D view
   // and rd.open stayed behind and every later Inspect stuck with the box lifted
   if(rd.open){rd.open=false;if(window.Inspect3D)Inspect3D.setPaused(false);$("inspect").classList.remove("reading");$("reader").classList.remove("on");$("reader").setAttribute("aria-hidden","true")}
@@ -1410,7 +1431,7 @@ function makeBooklet(g){
       const b=await bookletJpeg(c);c.width=c.height=0;urls.push(URL.createObjectURL(b))};
     const wrap=(x,text,X,Y,maxW,lh,maxLines)=>{const words=String(text||"").split(/\s+/);let line="",y=Y,n=0;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){x.fillText(line,X,y);y+=lh;line=w;if(++n>=maxLines-1)break}else line=t}if(line&&n<maxLines){x.fillText(n>=maxLines-1&&words.length>0?line+"…":line,X,y);y+=lh}return y};
     const band=x=>{x.fillStyle=st.caseColor||"#222";x.fillRect(0,0,W,90);x.fillStyle=(st.band&&st.band.fg)||"#fff";x.font="700 34px Lexend, sans-serif";x.fillText((sh&&sh.name||"").toUpperCase(),48,58)};
-    const front=await load((g.art&&g.art.front)||await Covers.frontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
+    const front=await load((g.art&&g.art.front)||await appFrontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
     // the front, laid out like an original instruction booklet: the box art full-bleed under a thin console band,
     // and a footer strip with "INSTRUCTION BOOKLET" and the console's name, the way the real ones are printed. A small
     // Boxshelf mark in the strip says it's ours, not a scan.
@@ -1592,10 +1613,46 @@ function ispAdvance(){
 }
 let holdT=null,holdStart=0;
 function bumpDisc(){if(window.Inspect3D&&Inspect3D.isActive()){Inspect3D.bump();return}const d=$("inspect").querySelector(".isp-disc");d.style.transition="transform .25s";d.style.transform+=" translateZ(20px)";setTimeout(()=>{d.style.transform=d.style.transform.replace(" translateZ(20px)","");setTimeout(()=>{d.style.transition=""},300)},120)}
-function holdBegin(){if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");$("ispHold").classList.add("on");holdT=requestAnimationFrame(holdTick)}
-function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/800);$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
+// the console under the disc, drawn for the console of the box (PS5, Xbox Series, Switch...): a drawing of its own for each, not one grey slab
+const CONSOLE_ART={
+  ps5:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d0dc"/></linearGradient></defs><path d="M8 64C8 30 44 12 130 12s122 18 122 52z" fill="url(#cw)"/><path d="M8 76h244c0 34-36 52-122 52S8 110 8 76z" fill="url(#cw)"/><rect x="8" y="64" width="244" height="12" fill="#0a0c11"/><rect x="40" y="68" width="180" height="4" rx="2" fill="#4b86ff"/></svg>',
+  xsx:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cx" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262b33"/><stop offset="1" stop-color="#0b0d10"/></linearGradient></defs><rect x="26" y="14" width="208" height="112" rx="9" fill="url(#cx)" stroke="#3a414d"/><circle cx="196" cy="42" r="14" fill="none" stroke="#6fcf3a" stroke-width="3.2"/><circle cx="196" cy="42" r="4" fill="#6fcf3a"/><g fill="#1a1e24"><circle cx="64" cy="36" r="2.4"/><circle cx="78" cy="36" r="2.4"/><circle cx="92" cy="36" r="2.4"/><circle cx="106" cy="36" r="2.4"/><circle cx="120" cy="36" r="2.4"/><circle cx="134" cy="36" r="2.4"/></g><rect x="52" y="76" width="156" height="9" rx="4.5" fill="#020304"/></svg>',
+  xone:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="co" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c3036"/><stop offset=".5" stop-color="#16181c"/><stop offset=".5" stop-color="#0d0e11"/><stop offset="1" stop-color="#08090b"/></linearGradient></defs><rect x="18" y="20" width="224" height="100" rx="7" fill="url(#co)" stroke="#3a3f48"/><circle cx="46" cy="48" r="9" fill="none" stroke="#c8ccd4" stroke-width="2.4"/><path d="M41 43l10 10M51 43L41 53" stroke="#c8ccd4" stroke-width="2.4" stroke-linecap="round"/><rect x="40" y="80" width="180" height="9" rx="4.5" fill="#020203"/></svg>',
+  x360:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbfb"/><stop offset="1" stop-color="#cfd2d6"/></linearGradient></defs><rect x="16" y="22" width="228" height="96" rx="14" fill="url(#c3)" stroke="#aab0b8"/><circle cx="48" cy="52" r="13" fill="none" stroke="#7bc043" stroke-width="3.6"/><g stroke="#aab0b8" stroke-width="2" stroke-linecap="round"><path d="M150 40h72M150 48h72M150 56h72"/></g><rect x="40" y="82" width="180" height="9" rx="4.5" fill="#2a2d33"/></svg>',
+  ps4:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2d34"/><stop offset="1" stop-color="#0a0b0e"/></linearGradient></defs><path d="M34 22h196l-22 96H12z" fill="url(#c4)" stroke="#3a3f4a"/><path d="M30 48h196" stroke="#3b82ff" stroke-width="3.2" stroke-linecap="round"/><path d="M26 82l-3 0h196" stroke="#020304" stroke-width="9" stroke-linecap="round"/></svg>',
+  ps3:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3d44"/><stop offset=".18" stop-color="#101216"/><stop offset="1" stop-color="#050608"/></linearGradient></defs><rect x="20" y="16" width="220" height="108" rx="16" fill="url(#c5)" stroke="#9aa3b2" stroke-width="2.4"/><path d="M34 34h192" stroke="#cfd5df" stroke-width="2" opacity=".5"/><rect x="48" y="78" width="164" height="9" rx="4.5" fill="#000"/></svg>',
+  sw:'<svg viewBox="0 0 260 140" aria-hidden="true"><rect x="10" y="22" width="48" height="98" rx="18" fill="#0ab9e6"/><rect x="202" y="22" width="48" height="98" rx="18" fill="#ff4554"/><rect x="54" y="18" width="152" height="106" rx="8" fill="#15171c" stroke="#2a2e36"/><rect x="64" y="30" width="132" height="82" rx="4" fill="#06080b"/><rect x="92" y="14" width="76" height="7" rx="3.5" fill="#020304"/><circle cx="34" cy="48" r="7" fill="#06323d"/><circle cx="226" cy="92" r="7" fill="#5a0d15"/></svg>',
+  pc:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3f4a"/><stop offset="1" stop-color="#1c1f26"/></linearGradient></defs><rect x="20" y="30" width="220" height="80" rx="6" fill="url(#cp)" stroke="#5a6272"/><rect x="40" y="62" width="180" height="9" rx="4.5" fill="#06080b"/><circle cx="216" cy="46" r="4" fill="#4b86ff"/><rect x="36" y="42" width="44" height="6" rx="3" fill="#5a6272"/></svg>'
+};
+const consoleKey=b=>({ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw",xbox360:"x360",xboxone:"xone",xboxseries:"xsx"})[b]||"pc";
+// the disc: a touch or mouse hold ejects it (the box shakes); dragged onto the console below it starts the game; Enter drops it in too
+let holdByPtr=false;
+const discRest=()=>{const d=document.querySelector("#inspect .isp-disc");return d?Math.round(d.offsetHeight*.9):0};
+function ejectDisc(){
+  holdByPtr=false;isp.ejected=true;const el=$("inspect"),d=document.querySelector("#inspect .isp-disc");
+  el.classList.add("isp-shake","disc-out");setTimeout(()=>el.classList.remove("isp-shake"),480);
+  const gl=document.querySelector("#inspect canvas.isp-gl.on");
+  if(d&&!gl)d.style.translate=`0 ${-discRest()}px`;
+  const cons=$("ispConsole"),cg=curGame();cons.innerHTML=CONSOLE_ART[consoleKey(cg&&cg.box)]||CONSOLE_ART.pc;cons.classList.add("art","on");rumble(.5,.3,140);play_("hold");
+}
+function resetEject(){
+  isp.ejected=false;holdByPtr=false;const el=$("inspect");if(el)el.classList.remove("isp-shake","disc-out");
+  const d=document.querySelector("#inspect .isp-disc");if(d)d.style.translate="";
+  const gl2=document.querySelector("#inspect canvas.isp-gl");if(gl2){gl2.style.translate="";gl2.style.transition=""}
+  const c=$("ispConsole");if(c)c.classList.remove("on","over","in");
+}
+function retractDisc(){resetEject()}
+function insertDisc(){
+  const c=$("ispConsole");if(c)c.classList.add("in");play_("boot");rumble(.6,.3,160);
+  closeInspect();setTimeout(()=>play(),120);
+}
+function holdBegin(){
+  if(mode==="inspect"&&isp.ejected){if(!holdByPtr)insertDisc();holdByPtr=false;return}
+  if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");$("ispHold").classList.add("on");holdT=requestAnimationFrame(holdTick)}
+function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/800);$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){if(holdByPtr&&!isp.ejected){cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";ejectDisc();return}holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
 function holdEnd(fire){if(!holdT)return;cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";if(!fire&&isp.state===2)bumpDisc()}
 function ispBack(){
+  if(isp.ejected){retractDisc();return} // Back puts the disc back in first
   const el=$("inspect");isp.last=performance.now();
   if(rd.open){closeReader();return}
   if(isp.state===2){if(ispSpins()){isp.ty=isp.sy0+Math.round((isp.ty-isp.sy0)/360)*360;if(!(window.Inspect3D&&Inspect3D.isActive()))isp.ry=isp.ty} /* back the nearest whole spin: the case comes back facing as it left (the CSS case at once: its spin isn't blended out) */isp.tf=0;isp.tx=Math.max(-50,Math.min(50,isp.tx));isp.state=1;el.classList.remove("out")} /* (the disc could tilt further than the case does) */
@@ -1644,7 +1701,20 @@ function inspectKey(e){
 }
 (function(){
   const el=$("inspect");
-  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2)holdBegin();isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
+  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
+  // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back.
+  // With the 3D view (WebGL) the disc is drawn in the canvas, so the canvas is what moves; without it, the DOM disc moves
+  let dr=null;
+  const discSurface=()=>{const g=document.querySelector("#inspect canvas.isp-gl.on");return g||document.querySelector("#inspect .isp-disc")};
+  const discBase=s=>s&&s.classList.contains("isp-gl")?[0,0]:[0,-discRest()];
+  const discCircle=s=>{const r=s.getBoundingClientRect(),g=s.classList.contains("isp-gl");return {x:r.left+r.width/2,y:r.top+r.height/2,r:g?Math.min(r.width,r.height*.5)*.34:Math.min(r.width,r.height)/2}};
+  const overConsole=s=>{const c=discCircle(s),k=$("ispConsole").getBoundingClientRect();const nx=Math.max(k.left,Math.min(c.x,k.right)),ny=Math.max(k.top,Math.min(c.y,k.bottom));return Math.hypot(c.x-nx,c.y-ny)<c.r*.7};
+  el.addEventListener("pointerdown",e=>{if(!isp.ejected||mode!=="inspect")return;const s=discSurface();if(!s)return;const c=discCircle(s);
+    if(Math.hypot(e.clientX-c.x,e.clientY-c.y)>c.r*1.3)return; // a touch away from the disc is not the disc
+    e.stopImmediatePropagation();dr={x:e.clientX,y:e.clientY,s,base:discBase(s)};s.style.transition="none"},true);
+  addEventListener("pointermove",e=>{if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y;dr.s.style.translate=`${dr.base[0]+dx}px ${dr.base[1]+dy}px`;$("ispConsole").classList.toggle("over",overConsole(dr.s))});
+  addEventListener("pointerup",e=>{if(!dr)return;const s=dr.s,base=dr.base;dr=null;const hit=overConsole(s);s.style.transition="";
+    if(hit)insertDisc();else{$("ispConsole").classList.remove("over");s.style.transition="translate .35s cubic-bezier(.2,.8,.2,1)";s.style.translate=`${base[0]}px ${base[1]}px`;setTimeout(()=>{if(isp.ejected)resetEject()},360)}});
   addEventListener("pointermove",e=>{if(!isp.drag)return;const dx=e.clientX-isp.drag.x,dy=e.clientY-isp.drag.y;if(Math.abs(dx)+Math.abs(dy)>4){isp.drag.moved=true;holdEnd(true)}if(isp.tz>1&&e.shiftKey)ispPan(dx,dy);else ispTurn(dx*.22,-dy*.16);isp.drag.x=e.clientX;isp.drag.y=e.clientY});
   addEventListener("pointerup",e=>{if(!isp.drag)return;const click=!isp.drag.moved;isp.drag=null;el.classList.remove("dragging");if(!click&&!rd.open&&isp.tz<=1)ispSnap();const wasHolding=!!holdT;holdEnd(false);if(click&&mode==="inspect"&&!wasHolding){if(rd.open)rdTurn(e.clientX<innerWidth/2?-1:1);else ispAdvance()}});
 })();
@@ -1679,9 +1749,9 @@ function runSlide(s,g,done,hideAfter){
   const bar=$("bsBar").querySelector("i");bar.style.animation="none";void bar.offsetWidth;bar.style.animation="";
   el.classList.add("on");el.setAttribute("aria-hidden","false");void el.offsetWidth;el.classList.add("go");
   lastGoAt=performance.now();play_("go");setTimeout(()=>play_("boot"),700);rumble(.4,.25,90);
-  slideEndAt=performance.now()+(reduced()?600:4000); // the line is full here: the boot sound fades out with it
-  clearTimeout(insertT);insertT=setTimeout(()=>{if(hideAfter)hideInsert();if(done)done()},reduced()?300:2200);
-  insertSeatAt=performance.now()+(reduced()?250:500); // the emulator starts right away under the slide; Boxshelf keeps the slide up a fixed ~4 s so the line fills
+  slideEndAt=performance.now()+(reduced()?300:1000); // the line is full here: the boot sound fades out with it (about 2/5 of the old slide)
+  clearTimeout(insertT);insertT=setTimeout(()=>{if(hideAfter)hideInsert();if(done)done()},reduced()?300:880);
+  insertSeatAt=performance.now()+(reduced()?150:200); // the emulator starts right away under the slide; Boxshelf keeps the slide up a fixed ~4 s so the line fills
 }
 function runInsert(s,g,done,hideAfter){
   if(!INSERT_3D){runSlide(s,g,done,hideAfter);return}
@@ -1857,6 +1927,7 @@ api.onRunAside&&api.onRunAside(on=>{document.body.classList.toggle("aside",on);i
 let returnWatch=0;
 function clearReturnCover(why){const was=["launching","returning"].filter(c=>app.classList.contains(c));document.body.classList.remove("aside");app.classList.remove("returning","launching");returnPrep=false;$("launch").style.background="";if(was.length&&api.log)api.log(`return: cleared the black cover (${why}; was ${was.join("+")}, mode ${mode}, page ${document.visibilityState})`)}
 api.onExited(async info=>{uiCrumb("Back from the game");if(window.Sound&&Sound.nextSong)Sound.nextSong("game");
+  try{dimWake();dimAt=lastInputAt=performance.now()}catch{} // a game that ran a long while left the shelf idle: the screen dimmer (black until a touch) must not be on when it comes back
   clearTimeout(returnWatch);returnWatch=setTimeout(()=>{if(mode!=="launch"&&(app.classList.contains("returning")||app.classList.contains("launching")||document.body.classList.contains("aside")))clearReturnCover("watchdog, 3 s after the game ended")},3000);
   if(mode!=="launch"){if(!(info&&info.code===-1))clearReturnCover("game ended outside launch mode");return}
   if(info&&info.code===-1){clearTimeout(insertT);clearTimeout(launchTimer);hideInsert();note([`Couldn't start: ${info.error||"unknown error"}. `,{br:1},"Press ",{b:btnWord("back")}," or ",{b:"Esc"}," to go back."],true);runningKind="error";return}
@@ -1894,12 +1965,13 @@ function runBoot(s,done){
   renderWordmark($("bootWord"),s.id,s.name,"");$("bootWord").hidden=!!t.logo;$("bootLogo").hidden=!t.logo;if(t.logo)cleanLogo(t.logo).then(r=>{$("bootLogo").src=r.url;$("bootLogo").classList.toggle("dark-logo",!!r.dark)});
   b.classList.remove("intro");b.classList.add("on");b.setAttribute("aria-hidden","false");
   const intro=()=>{if(!live())return;v.hidden=true;$("bootIntro").hidden=false;void b.offsetWidth;b.classList.add("intro");chime();clearTimeout(bootT);bootT=setTimeout(()=>endBoot(),3100+bootHold())};
-  if(t.boot){$("bootIntro").hidden=true;v.hidden=false;v.src=t.boot;v.muted=!soundOn;applySinkTo(v);v.onended=()=>{if(live())endBoot()};v.onerror=intro;
+  if(t.boot){clearTimeout(bootT);bootT=setTimeout(()=>{if(live())endBoot()},12000); /* a video that never ends (or never starts) must not keep the screen black */
+    $("bootIntro").hidden=true;v.hidden=false;v.src=t.boot;v.muted=!soundOn;applySinkTo(v);v.onended=()=>{if(live())endBoot()};v.onerror=intro;
     const stale=()=>{if(!live())try{v.pause()}catch(e){}}; // a play() that resolves after the boot was skipped must not keep playing hidden
     const p=v.play();if(p&&p.then)p.then(stale,()=>{if(!live())return;v.muted=true;const q=v.play();if(q&&q.then)q.then(stale,intro)})}
   else intro();
 }
-function endBoot(cancel){if(mode!=="boot")return;bootRun++;clearTimeout(bootT);const b=$("boot"),v=$("bootVideo");b.classList.remove("on","intro");b.setAttribute("aria-hidden","true");v.onended=v.onerror=null;try{v.pause();v.removeAttribute("src");v.load()}catch(e){} /* drop the video: nothing left to decode or play */const d=bootDone;bootDone=null;mode=(!cancel&&d)?"launch":"browse";if(cancel)musLaunch=null;if(!cancel&&d)setTimeout(d,200)}
+function endBoot(cancel){try{if(window.PulseHost&&PulseHost.introDone)PulseHost.introDone()}catch(e){}if(mode!=="boot")return;bootRun++;clearTimeout(bootT);const b=$("boot"),v=$("bootVideo");b.classList.remove("on","intro");b.setAttribute("aria-hidden","true");v.onended=v.onerror=null;try{v.pause();v.removeAttribute("src");v.load()}catch(e){} /* drop the video: nothing left to decode or play */const d=bootDone;bootDone=null;mode=(!cancel&&d)?"launch":"browse";if(cancel)musLaunch=null;if(!cancel&&d)setTimeout(d,200)}
 
 /* ---------- customize (logos + boot videos on disk) ---------- */
 const THEME_IDS=[["gc","GameCube",true],["wii","Wii",true],["wiiu","Wii U",true],["sw","Switch",true],...(ANDROID?[]:[["sw2","Switch 2",true]]),["psp","PSP",true],["ps2","PS2",true],["ps3","PS3",true],["ps4","PS4",true],["ps5","PS5",true],["x360","Xbox 360",true],["n3ds","3DS",true],["pc","PC",false],["media","Media",false]];
@@ -2417,7 +2489,7 @@ function flick(el){if(!el)return;el.classList.remove("flick");void el.offsetWidt
 const coverOf=(sh,g)=>(g.art&&g.art.front)||Covers.front(STYLE[sh.id]||STYLE.media,g);
 const preload=url=>new Promise(r=>{const im=new Image();im.onload=()=>{if(im.decode)im.decode().then(r,r);else r()};im.onerror=()=>r();im.src=url;setTimeout(r,900)}); // (beta.10) decoded too, so the swap costs nothing
 // (beta.10) a reel face's URL: real box art as is; a made-up cover encoded in the worker (never Covers.front mid-roll)
-const coverAsync=(sh,g)=>(g.art&&g.art.front)?Promise.resolve(g.art.front):Covers.frontAsync(STYLE[sh.id]||STYLE.media,g).catch(()=>coverOf(sh,g));
+const coverAsync=(sh,g)=>(g.art&&g.art.front)?Promise.resolve(g.art.front):appFrontAsync(STYLE[sh.id]||STYLE.media,g).catch(()=>coverOf(sh,g));
 // Slot machine on the "Surprise me" tile: its cover flips through random games (from every shelf, or this one),
 // slowing down until it stops on the pick. The tile then shows that game; A plays it, R rolls again.
 async function shuffle(){
@@ -2778,7 +2850,7 @@ function musFindKey(k){const IA=window.BoxshelfIA;if(k==="back"){if(IA&&IA.back&
 let Shelf_setMusLight=null;
 function museumData(){
   return allShelves.filter(sh=>(sh.kind==="console"||sh.kind==="steam")&&sh.items.some(isGame)).map(sh=>({id:sh.id,name:sh.name,style:STYLE[sh.id]||STYLE.media,
-    games:sh.items.filter(isGame).map(g=>{const h=HIST[g.id],i=g.info||{};return {id:g.id,title:g.title,front:()=>{const u=g.art&&g.art.front;if(!u)return Covers.frontAsync(stOf(g),g);return /^bsfile:/.test(u)?u+(u.includes("?")?"&":"?")+"t=768":u} /* generated covers: a Promise, encoded off the main thread */,spine:g.art&&g.art.spine||null,year:yearOf(g)||null,
+    games:sh.items.filter(isGame).map(g=>{const h=HIST[g.id],i=g.info||{};return {id:g.id,title:g.title,front:()=>{const u=g.art&&g.art.front;if(!u)return appFrontAsync(stOf(g),g);return /^bsfile:/.test(u)?u+(u.includes("?")?"&":"?")+"t=768":u} /* generated covers: a Promise, encoded off the main thread */,spine:g.art&&g.art.spine||null,year:yearOf(g)||null,
       dev:i.dev||null,pub:i.pub||null,genre:genreOf(g),rating:i.rating?+i.rating:null,metacritic:i.metacritic||null,group:groupOf(g),
       hours:h&&h.count?fmtPlay(h.ms)+" played":null,plays:h&&h.count||0,added:g.added||0,manual:!!(g.art&&g.art.manual&&g.art.manual.length),manualPage:g.art&&g.art.manual&&g.art.manual[0]||null,manualPages:g.art&&g.art.manual||[],back:g.art&&g.art.back?(/^bsfile:/.test(g.art.back)?g.art.back+(g.art.back.includes("?")?"&":"?")+"t=1024":g.art.back):null,disc:g.art&&g.art.disc||null,boxFull:!!(g.art&&g.art.front&&g.art.back&&g.art.spine),players:i.players||null,esrb:i.esrb||null,media:(MEDIA[sh.id]||{}).kind||"disc",mediaSize:(MEDIA[sh.id]||{}).size||0,last:h&&h.last?fmtDay(h.last/1000):null,fav:isFav(g),_g:g,_sh:sh}}),
     console:{model:themes[sh.id]&&themes[sh.id].model||BUILTIN_MODEL[sh.id]||null,opts:modelOpts(sh.id),controller:themes[sh.id]&&themes[sh.id].controller||null}}));
@@ -4079,7 +4151,7 @@ window.Shelf._dim=()=>dimStart(); // test hook: dim the screen now
 function bsSelectSoon(){if(!window.bsPlatform||bsPlatform.os!=="android")return; /* only the Android build has a second screen: Windows keeps no timer */clearTimeout(bsSelectSoon.t);bsSelectSoon.t=setTimeout(()=>{const g=curGame();dispatchEvent(new CustomEvent("bs-select",{detail:{id:g?String(g.id!=null?g.id:g.title):""}}))},380)}
 window.Shelf.bottomInfo=async g0=>{const g=g0||curGame();if(!g)return null; /* (the museum asks about the case it has chosen) */
   const sh=shelfFor(g)||{},st=stOf(g),i=g.info||{},h=histOf(g),a=g.art||{},game=isGame(g),r=game?raFor(g):null,md=MEDIA[sh.id]||{};
-  let front=a.front||a.icon||null;if(!front){try{front=await Covers.frontAsync(st,g)}catch{front=null}} // the cover the shelf made up for it (encoded off the main thread, usually cached already)
+  let front=a.front||a.icon||null;if(!front){try{front=await appFrontAsync(st,g)}catch{front=null}} // the cover the shelf made up for it (encoded off the main thread, usually cached already)
   return {id:String(g.id!=null?g.id:g.title),kind:g.kind,title:g.title||"",system:{id:sh.id||"",name:sh.name||""},hue:g.hue!=null?g.hue:st.hue,
     style:{ratio:st.ratio,depth:st.depth,rc:st.rc,re:st.re,edge:st.edge,pack:st.pack||(st.rc<=.012?(st.depth<.1?"jewel":"box"):"keep") /* a moulded keep case, a CD jewel case or a printed card box (systems-extra.js presets) */,caseColor:st.caseColor,caseSide:st.caseSide,spineInk:st.spineInk,band:st.band||null,spineBand:st.spineBand||null,glow:st.glow,tint:st.tint||null},
     media:{kind:md.kind||"disc",size:md.size||.62},

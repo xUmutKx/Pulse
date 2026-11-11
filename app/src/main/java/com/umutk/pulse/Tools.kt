@@ -140,7 +140,6 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "keyboard" -> com.umutk.pulse.extras.keyboard.KeyboardSettings(back)
         id == "notifhist" -> com.umutk.pulse.extras.notifhist.NotifHistoryScreen(back)
         id == "screenrec" -> com.umutk.pulse.extras.screenrec.ScreenRecHub(back)
-        id == "playlists" -> com.umutk.pulse.extras.playlists.OnlinePlaylistsHub(back)
         id == "launcher" -> com.umutk.pulse.extras.launcher.LauncherSettings(back)
         id == "messages" -> MessagesScreen(back)
         // Pulse's own pages (Task Manager, This PC ...), for the launcher's windows

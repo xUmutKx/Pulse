@@ -26,9 +26,24 @@ interface InferenceEngine {
     suspend fun setSystemPrompt(systemPrompt: String)
 
     /**
+     * Forgets the conversation so far and starts a new one with [systemPrompt] (the model stays loaded). Used for one-question-at-a-time work.
+     */
+    suspend fun restartConversation(systemPrompt: String)
+
+    /**
      * Sends a user prompt to the loaded model and returns a Flow of generated tokens.
      */
     fun sendUserPrompt(message: String, predictLength: Int = DEFAULT_PREDICT_LENGTH): Flow<String>
+
+    /**
+     * Loads the vision projector (the mmproj file) of the loaded model. True when the model can see pictures.
+     */
+    suspend fun loadProjector(projectorPath: String): Boolean
+
+    /**
+     * Sends a user prompt together with a picture (JPEG or PNG bytes) to the loaded vision model.
+     */
+    fun sendUserPromptWithImage(message: String, image: ByteArray, predictLength: Int = DEFAULT_PREDICT_LENGTH): Flow<String>
 
     /**
      * Runs a benchmark with the specified parameters.
