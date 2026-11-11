@@ -539,7 +539,8 @@ private fun AppIconChooser() {
     fun on(i: LauncherIcon): Boolean {
         val st = ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + i.alias))
         return st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
-            (st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && i === launcherIcons[0])
+            (st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && i === launcherIcons[0] && !com.umutk.pulse.extras.store.LauncherGlass.mainGlassShown(ctx)) ||
+            (i === launcherIcons[0] && com.umutk.pulse.extras.store.LauncherGlass.mainGlassShown(ctx))
     }
     var cur by remember { mutableStateOf((launcherIcons.firstOrNull { on(it) } ?: launcherIcons[0]).alias) }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -557,6 +558,7 @@ private fun AppIconChooser() {
                         )
                         set(i, true)
                         launcherIcons.forEach { if (it !== i) set(it, false) }
+                        com.umutk.pulse.extras.store.LauncherGlass.afterMainPick(ctx, i.alias)
                         cur = i.alias
                     },
             ) { Image(painterResource(i.fg), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }) }
@@ -696,7 +698,7 @@ private fun ExtraAppsCard() {
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
-    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    fun shown(a: String) = com.umutk.pulse.extras.store.LauncherGlass.shown(ctx, a)
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
     var rev by remember { mutableIntStateOf(0) }
     var placeOpen by remember { mutableStateOf<String?>(null) }
@@ -743,7 +745,7 @@ private fun ExtraAppsCard() {
                 // the chevron folds where the app is listed inside Pulse (top-right menu, left menu, Settings only); the switch is its home-screen icon
                 PIcon("chevron", T.sub, 20.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
                 PSwitch(state[alias] == true, { on ->
-                    pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+                    com.umutk.pulse.extras.store.LauncherGlass.setShown(ctx, alias, on) // the line icon or its glass twin, by the look
                     state[alias] = on
                     rev++
                 })
