@@ -154,7 +154,7 @@ private fun FloatingBody(onDrag: (Float, Float) -> Unit, onClose: () -> Unit) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val r = res
             when {
-                open == null -> LyricsSearchScreen(onOpen = { open = it }, onClose = onClose)
+                open == null -> LyricsSearchScreen(onOpen = { h -> playHit(ctx, h); open = h }, onClose = onClose)
                 busy -> Box(Modifier.fillMaxSize(), Alignment.Center) { PLoader() }
                 r != null -> LyricsView(r, -1, null, Modifier.fillMaxSize().padding(horizontal = 16.dp))
                 else -> Box(Modifier.fillMaxSize(), Alignment.Center) { PIcon("book", Color.White.copy(alpha = .6f), 40.dp) }
@@ -266,4 +266,12 @@ object MiniLyrics {
             delay(400)
         }
     }
+}
+
+/** A search hit that is a song on this phone starts that song in Pulse's player (from the library, so the queue goes on from it). */
+internal fun playHit(ctx: android.content.Context, h: LyricHit) {
+    val path = h.id.takeIf { it.startsWith("file:") }?.removePrefix("file:") ?: return
+    val lib = com.umutk.pulse.extras.music.MusicLibrary.tracks.value
+    val i = lib.indexOfFirst { it.path == path }
+    if (i >= 0) com.umutk.pulse.extras.music.MusicPlayerEngine.get(ctx).playQueue(lib, i)
 }
