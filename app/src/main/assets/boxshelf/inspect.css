@@ -173,3 +173,10 @@ body.reduce-motion .slot.held .face{transition:opacity .18s}
 #ispConsole.on{translate:-50% 0}
 #ispConsole.over{box-shadow:0 0 0 3px #7fd1ff,0 22px 44px rgba(0,0,0,.55)}
 #ispConsole.in{opacity:0}
+
+/* the console drawn for the box's console (its own picture instead of the grey slab) */
+#ispConsole.art{background:none;box-shadow:none;aspect-ratio:260/140;width:min(66vw,320px)}
+#ispConsole.art::after{display:none}
+#ispConsole.art svg{display:block;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(0,0,0,.55))}
+#ispConsole.art.over{box-shadow:none}
+#ispConsole.art.over svg{filter:drop-shadow(0 0 12px #7fd1ff) drop-shadow(0 16px 22px rgba(0,0,0,.55))}

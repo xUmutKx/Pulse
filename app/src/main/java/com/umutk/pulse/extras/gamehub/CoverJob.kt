@@ -51,6 +51,7 @@ object CoverJob {
                     delay(600)
                 }
             } finally {
+                if (found.value > 0) ShelfSync.bump() // the shelf reads its games again, so the found covers show
                 running.value = false
             }
         }
