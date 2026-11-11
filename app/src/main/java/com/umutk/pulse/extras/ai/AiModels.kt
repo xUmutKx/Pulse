@@ -47,11 +47,23 @@ val CHAT_MODELS = listOf(
     AiModel("qwen3-4b-abl", "chat", "Qwen 3 4B abliterated", "Qwen3-4B-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen3-4B-abliterated-GGUF", "Qwen3-4B-abliterated.Q4_K_M.gguf"), 2_497_280_704, "Apache 2.0", uncensored = true),
     AiModel("qwen25-7b", "chat", "Qwen 2.5 7B", "Qwen2.5-7B-Instruct-Q4_K_M.gguf", hf("bartowski/Qwen2.5-7B-Instruct-GGUF", "Qwen2.5-7B-Instruct-Q4_K_M.gguf"), 4_683_074_240, "Apache 2.0",
         note = "12 GB phones and up"),
+    // small uncensored (abliterated) chat models, from the smallest up; the same chat as the others
+    AiModel("qwen25-05b-abl", "chat", "Qwen 2.5 0.5B abliterated", "Qwen2.5-0.5B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-0.5B-Instruct-abliterated-GGUF", "Qwen2.5-0.5B-Instruct-abliterated.Q4_K_M.gguf"), 397_808_512, "Apache 2.0", uncensored = true,
+        note = "Very small, quick on any phone"),
+    AiModel("qwen25-15b-abl", "chat", "Qwen 2.5 1.5B abliterated", "Qwen2.5-1.5B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-1.5B-Instruct-abliterated-GGUF", "Qwen2.5-1.5B-Instruct-abliterated.Q4_K_M.gguf"), 986_049_088, "Apache 2.0", uncensored = true),
+    AiModel("smollm2-17b-abl", "chat", "SmolLM2 1.7B abliterated", "smollm2-1.7b-abliterated.Q4_K_M.gguf", hf("mradermacher/smollm2-1.7b-abliterated-GGUF", "smollm2-1.7b-abliterated.Q4_K_M.gguf"), 1_055_610_464, "Apache 2.0", uncensored = true),
+    AiModel("qwen25-3b-abl", "chat", "Qwen 2.5 3B abliterated", "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF", "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf"), 1_929_903_520, "Qwen research licence", uncensored = true),
+    AiModel("qwen3-4b-2507-abl", "chat", "Qwen 3 4B 2507 abliterated", "Huihui-Qwen3-4B-Instruct-2507-abliterated.Q4_K_M.gguf", hf("mradermacher/Huihui-Qwen3-4B-Instruct-2507-abliterated-GGUF", "Huihui-Qwen3-4B-Instruct-2507-abliterated.Q4_K_M.gguf"), 2_497_281_312, "Apache 2.0", uncensored = true),
     // vision: these see pictures (the picture goes in with the question); the small one answers quickest
     AiModel("smolvlm-500m-vision", "chat", "SmolVLM 500M vision", "SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "SmolVLM-500M-Instruct-Q8_0.gguf"), 436_806_912, "Apache 2.0",
         note = "Sees pictures, quickest", projector = Projector("mmproj-SmolVLM-500M-Instruct-Q8_0.gguf", hf("ggml-org/SmolVLM-500M-Instruct-GGUF", "mmproj-SmolVLM-500M-Instruct-Q8_0.gguf"), 108_783_360)),
     AiModel("gemma3-4b-vision", "chat", "Gemma 3 4B vision", "gemma-3-4b-it-Q4_K_M.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "gemma-3-4b-it-Q4_K_M.gguf"), 2_489_757_856, "Gemma terms",
         note = "Sees pictures, better answers", projector = Projector("mmproj-gemma-3-4b-it-f16.gguf", hf("ggml-org/gemma-3-4b-it-GGUF", "mmproj-model-f16.gguf"), 851_251_104)),
+    // uncensored vision models: they see pictures and answer without the usual refusals
+    AiModel("qwen3vl-4b-abl", "chat", "Qwen 3 VL 4B abliterated", "Qwen3-VL-4B-Instruct-c_abliterated-v2.Q4_K_M.gguf", hf("mradermacher/Qwen3-VL-4B-Instruct-c_abliterated-v2-GGUF", "Qwen3-VL-4B-Instruct-c_abliterated-v2.Q4_K_M.gguf"), 2_497_282_848, "Apache 2.0", uncensored = true,
+        note = "Sees pictures, uncensored", projector = Projector("Qwen3-VL-4B-Instruct-c_abliterated-v2.mmproj-Q8_0.gguf", hf("mradermacher/Qwen3-VL-4B-Instruct-c_abliterated-v2-GGUF", "Qwen3-VL-4B-Instruct-c_abliterated-v2.mmproj-Q8_0.gguf"), 453_974_944)),
+    AiModel("qwen25vl-7b-abl", "chat", "Qwen 2.5 VL 7B abliterated", "Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf", hf("mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF", "Qwen2.5-VL-7B-Instruct-abliterated.Q4_K_M.gguf"), 4_683_073_952, "Apache 2.0", uncensored = true,
+        note = "Sees pictures, 12 GB phones and up", projector = Projector("Qwen2.5-VL-7B-Instruct-abliterated.mmproj-Q8_0.gguf", hf("mradermacher/Qwen2.5-VL-7B-Instruct-abliterated-GGUF", "Qwen2.5-VL-7B-Instruct-abliterated.mmproj-Q8_0.gguf"), 853_119_712)),
 )
 
 /** Speech to text (whisper.cpp ggml files): for timed lyrics and voice. */

@@ -246,7 +246,9 @@ private fun AiModelsPage() {
             items(onPhone, key = { "p" + it.id }) { m -> ModelRow(m, tick, false) { tick++ } }
         }
         item { Section(tr("Chat", "Sohbet")) }
-        items(CHAT_MODELS + extras.filter { it.kind == "chat" && it.path == null }, key = { "c" + it.id }) { m -> ModelRow(m, tick, m == rec) { tick++ } }
+        items(CHAT_MODELS.filter { it.projector == null } + extras.filter { it.kind == "chat" && it.path == null && it.projector == null }, key = { "c" + it.id }) { m -> ModelRow(m, tick, m == rec) { tick++ } }
+        item { Section(tr("Vision (sees pictures)", "Görsel (resim görür)")) }
+        items(CHAT_MODELS.filter { it.projector != null }, key = { "v" + it.id }) { m -> ModelRow(m, tick, false) { tick++ } }
         item { Section(tr("Speech to text (lyrics)", "Konuşmadan yazıya (şarkı sözleri)")) }
         items(SPEECH_MODELS, key = { "s" + it.id }) { m -> ModelRow(m, tick, m.id == "whisper-medium") { tick++ } }
         item {
