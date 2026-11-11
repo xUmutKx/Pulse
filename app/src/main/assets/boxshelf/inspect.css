@@ -162,3 +162,14 @@ body.reduce-motion .slot.held .face{transition:opacity .18s}
 .mus-room .mr-k .g.ico svg{display:block}
 .mus-room .mr-dock{position:sticky;bottom:-12px;margin:8px -18px -12px;padding:2px 18px 12px;background:#0c0e17;border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -10px 14px rgba(12,14,23,.9);z-index:2}
 .mus-room .mr-dock .mr-note{margin-top:8px}
+
+/* the disc: a touch or mouse hold ejects it (the box shakes); it is dragged onto the console below and that starts the game */
+#inspect.isp-shake .isp-rot{animation:ispShake .45s ease-in-out}
+@keyframes ispShake{0%,100%{translate:0 0}20%{translate:-6px 2px}40%{translate:6px -2px}60%{translate:-4px 1px}80%{translate:3px 0}}
+#inspect .isp-disc{transition:translate .4s cubic-bezier(.2,.8,.2,1)}
+#inspect.disc-out .isp-disc{pointer-events:auto;cursor:grab}
+#ispConsole{position:absolute;left:50%;bottom:9%;translate:-50% 170%;width:min(52vw,260px);aspect-ratio:1.9;border-radius:16px;background:linear-gradient(#30343e,#12141a);box-shadow:0 22px 44px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12);transition:translate .5s cubic-bezier(.2,.8,.2,1),opacity .16s,box-shadow .2s;pointer-events:none;z-index:6}
+#ispConsole::after{content:"";position:absolute;left:12%;right:12%;top:40%;height:10px;border-radius:6px;background:#050608;box-shadow:inset 0 2px 5px #000}
+#ispConsole.on{translate:-50% 0}
+#ispConsole.over{box-shadow:0 0 0 3px #7fd1ff,0 22px 44px rgba(0,0,0,.55)}
+#ispConsole.in{opacity:0}
