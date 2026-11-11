@@ -2407,3 +2407,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Kutu arkası oyunun Steam ekran görüntüleri; yan bant kapak renginden.
 - Karışık modda Xbox/konsol çerçeveleri yok; kapak üstünde uygulama simgesi yok.
 - Açılış ekranı yaklaşık 2/5 süre.
+
+## 1.0.392 (derlendi)
+- Game Hub: karışık kutular yeniden Steam/PS5/Switch/Xbox Series; yan etiket ve arka yüz konsol renginde.
+- Açık kutuda basılı tutma ile disk çıkar, konsola sürükle: oyun başlar; dışarı bırakılırsa disk geri girer.
+- Oyundan dönüş: siyah kapak ve dönüş adımı Android'de de çalışır.
+- Game Hub ayarları Boxshelf ayarlarında.
+- Pulse AI: beş küçük sansürsüz sohbet modeli, Görsel bölümü ve iki sansürsüz görsel model.
+- Excel: Excel 2003 XML dosyaları açılır.
+- Güncelleme sonrası "Ne yeni" listesi bu sürümün notları.
