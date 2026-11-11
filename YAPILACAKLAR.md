@@ -2428,3 +2428,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## 1.0.394 (derlendi)
 - Game Hub: kutu tarzı değişince raf yenilenir; yan yüzde konsol işareti; disk çıkarma ve sürükleme (3B tuvali) ve konsol çizimleri.
 - Oyundan dönüşte karartma (dim) temizlenir ve görünüm yeniden çizilir.
+
+## 1.0.395 (derlendi)
+- Müzik: söz arama sonucu telefondaki şarkıyı çalar ve sözünü açar.
