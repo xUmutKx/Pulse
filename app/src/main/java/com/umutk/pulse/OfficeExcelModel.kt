@@ -157,6 +157,8 @@ fun xLoad(f: File, name: String): XBook {
     if (!zip) {
         if (head[0] == 0xD0.toByte() && head[1] == 0xCF.toByte()) return xLoad(OfXls.toXlsx(f), name) // legacy .xls: converted to a temporary .xlsx; saving always writes xlsx
         val text = ofReadText(f)
+        // Excel 2003 XML (SpreadsheetML), also when it is named .xls or .xlsx: its sheets, not its raw text
+        if (text.contains("urn:schemas-microsoft-com:office:spreadsheet")) return ssXmlLoad(f, text)
         val first = text.lineSequence().firstOrNull() ?: ""
         val d = if (name.endsWith(".tsv", true) || first.count { it == '\t' } > first.count { it == ',' }) '\t' else if (first.count { it == ';' } > first.count { it == ',' }) ';' else ','
         return XBook(f, true, d).also { b -> b.styles.add(XStyle()); b.sheets.add(csvSheet(text, d, name.substringBeforeLast('.'))) }
@@ -335,6 +337,51 @@ private fun readSheet(sh: XSheet, ins: InputStream, shared: List<String>) {
             }
         }
     }
+}
+
+/** Excel 2003 XML (SpreadsheetML): each Worksheet is a sheet; rows and cells come from their ss:Index or their order; values only (no formulas). */
+/** Some copies of these files lost their quotes (version=1.0, xmlns=urn:...): the attribute values inside the tags get them back; the cell text is left as it is. */
+private fun ssQuoteTags(t: String): String {
+    val attr = Regex("(?s)([\\w:.-]+)=(?![\"'])(.+?)(?=\\s+[\\w:.-]+=|\\s*/?>|\\s*\\?>)")
+    return Regex("<[^>]*>").replace(t) { m -> attr.replace(m.value) { a -> a.groupValues[1] + "=\"" + a.groupValues[2] + "\"" } }
+}
+
+fun ssXmlLoad(f: File, text: String): XBook {
+    val b = XBook(f, false)
+    b.styles.add(XStyle())
+    fun attr(p: XmlPullParser, n: String): String? {
+        for (i in 0 until p.attributeCount) if (p.getAttributeName(i).substringAfter(':') == n) return p.getAttributeValue(i)
+        return null
+    }
+    var sh: XSheet? = null
+    var r = -1; var c = -1; var inData = false; var dataType = ""
+    val txt = StringBuilder()
+    text.let { t -> ssQuoteTags(t) }.let { t ->
+        val p = parser(t.byteInputStream(Charsets.UTF_8))
+        var ev = p.eventType
+        while (ev != XmlPullParser.END_DOCUMENT) {
+            when (ev) {
+                XmlPullParser.START_TAG -> when (p.name.substringAfter(':')) {
+                    "Worksheet" -> { sh = XSheet(attr(p, "Name") ?: "Sheet${b.sheets.size + 1}", null); b.sheets.add(sh!!); r = -1 }
+                    "Row" -> { r = attr(p, "Index")?.toIntOrNull()?.let { it - 1 } ?: (r + 1); c = -1 }
+                    "Cell" -> { c = attr(p, "Index")?.toIntOrNull()?.let { it - 1 } ?: (c + 1) }
+                    "Data" -> { inData = true; dataType = attr(p, "Type") ?: ""; txt.setLength(0) }
+                }
+                XmlPullParser.TEXT -> if (inData) txt.append(p.text)
+                XmlPullParser.END_TAG -> if (p.name.substringAfter(':') == "Data") {
+                    inData = false
+                    val v = txt.toString()
+                    val target = sh
+                    if (target != null && v.isNotEmpty() && r >= 0 && c >= 0) {
+                        target.put(r, c, if (dataType == "String") XCell(v, 's') else xTyped(v, 0).first)
+                    }
+                }
+            }
+            ev = p.next()
+        }
+    }
+    if (b.sheets.isEmpty()) b.sheets.add(XSheet("Sheet1", null))
+    return b
 }
 
 private fun csvSheet(text: String, d: Char, name: String): XSheet {
