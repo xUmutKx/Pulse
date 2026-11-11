@@ -266,20 +266,17 @@ private fun PermissionsCard() {
     }
 }
 
-/** The notes of this version, shown once after an update (the first start has the full welcome instead). Newest first. */
+/**
+ * The notes of the current version, shown once after an update. Newest first.
+ * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
+ */
 private val WHATS_NEW = listOf(
-    "star" to (tr("Pulse AI: local chat and timed lyrics on the phone, an extra app inside Pulse; models go to Download/PulseAI.",
-        "Pulse AI: telefonda yerel sohbet ve zamanlı şarkı sözleri, Pulse'un içinde bir ek uygulama; modeller Download/PulseAI'ya iner.")),
-    "music" to (tr("Music: the Sonic look, a turntable in glowing lines.", "Müzik: Sonic görünümü, parlayan çizgilerle bir pikap.")),
-    "keyboard" to (tr("Keyboard: a neural model on the phone (Turkish and English) weighs every correction by the sentence; e-mail and name suggestions can be blocked; a learning card in statistics.",
-        "Klavye: telefonda çalışan bir sinir ağı modeli (Türkçe ve İngilizce) her düzeltmeyi cümleye göre tartar; e-posta ve isim önerileri engellenebilir; istatistikte öğrenme kartı.")),
-    "apps" to (tr("Extra apps: choose each app's icon from an installed icon pack (search by words) or make one: line or glass, any colours.",
-        "Ek uygulamalar: her uygulamanın ikonunu yüklü bir ikon paketinden (kelimeyle arayarak) seç ya da üret: çizgi veya cam, istediğin renkler.")),
-    "document" to (tr("PDF: tap printed text to edit it in place; saved copies stay real PDF text; dark pages keep photos whole.",
-        "PDF: basılı yazıya dokunup yerinde düzenle; kaydedilen kopyalarda yazı gerçek PDF yazısı kalır; koyu sayfalarda fotoğraflar bozulmaz.")),
-    "folder" to (tr("Files: pull down to refresh, faster APK extract and install, split archives extract by picking their parts.",
-        "Dosyalar: aşağı çekip yenile, daha hızlı APK çıkarma ve kurma, bölünmüş arşivler parçaları seçilerek çıkarılır.")),
-    "music" to (tr("Music: deleted songs leave the list at once, no empty entries.", "Müzik: silinen şarkılar listeden hemen çıkar, boş kayıt kalmaz.")),
+    "apps" to (tr("Game Hub: its settings are in Boxshelf's settings now (look, library, covers, box style, in-game menu, access and setup).",
+        "Game Hub: ayarları artık Boxshelf ayarlarında (görünüm, kütüphane, kapaklar, kutu tarzı, oyun içi menü, erişim ve kurulum).")),
+    "star" to (tr("Pulse AI: more small uncensored chat models, and a Vision section for models that see pictures.",
+        "Pulse AI: daha fazla küçük sansürsüz sohbet modeli ve resim gören modeller için bir Görsel bölümü.")),
+    "music" to (tr("Game Hub boxes: the back shows the game's own screenshots, the spine and the back take the colours of the box's console.",
+        "Game Hub kutuları: arka yüzde oyunun kendi ekran görüntüleri var, yan ve arka yüz kutunun konsol renklerini alır.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
