@@ -10,6 +10,8 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOn
 import androidx.compose.material.icons.rounded.RepeatOneOn
 import androidx.compose.material.icons.rounded.ShuffleOn
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.text.font.FontWeight
@@ -74,8 +76,14 @@ fun MusicPlayerEngine.restoreQueueOrder() {
 @Composable
 fun ShuffleGlyph(kind: ShuffleKind, lit: Color, dim: Color, size: Dp) {
     Box(Modifier.size(size), contentAlignment = androidx.compose.ui.Alignment.Center) {
-        Icon(if (kind == ShuffleKind.OFF) Icons.Rounded.Shuffle else Icons.Rounded.ShuffleOn, null, tint = if (kind == ShuffleKind.OFF) dim else lit, modifier = Modifier.fillMaxSize())
-        PlayModes.badge(kind)?.let { Text(it, color = lit, fontSize = (size.value * .27f).sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd)) }
+        // one picture per kind: queue shuffle, shuffle of all songs (the library), shuffle of albums
+        val icon = when (kind) {
+            ShuffleKind.OFF -> Icons.Rounded.Shuffle
+            ShuffleKind.QUEUE -> Icons.Rounded.ShuffleOn
+            ShuffleKind.ALL -> Icons.Rounded.LibraryMusic
+            ShuffleKind.ALBUMS -> Icons.Rounded.Album
+        }
+        Icon(icon, null, tint = if (kind == ShuffleKind.OFF) dim else lit, modifier = Modifier.fillMaxSize())
     }
 }
 

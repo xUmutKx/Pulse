@@ -950,7 +950,8 @@ class AlarmAudioService : Service() {
 
         const val ALARM_CHANNEL_ID = "lucid_high_priority_alarm_channel_v2"
         const val SNOOZE_CHANNEL_ID = "lucid_snoozed_alarm_channel"
-        const val FOREGROUND_NOTIFICATION_ID = 1001
+        // its own id: the music player's media notification uses 1001, and sharing it replaced the alarm's notification (and its Snooze and Dismiss buttons)
+        const val FOREGROUND_NOTIFICATION_ID = 4401
 
         const val ACTION_START_ALARM = "com.umutk.pulse.extras.lucid.service.ACTION_START_ALARM"
         const val ACTION_STOP_ALARM = "com.umutk.pulse.extras.lucid.service.ACTION_STOP_ALARM"
