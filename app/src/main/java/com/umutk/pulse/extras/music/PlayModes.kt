@@ -108,13 +108,13 @@ object PlayModes {
         reshuffle(c)
     }
 
+    /** The small mark under a shuffle icon that tells the kind apart (none for the plain queue shuffle); the Poweramp menu shows it. */
+    fun badge(k: ShuffleKind): String? = when (k) { ShuffleKind.ALL -> "ALL"; ShuffleKind.ALBUMS -> "ALB"; else -> null }
+
     /** Repeat: off, all, one, off ... Returns the new mode. */
     fun cycleRepeat(c: Context): Int {
         val p = MusicPlayerEngine.get(c).player
         p.repeatMode = when (p.repeatMode) { Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL; Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE; else -> Player.REPEAT_MODE_OFF }
         return p.repeatMode
     }
-
-    /** The small mark under a shuffle icon that tells the kind apart (none for the plain queue shuffle). */
-    fun badge(k: ShuffleKind): String? = when (k) { ShuffleKind.ALL -> "ALL"; ShuffleKind.ALBUMS -> "ALB"; else -> null }
 }

@@ -2431,3 +2431,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## 1.0.395 (derlendi)
 - Müzik: söz arama sonucu telefondaki şarkıyı çalar ve sözünü açar.
+
+## 1.0.396 (derlendi)
+- Müzik: karıştır simgesi her tür için ayrı resim (harf yok).
+- Alarm bildirimi müzik bildirimiyle aynı kimliği (1001) paylaşmıyor; Ertele ve Kapat çalışıyor.
