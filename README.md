@@ -88,10 +88,6 @@
 - Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
 </details>
 
-
-
-<details><summary><b>✨ Features</b></summary>
-
 <details><summary><b>📊 Task manager</b></summary>
 
 - **Processes**: apps and background processes in groups, with CPU and memory per process and an End task button.
@@ -210,7 +206,8 @@ Pulse can be your home screen, and the looks of the launcher match the app's loo
 
 <details><summary><b>🎬 Video player and subtitles</b></summary>
 
-The video player searches subtitles online from its subtitle menu. The search uses yifysubtitles.ch, which needs no account or key. It is mainly movies, so TV episodes may not be found.
+The video player searches subtitles online from its subtitle menu. The search uses yifysubtitles.ch, which needs no account or key.
+Also we got TheIntroDb implemention for skipping intros recaps etc and one of my most wanted thing subtile in pip mode!
 
 
 </details>
