@@ -1333,6 +1333,7 @@ function openInspect(){uiCrumb("Inspect");
 let detailsBack=null;
 function detailsReturn(){const g=detailsBack;detailsBack=null;if(g&&mode==="browse"&&!qm.open&&!sysBusy()&&curGame()===g)openDetails()}
 function closeInspect(){
+  resetEject(); // a disc out of the box goes back in when Inspect closes
   // the manual reader open on top (a phone companion's Play can close Inspect from under it): shut it too, or the paused 3D view
   // and rd.open stayed behind and every later Inspect stuck with the box lifted
   if(rd.open){rd.open=false;if(window.Inspect3D)Inspect3D.setPaused(false);$("inspect").classList.remove("reading");$("reader").classList.remove("on");$("reader").setAttribute("aria-hidden","true")}
@@ -1605,10 +1606,32 @@ function ispAdvance(){
 }
 let holdT=null,holdStart=0;
 function bumpDisc(){if(window.Inspect3D&&Inspect3D.isActive()){Inspect3D.bump();return}const d=$("inspect").querySelector(".isp-disc");d.style.transition="transform .25s";d.style.transform+=" translateZ(20px)";setTimeout(()=>{d.style.transform=d.style.transform.replace(" translateZ(20px)","");setTimeout(()=>{d.style.transition=""},300)},120)}
-function holdBegin(){if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");$("ispHold").classList.add("on");holdT=requestAnimationFrame(holdTick)}
-function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/800);$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
+// the disc: a touch or mouse hold ejects it (the box shakes); dragged onto the console below it starts the game; Enter drops it in too
+let holdByPtr=false;
+const discRest=()=>{const d=document.querySelector("#inspect .isp-disc");return d?Math.round(d.offsetHeight*.9):0};
+function ejectDisc(){
+  holdByPtr=false;isp.ejected=true;const el=$("inspect"),d=document.querySelector("#inspect .isp-disc");
+  el.classList.add("isp-shake","disc-out");setTimeout(()=>el.classList.remove("isp-shake"),480);
+  if(d)d.style.translate=`0 ${-discRest()}px`;
+  $("ispConsole").classList.add("on");rumble(.5,.3,140);play_("hold");
+}
+function resetEject(){
+  isp.ejected=false;holdByPtr=false;const el=$("inspect");if(el)el.classList.remove("isp-shake","disc-out");
+  const d=document.querySelector("#inspect .isp-disc");if(d)d.style.translate="";
+  const c=$("ispConsole");if(c)c.classList.remove("on","over","in");
+}
+function retractDisc(){resetEject()}
+function insertDisc(){
+  const c=$("ispConsole");if(c)c.classList.add("in");play_("boot");rumble(.6,.3,160);
+  closeInspect();setTimeout(()=>play(),120);
+}
+function holdBegin(){
+  if(mode==="inspect"&&isp.ejected){if(!holdByPtr)insertDisc();holdByPtr=false;return}
+  if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");$("ispHold").classList.add("on");holdT=requestAnimationFrame(holdTick)}
+function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/800);$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){if(holdByPtr&&!isp.ejected){cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";ejectDisc();return}holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
 function holdEnd(fire){if(!holdT)return;cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";if(!fire&&isp.state===2)bumpDisc()}
 function ispBack(){
+  if(isp.ejected){retractDisc();return} // Back puts the disc back in first
   const el=$("inspect");isp.last=performance.now();
   if(rd.open){closeReader();return}
   if(isp.state===2){if(ispSpins()){isp.ty=isp.sy0+Math.round((isp.ty-isp.sy0)/360)*360;if(!(window.Inspect3D&&Inspect3D.isActive()))isp.ry=isp.ty} /* back the nearest whole spin: the case comes back facing as it left (the CSS case at once: its spin isn't blended out) */isp.tf=0;isp.tx=Math.max(-50,Math.min(50,isp.tx));isp.state=1;el.classList.remove("out")} /* (the disc could tilt further than the case does) */
@@ -1657,7 +1680,12 @@ function inspectKey(e){
 }
 (function(){
   const el=$("inspect");
-  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2)holdBegin();isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
+  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
+  // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back
+  let dr=null;
+  el.addEventListener("pointerdown",e=>{if(!isp.ejected||mode!=="inspect")return;const d=e.target.closest&&e.target.closest(".isp-disc");if(!d)return;e.stopImmediatePropagation();dr={x:e.clientX,y:e.clientY,d};d.style.transition="none"},true);
+  addEventListener("pointermove",e=>{if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y;dr.d.style.translate=`${dx}px ${-discRest()+dy}px`;const c=$("ispConsole"),a=dr.d.getBoundingClientRect(),b=c.getBoundingClientRect();c.classList.toggle("over",a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)});
+  addEventListener("pointerup",e=>{if(!dr)return;const d=dr.d;dr=null;const c=$("ispConsole"),a=d.getBoundingClientRect(),b=c.getBoundingClientRect();const hit=a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;d.style.transition="";if(hit)insertDisc();else{c.classList.remove("over");d.style.translate=`0 ${-discRest()}px`}});
   addEventListener("pointermove",e=>{if(!isp.drag)return;const dx=e.clientX-isp.drag.x,dy=e.clientY-isp.drag.y;if(Math.abs(dx)+Math.abs(dy)>4){isp.drag.moved=true;holdEnd(true)}if(isp.tz>1&&e.shiftKey)ispPan(dx,dy);else ispTurn(dx*.22,-dy*.16);isp.drag.x=e.clientX;isp.drag.y=e.clientY});
   addEventListener("pointerup",e=>{if(!isp.drag)return;const click=!isp.drag.moved;isp.drag=null;el.classList.remove("dragging");if(!click&&!rd.open&&isp.tz<=1)ispSnap();const wasHolding=!!holdT;holdEnd(false);if(click&&mode==="inspect"&&!wasHolding){if(rd.open)rdTurn(e.clientX<innerWidth/2?-1:1);else ispAdvance()}});
 })();
