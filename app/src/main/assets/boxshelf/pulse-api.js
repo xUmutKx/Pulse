@@ -16,6 +16,8 @@
     kind: 'app', id: 'app-' + g.pkg, appId: g.pkg, title: g.name, path: g.pkg, pulse: true,
     // the Steam screenshots for the back of the box (up to four URLs; none until the covers were looked for)
     shots: Array.isArray(g.shots) ? g.shots : [],
+    // the box style of the game's box: its spine says that console
+    box: g.box || 'steam',
     hidden: !!g.hidden, minutes: Math.round((g.playMs || 0) / 60000), lastPlayed: g.lastUsed ? g.lastUsed / 1000 : 0,
     // the picture of a game is its cover from the internet (Steam, SteamGridDB, Google Play) or its wide art; the app's icon is never used as the cover
     // appIcon is only for the title line (not 'icon': the shelf builds a cover from that one when there is none)
