@@ -338,6 +338,8 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
     // Material glass for this app: its glass glyph in a colour
     var gCol by remember { mutableIntStateOf(current?.split('|')?.takeIf { it[0] == "glass" }?.getOrNull(3)?.let { ExtraIcons.colourOf(it) } ?: ExtraIcons.glassColour) }
     var gLevel by remember { mutableIntStateOf(current?.split('|')?.takeIf { it[0] == "glass" }?.getOrNull(4)?.toIntOrNull() ?: ExtraIcons.glassLevel) }
+    // the real home-screen icon of the app (Pulse itself, or an extra app that has glass icons): line or one of the glass colours
+    val homeAlias = remember(key) { if (key == "pulse") LauncherGlass.MAIN else key.takeIf { it.startsWith("app:") }?.removePrefix("app:")?.takeIf { it in LauncherGlass.ALIASES } }
     var spec by remember { mutableStateOf(current) }
     fun glassNow() { spec = "glass|$key|$glyph|${"%08x".format(gCol)}|$gLevel" }
     // icon pack
@@ -465,6 +467,22 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         }
                     }
                 }
+                if (homeAlias != null) {
+                    var hl by remember { mutableStateOf(LauncherGlass.lookOf(ctx, homeAlias)) }
+                    Text(tr("Home screen icon", "Ana ekran ikonu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PChip(hl == LauncherGlass.LINE, tr("Line", "Çizgi")) { hl = LauncherGlass.LINE }
+                        LauncherGlass.TONES.forEach { t ->
+                            Box(Modifier.size(30.dp).clip(CircleShape).background(Color(t.argb)).border(if (hl == t.id) 3.dp else 1.dp, if (hl == t.id) Look.accent else T.sub.copy(alpha = .5f), CircleShape).clickable { hl = t.id })
+                        }
+                    }
+                    TextButton({
+                        LauncherGlass.apply(ctx, homeAlias, hl)
+                        android.widget.Toast.makeText(ctx, tr("Applied. The launcher can take a few seconds to show it.", "Uygulandı. Başlatıcının göstermesi birkaç saniye sürebilir."), android.widget.Toast.LENGTH_SHORT).show()
+                    }) {
+                        PIcon("home", T.text, 18.dp); Spacer(Modifier.width(6.dp)); Text(tr("Apply to the home screen", "Ana ekrana uygula"))
+                    }
+                }
                 if (onPin != null) TextButton({ val s = spec; if (s != null) Thread { ExtraIcons.render(ctx, s, 256)?.let { b -> android.os.Handler(android.os.Looper.getMainLooper()).post { onPin(b) } } }.start() }, enabled = spec != null) {
                     PIcon("home", T.text, 18.dp); Spacer(Modifier.width(6.dp)); Text(tr("Add to home screen", "Ana ekrana ekle"))
                 }
@@ -546,25 +564,6 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         StoreHeader(tr("App icons", "Uygulama ikonları"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            // the icons on the HOME SCREEN (the app icons of the phone's launcher): line icons or blue Material glass; a tablet starts with glass
-            var homeGlass by remember { mutableStateOf(LauncherGlass.glassOn(ctx)) }
-            Text(tr("Home screen icons", "Ana ekran ikonları"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PChip(!homeGlass, tr("Line", "Çizgi")) { homeGlass = false; LauncherGlass.setGlass(ctx, false) }
-                PChip(homeGlass, tr("Material glass", "Material cam")) { homeGlass = true; LauncherGlass.setGlass(ctx, true) }
-            }
-            // the default look of every row without a choice: Material glass in one colour, or the look's own icon
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PChip(!ExtraIcons.glassOn, tr("Default", "Varsayılan")) { ExtraIcons.setGlass(ctx, false, ExtraIcons.glassColour) }
-                PChip(ExtraIcons.glassOn, tr("Material glass", "Material cam")) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour) }
-            }
-            if (ExtraIcons.glassOn) {
-                GlassLevels(ExtraIcons.glassLevel) { ExtraIcons.setGlass(ctx, true, ExtraIcons.glassColour, it) }
-                Spacer(Modifier.height(8.dp))
-                Swatches(GLASS_TINTS + Look.accent.toArgb(), ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
-                Spacer(Modifier.height(8.dp))
-                ColourPicker(ExtraIcons.glassColour) { ExtraIcons.setGlass(ctx, true, it) }
-            }
             Spacer(Modifier.height(6.dp))
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
