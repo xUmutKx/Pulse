@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -47,6 +49,9 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.PLoader
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.music.Track
+import com.umutk.pulse.extras.music.MusicSettings
+import com.umutk.pulse.WinAlert
+import com.umutk.pulse.PSwitch
 import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,6 +138,9 @@ fun LyricsPanel(track: Track?, positionMs: Int, modifier: Modifier = Modifier, o
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { searching = !searching }) { PIcon(if (searching) "close" else "search", T.text, 22.dp) }
             IconButton(onClick = { online() }, enabled = !busy && track != null) { PIcon("rotate", T.text, 22.dp) }
+            var skinOpen by remember { mutableStateOf(false) }
+            IconButton(onClick = { skinOpen = true }) { PIcon("settings", T.text, 22.dp) }
+            if (skinOpen) LyricsSkinSettings { skinOpen = false }
             rec?.takeIf { it.hasLyrics }?.let { r ->
                 if (saved) IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { store.delete(r, path) }; saved = false } }) { PIcon("delete", T.text, 22.dp) }
                 else IconButton(onClick = {
@@ -174,4 +182,31 @@ fun LyricsPanel(track: Track?, positionMs: Int, modifier: Modifier = Modifier, o
             else Box(Modifier.weight(1f).fillMaxSize())
         }
     }
+}
+
+/** The lyrics' own settings: the size of the words, the whole page or only the cover square, and the AI button. */
+@Composable
+fun LyricsSkinSettings(onClose: () -> Unit) {
+    val c = LocalContext.current
+    var size by remember { mutableIntStateOf(MusicSettings.lyricsFont(c)) }
+    var full by remember { mutableStateOf(MusicSettings.lyricsFull(c)) }
+    var ai by remember { mutableStateOf(MusicSettings.aiLyrics(c)) }
+    WinAlert(onDismissRequest = onClose, title = { Text(tr("Lyrics", "Sözler")) }, text = {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Text size", "Yazı boyutu"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = { size = (size - 1).coerceIn(12, 30); MusicSettings.setLyricsFont(c, size) }) { Text("−", color = T.text, fontSize = 20.sp) }
+                Text("$size", color = T.text, fontSize = 15.sp)
+                IconButton(onClick = { size = (size + 1).coerceIn(12, 30); MusicSettings.setLyricsFont(c, size) }) { Text("+", color = T.text, fontSize = 20.sp) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Whole page", "Tüm sayfa"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                PSwitch(full, { full = it; MusicSettings.setLyricsFull(c, it) })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Pulse AI makes lyrics", "Pulse AI söz yapsın"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                PSwitch(ai, { ai = it; MusicSettings.setAiLyrics(c, it) })
+            }
+        }
+    }, confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text(tr("Done", "Tamam")) } })
 }

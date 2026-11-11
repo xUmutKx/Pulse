@@ -1,0 +1,2 @@
+The console case frames in this folder (ps3, ps4, ps5, switch, switch2, xbox360, xboxone, xboxseries) come from the steam-case-covers project, licensed GPL-3.0.
+Their window positions are in CaseCover.kt. The platform logos are part of the frames.

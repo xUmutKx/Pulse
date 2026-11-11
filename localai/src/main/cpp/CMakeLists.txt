@@ -19,6 +19,7 @@ if(NOT DEFINED LLAMA_SRC)
     message(FATAL_ERROR "LLAMA_SRC is not set (the workflow fetches llama.cpp into localai/vendor)")
 endif()
 add_subdirectory(${LLAMA_SRC} build-llama)
+# the vision part (mtmd) of llama.cpp: built as its library, without the tools
 
 add_library(${CMAKE_PROJECT_NAME} SHARED ai_chat.cpp)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
@@ -26,5 +27,5 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
         GGML_CPU_KLEIDIAI=$<BOOL:${GGML_CPU_KLEIDIAI}>
         GGML_OPENMP=$<BOOL:${GGML_OPENMP}>)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-        ${LLAMA_SRC} ${LLAMA_SRC}/common ${LLAMA_SRC}/include ${LLAMA_SRC}/ggml/include ${LLAMA_SRC}/ggml/src)
-target_link_libraries(${CMAKE_PROJECT_NAME} llama llama-common android log)
+        ${LLAMA_SRC} ${LLAMA_SRC}/common ${LLAMA_SRC}/include ${LLAMA_SRC}/ggml/include ${LLAMA_SRC}/ggml/src ${LLAMA_SRC}/tools/mtmd)
+target_link_libraries(${CMAKE_PROJECT_NAME} llama llama-common mtmd android log)

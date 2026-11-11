@@ -15,9 +15,14 @@ import kotlinx.coroutines.sync.withLock
 object AiEngine {
     private var held: ParcelFileDescriptor? = null
     var loadedId: String? = null; private set
+    /** The loaded model can see pictures (its vision part is in). */
+    var vision = false; private set
     private val lock = Mutex()
 
     fun engine(c: Context): InferenceEngine = AiChat.getInferenceEngine(c.applicationContext)
+
+    /** The chat model picked in the Models tab, as a model (its files), or null when none is there. */
+    fun chosenModel(c: Context): AiModel? = chosenPath(c)?.first?.let { id -> Store.known(c, "chat").firstOrNull { it.id == id } }
 
     /** The model picked in the Models tab (or a file picked by hand): its id and path, or null when none is there. */
     fun chosenPath(c: Context): Pair<String, String>? {
@@ -39,11 +44,16 @@ object AiEngine {
         val (id, path) = chosenPath(c) ?: return false
         e.loadModel(path)
         loadedId = id
+        // a vision model: its vision part goes in right after the model (only when its file is there)
+        vision = chosenModel(c)?.projector?.let { p -> Store.projectorFile(p).isFile && runCatching { e.loadProjector(Store.projectorFile(p).path) }.getOrDefault(false) } ?: false
         if (system.isNotBlank()) e.setSystemPrompt(system)
         true
     }
 
-    fun ask(c: Context, text: String, max: Int = 1024): Flow<String> = engine(c).sendUserPrompt(text, max)
+    fun ask(c: Context, text: String, max: Int = 2048): Flow<String> = engine(c).sendUserPrompt(text, max)
+
+    /** A question about a picture (JPEG bytes): only for a model that can see (see [vision]). */
+    fun askPicture(c: Context, text: String, picture: ByteArray, max: Int = 2048): Flow<String> = engine(c).sendUserPromptWithImage(text, picture, max)
 
     /** One answer to one question in a fresh conversation (the text tools). */
     suspend fun once(c: Context, system: String, text: String, max: Int = 512): String? {

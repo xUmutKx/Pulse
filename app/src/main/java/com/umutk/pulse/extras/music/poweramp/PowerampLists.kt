@@ -71,7 +71,6 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.GraphicEq
-import com.umutk.pulse.extras.playlists.OnlinePlaylistsHub
 import com.umutk.pulse.extras.whitenoise.WhiteNoiseHub
 import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
@@ -135,7 +134,6 @@ private sealed interface Lib {
     /** Full pages that replace the library (white noise hub, online playlists hub). */
     object WhiteNoise : Lib
     object AllSounds : Lib
-    object OnlinePlaylists : Lib
     /** The suggestions and the mix maker, each on a page of its own (they were heavy at the bottom of the library list). */
     object Suggestions : Lib
     object MixMaker : Lib
@@ -208,17 +206,23 @@ fun LibraryScreen(
     val root = remember(tracks) {
         tracks.map { dirOf(it.path) }.reduceOrNull(::commonDir) ?: ""
     }
-    // every page fades and rises in when it opens (the list arrives with its contents)
-    val enter = remember { Animatable(0f) }
-    LaunchedEffect(node) { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
+    // a page you open fades and rises in; going back (or coming back to the library) shows the page at once, no black frame and no fade
+    val enter = remember { Animatable(1f) }
+    var stepBack by remember { mutableStateOf(false) }
+    var mounted by remember { mutableStateOf(false) }
+    LaunchedEffect(node) {
+        if (!mounted || stepBack) { mounted = true; stepBack = false; enter.snapTo(1f) }
+        else { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
+    }
+    fun goBack(to: Lib) { stepBack = true; node = to }
     BackHandler(enabled = node != Lib.Root) {
-        node = when (val n = node) {
+        goBack(when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
             is Lib.Folder -> Lib.Folders
             is Lib.Playlist, is Lib.M3u -> Lib.Playlists
             is Lib.Group -> Lib.Cat(n.kind)
             else -> Lib.Root
-        }
+        })
     }
     val title = when (val n = node) {
         Lib.Root -> tr("Library", "Kütüphane")
@@ -231,7 +235,6 @@ fun LibraryScreen(
         is Lib.Quick -> quickNames[n.kind]
         Lib.WhiteNoise -> tr("White noise", "Beyaz gürültü")
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
-        Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
         Lib.Radio -> tr("Radio", "Radyo")
         Lib.Suggestions -> tr("Recommendations", "Öneriler")
         Lib.MixMaker -> tr("Mix maker", "Mix yapıcı")
@@ -247,7 +250,6 @@ fun LibraryScreen(
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
-        Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
@@ -255,7 +257,7 @@ fun LibraryScreen(
     Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (node != Lib.Root) {
-                IconButton(onClick = { node = Lib.Root }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
+                IconButton(onClick = { goBack(Lib.Root) }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
             }
             Text(title, color = fg, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (node == Lib.Songs) {
@@ -272,7 +274,6 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
-                    Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
                     Triple(Icons.Rounded.Radio, Color(0xFFD9785B), Lib.Radio to tr("Radio", "Radyo")),
                     Triple(Icons.Rounded.AutoAwesome, Color(0xFFB65BD9), Lib.Suggestions to tr("Recommendations", "Öneriler")),
                     Triple(Icons.Rounded.Tune, Color(0xFF5BD9B0), Lib.MixMaker to tr("Mix maker", "Mix yapıcı")),
@@ -334,7 +335,7 @@ fun LibraryScreen(
                 )
                 itemsIndexed(hidden) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
-            Lib.WhiteNoise, Lib.AllSounds, Lib.OnlinePlaylists, Lib.Radio -> Unit // shown above
+            Lib.WhiteNoise, Lib.AllSounds, Lib.Radio -> Unit // shown above
             Lib.Playlists -> PlaylistsPage(queue, style, onOpenFile = { node = Lib.M3u(it.path, it.name) }, onOpen = { node = Lib.Playlist(it) })
             is Lib.M3u -> {
                 val l by androidx.compose.runtime.produceState(emptyList<Track>(), n.path) {
@@ -482,7 +483,7 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
         } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            // the buttons on the left, the number of songs at the right end
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
                 Icon(if (cols == 1) Icons.Rounded.ViewList else Icons.Rounded.GridView, tr("View", "Görünüm"), tint = style.accent, modifier = Modifier.size(22.dp))
@@ -490,6 +491,8 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             }
             ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
             ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            Spacer(Modifier.weight(1f))
+            Text("${items.size}", color = style.textDim, fontSize = 13.sp)
         }
     }
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {

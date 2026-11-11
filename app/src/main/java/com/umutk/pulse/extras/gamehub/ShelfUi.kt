@@ -15,6 +15,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import android.content.Context
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -142,6 +144,7 @@ private fun BoxArt(g: GameRow, pal: Pal, hidden: Boolean, modifier: Modifier = M
 
 /** The shelf as a row you swipe along: the box in the middle stands square, the ones beside it turn away and sink back. */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times: Map<String, Long>, onOpen: (GameRow) -> Unit, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
     val scope = rememberCoroutineScope()
     val pager = rememberPagerState { games.size }
@@ -174,7 +177,8 @@ private fun Coverflow(games: List<GameRow>, hidden: Set<String>, pal: Pal, times
                             translationX = (if (d < 0f) -1f else 1f) * tuck * cardW.toPx()
                             cameraDistance = 18f * density
                         }
-                        .clickable { if (page == pager.currentPage) onOpen(g) else scope.launch { pager.animateScrollToPage(page) } },
+                        .combinedClickable(onClick = { if (page == pager.currentPage) onOpen(g) else scope.launch { pager.animateScrollToPage(page) } },
+                            onDoubleClick = { if (page == pager.currentPage) onDetails(g) }),
                 ) { BoxArt(g, pal, g.pkg in hidden, Modifier.fillMaxSize()) }
             }
         }
@@ -331,7 +335,7 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
     val games = remember { loadGames(ctx) }
     var step by remember { mutableStateOf(0) }
     val last = 4
-    var art by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", true)) }
+    var art by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
     var iconMode by remember { mutableStateOf(prefs(ctx).getInt("iconMode", 0)) }
     var busy by remember { mutableStateOf(false) }
     var got by remember { mutableStateOf<Int?>(null) }
@@ -406,6 +410,11 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
  * Open button and More, then two tabs: Overview (what it is and the facts) and Settings (the game's own settings). No stripe marks the chosen tab;
  * it is shown by its weight and a soft pill.
  */
+/** Deletes the game (uninstalls the app): the system's own dialog asks first. */
+internal fun uninstallGame(c: Context, pkg: String) {
+    runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 @Composable
 internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, size: Long, hidden: Boolean, onBack: () -> Unit, onPlay: () -> Unit, settings: @Composable () -> Unit) {
     val ctx = LocalContext.current
@@ -436,6 +445,31 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
                 ShelfPill(tr("Add to home", "Ana ekrana ekle"), false, pal) { pinGame(ctx, g.pkg) }
                 ShelfPill(if (fav) "★ " + tr("Favourite", "Favori") else "☆ " + tr("Favourite", "Favori"), false, pal) { toggleFav(ctx, g.pkg); fav = g.pkg in favSet(ctx) }
                 ShelfPill(tr("Data folder", "Data klasörü"), false, pal) { openDataFolder(ctx, g.pkg) }
+            }
+            // this game's cover, looked for by its name (SteamGridDB with the key, then Steam)
+            var looking by remember(g.pkg) { mutableStateOf(false) }
+            var coverMsg by remember(g.pkg) { mutableStateOf("") }
+            val lookScope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.card).clickable {
+                    if (!looking) {
+                        if (sgdbKey(ctx).isEmpty() && !steamCoverFile(ctx, g.pkg).isFile) { coverMsg = tr("Enter the SteamGridDB key in Game Hub settings first", "Önce Game Hub ayarlarında SteamGridDB anahtarını gir"); return@clickable }
+                        looking = true; coverMsg = ""
+                        lookScope.launch {
+                            val ok = withContext(kotlinx.coroutines.Dispatchers.IO) { fetchBestCover(ctx, g) }
+                            looking = false
+                            if (ok) { GameArt.version.intValue++; coverMsg = tr("Cover found", "Kapak bulundu") } else coverMsg = tr("No cover found for this game", "Bu oyun için kapak bulunamadı")
+                        }
+                    }
+                }.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
+                    Text(if (looking) tr("Looking…", "Aranıyor…") else tr("Look for cover", "Kapak ara"), color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (coverMsg.isNotEmpty()) Text(coverMsg, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.card).clickable { uninstallGame(ctx, g.pkg) }.padding(vertical = 13.dp), contentAlignment = Alignment.Center) {
+                    Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
             Row(Modifier.padding(top = 18.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(tr("Overview", "Genel"), tr("Settings", "Ayarlar")).forEachIndexed { i, label ->

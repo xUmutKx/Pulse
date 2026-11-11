@@ -142,20 +142,33 @@ function back(style,game,lines,blurb){
 }
 // (beta.9) the same back as a Promise of its URL: drawn here, the JPEG encode (most of the 10–90 ms) in the worker, so a
 // back made ahead of a flip (or during one) never holds up the shelf
+// the back with the game's own Steam screenshots (up to four, loaded first); a picture that fails is drawn as before
+const loadPic=u=>new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=()=>res(null);im.src=u});
 function backAsync(style,game,lines,blurb){
-  const key=bkey(style,game);if(cache.has(key))return Promise.resolve(cache.get(key));
+  const shots=(game.shots||[]).slice(0,4),key=shots.length?bkey(style,game)+"|shots":bkey(style,game);
+  if(cache.has(key))return Promise.resolve(cache.get(key));
   if(pend.has(key))return pend.get(key).p.then(u=>u||back(style,game,lines,blurb));
-  return encodeAsync(key,drawBack(style,game,lines,blurb)).then(u=>u||back(style,game,lines,blurb));
+  if(!shots.length)return encodeAsync(key,drawBack(style,game,lines,blurb)).then(u=>u||back(style,game,lines,blurb));
+  return Promise.all(shots.map(loadPic)).then(pics=>encodeAsync(key,drawBack(style,game,lines,blurb,pics)).then(u=>u||back(style,game,lines,blurb)));
 }
-const hasBack=(style,game)=>cache.has(bkey(style,game));
-function drawBack(style,game,lines,blurb){
+const hasBack=(style,game)=>cache.has(bkey(style,game)+((game.shots||[]).length?"|shots":""));
+function drawBack(style,game,lines,blurb,pics){
   const W=420,Hh=Math.round(W/style.ratio),c=document.createElement("canvas");c.width=W;c.height=Hh;const ctx=c.getContext("2d",{willReadFrequently:true});const r=rng(game.seed^0x9e3779b9);
-  const g=ctx.createLinearGradient(0,0,0,Hh);g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7));ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh);
+  // a Game Hub box: its console's own colours (PS5 blue, Switch red, Xbox green-black...), the way the real case's back is; a Steam box keeps the drawn backdrop
+  const boxed=!!(game.box&&game.box!=="steam"&&style.caseColor);
+  const g=ctx.createLinearGradient(0,0,0,Hh);
+  if(boxed){g.addColorStop(0,style.caseColor);g.addColorStop(1,style.caseSide||style.caseColor)}else{g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7))}
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh);
   const bandH=band(ctx,W,Hh,style,"");
   ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="alphabetic";ctx.font=`22px "${FONTS[game.seed%FONTS.length]}", Lexend, sans-serif`;
   wrapLines(ctx,game.title.toUpperCase(),W*.88).slice(0,2).forEach((l,i)=>ctx.fillText(l,W*.06,bandH+40+i*26));
   const shotW=W*.42,shotH=shotW*.6,top=bandH+90;
-  [[W*.06,top],[W*.52,top],[W*.06,top+shotH+10],[W*.52,top+shotH+10]].forEach(([sx,sy],i)=>{drawScene(ctx,sx,sy,shotW,shotH,{hue:game.hue+i*35},r,KINDS[(game.seed>>>i)%KINDS.length]);ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=2;ctx.strokeRect(sx,sy,shotW,shotH)});
+  [[W*.06,top],[W*.52,top],[W*.06,top+shotH+10],[W*.52,top+shotH+10]].forEach(([sx,sy],i)=>{
+    const im=pics&&pics[i];
+    if(im){ // the game's own screenshot, cropped to the frame (cover)
+      const s=Math.max(shotW/im.width,shotH/im.height),dw=im.width*s,dh=im.height*s;ctx.save();ctx.beginPath();ctx.rect(sx,sy,shotW,shotH);ctx.clip();ctx.drawImage(im,sx+(shotW-dw)/2,sy+(shotH-dh)/2,dw,dh);ctx.restore();
+    }else drawScene(ctx,sx,sy,shotW,shotH,{hue:game.hue+i*35},r,KINDS[(game.seed>>>i)%KINDS.length]);
+    ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=2;ctx.strokeRect(sx,sy,shotW,shotH)});
   let y=top+shotH*2+44;ctx.font="13px Lexend, sans-serif";
   if(blurb){ctx.fillStyle="rgba(255,255,255,.9)";const bl=wrapLines(ctx,blurb,W*.88).slice(0,6);bl.forEach(l=>{ctx.fillText(l,W*.06,y);y+=17});y+=10}
   (lines||[]).forEach(([k,v])=>{if(y>Hh-40)return;ctx.fillStyle="rgba(255,255,255,.55)";ctx.fillText(k,W*.06,y);ctx.fillStyle="#fff";const vv=wrapLines(ctx,String(v),W*.6)[0]||"";ctx.fillText(vv,W*.34,y);y+=22});
@@ -264,5 +277,15 @@ function setupFront(style){
   ctx.fillStyle="rgba(255,255,255,.45)";ctx.font=`500 ${W*.04}px Lexend, sans-serif`;ctx.fillText("OPEN SETTINGS",W/2,Hh*.84+W*.07);
   const url=c.toDataURL("image/jpeg",.92);c.width=c.height=0;if(!document.fonts||document.fonts.check(`700 ${W*.1}px Lexend`))setupCache.set(style.id,url);return url;
 }
-window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront};
+// the average colour of a cover, for the spine's band (the spine matches the front); cached per picture, null when it can't be read
+const tintCache=new Map();
+function coverTint(url){
+  if(!url)return Promise.resolve(null);if(tintCache.has(url))return Promise.resolve(tintCache.get(url));
+  return new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";
+    im.onload=()=>{try{const t=document.createElement("canvas");t.width=t.height=8;const tx=t.getContext("2d",{willReadFrequently:true});tx.drawImage(im,0,0,8,8);const d=tx.getImageData(0,0,8,8).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<40)continue;r+=d[i];g+=d[i+1];b+=d[i+2];n++}
+      if(n){r/=n;g/=n;b/=n}else{r=g=b=40}
+      const v={bg:`rgb(${r|0},${g|0},${b|0})`,fg:(r*.299+g*.587+b*.114)>150?"#111":"#fff"};tintCache.set(url,v);res(v)}catch{res(null)}};
+    im.onerror=()=>res(null);im.src=url});
+}
+window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront,coverTint};
 })();

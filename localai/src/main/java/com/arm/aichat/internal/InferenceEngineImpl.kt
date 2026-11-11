@@ -24,6 +24,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 
+/** A prompt the native side refused (its code: see ai_chat.cpp). */
+class PromptRejected(val code: Int) : Exception("Prompt not processed ($code)")
+
 /**
  * JNI wrapper for the llama.cpp library providing Android-friendly access to large language models.
  *
@@ -99,6 +102,12 @@ internal class InferenceEngineImpl private constructor(
 
     @FastNative
     private external fun processUserPrompt(userPrompt: String, predictLength: Int): Int
+
+    @FastNative
+    private external fun projector(projectorPath: String): Int
+
+    @FastNative
+    private external fun processUserPromptImage(userPrompt: String, image: ByteArray, predictLength: Int): Int
 
     @FastNative
     private external fun generateNextToken(): String?
@@ -185,6 +194,20 @@ internal class InferenceEngineImpl private constructor(
         }
 
     /**
+     * Forgets the conversation and starts a new one with the system prompt (the model stays loaded)
+     */
+    override suspend fun restartConversation(systemPrompt: String) =
+        withContext(llamaDispatcher) {
+            check(_state.value is InferenceEngine.State.ModelReady) {
+                "Cannot restart conversation in ${_state.value.javaClass.simpleName}!"
+            }
+            _state.value = InferenceEngine.State.ProcessingSystemPrompt
+            val result = processSystemPrompt(systemPrompt)
+            _state.value = InferenceEngine.State.ModelReady
+            if (result != 0) throw IllegalStateException("Conversation not restarted ($result)")
+        }
+
+    /**
      * Process the plain text system prompt
      *
      * TODO-han.yin: return error code if system prompt not correct processed?
@@ -213,26 +236,52 @@ internal class InferenceEngineImpl private constructor(
         }
 
     /**
+     * Load the vision projector of the loaded model (Pulse AI: the mmproj file of a vision model)
+     */
+    override suspend fun loadProjector(projectorPath: String): Boolean =
+        withContext(llamaDispatcher) {
+            check(_state.value is InferenceEngine.State.ModelReady) {
+                "Cannot load projector in ${_state.value.javaClass.simpleName}!"
+            }
+            val file = File(projectorPath)
+            if (!file.isFile) return@withContext false
+            projector(projectorPath) == 0
+        }
+
+    /**
      * Send plain text user prompt to LLM, which starts generating tokens in a [Flow]
      */
     override fun sendUserPrompt(
         message: String,
         predictLength: Int,
-    ): Flow<String> = flow {
-        require(message.isNotEmpty()) { "User prompt discarded due to being empty!" }
+    ): Flow<String> = generation("text") { processUserPrompt(message, predictLength) }
+
+    /**
+     * Send a user prompt with a picture to the vision model, which starts generating tokens in a [Flow]
+     */
+    override fun sendUserPromptWithImage(
+        message: String,
+        image: ByteArray,
+        predictLength: Int,
+    ): Flow<String> = generation("picture") { processUserPromptImage(message, image, predictLength) }
+
+    /**
+     * The common part of both: the prompt is put in by [process] (a native result of 0 when it went in), then the answer is generated.
+     */
+    private fun generation(kind: String, process: () -> Int): Flow<String> = flow {
         check(_state.value is InferenceEngine.State.ModelReady) {
-            "User prompt discarded due to: ${_state.value.javaClass.simpleName}"
+            "User $kind prompt discarded due to: ${_state.value.javaClass.simpleName}"
         }
 
         try {
-            Log.i(TAG, "Sending user prompt...")
+            Log.i(TAG, "Sending user $kind prompt...")
             _readyForSystemPrompt = false
             _state.value = InferenceEngine.State.ProcessingUserPrompt
 
-            processUserPrompt(message, predictLength).let { result ->
+            process().let { result ->
                 if (result != 0) {
-                    Log.e(TAG, "Failed to process user prompt: $result")
-                    return@flow
+                    Log.e(TAG, "Failed to process user $kind prompt: $result")
+                    throw PromptRejected(result)
                 }
             }
 
@@ -251,6 +300,10 @@ internal class InferenceEngineImpl private constructor(
             _state.value = InferenceEngine.State.ModelReady
         } catch (e: CancellationException) {
             Log.i(TAG, "Assistant generation's flow collection cancelled.")
+            _state.value = InferenceEngine.State.ModelReady
+            throw e
+        } catch (e: PromptRejected) {
+            // the model is still good: only this prompt was refused (e.g. a picture that does not fit)
             _state.value = InferenceEngine.State.ModelReady
             throw e
         } catch (e: Exception) {
