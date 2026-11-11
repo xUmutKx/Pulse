@@ -1927,6 +1927,7 @@ api.onRunAside&&api.onRunAside(on=>{document.body.classList.toggle("aside",on);i
 let returnWatch=0;
 function clearReturnCover(why){const was=["launching","returning"].filter(c=>app.classList.contains(c));document.body.classList.remove("aside");app.classList.remove("returning","launching");returnPrep=false;$("launch").style.background="";if(was.length&&api.log)api.log(`return: cleared the black cover (${why}; was ${was.join("+")}, mode ${mode}, page ${document.visibilityState})`)}
 api.onExited(async info=>{uiCrumb("Back from the game");if(window.Sound&&Sound.nextSong)Sound.nextSong("game");
+  try{dimWake();dimAt=lastInputAt=performance.now()}catch{} // a game that ran a long while left the shelf idle: the screen dimmer (black until a touch) must not be on when it comes back
   clearTimeout(returnWatch);returnWatch=setTimeout(()=>{if(mode!=="launch"&&(app.classList.contains("returning")||app.classList.contains("launching")||document.body.classList.contains("aside")))clearReturnCover("watchdog, 3 s after the game ended")},3000);
   if(mode!=="launch"){if(!(info&&info.code===-1))clearReturnCover("game ended outside launch mode");return}
   if(info&&info.code===-1){clearTimeout(insertT);clearTimeout(launchTimer);hideInsert();note([`Couldn't start: ${info.error||"unknown error"}. `,{br:1},"Press ",{b:btnWord("back")}," or ",{b:"Esc"}," to go back."],true);runningKind="error";return}
