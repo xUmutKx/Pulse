@@ -107,6 +107,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 // the disc inside the case is the game's wide picture, so it is not the same picture as the front cover
                 .put("disc", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
                 // the Steam screenshots for the back of the box (up to four; none until the covers were looked for)
+                // the box style the game's box is made in: the spine says its console (Steam: the shelf's own PC spine)
+                .put("box", CaseCover.styleOf(c, g.pkg))
                 .put("shots", JSONArray((0 until 4).filter { steamShotFile(c, g.pkg, it).isFile }.map { "https://$HOST/shot/${g.pkg}/$it" }))
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
