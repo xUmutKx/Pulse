@@ -234,3 +234,7 @@ html,body,#app{-webkit-user-select:none;user-select:none}
 .platform-android .bss-root.phone .bss-search{display:none}
 .platform-android .bss-root.phone .bss-info{display:none}
 .platform-android .bss-root.phone .bss-page{padding:16px 16px 110px;grid-column:1}
+
+/* a box's spine mark (the console's picture instead of its name) */
+.spine-band.has-mark{display:flex;align-items:center;justify-content:center}
+.spine-band.has-mark svg{width:90%;height:auto;max-height:94%;display:block}

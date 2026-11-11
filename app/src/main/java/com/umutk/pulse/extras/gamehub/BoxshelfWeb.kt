@@ -80,6 +80,12 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
     }.getOrNull()
 }
 
+/** Counts the changes the web shelf must read again (the boxes were made in another style, covers were found): the shelf is keyed by it. */
+internal object ShelfSync {
+    val rev = androidx.compose.runtime.mutableIntStateOf(0)
+    fun bump() { android.os.Handler(android.os.Looper.getMainLooper()).post { rev.intValue++ } }
+}
+
 /** The game's box in the chosen console case (none for the Steam style). */
 internal fun caseFile(c: Context, pkg: String): java.io.File = CaseCover.fileFor(c, pkg) ?: java.io.File(c.filesDir, "none")
 
@@ -143,7 +149,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     @JavascriptInterface fun ghSet(key: String, value: String) {
         // the box style applies to every game's box (made again in the background); the menu asks for its permissions first
         if (key == "boxStyle") {
-            if (value in CaseCover.STYLES) { CaseCover.setStyle(c, value); val pkgs = loadGames(c).map { it.pkg }; Thread { CaseCover.applyAll(c, pkgs, value) }.start() }
+            if (value in CaseCover.STYLES) { CaseCover.setStyle(c, value); val pkgs = loadGames(c).map { it.pkg }; Thread { CaseCover.applyAll(c, pkgs, value); ShelfSync.bump() }.start() }
             return
         }
         if (key == "menu") { setMenu(value == "true"); return }
@@ -208,16 +214,24 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_RESUME) holder[0]?.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
             if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause()
             else if (e == Lifecycle.Event.ON_RESUME) {
                 val w = holder[0] ?: return@LifecycleEventObserver
                 w.onResume()
-                // back from a game the picture can stay black until something redraws it: the layer is reset and the page is laid out again
+                // the page's return step (the shelf comes back) runs once the page is running again: its timers and frames were stopped while it was away
+                w.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
+                // back from a game the picture can stay black until something redraws it (a touch did): the layer is reset, and the view is drawn
+                // again several times while the window comes back (the first draws can land before it is in front), the page nudged to paint too
                 w.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
                 w.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                 w.invalidate(); w.requestLayout()
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ w.invalidate(); w.requestLayout() }, 300L)
+                val h = android.os.Handler(android.os.Looper.getMainLooper())
+                for (d in longArrayOf(100L, 250L, 500L, 900L, 1500L, 2300L)) h.postDelayed({
+                    if (holder[0] !== w) return@postDelayed
+                    w.invalidate()
+                    w.evaluateJavascript("document.documentElement.style.opacity='.999';requestAnimationFrame(function(){document.documentElement.style.opacity=''})", null)
+                    if (d == 250L || d == 900L) { w.visibility = android.view.View.INVISIBLE; h.postDelayed({ if (holder[0] === w) w.visibility = android.view.View.VISIBLE }, 40L) }
+                }, d)
             }
         }
         owner.lifecycle.addObserver(obs)

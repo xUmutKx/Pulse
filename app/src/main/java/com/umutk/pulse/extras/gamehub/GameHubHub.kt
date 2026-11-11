@@ -996,7 +996,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle) { BoxshelfWeb(
+                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         Modifier.fillMaxSize().navigationBarsPadding(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
@@ -1134,7 +1134,7 @@ fun GameHubHub(onBack: () -> Unit) {
                                     boxStyle = st; CaseCover.setStyle(ctx, st); boxBusy = true
                                     scope.launch {
                                         withContext(Dispatchers.IO) { CaseCover.applyAll(ctx, games.map { it.pkg }, st) }
-                                        GameArt.version.intValue++; boxBusy = false
+                                        GameArt.version.intValue++; ShelfSync.bump(); boxBusy = false
                                     }
                                 }
                             }

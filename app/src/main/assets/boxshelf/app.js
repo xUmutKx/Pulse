@@ -277,6 +277,12 @@ function appFrontAsync(style,g){
   return Covers.frontAsync(style,g);
 }
 function frontUrl(g){return (g.art&&g.art.front)||Covers.front(stOf(g),g)}
+// the console mark on a box's spine: small line pictures (Xbox's sphere, PlayStation's four buttons, Switch's two Joy-Cons), in the band's ink
+const BOX_ICON={
+  xbox:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.6 6.8c2.3 2.1 3.6 3.6 5.4 5.7 1.8-2.1 3.1-3.6 5.4-5.7M6.6 17.2c2.3-2.1 3.6-3.6 5.4-5.7 1.8 2.1 3.1 3.6 5.4 5.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  ps:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6l2.8 4.8H9.2z"/><circle cx="19.2" cy="12" r="2.7"/><path d="M9.8 17.8l4.4 4.4M14.2 17.8l-4.4 4.4"/><rect x="2.3" y="9.4" width="5.3" height="5.3" rx=".6"/></g></svg>',
+  switch:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3.4" width="6.2" height="17.2" rx="3"/><rect x="14.8" y="3.4" width="6.2" height="17.2" rx="3"/></g><circle cx="6.1" cy="8.4" r="1.3" fill="currentColor"/><circle cx="17.9" cy="15.6" r="1.3" fill="currentColor"/></svg>'
+};
 // the style a game's back is drawn in: a Game Hub box's own console (its colours, band and label), else the shelf's style
 function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];return g&&g.pulse&&id&&STYLE[id]?STYLE[id]:stOf(g)}
 function backUrl(g){
@@ -356,7 +362,8 @@ function mount(s){
   const BOXST={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"},BOXLAB={ps5:"PS5",ps4:"PS4",ps3:"PS3",switch:"SWITCH",switch2:"SWITCH 2",xbox360:"XBOX 360",xboxone:"XBOX ONE",xboxseries:"XBOX SERIES"};
   const boxSt=g.pulse&&g.box&&BOXST[g.box]&&STYLE[BOXST[g.box]]&&STYLE[BOXST[g.box]].spineBand;
   const sb=boxSt||os.spineBand;
-  slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=sb.bg;band.style.color=sb.fg;band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":(boxSt&&BOXLAB[g.box]||os.spineBand.label)});
+  const boxMark=boxSt&&g.kind!=="emulator"&&g.kind!=="setup"?BOX_ICON[/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":"switch"]:null;
+  slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=sb.bg;band.style.color=sb.fg;if(boxMark){band.innerHTML=boxMark;band.classList.add("has-mark")}else{band.classList.remove("has-mark");band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":(boxSt&&BOXLAB[g.box]||os.spineBand.label)}});
   // a Steam box's spine takes the colour of the game's own cover (the front), once it is read
   if(!boxSt&&g.art&&g.art.front&&!g.art.gen&&window.Covers&&Covers.coverTint&&g.kind!=="emulator"&&g.kind!=="setup")Covers.coverTint(g.art.front).then(t=>{if(!t||!slot.isConnected)return;slot.querySelectorAll(".spine-band").forEach(b=>{b.style.background=t.bg;b.style.color=t.fg})});
   slot.querySelectorAll(".spine-title").forEach(t=>t.textContent=g.title);
@@ -1606,18 +1613,32 @@ function ispAdvance(){
 }
 let holdT=null,holdStart=0;
 function bumpDisc(){if(window.Inspect3D&&Inspect3D.isActive()){Inspect3D.bump();return}const d=$("inspect").querySelector(".isp-disc");d.style.transition="transform .25s";d.style.transform+=" translateZ(20px)";setTimeout(()=>{d.style.transform=d.style.transform.replace(" translateZ(20px)","");setTimeout(()=>{d.style.transition=""},300)},120)}
+// the console under the disc, drawn for the console of the box (PS5, Xbox Series, Switch...): a drawing of its own for each, not one grey slab
+const CONSOLE_ART={
+  ps5:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d0dc"/></linearGradient></defs><path d="M8 64C8 30 44 12 130 12s122 18 122 52z" fill="url(#cw)"/><path d="M8 76h244c0 34-36 52-122 52S8 110 8 76z" fill="url(#cw)"/><rect x="8" y="64" width="244" height="12" fill="#0a0c11"/><rect x="40" y="68" width="180" height="4" rx="2" fill="#4b86ff"/></svg>',
+  xsx:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cx" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262b33"/><stop offset="1" stop-color="#0b0d10"/></linearGradient></defs><rect x="26" y="14" width="208" height="112" rx="9" fill="url(#cx)" stroke="#3a414d"/><circle cx="196" cy="42" r="14" fill="none" stroke="#6fcf3a" stroke-width="3.2"/><circle cx="196" cy="42" r="4" fill="#6fcf3a"/><g fill="#1a1e24"><circle cx="64" cy="36" r="2.4"/><circle cx="78" cy="36" r="2.4"/><circle cx="92" cy="36" r="2.4"/><circle cx="106" cy="36" r="2.4"/><circle cx="120" cy="36" r="2.4"/><circle cx="134" cy="36" r="2.4"/></g><rect x="52" y="76" width="156" height="9" rx="4.5" fill="#020304"/></svg>',
+  xone:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="co" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c3036"/><stop offset=".5" stop-color="#16181c"/><stop offset=".5" stop-color="#0d0e11"/><stop offset="1" stop-color="#08090b"/></linearGradient></defs><rect x="18" y="20" width="224" height="100" rx="7" fill="url(#co)" stroke="#3a3f48"/><circle cx="46" cy="48" r="9" fill="none" stroke="#c8ccd4" stroke-width="2.4"/><path d="M41 43l10 10M51 43L41 53" stroke="#c8ccd4" stroke-width="2.4" stroke-linecap="round"/><rect x="40" y="80" width="180" height="9" rx="4.5" fill="#020203"/></svg>',
+  x360:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbfb"/><stop offset="1" stop-color="#cfd2d6"/></linearGradient></defs><rect x="16" y="22" width="228" height="96" rx="14" fill="url(#c3)" stroke="#aab0b8"/><circle cx="48" cy="52" r="13" fill="none" stroke="#7bc043" stroke-width="3.6"/><g stroke="#aab0b8" stroke-width="2" stroke-linecap="round"><path d="M150 40h72M150 48h72M150 56h72"/></g><rect x="40" y="82" width="180" height="9" rx="4.5" fill="#2a2d33"/></svg>',
+  ps4:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2d34"/><stop offset="1" stop-color="#0a0b0e"/></linearGradient></defs><path d="M34 22h196l-22 96H12z" fill="url(#c4)" stroke="#3a3f4a"/><path d="M30 48h196" stroke="#3b82ff" stroke-width="3.2" stroke-linecap="round"/><path d="M26 82l-3 0h196" stroke="#020304" stroke-width="9" stroke-linecap="round"/></svg>',
+  ps3:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="c5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3d44"/><stop offset=".18" stop-color="#101216"/><stop offset="1" stop-color="#050608"/></linearGradient></defs><rect x="20" y="16" width="220" height="108" rx="16" fill="url(#c5)" stroke="#9aa3b2" stroke-width="2.4"/><path d="M34 34h192" stroke="#cfd5df" stroke-width="2" opacity=".5"/><rect x="48" y="78" width="164" height="9" rx="4.5" fill="#000"/></svg>',
+  sw:'<svg viewBox="0 0 260 140" aria-hidden="true"><rect x="10" y="22" width="48" height="98" rx="18" fill="#0ab9e6"/><rect x="202" y="22" width="48" height="98" rx="18" fill="#ff4554"/><rect x="54" y="18" width="152" height="106" rx="8" fill="#15171c" stroke="#2a2e36"/><rect x="64" y="30" width="132" height="82" rx="4" fill="#06080b"/><rect x="92" y="14" width="76" height="7" rx="3.5" fill="#020304"/><circle cx="34" cy="48" r="7" fill="#06323d"/><circle cx="226" cy="92" r="7" fill="#5a0d15"/></svg>',
+  pc:'<svg viewBox="0 0 260 140" aria-hidden="true"><defs><linearGradient id="cp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3f4a"/><stop offset="1" stop-color="#1c1f26"/></linearGradient></defs><rect x="20" y="30" width="220" height="80" rx="6" fill="url(#cp)" stroke="#5a6272"/><rect x="40" y="62" width="180" height="9" rx="4.5" fill="#06080b"/><circle cx="216" cy="46" r="4" fill="#4b86ff"/><rect x="36" y="42" width="44" height="6" rx="3" fill="#5a6272"/></svg>'
+};
+const consoleKey=b=>({ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw",xbox360:"x360",xboxone:"xone",xboxseries:"xsx"})[b]||"pc";
 // the disc: a touch or mouse hold ejects it (the box shakes); dragged onto the console below it starts the game; Enter drops it in too
 let holdByPtr=false;
 const discRest=()=>{const d=document.querySelector("#inspect .isp-disc");return d?Math.round(d.offsetHeight*.9):0};
 function ejectDisc(){
   holdByPtr=false;isp.ejected=true;const el=$("inspect"),d=document.querySelector("#inspect .isp-disc");
   el.classList.add("isp-shake","disc-out");setTimeout(()=>el.classList.remove("isp-shake"),480);
-  if(d)d.style.translate=`0 ${-discRest()}px`;
-  $("ispConsole").classList.add("on");rumble(.5,.3,140);play_("hold");
+  const gl=document.querySelector("#inspect canvas.isp-gl.on");
+  if(d&&!gl)d.style.translate=`0 ${-discRest()}px`;
+  const cons=$("ispConsole"),cg=curGame();cons.innerHTML=CONSOLE_ART[consoleKey(cg&&cg.box)]||CONSOLE_ART.pc;cons.classList.add("art","on");rumble(.5,.3,140);play_("hold");
 }
 function resetEject(){
   isp.ejected=false;holdByPtr=false;const el=$("inspect");if(el)el.classList.remove("isp-shake","disc-out");
   const d=document.querySelector("#inspect .isp-disc");if(d)d.style.translate="";
+  const gl2=document.querySelector("#inspect canvas.isp-gl");if(gl2){gl2.style.translate="";gl2.style.transition=""}
   const c=$("ispConsole");if(c)c.classList.remove("on","over","in");
 }
 function retractDisc(){resetEject()}
@@ -1681,11 +1702,19 @@ function inspectKey(e){
 (function(){
   const el=$("inspect");
   el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
-  // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back
+  // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back.
+  // With the 3D view (WebGL) the disc is drawn in the canvas, so the canvas is what moves; without it, the DOM disc moves
   let dr=null;
-  el.addEventListener("pointerdown",e=>{if(!isp.ejected||mode!=="inspect")return;const d=e.target.closest&&e.target.closest(".isp-disc");if(!d)return;e.stopImmediatePropagation();dr={x:e.clientX,y:e.clientY,d};d.style.transition="none"},true);
-  addEventListener("pointermove",e=>{if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y;dr.d.style.translate=`${dx}px ${-discRest()+dy}px`;const c=$("ispConsole"),a=dr.d.getBoundingClientRect(),b=c.getBoundingClientRect();c.classList.toggle("over",a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)});
-  addEventListener("pointerup",e=>{if(!dr)return;const d=dr.d;dr=null;const c=$("ispConsole"),a=d.getBoundingClientRect(),b=c.getBoundingClientRect();const hit=a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;d.style.transition="";if(hit)insertDisc();else{c.classList.remove("over");d.style.transition="translate .35s cubic-bezier(.2,.8,.2,1)";d.style.translate="0 0";setTimeout(resetEject,360)}});
+  const discSurface=()=>{const g=document.querySelector("#inspect canvas.isp-gl.on");return g||document.querySelector("#inspect .isp-disc")};
+  const discBase=s=>s&&s.classList.contains("isp-gl")?[0,0]:[0,-discRest()];
+  const discCircle=s=>{const r=s.getBoundingClientRect(),g=s.classList.contains("isp-gl");return {x:r.left+r.width/2,y:r.top+r.height/2,r:g?Math.min(r.width,r.height*.5)*.34:Math.min(r.width,r.height)/2}};
+  const overConsole=s=>{const c=discCircle(s),k=$("ispConsole").getBoundingClientRect();const nx=Math.max(k.left,Math.min(c.x,k.right)),ny=Math.max(k.top,Math.min(c.y,k.bottom));return Math.hypot(c.x-nx,c.y-ny)<c.r*.7};
+  el.addEventListener("pointerdown",e=>{if(!isp.ejected||mode!=="inspect")return;const s=discSurface();if(!s)return;const c=discCircle(s);
+    if(Math.hypot(e.clientX-c.x,e.clientY-c.y)>c.r*1.3)return; // a touch away from the disc is not the disc
+    e.stopImmediatePropagation();dr={x:e.clientX,y:e.clientY,s,base:discBase(s)};s.style.transition="none"},true);
+  addEventListener("pointermove",e=>{if(!dr)return;const dx=e.clientX-dr.x,dy=e.clientY-dr.y;dr.s.style.translate=`${dr.base[0]+dx}px ${dr.base[1]+dy}px`;$("ispConsole").classList.toggle("over",overConsole(dr.s))});
+  addEventListener("pointerup",e=>{if(!dr)return;const s=dr.s,base=dr.base;dr=null;const hit=overConsole(s);s.style.transition="";
+    if(hit)insertDisc();else{$("ispConsole").classList.remove("over");s.style.transition="translate .35s cubic-bezier(.2,.8,.2,1)";s.style.translate=`${base[0]}px ${base[1]}px`;setTimeout(()=>{if(isp.ejected)resetEject()},360)}});
   addEventListener("pointermove",e=>{if(!isp.drag)return;const dx=e.clientX-isp.drag.x,dy=e.clientY-isp.drag.y;if(Math.abs(dx)+Math.abs(dy)>4){isp.drag.moved=true;holdEnd(true)}if(isp.tz>1&&e.shiftKey)ispPan(dx,dy);else ispTurn(dx*.22,-dy*.16);isp.drag.x=e.clientX;isp.drag.y=e.clientY});
   addEventListener("pointerup",e=>{if(!isp.drag)return;const click=!isp.drag.moved;isp.drag=null;el.classList.remove("dragging");if(!click&&!rd.open&&isp.tz<=1)ispSnap();const wasHolding=!!holdT;holdEnd(false);if(click&&mode==="inspect"&&!wasHolding){if(rd.open)rdTurn(e.clientX<innerWidth/2?-1:1);else ispAdvance()}});
 })();
