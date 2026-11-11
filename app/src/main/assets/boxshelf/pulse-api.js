@@ -65,7 +65,14 @@
   };
   api.quit = async () => { H.back(); return true; };
   // the platform's own "exited": Pulse tells the page when the game has closed and Boxshelf is on the screen again
-  window.__pulseExited = () => { try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {} };
+  // the desktop's "run quitting" step (the shelf is covered in black, then comes back): Android has no such event, so it runs
+  // here, the moment Pulse is in front again, right before the "exited" step that brings the shelf back
+  const onQuit = api.onRunQuitting;
+  api.onRunQuitting = fn => { window.__bsQuit = fn; return onQuit ? onQuit(fn) : () => {}; };
+  window.__pulseExited = () => {
+    try { window.__bsQuit && window.__bsQuit(); } catch (e) {}
+    try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {}
+  };
   // Details > More > Game settings: Pulse's own page of the game (performance, profile, cover)
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dPulse'); if (b && window.__pulseCur) api.pulseDetails(window.__pulseCur.appId); }, true);
   // Back (Android's back button): on the bare shelf Pulse leaves it; on any other screen (details, a case in hand, a menu, a list) the page goes one step back
