@@ -2416,3 +2416,11 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Pulse AI: beş küçük sansürsüz sohbet modeli, Görsel bölümü ve iki sansürsüz görsel model.
 - Excel: Excel 2003 XML dosyaları açılır.
 - Güncelleme sonrası "Ne yeni" listesi bu sürümün notları.
+
+## 1.0.393 (derlendi)
+- Ana ekran ikonları: her ekstra uygulama ve Pulse için çizgi ve 6 Material cam rengi; ikon seçicide "Ana ekrana uygula".
+- Tablette ilk açılışta mavi cam, telefonda çizgi.
+- Game Hub: karışık kutular, yan ve arka yüz konsol renginde, disk çıkarma ve sürükleme, dönüşte raf.
+- Pulse AI: beş küçük sansürsüz model, Görsel bölümü ve iki sansürsüz görsel model.
+- Excel 2003 XML dosyaları açılıyor.
+- Güncelleme sonrası "Ne yeni" listesi bu sürümün notları.
