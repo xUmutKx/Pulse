@@ -154,7 +154,11 @@ function backAsync(style,game,lines,blurb){
 const hasBack=(style,game)=>cache.has(bkey(style,game)+((game.shots||[]).length?"|shots":""));
 function drawBack(style,game,lines,blurb,pics){
   const W=420,Hh=Math.round(W/style.ratio),c=document.createElement("canvas");c.width=W;c.height=Hh;const ctx=c.getContext("2d",{willReadFrequently:true});const r=rng(game.seed^0x9e3779b9);
-  const g=ctx.createLinearGradient(0,0,0,Hh);g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7));ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh);
+  // a Game Hub box: its console's own colours (PS5 blue, Switch red, Xbox green-black...), the way the real case's back is; a Steam box keeps the drawn backdrop
+  const boxed=!!(game.box&&game.box!=="steam"&&style.caseColor);
+  const g=ctx.createLinearGradient(0,0,0,Hh);
+  if(boxed){g.addColorStop(0,style.caseColor);g.addColorStop(1,style.caseSide||style.caseColor)}else{g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7))}
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh);
   const bandH=band(ctx,W,Hh,style,"");
   ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="alphabetic";ctx.font=`22px "${FONTS[game.seed%FONTS.length]}", Lexend, sans-serif`;
   wrapLines(ctx,game.title.toUpperCase(),W*.88).slice(0,2).forEach((l,i)=>ctx.fillText(l,W*.06,bandH+40+i*26));

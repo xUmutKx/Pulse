@@ -277,9 +277,11 @@ function appFrontAsync(style,g){
   return Covers.frontAsync(style,g);
 }
 function frontUrl(g){return (g.art&&g.art.front)||Covers.front(stOf(g),g)}
+// the style a game's back is drawn in: a Game Hub box's own console (its colours, band and label), else the shelf's style
+function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];return g&&g.pulse&&id&&STYLE[id]?STYLE[id]:stOf(g)}
 function backUrl(g){
   if(g.art&&g.art.back)return g.art.back;
-  return Covers.back(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview);
+  return Covers.back(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview);
 }
 // Sample a real cover's average color so the glow matches it.
 const hueCache=new Map();
@@ -469,11 +471,11 @@ function ensureBack(onlyReal){
   // on settle only real back art is attached; a generated back (10–90 ms of drawing) waits until you actually flip
   if(onlyReal){const g0=curGame();if(!g0||!(g0.art&&g0.art.back))return}
   s.backDrawn=true;
-  const g=curGame(),img=new Image();img.alt="";img.draggable=false;img.decoding="async";img.onerror=()=>{img.onerror=null;img.src=Covers.back(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview)};
+  const g=curGame(),img=new Image();img.alt="";img.draggable=false;img.decoding="async";img.onerror=()=>{img.onerror=null;img.src=Covers.back(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview)};
   // (beta.9) a made-up back not ready yet: its JPEG is encoded in the worker and the picture goes in a moment later
   // (the flip never waits for it; prepBack usually made it while you were resting on the game)
-  if((g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(stOf(g),g))img.src=backUrl(g);
-  else Covers.backAsync(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).then(u=>{if(u&&!img.src)img.src=u}).catch(()=>{img.src=backUrl(g)});
+  if((g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(backStyleOf(g),g))img.src=backUrl(g);
+  else Covers.backAsync(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).then(u=>{if(u&&!img.src)img.src=u}).catch(()=>{img.src=backUrl(g)});
   s.back.appendChild(img);
 }
 // (beta.9) Details' backdrop: a screenshot is decoded off the main thread first, then put in (if that game is still open)
@@ -483,8 +485,8 @@ function heroBgSoon(u,g){heroBgWant=u;const im=new Image();im.decoding="async";i
   (im.decode?im.decode():Promise.resolve()).then(put,put)}
 // (beta.9) rest on a game with no back art of its own and its made-up back is made in idle time (requestIdleCallback
 // waits for a still shelf, perf.js), so the first flip shows it at once instead of drawing it then
-function prepBack(s,g){if(!g||(g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(stOf(g),g))return;
-  const run=()=>{if(slots[sel]!==s||curGame()!==g||s.backDrawn)return;Covers.backAsync(stOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).catch(()=>{})};
+function prepBack(s,g){if(!g||(g.art&&g.art.back)||!Covers.backAsync||Covers.hasBack(backStyleOf(g),g))return;
+  const run=()=>{if(slots[sel]!==s||curGame()!==g||s.backDrawn)return;Covers.backAsync(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview).catch(()=>{})};
   if(window.requestIdleCallback)requestIdleCallback(run,{timeout:3000});else setTimeout(run,250)}
 // A tiny copy of the cover, scaled up, makes a smooth blurred background without an expensive blur filter.
 const tinyCache=new Map();
