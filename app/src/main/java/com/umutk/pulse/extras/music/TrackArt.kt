@@ -127,7 +127,7 @@ private fun artKeep(path: String, b: ImageBitmap) { ArtCache.map.put(path, b) }
 @Composable
 fun rememberTrackArt(t: Track?, rev: Int = 0): ImageBitmap? {
     val ctx = LocalContext.current
-    return produceState<ImageBitmap?>(artCached(t?.path), t?.path, rev) {
+    return produceState<ImageBitmap?>(artCached(t?.path), t?.path, rev, MusicEdits.rev.intValue) {
         // the state outlives a key change: reset it to this track's own cover (or none) before anything is loaded
         value = artCached(t?.path)
         if (t == null || value != null) return@produceState

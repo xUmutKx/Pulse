@@ -31,6 +31,9 @@ import org.json.JSONObject
  * Basic tag editing: title, artist and album. The new values are kept in the app (shown everywhere in the players)
  * and also offered to the media database. Audio files themselves are never rewritten.
  */
+/** Counts the edits of songs (tags, cover): what is drawn from a song is read again when it goes up. */
+object MusicEdits { val rev = androidx.compose.runtime.mutableIntStateOf(0) }
+
 object MusicTags {
     private fun sp(c: Context) = c.getSharedPreferences("music_tags", Context.MODE_PRIVATE)
 
@@ -42,6 +45,19 @@ object MusicTags {
         genre?.let { o.put("ge", it) }; year?.let { o.put("yr", it) }
         all.put(path, o)
         sp(c).edit().putString("t", all.toString()).apply()
+        // the song's own file takes the tags too (MP3: its ID3 tag is rewritten through a copy), and the phone's music list reads the file again
+        val app = c.applicationContext
+        Thread {
+            runCatching {
+                val fr = LinkedHashMap<String, ByteArray?>()
+                if (title.isNotBlank()) fr["TIT2"] = Id3Frames.textBody(title)
+                if (artist.isNotBlank()) fr["TPE1"] = Id3Frames.textBody(artist)
+                if (album.isNotBlank()) fr["TALB"] = Id3Frames.textBody(album)
+                if (!genre.isNullOrBlank()) fr["TCON"] = Id3Frames.textBody(genre)
+                if (year != null && year > 0) fr["TYER"] = Id3Frames.textBody(year.toString())
+                if (fr.isNotEmpty() && Id3Frames.putFrames(path, fr)) android.media.MediaScannerConnection.scanFile(app, arrayOf(path), null, null)
+            }
+        }.start()
         // best effort: the media database may refuse files owned by other apps
         runCatching {
             c.contentResolver.update(
@@ -111,7 +127,12 @@ fun TagEditDialog(track: Track, onDone: (Track) -> Unit, onClose: () -> Unit) {
         confirmButton = {
             PButton("OK") {
                 MusicTags.set(ctx, track.path, ti, ar, al, ge, yr.toIntOrNull() ?: 0)
-                onDone(track.copy(title = ti.ifBlank { null }, artist = ar.ifBlank { null }, album = al.ifBlank { null }, genre = ge.ifBlank { null }, year = yr.toIntOrNull() ?: 0))
+                val now = track.copy(title = ti.ifBlank { null }, artist = ar.ifBlank { null }, album = al.ifBlank { null }, genre = ge.ifBlank { null }, year = yr.toIntOrNull() ?: 0)
+                // every list and the playing song show the new tags at once
+                MusicLibrary.reapplyTags(ctx)
+                runCatching { MusicPlayerEngine.get(ctx).retag(now) }
+                MusicEdits.rev.intValue++
+                onDone(now)
                 onClose()
             }
         },

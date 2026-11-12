@@ -142,7 +142,7 @@ fun PlayerLyrics(
             val (busy, res0) = state
             val res = edited ?: res0
             when {
-                res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp),
+                res != null && mode == 3 -> LyricsEditor(res, positionMs, { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r, ctx) }; mode = 0 }, { mode = 0 }, Modifier.fillMaxSize().padding(top = 36.dp),
                     playing = playing, onTogglePlay = onTogglePlay,
                     onAi = if (aiOk) ({ if (com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) aiRun = true else com.umutk.pulse.launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "ai") }) else null)
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
@@ -224,7 +224,7 @@ fun PlayerLyrics(
             // the AI lyrics run here, over the lyrics (the dialog shows the progress and writes the lines when it is done)
             if (aiRun && localPath != null) com.umutk.pulse.extras.ai.AiLyricsDialog(localPath, title, artist) { lrc ->
                 aiRun = false
-                if (lrc != null) Lyrics.fromText(lrc, "ai")?.let { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r) } }
+                if (lrc != null) Lyrics.fromText(lrc, "ai")?.let { r -> edited = r; scope.launch(Dispatchers.IO) { Lyrics.saveEdited(localPath, r, ctx) } }
             }
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
                 // the share button sits right here, no menu: Share opens the line picker; the edit button opens the editor

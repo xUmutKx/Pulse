@@ -279,6 +279,17 @@ class MusicPlayerEngine private constructor(context: Context) {
         })
     }
 
+    /**
+     * A song's tags were edited: the queue's copies of it take the new title, artist and album at once (the playing one too, without a break in the sound),
+     * so the player, the notification and the widgets show what was just written.
+     */
+    fun retag(t: Track) {
+        runCatching {
+            for (i in 0 until player.mediaItemCount) if (player.getMediaItemAt(i).mediaId == t.path) player.replaceMediaItem(i, t.toMediaItem())
+        }
+        publish()
+    }
+
     /** Replaces the queue and starts playing [startIndex]. */
     fun playQueue(list: List<Track>, startIndex: Int = 0) {
         cancelCrossfade()

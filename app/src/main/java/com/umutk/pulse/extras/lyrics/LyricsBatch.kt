@@ -176,7 +176,7 @@ class LyricsBatchService : Service() {
                             Transcriber.lrc(app, uri, "auto", title, artist, { s, _ -> LyricsBatchJob.step = s; LyricsBatchJob.now = "$title · $s" }, { lines -> LyricsBatchJob.live = lines })
                         } finally { poll.cancel() }
                         madeLrc = lrc.orEmpty()
-                        lrc?.let { Lyrics.fromText(it, "ai") }?.let { r -> Lyrics.saveEdited(path, r) }
+                        lrc?.let { Lyrics.fromText(it, "ai") }?.let { r -> Lyrics.saveEdited(path, r, app) }
                         LyricsStatus.forget(path)
                         }
                     }
