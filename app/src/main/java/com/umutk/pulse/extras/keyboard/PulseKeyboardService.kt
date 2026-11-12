@@ -2164,7 +2164,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
 // The neural correction rule (bits): cost weight, how far it reaches, the handicap of a completion, and the margin the typed word keeps
 // (a known word, an unknown one, a short one). Tuned on held-out sentences with made-up slips (see the PR notes).
-private const val NN_LAM = 20f
+// (26, was 20: on the owner's 1123 real slips without their sentences, 20 mended 75% and changed 3.0% of clean words; 28 mended 78% and changed 1.7%.
+// With the sentence the model has more to say, so the weight is moved most of the way, not all of it.)
+private const val NN_LAM = 26f
 private const val NN_REACH = 1.05f
 private const val NN_COMP = 3f
 private const val NN_VALID = 8f
