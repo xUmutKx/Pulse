@@ -249,6 +249,12 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
                             saving = true
                             scope.launch {
                                 val ok = withContext(Dispatchers.IO) { runCatching { PowerampCovers.save(ctx, track.path, PowerampCovers.fetch(pick.big)) }.isSuccess }
+                                // the picture goes into the song's own file too (MP3; checked against a copy, see CoverEmbed), and every screen reads the cover again
+                                if (ok) {
+                                    withContext(Dispatchers.IO) { runCatching { if (com.umutk.pulse.extras.music.CoverEmbed.embed(ctx, track)) android.media.MediaScannerConnection.scanFile(ctx.applicationContext, arrayOf(track.path), null, null) } }
+                                    com.umutk.pulse.extras.music.dropArt(track.path)
+                                    com.umutk.pulse.extras.music.MusicEdits.rev.intValue++
+                                }
                                 saving = false
                                 PowerampCovers.dropFetched()
                                 if (ok) { onSaved(); onClose() } else Toast.makeText(ctx, tr("Could not download", "İndirilemedi"), Toast.LENGTH_SHORT).show()

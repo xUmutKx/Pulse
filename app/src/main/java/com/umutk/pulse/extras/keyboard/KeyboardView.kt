@@ -475,7 +475,9 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     if (st.trans) { TransBar(th, st, act); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
-    val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
+    // the Samsung look: while there is nothing to suggest the bar holds its round tool buttons (the smart fix, emoji, translate, clipboard, settings, more)
+    val samBar = th.samsung && st.panel == "keys" && st.inline.isEmpty() && st.slots.none { it.isNotEmpty() }
+    val barHasContent = samBar || st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
     // no suggestions: no container, only a short handle line just above the keys (the space of an empty bar is given to the keys)
     if (!barHasContent) {
         Box(Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
@@ -490,10 +492,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
         },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
-        if (st.toolbar) {
+        if (!samBar) BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
+        if (st.toolbar || samBar) {
             // the icons share the width evenly; only when they would be smaller than a finger's reach does the row scroll
-            val shown = KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
+            val shown = if (th.samsung) listOf("aifix", "emoji", "translate", "clip", "settings") else KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
             BoxWithConstraints(Modifier.weight(1f)) {
                 val slot = if (shown.isEmpty()) maxWidth else maxOf(44.dp, maxWidth / shown.size)
                 Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
@@ -505,7 +507,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 }
             }
             // the three dots always sit at the right end, drawn in Fluent
-            if (KeyboardPrefs.toolbarItems.split(',').contains("menu")) FluentBarIcon(th, "more", on = toolOn("menu", st)) { act.menu("menu") }
+            if (th.samsung || KeyboardPrefs.toolbarItems.split(',').contains("menu")) FluentBarIcon(th, "more", on = toolOn("menu", st)) { act.menu("menu") }
         } else if (st.inline.isNotEmpty()) {
             // a password manager has something for this field (login, password, card): its own suggestions take the bar, close together,
             // each on a grey rounded back; one alone sits in the middle, several scroll with an arrow at each end
