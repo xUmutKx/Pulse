@@ -175,8 +175,17 @@ body.reduce-motion .slot.held .face{transition:opacity .18s}
 #ispConsole.in{opacity:0}
 
 /* the console drawn for the box's console (its own picture instead of the grey slab) */
-#ispConsole.art{background:none;box-shadow:none;aspect-ratio:260/140;width:min(66vw,320px)}
+#ispConsole.art{background:none;box-shadow:none;aspect-ratio:320/170;width:min(82vw,430px);bottom:6%}
 #ispConsole.art::after{display:none}
 #ispConsole.art svg{display:block;width:100%;height:100%;filter:drop-shadow(0 16px 22px rgba(0,0,0,.55))}
 #ispConsole.art.over{box-shadow:none}
 #ispConsole.art.over svg{filter:drop-shadow(0 0 12px #7fd1ff) drop-shadow(0 16px 22px rgba(0,0,0,.55))}
+
+/* the console's slot lights up under the disc, and its lights breathe; the disc sliding in makes them flash */
+#ispConsole.art .slot{transition:stroke .15s,filter .15s}
+#ispConsole.art.over .slot{stroke:#7fd1ff;stroke-width:1.6;filter:drop-shadow(0 0 5px #7fd1ff)}
+#ispConsole.art .led{animation:ispLed 2.6s ease-in-out infinite}
+#ispConsole.art.over .led{animation-duration:.7s}
+#ispConsole.art.in{opacity:1;transition:opacity .2s .25s}
+#ispConsole.art.in .led{animation:none;filter:drop-shadow(0 0 6px currentColor) brightness(1.6)}
+@keyframes ispLed{0%,100%{opacity:1}50%{opacity:.55}}
