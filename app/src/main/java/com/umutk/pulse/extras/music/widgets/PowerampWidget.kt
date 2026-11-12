@@ -92,8 +92,20 @@ class PowerampWidget : AppWidgetProvider() {
         private fun pi(c: Context, a: String) =
             PendingIntent.getBroadcast(c, a.hashCode(), Intent(a).setComponent(ComponentName(c, PowerampWidget::class.java)), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
+        /**
+         * The widget for every size the home screen may show it at (Android 12 and later tell both, upright and sideways): the home screen picks the one that fits,
+         * so the window is never drawn for the wrong one (it used to be drawn small when the phone had been held the other way a moment before).
+         */
         fun build(c: Context, id: Int): RemoteViews {
-            val (bw, bh) = boxPx(c, id)
+            if (android.os.Build.VERSION.SDK_INT >= 31) runCatching {
+                val sizes = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getParcelableArrayList<android.util.SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES).orEmpty().distinct().take(4)
+                if (sizes.size >= 2) return RemoteViews(sizes.associateWith { s -> buildFor(c, id, boxOf(c, s.width, s.height)) })
+            }
+            return buildFor(c, id, boxPx(c, id))
+        }
+
+        private fun buildFor(c: Context, id: Int, box: Pair<Int, Int>): RemoteViews {
+            val (bw, bh) = box
             val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val dur = e.player.duration.takeIf { it > 0 } ?: 0L
@@ -120,9 +132,11 @@ class PowerampWidget : AppWidgetProvider() {
                     Intent().setClassName(c, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
                 // loop and shuffle sit at the left of the counter line, between the text and the seek line
+                // (they follow the text to the left when the cover sits at the right)
+                val mx = if (WidgetOpts.look(c).artRight) 8f else 148f
                 setViewPadding(
                     R.id.pa_mid,
-                    ((f.x + 148 * f.scale) * k).toInt(), ((f.y + 100 * f.scale) * k).toInt(), ((bw - f.x - 226 * f.scale) * k).toInt(), ((bh - f.y - 148 * f.scale) * k).toInt(),
+                    ((f.x + mx * f.scale) * k).toInt(), ((f.y + 100 * f.scale) * k).toInt(), ((bw - f.x - (mx + 78f) * f.scale) * k).toInt(), ((bh - f.y - 148 * f.scale) * k).toInt(),
                 )
                 setOnClickPendingIntent(R.id.pa_prev, pi(c, A_PREV))
                 setOnClickPendingIntent(R.id.pa_rew, pi(c, A_REW))
@@ -160,6 +174,12 @@ class PowerampWidget : AppWidgetProvider() {
                 .takeIf { it > 0 } ?: 250
             val h = (if (portrait) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0))
                 .takeIf { it > 0 } ?: 110
+            return boxOf(c, w.toFloat(), h.toFloat())
+        }
+
+        /** The box of a widget [w] x [h] dp in bitmap pixels; also sets how much smaller than the screen the bitmap is. */
+        private fun boxOf(c: Context, w: Float, h: Float): Pair<Int, Int> {
+            val d = c.resources.displayMetrics.density
             val pw = w * d; val ph = h * d
             // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
             val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
@@ -211,7 +231,9 @@ class PowerampWidget : AppWidgetProvider() {
             // cover: rounded, centre-cropped to a square; a note disc when the track has none
             // the cover keeps its centre and takes the chosen share of its square
             val half = 63f * artPct.coerceIn(30, 100) / 100f
-            val art = RectF(75f - half, 75f - half, 75f + half, 75f + half)
+            // (the cover at the left, or at the right with the text at the left)
+            val acx = if (look.artRight) W - 75f else 75f
+            val art = RectF(acx - half, 75f - half, acx + half, 75f + half)
             val rad = if (artCircle) half else listOf(0f, 16f, half * .5f)[corners.coerceIn(0, 2)]
             if (artShadow) cv.drawRoundRect(art, rad, rad, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; setShadowLayer(12f, 0f, 5f, 0xB0000000.toInt()) })
             cv.save()
@@ -227,19 +249,24 @@ class PowerampWidget : AppWidgetProvider() {
             }
             cv.restore()
 
-            val x0 = 152f
-            val maxW = W - x0 - 12f
-            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = look.title; textSize = 21f; typeface = titleFace }
+            val x0 = if (look.artRight) 12f else 152f
+            val maxW = W - 152f - 12f
+            // the size of the text and where it sits in its place are the person's choice; a bigger title keeps to one line so the artist stays in the window
+            val ts = look.textPct.coerceIn(70, 150) / 100f
+            val layAlign = when (look.align) { 1 -> android.text.Layout.Alignment.ALIGN_CENTER; 2 -> android.text.Layout.Alignment.ALIGN_OPPOSITE; else -> android.text.Layout.Alignment.ALIGN_NORMAL }
+            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = look.title; textSize = 21f * ts; typeface = titleFace }
             val lay = if (android.os.Build.VERSION.SDK_INT >= 23) android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
-                .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build()
-            else @Suppress("DEPRECATION") android.text.StaticLayout(TextUtils.ellipsize(title, tp, maxW * 1.9f, TextUtils.TruncateAt.END), tp, maxW.toInt(), android.text.Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
+                .setAlignment(layAlign).setMaxLines(if (ts > 1.15f) 1 else 2).setEllipsize(TextUtils.TruncateAt.END).build()
+            else @Suppress("DEPRECATION") android.text.StaticLayout(TextUtils.ellipsize(title, tp, maxW * 1.9f, TextUtils.TruncateAt.END), tp, maxW.toInt(), layAlign, 1f, 0f, false)
             cv.save(); cv.translate(x0, 12f); lay.draw(cv); cv.restore()
-            var y = 12f + lay.height + 17f
-            val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f; typeface = textFace }
-            cv.drawText(TextUtils.ellipsize(artist, ap, maxW, TextUtils.TruncateAt.END).toString(), x0, y, ap)
-            y += 18f
-            ap.textSize = 13f
-            if (look.album) cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), x0, y, ap)
+            var y = 12f + lay.height + 17f * ts
+            val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f * ts; typeface = textFace; textAlign = when (look.align) { 1 -> Paint.Align.CENTER; 2 -> Paint.Align.RIGHT; else -> Paint.Align.LEFT } }
+            val tx = when (look.align) { 1 -> x0 + maxW / 2f; 2 -> x0 + maxW; else -> x0 }
+            // (the lines stay above the marks and the counter)
+            if (y < 112f) cv.drawText(TextUtils.ellipsize(artist, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
+            y += 18f * ts
+            ap.textSize = 13f * ts
+            if (look.album && y < 112f) cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
 
             // loop, shuffle and the counter, on one line above the buttons
             val iy = 124f
@@ -249,7 +276,7 @@ class PowerampWidget : AppWidgetProvider() {
                 cv.save(); cv.scale(1.38f, 1.38f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
             }
             val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 14f; textAlign = Paint.Align.RIGHT; typeface = textFace }
-            if (look.counter) cv.drawText(if (total > 0) "${index + 1}/$total" else "", W - 12f, iy + 5f, cp)
+            if (look.counter) cv.drawText(if (total > 0) "${index + 1}/$total" else "", x0 + maxW, iy + 5f, cp)
 
             // thin seek line
             if (look.seek) {
