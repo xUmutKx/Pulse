@@ -302,43 +302,69 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val shotExpire = Runnable { if (shotItem != null && !shotPinned) { shotItem = null; st.shotThumb = null; updateSuggestions() } }
     private var shotPinned = false
     private var shotAt = 0L
-    private var shotId = -1L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot() } }
+        // looked at three times: a screenshot is listed only when its file is finished, which takes a moment (longer for a long or an edited one)
+        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot(); delay(2500); checkShot(); delay(6000); checkShot() } }
     }
+    /** The pictures already taken in (their numbers in the phone's picture list), so none is taken twice and none is skipped when two come close together. */
+    private val shotsTaken = LinkedHashSet<Long>()
+    private val shotLock = kotlinx.coroutines.sync.Mutex()
 
+    /**
+     * Takes the screenshots and camera photos of the last minutes into the clipboard: every one not taken yet (not only the newest), also those made while the
+     * keyboard was not on the screen. The newest goes to the bar when it is fresh.
+     */
     private suspend fun checkShot() {
         if (st.incognito) return
         val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_IMAGES else android.Manifest.permission.READ_EXTERNAL_STORAGE
         if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
-        val found = withContext(Dispatchers.IO) {
-            runCatching {
-                val cols = arrayOf(android.provider.MediaStore.Images.Media._ID, android.provider.MediaStore.Images.Media.DISPLAY_NAME, android.provider.MediaStore.Images.Media.DATE_ADDED, android.provider.MediaStore.Images.Media.DATA)
-                // a "LIMIT" in the sort order is refused from Android 11 on (the whole lookup threw and nothing was ever found): the limit goes in a Bundle
-                val q = android.os.Bundle().apply {
-                    putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Images.Media.DATE_ADDED))
-                    putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
-                    putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 1)
-                }
-                (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
-                else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1"))?.use { c ->
-                    if (!c.moveToFirst()) return@use null
-                    val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
-                    // a screenshot (8 s) or a photo just taken with the camera, HEIC too (30 s: the camera app finishes the file a little later)
-                    val age = System.currentTimeMillis() / 1000 - c.getLong(2)
-                    val shot = name.contains("screenshot", true) || path.contains("screenshot", true)
-                    val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
-                    if (!(shot && age <= 8 || cam && age <= 30)) return@use null
-                    c.getLong(0)
-                }
-            }.getOrNull()
-        } ?: return
-        if (found == shotId) return
-        shotId = found
-        val uri = android.net.Uri.withAppendedPath(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, found.toString())
-        val items = withContext(Dispatchers.IO) { ClipStore.addImage(this@PulseKeyboardService, uri) }
-        st.clipItems = items
-        val item = items.filter { it.image != null }.maxByOrNull { it.time } ?: return
+        if (!shotLock.tryLock()) return
+        var items: List<ClipItem>? = null
+        var fresh = false
+        try {
+            val sp = getSharedPreferences("pulse_kb_shots", MODE_PRIVATE)
+            if (shotsTaken.isEmpty()) sp.getString("ids", "").orEmpty().split(',').mapNotNull { it.toLongOrNull() }.forEach { shotsTaken += it }
+            val found = withContext(Dispatchers.IO) {
+                runCatching {
+                    val cols = arrayOf(android.provider.MediaStore.Images.Media._ID, android.provider.MediaStore.Images.Media.DISPLAY_NAME, android.provider.MediaStore.Images.Media.DATE_ADDED, android.provider.MediaStore.Images.Media.DATA)
+                    // a "LIMIT" in the sort order is refused from Android 11 on (the whole lookup threw and nothing was ever found): the limit goes in a Bundle
+                    val q = android.os.Bundle().apply {
+                        putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Images.Media.DATE_ADDED))
+                        putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+                        putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 8)
+                    }
+                    val out = ArrayList<Pair<Long, Long>>()
+                    (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
+                    else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 8"))?.use { c ->
+                        while (c.moveToNext()) {
+                            val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
+                            val age = System.currentTimeMillis() / 1000 - c.getLong(2)
+                            // a screenshot by its name or folder in any spelling the phones use (Screenshot, Screen_shot, Ekran görüntüsü, Screen capture), up to three
+                            // minutes old; or a photo just taken with the camera, HEIC too (30 s: the camera app finishes the file a little later)
+                            val both = (name + "/" + path).lowercase(Locale.ROOT)
+                            val shot = listOf("screenshot", "screen_shot", "screen shot", "screen-shot", "screencap", "screen_cap", "ekran g", "ekran_g", "ekrang", "capture", "smartselect", "scrnshot").any { it in both }
+                            val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
+                            if (shot && age <= 180 || cam && age <= 30) out += c.getLong(0) to age
+                        }
+                    }
+                    out
+                }.getOrNull()
+            }.orEmpty().filter { it.first !in shotsTaken }
+            if (found.isEmpty()) return
+            // the oldest first, so the newest ends up the newest of the clipboard
+            for ((id, age) in found.reversed()) {
+                val uri = android.net.Uri.withAppendedPath(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
+                val got = withContext(Dispatchers.IO) { val n0 = ClipStore.load(this@PulseKeyboardService).count { it.image != null }; val l = ClipStore.addImage(this@PulseKeyboardService, uri); if (l.count { it.image != null } > n0) l else null }
+                // a file that could not be read yet (still being written) is not marked: the next look takes it
+                if (got != null) { items = got; shotsTaken += id; if (age <= 40) fresh = true }
+            }
+            while (shotsTaken.size > 40) shotsTaken.remove(shotsTaken.first())
+            sp.edit().putString("ids", shotsTaken.joinToString(",")).apply()
+        } finally { shotLock.unlock() }
+        val list = items ?: return
+        st.clipItems = list
+        if (!fresh) return
+        val item = list.filter { it.image != null }.maxByOrNull { it.time } ?: return
         // the newest copy wins the slot: a screenshot takes it from a copied text
         quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
         st.shotThumb = withContext(Dispatchers.IO) { runCatching {
@@ -453,6 +479,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         if (!restarting) runCatching { takeClip(true) }
+        // the screenshots made while the keyboard was away are taken into the clipboard now
+        if (!restarting) scope.launch { runCatching { checkShot() } }
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
         st.hardware = hardwareAttached()
@@ -783,8 +811,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // never longer than a few frames: the work runs on its own thread and is waited for only briefly, so typing cannot hang here. When it is not
                 // done in time it is NOT thrown away: the same work goes on and mends the word the moment it is ready (lateFix), so the word is not left to be mended later
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
-                val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2, ctxText = ctxNow).third }
-                try { f.get(150, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { pending = f; timedOut = true; null }
+                // (the work is not stopped by the next key: it is this word's correction, wanted whatever is typed after it)
+                val f = corrExec.submit<String?> { KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctxNow).third } }
+                try { f.get(70, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { pending = f; timedOut = true; null }
             }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
@@ -826,6 +855,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 c.commitText(out + tail, 1)
             }
         }
+        if (!out.equals(typed, true)) flashFix(c, typed, out, tail.length)
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
@@ -855,7 +885,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         scope.launch {
             // the work that was already running goes on (nothing is started again); a new run only when there was none
             val fix = withContext(Dispatchers.Default) {
-                runCatching { pending?.get(3, java.util.concurrent.TimeUnit.SECONDS) ?: KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
+                runCatching { if (pending != null) pending.get(3, java.util.concurrent.TimeUnit.SECONDS) else KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
             } ?: return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
             if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
@@ -876,11 +906,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     c.beginBatchEdit(); c.deleteSurroundingText(key.length + rest.length, 0); c.commitText(fix + tail, 1)
                     if (rest.isNotEmpty()) { if (open.isEmpty()) c.commitText(rest, 1) else c.setComposingText(open, 1) }
                     c.endBatchEdit()
+                    flashFix(c, typed, fix, tail.length + rest.length)
+                    if (!st.incognito) KbStats.add(this@PulseKeyboardService, "fixes")
                     if (rest.isEmpty()) { lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis() }
                     return@launch
                 }
                 kotlinx.coroutines.delay(60)
             }
+        }
+    }
+
+    /**
+     * The mended word lights up for a moment in the text field (the field's own highlight of a correction), so a word mended while the typing goes on is seen.
+     * [after] is how many characters stand between the end of the word and the cursor.
+     */
+    private fun flashFix(c: android.view.inputmethod.InputConnection, old: String, new: String, after: Int) {
+        runCatching {
+            val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
+                ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return
+            val at = end - after - new.length
+            if (at >= 0) c.commitCorrection(android.view.inputmethod.CorrectionInfo(at, old, new))
         }
     }
 
@@ -1319,8 +1364,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"
             "layout" -> st.panel = if (st.panel == "layout") "keys" else "layout"
-            "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
-            "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
+            // (turned sideways the keyboard has its own two switches)
+            "numbers" -> { if (st.land) KeyboardPrefs.landNumberRow = !KeyboardPrefs.landNumberRow else KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
+            "proRow" -> { if (st.land) KeyboardPrefs.landProRow = !KeyboardPrefs.landProRow else KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
         }
         if (id == "resize") return
@@ -1925,7 +1971,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
-            kotlinx.coroutines.delay(60)
+            kotlinx.coroutines.delay(20)
             if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
@@ -2020,7 +2066,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val ratioLimit = ((100 - KeyboardPrefs.autoRatio) / 100f * maxOf(lower.length, 4)).coerceAtMost(1.2f)
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         // the fast pass (completions only) gives the bar its words at once; the full pass with the corrections follows and replaces it
-        val corr = if (!fast && lower.length >= 2) (candCodes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
+        // the word list is read once, as far as the neural model reaches; the nearer words of the rule are taken from the same reading
+        val reach = if (KeyboardPrefs.neural && lower.length >= 3) maxOf(limit, NN_REACH) else limit
+        val nearAll = if (!fast && lower.length >= 2) candCodes.flatMap { KeyboardDictionary.correct(it, lower, reach, tc) } else emptyList()
+        val corr = if (!fast && lower.length >= 2) (nearAll.filter { it.cost <= limit } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
@@ -2064,7 +2113,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val stt = NeuralLm.state(lm, nnLang, (ctxText ?: lmCtx).let { if (cased) it else it.lowercase(loc) })
             val capFirst = cased && typed.firstOrNull()?.isUpperCase() == true
             fun form(w: String) = if (capFirst) w.replaceFirstChar { it.titlecase(loc) } else w
-            val wider = if (lower.length >= 3 && limit < NN_REACH) candCodes.flatMap { KeyboardDictionary.correct(it, lower, NN_REACH, 6, tc) } else emptyList()
+            val wider = if (lower.length >= 3 && limit < NN_REACH) nearAll else emptyList()
             val pool = (corr + wider).filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) && kotlin.math.abs(it.word.length - lower.length) <= 2 }
                 .sortedBy { it.cost }.distinctBy { it.word }.take(6)
             // the words the person writes weigh a little more (log2 of how often), but a learned word is not taken as a real one: typos left

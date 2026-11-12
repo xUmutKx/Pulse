@@ -21,6 +21,8 @@ class KbState {
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */
     var panel by mutableStateOf("keys")
+    /** The keyboard is drawn for a screen turned sideways (set by the view; the toolbar's switches for the rows follow it). */
+    var land by mutableStateOf(false)
     /** The height in pixels of the key panel as it is on screen: the emoji panel takes the same, so the keyboard keeps its size. */
     var keysH by mutableStateOf(0)
     /** Speech typing: the words recognised so far (the panel shows them while listening). */

@@ -23,6 +23,14 @@ object KeyboardPrefs {
 
     // size
     var heightPct by mutableStateOf(110)
+    // turned sideways the keyboard has its own settings: its height, and whether the extra key row and the number row show (both off there until asked for:
+    // the screen is low, and every row less makes the keys taller)
+    var landHeightPct by mutableStateOf(120)
+    var landProRow by mutableStateOf(false)
+    var landNumberRow by mutableStateOf(false)
+    fun heightAt(land: Boolean) = if (land) landHeightPct else heightPct
+    fun proRowAt(land: Boolean) = if (land) landProRow else proRow
+    fun numberRowAt(land: Boolean) = if (land) landNumberRow else numberRow
     /** A typed word this much like a known word (percent, letters that match) is corrected on its own. */
     var autoRatio by mutableStateOf(80)
     /** How far an automatic correction may reach: 0 modest, 1 normal, 2 aggressive, 3 very aggressive. */
@@ -164,7 +172,7 @@ object KeyboardPrefs {
         theme = p.getString("theme", theme) ?: theme
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
-        heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
+        heightPct = p.getInt("heightPct", heightPct); landHeightPct = p.getInt("landHeightPct", landHeightPct); landProRow = p.getBoolean("landProRow", landProRow); landNumberRow = p.getBoolean("landNumberRow", landNumberRow); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
         keyGap = p.getInt("keyGap", keyGap); compact = p.getBoolean("compact", compact); compactPct = p.getInt("compactPct", compactPct); emojiRight = p.getBoolean("emojiRight", emojiRight); emojiFull = p.getBoolean("emojiFull", emojiFull); modeShrink = p.getInt("modeShrink", modeShrink); commaShrink = p.getInt("commaShrink", commaShrink); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
@@ -250,7 +258,7 @@ object KeyboardPrefs {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
-            .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putBoolean("compact", compact).putInt("compactPct", compactPct).putBoolean("emojiRight", emojiRight).putBoolean("emojiFull", emojiFull).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
+            .putInt("heightPct", heightPct).putInt("landHeightPct", landHeightPct).putBoolean("landProRow", landProRow).putBoolean("landNumberRow", landNumberRow).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putBoolean("compact", compact).putInt("compactPct", compactPct).putBoolean("emojiRight", emojiRight).putBoolean("emojiFull", emojiFull).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
@@ -273,7 +281,7 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
+        theme = "amoled"; heightPct = 110; landHeightPct = 120; landProRow = false; landNumberRow = false; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; bottomKey = "emoji"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         numEnter = "enter"; cursorControl = true; cursorSens = 100; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; floatY = 0f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
