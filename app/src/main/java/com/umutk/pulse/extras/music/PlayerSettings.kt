@@ -350,6 +350,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             }
         }
         SwitchRow(tr("Cover shadow", "Kapak gölgesi"), shadow) { shadow = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtShadow(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
+        // the rest of the Poweramp widget (text size and place, the cover's side, font, colours, buttons, what is shown) has its own page with a live picture
+        com.umutk.pulse.PButton(tr("Text, buttons and layout", "Yazı, düğmeler ve yerleşim"), Modifier.padding(vertical = 6.dp)) {
+            runCatching { c.startActivity(android.content.Intent(c, com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
         SwitchRow(tr("Round cover", "Yuvarlak kapak"), circle) { circle = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtCircle(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
     }
 

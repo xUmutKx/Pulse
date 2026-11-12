@@ -118,6 +118,17 @@ class PowerampWidgetConfig : ComponentActivity() {
                             Text(tr("Round cover", "Yuvarlak kapak"), color = Color.White, modifier = Modifier.weight(1f))
                             Switch(circle, { circle = it; WidgetOpts.setArtCircle(this@PowerampWidgetConfig, it) })
                         }
+                        Text(tr("Cover", "Kapak"), color = Color(0xFFB0B0B0))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(!look.artRight, { upd(look.copy(artRight = false)) }, { Text(tr("Left", "Solda")) })
+                            FilterChip(look.artRight, { upd(look.copy(artRight = true)) }, { Text(tr("Right", "Sağda")) })
+                        }
+                        Text(tr("Text", "Yazı"), color = Color(0xFFB0B0B0))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(0 to tr("Left", "Sola"), 1 to tr("Centre", "Ortaya"), 2 to tr("Right", "Sağa")).forEach { (k, n) -> FilterChip(look.align == k, { upd(look.copy(align = k)) }, { Text(n) }) }
+                        }
+                        Text(tr("Text size", "Yazı boyutu") + "  ${look.textPct}%", color = Color(0xFFB0B0B0))
+                        Slider(look.textPct.toFloat(), { upd(look.copy(textPct = it.toInt())) }, valueRange = 70f..150f)
                         Text(tr("Font", "Yazı tipi"), color = Color(0xFFB0B0B0))
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             WIDGET_FONTS.forEach { (k, n, _) -> FilterChip(look.font == k, { upd(look.copy(font = k)) }, { Text(n) }) }
