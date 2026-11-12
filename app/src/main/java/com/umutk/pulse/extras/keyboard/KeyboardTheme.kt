@@ -11,14 +11,17 @@ class KbTheme(
     val menu: Color, val popup: Color, val sub: Color, val radius: Int, val bevel: Boolean = false, val border: Color = Color.Transparent,
     /** The icon family of the theme: filled, sharp, rounded or outlined (see KbIcons). */
     val icons: String = "outlined",
-)
+) {
+    /** The Samsung look: its own bottom row (!#1, comma, the space bar with the language, period, the action key in the accent colour), the number row, round toolbar buttons. */
+    val samsung: Boolean get() = id == "samsung"
+}
 
 object KeyboardThemes {
     /** The picker's order. */
-    val ids = listOf("amoled", "material", "win11", "win10", "win7", "xp", "win95", "custom")
+    val ids = listOf("amoled", "material", "samsung", "win11", "win10", "win7", "xp", "win95", "custom")
 
     fun name(id: String) = when (id) {
-        "amoled" -> "AMOLED"; "material" -> "Material"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
+        "amoled" -> "AMOLED"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
         "xp" -> "Windows XP"; "win95" -> "Windows 95"; else -> "Custom"
     }
 
@@ -29,6 +32,9 @@ object KeyboardThemes {
         "amoled" -> KbTheme(id, c(0xFF000000), c(0xFF1F1F1F), c(0xFFFFFFFF), c(0xFF141414), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF000000), c(0xFF000000), c(0xFF2B2B2B), c(0xFF9A9A9A), 10, icons = "outlined")
         "material" -> if (dark) KbTheme(id, c(0xFF1C1B1F), c(0xFF36343B), c(0xFFE6E1E5), c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), c(0xFF2B2930), c(0xFF49454F), c(0xFFCAC4D0), 12, icons = "rounded")
         else KbTheme(id, c(0xFFFEF7FF), c(0xFFFFFFFF), c(0xFF1D1B20), c(0xFFE7E0EC), c(0xFF1D1B20), c(0xFF6750A4), c(0xFFFFFFFF), c(0xFFF3EDF7), c(0xFFE6E0E9), c(0xFF49454F), 12, icons = "rounded")
+        // the Samsung keyboard's own greys: black board, lighter letter keys, darker function keys, the blue of its action key
+        "samsung" -> if (dark) KbTheme(id, c(0xFF000000), c(0xFF3A3A3C), c(0xFFFFFFFF), c(0xFF1C1C1E), c(0xFFFFFFFF), c(0xFF4A8FFF), c(0xFFFFFFFF), c(0xFF171719), c(0xFF4C4C4E), c(0xFFB9B9BE), 9, icons = "outlined")
+        else KbTheme(id, c(0xFFECEDF0), c(0xFFFFFFFF), c(0xFF000000), c(0xFFD2D5DB), c(0xFF000000), c(0xFF0381FE), c(0xFFFFFFFF), c(0xFFF6F6F8), c(0xFFFFFFFF), c(0xFF5F6368), 9, icons = "outlined")
         "win11" -> if (dark) KbTheme(id, c(0xFF202020), c(0xFF3B3B3B), c(0xFFFFFFFF), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFF60CDFF), c(0xFF000000), c(0xFF2B2B2B), c(0xFF444444), c(0xFFC5C5C5), 6, border = c(0xFF1A1A1A), icons = "outlined")
         else KbTheme(id, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF1B1B1B), c(0xFFE5E5E5), c(0xFF1B1B1B), c(0xFF005FB8), c(0xFFFFFFFF), c(0xFFF9F9F9), c(0xFFFFFFFF), c(0xFF5D5D5D), 6, border = c(0xFFD6D6D6), icons = "outlined")
         "win10" -> if (dark) KbTheme(id, c(0xFF1F1F1F), c(0xFF3C3C3C), c(0xFFFFFFFF), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFF0078D7), c(0xFFFFFFFF), c(0xFF2B2B2B), c(0xFF4A4A4A), c(0xFFBDBDBD), 0, icons = "sharp")

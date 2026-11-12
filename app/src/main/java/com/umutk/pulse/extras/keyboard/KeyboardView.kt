@@ -218,7 +218,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // a phone turned sideways takes a much smaller keyboard (a tablet keeps its size)
     val phoneLand = land && cfg.screenWidthDp < 600
-    val scale = KeyboardPrefs.heightPct / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
+    val scale = KeyboardPrefs.heightAt(land) / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
+    androidx.compose.runtime.SideEffect { if (st.land != land) st.land = land }
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
@@ -576,7 +577,9 @@ private val EMOJI_ORDER = listOf(0, 1, 11, 2, 3, 10, 4, 5, 6, 7, 8, 9)
 private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
   Column(Modifier.fillMaxWidth()) {
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarIcon(th, kbIcon(th, "ArrowBack")) { act.page(0) }
+        // (the Samsung look: "ABC" leads back to the letters, and the delete key sits at the other end of the categories)
+        if (th.samsung) Box(Modifier.padding(horizontal = 6.dp).height(34.dp).clip(RoundedCornerShape(9.dp)).background(th.special).clickable { act.page(0) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text("ABC", color = th.text, fontSize = 14.sp) }
+        else BarIcon(th, kbIcon(th, "ArrowBack")) { act.page(0) }
         Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             // recent, faces, then the symbols and presets beside the smiley, people, animals, the kaomoji between animals and food, the rest
             EMOJI_ORDER.forEach { i ->
@@ -588,6 +591,7 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
                 }
             }
         }
+        if (th.samsung) Box(Modifier.size(44.dp).clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(24.dp)) }
     }
   }
 }
@@ -622,7 +626,8 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
     val paths = remember(key) { (com.umutk.pulse.FluentPaths.map[key] ?: emptyList()).map { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath() } }
     val tint = if (on) th.accent else th.text
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
+        // (the Samsung look: a filled round button, no ring)
+        Box((if (th.samsung) Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) {
             androidx.compose.foundation.Canvas(Modifier.size(20.dp)) {
                 scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
             }
@@ -633,7 +638,8 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
 @Composable
 private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick: () -> Unit) {
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (on) th.accent else th.text, modifier = Modifier.size(20.dp)) }
+        // (the Samsung look: a filled round button, no ring)
+        Box((if (th.samsung) Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (on) th.accent else th.text, modifier = Modifier.size(20.dp)) }
     }
 }
 
@@ -665,21 +671,28 @@ private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, ki
     if (h != "none") Icon(toolIcon(th, h), null, tint = if (listening) th.accent else th.text.copy(alpha = .7f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(15.dp))
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRowAt(st.land); "numbers" -> KeyboardPrefs.numberRowAt(st.land); "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
+
+/** The keyboard is drawn for a screen turned sideways (its own height and rows, see KeyboardPrefs.heightAt). */
+@Composable
+private fun kbLand(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 
 @Composable
 private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     val up = st.shift > 0
-    val digits = !KeyboardPrefs.numberRow && KeyboardPrefs.longPressSymbols
+    val land = kbLand()
+    // (the Samsung look has its number row when held upright)
+    val numRow = KeyboardPrefs.numberRowAt(land) || (th.samsung && !land)
+    val digits = !numRow && KeyboardPrefs.longPressSymbols
     val langs = KeyboardPrefs.langList()
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
     // the direction keyboard: nine swipe keys (letters page only; the symbol pages stay the ordinary ones)
     if (KeyboardPrefs.dirLayout && st.page == 0) { ThumbPanel(th, st, act, keyH); return }
-    if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
+    if (KeyboardPrefs.proRowAt(land) && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         // the key bar: Fn (its twelve keys open from it), Shift, the arrows, Home / End, Page up / down, Esc, Tab and the editing keys
         if (st.fnOpen) {
@@ -699,7 +712,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
     }
     if (st.page == 0) {
-        if (KeyboardPrefs.numberRow) Row(Modifier.fillMaxWidth()) {
+        if (numRow) Row(Modifier.fillMaxWidth()) {
             "1234567890".forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, n1 / 10f, KeyboardLayouts.symbolAlts[d].orEmpty()), keyH, small = true) }
         }
         // split keys (for a tablet): a gap in the middle of each row, so both thumbs reach their half
@@ -735,7 +748,14 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val low = KeyboardPrefs.bottomShift
     val bh = if (low) keyH * .8f else keyH
     Box {
-    Row(Modifier.fillMaxWidth()) {
+    if (th.samsung) Row(Modifier.fillMaxWidth()) {
+        // the Samsung bottom row: !#1, comma, the space bar with the language's name, period, the action key (the emoji live in the toolbar)
+        Key(th, st, act, KbKey(if (st.page == 0) "!#1" else "ABC", KeyKind.MODE, 1.45f), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, .9f, listOf("😀") + KeyboardLayouts.popupComma), bh)
+        Key(th, st, act, KbKey(lang.name, KeyKind.SPACE, 5.3f), bh)
+        Key(th, st, act, KbKey(".", KeyKind.PERIOD, .9f, KeyboardLayouts.popupPeriod), bh)
+        Key(th, st, act, KbKey("", KeyKind.ENTER, 1.45f), bh)
+    } else Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
         Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, (if (low) 1.0f else 1.2f) * (1f - KeyboardPrefs.modeShrink / 100f)), bh)
         // the key beside ?123: the three-dot menu, the emoji panel, or nothing (the emoji stay under a long press on the comma)
@@ -747,7 +767,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     }
     if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f)))
     }
-    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f))) }
+    if (KeyboardPrefs.proRowAt(land) && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f))) }
 }
 
 @Composable
@@ -890,7 +910,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
     val isLetterNow by rememberUpdatedState(isLetter)
     val view = androidx.compose.ui.platform.LocalView.current
-    val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
+    val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
+        else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
@@ -1037,12 +1058,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             }.padding(horizontal = KeyboardPrefs.gap.dp * .75f, vertical = KeyboardPrefs.gap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
-        val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
+        val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         val keyHue = LocalHue.current
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFx, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
             .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
-            val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
+            val fs = (big * (.85f + .15f * KeyboardPrefs.heightAt(kbLand()) / 100f)).sp
             when (k.kind) {
                 KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
@@ -1050,8 +1071,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.EMOJI -> { Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.MENU -> { Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.LANG -> { Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
-                KeyKind.SPACE -> Text(k.label, color = th.sub, fontSize = 12.sp, maxLines = 1)
-                KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = 15.sp, maxLines = 1)
+                KeyKind.SPACE -> Text(k.label, color = if (th.samsung) th.text else th.sub, fontSize = if (th.samsung) 14.sp else 12.sp, maxLines = 1)
+                KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = if (th.samsung) 17.sp else 15.sp, maxLines = 1)
                 else -> {
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
@@ -1534,7 +1555,8 @@ private fun ClipThumb(path: String, modifier: Modifier = Modifier, full: Boolean
 private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
     val ctx = LocalContext.current
     val dens = LocalDensity.current.density
-    var h by remember { mutableFloatStateOf(KeyboardPrefs.heightPct.toFloat()) }
+    val land = kbLand()
+    var h by remember(land) { mutableFloatStateOf(KeyboardPrefs.heightAt(land).toFloat()) }
     var b by remember { mutableFloatStateOf(KeyboardPrefs.bottomPad.toFloat()) }
     var sd by remember { mutableFloatStateOf(KeyboardPrefs.sidePad.toFloat()) }
     val bar = Modifier.clip(RoundedCornerShape(3.dp)).background(th.accent)
@@ -1542,7 +1564,7 @@ private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
         Column { KeysPanel(th, st, NoKbActions, keyH) }
         // the handles sit inside the keys' own size (the window around the keyboard is taller: nothing here may grow to it)
         Box(Modifier.matchParentSize()) {
-        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 250f); KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
+        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(land) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 250f); if (land) KeyboardPrefs.landHeightPct = h.roundToInt() else KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> b = (b - dy / dens).coerceIn(0f, 60f); KeyboardPrefs.bottomPad = b.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
         Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd + dx / dens).coerceIn(0f, 400f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd - dx / dens).coerceIn(0f, 400f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }

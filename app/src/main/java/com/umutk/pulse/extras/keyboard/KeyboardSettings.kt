@@ -252,6 +252,17 @@ fun KeyboardSettings(back: () -> Unit) {
             ItemPicker(ExtraKeys.menu, KeyboardPrefs.menuItems) { KeyboardPrefs.menuItems = it; KeyboardPrefs.toolbarItems = KeyboardPrefs.toolbarItems.split(',').filter { id -> id !in it.split(',') }.joinToString(","); save() }
         }
 
+        // turned sideways: the keyboard's own height and rows there, with both keyboards drawn as they will look
+        KbSection("height", tr("Landscape", "Yatay")) {
+            OrientPreview(false, dark)
+            Spacer(Modifier.height(8.dp))
+            OrientPreview(true, dark)
+            Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.landHeightPct}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            PSlider((KeyboardPrefs.landHeightPct - 70) / 180f, { KeyboardPrefs.landHeightPct = 70 + (it * 180).roundToInt() }, 0f..1f, onDone = { save() })
+            Switch(tr("Extra key row", "Ek tuş satırı"), tr("Esc, Tab, Ctrl, Alt, Win, arrows, F-keys", "Esc, Tab, Ctrl, Alt, Win, oklar, F tuşları"), KeyboardPrefs.landProRow) { KeyboardPrefs.landProRow = it; save() }
+            Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.landNumberRow) { KeyboardPrefs.landNumberRow = it; save() }
+        }
+
         // size
         KbSection("height", tr("Size", "Boyut")) {
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
@@ -591,6 +602,40 @@ fun KeyboardSettings(back: () -> Unit) {
     }
     if (askForget) PDialog(tr("Forget the learned words?", "Öğrenilen kelimeler unutulsun mu?"), "", tr("Forget", "Unut"), { KeyboardDictionary.forgetUser(ctx); learned = 0; askForget = false }, { askForget = false })
     if (askReset) PDialog(tr("Back to factory settings?", "Fabrika ayarlarına dönülsün mü?"), tr("Theme, size, typing options and learned words are reset.", "Tema, boyut, yazım seçenekleri ve öğrenilen kelimeler sıfırlanır."), tr("Reset", "Sıfırla"), { KeyboardPrefs.factoryReset(ctx); learned = 0; askReset = false }, { askReset = false })
+}
+
+/**
+ * The keyboard itself as it is drawn upright ([land] false) or turned sideways, made small enough for the page: the real keyboard, laid out for that screen
+ * (the long side of this screen as its width when sideways), so every setting shows at once.
+ */
+@Composable
+private fun OrientPreview(land: Boolean, dark: Boolean) {
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val long = maxOf(cfg.screenWidthDp, cfg.screenHeightDp); val short = minOf(cfg.screenWidthDp, cfg.screenHeightDp)
+    val c2 = remember(cfg, land) { android.content.res.Configuration(cfg).apply {
+        orientation = if (land) android.content.res.Configuration.ORIENTATION_LANDSCAPE else android.content.res.Configuration.ORIENTATION_PORTRAIT
+        screenWidthDp = if (land) long else short; screenHeightDp = if (land) short else long
+    } }
+    val st = remember { KbState().also { it.slots = listOf("to", "the", "that") } }
+    st.dark = dark
+    val acts = remember { PreviewKbActions(st) }
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+        // the screen's outline, upright or sideways
+        Box(Modifier.size(if (land) 20.dp else 12.dp, if (land) 12.dp else 20.dp).border(1.5.dp, T.sub, RoundedCornerShape(3.dp)))
+        Text(if (land) tr("Landscape", "Yatay") else tr("Portrait", "Dikey"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
+    }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides c2) {
+        androidx.compose.ui.layout.Layout({ KeyboardView(st, acts) }, Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))) { ms, cs ->
+            val w = (c2.screenWidthDp * dens).roundToInt().coerceAtLeast(1)
+            val p = ms.first().measure(androidx.compose.ui.unit.Constraints.fixedWidth(w))
+            // (upright it is never drawn wider than half the page on a wide screen: it keeps the shape of the phone held upright)
+            val sc = minOf(cs.maxWidth.toFloat() / w, 1f)
+            layout(cs.maxWidth, (p.height * sc).roundToInt()) {
+                p.placeWithLayer(((cs.maxWidth - w * sc) / 2f).roundToInt(), 0) { scaleX = sc; scaleY = sc; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) }
+            }
+        }
+    }
 }
 
 /** A card of the settings that opens and closes from its header (icon, title, chevron). */

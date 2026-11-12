@@ -2435,3 +2435,10 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## 1.0.396 (derlendi)
 - Müzik: karıştır simgesi her tür için ayrı resim (harf yok).
 - Alarm bildirimi müzik bildirimiyle aynı kimliği (1001) paylaşmıyor; Ertele ve Kapat çalışıyor.
+
+## Sıradaki sürüm (derlenmedi)
+- Klavye: düzeltme taraması 6 kat hızlı (aynı sonuç); boşlukta anında düzeltir, yetişemediği kelimeyi yazmaya devam ederken yerinde düzeltir, düzeltilen kelime alanda kısa süre parlar.
+- Klavye: yatay için ayrı yükseklik, ek tuş satırı (varsayılan kapalı) ve sayı satırı; ayarlarda dikey ve yatay önizleme.
+- Klavye: Samsung teması (alt satır, sayı satırı, yuvarlak araç düğmeleri, emoji çubuğunda ABC ve silme).
+- Pano: her yeni ekran görüntüsü alınır (yalnız en yenisi değil), klavye kapalıyken alınanlar da; 48 MB'a kadar.
+- Hız: klavye ve ana ekran kodu için önceden derleme profili (baseline-prof.txt).

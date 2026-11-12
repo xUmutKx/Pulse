@@ -74,7 +74,7 @@ object ClipStore {
             val now = System.currentTimeMillis()
             val f = File(dir(c), "$now.img")
             c.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } } ?: return load(c)
-            if (f.length() == 0L || f.length() > 12_000_000L) { f.delete(); return load(c) }
+            if (f.length() == 0L || f.length() > 48_000_000L) { f.delete(); return load(c) }
             // a real picture file, not an ".img" no viewer opens: PNG or JPEG by the first bytes
             val head = ByteArray(12).also { b -> f.inputStream().use { it.read(b) } }
             // a HEIC / HEIF / AVIF photo (the camera's own format on many phones) is turned into a JPEG, so every app takes it

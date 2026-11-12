@@ -1,0 +1,24 @@
+# The code that runs at every start and at every key press is compiled ahead of time (with the profiles of the libraries, which are added by the build):
+# the keyboard (it must answer the first key at once), the looks and controls every screen draws with, and the main window.
+Lcom/umutk/pulse/extras/keyboard/**;
+HSPLcom/umutk/pulse/extras/keyboard/**->**(**)**
+Lcom/umutk/pulse/MainActivity**;
+HSPLcom/umutk/pulse/MainActivity**->**(**)**
+Lcom/umutk/pulse/PulseApp;
+HSPLcom/umutk/pulse/PulseApp;->**(**)**
+Lcom/umutk/pulse/Look**;
+HSPLcom/umutk/pulse/Look**->**(**)**
+Lcom/umutk/pulse/PTheme**;
+HSPLcom/umutk/pulse/PTheme**->**(**)**
+Lcom/umutk/pulse/Controls**;
+HSPLcom/umutk/pulse/Controls**->**(**)**
+Lcom/umutk/pulse/Fluent**;
+HSPLcom/umutk/pulse/Fluent**->**(**)**
+Lcom/umutk/pulse/Menus**;
+HSPLcom/umutk/pulse/Menus**->**(**)**
+Lcom/umutk/pulse/Bars**;
+HSPLcom/umutk/pulse/Bars**->**(**)**
+Lcom/umutk/pulse/Cfg**;
+HSPLcom/umutk/pulse/Cfg**->**(**)**
+Lcom/umutk/pulse/Opt**;
+HSPLcom/umutk/pulse/Opt**->**(**)**
