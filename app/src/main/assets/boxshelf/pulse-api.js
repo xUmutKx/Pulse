@@ -21,7 +21,7 @@
     hidden: !!g.hidden, minutes: Math.round((g.playMs || 0) / 60000), lastPlayed: g.lastUsed ? g.lastUsed / 1000 : 0,
     // the picture of a game is its cover from the internet (Steam, SteamGridDB, Google Play) or its wide art; the app's icon is never used as the cover
     // appIcon is only for the title line (not 'icon': the shelf builds a cover from that one when there is none)
-    art: Object.assign({}, g.cover || g.hero ? { front: g.cover || g.hero } : {}, g.hero ? { hero: g.hero } : {}, g.icon ? { appIcon: g.icon } : {}),
+    art: Object.assign({}, g.cover || g.hero ? { front: g.cover || g.hero } : {}, g.hero ? { hero: g.hero } : {}, g.icon ? { appIcon: g.icon } : {}, g.logo ? { logo: g.logo } : {}),
   });
   // the look of the cases: the id of one of Boxshelf's own case styles (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...), chosen in Game Hub
   const sid = () => { try { return (H.caseStyle && H.caseStyle()) || 'pc'; } catch (e) { return 'pc'; } };
