@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -371,6 +372,26 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         if (spec != null && pv != null) Image(pv.asImageBitmap(), null, Modifier.size(64.dp)) else PIcon(glyph, Color.White, 40.dp)
                     }
                 }
+                // the icon on the home screen comes first, on its own: the line icon (white on black) or glass in a colour; a tap puts it there at once
+                if (homeAlias != null) {
+                    var hl by remember { mutableStateOf(LauncherGlass.lookOf(ctx, homeAlias)) }
+                    fun put(l: String) { hl = l; LauncherGlass.apply(ctx, homeAlias, l) }
+                    Text(tr("Home screen icon", "Ana ekran ikonu"), color = T.text, fontSize = 14.sp)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PChip(hl == LauncherGlass.LINE, tr("Line", "Çizgi")) { put(LauncherGlass.LINE) }
+                        PChip(hl != LauncherGlass.LINE, tr("Glass", "Cam")) { if (hl == LauncherGlass.LINE) put(LauncherGlass.TONES.first().id) }
+                        if (hl != LauncherGlass.LINE) LauncherGlass.TONES.forEach { t ->
+                            Box(Modifier.size(30.dp).clip(CircleShape).background(Color(t.argb)).border(if (hl == t.id) 3.dp else 1.dp, if (hl == t.id) Look.accent else T.sub.copy(alpha = .5f), CircleShape).clickable { put(t.id) })
+                        }
+                    }
+                }
+                // the icon the app has inside Pulse (the lists and tiles) is a second matter: it stays folded away until it is asked for
+                var more by remember { mutableStateOf(homeAlias == null || current != null) }
+                if (homeAlias != null) Row(Modifier.fillMaxWidth().clickable { more = !more }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Icon inside Pulse", "Pulse içindeki ikon"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    PIcon("chevron", T.sub, 18.dp, Modifier.rotate(if (more) 90f else 0f))
+                }
+                if (more) {
                 // the three choices on their own row (scrolls when narrow), so no label is squeezed into a column
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PChip(spec == null, tr("Default", "Varsayılan")) { spec = null }
@@ -393,7 +414,9 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                             PChip(tint == "bw", tr("Black & white", "Siyah beyaz")) { setTint("bw") }
                             PChip(tint.startsWith("glass"), tr("Material glass", "Material cam")) { setTint("glass:" + "%08x".format(glassArgb)) }
                         }
-                        Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp)
+                        // (colours only for a look that takes one; the picture as it is, and black and white, have none)
+                        PChip(tint.length == 8, tr("One colour", "Tek renk")) { if (tint.length != 8) setTint("%08x".format(Look.accent.toArgb())) }
+                        if (tint.startsWith("glass") || tint.length == 8) {
                         Swatches((GLASS_COLORS + Look.accent.toArgb() + 0xFFFFFFFF.toInt()), if (tint.startsWith("glass")) glassArgb else if (tint.length == 8) tint.toLong(16).toInt() else 0) { c ->
                             val hex = "%08x".format(c)
                             setTint(if (tint.startsWith("glass")) "glass:$hex" else hex)
@@ -402,6 +425,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         ColourPicker(if (tint.startsWith("glass")) glassArgb else if (tint.length == 8) tint.toLong(16).toInt() else Look.accent.toArgb()) { c ->
                             val hex = "%08x".format(c)
                             setTint(if (tint.startsWith("glass")) "glass:$hex" else hex)
+                        }
                         }
                         PField(query, { query = it }, tr("Search: ice cream, dondurma…", "Ara: dondurma, ice cream…"), Modifier.fillMaxWidth())
                         val pk = pack
@@ -467,21 +491,6 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                         }
                     }
                 }
-                if (homeAlias != null) {
-                    var hl by remember { mutableStateOf(LauncherGlass.lookOf(ctx, homeAlias)) }
-                    Text(tr("Home screen icon", "Ana ekran ikonu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PChip(hl == LauncherGlass.LINE, tr("Line", "Çizgi")) { hl = LauncherGlass.LINE }
-                        LauncherGlass.TONES.forEach { t ->
-                            Box(Modifier.size(30.dp).clip(CircleShape).background(Color(t.argb)).border(if (hl == t.id) 3.dp else 1.dp, if (hl == t.id) Look.accent else T.sub.copy(alpha = .5f), CircleShape).clickable { hl = t.id })
-                        }
-                    }
-                    TextButton({
-                        LauncherGlass.apply(ctx, homeAlias, hl)
-                        android.widget.Toast.makeText(ctx, tr("Applied. The launcher can take a few seconds to show it.", "Uygulandı. Başlatıcının göstermesi birkaç saniye sürebilir."), android.widget.Toast.LENGTH_SHORT).show()
-                    }) {
-                        PIcon("home", T.text, 18.dp); Spacer(Modifier.width(6.dp)); Text(tr("Apply to the home screen", "Ana ekrana uygula"))
-                    }
                 }
                 if (onPin != null) TextButton({ val s = spec; if (s != null) Thread { ExtraIcons.render(ctx, s, 256)?.let { b -> android.os.Handler(android.os.Looper.getMainLooper()).post { onPin(b) } } }.start() }, enabled = spec != null) {
                     PIcon("home", T.text, 18.dp); Spacer(Modifier.width(6.dp)); Text(tr("Add to home screen", "Ana ekrana ekle"))
