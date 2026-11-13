@@ -50,7 +50,9 @@ android {
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
     buildFeatures { compose = true; aidl = true; buildConfig = true }
     // Pulse AI: ggml loads its CPU back ends from the library folder at run time, so the native libraries are extracted on install
-    packaging { jniLibs { useLegacyPackaging = true } }
+    // (the "armv8.2_1" build of Pulse AI's maths is left out: every phone that can run it also runs the fuller "armv8.2_2" one, which is the one chosen;
+    // older processors still have the "armv8.0" build)
+    packaging { jniLibs { useLegacyPackaging = true; excludes += "**/libggml-cpu-android_armv8.2_1.so" } }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 
