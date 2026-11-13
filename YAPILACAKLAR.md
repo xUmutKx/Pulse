@@ -2436,7 +2436,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Müzik: karıştır simgesi her tür için ayrı resim (harf yok).
 - Alarm bildirimi müzik bildirimiyle aynı kimliği (1001) paylaşmıyor; Ertele ve Kapat çalışıyor.
 
-## 1.0.397 (derleniyor)
+## 1.0.397 (derlendi)
 - Klavye: düzeltme taraması 6 kat hızlı (aynı sonuç); boşlukta anında düzeltir, yetişemediği kelimeyi yazmaya devam ederken yerinde düzeltir, düzeltilen kelime alanda kısa süre parlar.
 - Klavye: yatay için ayrı yükseklik, ek tuş satırı (varsayılan kapalı) ve sayı satırı; ayarlarda dikey ve yatay önizleme.
 - Klavye: Samsung teması (alt satır, sayı satırı, yuvarlak araç düğmeleri, emoji çubuğunda ABC ve silme).
@@ -2449,3 +2449,8 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: gerçek konsol çizimleri, disk tek basışta ele gelir ve yuvaya kayar, oyun arada sayfa olmadan açılır, diskin kendi baskısı, raf içinde kapak seçici, Oyun ekle ayarlarda, her kapak konsol çerçevesinde, kutu arkasında oynama istatistikleri ve dört görsel, dönüşte siyah ekran kurtarması.
 - Pano: yalnız yeni çekilen ekran görüntüleri ve yeni indirilen görseller.
 - Boyut: win11_splash_bg WebP (473 KB az).
+
+## 1.0.398 (derleniyor)
+- Game Hub: 50 yerleşik oyun (Mega Games), arama, kayan raf, kapak/görsel/puan otomatik çekimi; eski sayfalar kaldırıldı.
+- Müzik: düğmeler simge, dalga çubuğu kayar, sütun seçimi kalıcı değil.
+- Poweramp widget: yazı ve kapak düzeni, her boyut kendi kutusunda.
