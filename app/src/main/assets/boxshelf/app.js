@@ -284,7 +284,10 @@ const BOX_ICON={
   switch:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3.4" width="6.2" height="17.2" rx="3"/><rect x="14.8" y="3.4" width="6.2" height="17.2" rx="3"/></g><circle cx="6.1" cy="8.4" r="1.3" fill="currentColor"/><circle cx="17.9" cy="15.6" r="1.3" fill="currentColor"/></svg>'
 };
 // the style a game's back is drawn in: a Game Hub box's own console (its colours, band and label), else the shelf's style
-function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];return g&&g.pulse&&id&&STYLE[id]?STYLE[id]:stOf(g)}
+// (a Game Hub box's back has its console's colours but the proportions of the case it is drawn on: a different ratio was cropped by the face, which cut the left of the text and the top of the band)
+const BACK_STYLES={};
+function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];
+  if(!(g&&g.pulse&&id&&STYLE[id]))return stOf(g);const face=stOf(g),k=id+"|"+face.ratio;return BACK_STYLES[k]||(BACK_STYLES[k]=Object.assign({},STYLE[id],{ratio:face.ratio}))}
 function backUrl(g){
   if(g.art&&g.art.back)return g.art.back;
   return Covers.back(backStyleOf(g),g,infoRows(g).slice(0,5),g.info&&g.info.overview);
@@ -363,6 +366,8 @@ function mount(s){
   const boxSt=g.pulse&&g.box&&BOXST[g.box]&&STYLE[BOXST[g.box]]&&STYLE[BOXST[g.box]].spineBand;
   const sb=boxSt||os.spineBand;
   const boxMark=boxSt&&g.kind!=="emulator"&&g.kind!=="setup"?BOX_ICON[/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":"switch"]:null;
+  // a console box's spine is the console's own colour (PS5 blue, Switch red, Xbox green), not the shelf's black
+  if(boxSt){const cs=STYLE[BOXST[g.box]];slot.querySelectorAll(".f-left").forEach(f=>{f.style.background=cs.caseColor});slot.querySelectorAll(".f-right").forEach(f=>{f.style.background=cs.caseSide||cs.caseColor})}
   slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=sb.bg;band.style.color=sb.fg;if(boxMark){band.innerHTML=boxMark;band.classList.add("has-mark")}else{band.classList.remove("has-mark");band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":(boxSt&&BOXLAB[g.box]||os.spineBand.label)}});
   // a Steam box's spine takes the colour of the game's own cover (the front), once it is read
   if(!boxSt&&g.art&&g.art.front&&!g.art.gen&&window.Covers&&Covers.coverTint&&g.kind!=="emulator"&&g.kind!=="setup")Covers.coverTint(g.art.front).then(t=>{if(!t||!slot.isConnected)return;slot.querySelectorAll(".spine-band").forEach(b=>{b.style.background=t.bg;b.style.color=t.fg})});

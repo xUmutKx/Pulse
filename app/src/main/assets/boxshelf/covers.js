@@ -135,7 +135,7 @@ function drawFront(style,game){
   return c;
 }
 // lines: array of [label, value] shown on the back
-const bkey=(style,game)=>style.id+"|b|"+game.title+(game.pulse?"|"+(game.minutes||0)+"|"+(game.box||""):""); /* (a Game Hub box prints its play time: a new time is a new back) */
+const bkey=(style,game)=>style.id+"|"+style.ratio+"|b|"+game.title+(game.pulse?"|"+(game.minutes||0)+"|"+(game.box||""):""); /* (a Game Hub box prints its play time: a new time is a new back) */
 function back(style,game,lines,blurb){
   const key=bkey(style,game);if(cache.has(key))return cache.get(key);
   const url=pending(key)||c2url(drawBack(style,game,lines,blurb));capCache(key,url);return url;
