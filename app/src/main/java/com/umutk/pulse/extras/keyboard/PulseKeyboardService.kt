@@ -737,6 +737,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
         // fast typing: the keys are redrawn a moment after the automatic capital is used, so the next letters can still arrive as capitals; inside the word they stay small
         if (letter && ch.isUpperCase() && st.shift == 0 && word.isNotEmpty() && !st.plain && SystemClock.uptimeMillis() - shiftDropAt < 700) ch = ch.toString().lowercase(lang.locale).first()
+        if (letter && st.plain) {
+            // a field that wants plain keys (a terminal such as Termux, a password, "no input"): the letter goes in at once as a committed character, with no open word.
+            // A word kept open (setComposingText) and closed again made a terminal write the key twice
+            c.commitText(ch.toString(), 1)
+            word.clear(); target = null; lastCorrection = null; punctTyped = false; lastWasSpace = false
+            if (st.shift == 1) { st.shift = 0; shiftDropAt = SystemClock.uptimeMillis() }
+            return
+        }
         if (letter) {
             // a comma right before a letter, behind a word: a slip of the finger; the comma goes and the word is reopened
             if (punctTyped && ch.isLetter() && KeyboardPrefs.commaSlip && !st.plain && word.isEmpty()) {

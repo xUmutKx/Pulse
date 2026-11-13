@@ -363,6 +363,8 @@ function build(){
     A("Setup","Open","Opens Boxshelf's setup: your emulators, game folders and first choices.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(window.Setup&&Setup.open)Setup.open({wizard:true})},300)},{keys:"setup wizard emulators folders"}),
     H("Access"),
     A("Root or Shizuku",()=>{const m=api.ghGet?api.ghGet("access"):"None";return m==="Root"?"Root is on":m==="Shizuku"?"Shizuku is on":"Not connected"},"Root or Shizuku lets Game Hub hide games and switch background apps. Check again after you connect one.",()=>{if(api.ghRun)api.ghRun("checkAccess")},{keys:"root shizuku access"}),
+    H("Look"),
+    GHT("AMOLED black background","amoledShelf",false,"A pure black background behind the shelf and the settings, for AMOLED screens. The shelf is built again when this changes."),
     H("Library"),
     GHT("Show hidden games in All games","showHidden",true,"Hidden games are listed in All games too."),
     H("Icons"),

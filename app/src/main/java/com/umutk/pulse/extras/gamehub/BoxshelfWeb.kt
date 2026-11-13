@@ -175,6 +175,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             "grid", "view", "iconMode" -> p.getInt(key, 0).toString()
             "start" -> p.getInt(key, 1).toString()
             "showHidden" -> p.getBoolean(key, true).toString()
+            "amoledShelf" -> amoled().toString()
             "playCovers" -> p.getBoolean(key, false).toString()
             "miniGames" -> p.getBoolean(key, true).toString()
             "boxStyle" -> CaseCover.style(c)
@@ -192,6 +193,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             return
         }
         if (key == "menu") { setMenu(value == "true"); return }
+        // the black background: the page is built again, so the colours start from it
+        if (key == "amoledShelf") { prefs(c).edit().putBoolean(key, value == "true").apply(); ShelfSync.bump(); return }
         // the built-in games go on or off the shelf, which reads its games again
         if (key == "miniGames") { prefs(c).edit().putBoolean(key, value == "true").apply(); ShelfSync.bump(); return }
         if (key == "theme") { if (value in THEMES) prefs(c).edit().putString("theme", value).apply(); return }
