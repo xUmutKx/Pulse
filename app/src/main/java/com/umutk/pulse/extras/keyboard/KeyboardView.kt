@@ -220,7 +220,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val phoneLand = land && cfg.screenWidthDp < 600
     val scale = KeyboardPrefs.heightAt(land) / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
     androidx.compose.runtime.SideEffect { if (st.land != land) st.land = land }
-    val keyH = (61f * scale).dp
+    // (the Samsung look: its rows are a little lower than ours, as measured on the real keyboard)
+    val keyH = (61f * scale * (if (th.samsung) .85f else 1f)).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
     val pull = remember { Animatable(0f) }
@@ -303,7 +304,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 }
                 .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (th.samsung && !phoneLand) 6.dp else if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
@@ -466,7 +467,7 @@ private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
     // the floating keyboard keeps its bar slim, so its keys get the room
     if (KeyboardPrefs.floatNow) return 31.dp
-    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 30.dp else 44.dp
+    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 30.dp else if (KeyboardPrefs.theme == "samsung") 49.dp else 44.dp
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -753,11 +754,12 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     Box {
     if (th.samsung) Row(Modifier.fillMaxWidth()) {
         // the Samsung bottom row: !#1, comma, the space bar with the language's name, period, the action key (the emoji live in the toolbar)
-        Key(th, st, act, KbKey(if (st.page == 0) "!#1" else "ABC", KeyKind.MODE, 1.45f), bh)
-        Key(th, st, act, KbKey(",", KeyKind.COMMA, .9f, listOf("😀") + KeyboardLayouts.popupComma), bh)
-        Key(th, st, act, KbKey(lang.name, KeyKind.SPACE, 5.3f), bh)
-        Key(th, st, act, KbKey(".", KeyKind.PERIOD, .9f, KeyboardLayouts.popupPeriod), bh)
-        Key(th, st, act, KbKey("", KeyKind.ENTER, 1.45f), bh)
+        // (the widths measured on the real keyboard, in letter keys: 1.5, 1, 5, 1, 1.5)
+        Key(th, st, act, KbKey(if (st.page == 0) "!#1" else "ABC", KeyKind.MODE, 1.5f), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, listOf("😀") + KeyboardLayouts.popupComma), bh)
+        Key(th, st, act, KbKey(lang.name, KeyKind.SPACE, 5f), bh)
+        Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
+        Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
     } else Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
         Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, (if (low) 1.0f else 1.2f) * (1f - KeyboardPrefs.modeShrink / 100f)), bh)
@@ -919,7 +921,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
-        Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
+        Modifier.weight(k.weight).height(if (small) keyH * (if (th.samsung) .83f else .78f) else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
             // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
             .pointerInput(k.kind) {
                 awaitEachGesture {
@@ -1058,7 +1060,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         st.trail = emptyList()
                     }
                 }
-            }.padding(horizontal = KeyboardPrefs.gap.dp * .75f, vertical = KeyboardPrefs.gap.dp / 2),
+            }.padding(horizontal = if (th.samsung) 3.dp else KeyboardPrefs.gap.dp * .75f, vertical = if (th.samsung) 6.dp else KeyboardPrefs.gap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
         val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
