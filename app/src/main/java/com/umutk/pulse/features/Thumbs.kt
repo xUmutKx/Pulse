@@ -31,6 +31,9 @@ object Thumbs {
     // a few decodes at a time, so a folder like DCIM/Camera does not swamp the IO pool
     @OptIn(ExperimentalCoroutinesApi::class)
     private val io = Dispatchers.IO.limitedParallelism(4)
+    // videos, PDFs and the like decode a big frame: one at a time, so a folder of hundreds of clips cannot run the phone out of memory
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val heavy = Dispatchers.IO.limitedParallelism(1)
 
     @Volatile private var trimmed = false
     private const val MAX_BYTES = 96L shl 20
@@ -51,7 +54,7 @@ object Thumbs {
     fun cached(f: File): ImageBitmap? = mem.get(key(f))
 
     /** Decodes (or reads back) a preview that keeps the picture's aspect ratio. Null when the device cannot decode it. */
-    suspend fun load(ctx: Context, f: File): ImageBitmap? = withContext(io) {
+    suspend fun load(ctx: Context, f: File): ImageBitmap? = withContext(if (f.extension.lowercase() in PV_IMAGE) io else heavy) {
         val k = key(f)
         mem.get(k)?.let { return@withContext it }
         val dir = File(ctx.cacheDir, "thumbs").apply { mkdirs() }
@@ -101,7 +104,7 @@ private fun previewOf(ctx: Context, f: File): Bitmap? {
         }.getOrNull()
         e in PV_VIDEO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
-            try { m.setDataSource(f.path); (m.getFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(0L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(-1L))?.let { Bitmap.createScaledBitmap(it, 320, (320 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
+            try { m.setDataSource(f.path); ((if (android.os.Build.VERSION.SDK_INT >= 27) m.getScaledFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 320) else null) ?: m.getFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(0L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(-1L))?.let { Bitmap.createScaledBitmap(it, 320, (320 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
         }.getOrNull()
         e in PV_AUDIO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
