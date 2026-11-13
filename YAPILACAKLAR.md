@@ -2442,3 +2442,10 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: Samsung teması (alt satır, sayı satırı, yuvarlak araç düğmeleri, emoji çubuğunda ABC ve silme).
 - Pano: her yeni ekran görüntüsü alınır (yalnız en yenisi değil), klavye kapalıyken alınanlar da; 48 MB'a kadar.
 - Hız: klavye ve ana ekran kodu için önceden derleme profili (baseline-prof.txt).
+- Müzik: etiket, kapak ve söz düzenlemeleri dosyaya yazılır (MP3: ID3), çalan şarkıda ve listelerde hemen görünür; düzenlenen söz her zaman önce okunur.
+- Poweramp widget: yazı boyutu, hizalama, kapak tarafı; ana ekranın iki boyutu için ayrı çizilir (kendi kendine daralma); müzik ayarlarından açılır.
+- Klavye Samsung teması: araç çubuğu (akıllı düzeltme, emoji, çeviri, pano, ayarlar, menü).
+- İkon seçici: ana ekran ikonu en üstte (Çizgi / Cam + renk, dokununca uygulanır), uygulama içi ikon katlanır.
+- Game Hub: gerçek konsol çizimleri, disk tek basışta ele gelir ve yuvaya kayar, oyun arada sayfa olmadan açılır, diskin kendi baskısı, raf içinde kapak seçici, Oyun ekle ayarlarda, her kapak konsol çerçevesinde, kutu arkasında oynama istatistikleri ve dört görsel, dönüşte siyah ekran kurtarması.
+- Pano: yalnız yeni çekilen ekran görüntüleri ve yeni indirilen görseller.
+- Boyut: win11_splash_bg WebP (473 KB az).

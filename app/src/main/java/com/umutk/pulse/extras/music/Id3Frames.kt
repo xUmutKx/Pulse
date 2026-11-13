@@ -50,7 +50,10 @@ object Id3Frames {
             else byteArrayOf((v shr 24).toByte(), (v shr 16).toByte(), (v shr 8).toByte(), v.toByte())
         // a year is TYER in 2.3 and TDRC in 2.4: whichever was asked for is written under the tag's own name, and the other name is taken out
         val want = LinkedHashMap<String, ByteArray?>()
-        frames.forEach { (k, v) -> when (k) { "TYER", "TDRC" -> { want[if (ver == 4) "TDRC" else "TYER"] = v; want.putIfAbsent(if (ver == 4) "TYER" else "TDRC", null) }; else -> want[k] = v } }
+        for ((k, v) in frames) {
+            if (k == "TYER" || k == "TDRC") { want[if (ver == 4) "TDRC" else "TYER"] = v; if (!want.containsKey(if (ver == 4) "TYER" else "TDRC")) want[if (ver == 4) "TYER" else "TDRC"] = null }
+            else want[k] = v
+        }
         val out = ByteArrayOutputStream()
         var p = 0
         while (p + 10 <= old.size && old[p].toInt() != 0) {
