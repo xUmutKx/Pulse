@@ -147,6 +147,22 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     @JavascriptInterface fun guideCached(pkg: String): String = GameGuide.cached(c, pkg)
     @JavascriptInterface fun guideFetch(pkg: String) { GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
+    /** A text box of the page got the focus: the view takes the focus and the keyboard is asked for (a page in a view does not always bring it up by itself). */
+    @JavascriptInterface fun showKeyboard() {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            runCatching {
+                val w = ShelfJs.web ?: return@post
+                w.requestFocus()
+                val imm = c.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showSoftInput(w, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+    /** The text on the clipboard, for the shelf's own keyboard (Settings: paste a key). */
+    @JavascriptInterface fun clipRead(): String = runCatching {
+        val cm = c.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(c)?.toString().orEmpty().take(500)
+    }.getOrDefault("")
     @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     // Game Hub's own settings, read and written from Boxshelf's Settings page: only these keys, each in the type and with the
@@ -303,6 +319,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             holder[0] = w
             ShelfJs.web = w
             w.setBackgroundColor(android.graphics.Color.BLACK)
+            w.isFocusable = true; w.isFocusableInTouchMode = true
             w.settings.javaScriptEnabled = true
             w.settings.domStorageEnabled = true
             w.settings.mediaPlaybackRequiresUserGesture = false
@@ -317,6 +334,11 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.addJavascriptInterface(PulseHost(c.applicationContext, { if (MegaGames.isMega(it)) MegaGames.open(ctx, it) else launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
             w.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? = serve(c, request.url)
+                // the system took the page's process while another app was in front: the shelf is built again instead of staying a black view
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { ShelfSync.bump() }
+                    return true
+                }
             }
             w.loadUrl("https://$HOST/app/index.html?shelf=1&platform=android")
         }

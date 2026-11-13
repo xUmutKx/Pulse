@@ -238,3 +238,10 @@ html,body,#app{-webkit-user-select:none;user-select:none}
 /* a box's spine mark (the console's picture instead of its name) */
 .spine-band.has-mark{display:flex;align-items:center;justify-content:center}
 .spine-band.has-mark svg{width:90%;height:auto;max-height:94%;display:block}
+
+/* the settings' own keyboard on a phone: the whole width of the screen, keys that share it (it was laid out for a 1440 px handheld and ran off the right edge) */
+html.platform-android .bss-root .bss-osk{left:0;right:0;padding:8px 6px max(14px,env(safe-area-inset-bottom));z-index:60}
+html.platform-android .bss-root .bss-krow{gap:5px;margin-bottom:6px}
+html.platform-android .bss-root .bss-key{min-width:0;flex:1 1 0;height:46px;padding:0 2px;font-size:19px;border-radius:10px}
+html.platform-android .bss-root .bss-key.wide{flex:3.2 1 0}
+html.platform-android .bss-root .bss-key.mid{flex:1.7 1 0;font-size:14px}
