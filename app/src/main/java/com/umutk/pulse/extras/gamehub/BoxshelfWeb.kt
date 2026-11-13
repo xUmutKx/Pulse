@@ -191,6 +191,37 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             }
         }
     }
+    /**
+     * A text box of the shelf's settings (an API key): a plain Android dialog with a real text field, so the phone's keyboard (Pulse's own when it is the one in use)
+     * comes up for sure, which it did not always do inside the page. The answer goes back to the page's __pulseTextDone (null = cancelled).
+     */
+    @JavascriptInterface fun editText(title: String, value: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            val w = ShelfJs.web
+            var cx: android.content.Context? = w?.context
+            while (cx is android.content.ContextWrapper && cx !is android.app.Activity) cx = cx.baseContext
+            val act = cx as? android.app.Activity
+            fun back(t: String?) { w?.evaluateJavascript("window.__pulseTextDone&&window.__pulseTextDone(" + (if (t == null) "null" else org.json.JSONObject.quote(t)) + ")", null) }
+            if (w == null || act == null || act.isFinishing) { back(null); return@post }
+            val et = android.widget.EditText(act).apply {
+                setText(value); setSelection(text.length); setSingleLine(true)
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+            }
+            val pad = (20 * act.resources.displayMetrics.density).toInt()
+            val box = android.widget.FrameLayout(act).apply { setPadding(pad, pad / 2, pad, 0); addView(et) }
+            var done = false
+            val d = android.app.AlertDialog.Builder(act).setTitle(title).setView(box)
+                .setPositiveButton(android.R.string.ok) { _, _ -> if (!done) { done = true; back(et.text.toString()) } }
+                .setNegativeButton(android.R.string.cancel) { _, _ -> if (!done) { done = true; back(null) } }
+                .setOnCancelListener { if (!done) { done = true; back(null) } }
+                .create()
+            d.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+            et.setOnEditorActionListener { _, _, _ -> d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick(); true }
+            d.show()
+            et.requestFocus()
+        }
+    }
     /** The text on the clipboard, for the shelf's own keyboard (Settings: paste a key). */
     @JavascriptInterface fun clipRead(): String = runCatching {
         val cm = c.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

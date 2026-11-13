@@ -1014,6 +1014,9 @@ function oskMove(a){const K=keysNow(),pos=[];K.forEach((row,ri)=>row.forEach((k,
 /* (beta.13) On Android a finger opens Boxshelf's own keyboard too: Android's, over a fullscreen page, did not come up */
 const oskTouch=()=>false; /* Pulse: a finger types with Pulse's own keyboard into a real text box (the host brings it up); Boxshelf's on-screen keyboard is for a game pad only */
 function startEdit(r,first,val){edit={row:r,value:(val!=null?String(val):first!=null?String(r.get()||"")+first:String(r.get()||"")),idx:rowI}; /* val: text already typed (on-screen keyboard to a real one): the input is built with it */
+  if(device!=="pad"&&window.PulseHost&&PulseHost.editText){ /* Pulse: a real Android text dialog (the keyboard always comes up there) */
+    window.__pulseTextDone=t=>{window.__pulseTextDone=null;if(!edit)return;if(t==null)cancelEdit();else{edit.value=String(t);commitEdit()}};
+    try{PulseHost.editText(String(r.name||r.label||r.t||"Value"),String(edit.value))}catch{cancelEdit()}return}
   if(device==="pad"||oskTouch()){openOsk("edit");render()}else{focus="edit";render();const inp=E.list.querySelector(".bss-edit");if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length)}catch{}}}}
 function paintEdit(){const el=E.list.querySelector(".bss-editv");if(el){el.firstChild.textContent=edit.row.secret?"•".repeat(edit.value.length):edit.value}}
 function commitEdit(){if(!edit)return;const r=edit.row,v=edit.value.trim().replace(/^"(.*)"$/,"$1");edit=null;closeOsk();focus="page";
