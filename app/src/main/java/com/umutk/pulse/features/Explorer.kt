@@ -2363,7 +2363,7 @@ private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
     }
 }
 
-internal val EX_VIDEO = setOf("mp4", "mkv", "webm", "mov", "avi", "3gp", "m4v", "ts", "flv", "wmv")
+internal val EX_VIDEO = setOf("mp4", "mkv", "webm", "mov", "avi", "3gp", "m4v", "ts", "flv", "wmv", "mpg", "mpeg", "m2ts", "ogv")
 
 /** Starts Pulse's video player on [f]. False when it cannot be started (the caller then falls back to the other ways). */
 private fun exOpenInPulseVideo(ctx: Context, f: File): Boolean = runCatching {
