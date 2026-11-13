@@ -1493,7 +1493,7 @@ function openInspect(){uiCrumb("Inspect");
   detailsBack=mode==="details"?g:null;closeDetails(true);mode="inspect";clearTimeout(isp.wd);const tok=++isp.tok;
   const el=$("inspect"),style=STYLE[s.id]||STYLE.media,m=MEDIA[s.id]||MEDIA.wii;
   const PT=!!window.PulseHost&&innerWidth<innerHeight,ch=PT?Math.min(innerHeight*.5,innerWidth*.62/style.ratio):Math.min(innerHeight*.58,innerWidth*.34/style.ratio),cw=ch*style.ratio;
-  el.style.setProperty("--ch",ch+"px");el.style.setProperty("--cw",cw+"px");el.style.setProperty("--t",(cw*Math.max(.06,style.depth*.7))+"px");el.style.setProperty("--disc",(cw*m.size)+"px");
+  el.style.setProperty("--ch",ch+"px");el.style.setProperty("--cw",cw+"px");el.style.setProperty("--t",(cw*Math.max(.06,style.depth*.7))+"px");el.style.setProperty("--disc",(cw*m.size*.8)+"px"); /* the disc is a fifth smaller: it filled the whole screen as it flew in */
   el.style.setProperty("--case",style.caseColor);el.style.setProperty("--case-in",style.caseSide);el.style.setProperty("--case-side",style.caseSide);el.style.setProperty("--accent",style.glow);
   el.classList.remove("open","out","cart","umd","floppy");if(m.kind!=="disc")el.classList.add(m.kind);if(m.form)el.classList.add(m.form);
   const front=frontUrl(g);
@@ -2034,7 +2034,7 @@ function runInsert(s,g,done,hideAfter){
   const el=$("insert"),style=STYLE[s.id]||STYLE.media,m=MEDIA[s.id]||MEDIA.wii;
   const front=frontUrl(g);
   const PT=!!window.PulseHost&&innerWidth<innerHeight,ch=PT?Math.min(innerHeight*.4,innerWidth*.5/style.ratio):Math.min(innerHeight*.46,innerWidth*.3/style.ratio),cw=ch*style.ratio;
-  el.style.setProperty("--ch",ch+"px");el.style.setProperty("--cw",cw+"px");el.style.setProperty("--disc",(cw*m.size)+"px");
+  el.style.setProperty("--ch",ch+"px");el.style.setProperty("--cw",cw+"px");el.style.setProperty("--disc",(cw*m.size*.8)+"px"); /* the disc is a fifth smaller: it filled the whole screen as it flew in */
   el.style.setProperty("--case",style.caseColor);el.style.setProperty("--case-in",style.caseSide);el.style.setProperty("--accent",style.glow);
   el.classList.remove("go","out","cart","umd","floppy");if(m.kind!=="disc")el.classList.add(m.kind);if(m.form)el.classList.add(m.form);
   tinyBlur((g.art&&(g.art.hero||g.art.front))||front,d=>{el.querySelector(".ins-bg img").src=d||""});
