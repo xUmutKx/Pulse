@@ -8,7 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /** Frees the picture caches when no Pulse screen is in front. Services (Motion cues, overlays, alerts) are not touched. */
-class PulseApp : Application() {
+class PulseApp : Application(), androidx.work.Configuration.Provider {
+    // WorkManager starts itself, in every process of the app, from this configuration: the launcher, Files and the other windows run in their own processes, where the
+    // start-up provider did not start it, and the first use of it (the music player's lyrics work, for one) crashed with "WorkManager is not initialized properly"
+    override val workManagerConfiguration: androidx.work.Configuration
+        get() = androidx.work.Configuration.Builder().build()
+
     override fun onCreate() {
         super.onCreate()
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
