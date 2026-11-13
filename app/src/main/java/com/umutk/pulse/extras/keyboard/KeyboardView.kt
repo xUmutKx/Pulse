@@ -481,7 +481,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     // the Samsung look: while there is nothing to suggest the bar holds its round tool buttons (the smart fix, emoji, translate, clipboard, settings, more)
     val samBar = th.samsung && st.panel == "keys" && st.inline.isEmpty() && st.slots.none { it.isNotEmpty() }
-    val barHasContent = samBar || st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
+    // a field that takes suggestions keeps its bar at full height while nothing is suggested (a word the dictionary does not know): the bar used to shrink to a thin handle and
+    // grow again with the next word, and the keys jumped up and down with it. Only a field without suggestions (a password box, a number field), or the setting off, gives the room to the keys
+    val keepBar = KeyboardPrefs.suggestions && !st.plain && st.panel == "keys"
+    val barHasContent = samBar || keepBar || st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
     // no suggestions: no container, only a short handle line just above the keys (the space of an empty bar is given to the keys)
     if (!barHasContent) {
         Box(Modifier.fillMaxWidth().height(18.dp), contentAlignment = Alignment.Center) {
