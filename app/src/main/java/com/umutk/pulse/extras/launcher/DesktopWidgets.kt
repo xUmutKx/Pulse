@@ -44,7 +44,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** x, y, width, height of a widget on the desktop, in dp. */
 private fun posOf(id: Int, i: Int, minW: Int, minH: Int): FloatArray =
     LauncherPrefs.widgetPos[id]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 4 }?.toFloatArray()
-        ?: floatArrayOf(12f + (i % 3) * 12f, 96f + i * 40f, minW.coerceAtLeast(110).toFloat(), minH.coerceAtLeast(110).toFloat())
+        ?: floatArrayOf(12f + (i % 3) * 12f, 96f + i * 40f, (if (minW in 1..90) minW.coerceAtLeast(84) else minW.coerceAtLeast(110)).toFloat(), (if (minH in 1..90) minH.coerceAtLeast(84) else minH.coerceAtLeast(110)).toFloat())
 
 /**
  * The widgets of the Windows desktops, placed where the user wants them: a long press puts a widget in its edit mode (a grip moves it, the cross removes it, the
