@@ -4,7 +4,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="10dp">
+    android:padding="6dp">
     <TextView
         android:id="@+id/text"
         android:layout_width="match_parent"
@@ -12,5 +12,5 @@
         android:ellipsize="end"
         android:maxLines="12"
         android:textColor="#FF222222"
-        android:textSize="14sp" />
+        android:textSize="12sp" />
 </FrameLayout>
