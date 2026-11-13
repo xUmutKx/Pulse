@@ -1460,7 +1460,7 @@ function makeBooklet(g){
       const b=await bookletJpeg(c);c.width=c.height=0;urls.push(URL.createObjectURL(b))};
     const wrap=(x,text,X,Y,maxW,lh,maxLines)=>{const words=String(text||"").split(/\s+/);let line="",y=Y,n=0;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){x.fillText(line,X,y);y+=lh;line=w;if(++n>=maxLines-1)break}else line=t}if(line&&n<maxLines){x.fillText(n>=maxLines-1&&words.length>0?line+"…":line,X,y);y+=lh}return y};
     const band=x=>{x.fillStyle=st.caseColor||"#222";x.fillRect(0,0,W,90);x.fillStyle=(st.band&&st.band.fg)||"#fff";x.font="700 34px Lexend, sans-serif";x.fillText((sh&&sh.name||"").toUpperCase(),48,58)};
-    const front=await load((g.art&&g.art.front)||await appFrontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
+    const front=await load((g.pulse&&((g.shots&&g.shots[0])||(g.art&&g.art.hero)))||(g.art&&g.art.front)||await appFrontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* (a Game Hub game: the booklet inside the case shows a screenshot or the wide picture, not the cover again) */ /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
     // the front, laid out like an original instruction booklet: the box art full-bleed under a thin console band,
     // and a footer strip with "INSTRUCTION BOOKLET" and the console's name, the way the real ones are printed. A small
     // Boxshelf mark in the strip says it's ours, not a scan.

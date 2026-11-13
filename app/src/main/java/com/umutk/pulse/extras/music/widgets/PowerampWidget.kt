@@ -176,8 +176,8 @@ class PowerampWidget : AppWidgetProvider() {
         private fun boxOf(c: Context, w: Float, h: Float): WBox {
             val d = c.resources.displayMetrics.density
             val pw = w * d; val ph = h * d
-            // RemoteViews carries bitmaps over a 1 MB binder limit (ARGB, 4 bytes a pixel): about 240k pixels at most
-            val shrink = kotlin.math.sqrt(pw * ph / 240_000f).coerceAtLeast(1f)
+            // the bitmaps of a widget have a memory limit (about one and a half screens for all of them, and there is one per size): half a million pixels each stays well under it
+            val shrink = kotlin.math.sqrt(pw * ph / 500_000f).coerceAtLeast(1f)
             return WBox((pw / shrink).toInt().coerceAtLeast(1), (ph / shrink).toInt().coerceAtLeast(1), shrink)
         }
 
