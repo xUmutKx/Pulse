@@ -487,8 +487,8 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             // the buttons on the left, the number of songs at the right end
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
-                Icon(if (cols == 1) Icons.Rounded.ViewList else Icons.Rounded.GridView, tr("View", "Görünüm"), tint = style.accent, modifier = Modifier.size(22.dp))
-                if (cols > 1) Text("$cols", color = style.accent, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 4.dp))
+                // the picture says the layout: a list for one column, 2 x 2 or 3 x 3 squares for the grids (no number)
+                ViewModeGlyph(cols, style.accent, Modifier.size(22.dp))
             }
             ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
             ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
@@ -790,6 +790,32 @@ private fun RecapGated(back: () -> Unit) {
     } else {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             com.umutk.pulse.PButton(tr("Watch an ad to open the recap", "Özeti açmak için reklam izle"), onClick = { gate { unlocked = true } })
+        }
+    }
+}
+
+/** The songs' layout button's picture: one column (a list), or a grid of two or three columns, drawn with the same weight as the other icons. */
+@Composable
+internal fun ViewModeGlyph(cols: Int, tint: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width; val h = size.height
+        if (cols <= 1) {
+            // three rows: a dot and a bar each
+            val r = w * .07f
+            for (i in 0 until 3) {
+                val y = h * (.2f + i * .3f)
+                drawCircle(tint, r, androidx.compose.ui.geometry.Offset(w * .15f, y))
+                drawRoundRect(tint, androidx.compose.ui.geometry.Offset(w * .32f, y - h * .07f), androidx.compose.ui.geometry.Size(w * .53f, h * .14f), androidx.compose.ui.geometry.CornerRadius(h * .07f))
+            }
+        } else {
+            val n = cols
+            val gap = w * .07f
+            val cell = (w - gap * (n - 1)) / n
+            val cellH = (h - gap * (n - 1)) / n
+            val rad = cell * .18f
+            for (row in 0 until n) for (col in 0 until n) {
+                drawRoundRect(tint, androidx.compose.ui.geometry.Offset(col * (cell + gap), row * (cellH + gap)), androidx.compose.ui.geometry.Size(cell, cellH), androidx.compose.ui.geometry.CornerRadius(rad))
+            }
         }
     }
 }

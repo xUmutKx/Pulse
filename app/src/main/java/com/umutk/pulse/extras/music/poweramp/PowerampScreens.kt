@@ -464,7 +464,14 @@ fun NowPlayingScreen(
                 Spacer(Modifier.width(4.5.dp))
                 // the shuffle button goes round the kinds (off, queue, all songs, albums); its list also has a new order for the one that is on
                 val sk = PlayModes.shuffle
-                ModeMenuBtn(if (sk == ShuffleKind.OFF) IV("shuffle") else androidx.compose.material.icons.Icons.Rounded.ShuffleOn, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, badge = PlayModes.badge(sk), onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
+                // one picture per kind, no letters: the queue, all songs (the library), albums
+                val shuffleIcon = when (sk) {
+                    ShuffleKind.OFF -> IV("shuffle")
+                    ShuffleKind.QUEUE -> androidx.compose.material.icons.Icons.Rounded.ShuffleOn
+                    ShuffleKind.ALL -> androidx.compose.material.icons.Icons.Rounded.LibraryMusic
+                    ShuffleKind.ALBUMS -> androidx.compose.material.icons.Icons.Rounded.Album
+                }
+                ModeMenuBtn(shuffleIcon, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
                     ModeItem(tr("Shuffle off", "Karıştırma kapalı"), sk == ShuffleKind.OFF) { PlayModes.setShuffle(modesCtx, ShuffleKind.OFF) },
                     ModeItem(tr("Shuffle the queue", "Sırayı karıştır"), sk == ShuffleKind.QUEUE) { PlayModes.setShuffle(modesCtx, ShuffleKind.QUEUE) },
                     ModeItem(tr("Shuffle all songs", "Tüm şarkıları karıştır"), sk == ShuffleKind.ALL) { PlayModes.setShuffle(modesCtx, ShuffleKind.ALL) },
