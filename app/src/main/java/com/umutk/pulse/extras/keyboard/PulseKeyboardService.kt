@@ -2175,7 +2175,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the word list is read once, as far as the neural model reaches; the nearer words of the rule are taken from the same reading
         val reach = if (KeyboardPrefs.neural && lower.length >= 3) maxOf(limit, NN_REACH) else limit
         val nearAll = if (!fast && lower.length >= 2) candCodes.flatMap { KeyboardDictionary.correct(it, lower, reach, tc) } else emptyList()
-        val corr = if (!fast && lower.length >= 2) (nearAll.filter { it.cost <= limit } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
+        // the words the touches point to (a letter on a key's edge could have been the next key's)
+        val touchC = if (!fast && tc != null && lower.length >= 3) candCodes.flatMap { KeyboardDictionary.touchCands(it, lower, tc, 4) } else emptyList()
+        val corr = if (!fast && lower.length >= 2) (nearAll.filter { it.cost <= limit } + touchC + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
