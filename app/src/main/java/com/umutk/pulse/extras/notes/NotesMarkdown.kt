@@ -1,6 +1,9 @@
 package com.umutk.pulse.extras.notes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PCheck
 
+private val NUM = Regex("^(\\d+)\\. (.*)$")
 private val CHECK = Regex("^\\s*(?:[-*] )?\\[( |x|X)] (.*)$")
 
 /** Markdown-lite: "#" and "##" headings, "-" bullets, **bold**, and "[ ]" / "[x]" checklist lines that tick on tap. */
@@ -44,6 +48,13 @@ fun NoteBody(body: String, size: Int, ink: Color, accent: Color, onBody: (String
                     Text("•  ", color = accent, fontSize = size.sp)
                     Text(mdInline(line.drop(2)), color = ink, fontSize = size.sp, modifier = Modifier.weight(1f, fill = false))
                 }
+                NUM.find(line) != null -> Row {
+                    Text(NUM.find(line)!!.groupValues[1] + ".  ", color = accent, fontSize = size.sp)
+                    Text(mdInline(NUM.find(line)!!.groupValues[2]), color = ink, fontSize = size.sp, modifier = Modifier.weight(1f, fill = false))
+                }
+                line.startsWith("> ") -> Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+                    Box(Modifier.width(3.dp).fillMaxHeight().background(accent)); Text(mdInline(line.drop(2)), color = ink.copy(alpha = .8f), fontSize = size.sp, modifier = Modifier.padding(start = 8.dp))
+                }
                 line.isBlank() -> Spacer(Modifier.height((size / 2).dp))
                 else -> Text(mdInline(line), color = ink, fontSize = size.sp, modifier = Modifier.fillMaxWidth())
             }
@@ -58,13 +69,28 @@ fun toggle(lines: List<String>, index: Int): String = lines.mapIndexed { j, l ->
     else l.replaceFirst(Regex("\\[[xX]]"), "[ ]")
 }.joinToString("\n")
 
-/** **bold** runs in one line; the markers are removed. */
+/** Inline marks in one line, removed from the text: **bold**, *italic*, __underline__, ~~strike~~, ==highlight==. */
 fun mdInline(s: String): AnnotatedString = buildAnnotatedString {
-    var bold = false
-    s.split("**").forEachIndexed { k, part ->
-        if (k > 0) bold = !bold
-        if (bold) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(part) } else append(part)
+    var bold = false; var ital = false; var under = false; var strike = false; var mark = false
+    fun style() = SpanStyle(
+        fontWeight = if (bold) FontWeight.Bold else null, fontStyle = if (ital) androidx.compose.ui.text.font.FontStyle.Italic else null,
+        textDecoration = when { under && strike -> androidx.compose.ui.text.style.TextDecoration.combine(listOf(androidx.compose.ui.text.style.TextDecoration.Underline, androidx.compose.ui.text.style.TextDecoration.LineThrough)); under -> androidx.compose.ui.text.style.TextDecoration.Underline; strike -> androidx.compose.ui.text.style.TextDecoration.LineThrough; else -> null },
+        background = if (mark) Color(0x88FFEB3B) else Color.Unspecified,
+    )
+    val buf = StringBuilder()
+    fun flush() { if (buf.isNotEmpty()) { withStyle(style()) { append(buf.toString()) }; buf.clear() } }
+    var i = 0
+    while (i < s.length) {
+        when {
+            s.startsWith("**", i) -> { flush(); bold = !bold; i += 2 }
+            s.startsWith("__", i) -> { flush(); under = !under; i += 2 }
+            s.startsWith("~~", i) -> { flush(); strike = !strike; i += 2 }
+            s.startsWith("==", i) -> { flush(); mark = !mark; i += 2 }
+            s[i] == '*' -> { flush(); ital = !ital; i += 1 }
+            else -> { buf.append(s[i]); i++ }
+        }
     }
+    flush()
 }
 
 /** The text with every match of [q] in bold accent colour (search highlight). */

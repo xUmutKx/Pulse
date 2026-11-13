@@ -271,12 +271,16 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "apps" to (tr("Game Hub: its settings are in Boxshelf's settings now (look, library, covers, box style, in-game menu, access and setup).",
-        "Game Hub: ayarları artık Boxshelf ayarlarında (görünüm, kütüphane, kapaklar, kutu tarzı, oyun içi menü, erişim ve kurulum).")),
-    "star" to (tr("Pulse AI: more small uncensored chat models, and a Vision section for models that see pictures.",
-        "Pulse AI: daha fazla küçük sansürsüz sohbet modeli ve resim gören modeller için bir Görsel bölümü.")),
-    "music" to (tr("Game Hub boxes: the back shows the game's own screenshots, the spine and the back take the colours of the box's console.",
-        "Game Hub kutuları: arka yüzde oyunun kendi ekran görüntüleri var, yan ve arka yüz kutunun konsol renklerini alır.")),
+    "star" to (tr("Keyboard: faster and better corrections for Turkish and English, run-together words are split, and the word you meant is guessed from where your finger lands.",
+        "Klavye: Türkçe ve İngilizce için daha hızlı ve iyi düzeltme, bitişik yazılan kelimeler ayrılır, parmağının bastığı yere göre ne yazmak istediğin tahmin edilir.")),
+    "apps" to (tr("Keyboard: the Samsung look is the default now, held Ctrl/Alt work for shortcuts, and landscape has its own settings.",
+        "Klavye: Samsung görünümü artık varsayılan, basılı tutulan Ctrl/Alt kısayollarda çalışır, yatay modun kendi ayarları var.")),
+    "music" to (tr("Music: edited tags, covers and lyrics are saved into the file. The Poweramp widget keeps its size and lets you place text and cover.",
+        "Müzik: düzenlenen etiket, kapak ve sözler dosyaya kaydedilir. Poweramp widget'ı boyutunu korur, yazı ve kapak yerleşimi seçilebilir.")),
+    "apps" to (tr("Game Hub: real consoles and discs, covers and ratings fetched by themselves, 50 built-in browser games.",
+        "Game Hub: gerçek konsol ve diskler, kendiliğinden gelen kapak ve puanlar, 50 yerleşik tarayıcı oyunu.")),
+    "star" to (tr("Charging animation: 15 looks to pick from in the screen cover settings. It is off until you switch it on.",
+        "Şarj animasyonu: ekran kapağı ayarlarında 15 görünüm. Sen açana kadar kapalı.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
