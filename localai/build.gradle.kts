@@ -23,6 +23,10 @@ android {
                     "-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=ON", "-DLLAMA_BUILD_APP=OFF", "-DLLAMA_BUILD_COMMON=ON", "-DLLAMA_BUILD_MTMD=ON", "-DMTMD_VIDEO=OFF", "-DLLAMA_OPENSSL=OFF", "-DLLAMA_CURL=OFF",
                     "-DGGML_NATIVE=OFF", "-DGGML_BACKEND_DL=ON", "-DGGML_CPU_ALL_VARIANTS=ON", "-DGGML_LLAMAFILE=OFF",
                 )
+                // smaller libraries, same speed: every function in its own section, and the linker drops what nothing uses and folds the functions that are the same
+                cFlags += listOf("-ffunction-sections", "-fdata-sections")
+                cppFlags += listOf("-ffunction-sections", "-fdata-sections")
+                arguments += listOf("-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections -Wl,--icf=safe")
             }
         }
     }
