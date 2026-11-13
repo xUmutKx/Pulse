@@ -964,7 +964,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val seq = StringBuilder()
                     val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
                     var curRoot = startRoot
-                    val canGlide = isLetterNow && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
+                    val canGlide = isLetterNow && KeyboardPrefs.glide && !KeyboardPrefs.corners && st.page == 0 && st.panel == "keys"
                     // a tap deletes its letter on release; held, the first repeat already takes a whole word (no single letter first)
                     if (key.kind == KeyKind.DELETE) due = android.os.SystemClock.uptimeMillis() + 380L
                     while (true) {
@@ -1006,7 +1006,10 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         if (c.changedToUp() || !c.pressed) {
                             if (st.swiped) { st.preview = null; break }
                             val up = (startRoot.y - curRoot.y)
+                            // corner swipes: the symbol or key written on the corner the key was swiped toward
+                            val corner = if (KeyboardPrefs.corners && isLetterNow && st.page == 0 && !long) KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx()) else null
                             when {
+                                corner != null -> { st.touch = null; if (corner.startsWith("@")) a.extraKey(corner.drop(1)) else a.type(corner) }
                                 key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true) else if (delRepeats == 0) a.backspace()
                                 glide && seq.length >= 3 -> a.glide(seq.toString())
                                 glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
@@ -1035,6 +1038,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         }
                         val dx = c.position.x - startX
                         when {
+                            // corner swipes: the pop-up shows what a release here would type
+                            KeyboardPrefs.corners && isLetterNow && st.page == 0 && !long -> {
+                                val t = KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx())
+                                if (KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, if (t != null) KeyCorners.show(t) else key.label)
+                            }
                             // a swipe over the letters: the keys it passes spell the word
                             canGlide && !long && (glide || (curRoot - startRoot).getDistance() > 30.dp.toPx()) -> {
                                 if (!glide) { glide = true; st.preview = null; seq.append(KeyboardLayouts.lower(key.label, st.lang)); st.trail = listOf(startRoot) }
@@ -1092,7 +1100,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.SPACE -> Text(k.label, color = if (th.samsung) th.text else th.sub, fontSize = if (th.samsung) 14.sp else 12.sp, maxLines = 1)
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = if (th.samsung) 18.sp else 15.sp, maxLines = 1)
                 else -> {
-                    if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
+                    // corner swipes: the small labels on the corners say what a swipe toward them gives
+                    if (KeyboardPrefs.corners && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
+                        if (cc.nw.isNotEmpty()) Text(KeyCorners.show(cc.nw), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
+                        if (cc.ne.isNotEmpty()) Text(KeyCorners.show(cc.ne), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
+                        if (cc.s.isNotEmpty()) Text(KeyCorners.show(cc.s), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
+                    }
+                    if (!KeyboardPrefs.corners && !special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
