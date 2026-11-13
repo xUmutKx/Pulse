@@ -121,7 +121,6 @@ open class MainActivity : ComponentActivity() {
         // Pulse always comes back in its own saved look (Files, same process, swaps colours / language in while it is open)
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
         Look.resolved = pulseResolved
-        if (this !is FilesActivity) { CrashReport.askIfPending(this); LiteModels.askIfNeeded(this) }
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         com.umutk.pulse.features.StorageScan.dir = filesDir
         if (com.umutk.pulse.Compat.isStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
@@ -351,6 +350,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
                 }
             }
         }
+        // after a crash: the offer to send a bug report; in the lite build: the old Pulse AI models, once
+        if (SplashGate.splashed && welcomed && wctx !is FilesActivity) { CrashReportPrompt(); LiteModelsPrompt() }
         // the GitHub update window only in the foss build: the play build gets its updates from Google Play
         if (SplashGate.splashed && welcomed && wctx !is FilesActivity && BuildConfig.APK_INSTALL) UpdatePrompt()
     }
