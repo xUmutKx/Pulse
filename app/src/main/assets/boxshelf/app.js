@@ -1312,6 +1312,8 @@ function play(){
   // the built-in intro plays (runBoot without a video)
   if(vid){runBoot(s,()=>launchNow(g));return}
   // Pulse: the held disc goes into a console at the bottom (spins, its sound), the screen goes dark and the game starts, as a game's disc does
+  // (a disc put into the console by hand has already gone in: the game starts at once, with no dark insert screen over the shelf)
+  if(g.pulse&&quickLaunch){launchNow(g);return}
   if(g.pulse){runInsert(Object.assign({},s,{id:"ps5",emulatorName:"Pulse"}),g,()=>launchNow(g),false);return}
   if(g.kind==="rom"&&s.insertAnim!==false){runInsert(s,g,null,false);launchNow(g,true);return}
   if(boot){runBoot(s,()=>launchNow(g));return}
@@ -1990,6 +1992,9 @@ window.__pulseUnblack=()=>{try{
   if(mode==="launch"&&runningKind!=="error"){clearTimeout(insertT);clearTimeout(launchTimer);try{hideInsert()}catch{}endLaunch();returnAt=performance.now()}
   clearTimeout(returnUndo);clearReturnCover("the app asked, back in front");const l=$("launch");if(l){l.classList.remove("ready");l.style.background=""}
   quickLaunch=false;
+  // the dark insert screen (the disc going into the console) is taken down for good, whatever step it was left at
+  const ins=$("insert");if(ins){ins.classList.remove("on","go","out","slide");ins.setAttribute("aria-hidden","true");const fx=$("bsFx");if(fx)fx.innerHTML=""}
+  const isx=$("inspect");if(isx&&mode!=="inspect"){isx.classList.remove("on","disc-out");app.classList.remove("inspecting")}
 }catch(e){try{api.log&&api.log("unblack: "+(e&&e.message))}catch{}}};
 function back(){
   if(mode==="sort"){closeSort();return}
