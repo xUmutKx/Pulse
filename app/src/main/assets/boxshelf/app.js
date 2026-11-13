@@ -3487,11 +3487,19 @@ addEventListener("wheel",e=>{if(mode==="inspect"){e.preventDefault();if(rd.open)
   if(mode!=="browse"&&mode!=="details")return;if(qm.open)return; /* the quick menu scrolls itself; the shelf behind stays put */if(e.target.closest&&e.target.closest(".details,.settings,.setup"))return;e.preventDefault();wheelAcc+=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;const now=performance.now();
   if(Math.abs(wheelAcc)>40&&now-wheelT>70){move(Math.sign(wheelAcc));wheelAcc=0;wheelT=now}},{passive:false});
 let drag=null,dragMoved=false;
-$("scene").addEventListener("pointerdown",e=>{if(mode!=="browse")return;const sl=e.target.closest(".slot");drag={x:e.clientX,onSel:!!(sl&&slots[sel]&&sl===slots[sel].el),last:e.clientX,acc:0,spin0:spin} /* spin0: a drag carries on from the angle the box already has (right stick, last drag) instead of snapping to the front */;dragMoved=false});
+$("scene").addEventListener("pointerdown",e=>{if(mode!=="browse")return;const sl=e.target.closest(".slot");shelfCoast=null;drag={x:e.clientX,onSel:!!(sl&&slots[sel]&&sl===slots[sel].el),last:e.clientX,acc:0,spin0:spin,v:0,t:performance.now()} /* spin0: a drag carries on from the angle the box already has (right stick, last drag) instead of snapping to the front */;dragMoved=false});
 addEventListener("pointermove",e=>{if(!drag)return;const dx=e.clientX-drag.x;if(Math.abs(dx)>8)dragMoved=true;if(!dragMoved)return;
   if(drag.onSel){spin=drag.spin0+dx*.6;spinT=spin;slots[sel].box.classList.add("free");applyRotation()}
-  else{drag.acc+=e.clientX-drag.last;drag.last=e.clientX;const step=bw*.3;while(Math.abs(drag.acc)>step){move(drag.acc>0?-1:1);drag.acc-=Math.sign(drag.acc)*step}}});
-addEventListener("pointerup",()=>{if(!drag)return;if(drag.onSel&&dragMoved){spinT=spin;const wasFlipped=flipped;if(!spinSettle()&&flipped!==wasFlipped)sfx.flip()} /* one flip sound: spinSettle plays it for a spine */drag=null;setTimeout(()=>dragMoved=false,0)});
+  else{const now=performance.now(),dt=now-drag.t;if(dt>0)drag.v=.6*drag.v+.4*((e.clientX-drag.last)/dt);drag.t=now;drag.acc+=e.clientX-drag.last;drag.last=e.clientX;const step=bw*.3;while(Math.abs(drag.acc)>step){move(drag.acc>0?-1:1);drag.acc-=Math.sign(drag.acc)*step}}});
+// a flick of the shelf keeps going after the finger lets go: it glides on past a few more games and slows down by itself (a touch stops it)
+let shelfCoast=null;
+function shelfGlide(v,acc){const c=shelfCoast={v:v*1.5,acc,t:performance.now()};
+  const tick=now=>{if(shelfCoast!==c||mode!=="browse"){if(shelfCoast===c)shelfCoast=null;return}
+    const dt=Math.min(50,now-c.t);c.t=now;c.acc+=c.v*dt;c.v*=Math.exp(-dt/340);const step=bw*.3;
+    while(Math.abs(c.acc)>step){move(c.acc>0?-1:1);c.acc-=Math.sign(c.acc)*step}
+    if(Math.abs(c.v)<.1){shelfCoast=null;return}requestAnimationFrame(tick)};
+  requestAnimationFrame(tick)}
+addEventListener("pointerup",()=>{if(!drag)return;if(!drag.onSel&&dragMoved&&Math.abs(drag.v)>.35&&performance.now()-drag.t<90)shelfGlide(drag.v,drag.acc);if(drag.onSel&&dragMoved){spinT=spin;const wasFlipped=flipped;if(!spinSettle()&&flipped!==wasFlipped)sfx.flip()} /* one flip sound: spinSettle plays it for a spine */drag=null;setTimeout(()=>dragMoved=false,0)});
 
 /* ---------- touch hooks ----------
    The Android build's touch layer (android-app/web-extras/android-touch.js: swipe to go back, pinch to zoom) asks these
@@ -4136,6 +4144,17 @@ async function chooseGameEmu(g){if(!g||g.kind!=="rom"||!api.gameEmulator)return;
 (function(){const c=$("dActEnd");if(!c||$("dCols"))return;const b=document.createElement("button");b.className="btn";b.type="button";b.id="dCols";b.textContent="Collections";b.title="Put this game on shelves of your own";b.addEventListener("click",()=>{const g=curGame();if(!g||!isGame(g)||!window.Setup)return;closeDetails(true);Setup.open({page:"collections",id:g.id,title:g.title})});c.before(b)})();
 
 // Called by the setup screen.
+// Pulse: "Search" finds a game by its name and brings the shelf to it (it is not started: that stays a tap)
+window.__pulseFind=()=>{
+  let box=document.getElementById("pulseFind");if(box)box.remove();if(mode!=="browse")return;
+  box=document.createElement("div");box.id="pulseFind";box.style.cssText="position:fixed;inset:0;z-index:9000;background:rgba(4,6,10,.94);display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 14px 14px;color:#fff";
+  box.innerHTML='<div style="display:flex;gap:8px;margin-bottom:10px"><input type="text" placeholder="Search" style="flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid #39404d;background:#12151b;color:#fff;padding:0 14px;font:inherit;font-size:16px"><button type="button" class="btn" style="height:44px;padding:0 16px">Close</button></div><div class="pf-list" style="flex:1;overflow:auto"></div>';
+  document.body.appendChild(box);const q=box.querySelector("input"),list=box.querySelector(".pf-list"),close=()=>box.remove();
+  box.querySelector("button").onclick=close;["pointerdown","pointerup","click","keydown","keyup"].forEach(t=>box.addEventListener(t,e=>e.stopPropagation()));
+  const fill=()=>{const t=q.value.trim().toLowerCase(),items=(cur()&&cur().items||[]).map((g,i)=>[g,i]).filter(([g])=>isGame(g)&&(!t||String(g.title||"").toLowerCase().includes(t))).slice(0,60);list.innerHTML="";
+    items.forEach(([g,i])=>{const b=document.createElement("button");b.type="button";b.textContent=g.title;b.style.cssText="display:block;width:100%;text-align:left;padding:13px 12px;border:0;border-bottom:1px solid #1d222b;background:none;color:#fff;font:inherit;font-size:16px";
+      b.onclick=()=>{close();let n=0;const go=()=>{if(sel===i||mode!=="browse"||n++>400)return;move(i>sel?1:-1);setTimeout(go,sel===i?0:22)};go()};list.appendChild(b)})};
+  q.addEventListener("input",fill);fill();setTimeout(()=>q.focus(),60)};
 window.Shelf={
   reloadCustomThemes:()=>loadCustomThemes(), // (Settings → Display: Find themes again / Make a theme from a picture)
   companionPlay,smoothTest,holdInput,
