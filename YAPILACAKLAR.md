@@ -2454,3 +2454,9 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: 50 yerleşik oyun (Mega Games), arama, kayan raf, kapak/görsel/puan otomatik çekimi; eski sayfalar kaldırıldı.
 - Müzik: düğmeler simge, dalga çubuğu kayar, sütun seçimi kalıcı değil.
 - Poweramp widget: yazı ve kapak düzeni, her boyut kendi kutusunda.
+
+## Pulse 1.0.399 (derlenmedi)
+- Şarj animasyonu: 15 görünüm, varsayılan kapalı, anahtar
+- Yenilikler metni yeniden yazıldı
+- Klavye: düzeltme hızı, bitişik kelime ayırma, dokunuş adayları
+- Notlar: biçimlendirme satırı, PDF/resim dışa aktarma, kart görünümü, kalem düğmesi
