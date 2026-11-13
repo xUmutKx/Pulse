@@ -376,7 +376,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
                 }, 3500L)
                 // back after a game (or anything that kept Pulse away for a few seconds): the shelf is built again at once, at the place it was left (the page keeps its
                 // place), instead of trusting a picture that can stay black. A short absence (the shade, a dialog) keeps the page as it is
-                if (away[0] && android.os.SystemClock.elapsedRealtime() - pausedAt[0] > 2500L) { away[0] = false; ShelfSync.bump(); return@LifecycleEventObserver }
+                // (no longer rebuilt at once: the page is built again only when it does not answer, below, so the shelf does not flash white and stall on every return)
                 w.onResume()
                 // the page's return step (the shelf comes back) runs once the page is running again: its timers and frames were stopped while it was away
                 w.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
