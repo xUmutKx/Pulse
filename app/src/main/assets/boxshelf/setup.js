@@ -83,12 +83,19 @@ async function open(opts){
   $("setup").classList.add("on");$("setup").setAttribute("aria-hidden","false");
   render();
 }
+// shutting: a second B / Esc / Done while the first close is still saving does nothing (it used to find legacyBack
+// already used and put the shelf in charge with Settings still open, or run the wizard's close twice)
+let shutting=false,finishing=false;
 async function close(){
-  if(opening)return;clearTimeout(saveT);await persist();
-  $("setup").classList.remove("on");$("setup").setAttribute("aria-hidden","true");
-  if(legacyBack){const back=legacyBack;legacyBack=null;back();return} // a classic page opened from Settings: back to it
-  Shelf.setMode("browse");await Shelf.refresh(true);if(Shelf.raReload)Shelf.raReload();
+  if(opening||shutting)return;shutting=true;
+  try{clearTimeout(saveT);await persist();
+    $("setup").classList.remove("on");$("setup").setAttribute("aria-hidden","true");
+    if(legacyBack){const back=legacyBack;legacyBack=null;back();return} // a classic page opened from Settings: back to it
+    Shelf.setMode("browse");await Shelf.refresh(true);if(Shelf.raReload)Shelf.raReload();}
+  finally{shutting=false}
 }
+// Settings closing with a classic page still over it: the page just goes (Settings saves the settings they share)
+function dismiss(){if(!legacyBack)return;clearTimeout(saveT);legacyBack=null;$("setup").classList.remove("on");$("setup").setAttribute("aria-hidden","true")}
 async function persist(){try{info.config=await api.saveConfig(cfg)}catch(e){Shelf.toast(e.message)}}
 function changed(){clearTimeout(saveT);saveT=setTimeout(persist,400);renderNav()}
 
@@ -116,7 +123,7 @@ async function detectNow(applyEmpty){
 // Re-rendering the same page (after a seg pick, a toggle…) keeps the scroll position and the focused control,
 // so a controller user doesn't get thrown back to the top of the page.
 let lastPage=null;
-function render(){const b=$("suBody"),pg=steps[step]&&steps[step].id,same=pg===lastPage,top=b.scrollTop,fi=same?focusables().indexOf(document.activeElement):-1,fromNav=inNav(document.activeElement);
+function render(){wzLayout();const b=$("suBody"),pg=steps[step]&&steps[step].id,same=pg===lastPage,top=b.scrollTop,fi=same?focusables().indexOf(document.activeElement):-1,fromNav=inNav(document.activeElement);
   renderNav();renderBody();renderFoot();lastPage=pg;
   if(!same&&fromNav){const n=navActive();if(n)n.focus({preventScroll:true})}
   if(same){b.scrollTop=top;if(fi>=0){const f=focusables();if(f[fi])f[fi].focus({preventScroll:true})}}}
@@ -128,6 +135,9 @@ const ico=k=>{const sp=document.createElement("span");sp.className="su-ico";sp.i
 function renderNav(){
   const nav=$("suNav");nav.innerHTML="";nav.append(el("div",{class:"su-brand",text:wizard?"Boxshelf setup":"Settings"}));
   const ver=el("div",{class:"su-ver",text:info.version?"Boxshelf "+info.version:"Boxshelf"});
+  if(winWizard()){const curId=(steps[step]||{}).id; // (beta.11) Settings' sidebar: a line icon per step and, where the wizard knows it, a status word (drawn from data-st, so the step's text stays its name)
+    steps.forEach((s,i)=>{const [st,tone]=wzStatus(s.id),b=el("button",{type:"button",class:"su-step"+(s.id===curId?" on":""),"data-st":st||null,"data-tone":tone||null,onclick:()=>{step=i;render()}},el("span",{class:"wz-sico","aria-hidden":"true"}),el("span",{class:"su-label",text:s.label}));
+      b.firstChild.innerHTML=wzSvg(WZ_STEP_IC[s.id]||"");nav.append(b)});nav.append(ver);return}
   if(wizard){const curId=(steps[step]||{}).parent||(steps[step]||{}).id; // a console page opened from the Consoles page lights up Consoles
     steps.forEach((s,i)=>{if(s.parent)return;const d=dotFor(s);nav.append(el("button",{type:"button",class:"su-step"+(s.id===curId?" on":""),onclick:()=>{step=i;render()}},el("span",{class:"su-label",text:s.label}),s.id==="consoles"?hubCount():el("span",{class:"dot "+d})))});nav.append(ver);return}
   const cur=steps[step]||{},curId=cur.parent||cur.id,idx=id=>steps.findIndex(x=>x.id===id);
@@ -182,6 +192,7 @@ function renderFoot(){
   if(wizard){
     // run again from Settings (setup already done): the first step's Back leaves, so the wizard can't trap you
     const out=step===0&&!!(cfg&&cfg.setupDone);f.append(el("button",{type:"button",class:"btn",disabled:step===0&&!out,onclick:()=>{if(out)close();else stepBy(-1)}},out?"Cancel":"Back"),el("div",{class:"grow"}));
+    if(winWizard())f.append(wzHints()); // (beta.11) Settings' hint pill, centred under the page
     if(sec.id==="done")f.append(el("button",{type:"button",class:"btn primary",onclick:finish},"Open Boxshelf"));
     else if(sec.parent)f.append(el("button",{type:"button",class:"btn primary",onclick:()=>{persist();stepBy(-1)}},"Done")); // a console page from the Consoles page: back to it
     else if(sec.id!=="welcome"){if(sec.id==="consoles"||sec.id==="pick")f.append(el("button",{type:"button",class:"btn",onclick:()=>runDetect(true)},detecting?"Searching…":"Search again"));
@@ -199,7 +210,15 @@ function toHub(from){step=steps.findIndex(x=>x.id==="consoles");render();const c
 function stepBy(d){const sec=steps[step];if(sec&&sec.parent&&d<0)return toHub(sec.id);
   let n=step+d;while(n>0&&n<steps.length-1&&steps[n].parent)n+=d;step=Math.max(0,Math.min(steps.length-1,n));render()}
 function renderBody(){
-  const b=$("suBody");b.innerHTML="";b.scrollTop=0;
+  const body=$("suBody");body.innerHTML="";body.scrollTop=0;wzInfo=null;wzAside=null;wzInfoKey=null;body.classList.remove("wz-split");
+  // (beta.11) Windows: the page in a column; a page that sets wzInfo gets the info card beside it
+  if(!winWizard())return renderBody0(body);
+  if(!wzInfoHooked){wzInfoHooked=true;body.addEventListener("focusin",wzInfoEv);body.addEventListener("pointerover",wzInfoEv,{passive:true})}
+  const col=el("div",{class:"wz-col"});body.append(col);const r=renderBody0(col);
+  if(wzInfo){wzAside=el("aside",{class:"wz-info"});body.classList.add("wz-split");body.append(wzAside);wzInfoShow(wzInfo.def)}
+  return r;
+}
+function renderBody0(b){
   const sec=steps[step];
   if(sec.id==="welcome")return window.BS_WIZARD_EXTRA&&BS_WIZARD_EXTRA.welcome?BS_WIZARD_EXTRA.welcome(b,wizCtx()):welcome(b);
   if(sec.extra)return sec.extra.render(b,wizCtx());
@@ -260,17 +279,91 @@ function toggle(label,checked,onchange,id){
 function welcome(b){
   if(onAndroid())head(b,"Welcome","Let's connect your emulators and games","Boxshelf looks for the emulator apps on this device and the game folders you've already let it see. Next you'll see the consoles it found first; every other console is one tap away under More consoles.");
   else head(b,"Welcome to Boxshelf","Let's find your games","Boxshelf looks for your emulators, games, Steam library and streaming apps. Next you pick which consoles you play, and it's ready in a minute.");
+  if(winWizard())return welcomeWin(b);
   if(onAndroid()){const root=info.appRoot;b.append(el("div",{class:"field"},el("div",{class:"lbl"},"Boxshelf folder"),el("div",{class:"d-cmd",text:root})))}
   b.append(el("div",{class:"d-actions"},
     el("button",{type:"button",class:"btn primary",onclick:async()=>{if(detecting)return;await runDetect(true);searched=true;pickInit();if(step===0)step=1;render()}} /* (beta.10) only moves on if you're still on Welcome */,detecting?el("span",{class:"scanning"}):null,detecting?" Looking…":winWizard()?"Find my emulators and games":"Find automatically"),
     el("button",{type:"button",class:"btn",onclick:()=>{pickInit();step=1;render()}},winWizard()?"I'll pick them myself":"Set up by hand")));
 }
+// (beta.11) the Windows welcome: the same two choices (same actions) as Settings rows, with the info card beside them
+function welcomeWin(b){
+  b.append(el("div",{class:"wz-rows"},
+    wzRow({icon:"search",busy:detecting,title:"Find my emulators and games",chip:"Recommended",info:"find",attrs:{"data-choice":"find"},
+      desc:detecting?"Looking…":"Searches this PC, then shows the consoles it found, already ticked.",
+      onclick:async()=>{if(detecting)return;await runDetect(true);searched=true;pickInit();if(step===0)step=1;render()}}), /* (beta.10) only moves on if you're still on Welcome */
+    wzRow({icon:"list",title:"I'll pick them myself",info:"self",attrs:{"data-choice":"self"},desc:"Tick the consoles you play, then point to each one's emulator and games folder.",
+      onclick:()=>{pickInit();step=1;render()}})));
+  wzInfo={fn:welcomeInfo,def:"find"};
+}
+function welcomeInfo(key){
+  if(key==="self")return {h:"Set it up yourself",p:"Nothing is searched. Your consoles lists every console Boxshelf can run, and you tick the ones you play.",
+    li:["Finish setting up asks only for what those still need: the emulator program and a games folder.","Search again on Your consoles can still look for them."]};
+  const emus=[...new Set(info.consoles.map(c=>c.emulatorName).filter(Boolean))],apps=(info.apps||[]).map(a=>a.name);
+  return {h:"What Boxshelf looks for",p:"Only what it needs to put your games on the shelf.",
+    li:[emus.length?`Emulators: ${emus.slice(0,6).join(", ")}${emus.length>6?" and more":""}`:"Emulators",`Folders with your games in them`,
+      (!window.bsPlatform||bsPlatform.has("steam"))?"Steam and the games installed with it":null,apps.length?`Streaming apps (${apps.join(", ")}) for the Media shelf`:null,"What you've already set up stays as it is."]};
+}
+
+/* ---------- (beta.11) the Windows first run in Settings' look ----------
+   Full screen on a 1600 x 900 canvas scaled to the window (as Settings scales its 1920 one), Settings' sidebar with an
+   icon and a status word per step, choices as Settings rows, an info card on the right that explains the choice in focus,
+   console tiles, and Settings' hint pill. Only the Windows wizard (#setup.wz-win): Android's wizard and the classic pages
+   Settings opens keep their own look. */
+const WZ_STEP_IC={welcome:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',pick:'<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 13.5h.01"/>',
+  fix:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',artlook:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>',
+  accounts:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',done:'<path d="M20 6L9 17l-5-5"/>'};
+const WZ_IC={search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/>',list:'<path d="M4 6h16M4 12h10M4 18h7"/>',download:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',later:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'};
+const wzSvg=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+// the canvas: the window's size divided by the scale, then scaled up (Settings' fit(), Interface size included)
+function wzFit(){const c=$("setup").querySelector(".su-card");if(!c)return;const u=cfg&&cfg.ui&&[1,1.15,1.3].includes(+cfg.ui.uiScale)?+cfg.ui.uiScale:1,s=Math.min(innerWidth/1600,innerHeight/900)*u;
+  c.style.width=innerWidth/s+"px";c.style.height=innerHeight/s+"px";c.style.transform=`scale(${s})`}
+function wzLayout(){const root=$("setup"),on=winWizard();if(root.classList.contains("wz-win")!==on){root.classList.toggle("wz-win",on);if(!on){const c=root.querySelector(".su-card");if(c){c.style.width="";c.style.height="";c.style.transform=""}}}if(on)wzFit()}
+addEventListener("resize",()=>{if($("setup").classList.contains("wz-win"))wzFit()},{passive:true});
+// the sidebar's status words: [text, tone]; nothing where the wizard can't know yet
+function wzStatus(id){
+  const chosen=pickDone||searched||!!(info.config&&info.config.setupDone);
+  if(id==="welcome")return chosen?["Done","ok"]:["",""];
+  if(id==="pick"){if(!chosen)return ["",""];const on=pickItems().filter(x=>x.on()),ready=on.filter(x=>x.ready()).length;return !on.length?["",""]:ready?[`${ready} ready`,ready===on.length?"ok":""]:[`${on.length} picked`,""]}
+  if(id==="fix"){if(!chosen||!pickItems().some(x=>x.on()))return ["",""];const n=fixNeeds().length;return n?[`${n} to do`,"warn"]:["Done","ok"]}
+  if(id==="artlook")return cfg.ui.autoCovers===true?["On","ok"]:artChosen===false?["Off",""]:["",""];
+  if(id==="accounts")return acctAny()?["Added","ok"]:["Optional",""];
+  return ["",""];
+}
+// a choice as a Settings row: an icon tile, a bold title, one line on what happens, a chevron. The title is the button's
+// name (aria-label); the line describes it
+let wzRowN=0;
+function wzRow(o){const id="wzd"+(++wzRowN),ic=el("span",{class:"wz-ic","aria-hidden":"true"});
+  if(o.busy)ic.append(el("span",{class:"scanning"}));else ic.innerHTML=wzSvg(WZ_IC[o.icon]||"");
+  return el("button",Object.assign({type:"button",class:"wz-row","aria-label":o.title,"aria-describedby":id,"data-info":o.info||null,onclick:o.onclick},o.attrs||{}),
+    ic,el("span",{class:"wz-tx"},el("b",{class:"wz-t"},el("span",{text:o.title}),o.chip?el("span",{class:"wz-chip",text:o.chip}):null),el("small",{id,text:o.desc})),el("span",{class:"wz-chev","aria-hidden":"true",text:"›"}))}
+// the info card on the right: wzInfo = {fn: key → {h, p, li[]}, def: the key shown first}. It follows the choice in focus
+// (or under the pointer); only redrawn when that choice changes
+let wzInfo=null,wzAside=null,wzInfoKey=null,wzInfoHooked=false;
+function wzInfoShow(key){if(!wzInfo||!wzAside||key===wzInfoKey)return;const d=wzInfo.fn(key);if(!d)return;wzInfoKey=key;
+  wzAside.replaceChildren(el("h4",{text:d.h}),d.p?el("p",{text:d.p}):"",d.li&&d.li.filter(Boolean).length?el("ul",{},d.li.filter(Boolean).map(t=>el("li",{text:t}))):"")}
+function wzInfoEv(e){if(!wzInfo)return;const t=e.target&&e.target.closest&&e.target.closest("[data-info],[data-pick]");if(t&&$("suBody").contains(t))wzInfoShow(t.dataset.info||"pick:"+t.dataset.pick)}
+// a console tile (Settings' look): the name, what runs it, a dot and its state
+function wzTileKids(x){const t=x.tile();return [el("span",{class:"wz2-name",text:x.name}),el("span",{class:"wz2-emu",text:t[0]}),el("span",{class:"wz2-st"},el("span",{class:"wz-dot "+t[2],"aria-hidden":"true"}),t[1])]}
+// Settings' hint pill: the pad's buttons (shown while a controller is in use, body.pad-input) or the keys
+const WZ_XB=[["A","#5fbf4a"],["B","#e5484d"]],WZ_PS=['<path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="#86a8ff" stroke-width="1.6" stroke-linecap="round"/>','<circle cx="8" cy="8" r="3.3" fill="none" stroke="#ff7a7a" stroke-width="1.5"/>'];
+function wzPadStyle(){const p=cfg&&cfg.ui&&cfg.ui.buttons;if(p==="xbox"||p==="ps"||p==="nintendo")return p;try{const g=window.BS_activePad&&BS_activePad();if(g&&window.BS_padStyleOf)return BS_padStyleOf(g.id)}catch{}return "xbox"}
+// i: 0 = the bottom face button, 1 = the right one (Confirm button swaps which one is "ok")
+function wzFace(i){const st=wzPadStyle(),g=s=>`<span class="wz-g">${s}</span>`;
+  if(st==="ps")return g(`<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.4" fill="#1d2130" stroke="rgba(255,255,255,.28)" stroke-width=".6"/>${WZ_PS[i]}</svg>`);
+  const [l,c]=st==="nintendo"?[["B","A"][i],"#e9ebf1"]:WZ_XB[i];
+  return g(`<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.4" fill="${c}"/><text x="8" y="11.5" text-anchor="middle" font-size="9.5" font-weight="700" font-family="Mona Sans,Segoe UI,sans-serif" fill="#0b0b0f">${l}</text></svg>`)}
+const WZ_DPAD=`<span class="wz-g"><svg viewBox="0 0 18 18"><rect x="6.3" y=".6" width="5.4" height="6.4" rx="1.3" fill="rgba(255,255,255,.95)"/><rect x="6.3" y="11" width="5.4" height="6.4" rx="1.3" fill="rgba(255,255,255,.95)"/><rect x=".6" y="6.3" width="6.4" height="5.4" rx="1.3" fill="rgba(255,255,255,.38)"/><rect x="11" y="6.3" width="6.4" height="5.4" rx="1.3" fill="rgba(255,255,255,.38)"/><rect x="6.3" y="6.3" width="5.4" height="5.4" fill="rgba(255,255,255,.38)"/></svg></span>`;
+function wzHints(){const ok=window.BS_PAD&&BS_PAD.confirm===1?1:0,kc=t=>`<span class="wz-kc">${t}</span>`,back=step>0||!!(cfg&&cfg.setupDone);
+  const H=(pad,key,label)=>`<span class="wz-h"><span class="wz-pad">${pad}</span><span class="wz-key">${key}</span>${label}</span>`;
+  const p=el("div",{class:"wz-hints","aria-hidden":"true"});
+  p.innerHTML=H(wzFace(ok),kc("Enter"),"Choose")+H(WZ_DPAD,kc("Tab"),"Move")+(back?H(wzFace(1-ok),kc("Esc"),"Back"):"");return p}
+addEventListener("bs-padstyle",()=>{try{if(wizard&&$("setup").classList.contains("wz-win")&&$("setup").classList.contains("on"))renderFoot()}catch{}});
 
 /* ---------- the Windows first run's own pages ---------- */
 // Your consoles: every console plus Steam and the media apps as a card with a tick. On the very first run the ones with
 // an emulator or games found come ticked (pickInit, once); the rest wait under "More consoles". A card that started up top
 // stays there while the wizard is open (pickMain), so cards don't jump under the pointer. Unticked = no shelf.
-let wzPn,wzPnOn=false,emuAutoRan=false,pickDone=false,pickMain=null,pickMore=false,wizLook=null,artWatch=null,searched=false; // searched: Find was pressed (1.82)
+let wzPn,wzRl,wzPnOn=false,emuAutoRan=false,pickDone=false,pickMain=null,pickMore=false,wizLook=null,artWatch=null,searched=false; // searched: Find was pressed (1.82)
 function pickInit(){
   if(!winWizard()||pickDone||(info.config&&info.config.setupDone))return;pickDone=true; // (Android's wizard has its own Consoles page)
   for(const c of info.consoles){const sc=cfg.systems[c.id];if(sc)sc.enabled=pickFound(sc)} // (beta.7) RetroArch alone ticks nothing: it runs 22 consoles
@@ -284,15 +377,20 @@ const pickFound=sc=>!!(sc&&((sc.romDirs||[]).length||(sc.emulator&&!isRA(sc.emul
 function pickItems(){
   const L=info.consoles.map(c=>{const sc=cfg.systems[c.id];return {id:c.id,name:c.name,
     found:()=>pickFound(sc),ra:()=>!pickFound(sc)&&isRA(sc.emulator),on:()=>sc.enabled!==false,set:v=>{sc.enabled=v},
-    status:()=>{const n=sc.romDirs.length,e=c.emulatorName||"Emulator";return sc.emulator?`${e} found${n?` · ${n} game folder${n===1?"":"s"}`:""}`:n?`Games found · ${e} not found yet`:`${e} not found`}}});
-  if(!window.bsPlatform||bsPlatform.has("steam"))L.push({id:"steam",name:"Steam",found:()=>!!cfg.steam.path,on:()=>!!cfg.steam.enabled,set:v=>{cfg.steam.enabled=v},status:()=>cfg.steam.path?"Steam found · your PC games":"Steam not found"});
-  for(const a of info.apps||[]){const c=cfg.apps[a.id];if(c)L.push({id:"app:"+a.id,name:a.name,found:()=>!!c.path,on:()=>!!c.enabled,set:v=>{c.enabled=v},status:()=>c.path?`${a.name} found · Media shelf`:`${a.name} not found`})}
+    status:()=>{const n=sc.romDirs.length,e=c.emulatorName||"Emulator";return sc.emulator?`${e} found${n?` · ${n} game folder${n===1?"":"s"}`:""}`:n?`Games found · ${e} not found yet`:`${e} not found`},
+    // (beta.11) the Windows tiles: [what runs it, its state, the dot's tone]
+    ready:()=>!!(sc.emulator&&sc.romDirs.length),tile:()=>{const n=sc.romDirs.length;
+      return [c.emulatorName||"Emulator",sc.emulator&&n?`Ready · ${n} folder${n===1?"":"s"}`:sc.emulator?"No games folder yet":n?"Emulator not found":"Not found",sc.emulator&&n?"ok":sc.emulator||n?"warn":""]}}});
+  if(!window.bsPlatform||bsPlatform.has("steam"))L.push({id:"steam",name:"Steam",found:()=>!!cfg.steam.path,on:()=>!!cfg.steam.enabled,set:v=>{cfg.steam.enabled=v},status:()=>cfg.steam.path?"Steam found · your PC games":"Steam not found",
+    ready:()=>!!cfg.steam.path,tile:()=>["Your PC games",cfg.steam.path?"Ready":"Not found",cfg.steam.path?"ok":""]});
+  for(const a of info.apps||[]){const c=cfg.apps[a.id];if(c)L.push({id:"app:"+a.id,name:a.name,found:()=>!!c.path,on:()=>!!c.enabled,set:v=>{c.enabled=v},status:()=>c.path?`${a.name} found · Media shelf`:`${a.name} not found`,
+    ready:()=>!!c.path,tile:()=>["Media shelf",c.path?"Ready":"Not found",c.path?"ok":""]})}
   return L;
 }
 function pickCard(x,big){
   const on=x.on();
   return el("button",{type:"button",class:"wz2-card"+(big?" big":"")+(on?" on":""),role:"checkbox","aria-checked":String(on),"data-pick":x.id,onclick:()=>{x.set(!x.on());changed();render()}},
-    el("span",{class:"wz2-tick","aria-hidden":"true"}),el("span",{class:"wz2-name",text:x.name}),el("span",{class:"wz2-st"+(x.found()?" ok":""),text:x.status()}));
+    el("span",{class:"wz2-tick","aria-hidden":"true"}),winWizard()?wzTileKids(x):[el("span",{class:"wz2-name",text:x.name}),el("span",{class:"wz2-st"+(x.found()?" ok":""),text:x.status()})]);
 }
 // (beta.7) the folded "More consoles" list: small tick chips grouped by maker, so 30-odd consoles stay a tidy page
 const PICK_FAMILIES=[["Nintendo",["nes","snes","n64","gc","wii","wiiu","sw","sw2","gb","gbc","gba","nds","n3ds"]],["PlayStation",["psx","ps2","ps3","ps4","ps5","psp"]],
@@ -308,7 +406,7 @@ function pickSection(b){
   head(b,"Step 1 of 3","Which consoles do you play?",main.length?"Ticked ones get a shelf. Boxshelf found these on your PC; tick any others you play. You can change this any time in Settings.":searched?"Boxshelf didn't find any emulators yet. Tick the consoles you play and you'll point to their emulator and games next.":"Tick the consoles you play. Next you'll point to each one's emulator and games.");
   if(main.length)b.append(el("div",{class:"wz2-grid"},main.map(x=>pickCard(x,true))));
   if(rest.length){const open=pickMore||!main.length;
-    b.append(el("button",{type:"button",class:"con-more","aria-expanded":String(open),onclick:()=>{pickMore=!open;render()}},el("span",{text:`More consoles and apps (${rest.length})`}),el("span",{class:"con-more-ch","aria-hidden":"true"})));
+    b.append(el("button",{type:"button",class:"con-more","aria-expanded":String(open),"data-info":winWizard()?"more":null,onclick:()=>{pickMore=!open;render()}},el("span",{text:`More consoles and apps (${rest.length})`}),el("span",{class:"con-more-ch","aria-hidden":"true"})));
     if(open){
       if(rest.some(x=>x.ra&&x.ra()))b.append(el("p",{class:"wz2-more-note",text:"RetroArch is installed, so it can run any of the retro consoles here. Tick only the ones you play."}));
       for(const[fam,ids]of PICK_FAMILIES){const xs=rest.filter(x=>pickFamily(x.id)===fam);if(!xs.length)continue;
@@ -317,8 +415,26 @@ function pickSection(b){
   if(winWizard()&&api.playniteFind){if(wzPn===undefined){wzPn=null;Promise.resolve(api.playniteFind()).then(f=>{wzPn=f||false;if(f)render()}).catch(()=>{wzPn=false})}
     if(wzPn)b.append(card("","",toggle("Import my Playnite library after setup (experimental)",wzPnOn,v=>{wzPnOn=!!v},"wz-pn"),
       el("div",{class:"hint-text",text:"Your Playnite games come over in one go: games you added by hand onto a Custom shelf, emulated games' folders onto their consoles. You see what's found before anything is added."})))}
+  // (beta.12) RocketLauncher on this PC (HyperSpin's launcher): one switch, off; on starts every console it has a system for
+  // through it (Settings → Consoles has the rest). Nothing shows when it isn't there
+  if(winWizard()&&api.rocketFind){if(wzRl===undefined){wzRl=null;Promise.resolve(api.rocketFind()).then(f=>{wzRl=f||false;if(f)render()}).catch(()=>{wzRl=false})}
+    if(wzRl)b.append(card("","",toggle("Start games through RocketLauncher",!!(cfg.rocket&&cfg.rocket.exe&&cfg.rocket.mode==="all"),v=>{cfg.rocket=cfg.rocket||{exe:"",mode:"off",frontend:""};cfg.rocket.exe=wzRl;cfg.rocket.mode=v?"all":"off";persist()},"wz-rl"),
+      el("div",{class:"hint-text",text:"Found RocketLauncher, HyperSpin's launcher. On: your games start through it, with its fade screens, bezels and pause menu. Off: Boxshelf starts your emulators itself. You can change this any time in Settings → Consoles."})))}
   b.append(el("p",{class:"wz2-foot",text:n?`${n} shel${n===1?"f":"ves"} picked.`:"Nothing picked yet."}));
+  if(winWizard())wzInfo={fn:pickInfo,def:main.length?"pick:"+main[0].id:"more"};
 }
+// (beta.11) the info card on Your consoles: the console in focus, what was found for it, what's still missing
+function pickInfo(key){
+  const L=pickItems();
+  if(key==="more"){const rest=pickMain?L.filter(x=>!pickMain.has(x.id)):[];
+    return {h:"More consoles and apps",p:"Every other console Boxshelf can run, grouped by maker. Tick only the ones you play.",li:[rest.some(x=>x.ra&&x.ra())?"RetroArch is installed, so it can run any of the retro consoles here.":null,"A ticked console gets a shelf."]}}
+  const id=String(key).replace(/^pick:/,""),x=L.find(i=>i.id===id);if(!x)return null;
+  const p=x.on()?"Ticked, so it gets a shelf.":"Not ticked, so it gets no shelf.",miss=x.on()&&!x.ready()?"Finish setting up asks for what's still missing.":null;
+  if(id==="steam")return {h:"Steam",p,li:[cfg.steam.path?`Steam folder: ${shortPath(cfg.steam.path)}`:"Steam not found yet","The Steam games installed on this PC, with their real covers.",miss]};
+  if(/^app:/.test(id)){const a=(info.apps||[]).find(q=>"app:"+q.id===id),c=a&&cfg.apps[a.id];if(!c)return null;
+    return {h:a.name,p,li:[c.path?`Found: ${shortPath(c.path)}`:`${a.name} not found yet`,"A tile for it on the Media shelf.",miss]}}
+  const def=info.consoles.find(c=>c.id===id),sc=cfg.systems[id];if(!def||!sc)return null;const e=def.emulatorName||"Emulator";
+  return {h:def.name,p,li:[sc.emulator?`${e}: ${shortPath(sc.emulator)}`:`${e} not found yet`,...(sc.romDirs.length?sc.romDirs.slice(0,3).map(d=>`Games: ${shortPath(d)}`):["No games folder yet"]),miss]}}
 // Finish setting up: only what the picked consoles still need (the emulator program, a games folder). Nothing missing:
 // this page just says so.
 function fixNeeds(){
@@ -336,7 +452,7 @@ function fixSection(b){
   // the picked shelves that are ready, as a row of cards with a tick (nothing to do there; it shows what you'll get)
   const ready=pickItems().filter(x=>x.on()&&!need.some(n=>(n.def&&("app:"+n.def.id===x.id||n.def.id===x.id))||(n.kind==="steam"&&x.id==="steam")));
   if(ready.length){if(need.length)b.append(el("div",{class:"wz2-sub",text:"Ready"}));
-    b.append(el("div",{class:"wz2-grid"+(need.length?" small":"")},ready.map(x=>el("div",{class:"wz2-card on ready"},el("span",{class:"wz2-tick","aria-hidden":"true"}),el("span",{class:"wz2-name",text:x.name}),el("span",{class:"wz2-st ok",text:x.status()})))))}
+    b.append(el("div",{class:"wz2-grid"+(need.length?" small":"")},ready.map(x=>el("div",{class:"wz2-card on ready"},el("span",{class:"wz2-tick","aria-hidden":"true"}),winWizard()?wzTileKids(x):[el("span",{class:"wz2-name",text:x.name}),el("span",{class:"wz2-st ok",text:x.status()})]))))}
   for(const n of need){
     const box=el("section",{class:"wz2-fix"});
     if(n.kind==="con"){const {def,sc}=n,emu=def.emulatorName||"Emulator";
@@ -381,12 +497,29 @@ let artChosen=null;
 function artLookSection(b){
   if(artChosen===null&&!(info.config&&info.config.setupDone)&&cfg.ui.autoCovers!==true){
     head(b,"Step 3 of 3","Download box art?","Boxshelf can find the covers, backs, spines, discs and manuals for your games online. To find them it sends your game titles (and GameCube / Wii disc IDs) to LaunchBox, libretro, GameTDB and the Super Mario Wiki. Nothing else about you or your PC is sent.");
-    b.append(el("div",{class:"d-actions"},
-      el("button",{type:"button",class:"btn primary","data-art":"yes",onclick:()=>{artChosen=true;cfg.ui.autoCovers=true;if(cfg.ui.autoManuals==null)cfg.ui.autoManuals=true;if(!pvTouched&&api.previewFind&&!(window.bsPlatform&&bsPlatform.os==="android"))cfg.ui.previews="shelf"; /* (beta.9: Android previews stay off until chosen) */changed();render()}},"Yes, download box art"),
-      el("button",{type:"button",class:"btn","data-art":"no",onclick:()=>{artChosen=false;cfg.ui.autoCovers=false;cfg.ui.autoManuals=false;changed();stepBy(1)}},"Not now")));
+    const yes=()=>{artChosen=true;cfg.ui.autoCovers=true;cfg.ui.autoManuals=true; /* (beta.12: "Turns on box art and manuals" did: a new install's manuals are false, not unset, so they stayed off) */if(!pvTouched&&api.previewFind&&!(window.bsPlatform&&bsPlatform.os==="android"))cfg.ui.previews="shelf"; /* (beta.9: Android previews stay off until chosen) */changed();render()};
+    const no=()=>{artChosen=false;cfg.ui.autoCovers=false;cfg.ui.autoManuals=false;changed();stepBy(1)};
+    // (beta.11) Windows: the same two answers as Settings rows, the info card says what each one does
+    if(winWizard()){b.append(el("div",{class:"wz-rows"},
+      wzRow({icon:"download",title:"Yes, download box art",info:"art:yes",attrs:{"data-art":"yes"},desc:"Turns on box art and manuals, then you choose how the boxes look.",onclick:yes}),
+      wzRow({icon:"later",title:"Not now",info:"art:no",attrs:{"data-art":"no"},desc:"Nothing is looked up online. Downloads stay off.",onclick:no})));
+      wzInfo={fn:artAskInfo,def:"art:yes"}}
+    else b.append(el("div",{class:"d-actions"},
+      el("button",{type:"button",class:"btn primary","data-art":"yes",onclick:yes},"Yes, download box art"),
+      el("button",{type:"button",class:"btn","data-art":"no",onclick:no},"Not now")));
     b.append(el("p",{class:"wz2-foot",text:"You can change this any time in Settings → Box art & manuals."}));
     return;
   }
+  return artLookPage(b);
+}
+function artAskInfo(key){
+  if(key==="art:no")return {h:"Not now",p:"Nothing is sent online, and no box art or manuals are downloaded.",
+    li:["Games without art get a generated cover.",api.previewFind?"Video previews are offered on the Done page.":null]};
+  return {h:"Download box art",p:"It runs in the background: you can open Boxshelf while the covers fill in.",
+    li:["Covers, backs, spines and discs for your games",cfg.ui.autoManuals!==false?"Manuals, where they're available, to read from the game's case":null,
+      api.previewFind&&!pvTouched?"Video previews come on too (a switch on the page that follows)":null,`Then pick a look: ${LOOKS.map(l=>l[1]).join(", ")}`]};
+}
+function artLookPage(b){
   const on=cfg.ui.autoCovers===true,look=lookNow();
   head(b,"Step 3 of 3","How should your boxes look?","Boxshelf finds the covers, backs, spines and discs for your games online.");
   b.append(card("","",toggle("Download box art automatically",on,v=>{cfg.ui.autoCovers=v;render()},"wz2-ac"),
@@ -805,7 +938,17 @@ const IA_CHIPS={magazine:["Game Informer","Nintendo Power","Electronic Gaming Mo
 // pending: results archive.org was too busy to check (kept and asked again a little later, never dropped as "not downloadable")
 const iaState={kind:"magazine",text:"",page:0,next:1,total:0,rows:36,plain:false,items:[],backlog:[],pending:[],seen:new Set(),busy:false,err:"",series:"",jobs:new Map(),checking:0,skipped:0,gen:0,recheckT:0,rechecks:0,osk:false};
 const IA_PAR=2; // downloads at once: a big one never holds up the rest
-if(api.onArchiveProgress)api.onArchiveProgress(p=>{const j=iaState.jobs.get(p.id);if(j&&j.state==="run"){j.pct=p.total?Math.round(p.bytes/p.total*100):0;j.mb=p.unit==='pages'?`page ${p.bytes} of ${p.total}`:(p.bytes/1048576).toFixed(1)+' MB';iaPaintJob(p.id)}});
+// (beta.11) sizes in words, and how big a download will be (the archive's own page scans: about 0.45 MB a page, an
+// estimate); a big one is flagged on its card, and a very big one asks to be confirmed (a second press within 5 s)
+const iaSizeTxt=b=>b>=1073741824?(b/1073741824).toFixed(1)+" GB":Math.max(1,Math.round(b/1048576))+" MB";
+const iaBytes=it=>{const c=it&&it.check;if(!c||!c.ok)return 0;if(c.size)return c.size;return c.type==="pages"?(c.pages||it.pages||0)*.45*1048576:0};
+const IA_BIG=300*1048576,IA_HUGE=1073741824,IA_CONFIRM=500*1048576;
+// progress: how much of how much, the speed (smoothed) and the time left
+if(api.onArchiveProgress)api.onArchiveProgress(p=>{const j=iaState.jobs.get(p.id);if(!j||j.state!=="run")return;j.pct=p.total?Math.round(p.bytes/p.total*100):0;
+  if(p.unit==='pages'){j.mb=`page ${p.bytes} of ${p.total}`;iaPaintJob(p.id);return}
+  const now=performance.now();if(j.lt&&now-j.lt>150&&p.bytes>=j.lb){const r=(p.bytes-j.lb)*1000/(now-j.lt);j.rate=j.rate?j.rate*.75+r*.25:r}if(!j.lt||now-j.lt>150){j.lt=now;j.lb=p.bytes}
+  const left=j.rate>1024&&p.total>p.bytes?(p.total-p.bytes)/j.rate:0,eta=left?left<60?`${Math.max(1,Math.round(left))} s left`:`about ${Math.round(left/60)} min left`:"";
+  j.mb=(p.total?`${iaSizeTxt(p.bytes)} of ${iaSizeTxt(p.total)}`:iaSizeTxt(p.bytes))+(j.rate>1024?` · ${(j.rate/1048576).toFixed(1)} MB/s`:"")+(eta?` · ${eta}`:"");iaPaintJob(p.id)});
 let iaBox=null;
 // "Game Informer Issue 150", "GamePro_June_1995", "Xbox The Official Magazine Xmas 2015" → the magazine's name (its series
 // sub-folder): cut at the issue / volume / number, a month or season, or a year
@@ -858,7 +1001,8 @@ function iaPaint0(){
     const grid=el("div",{class:"ia-grid"});
     S.items.forEach(it=>{const img=el("img",{class:"ia-thumb",alt:"",loading:"lazy",src:it.thumb});img.onerror=()=>{img.style.visibility="hidden"};
       const job=S.jobs.get(it.id),act=el("div",{class:"ia-act","data-id":it.id});
-      grid.append(el("div",{class:"ia-card"},img,el("div",{class:"ia-meta"},el("div",{class:"ia-title",text:it.title}),el("div",{class:"ia-sub",text:[it.date&&it.date.slice(0,7),it.pages?it.pages+" pages":"",it.check&&it.check.size?(it.check.size/1048576).toFixed(0)+" MB":"",it.check&&it.check.type==="bundle"?it.check.files+" issues":"",it.check&&(it.check.type==="pages"||it.check.type==="images")?"page scans":""].filter(Boolean).join(" · ")}),act)));
+      const B=iaBytes(it),warn=B>=IA_BIG&&!(it.check&&it.check.owned)?el("div",{class:"ia-warn"+(B>=IA_HUGE?" huge":""),text:B>=IA_HUGE?`Very large: ${iaSizeTxt(B)}. Takes a while and needs that much free space.`:`Large download: ${iaSizeTxt(B)}`}):null;
+      grid.append(el("div",{class:"ia-card"},img,el("div",{class:"ia-meta"},el("div",{class:"ia-title",text:it.title}),el("div",{class:"ia-sub",text:[it.date&&it.date.slice(0,7),it.pages?it.pages+" pages":"",B?(it.check.size?"":"≈ ")+iaSizeTxt(B):"",it.check&&it.check.type==="bundle"?it.check.files+" issues":"",it.check&&(it.check.type==="pages"||it.check.type==="images")?"page scans":""].filter(Boolean).join(" · ")}),warn,act)));
       iaFillAct(act,it,job)});
     iaBox.append(grid);
     if(S.checking)iaBox.append(el("div",{class:"hint-text"},el("span",{class:"scanning"}),` Checking which of ${S.checking} more can be downloaded…`));
@@ -871,7 +1015,10 @@ function iaPaint0(){
 const iaMore=()=>{const S=iaState;return S.backlog.length>0||(S.next<=20&&(S.next-1)*S.rows<S.total)};
 function iaFillAct(act,it,job){act.innerHTML="";
   const cancel=el("button",{type:"button",class:"btn small ghost","aria-label":`Cancel ${it.title}`,onclick:()=>iaCancel(it.id)},"Cancel");
-  if(!job){if(it.check&&it.check.owned)act.append(el("span",{class:"badge ok",text:"In your folder"}));else act.append(el("button",{type:"button",class:"btn small","aria-label":`Download ${it.title}`,onclick:()=>iaQueue(it)},"Download"));act.append(el("button",{type:"button",class:"btn small ghost","aria-label":`View ${it.title}`,onclick:()=>openLink(it.page)},"View"))}
+  // (beta.11) a very big download asks once more: the button says how big, a second press within 5 s starts it
+  const B=iaBytes(it),big=B>=IA_CONFIRM,armed=big&&it.armAt&&Date.now()-it.armAt<5000;
+  const go=()=>{if(big&&!armed){it.armAt=Date.now();iaPaintJob(it.id);setTimeout(()=>{if(it.armAt&&Date.now()-it.armAt>=5000){it.armAt=0;iaPaintJob(it.id)}},5100);return}it.armAt=0;iaQueue(it)};
+  if(!job){if(it.check&&it.check.owned)act.append(el("span",{class:"badge ok",text:"In your folder"}));else act.append(el("button",{type:"button",class:"btn small"+(armed?" warn":""),"aria-label":armed?`Yes, download ${it.title} (${iaSizeTxt(B)})`:`Download ${it.title}`,onclick:go},armed?`Yes, download ${iaSizeTxt(B)}`:"Download"));act.append(el("button",{type:"button",class:"btn small ghost","aria-label":`View ${it.title}`,onclick:()=>openLink(it.page)},"View"))}
   else if(job.state==="queued")act.append(el("span",{class:"ia-state",text:"Waiting…"}),cancel);
   else if(job.state==="run")act.append(el("div",{class:"art-bar"},el("div",{class:"art-fill",style:`width:${job.pct||0}%`})),el("span",{class:"ia-state",text:job.stopping?"Stopping…":job.pct?`${job.pct}% · ${job.mb}`:"Starting…"}),api.archiveCancel&&!job.stopping?cancel:null);
   else if(job.state==="done")act.append(el("span",{class:"badge ok",text:job.existed?"Already in your folder":"Saved"}),el("span",{class:"ia-state",text:" "+job.name}));
@@ -932,7 +1079,7 @@ let pvClipAsked=false;
 function pvClipStart(){if(pvClipAsked)return;if(pvClipOk&&(pvClipAsked=true)&&api.clipHelper&&(cfg.ui.previews||"off")!=="off"&&cfg.ui.previewClips!==false)api.clipHelper().catch(()=>{})}
 async function doneSection(b){
   pvClipStart(); // (beta.8) the console trailer helper, in the background (Settings → Video previews shows how it went)
-  head(b,"All set","Here's your library","You can change any of this later in Settings (press S, or View on the controller: Create on a PlayStation pad, − on a Switch pad).");
+  head(b,"All set","Here's your library",onAndroid()?"You can change any of this later in Settings (press S, or View on the controller: Create on a PlayStation pad, − on a Switch pad).":"You can change any of this later in Settings (press S, or open the quick menu with Menu on the controller and pick Settings)."); /* (beta.12: on Windows / Linux View opens a game's Details) */
   const grid=el("div",{class:"summary-grid"},el("div",{class:"sum"},el("span",{class:"scanning"}),el("span",{text:" Scanning…"})));b.append(grid);
   // Windows: the art was chosen on the Box art page; here its first download shows its progress (covers:auto from
   // main.js autoCovers, which the scan below starts), then points to the Art Studio
@@ -957,9 +1104,14 @@ async function doneSection(b){
   if(!grid.isConnected)return; // left this page while it was scanning
   grid.innerHTML="";
   if(!shelves.length)grid.append(el("div",{class:"sum"},el("b",{text:"0"}),el("span",{text:"Nothing found yet. Go back and add an emulator or a games folder."})));
+  if(winWizard()){grid.classList.add("wz-tiles"); // (beta.11) Settings' console tiles: the shelf, what runs it, a dot and its games
+    shelves.forEach(s=>{const n=s.games.length,w=s.kind==="apps"?"app":"game",def=info.consoles.find(c=>c.id===s.id),sc=def&&cfg.systems[s.id],ok=!def||!!(sc&&sc.emulator),emu=def?def.emulatorName||"Emulator":s.kind==="apps"?"Media shelf":"PC games";
+      grid.append(el("div",{class:"sum wz-tile"},el("span",{class:"wz2-name",text:s.name}),el("span",{class:"wz2-emu",text:emu}),
+        el("span",{class:"wz2-st"},el("span",{class:"wz-dot "+(ok?"ok":"warn"),"aria-hidden":"true"}),`${ok?"Ready":`${emu} not set`} · ${n} ${w}${n===1?"":"s"}`)))});return}
   shelves.forEach(s=>grid.append(el("div",{class:"sum"},el("b",{text:String(s.games.length)}),el("span",{text:`${s.name} ${s.kind==="apps"?"apps":"games"}`}))));
 }
-async function finish(){pickInit();const hd=applyLook();cfg.setupDone=true;wizard=false;
+async function finish(){if(finishing)return;finishing=true;try{await finishNow()}finally{finishing=false}}
+async function finishNow(){pickInit();const hd=applyLook();cfg.setupDone=true;wizard=false;
   // (beta.10) "Sharpest art": saved first (the consoles you picked must exist for main), then each console's style through api.artStyle, before the shelf's rescan
   if(hd.length&&api.artStyle){clearTimeout(saveT);await persist();for(const id of hd){try{await api.artStyle({systemId:id,style:{preset:"hd",region:"usa",parts:{}}})}catch(e){console.warn("setup: art style",id,e&&e.message)}}}
   await close();if(wzPnOn&&wzPn)setTimeout(()=>{try{Setup.open({page:"addgames"})}catch{}},900)} // (beta.7: then the Playnite import, if ticked) // (1.82) pickInit: done from the sidebar without visiting Your consoles still ticks only the consoles found
@@ -1061,5 +1213,5 @@ const oldOn=()=>$("setup").classList.contains("on");
 function keyR(e){if(newOn())return Settings.key(e);if(!oldOn())return;return key(e)}
 function padR(a){if(newOn()||!oldOn())return;return pad(a)}
 function scrollR(dy){if(newOn()||!oldOn())return;return scroll(dy)}
-window.Setup={open,close,key:keyR,pad:padR,scroll:scrollR,openLegacy,legacyOpen:()=>!!legacyBack,downloads:()=>dlRuns};
+window.Setup={open,close,key:keyR,pad:padR,scroll:scrollR,openLegacy,dismiss,legacyOpen:()=>!!legacyBack,downloads:()=>dlRuns};
 })();

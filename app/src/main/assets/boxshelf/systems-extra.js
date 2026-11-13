@@ -49,7 +49,7 @@
       arcade: { kind: 'cart', size: 0.5, drive: 'slot' },
       psx: { kind: 'disc', size: 0.7, drive: 'top' }, dreamcast: { kind: 'disc', size: 0.7, drive: 'top' }, saturn: { kind: 'disc', size: 0.7, drive: 'top' },
       segacd: { kind: 'disc', size: 0.7, drive: 'top' }, sega32x: { kind: 'cart', size: 0.5, drive: 'slot' }, atari2600: { kind: 'cart', size: 0.5, drive: 'slot' },
-      atarilynx: { kind: 'cart', size: 0.42, drive: 'slot' }, wonderswan: { kind: 'cart', size: 0.42, drive: 'slot' }, dos: { kind: 'disc', size: 0.7, drive: 'top' }
+      atarilynx: { kind: 'cart', size: 0.42, drive: 'slot' }, wonderswan: { kind: 'cart', size: 0.42, drive: 'slot' }, dos: { kind: 'cart', form: 'floppy', size: 0.5, drive: 'slot' } /* (beta.11) a 3.5" floppy, not a CD: handled like a cartridge (no spin), drawn as a floppy */
     }
   };
   Object.assign(window.BS_SYSTEMS_EXTRA.wordmarks, window.BS_WORDMARK_OVERRIDES || {}); // a platform can rename a shelf (Android: Media → Apps)

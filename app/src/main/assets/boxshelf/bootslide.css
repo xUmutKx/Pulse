@@ -120,8 +120,7 @@
 .ins-slide.bs-other{--bs-bg:radial-gradient(ellipse 80% 70% at 50% 40%,var(--bs-t0),var(--bs-t1) 75%)}
 .bs-other .bs-fx i{left:50%;top:50%;width:70vh;height:70vh;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--bs-acc) 30%,transparent),transparent 65%);animation:bsPulse 4s ease-in-out infinite}
 
-@media (prefers-reduced-motion:reduce){.ins-slide *{animation-duration:.01s!important;animation-iteration-count:1!important}}
-/* the same for Boxshelf's own Reduce motion setting (body.reduce-motion), which the rest of the app follows */
+/* Boxshelf's own Reduce motion setting (body.reduce-motion: On, or Follow Windows with Windows' animations off) */
 body.reduce-motion .ins-slide *{animation-duration:.01s!important;animation-iteration-count:1!important}
 /* keep the words readable over the bright middle of the Xbox orb */
 .bs-x360 .bs-title,.bs-x360 .bs-emu,.bs-x360 .bs-boot{text-shadow:0 2px 14px rgba(0,40,0,.6)}

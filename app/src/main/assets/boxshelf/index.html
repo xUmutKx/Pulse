@@ -15,6 +15,10 @@
 <link rel="stylesheet" href="inspect.css">
 <link rel="stylesheet" href="quickshelf.css">
 <link rel="stylesheet" href="themes-extra.css">
+<link rel="stylesheet" href="tour.css">
+<link rel="stylesheet" href="details2.css">
+  <link rel="stylesheet" href="picker.css">
+  <link rel="stylesheet" href="find.css">
 <link rel="stylesheet" href="android.css">
 <script src="splash.js"></script>
 </head>
@@ -54,8 +58,8 @@
       </div>
       <div class="counter" id="counter"></div><div class="ra-pts" id="raPts" hidden></div>
       <div class="hud-buttons">
+        <button class="mini keep find-btn" id="findBtn" type="button" title="Find a game (/)" aria-label="Find a game"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
         <button class="mini keep menu-btn" id="menuBtn" type="button" aria-haspopup="menu"><span class="mb-glyph" id="menuGlyph"></span>Menu</button>
-        <button class="mini keep menu-btn" id="findBtn" type="button" aria-label="Search" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
         <button class="mini keep" id="sortBtn" type="button" hidden>Sort</button>
         <button class="mini keep" id="museumBtn" type="button" hidden>Museum</button>
         <button class="mini keep" id="themeBtn" type="button" hidden>Customize</button>
@@ -122,6 +126,7 @@
       <div class="d-pane" data-pane="media">
         <div class="d-media" id="dMedia" aria-hidden="true"><div class="d-media-in" id="dMediaIn"><video id="dVideo" muted playsinline loop preload="none"></video><span class="d-media-tag" id="dMediaTag"></span></div></div>
         <button class="btn" type="button" id="dTrailer" hidden>Watch the trailer full screen</button>
+        <button class="btn" type="button" id="dSound" hidden></button>
         <div class="d-shots" id="dShots" hidden></div>
         <p class="d-none" id="dNoMedia" hidden>No preview, trailer or screenshots for this game yet.</p>
       </div>
@@ -242,9 +247,18 @@
   </div>
 
   <div class="achv" id="achv" aria-hidden="true">
-    <div class="ach-head"><img id="achIcon" alt="" hidden><div class="ach-head-main"><div class="d-kicker">RetroAchievements</div><div class="ach-title" id="achTitle"></div><div class="ach-bar"><i id="achBar"></i></div><div class="ach-sub" id="achSub"></div></div></div>
+    <div class="ach-head"><img id="achIcon" alt="" hidden><div class="ach-head-main"><div class="d-kicker" id="achKick">RetroAchievements</div><div class="ach-title" id="achTitle"></div><div class="ach-bar"><i id="achBar"></i></div><div class="ach-sub" id="achSub"></div></div></div>
     <div class="ach-tabs" id="achTabs"></div>
-    <div class="ach-list" id="achList"></div>
+    <div class="ach-body">
+      <div class="ach-list" id="achList"></div>
+      <aside class="ach-card" id="achCard" aria-live="polite" hidden>
+        <div class="ach-card-top"><img class="ach-big" alt="" decoding="async"><div class="ach-tier"></div></div>
+        <div class="ach-card-t"></div><div class="ach-card-d"></div>
+        <div class="ach-tags"></div>
+        <div class="ach-facts"></div>
+        <div class="ach-rare"><i></i></div><div class="ach-when"></div>
+      </aside>
+    </div>
     <nav class="hints ach-hints" id="achHints"></nav>
   </div>
   <div class="museum" id="museum" aria-hidden="true">
@@ -257,6 +271,8 @@
   <div class="toast" id="toast"></div>
 </div>
 <script src="perf.js"></script>
+  <script src="picker.js"></script>
+  <script src="find.js"></script>
 <script src="vendor/three.bundle.js"></script>
 <script src="consolefit.js"></script>
 <script src="model.js"></script>
@@ -277,5 +293,6 @@
 <script src="systems-extra.js"></script>
 <script src="android-touch.js"></script>
 <script src="app.js"></script>
+<script src="tour.js"></script>
 </body>
 </html>

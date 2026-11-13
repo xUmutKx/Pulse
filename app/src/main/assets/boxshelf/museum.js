@@ -74,7 +74,7 @@ window.Museum = (() => {
   function ensure() {
     if (renderer) return true; const THREE = T(); if (!THREE) return false;
     try { canvas = document.createElement('canvas'); canvas.className = 'mus-gl'; rendererAA = perf().aa; renderer = new THREE.WebGLRenderer({ canvas, antialias: rendererAA, powerPreference: 'high-performance' }); renderer.debug.checkShaderErrors = false; }
-    catch { failed = true; return false; }
+    catch { failed = true; setTimeout(() => { failed = false; }, 30000); return false; } /* (beta.12: tried again in 30 s: a graphics driver restarting used to leave the museum off until Boxshelf restarted) */
     renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
     // shadows follow the Performance level (Settings → Performance: off at Low) for weaker GPUs
     renderer.shadowMap.enabled = wantShadows(); renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false;
@@ -287,7 +287,7 @@ window.Museum = (() => {
     x.font = '400 34px Lexend, sans-serif'; x.fillStyle = 'rgba(243,231,201,.85)';
     const n = row.games.length, lines = [row.stats.played ? `${n} ${n === 1 ? 'game' : 'games'} · ${row.stats.played} played · ${row.stats.hours}` : `${n} ${n === 1 ? 'game' : 'games'} · nothing played yet`];
     if (row.stats.top) lines.push(`Most played: ${row.stats.top}`); if (row.stats.fav) lines.push(`${row.stats.fav} favorite${row.stats.fav === 1 ? '' : 's'}`);
-    if (!(row.console && row.console.model)) lines.push(`Add themes\\${row.id}\\console.glb to show your console`);
+    if (!(row.console && row.console.model)) lines.push(`${hooks.okWord ? hooks.okWord() : 'A'}: add a 3D model of your console`); // (beta.11: A opens Add a 3D model)
     lines.forEach((l, i) => x.fillText(l, 64, 204 + i * 52));
   });
   const CARD_S = 1.16; // the museum card's size on the shelf
@@ -322,7 +322,7 @@ window.Museum = (() => {
       x.beginPath(); x.moveTo(cx + r, y); x.arcTo(cx + tw, y, cx + tw, y + ch, r); x.arcTo(cx + tw, y + ch, cx, y + ch, r); x.arcTo(cx, y + ch, cx, y, r); x.arcTo(cx, y, cx + tw, y, r); x.closePath();
       if (on) { x.fillStyle = '#2c241b'; x.fill(); x.fillStyle = '#f6eedc'; } else { x.fillStyle = 'rgba(60,50,40,.08)'; x.fill(); x.strokeStyle = 'rgba(60,50,40,.55)'; x.lineWidth = 2; x.stroke(); x.fillStyle = 'rgba(45,38,30,.78)'; }
       x.fillText(label, cx + 16, y + 25); cx += tw + 10; };
-    chip(g.manual ? '✓ Manual' : 'No manual', g.manual); chip(g.boxFull ? '✓ Full box art' : 'Box art incomplete', g.boxFull); if (g.media !== 'cart') chip(g.disc ? '✓ Disc art' : 'No disc art', !!g.disc);
+    chip(g.manual ? '✓ Manual' : 'No manual', g.manual); chip(g.boxFull ? '✓ Full box art' : 'Box art incomplete', g.boxFull); if (g.media !== 'cart') { const mw = g.media === 'umd' ? 'UMD' : 'Disc'; chip(g.disc ? `✓ ${mw} art` : `No ${mw} art`, !!g.disc); }
     if (g.players) chip(+g.players > 1 ? `1–${g.players} players` : '1 player', true); if (g.esrb) chip(String(g.esrb).replace(/\s*\(.*\)$/, '').replace(/^Everyone 10\+$/i, 'E10+').replace(/^Everyone$/i, 'E').replace(/^Teen$/i, 'T').replace(/^Mature$/i, 'M'), true);
     x.font = '600 23px Lexend, sans-serif'; x.fillStyle = '#4f463b'; x.fillText((g.fav ? '♥ favorite    ' : '') + cardKeys(), 40, h - 28); // what the confirm button does here now (A no longer goes to Inspect, X no longer opens from the shelf)
   }; if (t0 && t0.image && t0.image.getContext && t0.image.width === 900 * K) { const x = t0.image.getContext('2d'); if (x.reset) x.reset(); else { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 900 * K, 440 * K); } draw(x, 900 * K, 440 * K); t0.needsUpdate = true; return t0; } const t = canvasTex(900 * K, 440 * K, draw); t.anisotropy = 8; return t; };
@@ -544,6 +544,7 @@ window.Museum = (() => {
   const libKey = d => 'lib:' + d.id, libSealed = d => !!d && !unwrapped.has(libKey(d));
   // the magazine in your hands, or the one facing you in a fanned-out box: what hold-A unwraps
   function libInHand() {
+    if (libHeld && libHeld.temp) return { d: libHeld.d, mesh: libHeld.mesh, bag: libHeld.bag, z: (libHeld.d.kind === 'guide' ? .035 : .012) / 2 + .012, it: libHeld }; // (beta.11: picked up out of a fan)
     if (fan && !fan.closing) { const sl = fan.slots.get(fan.i); return sl ? { d: sl.d, mesh: sl.mesh, bag: sl.bag, z: .012, sl } : { d: fan.it.box.issues[fan.i], mesh: null, bag: null, pending: true }; } // (its slot is made on the next frame)
     if (libHeld) return { d: libHeld.d, mesh: libHeld.mesh, bag: libHeld.bag, z: (libHeld.d.kind === 'guide' ? .035 : .012) / 2 + .012, it: libHeld };
     return null; }
@@ -574,7 +575,8 @@ window.Museum = (() => {
       [[0, 'rgba(0,0,0,0)'], [.38, 'rgba(255,70,160,0)'], [.42, 'rgba(255,70,160,.85)'], [.46, 'rgba(255,220,80,.85)'], [.5, 'rgba(90,255,200,.85)'], [.54, 'rgba(90,140,255,.85)'], [.58, 'rgba(230,90,255,.8)'], [.62, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']].forEach(([o, col]) => gr.addColorStop(o, col));
       x.fillStyle = gr; x.fillRect(0, 0, 256, 256);
       for (let i = 0; i < 70; i++) { const px = 8 + Math.random() * 240, py = 8 + Math.random() * 240; x.fillStyle = `rgba(255,255,255,${.4 + Math.random() * .6})`; x.fillRect(px, py, 1.5, 1.5); }
-      shimTex = new THREE.CanvasTexture(c); shimTex.repeat.set(.5, .5); // a half-size window slides across the texture, carrying the band corner to corner (no edges or tiling ever shown) if (THREE.SRGBColorSpace) shimTex.colorSpace = THREE.SRGBColorSpace;
+      // a half-size window slides across the texture, carrying the band corner to corner (no edges or tiling ever shown)
+      shimTex = new THREE.CanvasTexture(c); shimTex.repeat.set(.5, .5); if (THREE.SRGBColorSpace) shimTex.colorSpace = THREE.SRGBColorSpace;
     }
     // one material for every glint, kept for as long as the room: making and throwing away a new one per glint meant
     // the graphics card had to rebuild its shader each time, a small stall right as you landed on a sealed game
@@ -614,7 +616,7 @@ window.Museum = (() => {
   // holding A on a sealed case: the plastic tightens and starts to glint; let go and it relaxes
   // hold-A tension on the plastic. Let go (p 0), or the thing in your hands changes, and whatever was pulled relaxes
   let pullCase = null;
-  function wrapPull(p) { p = Math.max(0, Math.min(1, p || 0));
+  function wrapPull(p) { p = Math.max(0, Math.min(1, p || 0)); if (p > 0) nudge();
     if (p <= 0) { libPull = 0; if (pullCase) { pullCase.userData.pull = 0; pullCase = null; } return; }
     const pb = !heldCase && selParcel(); if (pb) { if (pullCase && pullCase !== pb) pullCase.userData.pull = 0; pb.userData.pull = p; pullCase = pb; return; }
     const h = !heldCase && libInHand();
@@ -885,7 +887,7 @@ window.Museum = (() => {
     const hrs = ms / 36e5; return { played, hours: hrs >= 1 ? `${hrs.toFixed(1)} h played` : ms ? `${Math.round(ms / 6e4)} min played` : 'not played yet', top: topMs > 0 ? top : null, fav };
   }
   const fitZ = (w, h) => { const fov = camera.fov * DEG, asp = innerWidth / innerHeight; return Math.max((h / 2) / Math.tan(fov / 2), (w / 2) / Math.tan(fov / 2) / asp); };
-  const rowView = () => { const r = rows[rowI], sel = r.boxes[colI] || null, ri = sel ? null : rackItem(); const cx = sel ? sel.userData.home.x : ri ? ri.mesh.userData.home.x + .2 : r.consoleX; if (fan && fan.it.ri === rowI) { const h0 = fan.it.mesh.userData.home; return { x: h0.x, y: r.y + .2, z: h0.z + 1.55 + 2.85 }; } if (libHeld && libHeld.ri === rowI) { const h0 = libHeld.mesh.userData.home; return { x: h0.x + hPan.x, y: r.y + .22 + hPan.y, z: h0.z + 1.7 + 2.05 / handZoom }; } if (heldCase) { const k = peek && peek.box === heldCase ? ss(peek.k) : 0, wp = heldCase.getWorldPosition(sv('rowWp')); return { x: wp.x - r.w * .5 * k / handZoom + hPan.x, y: wp.y + hPan.y, z: wp.z + (2.35 + .3 * k) / handZoom }; } /* far enough back to see the whole case (and both halves once open) */ /* open: both halves in view */ return holding ? { x: cx, y: r.y + .42, z: 3.0 } : { x: cx - .2, y: r.y + .02, z: 3.7 }; };
+  const rowView = () => { const r = rows[rowI], sel = r.boxes[colI] || null, ri = sel ? null : rackItem(); const cx = sel ? sel.userData.home.x : ri ? ri.mesh.userData.home.x + .2 : r.consoleX; if (fan && fan.it.ri === rowI && !(libHeld && libHeld.temp)) { const h0 = fan.it.mesh.userData.home; return { x: h0.x, y: r.y + .2, z: h0.z + 1.55 + 2.85 }; } if (libHeld && libHeld.ri === rowI) { const h0 = libHeld.mesh.userData.home; return { x: h0.x + hPan.x, y: r.y + .22 + hPan.y, z: h0.z + 1.7 + 2.05 / handZoom }; } if (heldCase) { const k = peek && peek.box === heldCase ? ss(peek.k) : 0, wp = heldCase.getWorldPosition(sv('rowWp')); return { x: wp.x - r.w * .5 * k / handZoom + hPan.x, y: wp.y + hPan.y, z: wp.z + (2.35 + .3 * k) / handZoom }; } /* far enough back to see the whole case (and both halves once open) */ /* open: both halves in view */ return holding ? { x: cx, y: r.y + .42, z: 3.0 } : { x: cx - .2, y: r.y + .02, z: 3.7 }; };
   // the whole wall (bookcase and reading corner), snug; with the Room menu open, framed in the space left of the menu
   const wallL = () => -.55 - (tvSide() === 'left' ? tvDims().W + .95 : 0), wallR = () => Math.max(wallW, roomObj && roomObj.rackEnd || 0) + (tvSide() === 'right' ? tvDims().W + .95 : .55);
   const overview = () => { const l = wallL(), r = wallR(), lo = tvOn && room.tvStand !== 'wall' ? .55 : 0; return { x: (l + r) / 2, y: -(rows.length - 1) * ROW / 2 + .15 - lo, z: fitZ(r - l + .6, wallH + 1.1 + lo * 2) + .25 }; }; // with the TV: a little more floor in view
@@ -1512,6 +1514,45 @@ window.Museum = (() => {
     if (!it.backTex && hooks.libBack) { const gen = wallGen; Promise.resolve(hooks.libBack(it.d)).then(url => { if (!url || gen !== wallGen || libHeld !== it || it.backTex) return; const t = loadTex(url, 'back'); it.backTex = t; whenLoaded(t, () => { if (it.backTex !== t) return; it.backM.map = t; it.backM.color.set(0xffffff); it.backM.needsUpdate = true; }, () => {}); }, () => {}); }
     return true;
   }
+  // (beta.11) Y in the fan: the issue you're on comes into your hands like a magazine standing on its own (turn it to see
+  // its back, A reads it, B puts it back and the fan returns). It's a stand-in made like the rack's magazines (its own
+  // geometry and materials; the fan slot's cover texture shared, with a reference of its own let go in dropTemp), kept in
+  // rack.items only while held. L1 / R1 and A act on it, not on the fan behind it
+  function fanLift() {
+    if (!fan || fan.closing || libPull > 0 || holdA || libHeld || !rack) return false;
+    const d = fan.it.box.issues[fan.i], sl = fan.slots.get(fan.i); if (!d) return false;
+    // the fan's cover is shared only once its picture is there (an empty texture draws black): until then the stand-in shows
+    // its own placeholder and takes the cover as it.tex when it has loaded
+    const THREE = T(), guide = d.kind === 'guide', th = guide ? .035 : .012, st = sl && sl.tex ? sl.tex : null, ready = !!(st && st.userData.state === 'ok'), ph = ready ? st : placeholderTex(d);
+    if (st && st.userData.url) st.userData.refs = (st.userData.refs || 0) + 1; // (its own hold on the fan's cover: freed in dropTemp, so the fan freeing it can't blank this one)
+    const edge = new THREE.MeshStandardMaterial({ color: 0xece6d8, roughness: .9 }), backM = new THREE.MeshStandardMaterial({ color: 0xd9d2c4, roughness: .7 });
+    const front = new THREE.MeshStandardMaterial({ map: ph, roughness: .45, emissive: 0xffffff, emissiveMap: ph, emissiveIntensity: .38 });
+    const m = new THREE.Mesh(new THREE.BoxGeometry(RACK_W, RACK_H, th), [edge, edge, edge, edge, front, backM]); m.castShadow = true;
+    const h0 = fan.it.mesh.userData.home; m.position.set(h0.x, h0.y, h0.z); m.userData = { home: { x: h0.x, y: h0.y, z: h0.z }, lift: 0, p: 0 };
+    rows[fan.it.ri].group.add(m);
+    // still sealed: it comes up in its bag, and holding A unwraps it in your hands (unwrapLib), as on the rack
+    let bag = null; if (libSealed(d)) { bag = new THREE.Mesh(guide ? rack.bagG : rack.bagM, bagMat()); bag.position.y = RACK_H * .025; bag.renderOrder = 3; bag.userData.keepMat = true; m.add(bag); }
+    const it = { d, mesh: m, ri: fan.it.ri, k: -1, front, backM, ph, tex: st && !ready && st.userData.url ? st : null, coverOn: true, temp: true, ownTex: !ready, bag, fanI: fan.i };
+    if (it.tex) { const t = it.tex; whenLoaded(t, () => { if (it.tex !== t || !rack || !rack.items.includes(it)) return; front.map = front.emissiveMap = t; front.needsUpdate = true; }, () => {}); }
+    rack.items.push(it); fan.group.visible = false;
+    libHeld = it; hold = { rx: 0, ry: 0, trx: -4, try: 0 }; handZoomT = 1; snd('lift');
+    if (!sl || !sl.tex) { if (hooks.libCover) { const f = fan; Promise.resolve(hooks.libCover(d)).then(url => { if (!url || libHeld !== it || fan !== f) return; const t = loadTex(url, 'front'); it.tex = t; whenLoaded(t, () => { if (it.tex !== t) return; front.map = front.emissiveMap = t; front.needsUpdate = true; }, () => {}); }, () => {}); } }
+    if (hooks.libBack) { const gen = wallGen; Promise.resolve(hooks.libBack(d)).then(url => { if (!url || gen !== wallGen || libHeld !== it || it.backTex) return; const t = loadTex(url, 'back'); it.backTex = t; whenLoaded(t, () => { if (it.backTex !== t) return; backM.map = t; backM.color.set(0xffffff); backM.needsUpdate = true; }, () => {}); }, () => {}); }
+    hooks.onSelect && hooks.onSelect(current());
+    return true;
+  }
+  // the stand-in once it's out of your hands (put back, the TV, a rebuild): gone, and the fan shows again
+  function dropTemp(it) {
+    if (it.bag) { if (libPullBag === it.bag) { libPullBag = null; libPull = 0; } if (it.bag.material !== bagM0) { try { it.bag.material.dispose(); } catch {} } }
+    // unwrapped in your hands: its copy in the fan loses its bag too
+    if (fan && !libSealed(it.d)) { const sl = fan.slots.get(it.fanI); if (sl && sl.bag) { if (libPullBag === sl.bag) { libPullBag = null; libPull = 0; } sl.mesh.remove(sl.bag); sl.bag = null; } }
+    for (let i = unwraps.length - 1; i >= 0; i--) if (unwraps[i].b === it.mesh) { try { unwraps[i].sl.material.dispose(); } catch {} unwraps.splice(i, 1); }
+    if (shim && shim.box === it.mesh) endShim(); if (sparks && sparks.parent === it.mesh) { try { it.mesh.remove(sparks); sparks.geometry.dispose(); } catch {} sparks = null; }
+    try { if (it.mesh.parent) it.mesh.parent.remove(it.mesh); it.mesh.geometry.dispose(); [it.front, it.backM].forEach(mt => { try { mt.dispose(); } catch {} }); it.mesh.material[0].dispose(); } catch {}
+    if (it.tex) freeMap(it.tex); if (it.backTex) freeMap(it.backTex); if (it.ownTex && it.ph) { try { it.ph.dispose(); } catch {} } else if (it.ph && it.ph.userData.url) freeMap(it.ph); // (the fan's shared cover: our hold on it let go)
+    if (rack) { const k = rack.items.indexOf(it); if (k >= 0) rack.items.splice(k, 1); }
+    if (fan) fan.group.visible = true;
+  }
   // A on a file box: the issues come up out of it and fan out in front of you, the one you're on facing you, its
   // neighbours turned away to each side (only the ones near it are made, so a box of 300 is as quick as a box of 3).
   // Left / right flips through, L1 / R1 jumps a year (or 10 when the titles carry no year), A reads it, B puts them back.
@@ -1535,8 +1576,8 @@ window.Museum = (() => {
   function dropFanSlot(idx) { const sl = fan.slots.get(idx); if (!sl) return; if (sl.bag && libPullBag === sl.bag) { libPullBag = null; libPull = 0; } for (let i = unwraps.length - 1; i >= 0; i--) if (unwraps[i].b === sl.mesh) { try { unwraps[i].sl.material.dispose(); } catch {} unwraps.splice(i, 1); } if (shim && shim.box === sl.mesh) endShim(); if (sparks && sparks.parent === sl.mesh) { try { sl.mesh.remove(sparks); sparks.geometry.dispose(); } catch {} sparks = null; } fan.group.remove(sl.mesh); sl.mat.dispose(); freeMap(sl.ph); if (sl.tex) freeMap(sl.tex); fan.slots.delete(idx); }
   function closeFan(now) { if (!fan) return; if (!now) { fan.closing = true; snd('slideBack'); return; } try { [...fan.slots.keys()].forEach(dropFanSlot); if (fan.group.parent) fan.group.parent.remove(fan.group); fan.geo.dispose(); fan.bagGeo.dispose(); } catch {} fan = null; }
   let holdA = false; // A is being held (unwrapping): the fan doesn't move under your thumb
-  function fanStep(d) { if (!fan || fan.closing || libPull > 0 || holdA) return; const ni = Math.max(0, Math.min(fan.n - 1, fan.i + d)); if (ni === fan.i) { snd('toast'); return; } fan.i = ni; snd('page'); hooks.onSelect && hooks.onSelect(current()); }
-  function fanJump(dir) { if (!fan || fan.closing || libPull > 0 || holdA) return; const ys = fan.it.box.years, y0 = ys[fan.i]; let ni = fan.i;
+  function fanStep(d) { if (!fan || fan.closing || libPull > 0 || holdA || (libHeld && libHeld.temp)) return; /* (beta.11: not while an issue from it is in your hands) */ const ni = Math.max(0, Math.min(fan.n - 1, fan.i + d)); if (ni === fan.i) { snd('toast'); return; } fan.i = ni; snd('page'); hooks.onSelect && hooks.onSelect(current()); }
+  function fanJump(dir) { if (!fan || fan.closing || libPull > 0 || holdA || (libHeld && libHeld.temp)) return; const ys = fan.it.box.years, y0 = ys[fan.i]; let ni = fan.i;
     if (y0 && ys.some(Boolean)) { if (dir > 0) { while (ni < fan.n - 1 && ys[ni] <= y0) ni++; } else if (ni > 0 && ys[ni - 1] === y0) { while (ni > 0 && ys[ni - 1] === y0) ni--; } else { while (ni > 0 && (ys[ni] >= y0 || !ys[ni])) ni--; const y1 = ys[ni]; while (ni > 0 && ys[ni - 1] === y1) ni--; } } // back: to the start of this year first, then a year at a time; forward: the first issue of the next year
     else ni = Math.max(0, Math.min(fan.n - 1, ni + dir * 10));
     if (ni === fan.i) { snd('toast'); return; } fan.i = ni; snd('flip'); hooks.onSelect && hooks.onSelect(current()); }
@@ -1565,7 +1606,7 @@ window.Museum = (() => {
   function setLibrary(list) { if (!active || !rows.length) return; if (libBusy()) { libPending = list || []; return; } libPending = null; lastLib = list || []; const was = rackItem(), wasTv = wide && isTvSel(wideSel); buildRack(list); buildTV(); let r = rows[rowI]; if (r && colI > r.boxes.length) colI = Math.min(colI, r.boxes.length + rackLen(rowI));
     if (was && was.d && was.d.id != null && rack) { const id = was.d.id; for (let ri = 0; ri < rows.length; ri++) { const k = (rack.byRow[ri] || []).findIndex(it => it.d && it.d.id === id); if (k >= 0) { if (ri !== rowI && !wide) { rowI = ri; r = rows[ri]; } if (ri === rowI) colI = r.boxes.length + 1 + k; break; } } } // the same magazine stays selected, wherever it moved
     if (was && !rackItem()) colI = r.boxes.length; if (wide) wideSel = wasTv ? wideCount() - 1 : Math.max(0, Math.min(wideSel, wideCount() - 1)); hooks.onSelect && hooks.onSelect(current()); }
-  function current() { const r = rows[rowI]; if (!r) return null; if (tvView && tv) return { tv: { meta: tv.meta, mode: tv.mode, card: tv.card, ch: room.tvCh || 'ads' }, row: r }; if (wide && tv && isTvSel(wideSel) && !delivery) return { wide: { label: 'Retro TV', sub: TV_CH[room.tvCh] || TV_CH.ads, tv: true, on: !!tv.power }, row: r }; if (delivery) return { delivery: { n: delivery.n, crate: delivery.crate, shelf: dvShelf(delivery.list), open: !!delivery.open, waiting: !delivery.shown }, parcel: delivery.shown && !delivery.open, crate: delivery.crate && !delivery.open ? delivery.n : 0, row: r }; if (wide && wideSel < wideCount()) { const b = wideBox(wideSel); return { wide: { label: b.label, sub: b.sub, rack: wideSel >= rows.length, kind: wideSel >= rows.length ? (rack.units[wideSel - rows.length].movie ? 'movie' : rack.units[wideSel - rows.length].guide ? 'guide' : 'magazine') : null, empty: wideSel >= rows.length && !rack.units[wideSel - rows.length].n }, row: r }; } if (fan && !fan.closing) return { lib: fan.it.box.issues[fan.i], fan: { i: fan.i, n: fan.n, series: fan.it.box.series, year: fan.it.box.years[fan.i] || 0 }, row: rows[fan.it.ri] || r }; if (colI > r.boxes.length) { const it = rackItem(); if (it) return it.box ? { lib: it.d, stack: { series: it.box.series, n: it.box.issues.length, years: yearSpan(it.box.years), guide: it.d.kind === 'guide' }, row: r } : { lib: it.d, row: r }; } if (colI >= r.boxes.length) return { console: true, row: r }; const bx = r.boxes[colI]; return { game: bx.userData.g, sealed: !!bx.userData.sleeve, row: r }; }
+  function current() { const r = rows[rowI]; if (!r) return null; if (tvView && tv) return { tv: { meta: tv.meta, mode: tv.mode, card: tv.card, ch: room.tvCh || 'ads' }, row: r }; if (wide && tv && isTvSel(wideSel) && !delivery) return { wide: { label: 'Retro TV', sub: TV_CH[room.tvCh] || TV_CH.ads, tv: true, on: !!tv.power }, row: r }; if (delivery) return { delivery: { n: delivery.n, crate: delivery.crate, shelf: dvShelf(delivery.list), open: !!delivery.open, waiting: !delivery.shown }, parcel: delivery.shown && !delivery.open, crate: delivery.crate && !delivery.open ? delivery.n : 0, row: r }; if (wide && wideSel < wideCount()) { const b = wideBox(wideSel); return { wide: { label: b.label, sub: b.sub, rack: wideSel >= rows.length, kind: wideSel >= rows.length ? (rack.units[wideSel - rows.length].movie ? 'movie' : rack.units[wideSel - rows.length].guide ? 'guide' : 'magazine') : null, empty: wideSel >= rows.length && !rack.units[wideSel - rows.length].n }, row: r }; } if (libHeld && libHeld.temp) return { lib: libHeld.d, row: rows[libHeld.ri] || r }; if (fan && !fan.closing) return { lib: fan.it.box.issues[fan.i], fan: { i: fan.i, n: fan.n, series: fan.it.box.series, year: fan.it.box.years[fan.i] || 0 }, row: rows[fan.it.ri] || r }; if (colI > r.boxes.length) { const it = rackItem(); if (it) return it.box ? { lib: it.d, stack: { series: it.box.series, n: it.box.issues.length, years: yearSpan(it.box.years), guide: it.d.kind === 'guide' }, row: r } : { lib: it.d, row: r }; } if (colI >= r.boxes.length) return { console: true, row: r }; const bx = r.boxes[colI]; return { game: bx.userData.g, sealed: !!bx.userData.sleeve, row: r }; }
   // Hands-on: A takes the case off the shelf into your hands (the room dims, a light falls on it) and the stick turns it.
   // X opens it on its hinge (the spine side): the disc / cartridge sits in the tray and the manual is clipped inside
   // the lid. X again takes the disc out (hold A then plays it), Y lifts the manual out to read, page by page. B steps
@@ -1580,9 +1621,12 @@ window.Museum = (() => {
     const col = new THREE.Color(u.st.caseColor), inner = col.clone().lerp(new THREE.Color(0xffffff), .12);
     const caseM = new THREE.MeshStandardMaterial({ color: col, roughness: .42 }), innerM = new THREE.MeshStandardMaterial({ color: inner, roughness: .55 });
     const frontM = new THREE.MeshStandardMaterial({ color: u.front.map ? 0xffffff : col, map: u.front.map || null, roughness: .3, metalness: .05 });
-    // opened before its cover arrived: put it on when it does (it stayed blank)
-    if (!u.front.map && u.frontTex) whenLoaded(u.frontTex, () => { if (!peek || peek.box !== b || frontM.map) return; frontM.map = u.frontTex; frontM.color.set(0xffffff); frontM.needsUpdate = true; }, () => {});
     const rig = new THREE.Group(), mats = [caseM, innerM, frontM], geos = [], texs = [], own = [];
+    // the lid borrows the case's cover with a hold of its own (let go in endPeek), so refreshArt or the case letting go of
+    // its cover can't free the picture under the open lid (it went black)
+    const lidT = u.front.map || u.frontTex || null; if (lidT && lidT.userData.url) { lidT.userData.refs = (lidT.userData.refs || 0) + 1; texs.push(lidT); }
+    // opened before its cover arrived: put it on when it does (it stayed blank)
+    if (!u.front.map && lidT) { if (lidT.userData.state === 'ok') { frontM.map = lidT; frontM.color.set(0xffffff); } else whenLoaded(lidT, () => { if (!peek || peek.box !== b || frontM.map) return; frontM.map = lidT; frontM.color.set(0xffffff); frontM.needsUpdate = true; }, () => {}); }
     const mesh = (geo, m) => { geos.push(geo); return new THREE.Mesh(geo, m); };
     // The same moulded case as Inspect: rounded-rectangle back and lid with this console's corner radius and soft
     // bevels, one continuous rounded wall ring, a moulded interior (disc well and finger notches, hub rosette, cart
@@ -1700,7 +1744,7 @@ window.Museum = (() => {
     // forward: the right page lifts and turns over to the left, showing the next spread's left page on its back.
     // Underneath, the old left page stays until it's covered, and the new right page is already there.
     r.flip = dir > 0 ? { k: 0, dir, under: [L0, R1], leaf: [R0, L1] } : { k: 0, dir, under: [L1, R0], leaf: [L0, R1] };
-    r.leafPivot.visible = true; showSpread(to); snd('page'); return true;
+    r.leafPivot.visible = true; showSpread(to); snd('page'); nudge(); return true;
   }
   function closeReader(now) {
     const r = reader; if (!r) return; if (!now) { r.out = true; return; }
@@ -1765,17 +1809,17 @@ window.Museum = (() => {
     if (peek.spinner) { const x = peek.spinner.rotation.x % (2 * Math.PI); peek.spinner.rotation.x = x > Math.PI ? x - 2 * Math.PI : x < -Math.PI ? x + 2 * Math.PI : x; } }
   // Y: the manual out to read, and back into the lid
   function handY() { lastInput = woke(); if (!peek || !peek.t || peek.discT) return null; if (reader && reader.out) closeReader(true); if (reader) { if (!reader.out) { reader.out = true; snd('flip'); } return { reading: false }; } return openReader() ? { reading: true } : null; }
-  function readerZoom(dz) { if (!reader) return; reader.zoomT = Math.max(1, Math.min(2.4, dz > 0 ? reader.zoomT * 1.3 : reader.zoomT / 1.3)); if (reader.zoomT < 1.05) { reader.zoomT = 1; reader.panT = 0; } }
-  function readerPan(dy) { if (!reader || reader.zoomT <= 1) return; const lim = 1 - 1 / reader.zoomT; reader.panT = Math.max(-lim, Math.min(lim, reader.panT + dy)); }
+  function readerZoom(dz) { if (!reader) return; nudge(); reader.zoomT = Math.max(1, Math.min(2.4, dz > 0 ? reader.zoomT * 1.3 : reader.zoomT / 1.3)); if (reader.zoomT < 1.05) { reader.zoomT = 1; reader.panT = 0; } }
+  function readerPan(dy) { if (!reader || reader.zoomT <= 1) return; nudge(); const lim = 1 - 1 / reader.zoomT; reader.panT = Math.max(-lim, Math.min(lim, reader.panT + dy)); }
   // up/down in your hands: step closer to the case (or back)
-  function zoomHand(dz) { if ((!heldCase && !libHeld) || reader) return; handZoomT = Math.max(1, Math.min(3, dz > 0 ? handZoomT * 1.15 : handZoomT / 1.15)); if (handZoomT < 1.04) handZoomT = 1; clampPan(); }
+  function zoomHand(dz) { if ((!heldCase && !libHeld) || reader) return; nudge(); handZoomT = Math.max(1, Math.min(3, dz > 0 ? handZoomT * 1.15 : handZoomT / 1.15)); if (handZoomT < 1.04) handZoomT = 1; clampPan(); }
   // left stick in your hands: slide the view across the case (further the closer you are), to look at the manual, the disc, a corner
   function clampPan() { const open = peek && peek.box === heldCase && peek.t ? 1 : 0, lx = .25 + .35 * open + .3 * (handZoomT - 1), ly = .2 + .3 * (handZoomT - 1); hPan.tx = Math.max(-lx, Math.min(lx, hPan.tx)); hPan.ty = Math.max(-ly, Math.min(ly, hPan.ty)); }
-  function panHand(dx, dy) { if (!heldCase || reader) return; hPan.tx += dx; hPan.ty += dy; clampPan(); }
+  function panHand(dx, dy) { if (!heldCase || reader) return; nudge(); hPan.tx += dx; hPan.ty += dy; clampPan(); }
   // the stick leans the view: tilt it and it shifts that way in proportion, let go and it glides back to centre
   // (on top of any keyboard nudges); sx, sy are -1..1 after the dead zone
-  function leanHand(sx, sy) { if (!heldCase || reader) { hPan.lx = hPan.ly = 0; return; } const open = peek && peek.box === heldCase && peek.t ? 1 : 0; hPan.lx = sx * (.22 + .3 * open + .3 * (handZoomT - 1)); hPan.ly = sy * (.18 + .28 * (handZoomT - 1)); }
-  function handState() { return { fan: !!(fan && !fan.closing), fanYears: !!(fan && fan.it.box.years.some(Boolean)), wrapped: !!(heldCase && heldCase.userData.sleeve) || libWrappedNow() || !!selParcel(), parcel: !!selParcel(), opening: !!opening, crate: !!(delivery && delivery.crate), delivery: !!delivery, dvShown: !!(delivery && delivery.shown), libWrapped: libWrappedNow(), libHeld: !!libHeld, tv: tvView, tvAvail: !!tv, movieOpen: !!(libHeld && libHeld.rig && libHeld.rig.openT), movieDisc: !!(libHeld && libHeld.rig && libHeld.rig.discT), libMovie: !!(libHeld && libHeld.movie) || !!(!heldCase && !libHeld && !wide && rackItem() && rackItem().movie), held: !!heldCase, ready: !!heldReady(), open: !!(peek && peek.t), disc: !!(peek && peek.discT && peek.disc > .9), discOut: !!(peek && peek.discT), reading: !!(reader && !reader.out), page: reader ? reader.s : 0, pageLabel: reader ? (() => { const [L, R] = spreadOf(reader.s, reader.pages.length); return L < 0 ? 'Cover' : R < 0 ? `Page ${L + 1}` : `Pages ${L + 1}–${R + 1}`; })() : '', pages: reader ? reader.pages.length : 0, hasManual: !!(heldCase && heldCase.userData.g.manualPages && heldCase.userData.g.manualPages.length), game: heldCase ? heldCase.userData.g : null }; }
+  function leanHand(sx, sy) { if (!heldCase || reader) { hPan.lx = hPan.ly = 0; return; } const open = peek && peek.box === heldCase && peek.t ? 1 : 0, lx = sx * (.22 + .3 * open + .3 * (handZoomT - 1)), ly = sy * (.18 + .28 * (handZoomT - 1)); if (lx !== (hPan.lx || 0) || ly !== (hPan.ly || 0)) nudge(); hPan.lx = lx; hPan.ly = ly; }
+  function handState() { return { fan: !!(fan && !fan.closing && !(libHeld && libHeld.temp)) /* (beta.11: an issue picked up from it is in your hands) */, fanYears: !!(fan && fan.it.box.years.some(Boolean)), wrapped: !!(heldCase && heldCase.userData.sleeve) || libWrappedNow() || !!selParcel(), parcel: !!selParcel(), opening: !!opening, crate: !!(delivery && delivery.crate), delivery: !!delivery, dvShown: !!(delivery && delivery.shown), libWrapped: libWrappedNow(), libHeld: !!libHeld, tv: tvView, tvAvail: !!tv, movieOpen: !!(libHeld && libHeld.rig && libHeld.rig.openT), movieDisc: !!(libHeld && libHeld.rig && libHeld.rig.discT), libMovie: !!(libHeld && libHeld.movie) || !!(!heldCase && !libHeld && !wide && rackItem() && rackItem().movie), held: !!heldCase, ready: !!heldReady(), open: !!(peek && peek.t), disc: !!(peek && peek.discT && peek.disc > .9), discOut: !!(peek && peek.discT), reading: !!(reader && !reader.out), page: reader ? reader.s : 0, pageLabel: reader ? (() => { const [L, R] = spreadOf(reader.s, reader.pages.length); return L < 0 ? 'Cover' : R < 0 ? `Page ${L + 1}` : `Pages ${L + 1}–${R + 1}`; })() : '', pages: reader ? reader.pages.length : 0, hasManual: !!(heldCase && heldCase.userData.g.manualPages && heldCase.userData.g.manualPages.length), game: heldCase ? heldCase.userData.g : null }; }
   let zoomAt = -1e9; // when A last zoomed in from the wide view (its glide gets the same light per-frame pacing as a change of shelf)
   let rowNavAt = -1e9; // when you last went up or down a shelf (the change of row is eased, see frame)
   // Discrete camera moves (wide view <-> a shelf, shelf <-> shelf) are timed tweens on an ease-in-out curve instead of the
@@ -1784,7 +1828,7 @@ window.Museum = (() => {
   const tw = { on: false, t: 0, d: 1, s: 1, zoom: 0, x0: 0, y0: 0, z0: 0, x1: 0, y1: 0, z1: 0, vx: 0, vy: 0, vz: 0, ay: 0, az: 0 }, camV = { x: 0, y: 0, z: 0 }, fbx = { x0: 0, x1: 0, y0: 0, y1: 0, z: null };
   let twKey = null, twSndAt = -1e9, rmMQ = null, preRow = -1, preAt = 0, preOn = false, lastTg = null;
   const viewKey = () => intro.on || tvView || roomView ? -2 : heldCase || libHeld || fan || holding ? -3 : wide ? -1 : rowI; // -1 wide, >= 0 a shelf, < -1 no tween (the chase)
-  const reducedMo = () => document.body.classList.contains('reduce-motion') || (rmMQ = rmMQ || matchMedia('(prefers-reduced-motion: reduce)')).matches;
+  const reducedMo = () => document.body.classList.contains('reduce-motion'); /* (beta.12: Boxshelf's own Reduce motion, which follows the system only when told to) */
   function twStart(tg, zoom, dur) {
     const dx = tg.x - camP.x, dy = tg.y - camP.y, dz = tg.z - camP.z, dist = Math.sqrt(dx * dx + dy * dy + dz * dz), rm = reducedMo();
     tw.on = true; tw.t = 0; tw.s = 0; tw.zoom = zoom; tw.x0 = camP.x; tw.y0 = camP.y; tw.z0 = camP.z; tw.x1 = tg.x; tw.y1 = tg.y; tw.z1 = tg.z; tw.vx = camV.x; tw.vy = camV.y; tw.vz = camV.z;
@@ -1826,7 +1870,7 @@ window.Museum = (() => {
     lastInput = woke(); if (intro.on) { skipFill(); return null; }
     if (tvView) return { tvPlay: true };
     if (delivery) { if (delivery.open) { skipOpening(); return { skipped: true }; } return delivery.shown ? { parcelTap: true } : null; }
-    if (fan) { if (fan.closing) return null; const d = fan.it.box.issues[fan.i]; if (libSealed(d)) return { sealedLib: true }; return { lib: d }; }
+    if (fan && !(libHeld && libHeld.temp)) { if (fan.closing) return null; const d = fan.it.box.issues[fan.i]; if (libSealed(d)) return { sealedLib: true }; return { lib: d }; } // (beta.11: an issue picked up from it is handled as libHeld below)
     if (wide) return wideEnter();
     if (libHeld && libHeld.movie) { const rg = movieRig(libHeld);
       if (!rg.openT) { rg.openT = 1; hold.try = Math.round(hold.try / 360) * 360; hold.trx = 0; movieArt(libHeld); snd('caseOpen'); return { movieOpen: true }; }
@@ -1852,7 +1896,8 @@ window.Museum = (() => {
     if (heldCase) { heldCase = null; if (peek) peek.t = 0; snd('slideBack'); return true; }
     if (libHeld && libHeld.rig && libHeld.rig.discT) { libHeld.rig.discT = 0; movieDiscHome(libHeld.rig); snd('discIn'); return true; } // the disc back on its hub
     if (libHeld && libHeld.rig && libHeld.rig.openT) { libHeld.rig.openT = 0; snd('caseClose'); return true; } // the case shut
-    if (libHeld) { libHeld = null; snd('slideBack'); return true; }
+    // (beta.11) a fan issue put back: its stand-in goes now, not on the next drawn frame (a slow or paused draw left it in the rack)
+    if (libHeld) { const h = libHeld; libHeld = null; if (h.temp && rack && rack.items.includes(h)) dropTemp(h); snd('slideBack'); return true; }
     if (fan) { if (!fan.closing) closeFan(false); return true; }
     if (holding) { holding = null; return true; }
     if (!wide) { wide = true; wideSel = wideFromHere(); hooks.onSelect && hooks.onSelect(current()); return true; } return false;
@@ -1861,7 +1906,7 @@ window.Museum = (() => {
     if (peek && peek.discT && peek.box === heldCase) { peek.dry = (peek.dry || 0) + dx; peek.drx = Math.max(-75, Math.min(75, (peek.drx || 0) + dy)); return; } // the disc turns in your hands; its case stays put, set aside
     if (libHeld && libHeld.rig && libHeld.rig.discT) { const rg = libHeld.rig; rg.dry = (rg.dry || 0) + dx; rg.drx = Math.max(-75, Math.min(75, (rg.drx || 0) + dy)); return; } // a Blu-ray's disc, the same
     hold.try += dx; hold.trx = Math.max(-60, Math.min(60, hold.trx + dy)); }
-  function release() { if (!holding && !heldCase && !libHeld) return; hold.try = Math.round(hold.try / 90) * 90; }
+  function release() { if (!holding && !heldCase && !libHeld) return; nudge(); hold.try = Math.round(hold.try / 90) * 90; }
 
   const sm = (a, b, k) => a + (b - a) * k, ss = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
   let prep = null, dummyTex = null, primeKeep = [];
@@ -1887,9 +1932,27 @@ window.Museum = (() => {
   const SLEEP_MS = 8000; let sleepOk = null;
   function unsleep() { if (pauseWhy.delete('idle')) { paused = pauseWhy.size > 0; if (!paused && active && !raf) { lastT = 0; raf = requestAnimationFrame(frame); } } }
   function woke() { unsleep(); return performance.now(); }
+  // input that only steers something in your hands (a pinch, the left stick, a page turn, A held): on the handheld it wakes
+  // the museum and starts the SLEEP_MS over, like any other input. Windows never sleeps, so there it changes nothing.
+  function nudge() { if (sleepOk) lastInput = woke(); }
+  // Something in your hands may sleep too, once it has come to rest: not while A pulls at the plastic, the plastic peels
+  // off or sparkles, it is still coming up to you, or the fan, the lid, the disc, a Blu-ray case or a page is on its way
+  function handStill() {
+    if (holdA || libPull > 0 || (pullCase && pullCase.userData.pull > 0) || unwraps.length || sparks) return false;
+    if ((heldCase || holding || libHeld) && (Math.abs(hold.rx - hold.trx) > .01 || Math.abs(hold.ry - hold.try) > .01)) return false;
+    if (Math.abs(handZoom - handZoomT) > 1e-4) return false;
+    if (Math.abs(hPan.x - hPan.tx - (hPan.lx || 0)) > 1e-4 || Math.abs(hPan.y - hPan.ty - (hPan.ly || 0)) > 1e-4) return false;
+    if (heldCase && heldCase.userData.lift !== 1) return false;
+    if (libHeld) { const u = libHeld.mesh.userData, rg = libHeld.rig; if (u.lift !== 1 || (rg && (rg.open !== rg.openT || rg.disc !== rg.discT))) return false; }
+    if (fan && (fan.closing || fan.cur !== fan.i || Math.abs(fan.k - 1) > 1e-3)) return false;
+    if (peek && ((peek.k !== 0 && peek.k !== 1) || (peek.disc !== 0 && peek.disc !== 1))) return false;
+    if (reader && (reader.out || reader.flip || Math.abs(reader.fade - 1) > 1e-3 || Math.abs(reader.zoom - reader.zoomT) > 1e-4 || Math.abs(reader.pan - reader.panT) > 1e-4)) return false;
+    return true;
+  }
   function maybeSleep(now) {
     if (sleepOk === null) sleepOk = !!(window.bsPlatform && window.bsPlatform.os === 'android');
-    if (!sleepOk || now - lastInput < SLEEP_MS || intro.on || tw.on || prep || delivery || heldCase || holding || libHeld || peek || fan || reader || shim || shadowDirty) return;
+    if (!sleepOk || now - lastInput < SLEEP_MS || intro.on || tw.on || prep || delivery || shim || shadowDirty) return;
+    if ((heldCase || holding || libHeld || peek || fan || reader) && !handStill()) return;
     if (work.length || upQ.length || loadQ.length || loading || (tv && (tv.power || tv.pow > 0))) return;
     pauseWhy.add('idle'); paused = true;
     if (raf) { cancelAnimationFrame(raf); raf = 0; } lastT = 0; // the frame already asked for would only wake to stop
@@ -1987,6 +2050,7 @@ window.Museum = (() => {
     // pick-up) and it goes back by the short way from where it is, its whole turns dropped (wrap180), instead of being drawn
     // from the shared hold, which was eased to 0 through every turn you'd given it (and fought over by two easings)
     if (heldCase || holding || libHeld) { const kh = 1 - Math.exp(-dt * 6); hold.rx = sm(hold.rx, hold.trx, kh); hold.ry = sm(hold.ry, hold.try, kh); }
+    if (rack) for (let i = rack.items.length - 1; i >= 0; i--) { const t = rack.items[i]; if (t.temp && t !== libHeld) dropTemp(t); } // (beta.11) a fan issue put down
     if (rack && rack.items.length) { rackCovers(); rack.items.forEach(it => { const m = it.mesh, u = m.userData, on = it === rsel && !intro.on && !wide && !twHold, held = it === libHeld;
       u.lift = sm(u.lift || 0, held ? 1 : 0, 1 - Math.exp(-dt * 5)); if (Math.abs(u.lift - (held ? 1 : 0)) < 1e-3) u.lift = held ? 1 : 0;
       if (!held && u.hHeld && it.rig) { const rg = it.rig; rg.discT = 0; rg.openT = 0; movieDiscHome(rg); } // let go with it open (the TV, a play): the disc goes in and the case shuts on the way back, not left open on the rack
@@ -2190,18 +2254,20 @@ window.Museum = (() => {
     ray = ray || new THREE.Raycaster(); scene.updateMatrixWorld(); camera.updateMatrixWorld(); // (fresh even when nothing has drawn yet)
     const list = [], at = new Map(); rows.forEach((r, ri) => r.boxes.forEach((b, ci) => { if (b.visible) { list.push(b); at.set(b, [ri, ci]); } }));
     if (heldCase && !at.has(heldCase)) { list.push(heldCase); at.set(heldCase, [rowI, colI]); }
+    // a magazine / Blu-ray in your hands is a target too: a tap on it is not a tap on bare wall (which puts it back)
+    const lh = libHeld && libHeld.mesh; if (lh && lh.parent && !at.has(lh)) { list.push(lh); at.set(lh, [rowI, colI]); }
     let hit = null; // a fingertip is wide: a near miss tries a little to each side (a spine on the wall is a thin target)
     for (const [ox, oy] of [[0, 0], [-14, 0], [14, 0], [0, -14], [0, 14]]) {
       ray.setFromCamera(new THREE.Vector2((x + ox - rc.left) / rc.width * 2 - 1, -((y + oy - rc.top) / rc.height) * 2 + 1), camera);
       if ((hit = ray.intersectObjects(list, true)[0])) break; }
     if (!hit) return null;
     let o = hit.object; while (o && !at.has(o)) o = o.parent; if (!o) return null; const [row, col] = at.get(o), wr = wideRow();
-    return { row, col, sel: wr < 0 && row === rowI && col === colI, held: o === heldCase }; }
+    return { row, col, sel: wr < 0 && row === rowI && col === colI, held: o === heldCase || !!(lh && o === lh) }; }
   function unwrapCol(i) { const r = rows[rowI]; if (!active || !r) return false;
     if (heldCase) { if (r.boxes[i] !== heldCase) return false; const ok = unwrapHeld(); if (ok) hooks.onSelect && hooks.onSelect(current()); return ok; }
     if (!touchFree() || i !== colI) return false; const b = r.boxes[i]; if (!b || !b.userData.sleeve) return false;
     lastInput = woke(); startUnwrap(b); snd('unlock'); endShim(); const m = shimMesh(b); b.add(m); shim = { box: b, mesh: m, t: 0, fast: true }; burst(b);
     hooks.onSelect && hooks.onSelect(current()); return true; }
   function glStats() { if (!renderer) return null; const i = renderer.info; let lights = 0, shadowL = 0; scene && scene.traverse(o => { if (o.isLight && o.visible && o.intensity > 0) { lights++; if (o.castShadow) shadowL++; } }); return { calls: i.render.calls, tris: i.render.triangles, geos: i.memory.geometries, texs: i.memory.textures, progs: (i.programs || []).length, progNames: (i.programs || []).map(p => p.name + '#' + p.id), lights, shadowL, pr: renderer.getPixelRatio(), aa: !!(renderer.getContext().getContextAttributes() || {}).antialias, shadows: renderer.shadowMap.enabled }; }
-  return { _perf: reset => { const o = Object.assign({}, facc), r = rows[rowI]; o.pending = r ? r.boxes.filter((b, i) => Math.abs(i - colI) <= 4 && !b.userData.mail && !b.userData.frontLoaded).length : -1; if (reset) Object.keys(facc).forEach(k => facc[k] = 0); return o; }, stats: glStats, tvShow, tvCard, tvStatic, tvOff, tvVolume, watchTv, tvMeta: () => tv && tv.power ? tv.meta : null, tvPower: on => { tvPower(!!on); hooks.onSelect && hooks.onSelect(current()); }, tvPowered: () => !!(tv && tv.power), tvAvail: () => !!tv, showTv, _tv: () => tv && { mode: tv.mode, power: tv.power, pow: tv.pow, gain: tv.gain, gt: tv.gT, base: tv.base, vol: tv.video ? tv.video.volume : null, box: [tv.box.min.x, tv.box.max.x, tv.box.min.y, tv.box.max.y], card: tv.card && tv.card.title, crt: tvM && tvM.U.uCrt.value, prog: tv.screen.material === (tvM && tvM.screenV) ? 'video' : 'still' }, lightFade: () => lightK, _dv: () => delivery && { rot: delivery.rot, shown: delivery.shown, ot: delivery.open && delivery.open.t }, skipDelivery, setHoldA: v => { holdA = !!v; }, resealAll, opened: () => unwrapped.size, preloadModel, _snapCam: () => { snapCam = true; }, _cam: () => ({ x: camP.x, y: camP.y, z: camP.z, tx: lastTg ? lastTg.x : 0, ty: lastTg ? lastTg.y : 0, tz: lastTg ? lastTg.z : 0, on: tw.on, s: tw.s, t: tw.t, d: tw.d, zoom: tw.zoom, key: twKey, pre: preOn ? preRow : -1, fk: wideFrame ? wideFrame.userData.k : 0, up: fst.up, fr: fst.fr, sp: fst.sp, sh: fst.sh, row: fst.row, js: fst.jsMs, upQ: upQ.length }), setRoomView: on => { roomView = !!on; lastInput = woke(); }, setGuideView: on => { guideView = !!on; lastInput = woke(); }, setLibrary, consoleFit, setConsoleFit, toConsole, setRoom, room: () => Object.assign({}, room), handX, handY, handState, wrapPull, unwrapHeld, zoomHand, panHand, leanHand, turnPage, readerZoom, readerPan, lights: () => Object.entries(LIGHTS).map(([id, l]) => [id, l.name]), setLighting, lighting: () => lightId, _rows: () => rows, _rack: () => rack && rack.items, available, open, close, warm, _lights: () => { let n = 0, spots = 0; if (scene) scene.traverseVisible(o => { if (o.isLight) { n++; if (o.isSpotLight) spots++; } }); return { n, spots }; }, setPaused: (p, why = 'x') => { if (p) pauseWhy.add(why); else pauseWhy.delete(why); paused = pauseWhy.size > 0; if (!paused && active && !raf) { lastT = 0; raf = requestAnimationFrame(frame); } }, wake: () => { if (window.bsPlatform && window.bsPlatform.os === 'android') lastInput = woke(); } /* a change from outside (the bottom screen, the Room menu) counts as input: woken, and not straight back to sleep */, sleeping: () => pauseWhy.has('idle') /* (the reader and the dimmed screen each hold their own pause: waking from a dim mustn't unpause under an open magazine) */, setShadows: on => { window.__musNoShadows = !on; if (renderer) { renderer.shadowMap.enabled = wantShadows(); renderer.shadowMap.needsUpdate = true; rows.forEach(r => { r.lamp.castShadow = false; }); shadowRow = -1; } }, move, jump, activate, back, bottomRow, pickCol, pickAt, unwrapCol, refreshArt, turn, release, skipFill, current, isActive: () => active, isHolding: () => !!holding || !!heldCase || !!libHeld, isHoldingCase: () => !!heldCase, isFilling: () => intro.on, isWide: () => wide, setRow: i => { rowI = Math.max(0, i | 0); colI = 0; } };
+  return { _perf: reset => { const o = Object.assign({}, facc), r = rows[rowI]; o.pending = r ? r.boxes.filter((b, i) => Math.abs(i - colI) <= 4 && !b.userData.mail && !b.userData.frontLoaded).length : -1; if (reset) Object.keys(facc).forEach(k => facc[k] = 0); return o; }, stats: glStats, tvShow, tvCard, tvStatic, tvOff, tvVolume, watchTv, tvMeta: () => tv && tv.power ? tv.meta : null, tvPower: on => { tvPower(!!on); hooks.onSelect && hooks.onSelect(current()); }, tvPowered: () => !!(tv && tv.power), tvAvail: () => !!tv, showTv, _tv: () => tv && { mode: tv.mode, power: tv.power, pow: tv.pow, gain: tv.gain, gt: tv.gT, base: tv.base, vol: tv.video ? tv.video.volume : null, box: [tv.box.min.x, tv.box.max.x, tv.box.min.y, tv.box.max.y], card: tv.card && tv.card.title, crt: tvM && tvM.U.uCrt.value, prog: tv.screen.material === (tvM && tvM.screenV) ? 'video' : 'still' }, lightFade: () => lightK, _dv: () => delivery && { rot: delivery.rot, shown: delivery.shown, ot: delivery.open && delivery.open.t }, skipDelivery, setHoldA: v => { holdA = !!v; if (holdA) nudge(); }, resealAll, opened: () => unwrapped.size, preloadModel, _snapCam: () => { snapCam = true; }, _cam: () => ({ x: camP.x, y: camP.y, z: camP.z, tx: lastTg ? lastTg.x : 0, ty: lastTg ? lastTg.y : 0, tz: lastTg ? lastTg.z : 0, on: tw.on, s: tw.s, t: tw.t, d: tw.d, zoom: tw.zoom, key: twKey, pre: preOn ? preRow : -1, fk: wideFrame ? wideFrame.userData.k : 0, up: fst.up, fr: fst.fr, sp: fst.sp, sh: fst.sh, row: fst.row, js: fst.jsMs, upQ: upQ.length }), setRoomView: on => { roomView = !!on; lastInput = woke(); }, setGuideView: on => { guideView = !!on; lastInput = woke(); }, setLibrary, consoleFit, setConsoleFit, toConsole, setRoom, room: () => Object.assign({}, room), handX, handY, handState, wrapPull, unwrapHeld, zoomHand, panHand, leanHand, turnPage, readerZoom, readerPan, lights: () => Object.entries(LIGHTS).map(([id, l]) => [id, l.name]), setLighting, lighting: () => lightId, _rows: () => rows, _rack: () => rack && rack.items, available, open, close, warm, _lights: () => { let n = 0, spots = 0; if (scene) scene.traverseVisible(o => { if (o.isLight) { n++; if (o.isSpotLight) spots++; } }); return { n, spots }; }, setPaused: (p, why = 'x') => { if (p) pauseWhy.add(why); else pauseWhy.delete(why); paused = pauseWhy.size > 0; if (!paused && active && !raf) { lastT = 0; raf = requestAnimationFrame(frame); } }, wake: () => { if (window.bsPlatform && window.bsPlatform.os === 'android') lastInput = woke(); } /* a change from outside (the bottom screen, the Room menu) counts as input: woken, and not straight back to sleep */, sleeping: () => pauseWhy.has('idle') /* (the reader and the dimmed screen each hold their own pause: waking from a dim mustn't unpause under an open magazine) */, setShadows: on => { window.__musNoShadows = !on; if (renderer) { renderer.shadowMap.enabled = wantShadows(); renderer.shadowMap.needsUpdate = true; rows.forEach(r => { r.lamp.castShadow = false; }); shadowRow = -1; } }, move, jump, activate, back, bottomRow, pickCol, pickAt, unwrapCol, refreshArt, turn, release, skipFill, current, fanLift /* (beta.11) Y in a file box's fan */, isActive: () => active, isHolding: () => !!holding || !!heldCase || !!libHeld, isHoldingCase: () => !!heldCase, isFilling: () => intro.on, isWide: () => wide, setRow: i => { rowI = Math.max(0, i | 0); colI = 0; } };
 })();

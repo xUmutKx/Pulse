@@ -1,0 +1,285 @@
+/* ---- (beta.12, Windows / Linux) Details, redesigned around the case (app.js dvBuild / dvFill) ----
+   Only for #app.dv2 (never set on the Thor, which keeps its own Details). The shelf fades away behind the game's own art,
+   tinted with its console's shelf colour; the chosen 3D case stays where it was and turns a little toward the page; the
+   page opens in the space the other cases left: one scrolling column of sections under a bar that shows where you are.
+   Settings' own look: 'Mona Sans', its dark tokens, its highlight and focus ring. Sizes are in --u (1/1600 of the window's
+   width, as the mockup was drawn), never under .72 px so a small window stays readable. */
+#app.dv2{--u:max(.72px,calc(100vw / 1600));--dv-tint:#9d8cff}
+#app.dv2 #details{--ink:#f3f5fb;--ink2:#d5d9e6;--dim:#a4abbf;--faint:#7c8399;--acc:#6b8cff;--acc2:#a9bfff;--ok:#45d483;--warn:#ffb547;
+  --line:rgba(255,255,255,.08);--panel2:#181b25;--dacc:#6b8cff;--dacc2:#a9bfff;
+  --hl:linear-gradient(90deg,color-mix(in srgb,var(--acc) 30%,transparent),color-mix(in srgb,var(--acc) 13%,transparent));
+  --ring:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 85%,transparent);color:var(--ink)}
+
+/* ---------- behind the page: the game's art over the shelf, the other cases gone, the case turned toward the page ---------- */
+#app.dv2 .dv-back{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#07080d;opacity:0;visibility:hidden;transition:opacity .5s ease,visibility 0s .5s}
+#app.dv2.details-open:not(.launching) .dv-back{opacity:1;visibility:visible;transition:opacity .5s ease,visibility 0s}
+#app.dv2 .dv-back img{position:absolute;left:-8%;top:-8%;width:116%;height:116%;max-width:none;object-fit:cover;filter:blur(calc(40 * var(--u))) saturate(1.25) brightness(.6)}
+#app.dv2 .dv-back img:not([src]){display:none}
+#app.dv2 .dv-back i{position:absolute;inset:0;background:
+  radial-gradient(60% 75% at 31% 46%,color-mix(in srgb,var(--dv-tint) 30%,transparent),transparent 70%),
+  linear-gradient(90deg,rgba(7,8,13,.3) 0%,rgba(7,8,13,.42) 30%,rgba(7,8,13,.8) 50%,rgba(7,8,13,.92) 100%),
+  linear-gradient(180deg,rgba(7,8,13,.35),transparent 22%,transparent 70%,rgba(7,8,13,.85))}
+/* (test.8) the other cases fade by their faces, not the slot: any opacity below 1 on a preserve-3d slot makes the browser
+   draw that case flat, so every case went flat for the whole fade and snapped back to 3D at the end (as #track did, style.css) */
+#app.dv2.details-open .slot:not(.sel){pointer-events:none}
+#app.dv2 .slot:not(.sel)>.box>.face{transition:opacity .4s ease}
+#app.dv2.details-open .slot:not(.sel)>.box>.face{opacity:0}
+#app.dv2 .slot.sel>.box:not(.free){transition:transform .75s cubic-bezier(.3,.95,.25,1),rotate .6s cubic-bezier(.22,.9,.25,1)}
+#app.dv2.details-open .slot.sel>.box{rotate:y 9deg}
+#app.dv2.details-open .floor,#app.dv2.details-open .sel-halo{opacity:0}
+#app.dv2.details-open .hud-top .tabs,#app.dv2.details-open .hud-top .right{opacity:0!important;pointer-events:none!important}
+#app.dv2 .hud-top .right{transition:opacity .3s}
+/* under the case: Inspect, for the mouse (R3 / V from the controller and keyboard) */
+#app.dv2 .dv-cap{position:absolute;z-index:6;left:calc(50% - var(--dw,460px) * .5);top:calc(43% + var(--bh) * .6 + 3vh);transform:translateX(-50%);
+  display:flex;align-items:center;gap:calc(8 * var(--u));padding:calc(6 * var(--u)) calc(14 * var(--u));border-radius:99px;font:500 calc(13.5 * var(--u)) var(--ui);
+  letter-spacing:.04em;color:#a4abbf;background:none;opacity:0;visibility:hidden;transition:opacity .4s,visibility 0s .4s,color .16s,background .16s}
+#app.dv2 .dv-cap[hidden]{display:none}
+#app.dv2.details-open:not(.launching) .dv-cap{opacity:1;visibility:visible;transition:opacity .4s .2s,visibility 0s,color .16s,background .16s}
+#app.dv2 .dv-cap:hover{color:#fff;background:rgba(255,255,255,.06)}
+#app.dv2 .dv-cap .g,#app.dv2 .dv-nav .g,#app.dv2 .dv-trg .g{min-width:calc(26 * var(--u));height:calc(22 * var(--u));font-size:calc(11 * var(--u))}
+#app.dv2 .dv-cap .g.shape svg,#app.dv2 .dv-nav .g.shape svg,#app.dv2 .dv-trg .g.shape svg{width:calc(22 * var(--u));height:calc(22 * var(--u))}
+/* the hint bar sits in the middle again (the page keeps the row you're on clear of it) */
+#app.dv2.details-open .hints{left:50%!important;transform:translateX(-50%)!important;max-width:calc(100% - 64px)!important;z-index:9;background:rgba(10,11,18,.9)!important}
+/* the page fades out under it (a still strip over the page's foot: nothing redrawn as the page scrolls) */
+#app.dv2 .dv-foot{position:absolute;z-index:8;left:calc(704 * var(--u));right:0;bottom:0;height:calc(120 * var(--u));pointer-events:none;opacity:0;visibility:hidden;
+  background:linear-gradient(180deg,rgba(8,9,14,0),rgba(8,9,14,.94) 75%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 calc(90 * var(--u)));mask-image:linear-gradient(90deg,transparent,#000 calc(90 * var(--u)));transition:opacity .3s,visibility 0s .3s}
+#app.dv2.details-open:not(.launching) .dv-foot{opacity:1;visibility:visible;transition:opacity .35s .06s,visibility 0s}
+@media (max-width:760px){#app.dv2 .dv-foot{display:none}}
+
+/* ---------- the page ---------- */
+#app.dv2 #details{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;scrollbar-width:none;overscroll-behavior:contain}
+#app.dv2 #details::-webkit-scrollbar{display:none}
+#app.dv2 #details>.d-tabs,#app.dv2 #details>.d-body,#app.dv2 #dArt,#app.dv2 #dNoMedia,#app.dv2 #dCover,#app.dv2 #dHeroBg,#app.dv2 .d-logo{display:none!important}
+#app.dv2 #details .dv-sec[hidden],#app.dv2 #details [hidden]{display:none!important}
+@media (min-width:761px){
+  #app.dv2 #details{left:calc(704 * var(--u));right:0;width:auto!important;display:block!important;
+    padding:0 calc(48 * var(--u)) calc(300 * var(--u)) calc(24 * var(--u))!important;
+    opacity:0;visibility:hidden;transform:translateX(calc(48 * var(--u)));transition:transform .55s cubic-bezier(.22,.9,.25,1),opacity .3s,visibility 0s .55s}
+  #app.dv2.details-open #details{opacity:1;visibility:visible;transform:none;transition:transform .55s cubic-bezier(.22,.9,.25,1),opacity .35s .06s,visibility 0s}
+}
+/* the section bar: pinned at the top of the page, the one you're in underlined */
+#app.dv2 .dv-nav{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:calc(4 * var(--u));margin:0 calc(-24 * var(--u));padding:calc(30 * var(--u)) calc(24 * var(--u)) calc(10 * var(--u));
+  background:linear-gradient(180deg,rgba(8,9,14,.95) 80%,rgba(8,9,14,0));-webkit-mask-image:linear-gradient(90deg,transparent,#000 calc(24 * var(--u)));mask-image:linear-gradient(90deg,transparent,#000 calc(24 * var(--u)))}
+#app.dv2 .dv-navt{display:flex;gap:calc(4 * var(--u));min-width:0;overflow:hidden}
+#app.dv2 .dv-t{position:relative;font:500 calc(14.5 * var(--u)) var(--ui);color:var(--dim);padding:calc(8 * var(--u)) calc(12 * var(--u));border-radius:calc(10 * var(--u));cursor:pointer;white-space:nowrap;transition:color .16s,background .16s}
+#app.dv2 .dv-t:hover{color:#fff;background:rgba(255,255,255,.05)}
+#app.dv2 .dv-t.cur{color:var(--ink)}
+#app.dv2 .dv-t.cur::after{content:"";position:absolute;left:calc(12 * var(--u));right:calc(12 * var(--u));bottom:calc(1 * var(--u));height:calc(3 * var(--u));border-radius:9px;background:var(--acc)}
+#app.dv2 .dv-t[hidden]{display:none}
+#app.dv2 .dv-bump{display:inline-flex;margin:0 calc(4 * var(--u));opacity:.85}
+#app.dv2 .dv-sec{position:relative;display:flex;flex-direction:column;gap:calc(14 * var(--u));margin-top:calc(52 * var(--u))}
+#app.dv2 .dv-sh,#app.dv2 #details .d-sec.dv-sh{margin:0!important;font-size:calc(12.5 * var(--u))!important;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+#app.dv2 .dv-sh em{font-style:normal;letter-spacing:.06em;text-transform:none;font-weight:500}
+
+/* ---------- Overview: title, chips, the buttons, the trailer beside Your play ---------- */
+#app.dv2 #details .d-hero{display:block!important;position:relative;min-height:0!important;margin:0;padding:calc(18 * var(--u)) 0 0!important;overflow:visible;border:0;background:none}
+#app.dv2 #details .d-hero::after,#app.dv2 #details .d-hero::before{display:none}
+#app.dv2 #details .d-hero-row{display:block;gap:0}
+#app.dv2 #details .d-head{min-width:0}
+#app.dv2 #details .d-kicker{font-size:calc(13 * var(--u))!important;font-weight:600;letter-spacing:.24em;color:color-mix(in srgb,var(--acc2) 75%,var(--dim));padding-right:calc(60 * var(--u))}
+#app.dv2 #details .d-head .d-title,#app.dv2 #details .d-head.has-logo .d-title{position:static;width:auto;height:auto;overflow:visible;clip:auto;white-space:normal;
+  margin:calc(4 * var(--u)) 0 0;font-size:calc(66 * var(--u))!important;line-height:1.04;font-weight:700;letter-spacing:-.015em;text-wrap:balance;text-shadow:none}
+#app.dv2 #details .d-chips{display:flex;flex-wrap:wrap;align-items:center;gap:calc(8 * var(--u));margin-top:calc(12 * var(--u))!important}
+#app.dv2 #details .chipx{font-size:calc(14 * var(--u))!important;font-weight:500;letter-spacing:0;color:var(--ink2);border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:calc(5 * var(--u)) calc(13 * var(--u))!important;background:rgba(255,255,255,.04)}
+#app.dv2 #details .chipx.score{color:#ffd77a;border-color:color-mix(in srgb,#ffd77a 40%,transparent);background:rgba(255,215,122,.05)}
+#app.dv2 #details .chipx.esrb{background:rgba(255,255,255,.9);color:#111;border-color:transparent}
+#app.dv2 #details .dv-by{font-size:calc(15 * var(--u));color:var(--dim);margin-left:calc(6 * var(--u))}
+#app.dv2 #details .d-x{top:calc(14 * var(--u));right:0;width:calc(42 * var(--u));min-width:30px}
+/* the buttons: Play wide and lit; Read booklet, Inspect, Favourite, More labelled; Settings' highlight glides under them */
+#app.dv2 #details .d-actions{position:relative!important;display:flex!important;flex-wrap:wrap!important;gap:calc(12 * var(--u))!important;margin:calc(20 * var(--u)) 0 0!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+#app.dv2 #details .d-actions .btn{height:calc(62 * var(--u))!important;min-height:40px!important;border-radius:calc(16 * var(--u))!important;padding:0 calc(18 * var(--u))!important;
+  font-size:calc(16 * var(--u))!important;font-weight:500;color:var(--ink2);background:rgba(255,255,255,.05)!important;box-shadow:inset 0 0 0 1px var(--line)!important;flex:0 0 auto!important;min-width:0!important}
+#app.dv2 #details .d-actions .d-ico svg{width:calc(21 * var(--u));height:calc(21 * var(--u));min-width:16px;min-height:16px}
+#app.dv2 #details .d-actions #dPlay{flex:0 0 calc(220 * var(--u))!important;justify-content:center;font-size:calc(20 * var(--u))!important;font-weight:600;color:#fff!important;
+  background:linear-gradient(180deg,#7d9aff,var(--acc))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 calc(10 * var(--u)) calc(26 * var(--u)) calc(-14 * var(--u)) color-mix(in srgb,var(--acc) 90%,transparent)!important}
+body.pad-input #app.dv2 #details .d-actions #dPlay.pad-focus{background:linear-gradient(180deg,#8aa5ff,#6b8cff)!important;
+  box-shadow:inset 0 0 0 2px #fff,0 0 0 calc(4 * var(--u)) color-mix(in srgb,var(--acc) 45%,transparent),0 calc(14 * var(--u)) calc(40 * var(--u)) calc(-8 * var(--u)) color-mix(in srgb,var(--acc) 80%,transparent)!important}
+#app.dv2 #details .d-actions .d-hl{border-radius:calc(16 * var(--u))}
+#app.dv2 #details .dv-fav.set svg{fill:#ff8fa3;stroke:#ff8fa3;opacity:1}
+@media (min-width:1300px){
+  #app.dv2 #details .d-actions .d-ico span{display:inline-block!important;max-width:none!important;opacity:1!important;margin-left:calc(10 * var(--u))!important}
+}
+/* More: Settings' rows in a card that opens over the page, under its button */
+#app.dv2 #details #dMenu{position:absolute;z-index:6;right:0;margin:calc(8 * var(--u)) 0 0;width:calc(360 * var(--u));min-width:240px;display:flex;flex-direction:column;gap:calc(4 * var(--u));
+  padding:calc(10 * var(--u));border-radius:calc(18 * var(--u));background:var(--panel2);border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(0,0,0,.8)}
+#app.dv2 #details #dMenu[hidden]{display:none!important}
+#app.dv2 #details #dMenu .btn{justify-content:flex-start;width:100%;min-height:calc(42 * var(--u));padding:0 calc(14 * var(--u));border:0;border-radius:calc(12 * var(--u));background:transparent;color:var(--ink);font-size:calc(15.5 * var(--u));font-weight:500}
+#app.dv2 #details #dMenu #dHide{order:9;color:#ffb4a8;position:relative;margin-top:calc(9 * var(--u))}
+#app.dv2 #details #dMenu #dHide::before{content:"";position:absolute;left:calc(10 * var(--u));right:calc(10 * var(--u));top:calc(-6 * var(--u));height:1px;background:var(--line)}
+/* the trailer's box beside Your play */
+#app.dv2 .dv-duo{display:grid;grid-template-columns:calc(520 * var(--u)) minmax(0,1fr);gap:calc(16 * var(--u));margin-top:calc(22 * var(--u))}
+#app.dv2 .dv-duo[hidden]{display:none!important}
+#app.dv2 .dv-vid{position:relative;min-width:0}
+#app.dv2 #details #dMedia{display:block!important;opacity:1!important;padding:0!important;margin:0!important;transition:none}
+#app.dv2 #details #dMedia .d-media-in{border-radius:calc(16 * var(--u));aspect-ratio:16/9;background-color:#05070d;background-size:cover;background-position:center;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+#app.dv2 #details #dMedia .d-media-in::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06) 50%,rgba(0,0,0,.55));pointer-events:none}
+#app.dv2 #details #dMedia.on:not(.ready) .d-media-in::after{content:"Getting the trailer…";inset:auto auto calc(12 * var(--u)) calc(14 * var(--u));padding:calc(4 * var(--u)) calc(11 * var(--u));border-radius:99px;
+  font-size:calc(12 * var(--u));font-weight:600;color:#e9ecf6;background:rgba(8,10,18,.62)}
+#app.dv2 #details .d-media-tag{left:calc(14 * var(--u));top:calc(12 * var(--u));bottom:auto;font-size:calc(11 * var(--u));letter-spacing:.16em;padding:calc(4 * var(--u)) calc(10 * var(--u));z-index:2}
+/* (beta.12) the box's sound: a speaker (on / off) and a slim volume bar, over the box (above #dTrailer, so the mouse reaches
+   them); LT / RT shown beside it on the controller (app.js boxSoundOn / boxVolSet) */
+#app.dv2 .dv-snd{position:absolute;z-index:4;right:calc(12 * var(--u));top:calc(10 * var(--u));display:flex;align-items:center;gap:calc(8 * var(--u));height:calc(30 * var(--u));
+  padding:0 calc(10 * var(--u)) 0 calc(5 * var(--u));border-radius:99px;background:rgba(8,10,18,.62);border:1px solid rgba(255,255,255,.14);color:#fff;opacity:0;transition:opacity .4s .3s;pointer-events:none}
+#app.dv2 #dMedia.ready:not(.yt)~.dv-snd{opacity:1;pointer-events:auto}
+#app.dv2 .dv-spk{display:grid;place-items:center;width:calc(24 * var(--u));height:calc(24 * var(--u));padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+#app.dv2 .dv-spk svg{width:calc(18 * var(--u));height:calc(18 * var(--u));fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#app.dv2 .dv-spk svg .b{fill:currentColor;stroke:none}
+#app.dv2 .dv-snd .w,#app.dv2 .dv-snd.on .x{display:none}#app.dv2 .dv-snd.on .w{display:block}
+#app.dv2 .dv-vbar{position:relative;width:calc(64 * var(--u));height:calc(18 * var(--u));cursor:pointer;touch-action:none}
+#app.dv2 .dv-vbar::before,#app.dv2 .dv-vbar i{content:"";position:absolute;left:0;right:0;top:50%;height:calc(4 * var(--u));margin-top:calc(-2 * var(--u));border-radius:99px}
+#app.dv2 .dv-vbar::before{background:rgba(255,255,255,.25)}
+#app.dv2 .dv-vbar i{background:#fff;transform-origin:0 50%;transform:scaleX(0);transition:transform .15s}
+#app.dv2 .dv-snd.busy .dv-spk{animation:dvSndPulse 1s ease-in-out infinite}
+@keyframes dvSndPulse{50%{opacity:.35}}
+#app.dv2 .dv-vk{display:none;font-size:calc(11 * var(--u));font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.75);white-space:nowrap}
+body.pad-input #app.dv2 .dv-vk{display:inline}
+#app.dv2 #details #dTrailer{position:absolute!important;inset:0;z-index:3;display:block;width:auto!important;height:auto!important;margin:0!important;padding:0!important;border:0!important;border-radius:calc(16 * var(--u))!important;background:transparent!important;box-shadow:none!important;cursor:pointer}
+#app.dv2 #details #dTrailer.pad-focus,#app.dv2 #details #dTrailer:focus-visible{background:transparent!important;outline:none;box-shadow:inset 0 0 0 2px var(--acc2),0 0 0 calc(4 * var(--u)) color-mix(in srgb,var(--acc) 40%,transparent)!important}
+#app.dv2 .dv-vfull{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:calc(9 * var(--u));white-space:nowrap;font-size:calc(15 * var(--u));font-weight:500;color:#fff;
+  background:rgba(10,11,18,.7);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:calc(8 * var(--u)) calc(16 * var(--u));opacity:0;transition:opacity .18s}
+#app.dv2 #dTrailer.pad-focus .dv-vfull,body:not(.pad-input) #app.dv2 #dTrailer:hover .dv-vfull,#app.dv2 #dTrailer:focus-visible .dv-vfull{opacity:1}
+#app.dv2 .dv-trg{display:inline-flex}
+/* nothing to play or show yet: a quiet box with the game's art behind (the backdrop) */
+#app.dv2 .dv-none{position:absolute;z-index:1;inset:0;display:none;place-items:center;border-radius:calc(16 * var(--u));font-size:calc(14 * var(--u));color:var(--dim);
+  background:radial-gradient(70% 90% at 50% 40%,color-mix(in srgb,var(--dv-tint) 16%,transparent),transparent 70%),rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--line)}
+#app.dv2 .dv-vid.dv-empty .dv-none{display:grid}
+#app.dv2 .dv-vid.dv-empty:has(#dMedia.on) .dv-none{display:none}
+#app.dv2 .dv-p1{min-width:0;border-radius:calc(16 * var(--u));background:rgba(12,13,20,.55);border:1px solid var(--line);padding:calc(18 * var(--u)) calc(20 * var(--u));display:flex;flex-direction:column;gap:calc(13 * var(--u))}
+#app.dv2 .dv-p1 .dv-sh{letter-spacing:.2em}
+#app.dv2 #details #dStats{display:flex!important;flex-direction:column;gap:calc(13 * var(--u));margin:0}
+#app.dv2 #details #dStats[hidden]{display:none!important}
+#app.dv2 #details .d-stat{padding:0;border:0;background:none;border-radius:0}
+#app.dv2 #details .d-stat span{font-size:calc(11.5 * var(--u));font-weight:600;letter-spacing:.16em;color:var(--faint)}
+#app.dv2 #details .d-stat b{margin-top:calc(2 * var(--u));font-size:calc(21 * var(--u));font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+/* ---------- Screenshots: a strip that glides to the one you're on ---------- */
+#app.dv2 #details #dShots{display:flex;flex-wrap:nowrap;gap:calc(12 * var(--u));overflow-x:auto;padding:10px;margin:-10px;scroll-behavior:smooth;overscroll-behavior-x:contain;scrollbar-width:none}
+#app.dv2 #details #dShots .d-shot{flex:none;width:calc(197 * var(--u));aspect-ratio:16/9;border-radius:calc(12 * var(--u));border:1px solid var(--line);opacity:.8;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s,box-shadow .22s}
+#app.dv2 #details #dShots .d-shot.on{opacity:1;transform:none;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 55%,transparent)}
+body.pad-input #app.dv2 #details #dShots .d-shot.pad-focus{transform:scale(1.04)}
+html.reduce-motion #app.dv2 #details #dShots,body.reduce-motion #app.dv2 #details #dShots{scroll-behavior:auto}
+
+/* ---------- About ---------- */
+#app.dv2 #details #dDesc{margin:0;font-size:calc(17 * var(--u))!important;line-height:1.62;color:var(--ink2);max-width:62ch;max-height:none;overflow:visible}
+#app.dv2 #details #dDesc.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#app.dv2 #details #dMore{align-self:flex-start;margin:0;font:500 calc(15 * var(--u)) var(--ui)!important;letter-spacing:0;text-transform:none;color:var(--ink);padding:calc(8 * var(--u)) calc(16 * var(--u));border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
+
+/* ---------- Your play ---------- */
+#app.dv2 .dv-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(12 * var(--u))}
+#app.dv2 .dv-tile,#app.dv2 .dv-weeks,#app.dv2 .dv-status,#app.dv2 .dv-row,#app.dv2 .dv-obj{border-radius:calc(14 * var(--u));background:rgba(255,255,255,.035);border:1px solid var(--line)}
+#app.dv2 .dv-tile{padding:calc(16 * var(--u)) calc(18 * var(--u));display:flex;flex-direction:column;gap:calc(4 * var(--u));min-width:0}
+#app.dv2 .dv-tile span,#app.dv2 .dv-kv span{font-size:calc(11.5 * var(--u));font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+#app.dv2 .dv-tile b,#app.dv2 .dv-kv b{font-size:calc(21 * var(--u));font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#app.dv2 .dv-tile small,#app.dv2 .dv-kv small{font-size:calc(12.5 * var(--u));color:var(--dim);min-height:1em}
+#app.dv2 .dv-weeks{display:grid;grid-template-columns:1fr auto;gap:calc(18 * var(--u));align-items:end;padding:calc(16 * var(--u)) calc(20 * var(--u))}
+#app.dv2 .dv-kv{display:flex;flex-direction:column;gap:calc(2 * var(--u))}
+#app.dv2 .dv-kv.dv-r{text-align:right}
+#app.dv2 .dv-bars{display:flex;align-items:flex-end;gap:calc(8 * var(--u));height:calc(70 * var(--u));border-bottom:1px solid var(--line)}
+#app.dv2 .dv-bars i{flex:1;min-height:2px;border-radius:calc(4 * var(--u)) calc(4 * var(--u)) 0 0;background:color-mix(in srgb,var(--acc) 55%,transparent)}
+#app.dv2 .dv-bars i:last-child{background:var(--acc2)}
+#app.dv2 .dv-wk{display:flex;justify-content:space-between;font-size:calc(11.5 * var(--u));color:var(--faint);margin-top:calc(6 * var(--u))}
+#app.dv2 .dv-status{display:flex;align-items:center;gap:calc(16 * var(--u));padding:calc(14 * var(--u)) calc(20 * var(--u));flex-wrap:wrap}
+#app.dv2 .dv-tx{flex:1;min-width:0;text-align:left}
+#app.dv2 .dv-tx b{display:block;font-size:calc(17 * var(--u));font-weight:600;color:var(--ink)}
+#app.dv2 .dv-tx small{display:block;margin-top:calc(3 * var(--u));font-size:calc(13.5 * var(--u));line-height:1.4;color:var(--dim)}
+#app.dv2 .dv-seg{display:flex;gap:calc(6 * var(--u));flex-wrap:wrap}
+#app.dv2 .dv-opt{font:500 calc(14.5 * var(--u)) var(--ui);color:var(--dim);padding:calc(9 * var(--u)) calc(14 * var(--u));border-radius:calc(10 * var(--u));background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--line);transition:color .16s,background .16s,box-shadow .16s}
+body:not(.pad-input) #app.dv2 .dv-opt:hover{color:#fff;background:rgba(255,255,255,.08)}
+#app.dv2 .dv-opt.on{color:#fff;background:color-mix(in srgb,var(--acc) 34%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc2) 60%,transparent)}
+#app.dv2 .dv-opt.on::before{content:"✓ "}
+
+/* ---------- Achievements ---------- */
+#app.dv2 #details #dAch{margin:0;display:flex;align-items:center;gap:calc(20 * var(--u));padding:0;border:0;background:none;border-radius:0}
+#app.dv2 #details #dAch .ring{width:calc(78 * var(--u));height:calc(78 * var(--u));min-width:48px;min-height:48px;background:conic-gradient(var(--warn) calc(var(--p,0)*1%),rgba(255,255,255,.1) 0)}
+#app.dv2 #details #dAch .ring::before{inset:12%;background:#10121a}
+#app.dv2 #details #dAch .ring span{font-size:calc(18 * var(--u));color:var(--ink)}
+#app.dv2 #details .d-ach-main b{font-size:calc(19 * var(--u))}
+#app.dv2 #details .d-ach-sub{font-size:calc(13.5 * var(--u));color:var(--dim)}
+#app.dv2 #details #dAchBtn{font-size:calc(14.5 * var(--u));padding:calc(9 * var(--u)) calc(16 * var(--u));border-radius:calc(10 * var(--u));border:0;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--line);color:var(--ink)}
+#app.dv2 .dv-how,#app.dv2 #details #dHow{display:block;margin:0;font-size:calc(14 * var(--u));line-height:1.5;color:var(--dim)}
+
+/* ---------- Your copy: the things on file, drawn as small objects ---------- */
+#app.dv2 .dv-sh em#dvCopySum{color:var(--faint)}
+#app.dv2 .dv-tray{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(12 * var(--u))}
+#app.dv2 .dv-obj{padding:calc(14 * var(--u));display:flex;flex-direction:column;align-items:center;gap:calc(10 * var(--u));min-width:0}
+#app.dv2 .dv-obj .dv-art{height:calc(104 * var(--u));display:grid;place-items:center}
+#app.dv2 .dv-obj b{font-size:calc(15 * var(--u));font-weight:600}
+#app.dv2 .dv-obj small{font-size:calc(12.5 * var(--u));color:var(--dim);text-align:center}
+#app.dv2 .dv-obj small.ok{color:var(--ok)}
+#app.dv2 .dv-obj.miss .dv-art{opacity:.32;filter:grayscale(1)}
+#app.dv2 .dv-art i{display:block;position:relative;background:#1a1c24 center/cover no-repeat;box-shadow:0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(0,0,0,.5)}
+#app.dv2 .dv-art .dv-box{width:calc(74 * var(--u));height:calc(104 * var(--u));border-radius:calc(4 * var(--u))}
+#app.dv2 .dv-art .dv-spine{width:calc(22 * var(--u));height:calc(104 * var(--u));border-radius:calc(3 * var(--u));background-color:var(--sb,#2c2c35);color:var(--sf,#c3c3cf);
+  writing-mode:vertical-rl;font-size:calc(9 * var(--u));font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;padding:calc(6 * var(--u)) 0}
+#app.dv2 .dv-art .dv-disc{width:calc(96 * var(--u));height:calc(96 * var(--u));border-radius:50%;background-image:conic-gradient(from 30deg,#d9dde6,#8e96a8,#e8ebf1,#9aa2b3,#d9dde6);box-shadow:0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(0,0,0,.5),inset 0 0 0 calc(2 * var(--u)) rgba(255,255,255,.25)}
+#app.dv2 .dv-art .dv-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#0b0c14 0 9%,#c9ced8 9.5% 14%,transparent 14.5%)}
+#app.dv2 .dv-art .dv-manual{width:calc(80 * var(--u));height:calc(100 * var(--u));border-radius:calc(2 * var(--u)) calc(5 * var(--u)) calc(5 * var(--u)) calc(2 * var(--u));background-color:#e9ebf1;
+  box-shadow:calc(3 * var(--u)) calc(3 * var(--u)) 0 #d8dbe4,0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(0,0,0,.5)}
+/* rows: Settings' row (an icon, the words, a value on the right, a chevron) */
+#app.dv2 .dv-rows{display:flex;flex-direction:column;gap:calc(10 * var(--u))}
+#app.dv2 .dv-row{display:flex;align-items:center;gap:calc(16 * var(--u));width:100%;padding:calc(14 * var(--u)) calc(20 * var(--u));text-align:left;color:var(--ink);cursor:pointer;transition:background .16s,box-shadow .16s}
+body:not(.pad-input) #app.dv2 .dv-row:hover{background:var(--hl);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc2) 60%,transparent)}
+#app.dv2 .dv-row[hidden]{display:none!important}
+#app.dv2 .dv-ic{width:calc(40 * var(--u));height:calc(40 * var(--u));min-width:28px;min-height:28px;border-radius:calc(11 * var(--u));display:grid;place-items:center;background:rgba(255,255,255,.06);flex:none}
+#app.dv2 .dv-ic svg{width:calc(20 * var(--u));height:calc(20 * var(--u));min-width:14px;stroke:var(--ink2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#app.dv2 .dv-val{font-size:calc(15 * var(--u));color:var(--dim);white-space:nowrap}
+#app.dv2 .dv-chev{color:var(--faint);font-size:calc(22 * var(--u));line-height:1}
+
+/* ---------- Info: a museum placard; how it plays and the launch command at the bottom ---------- */
+#app.dv2 .dv-plac{border-radius:calc(16 * var(--u));border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));padding:calc(22 * var(--u)) calc(26 * var(--u))}
+#app.dv2 .dv-pl{font-size:calc(12 * var(--u));font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+#app.dv2 .dv-ph{margin:calc(6 * var(--u)) 0 calc(14 * var(--u));font-size:calc(24 * var(--u));font-weight:700}
+#app.dv2 #details #dGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:calc(36 * var(--u));row-gap:0;margin:0;border:0;font-size:inherit}
+#app.dv2 #details #dGrid>div{display:flex;justify-content:space-between;align-items:baseline;gap:calc(16 * var(--u));padding:calc(10 * var(--u)) 0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;min-width:0}
+#app.dv2 #details #dGrid>div.wide{flex-direction:row;grid-column:auto}
+#app.dv2 #details #dGrid dt{font-size:calc(14.5 * var(--u));letter-spacing:0;text-transform:none;color:var(--dim);flex:none}
+#app.dv2 #details #dGrid dd{margin:0;font-size:calc(14.5 * var(--u));font-weight:600;text-align:right;color:var(--ink);overflow-wrap:anywhere}
+#app.dv2 #details .d-adv{margin:0}
+#app.dv2 #details .d-adv summary{width:max-content;font-size:calc(12.5 * var(--u));font-weight:600;letter-spacing:.2em;color:var(--faint);padding:calc(6 * var(--u)) calc(10 * var(--u));margin-left:calc(-10 * var(--u));border-radius:calc(8 * var(--u))}
+#app.dv2 #details .d-cmd{font-size:calc(13 * var(--u));border-radius:calc(12 * var(--u));background:rgba(255,255,255,.04);border-color:var(--line)}
+
+/* ---------- the controller's focus: Settings' ring (the buttons' row keeps its gliding highlight) ---------- */
+body.pad-input #app.dv2 #details .dv-row.pad-focus,body.pad-input #app.dv2 #details .dv-opt.pad-focus,body.pad-input #app.dv2 #details #dMore.pad-focus,body.pad-input #app.dv2 #details #dAchBtn.pad-focus,
+body.pad-input #app.dv2 #details #dMenu .btn.pad-focus,body.pad-input #app.dv2 #details .d-adv summary.pad-focus,body.pad-input #app.dv2 #details .d-x.pad-focus{color:#fff!important;background:var(--hl)!important;
+  box-shadow:var(--ring),0 calc(10 * var(--u)) calc(34 * var(--u)) calc(-10 * var(--u)) color-mix(in srgb,var(--acc) 70%,transparent)!important}
+
+/* ---------- narrow windows (under 761 px, the phone-style sheet): one column ---------- */
+@media (max-width:760px){
+  #app.dv2 #details{padding:0 20px 120px!important;display:block!important}
+  #app.dv2 .dv-duo{grid-template-columns:1fr}
+  #app.dv2 .dv-tiles,#app.dv2 .dv-tray{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #app.dv2 #details #dGrid{grid-template-columns:1fr}
+  #app.dv2 .dv-nav{margin:0 -20px;padding:12px 20px 8px}
+  #app.dv2 .dv-cap{display:none}
+}
+body.reduce-motion #app.dv2 .slot.sel>.box{transition:none}
+body.reduce-motion #app.dv2 .slot.sel>.box{rotate:none}
+
+/* ---------- (beta.12) the screenshot viewer (app.js openShotView): full screen over Details, grown out of the thumbnail
+   (--ox / --oy: its centre) and shrunk back into it; only opacity and transform move ---------- */
+#shotView{position:fixed;inset:0;z-index:80;display:none;background:rgba(5,6,10,.94);--ox:50vw;--oy:50vh;font-family:var(--ui,inherit);color:#fff}
+#shotView.on,#shotView.out{display:block}
+#shotView .sv-stage{position:absolute;inset:0;padding:5vh 5vw 12vh;display:grid;grid-template:minmax(0,1fr)/minmax(0,1fr);place-items:stretch;transform-origin:var(--ox) var(--oy)}
+/* (beta.12) the picture fills the space it has, whatever its size (a 256x224 shot used to stay tiny, a tall one ran off the
+   screen): contain keeps its shape; the shadow follows the picture itself */
+#shotView .sv-img{width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;filter:drop-shadow(0 24px 50px rgba(0,0,0,.6))}
+#shotView .sv-img:not([src]){visibility:hidden}
+#shotView.on{animation:svIn .26s ease both}#shotView.on .sv-stage{animation:svGrow .34s cubic-bezier(.2,.9,.25,1) both}
+#shotView.out{animation:svOut .22s ease both;pointer-events:none}#shotView.out .sv-stage{animation:svShrink .24s cubic-bezier(.4,0,.6,1) both}
+@keyframes svIn{from{opacity:0}}@keyframes svOut{to{opacity:0}}
+@keyframes svGrow{from{transform:scale(.16);opacity:.2}}@keyframes svShrink{to{transform:scale(.16);opacity:0}}
+#shotView .sv-nav{position:absolute;top:50%;width:56px;height:56px;margin-top:-28px;border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(14,16,24,.7);color:#fff;font-size:34px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0 0 4px}
+#shotView .sv-nav:hover{background:rgba(40,44,60,.9)}
+#shotView .sv-prev{left:2vw}#shotView .sv-next{right:2vw}
+#shotView.one .sv-nav{display:none}
+#shotView .sv-bar{position:absolute;left:50%;bottom:3.5vh;transform:translateX(-50%);display:flex;align-items:center;gap:18px;padding:8px 18px;border-radius:99px;background:rgba(14,16,24,.78);border:1px solid rgba(255,255,255,.12);font-size:15px;white-space:nowrap}
+#shotView .sv-n{font-weight:700;letter-spacing:.04em}
+#shotView .sv-keys{color:rgba(255,255,255,.72)}
+body.reduce-motion #shotView.on,body.reduce-motion #shotView.on .sv-stage,body.reduce-motion #shotView.out,body.reduce-motion #shotView.out .sv-stage{animation-duration:.01s}
+/* (beta.12) Android: a close button for touch, bigger words (the page is laid out wide and scaled down), over YouTube's player */
+#shotView .sv-x{display:none}
+html.platform-android #shotView{z-index:400}
+html.platform-android #shotView .sv-x{display:grid;place-items:center;position:absolute;top:max(18px,env(safe-area-inset-top,0px));right:max(18px,env(safe-area-inset-right,0px));width:64px;height:64px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(14,16,24,.78);color:#fff;font-size:28px;line-height:1;padding:0}
+html.platform-android #shotView .sv-bar{font-size:21px;padding:11px 24px;gap:22px;bottom:max(3.5vh,env(safe-area-inset-bottom,0px));max-width:92vw;white-space:normal;text-align:center}
+html.platform-android #shotView .sv-nav{width:68px;height:68px;margin-top:-34px;font-size:40px}
+@media (orientation:portrait){html.platform-android #shotView .sv-stage{padding:9vh 3vw 14vh}html.platform-android #shotView .sv-nav{display:none}}

@@ -5,6 +5,11 @@
   padding-top:max(34px,env(safe-area-inset-top,0px));padding-left:28px;padding-right:max(28px,env(safe-area-inset-right,0px));
   transform:translateX(104%);visibility:hidden;transition:transform .55s cubic-bezier(.22,.9,.25,1),visibility 0s .55s}
 #app.qm-open .qm{transform:none;visibility:visible;transition:transform .55s cubic-bezier(.22,.9,.25,1)}
+/* (beta.10) drawn once, unseen, while the app is idle after start-up (app.js qmPrewarm): the graphics card's first drawing of the
+   panel cost ~130 ms on the first open */
+#app.qm-warm:not(.qm-open) .qm{transform:none;visibility:visible;opacity:.004;transition:none;pointer-events:none}
+/* (beta.12) and straight back to hidden afterwards: without this the panel ran its slide-out, fully visible (app.js qmPrewarm) */
+#app.qm-cool:not(.qm-open) .qm{transition:none;visibility:hidden}
 /* the shelf steps aside exactly as it does for Details (style.css), the hint bar hands over to the panel's own */
 #app.qm-open #scene{transform:translateX(-17vw) scale(.92)}
 #app.qm-open .sel-halo{transform:translate(calc(-50% - 17vw),-50%) scale(.92)}
@@ -97,4 +102,4 @@ body.perf-low .qm{background:rgba(10,12,20,.94)!important;backdrop-filter:none;-
 #app.qm-open .hud-top>.right{opacity:0;pointer-events:none}
 
 /* Windows' own "show animations" switch off: the same quick fades as Boxshelf's Reduce motion */
-@media (prefers-reduced-motion:reduce){.qm,.qm-hl,.qm-sub,.qm-act,.qm-opt,#app.qm-open #scene{transition-duration:.12s!important}}
+body.reduce-motion .qm,body.reduce-motion .qm-hl,body.reduce-motion .qm-sub,body.reduce-motion .qm-act,body.reduce-motion .qm-opt,body.reduce-motion #app.qm-open #scene{transition-duration:.12s!important}

@@ -39,6 +39,8 @@ if(RETRO){[["psx","PlayStation","DuckStation","DuckStation\\duckstation-qt-x64-R
   ["megadrive","Mega Drive","RetroArch","RetroArch-Win64\\retroarch.exe","Mega Drive","md",["Blast Hedgehog","Street Rage"]],
   ["dreamcast","Dreamcast","RetroArch","RetroArch-Win64\\retroarch.exe","Dreamcast","chd",["Soul Spiral","Crazy Courier"]]].forEach(([id,name,en,ex,fo,e,ts])=>{
   consoles.push({id,name,emulatorName:en,exeNames:[ex.split("\\").pop()],extensions:[e],gameArgs:'"{rom}"'});titles[id]=ts;emu[id]=ex;folder[id]=fo})}
+// ?x360=1 (beta.11): an Xbox 360 shelf, for its wrap-around cover
+if(/[?&]x360=1/.test(location.search)){consoles.push({id:"x360",name:"Xbox 360",emulatorName:"Xenia",exeNames:["xenia_canary.exe"],extensions:["iso","xex"],gameArgs:'"{rom}"'});titles.x360=["Halo Frontier","Gear Storm","Forza Lane"];emu.x360="Xenia\\xenia_canary.exe";folder.x360="Xbox 360"}
 // ?wave2=1 (beta.7): RetroArch installed and every other retro console it can run, without games, for the first run's
 // tidy "More consoles" (RetroArch alone ticks none of them)
 const WAVE2=/[?&]wave2=1/.test(location.search);
@@ -46,10 +48,13 @@ if(WAVE2)[["nes","NES"],["n64","Nintendo 64"],["gb","Game Boy"],["gbc","Game Boy
   .forEach(([id,name])=>{if(consoles.some(c=>c.id===id))return;consoles.push({id,name,emulatorName:"RetroArch",retro:true,exeNames:["retroarch.exe"],extensions:["zip"],gameArgs:'"{rom}"'});titles[id]=[];emu[id]="RetroArch-Win64\\retroarch.exe"});
 // three of them with games, for their cases and wordmarks
 if(WAVE2){Object.assign(titles,{saturn:["Astral Knights","Panzer Skies"],arcade:["Street Brawlers II","Metal Squad"],atari2600:["Pit Runner"]});Object.assign(folder,{saturn:"Saturn",arcade:"Arcade",atari2600:"Atari 2600"})}
+// ?dos=1 (beta.11, with wave2): a DOS game, for its floppy disk (off by default: the first-run test wants DOS without games)
+if(WAVE2&&/[?&]dos=1/.test(location.search)){titles.dos=["Dungeon Quest"];folder.dos="DOS"}
 function mockSw2Builds(){const s=config.systems.sw2||{},B=[["Switch 2 emu\\Selvet Forks\\performance-6\\eglantine.exe","Selvet · Performance 6",false],["Switch 2 emu\\Lichii\\pgo\\lichii.exe","Lichii pgo",true],["Switch 2 emu\\Orchid v0.7.0\\orchid.exe","Orchid v0.7.0",false]].map(([e,label,nup],i)=>({exe:root+"\\"+e,group:"",name:label,label,date:Date.UTC(2026,9,20+i),nup}));
   (Array.isArray(s.buildDirs)?s.buildDirs:[]).forEach((d,i)=>B.push({exe:d+"\\fork-"+i+"\\eglantine.exe",group:"",name:"Fork "+(i+1),label:"Fork "+(i+1),date:Date.UTC(2026,10,1),nup:false}));
   (Array.isArray(s.buildExes)?s.buildExes:[]).forEach(x=>B.push({exe:x,group:"",name:x.split("\\").pop(),label:"Added · "+x.split("\\").pop(),date:Date.UTC(2026,10,2),nup:false}));
-  return B}
+  const hid=new Set((Array.isArray(s.buildHidden)?s.buildHidden:[]).map(x=>String(x).toLowerCase())); // (beta.11) removed in Settings, as main.js does
+  return B.filter(b=>!hid.has(b.exe.toLowerCase()))}
 let config={version:1,setupDone:false,systems:{},steam:{enabled:true,path:""},apps:{stremio:{enabled:true,path:""},nuvio:{enabled:true,path:""}},ui:{sound:true,startFullscreen:true}};
 {const q=(location.search.match(/[?&]previews=(\w+)/)||[])[1];if(q)Object.assign(config.ui,{previews:q,previewDelay:1})} // (beta.7) ?previews=details|shelf: video previews on
 consoles.forEach(c=>config.systems[c.id]={enabled:true,emulator:"",gameArgs:c.gameArgs,emulatorArgs:"",romDirs:[],artDir:"",bootOnLaunch:true});
@@ -63,7 +68,8 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));const mockDl={};
 window.boxshelf={
   // Demo platform: 'android' inside the Capacitor shell (window.Capacitor), else 'web'; ?platform=windows|android overrides for testing
   platform:(()=>{const q=(location.search.match(/[?&]platform=(\w+)/)||[])[1];const os=q||(window.Capacitor?'android':'web');const all=os==='windows';
-    return {os,caps:{steam:all,power:all,homeMenu:all,emuSettings:all,autostart:all,displays:all,folders:all,companionServer:all,winMode:all,dolphinIpl:all,raAutoConfig:all}};})(),
+    const lx=os==='linux'; /* (beta.12) ?platform=linux: what preload.js reports there (power and start at login on, no Home menu or Windows-only rows) */
+ return {os,caps:{steam:all||lx,power:all||lx,homeMenu:all,emuSettings:all,autostart:all||lx,displays:all||lx,folders:all||lx,companionServer:all||lx,winMode:all,dolphinIpl:all,raAutoConfig:all}};})(),
   // Phone companion (Settings → Phone companion): a fake server state; the code is a stand-in picture (the real one is drawn in main/companion.js)
   ...(()=>{const qr='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29"><rect width="29" height="29" fill="#fff"/><path d="M4 4h7v7H4zM18 4h7v7h-7zM4 18h7v7H4zM13 13h3v3h-3zM18 18h2v2h-2zM22 21h3v3h-3z" fill="#000"/></svg>';
     let st={enabled:false,on:false,url:"",port:8730,wantPort:8730,pin:"",qr:"",error:"",note:"",locked:0,phones:[{id:"a1",name:"Pixel 7",added:Date.now()-864e5*3,seen:Date.now()-3600e3}]};
@@ -88,10 +94,21 @@ window.boxshelf={
           return {type:"youtube",id}}
         if(o.file&&hash(o.title)%3!==0){const u=await demoUrl();return u?{type:"file",url:u}:null}
         return o.youtube&&(config.ui||{}).previewYoutube!==false?{type:"youtube",id:"aaaaaaaaaaa"}:null},
-      previewYt:async(id,rect)=>{window.__ytRect=rect;window.__ytOn=true;setTimeout(()=>ytFns.forEach(f=>f({id,state:"playing"})),500);return true},
-      previewYtMove:async(rect,show)=>{window.__ytOn=!!show;if(rect)window.__ytRect=rect},previewYtStop:async()=>{window.__ytOn=false;window.__ytStops=(window.__ytStops||0)+1},
+      previewYt:async(id,rect,muted)=>{window.__ytRect=rect;window.__ytOn=true;window.__ytMuted=muted;setTimeout(()=>ytFns.forEach(f=>f({id,state:"playing"})),500);return true},
+      // (beta.12) a clip's sound for Details' box: a few seconds of silence as a WAV (made here, nothing fetched); window.__noClipAudio:
+  // the sound can't be had; window.__ownSound: the video has its own (a Steam trailer)
+  previewClipAudio:async url=>{await new Promise(r=>setTimeout(r,250));if(window.__ownSound)return {clip:false};if(window.__noClipAudio)return {clip:true,url:null};
+    const n=8000*3,b=new Uint8Array(44+n),dv=new DataView(b.buffer),s=(p,t)=>{for(let i=0;i<t.length;i++)b[p+i]=t.charCodeAt(i)};
+    s(0,"RIFF");dv.setUint32(4,36+n,true);s(8,"WAVEfmt ");dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,8000,true);dv.setUint32(28,8000,true);dv.setUint16(32,1,true);dv.setUint16(34,8,true);s(36,"data");dv.setUint32(40,n,true);b.fill(128,44);
+    window.__clipAudioAsked=(window.__clipAudioAsked||0)+1;return {clip:true,url:URL.createObjectURL(new Blob([b],{type:"audio/wav"}))}}, /* (blob:, as the page's media-src allows; data: isn't) */
+  previewYtMove:async(rect,show)=>{window.__ytOn=!!show;if(rect)window.__ytRect=rect},previewYtStop:async()=>{window.__ytOn=false;window.__ytStops=(window.__ytStops||0)+1},
       onPreviewYt:fn=>{ytFns.push(fn)},previewClearSteam:async()=>true,
       onPreviewClip:fn=>{clipFns.push(fn)},onClipProgress:fn=>{progFns.push(fn)},
+      /* (beta.12) the Linux Game Mode browser (picker.js): window.__pickOpen(d) asks, window.__picked is the answer; a made-up home folder */
+      onPickOpen:fn=>{window.__pickOpen=fn},pickDone:(id,p)=>{window.__picked={id,path:p}},onNotice:fn=>{window.__notice=fn},
+      fsPlaces:async()=>[{label:"Home",path:"/home/deck"},{label:"SD card",path:"/run/media/mmcblk0p1"},{label:"Emulation (EmuDeck)",path:"/home/deck/Emulation"}],
+      fsList:async dir=>{const T={"/home/deck":[{n:"Applications",d:true},{n:"Emulation",d:true},{n:"notes.txt",d:false}],"/home/deck/Emulation":[{n:"roms",d:true},{n:"bios",d:true}],"/home/deck/Emulation/roms":[{n:"gc",d:true},{n:"snes",d:true}],"/home/deck/Emulation/roms/snes":[{n:"Game.sfc",d:false},{n:"Other.zip",d:false}],"/home/deck/Applications":[{n:"Dolphin.AppImage",d:false}],"/run/media/mmcblk0p1":[{n:"Emulation",d:true}]};
+        const d=dir||"/home/deck",up=d.replace(/\/[^/]+$/,"")||"/";return {dir:d,parent:d==="/"?"":up,entries:T[d]||[]}},
       // (beta.8) ?deck=desktop: a Steam Deck in Desktop Mode, Boxshelf not started by Steam (?deck=steam: started by Steam)
       deckInfo:async()=>{const m=(location.search.match(/[?&]deck=(\w+)/)||[])[1];return m?{linux:true,deck:true,steam:m==="steam",gameMode:false,canAdd:true,inSteam:!!window.__inSteam,flags:[]}:{linux:false,deck:false,steam:false,gameMode:false,canAdd:false}},
       addToSteam:async()=>{await wait(200);window.__added=(window.__added||0)+1;window.__inSteam=true;return {ok:true,users:1,updated:false,reopened:true}},
@@ -121,6 +138,20 @@ window.boxshelf={
   // (beta.7) Add games: a pretend folder of games and a pretend Playnite library
   gameTitles:async exes=>exes.map(e=>({exe:e,title:/Moon Forge/.test(e)?"Moon Forge":/Star Rally/.test(e)?"Star Rally":e.split("\\").pop().replace(/\.exe$/i,"")})),
   scanGameFolder:async r=>{await wait(300);return {root:r,games:[["Aurora Drift","AuroraDrift.exe"],["Clockwork Garden","Clockwork.exe"],["Neon Harbor","NeonHarbor.exe"]].map(([t,e])=>({folder:r+"\\"+t,title:t,exe:r+"\\"+t+"\\"+e,others:[]}))}},
+  // (beta.12) RomM, pretend: pairing approves on the 2nd poll; a wrong code is refused; Test / Sync answer
+  rommStatus:async()=>({server:"",paired:!!window.__rommPaired,count:window.__rommPaired?3:null,at:null,offline:false,skipped:null}),
+  rommPairStart:async()=>{window.__rommPolls=0;return {ok:true,userCode:"ABCD-EFGH",qrUrl:"http://romm.local/pair/device?user_code=ABCDEFGH",qr:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" class="pretend-qr"><rect width="10" height="10" fill="#fff"/><rect x="1" y="1" width="3" height="3"/></svg>',expiresAt:Date.now()+600000}},
+  rommPairPoll:async()=>{window.__rommPolls=(window.__rommPolls||0)+1;if(window.__rommPolls>=2){window.__rommPaired=true;return {state:"ok"}}return {state:"pending",wait:1000}},
+  rommPairCancel:async()=>true,
+  rommPairCode:async code=>code==="12345678"?(window.__rommPaired=true,{ok:true}):{ok:false,error:"not accepted"},
+  rommTest:async()=>window.__rommPaired?{ok:true,version:"5.4.1",platforms:3}:{ok:false,error:"auth"},
+  rommSync:async()=>({ok:true,count:3,offline:false}),
+  rommForget:async()=>{window.__rommPaired=false;return true},
+  rommCancel:async()=>{window.__rommCancel=(window.__rommCancel||0)+1;return true},
+  // (beta.12) RocketLauncher, pretend: found with ?rl=1, GameCube set up and in the same folder, NES with no emulator yet
+  rocketFind:async()=>/[?&]rl=1/.test(location.search)?"C:\\HyperSpin\\RocketLauncher\\RocketLauncher.exe":"",
+  rocketSystems:async()=>/[?&]rl=1/.test(location.search)?{list:[{name:"Nintendo GameCube",ready:true},{name:"Nintendo Entertainment System",ready:false},{name:"Sony PlayStation 2",ready:true}],
+    names:{gc:{name:"Nintendo GameCube",known:true,ready:true,folders:1,matches:true},nes:{name:"Nintendo Entertainment System",known:true,ready:false,folders:1,matches:false},ps2:{name:"Sony PlayStation 2",known:true,ready:true,folders:1,matches:false}}}:{list:[],names:{}},
   playniteFind:async()=>/[?&]playnite=1/.test(location.search)?{app:"C:\\Users\\you\\AppData\\Local\\Playnite",library:"C:\\Users\\you\\AppData\\Roaming\\Playnite\\library",portable:false}:null,
   playnitePlan:async()=>{await wait(400);return {total:9,app:"C:\\Users\\you\\AppData\\Local\\Playnite",portable:false,pc:[{key:"p1",title:"Lantern Path",exe:"D:\\Games\\Lantern Path\\lantern.exe",args:"",cover:null,favorite:true,there:true},{key:"p2",title:"Old Tower",exe:"D:\\Games\\Old Tower\\tower.exe",args:"-w",cover:null,favorite:false,there:false}],consoles:{gc:{dirs:["E:\\ROMs\\GameCube"],count:3,emulatorDir:"D:\\Emus\\Dolphin"}},skipped:{store:2,hidden:1,link:1,nothing:0}}},
   emulatorIn:async()=>null,gameCovers:async items=>items.length,
@@ -135,7 +166,8 @@ window.boxshelf={
     // (beta.9) the Custom shelf's games without a cover chosen yet (the batch cover finder)
     pcCoverMissing:async()=>{await wait(80);const s=(window.Shelf&&Shelf._lib?Shelf._lib.shelves():[]).find(x=>x.id==="custom");return (s?s.ids:[]).filter(id=>!(window.__pcCovers||{})[id]).map(id=>({id,title:id,source:"custom"}))},
     launchPc:async id=>{window.__pcLaunched=(window.__pcLaunched||[]).concat(id);await wait(100);if(/^(epic|ubisoft|ea|xbox)-/.test(id))return {external:true};setTimeout(()=>onExit({code:0}),3000);return {pid:4242,cover:3}},pcStatus:async()=>({quiver:root+"\\Quiver",epic:1,gog:1,ubisoft:1,ea:1,xbox:1}),findQuiver:async()=>root+"\\Quiver"}:{}),
-  ...(SW2?{sw2Builds:async()=>{await wait(120);const b=mockSw2Builds();return {builds:b,nup:false,first:b[0].exe}}}:{}),
+  ...(SW2?{sw2Builds:async()=>{await wait(120);const b=mockSw2Builds();return {builds:b,nup:false,first:b[0]&&b[0].exe}},
+    sw2AddBuild:async exe=>{const s=config.systems.sw2=config.systems.sw2||{},low=String(exe).toLowerCase();s.buildHidden=(s.buildHidden||[]).filter(x=>String(x).toLowerCase()!==low);if(!(s.buildExes||[]).some(x=>String(x).toLowerCase()===low))s.buildExes=[...(s.buildExes||[]),exe];return {ok:true}}}:{}),
   downloadCovers:async ids=>({systems:ids.map(id=>({id,name:id,total:10,front:8,back:6,spine:5,had:0,missed:["Example Game"]}))}),
   onCoversProgress:fn=>{(window.__mockCov=window.__mockCov||[]).push(fn)},
   findManuals:async ids=>{await wait(800);return ["Aether Drift","Bramblewood Tales","Cinder Circuit","Coral Kingdom","Echo Hollow","Ferrous Fist","Gale Riders","Kettle Knight","Lumen Isle","Moonmallow","Orbit Odyssey","Sky Harbor"].map((t,i)=>({systemId:"gc",system:"GameCube",title:t,file:root+"\\ROMS\\Gamecube\\"+t+" (USA).rvz",have:i===2,candidates:i===2?[]:[{id:"demo-"+i,title:t+" GameCube Manual",language:"eng",pages:24,score:8,thumb:"",url:"#"},{id:"demo-fr-"+i,title:t+" mode d'emploi",language:"fre",pages:24,score:4.5,thumb:"",url:"#"}]}))},
@@ -146,7 +178,13 @@ window.boxshelf={
   launchGame:async()=>{setTimeout(()=>onExit({code:0}),4000);return {}},
   launchEmulator:async()=>{setTimeout(()=>onExit({code:0}),3000);return {}},
   launchApp:async()=>{setTimeout(()=>onExit({code:0}),3000);return {}},
-  launchSteam:async()=>true,
+  // (beta.12) ?watch=1: Seamless play watches the Steam game (it "ends" 3 s later, or ?watch=giveup: it never shows up),
+  // as main/seamless.js does; Seamless play off (or no ?watch): handed to Steam, as before
+  steamExit:async()=>{window.__steamExit=(window.__steamExit||0)+1;return true}, // (beta.12)
+  launchSteam:async appid=>{const w=window.__watchMode||(/[?&]watch=(\w+)/.exec(location.search)||[])[1];if(!w||(config.ui&&config.ui.seamless===false))return true;window.__watched=(window.__watched||[]).concat(String(appid));
+    if(w==="giveup")setTimeout(()=>{if(window.__gaveUp)window.__gaveUp()},2500);else setTimeout(()=>onExit({code:0,watched:true}),3000);return {watching:true,cover:3}},
+  setScreenMode:async m=>{(window.__screenModes=window.__screenModes||[]).push(m);config.ui.screenMode=m;return m},
+  watchCancel:async()=>({cancelled:false}),onWatchGaveUp:fn=>{window.__gaveUp=fn},
   stopRunning:async()=>{},
   themes:async()=>(window.__mockThemes||{}),
   // (1.76) custom themes: one pretend picture theme (an SVG sky); "Make a theme from a picture" adds a second; tests can
@@ -170,6 +208,8 @@ window.boxshelf={
   pathForFile:()=>null,
   toggleFullscreen:async()=>{},
   quit:async()=>{},power:async k=>{console.log("power",k);return true},chooseArt:async id=>({ok:false,canceled:true}),gameEmulator:async id=>{config.games=config.games||{};if(config.games[id])delete config.games[id];else config.games[id]={emulator:"C:/Emus/shadPS4-perf/shadps4.exe"};return {ok:true,games:JSON.parse(JSON.stringify(config.games))}},
+  // (beta.12) Details → Status, kept per game as main does (cfg.games[id].status)
+  gameStatus:async(id,status)=>{config.games=config.games||{};const k=String(id),o=Object.assign({},config.games[k]);if(["playing","finished","notstarted","abandoned"].includes(status))o.status=status;else delete o.status;if(Object.keys(o).length)config.games[k]=o;else delete config.games[k];window.__statusSaved=(window.__statusSaved||0)+1;return {ok:true,games:JSON.parse(JSON.stringify(config.games))}},
   onExited:fn=>{onExit=fn},
   // 1.55 Settings APIs (fakes): displays, backup / restore, problem report, play history, account status
   listDisplays:async()=>[{id:"1",label:"Display 1 — 1920×1080 (main)",primary:true,current:true,width:1920,height:1080},{id:"2",label:"Display 2 — 3840×2160",primary:false,current:false,width:3840,height:2160}],
@@ -195,7 +235,15 @@ window.boxshelf={
   log:()=>{},uiBusy:()=>{},homeMeta:()=>{},shelfInfo:()=>{},openShelfMenu:()=>{},shelfMenuKey:()=>{},
   onLaunchStatus:()=>{},onRunReady:()=>{},onRunQuitting:()=>{},onRunAside:()=>{},onRaUnlocks:()=>{},onTvFound:()=>{},onShelfMenu:()=>{},onShelfMenuRequest:()=>{},onUiScale:()=>{},onArchiveProgress:()=>{},
   cachedLibrary:async()=>null,scanIfChanged:async()=>window.boxshelf.scan(),
-  raEnabled:async()=>({enabled:false,systems:["gc","wii","psp","ps2"]}),raProfile:async()=>null,raShelf:async()=>({}),raProgress:async()=>null,
+  raEnabled:async()=>({enabled:/[?&]ra=1/.test(location.search),systems:["gc","wii","psp","ps2","snes","n64","gba","psx","ps1"]}),raProfile:async()=>null,raShelf:async()=>({}),
+  /* (beta.12, ?ra=1) a pretend set for the achievements screen: 40 of them, 7 unlocked (one hardcore), story steps, a win condition, missables, every rarity */
+  raProgress:async(sys,title)=>{if(!/[?&]ra=1/.test(location.search))return null;
+    const ic=(h,k)=>"data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="hsl(${h},55%,38%)"/><circle cx="32" cy="32" r="17" fill="hsl(${h},70%,62%)"/><text x="32" y="39" font-size="20" font-family="Arial" font-weight="700" text-anchor="middle" fill="#fff">${k}</text></svg>`);
+    const R=[95,61,42,22,14,36,26,10,3,39,22,2,9,1,42,29,8,23,6,4],W=["Pay the first loan","Open the museum","Donate 10 fish","Catch every bug","Find a fossil","Fill the catalog","Visit the island","Earn a million"];
+    const achievements=Array.from({length:40},(_,i)=>({id:9000+i,title:i===3?"A Very Long Achievement Name That Used To Be Cut Off":`${W[i%W.length]} ${Math.floor(i/W.length)+1}`,desc:i===3?"A longer description, to show it's never cut off in the panel: register every piece of furniture, wallpaper and carpet in the catalog.":`Do the thing number ${i+1}`,
+      points:[1,5,10,25,2,3,50,100][i%8],type:i<5?"progression":i===5?"win_condition":i===12||i===18||i===27?"missable":"",badge:ic((i*37)%360,String(i+1)),earned:i<7&&i!==4,hardcore:i===1,date:i<7&&i!==4?`2026-11-0${i+1} 20:1${i}:00`:null,rarity:R[i%R.length]}));
+    const got=achievements.filter(a=>a.earned);
+    return {id:1,title,console:"Test",icon:ic(200,"★"),box:null,total:40,earned:got.length,points:achievements.reduce((s,a)=>s+a.points,0),pointsEarned:got.reduce((s,a)=>s+a.points,0),completion:null,completionHardcore:null,mastered:null,achievements,url:"https://retroachievements.org/game/1"}},
   
   openExternal:async()=>true,openSongsFolder:async()=>true,openLibraryFolder:async()=>true,openAppFolder:async()=>true,restoreEmuSettings:async()=>[],
   // (beta.7) Set up for me: a pretend state per emulator (RetroArch, Dolphin, DuckStation here)
@@ -212,7 +260,7 @@ window.boxshelf={
         return {done:names.filter(k=>k!=="Dolphin"),later:[],left:names.filter(k=>k==="Dolphin"),emuSetup:{auto:true,graphics:"auto",resume:false,pending:[]}}}}})(),
   getAutostart:async()=>({enabled:false}),setAutostart:async v=>({enabled:!!v,how:"shortcut"}),
   songs:async()=>[],songRead:async()=>{throw new Error("Preview mode")},
-  library:async()=>[],libraryCover:async()=>null,libraryPages:async()=>[],stremioLibrary:async()=>[],stremioPoster:async()=>null,stremioDetails:async()=>null,
+  library:async()=>/[?&]mags=1/.test(location.search)?[1,2,3].map(n=>({id:"np"+n,kind:"magazine",type:"pdf",title:`Nintendo Power Issue ${n} (198${7+n})`,series:"Nintendo Power"})).concat([{id:"gi1",kind:"magazine",type:"pdf",title:"Game Informer Issue 1 (1991)",series:"Game Informer"}]):[] /* (beta.11 ?mags=1: a file box of three issues and one on its own) */,libraryCover:async()=>null,libraryPages:async()=>[],stremioLibrary:async()=>[],stremioPoster:async()=>null,stremioDetails:async()=>null,
   tvScan:async()=>true,tvList:async()=>[],tvAdFor:async()=>null,tvLocal:async()=>null,
   manualCoverage:async()=>consoles.filter(c=>config.systems[c.id]&&config.systems[c.id].romDirs.length).map(c=>({id:c.id,name:c.name,total:titles[c.id].length,have:0,low:0})),
   artCoverage:async()=>consoles.filter(c=>config.systems[c.id]&&config.systems[c.id].romDirs.length).map(c=>({id:c.id,name:c.name,total:titles[c.id].length,front:0,back:0,spine:0,disc:0,frontLow:0,backLow:0,spineLow:0,discLow:0})),
@@ -226,8 +274,8 @@ window.boxshelf={
     say({stage:"Looking up the set-aside games…",checked:12,moved:2});await wait(400);return {checked:12,moved:2,shrunk:1,got:2,cancelled:false}},
   rejectManual:async()=>{const T=window.__mockTurn||[],C=window.__mockCov||[];T.forEach(f=>f({wait:true}));await wait(300);T.forEach(f=>f({go:true}));for(let i=1;i<=3;i++){await wait(200);C.forEach(f=>f({stage:`Aether Drift: page ${i} of 3`}))}return {got:3,pages:window.__mockManual||[]}},
   repairManual:async()=>{const T=window.__mockTurn||[];T.forEach(f=>f({go:true}));await wait(500);return {changed:true,what:"the box front added as its cover",pages:window.__mockManual||[]}},saveOptimizedModel:async()=>true,
-  archiveSearch:async(t,k,page,plain)=>{await wait(250);const p=page||1,n=p<3?36:8;return {page:p,total:80,rows:36,plain:!!plain,items:Array.from({length:n},(_,i)=>({id:`${k==="guide"?"g":"m"}${p}_${i}`,title:`${String(t||"Magazine").replace(/\b\w/g,c=>c.toUpperCase())} ${k==="guide"?"Official Guide Vol.":"Issue"} ${(p-1)*36+i+1}`,date:`199${i%10}-0${1+i%9}`,pages:96+i,downloads:999-i,thumb:"",page:"https://archive.org/details/x"}))}},
-  archiveCheck:async ids=>{await wait(150);return Object.fromEntries((ids||[]).map((id,i)=>[id,/_3$|_7$/.test(id)?{ok:false,why:"borrow-only"}:{ok:true,type:i%3?"file":"pages",size:i%3?4.2e7:0,files:1,pages:120}]))},
+  archiveSearch:async(t,k,page,plain)=>{await wait(250);const p=page||1,n=p<3?36:8;return {page:p,total:80,rows:36,plain:!!plain,items:Array.from({length:n},(_,i)=>({id:/\bbig\b/i.test(t)&&i===0?`${k==="guide"?"g":"m"}${p}_big`:`${k==="guide"?"g":"m"}${p}_${i}`,title:`${String(t||"Magazine").replace(/\b\w/g,c=>c.toUpperCase())} ${k==="guide"?"Official Guide Vol.":"Issue"} ${(p-1)*36+i+1}`,date:`199${i%10}-0${1+i%9}`,pages:96+i,downloads:999-i,thumb:"",page:"https://archive.org/details/x"}))}},
+  archiveCheck:async ids=>{await wait(150);return Object.fromEntries((ids||[]).map((id,i)=>[id,/_3$|_7$/.test(id)?{ok:false,why:"borrow-only"}:/_big$/.test(id)?{ok:true,type:"file",size:7.9e8,files:1,pages:124} /* (beta.11: a 750 MB one, for the size warning) */:{ok:true,type:i%3?"file":"pages",size:i%3?4.2e7:0,files:1,pages:120}]))},
   archiveDownload:(id,kind,title)=>new Promise((res,rej)=>{mockDl[id]={rej,t:setTimeout(()=>{delete mockDl[id];res({existed:false,name:`${title}.pdf`,count:0})},4000)}}),
   archiveCancel:async id=>{const j=mockDl[id];if(!j)return false;clearTimeout(j.t);delete mockDl[id];setTimeout(()=>j.rej(new Error("Cancelled.")),50);return true},
   readingWhere:async()=>({root,custom:false,magazines:root+"\\Magazines",guides:root+"\\Guides"}),
@@ -389,6 +437,11 @@ Object.assign(api,{
       return {key:c.key,source:c.source,region:c.region,edition:c.edition,kind:c.kind,label:label(c),w:sizeKnown?c.w:null,h:sizeKnown?c.h:null,thumb:t||null,inUse:g.sel[part]===c.key||(c.source==="earlier"&&false),score:scoreOf(c,styles[systemId])}});
     // Gale Riders' disc: nothing until the LaunchBox index is built (scratchpad/studio/CONTRACT-CHANGES.md 2–3)
     const index=systemId==="gc"&&g.i===6&&part==="disc"&&!indexBuilt?"missing":"ready";
+    // (beta.12) a slow source (window.__artLate, ms): one version is held back, the list says pending, and the version arrives
+    // later as a whole card (late) followed by listDone, as main does when a source answers after the list went back
+    let held=null;if(window.__artLate){const h=L.map((c,j)=>[c,j]).reverse().find(([c])=>!c.inUse&&c.source!=="current");if(h){held=h[0];L.splice(h[1],1)}}
+    if(held)setTimeout(()=>{const v=candOf(systemId,g,part,held.key),k=systemId+"|"+file+"|"+part+"|"+held.key;if(v){thumbs[k]=thumbs[k]||pic(systemId,g,part,v);held.thumb=thumbs[k];held.w=v.w;held.h=v.h}
+      emitC({systemId,file,part,key:held.key,late:true,cand:held});emitC({systemId,file,part,listDone:true})},window.__artLate);
     // the thumbnails trickle in afterwards, as downloads finish
     // offline (window.__artOffline): every download fails; an "Earlier" entry turns out to be the same picture as its original (dup)
     L.forEach(c=>{if(c.thumb)return;const k=systemId+"|"+file+"|"+part+"|"+c.key;setTimeout(()=>{const v=candOf(systemId,g,part,c.key);if(!v)return;
@@ -396,7 +449,7 @@ Object.assign(api,{
       if(window.__artOffline){emitC({systemId,file,part,key:c.key,failed:true});return}
       if(c.source==="earlier"){const orig=L.find(z=>z.source!=="earlier"&&z.region===c.region&&z.edition===c.edition&&z.w===v.w);if(orig&&!window.__artNoDup){emitC({systemId,file,part,key:c.key,dup:orig.key});return}}
       thumbs[k]=pic(systemId,g,part,v);emitC({systemId,file,part,key:c.key,thumb:thumbs[k],w:v.w,h:v.h})},150+Math.random()*(window.__artThumbMs||1500))});
-    return {list:L,index}},
+    return {list:L,index,pending:!!held}},
   artBuildIndex:async()=>{await o.wait(2500);indexBuilt=true;return {index:"ready"}},
   // Refresh art database (1.71): a fake 110 MB download, then unpacking and reading, cancellable
   artIndexInfo:async()=>({state:"ready",at:Date.now()-41*864e5,bytes:47.3*1048576}),
