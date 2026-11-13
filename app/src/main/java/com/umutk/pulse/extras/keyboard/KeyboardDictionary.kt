@@ -734,8 +734,34 @@ object KeyboardDictionary {
         // how widely this person's touches scatter around the drifted centre of the key (the variance of the touch model, per key)
         val rx = dx - b[0]; val ry = dy - b[1]
         spread[ch] = ((spread[ch] ?: TOUCH_VAR) * .98f + ((rx * rx + ry * ry) / 2f) * .02f).coerceIn(.03f, .2f)
-        b[0] = (b[0] * .98f + dx * .02f).coerceIn(-.4f, .4f)
-        b[1] = (b[1] * .98f + dy * .02f).coerceIn(-.4f, .4f)
+        // a new key's drift is learned quickly from its first touches (one in six at first), then slowly (two in a hundred)
+        val cnt = (touchN[ch] ?: 0) + 1; touchN[ch] = minOf(cnt, 1000)
+        val rate = maxOf(.02f, 1f / (cnt + 5))
+        b[0] = (b[0] * (1f - rate) + dx * rate).coerceIn(-.4f, .4f)
+        b[1] = (b[1] * (1f - rate) + dy * rate).coerceIn(-.4f, .4f)
+    }
+
+    private val touchN = ConcurrentHashMap<Char, Int>()
+
+    /**
+     * Words the touches themselves point to: a letter touched near the edge of its key could have been the next key's, so for each such place the neighbouring keys that the touch
+     * is close to (up to two at a time) are tried in its place, and the words that come out are the candidates, each with the touch cost of its changes. This finds the word
+     * the finger meant even when more than one letter sits on a key's edge, which the plain edit distance reaches only by luck.
+     */
+    fun touchCands(code: String, typed: String, tc: TouchCtx, n: Int): List<Cand> {
+        val lang = d(code)
+        if (typed.length < 3 || typed.length > 14 || tc.pts.size < typed.length) return emptyList()
+        val alts = typed.indices.map { i ->
+            val a = typed[i]
+            if (tc.pts.getOrNull(i) == null) emptyList() else tc.centers.keys.filter { it != a && it.isLetter() }
+                .map { b -> b to touchSub(i, a, b, tc) }.filter { it.second <= .55f }.sortedBy { it.second }.take(2)
+        }
+        val out = ArrayList<Cand>()
+        fun test(w: String, cost: Float) { if (w != typed && !isBanned(w) && isWord(code, w)) out += Cand(w, score(lang, w) - 4f * cost, cost) }
+        for (i in alts.indices) for ((b, c) in alts[i]) test(typed.substring(0, i) + b + typed.substring(i + 1), c)
+        for (i in alts.indices) for (j in i + 1 until alts.size) for ((b, c) in alts[i]) for ((e, f) in alts[j])
+            test(typed.substring(0, i) + b + typed.substring(i + 1, j) + e + typed.substring(j + 1), c + f)
+        return out.sortedByDescending { it.score }.distinctBy { it.word }.take(n)
     }
 
     private const val TOUCH_VAR = .09f   // about a third of a key width of scatter, until the person's own is known
