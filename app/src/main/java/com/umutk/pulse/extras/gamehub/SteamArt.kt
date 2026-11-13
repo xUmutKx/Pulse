@@ -105,6 +105,54 @@ internal fun fetchSgdbCover(c: Context, g: GameRow): Boolean = runCatching {
     true
 }.getOrDefault(false)
 
+/**
+ * The covers to choose from for a search of [query]: Steam's own cover of each game the store finds, then (with the person's SteamGridDB key) the 600x900
+ * pictures of the games that site finds. Each one: the picture, a small copy of it for the list, and the game it belongs to.
+ */
+internal fun coverCandidates(c: Context, query: String): org.json.JSONArray {
+    val out = org.json.JSONArray()
+    fun add(u: String, t: String, n: String) { out.put(JSONObject().put("u", u).put("t", t).put("n", n)) }
+    runCatching {
+        storeSearch(query)?.let { items ->
+            for (i in 0 until minOf(items.length(), 6)) {
+                val o = items.getJSONObject(i)
+                val base = "https://cdn.cloudflare.steamstatic.com/steam/apps/${o.optInt("id")}/"
+                add(base + "library_600x900_2x.jpg", base + "library_600x900.jpg", o.optString("name"))
+            }
+        }
+    }
+    runCatching {
+        val key = sgdbKey(c); if (key.isEmpty()) return@runCatching
+        val q = URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+        val found = JSONObject(sgdbGet("https://www.steamgriddb.com/api/v2/search/autocomplete/$q", key)?.toString(Charsets.UTF_8) ?: return@runCatching).optJSONArray("data") ?: return@runCatching
+        for (k in 0 until minOf(found.length(), 2)) {
+            val game = found.getJSONObject(k)
+            val grids = JSONObject(sgdbGet("https://www.steamgriddb.com/api/v2/grids/game/${game.optInt("id")}?dimensions=600x900&types=static&nsfw=false", key)?.toString(Charsets.UTF_8) ?: continue).optJSONArray("data") ?: continue
+            for (i in 0 until minOf(grids.length(), if (k == 0) 12 else 4)) {
+                val g = grids.getJSONObject(i)
+                val u = g.optString("url"); if (!u.startsWith("https://")) continue
+                add(u, g.optString("thumb").takeIf { it.startsWith("https://") } ?: u, game.optString("name"))
+            }
+        }
+    }
+    return out
+}
+
+/** The cover chosen from [coverCandidates] becomes the game's picture (its box is made again in the game's box style). True when it was downloaded. */
+internal fun setChosenCover(c: Context, pkg: String, url: String): Boolean = runCatching {
+    if (!url.startsWith("https://")) return@runCatching false
+    val bytes = httpBytes(url, 6 * 1024 * 1024) ?: httpBytes(url.replace("_2x.jpg", ".jpg"), 6 * 1024 * 1024) ?: return@runCatching false
+    // (it must be a picture)
+    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
+    if (o.outWidth <= 0) return@runCatching false
+    steamCoverFile(c, pkg).apply { parentFile?.mkdirs(); writeBytes(bytes) }
+    // a picture chosen by hand earlier would still win: this choice takes its place
+    runCatching { coverFile(c, pkg).delete() }
+    runCatching { val st = CaseCover.styleOf(c, pkg); if (st != "steam") CaseCover.make(c, pkg, st) }
+    true
+}.getOrDefault(false)
+
 internal fun fetchBestCover(c: Context, g: GameRow): Boolean {
     // a game that only has its package id for a name ("com.Hakita.ULTRAKIL") is looked up by the title of its store page
     val named = if (looksLikePackage(g.name)) GameRow(g.pkg, fetchPlayTitle(c, g.pkg) ?: g.name) else g

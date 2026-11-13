@@ -74,6 +74,39 @@
     try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {}
   };
   // Details > More > Game settings: Pulse's own page of the game (performance, profile, cover)
+  // "Find a cover": the covers the internet has for the game (Steam's, and SteamGridDB's with a key), in the shelf's own look; a tap makes one the game's cover.
+  // The name can be typed again when the game is listed under another one.
+  api.coverPick = g => {
+    if (!g || !H.coverSearch) return;
+    let box = document.getElementById('pulseCovers'); if (box) box.remove();
+    box = document.createElement('div'); box.id = 'pulseCovers';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(4,6,10,.94);display:flex;flex-direction:column;padding:max(14px,env(safe-area-inset-top)) 14px 14px;font-family:Lexend,system-ui,sans-serif;color:#fff';
+    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input id="pcQ" type="text" style="flex:1;min-width:0;height:44px;border-radius:12px;border:1px solid #39404d;background:#12151b;color:#fff;padding:0 14px;font:inherit;font-size:16px"><button id="pcGo" type="button" class="btn" style="height:44px;padding:0 16px">Search</button><button id="pcX" type="button" class="btn" style="height:44px;padding:0 16px">Close</button></div><div id="pcNote" style="opacity:.7;font-size:14px;margin-bottom:8px"></div><div id="pcGrid" style="flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;align-content:start"></div>';
+    document.body.appendChild(box);
+    const q = box.querySelector('#pcQ'), grid = box.querySelector('#pcGrid'), note = box.querySelector('#pcNote');
+    const close = () => { box.remove(); window.__pulseCovers = null; };
+    const go = () => { grid.innerHTML = ''; grid.style.opacity = ''; note.textContent = 'Searching…'; H.coverSearch(String(g.appId), q.value.trim()); };
+    q.value = g.title || '';
+    box.querySelector('#pcX').onclick = close; box.querySelector('#pcGo').onclick = go;
+    q.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') go(); }); q.addEventListener('keyup', e => e.stopPropagation());
+    box.addEventListener('pointerdown', e => e.stopPropagation()); box.addEventListener('click', e => e.stopPropagation());
+    window.__pulseCoverFail = () => { note.textContent = 'That picture could not be downloaded'; grid.style.opacity = ''; };
+    window.__pulseCovers = (pkg, list) => {
+      if (String(pkg) !== String(g.appId) || !document.body.contains(box)) return;
+      grid.innerHTML = ''; let shown = 0; note.textContent = list.length ? '' : 'Nothing found';
+      list.forEach(it => {
+        const b = document.createElement('button'); b.type = 'button';
+        b.style.cssText = 'padding:0;border:0;background:#12151b;border-radius:10px;overflow:hidden;aspect-ratio:2/3;position:relative';
+        const im = new Image(); im.loading = 'lazy'; im.alt = it.n || ''; im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+        im.onerror = () => { b.remove(); if (!--shown) note.textContent = 'Nothing found'; };
+        im.src = it.t || it.u; b.appendChild(im);
+        b.onclick = () => { note.textContent = 'Saving…'; grid.style.opacity = '.4'; H.coverSet(String(g.appId), it.u); };
+        grid.appendChild(b); shown++;
+      });
+    };
+    go();
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dCover'); if (b && window.__pulseCur) api.coverPick(window.__pulseCur); }, true);
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dPulse'); if (b && window.__pulseCur) api.pulseDetails(window.__pulseCur.appId); }, true);
   // Back (Android's back button): on the bare shelf Pulse leaves it; on any other screen (details, a case in hand, a menu, a list) the page goes one step back
   window.__pulseBack = () => {
