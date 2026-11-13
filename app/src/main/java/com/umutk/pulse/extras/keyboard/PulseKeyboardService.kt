@@ -690,6 +690,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a key from a real keyboard: one is attached, whatever the configuration said (its letters then go through the keyboard's own typing: suggestions and automatic correction)
         if (!st.hardware && e.device?.let { d -> !d.isVirtual && d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC } == true) st.hardware = true
         if (st.hardware && hardwareKey(keyCode, e)) return true
+        // the arrows, Home and End of a real keyboard move the cursor here, through the text field: a key event that reaches the app makes Android leave touch mode and draw its
+        // keyboard-navigation highlight (a layer over the screen); a key the keyboard takes itself never reaches the app
+        if (!e.isCtrlPressed && !e.isAltPressed && !e.isMetaPressed && !e.isShiftPressed && (currentInputEditorInfo?.inputType ?: 0) != 0 && currentInputConnection != null) {
+            val handled = when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END -> { arrow(keyCode); true }
+                KeyEvent.KEYCODE_DPAD_UP -> { moveLine(-1); true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { moveLine(1); true }
+                else -> false
+            }
+            if (handled) { turkishDown.add(keyCode); return true }
+        }
         if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return super.onKeyDown(keyCode, event)
         if (KeyboardPrefs.langList().firstOrNull() != "tr") return super.onKeyDown(keyCode, event)
         // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
@@ -1270,8 +1281,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val code = if (delta < 0) android.view.KeyEvent.KEYCODE_DPAD_UP else android.view.KeyEvent.KEYCODE_DPAD_DOWN
         repeat(Math.abs(delta)) {
-            c.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
-            c.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+            c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), android.view.KeyEvent.ACTION_DOWN, code, 0))
+            c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), android.view.KeyEvent.ACTION_UP, code, 0))
         }
     }
 
@@ -1643,11 +1654,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.shiftMod == 1) st.shiftMod = 0
     }
 
+    /**
+     * A key of the screen keyboard, sent to the app. Without these flags Android takes an arrow, Tab, Esc... for a person using a keyboard to move about: the app leaves
+     * "touch mode" and draws its keyboard-navigation highlight (a layer over the screen that stays). A soft keyboard's key is marked as such, and as one that keeps touch mode
+     * (what the system's own sendDownUpKeyEvents does too).
+     */
+    private fun softKey(t: Long, action: Int, code: Int, meta: Int) =
+        KeyEvent(t, t, action, code, 0, meta, android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE)
+
     private fun sendKey(code: Int, extraMeta: Int = 0) {
         val c = currentInputConnection ?: return
         val t = SystemClock.uptimeMillis(); val meta = metaNow() or extraMeta
-        c.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0, meta))
-        c.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP, code, 0, meta))
+        c.sendKeyEvent(softKey(t, KeyEvent.ACTION_DOWN, code, meta))
+        c.sendKeyEvent(softKey(t, KeyEvent.ACTION_UP, code, meta))
         useModifiers()
     }
 
