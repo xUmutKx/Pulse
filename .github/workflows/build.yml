@@ -8,6 +8,10 @@ on:
         description: "Publish this build as a GitHub release (tag v<versionName>)"
         type: boolean
         default: false
+      lite:
+        description: "Also build the lite APK (without Pulse AI), without publishing"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -20,7 +24,7 @@ jobs:
       - id: p
         run: |
           V='["full"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.release }}" = "true" ]; then V='["full","lite"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
