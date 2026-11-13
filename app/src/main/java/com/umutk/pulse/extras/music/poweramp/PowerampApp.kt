@@ -39,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -164,7 +166,19 @@ fun PowerampApp(
         // one layer only: the blurred cover at full strength, edge to edge outside the safe-area inset; black when off
         // each page can keep or drop the blurred cover (Settings > Art background); a page left out is plain black
         val pageKey = tab?.name?.lowercase() ?: "now"
-        if (artBg && PowerampPrefs.artPage(ctx, pageKey)) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop) }
+        // "Blended" (Settings > Look): the cover edge to edge at the top, fading into its own blurred copy that fills the screen (the now-playing page only)
+        if (tab == null && PowerampPrefs.blended(ctx)) cover?.let { cv ->
+            Image(cv, null, Modifier.fillMaxSize().blur(36.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
+            Image(cv, null,
+                Modifier.fillMaxWidth().aspectRatio(1f)
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black, .55f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                    },
+                contentScale = ContentScale.Crop)
+        } else if (artBg && PowerampPrefs.artPage(ctx, pageKey)) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop) }
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Box(Modifier.weight(1f)) {
                 // while the now playing page is pulled down, the screen it came from shows underneath
