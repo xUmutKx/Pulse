@@ -287,7 +287,7 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
-/** Every launchable app except Pulse itself, one entry per package, sorted by label. */
+/** Every launchable app, one entry per package, sorted by label; Pulse's own apps come as its \"pulse:x:\" entries. */
 internal fun loadApps(ctx: Context): List<LaunchApp> {
     val pm = ctx.packageManager
     val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -308,6 +308,8 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
                 system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                 category = ri.activityInfo.applicationInfo.category)
         }
+        // Pulse's own apps (Music player, Notes, Video, Weather...) are in the list too, so they can be opened, hidden and put on the home screen or the dock like any other app
+        .let { it + desktopItems().filter { d -> d.pkg.startsWith("pulse:x:") } }
         .sortedBy { it.label.lowercase() }
 }
 
