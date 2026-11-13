@@ -1645,6 +1645,7 @@
         </receiver>
         <activity android:name="com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig" android:exported="false" />
         <activity android:name="com.umutk.pulse.extras.gamehub.MegaGameActivity" android:exported="false" android:hardwareAccelerated="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <activity android:name="com.umutk.pulse.extras.gamehub.HtmlGameActivity" android:exported="false" android:hardwareAccelerated="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
         <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsBlobWidget" android:label="Windows Media skin · Blob" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms1_info" />

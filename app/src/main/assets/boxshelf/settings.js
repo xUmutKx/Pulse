@@ -370,6 +370,8 @@ function build(){
     H("Icons"),
     GHC("Icons","iconMode",[[0,"Cover, else APK icon"],[1,"APK icon only"]],0,"What each game shows: its cover, or its app icon when it has none."),
     GHT("Built-in games","miniGames",true,"Fifty games that come with Pulse (Blade Arena, Nebula Voyager, VoxelCraft, puzzles, arcade), on the shelf like your own."),
+    A("Add an HTML game","Choose","A game of your own that is a web page: an .html file, or a .zip with an index.html and its files. It goes on the shelf like any game and opens full screen.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(api.ghRun)api.ghRun("addHtml")},250)},{keys:"html web game zip add own"}),
+    A("Bring back removed built-in games","Restore","Built-in games taken off the shelf by the delete button on a box's back come back.",()=>{if(api.ghRun)api.ghRun("restoreMega");toast("Built-in games restored")},{keys:"restore built-in games removed"}),
     A("Add a game","Add","Any app of the phone can be put on the shelf as a game.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(api.ghRun)api.ghRun("add")},250)},{keys:"add game app plus"}),
     H("Covers"),
     GHT("Fetch covers from Google Play","playCovers",false,"A cover from Google Play when Steam has none."),

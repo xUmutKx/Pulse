@@ -64,6 +64,38 @@
     }
     return '';
   };
+  // the back cover of a box shows a delete button: an app is uninstalled (Android asks first), a built-in game leaves the shelf, a game of your own is deleted
+  (function () {
+    const css = document.createElement('style');
+    css.textContent = '#pulseDel{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8000;display:none;align-items:center;gap:10px;height:48px;padding:0 20px 0 14px;border-radius:24px;border:0;background:rgba(40,12,16,.92);color:#ffb4b4;font:600 15px system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.5)}#pulseDel.on{display:flex}#pulseDel svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#pulseAsk{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px}#pulseAsk div{background:#15181f;color:#eef;border-radius:20px;padding:20px;max-width:340px;font:15px system-ui,sans-serif}#pulseAsk p{margin:0 0 6px}#pulseAsk small{color:#9aa}#pulseAsk .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}#pulseAsk button{border:0;border-radius:14px;padding:10px 18px;font:600 15px system-ui,sans-serif;background:#2a2f3a;color:#dde}#pulseAsk button.go{background:#c0392b;color:#fff}';
+    document.head.appendChild(css);
+    const b = document.createElement('button'); b.id = 'pulseDel'; b.type = 'button';
+    b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg><span></span>';
+    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(b));
+    if (document.body) document.body.appendChild(b);
+    const kind = g => { const id = String(g && g.appId || ''); return id.indexOf('mega:') === 0 ? 'mega' : id.indexOf('html:') === 0 ? 'html' : 'app'; };
+    const label = k => k === 'app' ? 'Uninstall' : k === 'html' ? 'Delete game' : 'Remove from shelf';
+    let last = '';
+    setInterval(() => {
+      let g = null, on = false;
+      try { on = !!(window.__pulseFlipped && window.__pulseFlipped()); g = on && window.__pulseCurGame ? window.__pulseCurGame() : null; } catch (e) {}
+      on = !!(on && g && g.pulse);
+      const k = on ? kind(g) : '';
+      if (k !== last) { last = k; b.classList.toggle('on', !!k); if (k) b.querySelector('span').textContent = label(k); }
+    }, 350);
+    b.addEventListener('pointerdown', e => e.stopPropagation()); b.addEventListener('click', e => {
+      e.stopPropagation();
+      const g = window.__pulseCurGame && window.__pulseCurGame(); if (!g || !g.pulse) return;
+      const k = kind(g), box = document.createElement('div'); box.id = 'pulseAsk';
+      const msg = k === 'app' ? 'Uninstall this app? Android asks once more before it is removed.' : k === 'html' ? 'Delete this game and its files from the phone?' : 'Take this built-in game off the shelf? It can be brought back in the settings.';
+      box.innerHTML = '<div><p><b></b></p><p></p><div class="row"><button type="button" class="no">Cancel</button><button type="button" class="go"></button></div></div>';
+      box.querySelector('b').textContent = g.title || ''; box.querySelectorAll('p')[1].textContent = msg; box.querySelector('.go').textContent = label(k);
+      box.addEventListener('pointerdown', ev => ev.stopPropagation()); box.addEventListener('click', ev => ev.stopPropagation());
+      box.querySelector('.no').onclick = () => box.remove();
+      box.querySelector('.go').onclick = () => { box.remove(); try { H.removeGame(String(g.appId)); } catch (x) {} };
+      document.body.appendChild(box);
+    });
+  })();
   // a text box of the page that gets the focus asks Android for its keyboard
   document.addEventListener('focusin', e => { const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName) && t.type !== 'checkbox' && t.type !== 'range') { try { H.showKeyboard && H.showKeyboard(); } catch (x) {} } }, true);
   // the clipboard, for the settings' on-screen keyboard (an API key copied from a browser)

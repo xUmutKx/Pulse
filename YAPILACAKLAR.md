@@ -2464,3 +2464,8 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## Pulse 1.0.400 (derlenmedi)
 - Game Hub (Boxshelf) ayarları: Game Hub ilk kategori, PC sayfaları çıkarıldı, API anahtarları kategorisi, ayarların klavyesi telefona sığar + yapıştır, yazı kutuları Android klavyesini ister, beyaz parlama yok, WebView süreci kaybolursa raf yeniden kurulur
 - Yüzen klavye (erişilebilirlik): tüm Pulse klavyesi, hep açık düğme, istenen yere taşınır, yazı kutusu olsun olmasın
+
+## Pulse 1.0.400 ek (derlenmedi)
+- Game Hub: dönüşte (2,5 sn+ ayrı kalınca) raf yeniden kurulur (siyah ekran); Pulse telefonda Performans auto = Low
+- HTML oyun ekleme (.html/.zip), yerleşik oyunlara açıklama, arka kapakta sil tuşu (uygulama: kaldır, yerleşik: raftan çıkar, HTML: sil), çıkarılan yerleşikleri geri getir
+- Kitaplar: kütüphane görünümü, koleksiyonlar, internetten kategoriler
