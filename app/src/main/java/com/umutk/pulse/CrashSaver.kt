@@ -82,6 +82,14 @@ object CrashSaver {
             append("process: ").append(processName(app)).append("  thread: ").append(t.name).append('\n').append('\n')
             append(sw.toString())
         }
+        // the report the next start offers to send (see CrashReport): what the error is, on which Pulse and phone, nothing personal
+        runCatching {
+            File(app.filesDir, "crash-pending.txt").writeText(
+                "Pulse " + runCatching { app.packageManager.getPackageInfo(app.packageName, 0).versionName }.getOrDefault("?") + "\n" +
+                    "Android " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + "), " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + "\n" +
+                    "process: " + processName(app) + "  thread: " + t.name + "\n\n" + sw.toString().lines().take(30).joinToString("\n"),
+            )
+        }
         runCatching { appendLog(app, "===== " + SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "  JAVA CRASH  " + processName(app) + "  thread " + t.name + "\n" + sw.toString().lines().take(40).joinToString("\n") + "\n\n") }
         val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash.txt")
         val ok = runCatching { pub.parentFile?.mkdirs(); pub.writeText(text); true }.getOrDefault(false)

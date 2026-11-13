@@ -121,6 +121,7 @@ open class MainActivity : ComponentActivity() {
         // Pulse always comes back in its own saved look (Files, same process, swaps colours / language in while it is open)
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
         Look.resolved = pulseResolved
+        if (this !is FilesActivity) { CrashReport.askIfPending(this); LiteModels.askIfNeeded(this) }
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         com.umutk.pulse.features.StorageScan.dir = filesDir
         if (com.umutk.pulse.Compat.isStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
