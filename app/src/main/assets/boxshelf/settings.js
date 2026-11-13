@@ -373,6 +373,7 @@ function build(){
     GHC("Icons","iconMode",[[0,"Cover, else APK icon"],[1,"APK icon only"]],0,"What each game shows: its cover, or its app icon when it has none."),
     H("Start page"),
     GHC("Start page","start",[[0,"Home"],[1,"Library"]],1,"The page Game Hub opens on."),
+    A("Add a game","Add","Any app of the phone can be put on the shelf as a game.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(api.ghRun)api.ghRun("add")},250)},{keys:"add game app plus"}),
     H("Covers"),
     GHT("Fetch covers from Google Play","playCovers",false,"A cover from Google Play when Steam has none."),
     GHX("SteamGridDB key (more covers)","sgdbKey","Your own free SteamGridDB key, for more covers. Stored on this device.",{secret:true,ph:"Not set"}),

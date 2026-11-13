@@ -184,8 +184,21 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 "lookCovers" -> if (sgdbKey(c).isNotEmpty()) CoverJob.start(c, loadGames(c))
                 "stopCovers" -> CoverJob.cancel()
                 "checkAccess" -> Thread { Privilege.detect() }.start()
+                // "Add a game" of the shelf's own settings: Game Hub's list of the phone's apps opens
+                "add" -> ShelfAsk.add.value = true
             }
         }
+    }
+    /** Looks for covers of [query] (the game's name, or what was typed) and hands the list to the page (window.__pulseCovers). */
+    @JavascriptInterface fun coverSearch(pkg: String, query: String) {
+        Thread {
+            val list = runCatching { coverCandidates(c, query.ifBlank { loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg }) }.getOrDefault(org.json.JSONArray())
+            ShelfJs.run("window.__pulseCovers&&window.__pulseCovers(" + JSONObject.quote(pkg) + "," + list.toString() + ")")
+        }.start()
+    }
+    /** The cover picked on the page: downloaded, made the game's cover, and the shelf is drawn again. */
+    @JavascriptInterface fun coverSet(pkg: String, url: String) {
+        Thread { if (setChosenCover(c, pkg, url)) ShelfSync.bump() else ShelfJs.run("window.__pulseCoverFail&&window.__pulseCoverFail()") }.start()
     }
     @JavascriptInterface fun launch(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onLaunch(pkg) } }
     @JavascriptInterface fun details(pkg: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { onDetails(pkg) } }
@@ -193,6 +206,15 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     @JavascriptInterface fun settings() { android.os.Handler(android.os.Looper.getMainLooper()).post { onSettings() } }
     @JavascriptInterface fun back() { android.os.Handler(android.os.Looper.getMainLooper()).post { onBack() } }
 }
+
+/** A line of script for the shelf's page, from any thread (the answer of a search that ran in the background). */
+internal object ShelfJs {
+    @Volatile var web: WebView? = null
+    fun run(js: String) { android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { web?.evaluateJavascript(js, null) } } }
+}
+
+/** What the shelf's page asks Game Hub to open (its own dialogs): the list of apps to add a game from. */
+internal object ShelfAsk { val add = androidx.compose.runtime.mutableStateOf(false) }
 
 /** The WebView of the shelf. [onLaunch] starts a game, [onDetails] opens Pulse's page for it. Back goes one step back inside the shelf (Esc), as Boxshelf does. */
 @SuppressLint("SetJavaScriptEnabled")
@@ -235,13 +257,14 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             }
         }
         owner.lifecycle.addObserver(obs)
-        onDispose { owner.lifecycle.removeObserver(obs); holder[0]?.destroy(); holder[0] = null }
+        onDispose { owner.lifecycle.removeObserver(obs); if (ShelfJs.web === holder[0]) ShelfJs.web = null; holder[0]?.destroy(); holder[0] = null }
     }
     // Back: Esc into the page; the page decides (it closes a panel, a case, a menu); at the top it asks Pulse to leave
     BackHandler(enabled = !leaving) { holder[0]?.evaluateJavascript("window.__pulseBack&&window.__pulseBack()", null) }
     AndroidView(modifier = modifier.fillMaxSize(), factory = { c ->
         WebView(c).also { w ->
             holder[0] = w
+            ShelfJs.web = w
             w.setBackgroundColor(android.graphics.Color.BLACK)
             w.settings.javaScriptEnabled = true
             w.settings.domStorageEnabled = true

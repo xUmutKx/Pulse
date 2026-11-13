@@ -1041,7 +1041,9 @@ fun GameHubHub(onBack: () -> Unit) {
                         modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 20.dp, bottom = 96.dp),
                     ) { FluentIcon("search", pal.text, 22.dp) }
                     // the + waits for Boxshelf's opening animation to end (it is not drawn over the animation)
-                    if (!webShelf || ShelfIntro.done.value) FloatingActionButton(
+                    // (the shelf has no button of Pulse's over it: "Add a game" is in the shelf's own settings and asks for the same list)
+                    if (webShelf && ShelfAsk.add.value) { ShelfAsk.add.value = false; addOpen = true }
+                    if (!webShelf) FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
                         contentColor = pal.bg,

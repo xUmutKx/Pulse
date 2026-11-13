@@ -311,8 +311,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val shotLock = kotlinx.coroutines.sync.Mutex()
 
     /**
-     * Takes the screenshots and camera photos of the last minutes into the clipboard: every one not taken yet (not only the newest), also those made while the
-     * keyboard was not on the screen. The newest goes to the bar when it is fresh.
+     * Takes the new screenshots, camera photos and downloaded pictures into the clipboard: only those made in the last moments, each of them once (two made
+     * close together are both taken). The newest goes to the bar.
      */
     private suspend fun checkShot() {
         if (st.incognito) return
@@ -339,12 +339,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                         while (c.moveToNext()) {
                             val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
                             val age = System.currentTimeMillis() / 1000 - c.getLong(2)
-                            // a screenshot by its name or folder in any spelling the phones use (Screenshot, Screen_shot, Ekran görüntüsü, Screen capture), up to three
-                            // minutes old; or a photo just taken with the camera, HEIC too (30 s: the camera app finishes the file a little later)
+                            // a screenshot by its name or folder in any spelling the phones use (Screenshot, Screen_shot, Ekran görüntüsü, Screen capture),
+                            // or a photo just taken with the camera, HEIC too (the camera app finishes the file a little later)
                             val both = (name + "/" + path).lowercase(Locale.ROOT)
                             val shot = listOf("screenshot", "screen_shot", "screen shot", "screen-shot", "screencap", "screen_cap", "ekran g", "ekran_g", "ekrang", "capture", "smartselect", "scrnshot").any { it in both }
                             val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
-                            if (shot && age <= 180 || cam && age <= 30) out += c.getLong(0) to age
+                            // a picture just downloaded (the Download folder) is offered the same way
+                            val down = path.contains("/download", true)
+                            // only what is new: a picture made in the last moments, never the older ones of the gallery
+                            if (shot && age <= 45 || cam && age <= 30 || down && age <= 45) out += c.getLong(0) to age
                         }
                     }
                     out
@@ -479,7 +482,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         if (!restarting) runCatching { takeClip(true) }
-        // the screenshots made while the keyboard was away are taken into the clipboard now
+        // a screenshot or download made a moment before the keyboard came up is offered too
         if (!restarting) scope.launch { runCatching { checkShot() } }
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
