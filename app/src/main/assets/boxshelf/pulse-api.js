@@ -180,7 +180,7 @@
           else { const sp = document.createElement('span'); sp.textContent = g.title; c.style.background = 'hsl(' + hue(g.title) + ' 40% 28%)'; c.appendChild(sp); }
           const n = document.createElement('div'); n.className = 'gn'; n.textContent = g.title;
           t.append(c, n);
-          t.onclick = () => { close(); setTimeout(() => { try { F.go(g.id); } catch (e) {} }, 60); };
+          t.onclick = () => { close(); setTimeout(() => { try { if (!F.go(g.id)) F.play(g.id); } catch (e) {} }, 60); };
           grid.appendChild(t);
         });
         body.appendChild(grid);
@@ -188,6 +188,7 @@
       box.classList.add('on'); body.scrollTop = 0;
     }
     document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('gridBtn'); if (b) { b.hidden = false; b.addEventListener('click', e => { e.stopPropagation(); open(); }); } });
+    window.__pulseOpenGrid = open;
     // Back closes it first
     window.__pulseBackGrid = () => { if (box.classList.contains('on')) { close(); return true; } return false; };
   })();

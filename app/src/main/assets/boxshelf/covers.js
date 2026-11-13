@@ -285,6 +285,24 @@ function setupFront(style){
   ctx.fillStyle="rgba(255,255,255,.45)";ctx.font=`500 ${W*.04}px Lexend, sans-serif`;ctx.fillText("OPEN SETTINGS",W/2,Hh*.84+W*.07);
   const url=c.toDataURL("image/jpeg",.92);c.width=c.height=0;if(!document.fonts||document.fonts.check(`700 ${W*.1}px Lexend`))setupCache.set(style.id,url);return url;
 }
+// the grouped built-in and HTML games: one drawn cover at the end of the shelf (a mosaic of little covers in their own colours and a count, no emoji)
+const groupCache=new Map();
+function groupFront(style,n){
+  const key=style.id+":"+n;if(groupCache.has(key))return groupCache.get(key);
+  const W=420,Hh=Math.round(W/style.ratio),c=document.createElement("canvas");c.width=W;c.height=Hh;const ctx=c.getContext("2d");
+  const bg=ctx.createLinearGradient(0,0,0,Hh);bg.addColorStop(0,"#1b1f2a");bg.addColorStop(1,"#07080b");ctx.fillStyle=bg;ctx.fillRect(0,0,W,Hh);
+  const bandH=band(ctx,W,Hh,style,"");
+  const cols=3,rows=2,pad=W*.07,gap=W*.035,tw=(W-pad*2-gap*(cols-1))/cols,th=tw*1.3,top=bandH+W*.12;
+  for(let r=0;r<rows;r++)for(let k=0;k<cols;k++){
+    const x=pad+k*(tw+gap),y=top+r*(th+gap),hue=((r*cols+k)*97+n*13)%360;
+    const g2=ctx.createLinearGradient(x,y,x,y+th);g2.addColorStop(0,`hsl(${hue} 55% 46%)`);g2.addColorStop(1,`hsl(${hue} 50% 18%)`);
+    ctx.fillStyle=g2;ctx.beginPath();ctx.roundRect(x,y,tw,th,W*.025);ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.22)";ctx.fillRect(x+tw*.14,y+th*.14,tw*.72,th*.07);
+  }
+  ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillStyle="rgba(255,255,255,.96)";ctx.font=`700 ${W*.075}px Lexend, sans-serif`;ctx.fillText("Built-in games",W/2,Hh*.9);
+  ctx.fillStyle="rgba(255,255,255,.55)";ctx.font=`500 ${W*.042}px Lexend, sans-serif`;ctx.fillText(n+" games",W/2,Hh*.9+W*.06);
+  const url=c.toDataURL("image/jpeg",.92);c.width=c.height=0;groupCache.set(key,url);return url;
+}
 // the average colour of a cover, for the spine's band (the spine matches the front); cached per picture, null when it can't be read
 const tintCache=new Map();
 function coverTint(url){
@@ -295,5 +313,5 @@ function coverTint(url){
       const v={bg:`rgb(${r|0},${g|0},${b|0})`,fg:(r*.299+g*.587+b*.114)>150?"#111":"#fff"};tintCache.set(url,v);res(v)}catch{res(null)}};
     im.onerror=()=>res(null);im.src=url});
 }
-window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront,coverTint};
+window.Covers={front,frontAsync,back,backAsync,hasBack,hash,hsl,iconFront,randomFront,setupFront,groupFront,coverTint};
 })();
