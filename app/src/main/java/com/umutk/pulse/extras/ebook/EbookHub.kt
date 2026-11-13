@@ -234,6 +234,14 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             note = tr("Books deleted outside Pulse were removed from the shelf", "Pulse dışında silinen kitaplar raftan kaldırıldı")
         }
     }
+    // a book whose title is a file name gets its real name (cleaned, then looked up online by pieces of it); it is kept, so it is looked up once
+    LaunchedEffect(shelf.map { it.uri + "|" + it.title }) {
+        for (b in shelf.filter { BookNames.looksLikeFile(it.title) }.take(6)) {
+            val (t, au) = withContext(Dispatchers.IO) { BookNames.resolve(b.title, b.author) }
+            if (t.isNotBlank() && t != b.title) shelf = shelf.map { if (it.uri == b.uri) it.copy(title = t, author = au) else it }.also { shelfSave(ctx, it) }
+        }
+    }
+    var renameFor by remember { mutableStateOf<Book?>(null) }
     // "" the shelf, "options" the options page
     var screen by remember { mutableStateOf("") }
     var drawer by remember { mutableStateOf(false) }
@@ -444,8 +452,12 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 Triple("heart", if (fav) tr("Remove from favorites", "Favorilerden çıkar") else tr("Add to favorites", "Favorilere ekle"), { Ebook.toggleFavorite(ctx, bk.uri) }),
                 Triple("check", tr("Select", "Seç"), { picked = picked + bk.uri }),
                 Triple("folder", tr("Add to a collection", "Koleksiyona ekle"), { collFor = listOf(bk.uri) }),
+                Triple("edit", tr("Rename", "Yeniden adlandır"), { renameFor = bk }),
                 Triple("recycle", tr("Remove from shelf", "Raftan kaldır"), { askRemove = bk }),
             ), onDismiss = { menuFor = null })
+        }
+        renameFor?.let { bk ->
+            RenameDialog(th, bk.title, onOk = { n -> shelf = shelf.map { if (it.uri == bk.uri) it.copy(title = n) else it }.also { shelfSave(ctx, it) }; renameFor = null }, onDismiss = { renameFor = null })
         }
         if (newColl) NewCollDialog(th, onOk = { n ->
             if (colls.none { it.name == n }) colls = (colls + Coll(n, System.currentTimeMillis(), System.currentTimeMillis(), emptyList())).also { EbookColl.save(ctx, it) }
@@ -1844,6 +1856,23 @@ private fun PickCollDialog(th: Theme, colls: List<Coll>, onPick: (Coll) -> Unit,
             Text(tr("Add to a collection", "Koleksiyona ekle"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
             colls.forEach { c -> Text(c.name, color = th.ink, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().clickable { onPick(c) }.padding(horizontal = 20.dp, vertical = 12.dp)) }
             Text("+ " + tr("New collection", "Yeni koleksiyon"), color = th.ink.copy(alpha = .8f), fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.fillMaxWidth().clickable { onNew() }.padding(horizontal = 20.dp, vertical = 12.dp))
+        }
+    }
+}
+
+/** A small dialog: the name of a book, to change by hand. */
+@Composable
+private fun RenameDialog(th: Theme, initial: String, onOk: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf(initial) }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.clip(RoundedCornerShape(26.dp)).background(th.card()).padding(20.dp)) {
+            Text(tr("Name of the book", "Kitabın adı"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+            OutlinedField(name, th, tr("Name", "Ad")) { name = it }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 15.sp, modifier = Modifier.clip(CircleShape).clickable { onDismiss() }.padding(horizontal = 16.dp, vertical = 10.dp))
+                Text("OK", color = LIB_DARK, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).background(LIB_YELLOW).clickable { if (name.isNotBlank()) onOk(name.trim()) }.padding(horizontal = 18.dp, vertical = 10.dp))
+            }
         }
     }
 }
