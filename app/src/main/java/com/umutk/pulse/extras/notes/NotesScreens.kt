@@ -318,8 +318,7 @@ private fun NoteCard(n: Note, query: String, grid: Boolean, showDates: Boolean, 
             if (inkBox != null && inkBox.right > 1f && inkBox.bottom > 1f) {
                 val ratio = (inkBox.bottom / inkBox.right).coerceIn(.15f, .9f)
                 androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().padding(top = 6.dp).aspectRatio(1f / ratio).clip(RoundedCornerShape(8.dp))) {
-                    val sc = size.width / inkBox.right
-                    strokes.forEach { st -> drawInkStroke(st.copy(width = (st.width * sc).coerceAtLeast(1.2f), pts = st.pts.map { Offset(it.x * sc, it.y * sc) }, rel = st.rel), Offset.Zero) }
+                    drawNoteInk(strokes, inkBox.right)
                 }
             }
             Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -601,5 +600,13 @@ private fun NoteBookCard(n: Note, selected: Boolean, onTap: () -> Unit, onLong: 
             Text(if (hidden) "" else text, color = sub, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 9, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Text(date.format(Date(n.updated)), color = sub, fontSize = 11.sp)
         }
+    }
+}
+
+/** A note's pen drawing scaled into the card: [right] is the drawing's width in its own units. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNoteInk(strokes: List<InkStroke>, right: Float) {
+    val sc = this.size.width / right
+    strokes.forEach { st ->
+        drawInkStroke(st.copy(width = (st.width * sc).coerceAtLeast(1.2f), pts = st.pts.map { Offset(it.x * sc, it.y * sc) }, rel = st.rel), Offset.Zero)
     }
 }
