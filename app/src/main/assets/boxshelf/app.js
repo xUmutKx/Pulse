@@ -503,7 +503,7 @@ function pulseDisc(g){
   if(!g||!g.pulse)return Promise.resolve(null);if(pulseDiscCache.has(g.id))return pulseDiscCache.get(g.id);
   const p=(async()=>{const a=g.art||{};
     const load=u=>new Promise(r=>{if(!u||typeof u!=="string")return r(null);const im=new Image();const t=setTimeout(()=>r(null),4000);im.onload=()=>{clearTimeout(t);r(im)};im.onerror=()=>{clearTimeout(t);r(null)};im.src=u});
-    const bg=await load(a.hero)||await load(g.shots&&g.shots[0]),logo=await load(a.logo);if(!bg&&!logo)return null;
+    const bg=await load(a.hero)||await load(g.shots&&g.shots[0]),logo=await load(a.logo);
     const S=768,c=document.createElement("canvas");c.width=c.height=S;const x=c.getContext("2d"),r=S/2;
     x.beginPath();x.arc(r,r,r-1,0,Math.PI*2);x.clip();x.fillStyle="#0b1020";x.fillRect(0,0,S,S);
     // the disc is not the cover again: a colour of its own (from the game's hue), the wide picture only faintly under it, and the logo on top
@@ -1688,8 +1688,8 @@ function insertDisc(){
 }
 function holdBegin(){
   if(mode==="inspect"&&isp.ejected){if(!holdByPtr)insertDisc();holdByPtr=false;return}
-  if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");$("ispHold").classList.add("on");holdT=requestAnimationFrame(holdTick)}
-function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/800);$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){if(holdByPtr&&!isp.ejected){cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";ejectDisc();if(window.__discGrab)__discGrab();return}holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
+  if(mode!=="inspect"||isp.state!==2||rd.open||holdT)return;holdStart=performance.now();play_("hold");if(!holdByPtr)$("ispHold").classList.add("on"); /* (a finger's hold takes the disc out with no bar and no wait) */holdT=requestAnimationFrame(holdTick)}
+function holdTick(){if(!holdT)return;if(mode!=="inspect"||isp.state!==2||rd.open){holdEnd(false);return}const p=Math.min(1,(performance.now()-holdStart)/(holdByPtr?260:800));$("ispHoldBar").style.width=(p*100)+"%";if(p>=1){if(holdByPtr&&!isp.ejected){cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";ejectDisc();if(window.__discGrab)__discGrab();return}holdEnd(true);closeInspect();setTimeout(play,120);return}holdT=requestAnimationFrame(holdTick)}
 function holdEnd(fire){if(!holdT)return;cancelAnimationFrame(holdT);holdT=null;$("ispHold").classList.remove("on");$("ispHoldBar").style.width="0%";if(!fire&&isp.state===2)bumpDisc()}
 function ispBack(){
   if(isp.ejected){retractDisc();return} // Back puts the disc back in first
@@ -1742,7 +1742,7 @@ function inspectKey(e){
 (function(){
   const el=$("inspect");
   el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}else if(!rd.open&&!isp.ejected){ // a hold on a closed or open case takes the disc straight out (no tap first)
-      clearTimeout(quickEjectT);quickEjectT=setTimeout(()=>{quickEjectT=0;if(mode!=="inspect"||isp.ejected)return;while(isp.state<2)ispAdvance();if(isp.state===2){holdByPtr=true;ejectDisc();if(window.__discGrab)__discGrab()}},420)}
+      clearTimeout(quickEjectT);quickEjectT=setTimeout(()=>{quickEjectT=0;if(mode!=="inspect"||isp.ejected)return;while(isp.state<2)ispAdvance();if(isp.state===2){holdByPtr=true;ejectDisc();if(window.__discGrab)__discGrab()}},260)}
     isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
   // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back.
   // With the 3D view (WebGL) the disc is drawn in the canvas, so the canvas is what moves; without it, the DOM disc moves
@@ -1997,6 +1997,8 @@ window.__pulseUnblack=()=>{try{
   if(mode==="launch"&&runningKind!=="error"){clearTimeout(insertT);clearTimeout(launchTimer);try{hideInsert()}catch{}endLaunch();returnAt=performance.now()}
   clearTimeout(returnUndo);clearReturnCover("the app asked, back in front");const l=$("launch");if(l){l.classList.remove("ready");l.style.background=""}
   quickLaunch=false;
+  // nothing of the last hold or drag is left over (the box was taken for held down again, and the shelf could not be left)
+  try{clearTimeout(quickEjectT);quickEjectT=0;if(holdT){cancelAnimationFrame(holdT);holdT=null}holdByPtr=false;drag=null;dragMoved=false;isp.drag=null;if(isp.ejected)resetEject()}catch{}
   // the dark insert screen (the disc going into the console) is taken down for good, whatever step it was left at
   const ins=$("insert");if(ins){ins.classList.remove("on","go","out","slide");ins.setAttribute("aria-hidden","true");const fx=$("bsFx");if(fx)fx.innerHTML=""}
   const isx=$("inspect");if(isx&&mode!=="inspect"){isx.classList.remove("on","disc-out");app.classList.remove("inspecting")}
@@ -2441,7 +2443,7 @@ function qsPick(){const x=qm.rows[qm.r];if(!x)return;const r=x.r;
   if(r.id==="upd"){qsUpdCheck();return}
   if(r.id==="acts"){const b=x.el.children[qm.ac];if(b)qsAct(b.dataset.k);return}
   if(r.id==="vol"){const v=curVol();setVol(v>0?0:(volPrev||.7));if(curVol()>0)play_("tick",{dir:1});qsSoft();return}
-  if(r.id==="set"){qmClose(true);play_("open");if(window.PulseHost&&PulseHost.settings){PulseHost.settings();return}Setup.open();return}
+  if(r.id==="set"){qmClose(true);play_("open");Setup.open();return} /* Boxshelf's own settings (Consoles, Display, Performance, Sound...), not Game Hub's old page */
   if(r.id==="mus"){qmClose(true);openMuseum();return}
   if(r.id==="studio"){const g=qsGame();qmClose(true);if(g&&ANDROID){play_("panel");Setup.open({page:"artstudio",systemId:shelfFor(g).id});return} /* (Android: the console's whole studio) */if(g)artStudioFor(g);return}
   if(r.id==="cz3d"){const e=qsCzShelf();qmClose(true);play_("open");if(e)custSel=e[0];czPick=null;openCustomize();return}
