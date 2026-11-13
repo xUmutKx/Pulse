@@ -1648,10 +1648,34 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** A one-shot modifier is used up by the key it was waiting for. */
     private fun useModifiers() {
-        if (st.ctrl == 1) st.ctrl = 0
-        if (st.alt == 1) st.alt = 0
-        if (st.win == 1) st.win = 0
-        if (st.shiftMod == 1) st.shiftMod = 0
+        // a modifier that is held down stays for the next key too (and is let go with the finger)
+        heldUsed.addAll(heldMods.keys)
+        if (st.ctrl == 1 && "ctrl" !in heldMods) st.ctrl = 0
+        if (st.alt == 1 && "alt" !in heldMods) st.alt = 0
+        if (st.win == 1 && "win" !in heldMods) st.win = 0
+        if (st.shiftMod == 1 && "shiftm" !in heldMods) st.shiftMod = 0
+    }
+
+    private val heldMods = HashMap<String, Long>()
+    private val heldPrev = HashMap<String, Int>()
+    private val heldUsed = HashSet<String>()
+
+    /**
+     * Ctrl, Alt, Win and Shift of the extra row: a finger held on one works as on a real keyboard (the keys pressed meanwhile get the modifier, which goes when the finger lifts);
+     * a quick tap without another key still switches it on for the next key (and twice to lock it), as before.
+     */
+    override fun modHold(id: String, down: Boolean) {
+        fun get() = when (id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; else -> st.shiftMod }
+        fun set(v: Int) { when (id) { "ctrl" -> st.ctrl = v; "alt" -> st.alt = v; "win" -> st.win = v; else -> st.shiftMod = v } }
+        if (down) {
+            finishWord("", false)
+            heldPrev[id] = get(); heldMods[id] = SystemClock.uptimeMillis(); heldUsed.remove(id)
+            if (get() == 0) set(1)
+        } else {
+            val prev = heldPrev.remove(id) ?: 0; val t0 = heldMods.remove(id) ?: return
+            val used = heldUsed.remove(id)
+            set(if (!used && SystemClock.uptimeMillis() - t0 < 450L) (prev + 1) % 3 else prev)
+        }
     }
 
     /**

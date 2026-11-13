@@ -425,7 +425,7 @@ private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
 @Composable
 private fun RowScope.GCell(th: KbTheme, act: KbActions, h: androidx.compose.ui.unit.Dp, id: String, w: Float = 1f) {
     val d = ExtraKeys.byId(id) ?: return
-    ExtraCell(th, 0.dp, h, d, 0, Modifier.weight(w)) { act.extraKey(d.id) }
+    ExtraCell(th, 0.dp, h, d, 0, Modifier.weight(w), hold = holdOf(d, act)) { act.extraKey(d.id) }
 }
 
 /** A WASD cluster for movement and a handful of action keys for the other hand: real key codes, so a game reads them like a hardware keyboard. */
@@ -710,7 +710,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 ids.mapNotNull { ExtraKeys.byId(it) }.forEach { d ->
                     val level = when (d.id) { "shiftm" -> st.shiftMod; else -> 0 }
-                    ExtraCell(th, w, keyH * .8f, d, level) { act.extraKey(d.id) }
+                    ExtraCell(th, w, keyH * .8f, d, level, hold = holdOf(d, act)) { act.extraKey(d.id) }
                 }
             }
         }
@@ -792,7 +792,7 @@ private fun KeysetPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx
         Row(Modifier.fillMaxWidth()) {
             r.mapNotNull { ExtraKeys.byId(it) }.forEach { d ->
                 val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
-                ExtraCell(th, 0.dp, keyH * .8f, d, level, Modifier.weight(1f)) { act.extraKey(d.id) }
+                ExtraCell(th, 0.dp, keyH * .8f, d, level, Modifier.weight(1f), hold = holdOf(d, act)) { act.extraKey(d.id) }
             }
         }
     }
@@ -812,7 +812,7 @@ private fun ExtraRow(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.co
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 defs.forEach { d ->
                     val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
-                    ExtraCell(th, w, keyH * .78f, d, level) { act.extraKey(d.id) }
+                    ExtraCell(th, w, keyH * .78f, d, level, hold = holdOf(d, act)) { act.extraKey(d.id) }
                 }
             }
         }
@@ -837,9 +837,13 @@ private fun extraIcon(id: String): ImageVector? = when (id) {
     else -> null
 }
 
+/** A modifier key's hold handler (see KbActions.modHold); none for the other keys. */
+private fun holdOf(d: ExtraKeyDef, act: KbActions): ((Boolean) -> Unit)? = if (d.mod) { down -> act.modHold(d.id, down) } else null
+
 @Composable
-private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, modifier: Modifier = Modifier, onTap: () -> Unit) {
+private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, modifier: Modifier = Modifier, hold: ((Boolean) -> Unit)? = null, onTap: () -> Unit) {
     val tap by rememberUpdatedState(onTap)
+    val holdNow by rememberUpdatedState(hold)
     var down by remember { mutableStateOf(false) }
     Box(
         modifier.then(if (w > 0.dp) Modifier.width(w) else Modifier).height(h).pointerInput(d.id) {
@@ -855,6 +859,11 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
                         val c = ev.changes.firstOrNull { it.id == first.id } ?: break
                         if (c.changedToUp() || !c.pressed || (c.position - first.position).getDistance() > 24.dp.toPx()) break
                     }
+                } else if (holdNow != null) {
+                    // a modifier: held while another key is pressed it works like a real keyboard's; a quick tap alone switches it on for the next key
+                    holdNow?.invoke(true)
+                    waitForUpOrCancellation()
+                    holdNow?.invoke(false)
                 } else {
                     // a drag along the row scrolls it: only a finger that lifts where it came down is a tap
                     val up = waitForUpOrCancellation()
