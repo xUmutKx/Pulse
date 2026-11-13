@@ -36,6 +36,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -468,8 +470,8 @@ fun NowPlayingScreen(
                 val shuffleIcon = when (sk) {
                     ShuffleKind.OFF -> IV("shuffle")
                     ShuffleKind.QUEUE -> androidx.compose.material.icons.Icons.Rounded.ShuffleOn
-                    ShuffleKind.ALL -> androidx.compose.material.icons.rounded.LibraryMusic
-                    ShuffleKind.ALBUMS -> androidx.compose.material.icons.rounded.Album
+                    ShuffleKind.ALL -> LibraryMusic
+                    ShuffleKind.ALBUMS -> Album
                 }
                 ModeMenuBtn(shuffleIcon, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
                     ModeItem(tr("Shuffle off", "Karıştırma kapalı"), sk == ShuffleKind.OFF) { PlayModes.setShuffle(modesCtx, ShuffleKind.OFF) },
