@@ -345,6 +345,8 @@ class VideoPrefs(ctx: Context) {
     var dtapSec by int(g, "dtap_sec", 10)
     /** seconds crossed by a swipe over the whole width */
     var seekSens by int(g, "seek_sens", 90)
+    /** dead zone on the left and right edges (dp): a touch that starts there is not a gesture, so the system's edge swipe does not seek or change anything; 0 off */
+    var edgeDead by int(g, "edge_dead", 24)
     var ctrlTimeout by int(g, "ctrl_ms", 3500)
     var showRemaining by bool(g, "remaining", false)
     var rememberBright by bool(g, "rem_bright", false)

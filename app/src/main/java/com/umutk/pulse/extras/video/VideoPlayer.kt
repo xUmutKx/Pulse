@@ -658,6 +658,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val w = size.width.toFloat()
                         val h = size.height.toFloat()
+                        // the dead zone on both edges: a touch that starts there does nothing here (the system edge swipe is not a seek or a volume change)
+                        val edge = prefs.edgeDead.dp.toPx()
+                        if (edge > 0f && (down.position.x < edge || down.position.x > w - edge)) { waitForUpOrCancellation(); return@awaitEachGesture }
                         val slop = viewConfiguration.touchSlop * 2
                         var mode = 0 // 1 seek, 2 brightness, 3 volume, 4 pinch, -1 off
                         var tx = 0f

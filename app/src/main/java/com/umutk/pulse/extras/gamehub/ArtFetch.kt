@@ -84,7 +84,9 @@ internal object ArtFetch {
     fun fetch(c: Context, g: GameRow): Boolean {
         val p = prefs(c)
         val tried = "artTry_${g.pkg}"
-        if (System.currentTimeMillis() - p.getLong(tried, 0L) < 3L * 86_400_000L) return false
+        // a game with no cover at all is searched again after 6 hours; a game that has one waits 3 days before the next look
+        val noCover = !(coverFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile)
+        if (System.currentTimeMillis() - p.getLong(tried, 0L) < (if (noCover) 6L * 3_600_000L else 3L * 86_400_000L)) return false
         p.edit().putLong(tried, System.currentTimeMillis()).apply()
         var got = false
         // a game without any cover gets one now (Steam, SteamGridDB, Google Play), as "Look for covers" would
