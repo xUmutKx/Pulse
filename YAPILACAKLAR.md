@@ -2472,3 +2472,10 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 
 ## Pulse 1.0.400 ek 2 (derlenmedi)
 - Boxshelf beta.10-12 birleştirme, Pulse rozetleri, Steam mavi kutu (steam.png), kapaksız oyuna çerçeveli kutu, klavye: yanlış öneriden sonra düzeltme zinciri öğrenme
+
+## Pulse 1.0.400 (derlenmedi)
+- Kitaplar kütüphane görünümü, koleksiyonlar, internet kategorileri
+- Game Hub: HTML oyunlar, arka kapakta sil, açıklamalar, rozetler, Boxshelf beta.10-12 birleştirme
+- Game Hub: 22 kutu stili (Steam mavi, PC, Epic, GOG, Play, Android, EA, Ubisoft, Battle.net, itch.io, PS1-5, Xbox, Nintendo), Mix rastgele
+- Klavye: iki adımlı düzeltme öğrenme, alt satır tuşları bırakılır, vurgu 0,8 sn
+- Yüzen klavye (erişilebilirlik) tüm Pulse klavyesi
