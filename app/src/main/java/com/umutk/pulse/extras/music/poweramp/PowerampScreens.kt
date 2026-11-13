@@ -468,8 +468,8 @@ fun NowPlayingScreen(
                 val shuffleIcon = when (sk) {
                     ShuffleKind.OFF -> IV("shuffle")
                     ShuffleKind.QUEUE -> androidx.compose.material.icons.Icons.Rounded.ShuffleOn
-                    ShuffleKind.ALL -> androidx.compose.material.icons.Icons.Rounded.LibraryMusic
-                    ShuffleKind.ALBUMS -> androidx.compose.material.icons.Icons.Rounded.Album
+                    ShuffleKind.ALL -> androidx.compose.material.icons.rounded.LibraryMusic
+                    ShuffleKind.ALBUMS -> androidx.compose.material.icons.rounded.Album
                 }
                 ModeMenuBtn(shuffleIcon, tr("Shuffle", "Karıştır"), sk != ShuffleKind.OFF, style, onClick = { PlayModes.cycleShuffle(modesCtx) }, items = listOfNotNull(
                     ModeItem(tr("Shuffle off", "Karıştırma kapalı"), sk == ShuffleKind.OFF) { PlayModes.setShuffle(modesCtx, ShuffleKind.OFF) },
