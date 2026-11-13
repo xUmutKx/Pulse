@@ -34,7 +34,9 @@ window.Perf = (() => {
 
   // what kind of PC this is: read once, from a throwaway WebGL context
   function detect() {
-    if (guess) return guess; // once per run: a WebGL context is costly to make and to throw away (Perf.get() is called every frame)
+    // once per run: a WebGL context is costly to make and to throw away (Perf.get() is called every frame). (beta.12) "No
+    // WebGL" is asked again after a minute: a graphics driver restarting at start-up locked Low for the whole run
+    if (guess && (!guess.noGl || performance.now() - guess.at < 60e3)) return guess;
     // Android: Handheld on any real GPU (the desktop tiers assume a PC driving a TV); software rendering still means Low
     const os = (window.bsPlatform && window.bsPlatform.os) || (window.boxshelf && window.boxshelf.platform && window.boxshelf.platform.os) || '';
     let tier = 'high', why = [];
@@ -47,13 +49,17 @@ window.Perf = (() => {
     if (/swiftshader|llvmpipe|softpipe|basic render|microsoft basic|software/.test(g)) { tier = 'low'; why.push('software rendering'); }
     else if (os === 'android' && tier !== 'low') { guess = { tier: window.PulseHost ? 'low' : 'handheld', why: window.PulseHost ? 'Pulse on a phone: smooth first' : 'Android handheld', gpu }; return guess; } // Android handhelds start at Handheld: the desktop tiers assume a PC driving a TV
     else if (/vangogh|custom gpu 0(405|932)/.test(g)) { tier = 'balanced'; why.push('Steam Deck graphics'); } // (beta.10) the Deck's APU (LCD 0405, OLED 0932): a PC handheld, so Balanced (Handheld is tuned for Android phones' GPUs)
-    else if (/intel/.test(g) && !/iris|arc|\bxe\b/.test(g)) { tier = 'low'; why.push('Intel HD/UHD graphics'); }
+    // (beta.12) only the oldest Intel chips get Low (HD Graphics, UHD 600 / 605 / 610: Celeron and Pentium); UHD 620-770 and
+    // the newer "Intel(R) Graphics" manage the shelf's effects fine and get Balanced (Low used to take every UHD)
+    else if (/intel/.test(g) && !/iris|arc|\bxe\b/.test(g) && (/\bhd graphics\b/.test(g) || /uhd graphics 6(00|05|10)\b/.test(g))) { tier = 'low'; why.push('older Intel graphics'); }
+    else if (/intel/.test(g) && !/iris|arc|\bxe\b/.test(g)) { tier = 'balanced'; why.push('Intel graphics'); }
     else if (/iris|radeon\(tm\) graphics|radeon graphics|vega \d+ graphics|radeon r[2-7]\b|geforce mx|mx\s?\d{3}|adreno|mali|apple m1(?! (pro|max|ultra))\b|\bxe\b/.test(g)) { tier = 'balanced'; why.push('integrated graphics'); }
-    const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 8;
+    const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 8, strong = tier === 'high' && !!gpu;
     const cap = t => { if (tier === 'high' || (tier === 'balanced' && t === 'low')) tier = t; };
-    if (cores <= 2) { cap('low'); why.push(cores + ' cores'); } else if (cores <= 4) { cap('balanced'); why.push(cores + ' cores'); }
-    if (mem <= 2) { cap('low'); why.push(mem + ' GB memory'); } else if (mem <= 4) { cap('balanced'); why.push(mem + ' GB memory'); }
-    guess = { tier, why: why.join(', ') || 'dedicated graphics', gpu };
+    // (beta.12) a few cores or little memory only count with weak graphics: a 4-thread i5 with a GeForce has room for it all
+    if (cores <= 2) { cap('low'); why.push(cores + ' cores'); } else if (cores <= 4 && !strong) { cap('balanced'); why.push(cores + ' cores'); }
+    if (mem <= 2) { cap('low'); why.push(mem + ' GB memory'); } else if (mem <= 4 && !strong) { cap('balanced'); why.push(mem + ' GB memory'); }
+    guess = { tier, why: why.join(', ') || 'dedicated graphics', gpu, noGl: why.includes('no WebGL'), at: performance.now() };
     return guess;
   }
   const level = () => pref === 'auto' ? detect().tier : (LEVELS[pref] ? pref : 'high');

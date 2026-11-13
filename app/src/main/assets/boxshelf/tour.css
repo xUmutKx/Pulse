@@ -1,0 +1,43 @@
+/* (beta.11, Windows) The shelf tour (tour.js): the screen dimmed around one part, and a card in Settings' style beside it.
+   Sized from the window's width like the rest of the app (16 px at 1600 wide). Only opacity and the spotlight's box move. */
+#bsTour{--acc:#6b8cff;--acc2:#a9bfff;--ink:#f3f5fb;--ink2:#d5d9e6;--dim:#a4abbf;--faint:#7c8399;--line:rgba(255,255,255,.08);
+  position:fixed;inset:0;z-index:400;display:none;font-family:var(--ui,'Mona Sans',system-ui,sans-serif);color:var(--ink);
+  font-size:clamp(13px,1vw,24px);-webkit-user-select:none;user-select:none}
+#bsTour.on{display:block}
+#bsTour .bt-spot{position:absolute;border-radius:1em;pointer-events:none;
+  box-shadow:0 0 0 200vmax rgba(4,5,10,.72),0 0 0 2px color-mix(in srgb,var(--acc2) 80%,transparent),0 0 2.5em .25em color-mix(in srgb,var(--acc) 45%,transparent);
+  transition:left .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1)}
+#bsTour .bt-spot.none{left:50%!important;top:50%!important;width:0!important;height:0!important;box-shadow:0 0 0 200vmax rgba(4,5,10,.72)}
+#bsTour .bt-card{position:absolute;left:50%;top:50%;width:25em;max-width:calc(100vw - 32px);box-sizing:border-box;padding:1.6em 1.75em 1.4em;border-radius:1.25em;
+  background:rgba(24,27,37,.96);border:1px solid var(--line);box-shadow:0 1.9em 5em -1.25em rgba(0,0,0,.7);opacity:0}
+#bsTour .bt-card.in{animation:btIn .26s ease-out forwards}
+#bsTour.moving .bt-card{opacity:0!important;animation:none;transition:opacity .15s}
+@keyframes btIn{from{opacity:0;transform:translateY(.5em)}to{opacity:1;transform:none}}
+#bsTour .bt-k{display:flex;justify-content:space-between;font-size:.75em;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--acc2)}
+#bsTour .bt-n{color:var(--faint);letter-spacing:.08em}
+#bsTour h2{margin:.45em 0 .45em;font-size:1.7em;font-weight:700;line-height:1.15}
+#bsTour .bt-p{margin:0;font-size:1.03em;line-height:1.5;color:var(--ink2)}
+#bsTour .bt-keys{display:flex;flex-direction:column;gap:.55em;margin-top:.9em}
+#bsTour .bt-keys:empty{display:none}
+#bsTour .bt-kr{display:flex;align-items:center;gap:.65em;font-size:.94em;color:var(--ink2)}
+#bsTour .bt-caps{display:inline-flex;align-items:center;gap:.3em;flex:none}
+#bsTour .bt-caps .g{font-size:.7em;height:1.6em;min-width:1.9em;border-color:rgba(255,255,255,.6)}
+#bsTour .bt-caps .g.shape,#bsTour .bt-g .g.shape{font-size:1em;min-width:1.45em;height:1.45em}
+#bsTour .bt-caps .g.shape svg,#bsTour .bt-g .g.shape svg{width:1.45em;height:1.45em}
+#bsTour .bt-cap{display:inline-grid;place-items:center;min-width:1.9em;height:1.75em;padding:0 .45em;box-sizing:border-box;border-radius:.45em;border:1.5px solid rgba(255,255,255,.55);font-size:.8em;font-weight:600;color:#fff}
+#bsTour .bt-word{font-size:.85em;color:var(--faint);margin-right:.2em}
+#bsTour .bt-foot{display:flex;align-items:center;justify-content:space-between;gap:1em;margin-top:1.25em;padding-top:.9em;border-top:1px solid var(--line)}
+/* (beta.12: ten or eleven steps now: smaller dots, closer together, so Skip and Next stay inside the card) */
+#bsTour .bt-dots{display:flex;gap:.26em;flex:none}
+#bsTour .bt-dots i{width:.3em;height:.3em;border-radius:50%;background:rgba(255,255,255,.18)}
+#bsTour .bt-dots i.on{width:1em;border-radius:99px;background:var(--acc2)}
+#bsTour .bt-acts{display:flex;gap:.7em;align-items:center}
+#bsTour .bt-btn{display:inline-flex;align-items:center;gap:.5em;white-space:nowrap;font:500 .94em var(--ui,'Mona Sans',system-ui,sans-serif);color:var(--ink2);background:none;border:0;padding:.3em .2em;border-radius:.5em;cursor:pointer}
+#bsTour .bt-btn:hover,#bsTour .bt-btn:focus-visible{color:#fff;outline:none;background:rgba(255,255,255,.06)}
+#bsTour .bt-g{display:inline-flex}
+/* a d-pad press while the tour is up: Next pulses once (the tour has the controller; A goes on) */
+#bsTour .bt-next.nudge{animation:btNudge .55s ease-out}
+@keyframes btNudge{0%,100%{transform:none}30%{transform:scale(1.12);color:#fff;background:rgba(255,255,255,.12)}60%{transform:scale(.97)}}
+#bsTour .bt-g .g{font-size:.7em;height:1.6em;min-width:1.9em}
+body.reduce-motion #bsTour .bt-spot{transition:none}
+body.reduce-motion #bsTour .bt-card.in{animation-duration:.01s}

@@ -5,7 +5,7 @@
   --glass:rgba(8,10,20,.46);
   --line:rgba(255,255,255,.16);
   --tri:#3fd0b6; --sq:#ee8fd6; --cross:#86a8ff; --circ:#ff7a7a;
-  --ui:'Lexend',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --ui:'Mona Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --bw:240px; --bh:340px; --bd:24px; --edge:6px; --cw:240px; --ch:340px; --cd:24px; --ce:6px;
   --case:#141418; --case-side:#0b0b0e; --spine-ink:#e6e6ee; --sel-glow:rgba(120,140,255,.45);
   color-scheme:dark;
@@ -68,7 +68,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radi
 #track.swap{transform:translateY(18px)}
 #scene:has(> #track.swap){opacity:0;transition:transform .6s cubic-bezier(.22,.9,.25,1),opacity .3s}
 #track.fresh .slot,#track.fresh .box,#track.fresh .glare{transition:none!important}
-.slot{--bw:var(--cw);--bh:var(--ch);--bd:var(--cd);--edge:var(--ce);
+.slot{--bw:var(--cw);--bh:var(--ch);--bd:var(--cd);--edge:var(--ce);--edge-in:var(--cei,var(--ce));
   position:absolute;left:calc(var(--bw)/-2);top:calc(var(--bh)/-2);transform-style:preserve-3d;
   transition:transform .55s cubic-bezier(.22,.9,.25,1),opacity .4s;will-change:transform;cursor:pointer}
 .slot.far{opacity:0;pointer-events:none}
@@ -76,6 +76,9 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radi
 .box.free{transition:none}
 .face{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .f-front,.f-back{inset:0;background:var(--case);padding:var(--edge);overflow:hidden}
+/* (beta.11) the spine side's border (--edge-in): none on a case whose cover wraps round the spine (Xbox 360) */
+.f-front{padding-left:var(--edge-in,var(--edge))}
+.f-back{padding-right:var(--edge-in,var(--edge))}
 .f-front{transform:translateZ(calc(var(--bd)/2))}
 .f-back{transform:rotateY(180deg) translateZ(calc(var(--bd)/2))}
 .f-front img,.f-back img{width:100%;height:100%;display:block;object-fit:cover;max-width:none}
@@ -108,6 +111,9 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radi
 .sheen{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
 .sheen::after{content:"";position:absolute;top:-20%;bottom:-20%;width:42%;left:-70%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:translateX(0) skewX(-14deg)}
 .slot.landed .sheen::after{animation:sheen .85s cubic-bezier(.3,.6,.3,1)}
+/* (beta.11) Settings → Display → Box shine: Less waits until you've stayed on the box (moving on first skips it), Off never plays */
+body.shine-less .slot.landed .sheen::after{animation-delay:1.4s}
+body.shine-off .sheen{display:none}
 /* shuffle landing: holographic foil sweep (rainbow bands + glitter) over the cover, like a rare trading card */
 .slot.holo .sheen::before{content:"";position:absolute;inset:-30%;mix-blend-mode:screen;pointer-events:none;
   background:
@@ -248,7 +254,7 @@ body.aside *,body.aside *::before,body.aside *::after{animation-play-state:pause
 .wm-atarilynx{--wm-grad:linear-gradient(180deg,#e9fbff 10%,#1f9fc4 95%);--wm-glow:rgba(31,159,196,.4);--wm-tagc:#9fd6e7}
 .wm-wonderswan{--wm-grad:linear-gradient(180deg,#f3ecff 10%,#7c4fd6 95%);--wm-glow:rgba(124,79,214,.42);--wm-tagc:#c4adee}
 .wm-dos{--wm-grad:linear-gradient(180deg,#e9ffe9 10%,#2fbf4a 95%);--wm-glow:rgba(47,191,74,.4);--wm-tagc:#a3e3ae}
-.wm-home .wm-main{font-family:'Lexend',var(--ui);font-weight:800;letter-spacing:.1em;font-size:clamp(22px,2.4vw,34px)}
+.wm-home .wm-main{font-family:'Mona Sans',var(--ui);font-weight:800;letter-spacing:.1em;font-size:clamp(22px,2.4vw,34px)}
 /* favorite heart on the box corner */
 .slot.fav .f-front::before{content:"♥";position:absolute;right:calc(8px*var(--os,1));top:calc(8px*var(--os,1));z-index:3;width:calc(26px*var(--os,1));height:calc(26px*var(--os,1));border-radius:50%;background:rgba(10,10,16,.75);color:#ff5c8a;font-size:calc(14px*var(--os,1));line-height:calc(26px*var(--os,1));text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .wm-gc{--wm-grad:linear-gradient(180deg,#e2dbff 10%,#8b75ff 95%);--wm-glow:rgba(139,117,255,.45);--wm-tagc:#b7aaf2}
@@ -329,10 +335,9 @@ body.aside *,body.aside *::before,body.aside *::after{animation-play-state:pause
   .details{width:100%;top:46%;border-left:0;border-top:1px solid var(--line);padding-top:24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
   .hint{padding:4px 7px;font-size:11px;gap:5px}
 }
-@media (prefers-reduced-motion:reduce){
-  .slot,.box,#scene,.bg-layer,.details{transition-duration:.01s!important}
-  .letter-flash.go,.info.swap .g-title,.info.swap .g-meta,.sel-halo,.slot.landed .sheen::after{animation:none}
-}
+/* (beta.12) Reduce motion follows Boxshelf's own setting (body.reduce-motion: On, or Follow Windows with Windows'
+   animation effects off), never Windows by itself: the shelf still slides from game to game (it used to jump) */
+body.reduce-motion .letter-flash.go,body.reduce-motion .info.swap .g-title,body.reduce-motion .info.swap .g-meta,body.reduce-motion .sel-halo,body.reduce-motion .slot.landed .sheen::after{animation:none}
 
 /* ---------- colour themes (the wash itself is painted from app.js; these add each theme's ambient layer) ---------- */
 .theme-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;display:none}
@@ -349,7 +354,7 @@ body.theme-aurora .theme-fx i:nth-child(3){top:-6%;background:linear-gradient(90
 @keyframes aurA{from{transform:translateX(-8%) rotate(-4deg) scaleY(.8)}to{transform:translateX(8%) rotate(3deg) scaleY(1.15)}}
 @keyframes aurB{from{transform:translateX(10%) rotate(5deg)}to{transform:translateX(-10%) rotate(-3deg) scaleY(1.2)}}
 body:not(.fx) .theme-fx i{animation:none!important}
-@media (prefers-reduced-motion:reduce){.theme-fx i{animation:none!important}}
+body.reduce-motion .theme-fx i{animation:none!important}
 #app.bg-art .theme-fx{display:none}
 
 /* ---------- volume beside the clock ---------- */
@@ -389,6 +394,8 @@ body:not(.fx) .theme-fx i{animation:none!important}
 .bp-row.on{background:rgba(255,255,255,.92);color:#10121a;box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px var(--sel-glow,rgba(120,140,255,.4))}
 .bp-row.on span{color:#3a3f52}
 .bp-row:disabled{opacity:.38;cursor:default}
+.bp-row.bp-add{background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);margin-top:8px} /* (beta.11) "+ Add another emulator…" */
+.bp-row.bp-add.on{background:rgba(255,255,255,.92);box-shadow:0 0 0 2px rgba(255,255,255,.35),0 0 18px var(--sel-glow,rgba(120,140,255,.4))}
 .bp-foot{margin-top:10px;padding:0 8px;font-size:11px;color:var(--ink-dim)}
 /* (beta.5) a PC game's cover picker: the build picker's card, wider, with a grid of covers (2:3) and two action tiles */
 .coverpick .bp-card{width:min(980px,94vw)}
@@ -486,7 +493,7 @@ body.pad-input,body.pad-input *{cursor:none!important}
 @keyframes lFloat{from{transform:translateY(0)}to{transform:translateY(-8px)}}
 @keyframes lGlare{to{left:140%}}
 @keyframes lUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.l-bg img,.l-card,.l-glare{animation:none!important}}
+body.reduce-motion .l-bg img,body.reduce-motion .l-card,body.reduce-motion .l-glare{animation:none!important}
 
 /* the console tabs stay put in the centre whatever the brand corner shows ("GameCube" vs "PS3"): a 3-column grid
    instead of space-between, which re-centred the tabs every time the brand's width changed */
@@ -556,6 +563,10 @@ body.pad-input .pad-focus.chip,body.pad-input .pad-focus.d-more{transform:none}
 .lr-wait{position:absolute;display:none;color:rgba(255,255,255,.75);font-size:18px;text-align:center;padding:0 30px}
 .lib-reader.waiting .lr-wait{display:block}
 .lib-reader.waiting .lr-pages{opacity:.35}
+/* (beta.11) the saved cover stands in for page 1 while a big PDF opens (replaced by the real page when it's drawn) */
+.lr-ph{height:100%;width:auto;max-width:100%;object-fit:contain;box-shadow:0 18px 60px rgba(0,0,0,.55);border-radius:2px}
+.lib-reader.waiting.has-ph .lr-pages{opacity:1}
+.lib-reader.waiting.has-ph .lr-wait{align-self:flex-end;margin-bottom:-60px;font-size:14px}
 .row-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 /* the reading corner's finder, inside the museum */
 .mus-find{position:absolute;right:24px;top:24px;bottom:96px;width:min(720px,58vw);z-index:7;display:flex;flex-direction:column;padding:18px 20px;border-radius:18px;background:rgba(10,12,20,.9);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);opacity:0;pointer-events:none;transform:translateX(24px);transition:opacity .2s,transform .25s;color:#fff}
@@ -666,7 +677,7 @@ body.theme-aurora .theme-fx{display:none}
   background:radial-gradient(ellipse at 50% 46%,#151829 0%,#07070c 72%);transition:opacity .6s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
 html.no-splash #splash{display:none}
 #splash.out{opacity:0;transform:scale(1.035)}
-.sp-word{position:relative;font-family:'Lexend',var(--ui),sans-serif;font-weight:800;letter-spacing:.34em;padding-left:.34em;font-size:clamp(34px,4.2vw,70px);color:rgba(214,220,255,.82);}
+.sp-word{position:relative;font-family:'Mona Sans',var(--ui),sans-serif;font-weight:800;letter-spacing:.34em;padding-left:.34em;font-size:clamp(34px,4.2vw,70px);color:rgba(214,220,255,.82);}
 .sp-word{will-change:transform,opacity}
 .sp-line{width:min(50px,4.5vw);height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(170,186,255,.75),transparent)}
 /* ripple: the chosen case first, then outward to each side; the text and buttons last */
@@ -819,3 +830,12 @@ html.reduce-motion .note-card{transition:none}
 .ac-hint .g{min-width:18px;height:18px;padding:0 3px;box-sizing:border-box;display:inline-grid;place-items:center;border-radius:5px;background:rgba(255,255,255,.14);font-size:10px;font-weight:700}
 .ac-hint .g svg{width:14px;height:14px}
 html.reduce-motion .art-card,html.reduce-motion .ac-bar i{transition:none}
+
+/* (beta.12) a RomM game not on this device yet: a small cloud in the cover's top-left corner (the favourite's heart is
+   top-right); Play downloads it first */
+.slot.cloud .f-front::after{content:"";position:absolute;left:calc(8px*var(--os,1));top:calc(8px*var(--os,1));z-index:3;width:calc(26px*var(--os,1));height:calc(26px*var(--os,1));border-radius:50%;
+  background:rgba(10,10,16,.75) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9bfff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z'/><path d='M12 10v6m-2.5-2.5L12 16l2.5-2.5'/></svg>") center/62% no-repeat;pointer-events:none}
+
+/* (beta.12) Mona Sans: titles in its wide cut, as in the font mockup (the console's name, a game's title on the shelf,
+   in Details and on the launch screen, page titles in Settings and setup, the tour's card) */
+.sys-word,.g-title,.l-title,.d-title,.bss-title,.su-title,#btT{font-stretch:125%}

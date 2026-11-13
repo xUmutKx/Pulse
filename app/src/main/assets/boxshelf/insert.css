@@ -34,6 +34,10 @@
 .insert.cart .ins-label{border-radius:10% 10% 6% 6%;-webkit-mask:none;mask:none;background-color:#222}
 .insert.cart .ins-label::after{border-radius:10% 10% 6% 6%;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 30%),linear-gradient(0deg,#1b1b1f 0 14%,transparent 14%)}
 .insert.cart .ins-media{width:calc(var(--disc)*.78);height:var(--disc);margin-left:calc(var(--disc)*-.39)}
+/* (beta.11) DOS: a 3.5" floppy disk */
+.insert.floppy .ins-media{width:calc(var(--disc)*.9);height:calc(var(--disc)*.94);margin-left:calc(var(--disc)*-.45)}
+.insert.floppy .ins-label{border-radius:3%;background-color:#1d1e22;background-size:82% 56%;background-position:50% 88%;background-repeat:no-repeat}
+.insert.floppy .ins-label::after{border-radius:3%;background:linear-gradient(90deg,transparent 22%,#c4c8cf 22% 82%,transparent 82%) top/100% 34% no-repeat,linear-gradient(180deg,rgba(255,255,255,.14),transparent 30%)}
 
 /* the drive the game goes into (generic, tinted per system) */
 .ins-console{position:absolute;left:50%;bottom:0;width:min(70vw,900px);height:16vh;transform:translateX(-50%);z-index:5;border-radius:18px 18px 0 0;
@@ -67,7 +71,7 @@
 @keyframes insSpin{to{transform:rotate(360deg)}}
 @keyframes insConsole{from{transform:translateX(-50%) translateY(46vh)}to{transform:translateX(-50%) translateY(0)}}
 @keyframes insLight{0%{opacity:.25}30%{opacity:1}100%{opacity:.85}}
-@media (prefers-reduced-motion:reduce){.insert.go *{animation-duration:.01s!important;animation-delay:0s!important}}
+body.reduce-motion .insert.go *{animation-duration:.01s!important;animation-delay:0s!important}
 /* Your own console image (themes\\<system>\\console.png) replaces the built-in drive; the disc slides in behind its top edge. */
 .ins-console-img{display:none}
 .insert.has-console .ins-console{height:36vh;width:auto;background:none;box-shadow:none;border-radius:0}
@@ -288,7 +292,7 @@
   94%{opacity:1}
   100%{opacity:0;transform:translateY(54vh) rotateX(80deg) scale(.8)}}
 
-@media (prefers-reduced-motion:reduce){.insert.go .cube-well::after{animation:none!important}}
+body.reduce-motion .insert.go .cube-well::after{animation:none!important}
 
 /* ---- v1.9: the other consoles get a device too. All original, generic shapes tinted from the shelf's colours
    (never a real console's design):
@@ -403,4 +407,4 @@
 .insert.hatchload{--cs:calc(var(--dw)*.7)}
 @keyframes hatchOpen{from{transform:rotateX(0)}to{transform:rotateX(70deg)}}
 @keyframes hatchClose{0%{transform:rotateX(70deg);animation-timing-function:cubic-bezier(.55,0,.9,.6)}70%{transform:rotateX(0);animation-timing-function:cubic-bezier(.2,.6,.4,1)}84%{transform:rotateX(5deg)}100%{transform:rotateX(0)}}
-@media (prefers-reduced-motion:reduce){.insert.go .deck-slot::after{animation:none!important}}
+body.reduce-motion .insert.go .deck-slot::after{animation:none!important}

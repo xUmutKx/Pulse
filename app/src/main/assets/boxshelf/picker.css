@@ -1,0 +1,19 @@
+/* (beta.12, Linux Game Mode) Boxshelf's own file and folder browser (picker.js): Settings' look, sized for a TV or the Deck */
+.bsp{position:fixed;inset:0;z-index:2147482000;display:none;background:rgba(5,6,12,.86);font-family:var(--ui,inherit);color:#f3f5fb}
+.bsp.on{display:grid;place-items:center}
+.bsp-box{width:min(1100px,92vw);height:min(720px,86vh);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:14px;padding:22px 24px;border-radius:20px;background:#121521;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.bsp-title{font-size:24px;font-weight:600}
+.bsp-path{margin-top:4px;font-size:14px;color:rgba(243,245,251,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+.bsp-body{display:grid;grid-template-columns:clamp(160px,22%,240px) minmax(0,1fr);gap:16px;min-height:0}
+.bsp-places,.bsp-list{overflow-y:auto;display:flex;flex-direction:column;gap:4px;min-height:0;padding:2px}
+.bsp-place,.bsp-item{all:unset;box-sizing:border-box;display:block;padding:11px 14px;border-radius:12px;font-size:17px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(243,245,251,.82)}
+.bsp-place:hover,.bsp-item:hover{background:rgba(255,255,255,.05)}
+.bsp-place.here{color:#fff;background:rgba(255,255,255,.06)}
+.bsp-item.dir::before{content:"";display:inline-block;width:16px;height:12px;margin-right:10px;border-radius:2px 3px 3px 3px;background:#9d8cff;vertical-align:-1px}
+.bsp-item:not(.dir)::before{content:"";display:inline-block;width:12px;height:15px;margin:0 12px 0 2px;border-radius:2px;background:rgba(243,245,251,.4);vertical-align:-2px}
+.bsp-place.sel,.bsp-item.sel{background:rgba(157,140,255,.22);color:#fff;box-shadow:inset 0 0 0 2px #9d8cff}
+.bsp-empty{padding:30px 14px;color:rgba(243,245,251,.55);font-size:16px}
+.bsp-hints{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.bsp-hint{all:unset;cursor:pointer;font-size:15px;color:rgba(243,245,251,.78)}
+.bsp-key{display:inline-block;min-width:22px;padding:2px 8px;margin-right:4px;border-radius:7px;border:1px solid rgba(255,255,255,.28);text-align:center;font-weight:600;color:#fff}
+@media (max-height:620px){.bsp-box{padding:14px 16px;gap:10px}.bsp-title{font-size:19px}.bsp-place,.bsp-item{padding:8px 12px;font-size:15px}}

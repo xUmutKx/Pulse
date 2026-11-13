@@ -125,7 +125,7 @@
   };
   // Details > More > Game settings: Pulse's own page of the game (performance, profile, cover)
   // the search button beside Menu (Game Hub only): finds a game by name and brings the shelf to it
-  document.addEventListener('DOMContentLoaded', () => { const f = document.getElementById('findBtn'); if (f) { f.hidden = false; f.addEventListener('click', e => { e.stopPropagation(); window.__pulseFind && window.__pulseFind(); }); } });
+  // the search button beside Menu is Boxshelf's own Find a game (find.js)
   // "Find a cover": the covers the internet has for the game (Steam's, and SteamGridDB's with a key), in the shelf's own look; a tap makes one the game's cover.
   // The name can be typed again when the game is listed under another one.
   api.coverPick = g => {

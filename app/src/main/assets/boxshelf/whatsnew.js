@@ -6,6 +6,75 @@
 //   sections: [{ h, items: [[headline, more]] }] }; newest first.
 window.BS_WHATSNEW = [
   {
+    // (android: the APK published with beta.12 was built a day later and calls itself 1.82.0-beta.13)
+    version: '1.82.0-beta.12', android: '1.82.0-beta.13', date: '2026-11-11', title: 'Find any game, manuals you can read, and a new Thor bottom screen',
+    highlights: [
+      "Find a game: search every shelf by name, by keyboard, controller or touch",
+      "Manuals and guides you can read on any screen: zoom, move around the page, one page at a time",
+      "A new Details page built around the case, with the trailer's sound and full-screen screenshots",
+      "The shelf always slides with every effect on, and achievements as a wall of badges",
+      "Every art source one tap away in the Art Studio; Thor: a new bottom screen with Apps, Consoles and Screen off"
+    ],
+    platforms: [
+      "Windows is the main version: everything under Everywhere and Windows.",
+      "Android (AYN Thor, phones and tablets) is still a work in progress: expect rough edges, especially on the Thor's bottom screen.",
+      "Linux / Steam Deck is still a work in progress: an early build, not yet tried on many Steam Decks."
+    ],
+    sections: [
+      { h: "Everywhere", items: [
+        ["Find a game", "Search every shelf by title: the Search button beside Menu, / or Ctrl+F, hold the left stick's click, or the quick menu's first row. Results show as you type, best match first; pick one and the shelf goes to it, on whichever console it's on."],
+        ["Manuals you can read", "Zoom in and move around a page with the controller (L2 / R2, right stick), the keyboard (+ / -, arrows), the mouse (Ctrl + wheel) or your fingers (pinch, double tap, drag). Small screens show one page at a time."],
+        ["A new achievements screen", "A game's achievements as a wall of badges, with a card beside the one you're on: its full title and description, points, how many players have it, when you unlocked it (and whether in hardcore), and whether it's Story, Beats the game or Missable. Your unlocks sit on a trophy shelf at the top, newest first; the rest are grouped into Story, Missable and Everything else. Rare badges (violet, under 10% of players) and ultra-rare ones (gold, under 3%) get a rim, and missable ones a dot. Y sorts by order, rarity or points."],
+        ["RomM", "Play games from your RomM server."],
+        ["Every art source at a tap", "The Art Studio ends each row with a card for each source not set up yet, saying what it brings: LaunchBox art (one download, right there), ScreenScraper (every part), SteamGridDB (fronts in HD) and IGDB. Connect one and its versions fill the row."],
+        ["A faster Art Studio", "Versions show at once instead of waiting for the slowest source, and the Spine page is readable."],
+        ["ScreenScraper", "Sign in with your own free account under Settings → Accounts; its previews in the Art Studio load fast."],
+        ["Smoother moments", "A case set down from Inspect lands smoothly, and the other cases stay 3D while Details is open."],
+        ["Settings from the quick menu", "Settings is one press away in the quick menu."],
+        ["The right word for every console", "Cartridge, UMD or floppy disk wherever the case holds one, in Details, the museum and the Art Studio."],
+        ["Every effect stays on", "The automatic performance level no longer turns the shelf's effects off."],
+        ["Mona Sans", "Boxshelf's interface has a new, clearer font."],
+        ["Fixed", "A cover you chose stays chosen. \"Set up for me\" Undo never wipes settings you saved since. A RetroArch system folder with core subfolders is read."]
+      ] },
+      { h: "Windows", items: [
+        ["Details, redesigned", "Built around the case: Play first, the trailer beside it with its sound and volume, screenshots that open full screen, and LB / RB to jump between sections."],
+        ["Seamless play", "Steam and store games are watched while they run, so Boxshelf is back the moment you quit; pick the screen mode, or Go to desktop from the Home menu."],
+        ["RocketLauncher", "Games can start through RocketLauncher, HyperSpin's launcher, with its fade screens, bezels and pause menu."],
+        ["Custom games", "A Settings page for recomps, PC ports and any other program, on their own Custom shelf."],
+        ["Steam", "Trailers play with their sound; fixes for controllers and for games that close early. A on Details' trailer pauses and plays it there."],
+        ["Attract mode", "It keeps going when Boxshelf's window isn't in focus, with more attract settings."],
+        ["Animations", "The shelf slides with every effect on whatever Windows' own animation setting says. Reduce motion is now in Settings → Performance (Off by default)."],
+        ["Controllers", "Switching a controller on with its Guide button no longer opens the Home menu, and its first presses are never lost. Minus / View opens Details (held: the museum)."],
+        ["Fixed", "The quick menu no longer opens or slides away by itself."]
+      ] },
+      { h: "Android (work in progress)", items: [
+        ["A new Thor bottom screen", "Apps first (every app on the device, plus Android home, Settings, Wi-Fi and Bluetooth), then a calmer card for the game you're on, Trophies, Consoles (tap one to jump to its shelf) and Shortcuts (up to twelve, in pages, with Add)."],
+        ["Hold an app for its menu", "On the bottom screen's Apps tab (or an app in Shortcuts), hold an app to open it on the top or the bottom screen, add it to Shortcuts or open its App info. An app on the top screen leaves Boxshelf's bottom screen up (DS and 3DS emulators get both screens); an app on the bottom screen leaves the shelf live on top, with a button there to bring Boxshelf's bottom screen back."],
+        ["Typing in Settings by touch", "A finger on a setting you type into (an API key, an account) opens Boxshelf's own keyboard, with a Paste key for a key copied in your browser."],
+        ["The bottom screen helps with what's on top", "While you read a manual, search or look at Details, it shows big buttons for that. Find a game types on the bottom screen, so the top keeps the results."],
+        ["It stays up while you play", "A game that doesn't use the second screen (GameCube, PS2…) leaves Boxshelf's bottom screen up. DS and 3DS games still get the bottom screen for themselves."],
+        ["Screen off", "A Shortcut that turns the bottom screen dark until you tap it."],
+        ["Touch everywhere", "Double-tap a case to pick it up, swipe up for Details and down to close them, tap the manual or the disc in an open case. A one-time tip shows the gestures."],
+        ["Manuals sized for the Thor", "A manual opens at the page's width, its print near real size and sharp. Each one starts fitted again, the way you last chose (the whole page or its width)."],
+        ["Smoother scrolling", "Racing through a shelf no longer competes with the bottom screen or the moving backdrop. Settings → System → Smoothness test shows its results on screen."],
+        ["Box art made clear", "The Thor's Art Studio has a card for each art source: LaunchBox art downloads right there with its progress; ScreenScraper, SteamGridDB and IGDB connect and come back."],
+        ["Readable on the Thor", "A Text size setting (Automatic by default, up to Largest), with bigger labels on the shelf, in Details and on the bottom screen's buttons."],
+        ["Phones and tablets", "They turn upright with the screen; the Thor stays landscape."],
+        ["Fixed", "Boxshelf no longer freezes after you make it your Home app. DS and other cartridge games show the cartridge's own picture, whole, and call it a cartridge."]
+      ] },
+      { h: "Linux / Steam Deck (work in progress)", items: [
+        ["Details, redesigned", "As on Windows."],
+        ["Emulators as Flatpaks", "They are found, EmuDeck and RetroDECK included."],
+        ["Steam games are watched", "While they run, so Boxshelf is back when you quit."],
+        ["Leaving a game, explained", "A \"Leaving a game\" card after setup: hold View + Menu to come back. Steam's own Exit game closes Boxshelf too, and the tour says so."],
+        ["Sized for the Deck", "A Steam Deck starts at Interface size 115% for its 7\" screen (a size you choose later is kept)."],
+        ["Power and start-up", "Sleep, Restart and Shut down in the quick menu; Settings → Start Boxshelf at login."],
+        ["Game Mode", "A controller-friendly file browser, updates that keep your Steam shortcut working, and Boxshelf's own artwork in your Steam library."],
+        ["Touch on the Deck's screen", "Double-tap a case to pick it up, swipe for Details, tap the manual in an open case to read it."]
+      ] }
+    ]
+  },
+  {
     version: '1.82.0-beta.9', android: '1.82.0-beta.9', date: '2026-11-06', title: 'Smoother, better manuals, and covers for every custom game',
     highlights: [
       'Smoother: background work no longer makes the shelf hitch, and the Art Studio opens faster',

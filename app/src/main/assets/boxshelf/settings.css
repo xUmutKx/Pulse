@@ -2,7 +2,7 @@
    Interface size and Fit to TV settings). Every class is prefixed bss- so nothing collides with the shelf's styles.
    One look throughout: a dark surface tinted by the theme, a clean list with hairlines, and a single gliding highlight
    (the same family as the sidebar's selected item). */
-#bss{position:fixed;inset:0;z-index:55;display:none;overflow:hidden;font-family:var(--ui,'Lexend',system-ui,sans-serif);color:#eef0f6;user-select:none;-webkit-user-select:none;
+#bss{position:fixed;inset:0;z-index:55;display:none;overflow:hidden;font-family:var(--ui,'Mona Sans',system-ui,sans-serif);color:#eef0f6;user-select:none;-webkit-user-select:none;
   --line:rgba(255,255,255,.07);--ink:#f3f5fb;--ink2:#d5d9e6;--dim:#a4abbf;--faint:#7c8399;--acc:#6b8cff;--acc2:#a9bfff;--ok:#45d483;--warn:#ffb547;--bad:#ff6b6b;--tint:#6a5cff;
   --hl:linear-gradient(90deg,color-mix(in srgb,var(--acc) 30%,transparent),color-mix(in srgb,var(--acc) 13%,transparent));
   --hlRing:inset 0 0 0 2px color-mix(in srgb,var(--acc2) 85%,transparent);--hlGlow:0 10px 34px -10px color-mix(in srgb,var(--acc) 70%,transparent),0 0 0 1px rgba(0,0,0,.25)}
@@ -16,7 +16,7 @@
 #bss:not(.on){pointer-events:none}
 body.bss-reduce #bss,body.reduce-motion #bss{transition-duration:.12s}
 #bss *{box-sizing:border-box}
-.bss-stage{position:absolute;left:0;top:0;transform-origin:0 0;font:500 16px/1.35 var(--ui,'Lexend',system-ui,sans-serif);letter-spacing:.005em}
+.bss-stage{position:absolute;left:0;top:0;transform-origin:0 0;font:500 16px/1.35 var(--ui,'Mona Sans',system-ui,sans-serif);letter-spacing:.005em}
 /* the surface: opaque, a soft glow of the theme's colour, a little grain and a vignette; only a live preview lets the shelf through */
 .bss-bg{position:absolute;inset:0;transition:opacity .35s ease;will-change:transform;transform:translateZ(0);
   background:radial-gradient(1300px 760px at 78% -12%,color-mix(in srgb,var(--tint) 24%,transparent),transparent 70%),radial-gradient(1000px 640px at 18% 118%,color-mix(in srgb,var(--tint) 12%,transparent),transparent 70%),linear-gradient(180deg,#0d0f1a,#07080e 70%)}
@@ -133,8 +133,8 @@ body.bss-reduce #bss,body.reduce-motion #bss{transition-duration:.12s}
 .bss-st.busy{color:#ffd08a}.bss-st.busy i{width:18px;height:18px;margin:0 3px;background:none;border:2.5px solid var(--warn);border-right-color:transparent;animation:bssspin .8s linear infinite}
 @keyframes bssspin{to{transform:rotate(360deg)}}
 /* text being typed */
-.bss-edit{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Lexend',sans-serif);color:#fff;background:rgba(0,0,0,.4);border:0;box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;outline:none}
-.bss-editv{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Lexend',sans-serif);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;white-space:pre;overflow:hidden;display:flex;justify-content:flex-end}
+.bss-edit{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Mona Sans',sans-serif);color:#fff;background:rgba(0,0,0,.4);border:0;box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;outline:none}
+.bss-editv{flex:1;min-width:0;font:500 20px/1.2 var(--ui,'Mona Sans',sans-serif);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 2px var(--acc2);border-radius:12px;padding:10px 14px;white-space:pre;overflow:hidden;display:flex;justify-content:flex-end}
 .bss-editv .c{width:2px;height:24px;background:var(--acc2);animation:bssblink 1s steps(1) infinite;flex:none;align-self:center}
 .bss-row.editing .bss-val{min-width:0;flex:1;max-width:66%}
 /* theme tiles */
@@ -220,7 +220,7 @@ body.bss-reduce #bss,body.reduce-motion #bss{transition-duration:.12s}
 .bss-root.narrow .bss-key{min-width:56px;height:56px;font-size:21px;padding:0 8px}
 .bss-root.narrow .bss-key.wide{min-width:150px}.bss-root.narrow .bss-key.mid{min-width:90px;font-size:17px}
 .bss-root.narrow .bss-krow{gap:8px;margin-bottom:8px}
-@media (prefers-reduced-motion:reduce){.bss-list,.bss-osk,.bss-hl{transition:none}.bss-scroll.enter,.bss-row.press,.bss-val .txt b{animation:none}}
+body.reduce-motion .bss-list,body.reduce-motion .bss-osk,body.reduce-motion .bss-hl{transition:none}body.reduce-motion .bss-scroll.enter,body.reduce-motion .bss-row.press,body.reduce-motion .bss-val .txt b{animation:none}
 body.bss-reduce .bss-list,body.bss-reduce .bss-osk,body.bss-reduce .bss-hl{transition:none}
 body.bss-reduce .bss-scroll.enter,body.bss-reduce .bss-row.press,body.bss-reduce .bss-val .txt b{animation:none}
 
@@ -469,7 +469,7 @@ body.safe-area #app>#bss{scale:var(--safe-inv,1)}
 .bss-root.narrow .bsa-scene{height:380px}.bss-root.narrow .bsa-case{--h:308px;--mw:300px}
 .bss-root.narrow .bsa-pill{padding:0 14px;font-size:15.5px}
 .bss-root.narrow .bsa-part{padding:0 12px;gap:10px}.bss-root.narrow .bsa-part .nm{font-size:17px}
-@media (prefers-reduced-motion:reduce){.bsa-case,.bsa-disc,.bsa-ph.wait::after{animation:none}.bsa-grid,.bsa-cgrid,.bsa-turn{transition:none}}
+body.reduce-motion .bsa-case,body.reduce-motion .bsa-disc,body.reduce-motion .bsa-ph.wait::after{animation:none}body.reduce-motion .bsa-grid,body.reduce-motion .bsa-cgrid,body.reduce-motion .bsa-turn{transition:none}
 body.bss-reduce .bsa-case,body.bss-reduce .bsa-disc,body.bss-reduce .bsa-ph.wait::after{animation:none}
 body.bss-reduce .bsa-grid,body.bss-reduce .bsa-cgrid{transition:none}
 /* Pick exact for the disc (mockup screen 4): a full-width row of big discs; the chosen one spins (X stops it) */
@@ -522,7 +522,7 @@ body.bss-reduce .bsa-card.dk.sel .im.disc img{animation:none}
 
 /* spines: each version lies on its side across the card (spines are ~1:13, upright they'd be a hairline), and the
    preview shows the chosen spine standing up big; X turns back to the whole case */
-.bsa-card .im.sp img{position:absolute;left:50%;top:50%;width:76px;height:var(--L,260px);max-width:none;transform:translate(-50%,-50%) rotate(-90deg);object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+.bsa-card .im.sp img{position:absolute;left:50%;top:50%;width:var(--T,76px);height:var(--L,260px);max-width:none;transform:translate(-50%,-50%) rotate(-90deg);object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
 .bsa-card .im.sp{background:linear-gradient(180deg,#0b0d16,#121524)}
 .bsa-spinebig{display:none;position:absolute;left:50%;top:50%;width:46px;height:calc(100% - 26px);transform:translate(-50%,-50%);border-radius:3px;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);background:#15161c}
 .bsa-spinebig img{width:100%;height:100%;object-fit:fill}
@@ -591,7 +591,8 @@ body.bss-reduce .bsa-card.dk.sel .im.disc img{animation:none}
 .bsa-pk.ptabs .bsa-part .th.round{width:40px;height:40px}
 .bsa-pk.ptabs.cart .bsa-part .th.round{width:34px;height:44px}
 .bsa-pk.ptabs .bsa-part .nm{font-size:16.5px}
-.bsa-pk.ptabs .bsa-part .st{font-size:12.5px;margin-top:1px;-webkit-line-clamp:1}
+/* (beta.11) the tabs show their picture and name only: the cards below say each part's state */
+.bsa-pk.ptabs .bsa-part .st{display:none}
 .bsa-pk.ptabs .bsa-part .badge{display:none}
 .bsa-pk.ptabs .bsa-parts .bsa-ghl{height:68px;right:auto;width:0;border-radius:14px;transition:transform .14s cubic-bezier(.2,.8,.2,1),width .14s cubic-bezier(.2,.8,.2,1)}
 .bsa-pk.ptabs .bsa-glock.mini{flex:0 0 auto;margin:0;min-height:0;height:68px;padding:0 14px;gap:10px;border-radius:14px}
@@ -610,3 +611,30 @@ body.bss-reduce .bsa-card.dk.sel .im.disc img{animation:none}
 .bsa-now.on{display:flex}
 .bsa-now .im{position:relative;width:62px;height:88px;border-radius:5px;overflow:hidden;background:#0b0d16;box-shadow:0 0 0 1px rgba(255,255,255,.18);opacity:.8}
 .bsa-now .im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* (beta.12) the Spine page (spmode, set by pickCards): an "Up close" strip across the page with the spine lying flat (--L
+   long, --T thick, sized in pkGeo), the versions as short wide cards, and the left column's room for the neighbours shelf */
+.bsa-up{display:none}
+.bsa-pk.ptabs.spmode{grid-template-rows:68px var(--upH,120px) minmax(0,1fr)}
+.bsa-pk.ptabs.spmode .bsa-pv,.bsa-pk.ptabs.spmode .bsa-cw{grid-row:3}
+.bsa-pk.spmode .bsa-up{display:flex;grid-column:1/-1;grid-row:2;align-items:center;min-width:0;padding:12px 18px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b0d16,#121524);box-shadow:inset 0 0 0 1px var(--line)}
+.bsa-up .k{flex:none;width:90px;margin-right:14px;font-size:13px;line-height:1.5;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.bsa-up .sl{position:relative;flex:none;width:var(--L,600px);height:var(--T,50px)}
+.bsa-up .rot{position:absolute;left:50%;top:50%;width:var(--T,50px);height:var(--L,600px);transform:translate(-50%,-50%) rotate(-90deg)}
+.bsa-up .rot>img{object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.55))}
+.bsa-up .rot>.bsa-ph.spine{font-size:calc(var(--T,50px) * .36);border-radius:4px}
+.bsa-pk.spmode .bsa-now{display:none}
+.bsa-pk.spmode .bsa-card .use{top:calc(var(--spH,44px) + 17px);left:auto;right:12px}
+.bsa-pk.spmode .bsa-card:has(.use.on) .ed{padding-right:150px}
+.bsa-pk.spmode .bsa-card .in.act .im span{font-size:30px;line-height:1}
+.bsa-pk.spmode .bsa-card .in.act.acct .im span{width:34px;height:34px}
+.bsa-pk.spmode .bsa-scene{height:auto;flex:1 1 0;min-height:0}
+.bsa-pk.spmode .bsa-case{--h:260px}
+.bsa-pk.spmode .bsa-scene.spinemode,.bsa-pk.spmode .bsa-pv:has(.bsa-scene.spinemode) .bsa-shadow{display:none}
+.bsa-pk.spmode .bsa-pv:not(.sbig):has(.bsa-scene.spinemode) .what{margin-top:auto}.bsa-pk.spmode .bsa-pv:not(.sbig):has(.bsa-scene.spinemode) .why{margin-bottom:auto}
+.bsa-pk.spmode .bsa-pv:not(.sbig) .bsa-nb{display:none}
+.bsa-pv.sbig .bsa-scene,.bsa-pv.sbig .bsa-shadow{display:none}
+.bsa-pv.sbig .bsa-nb{flex:1 1 0;min-height:0;width:100%;margin-top:14px;padding-top:0;justify-content:flex-end;container-type:size}
+.bsa-pv.sbig .bsa-nb .row{flex:none;flex-wrap:nowrap;height:min(340px,calc(100cqh - 34px),calc(96cqw - 44px));gap:8px}
+.bsa-pv.sbig .bsa-nb .sp{flex:none;height:94%;width:auto;aspect-ratio:26/146}
+.bsa-pv.sbig .bsa-nb .sp.me{height:100%;aspect-ratio:30/156}
+.bsa-pv.sbig .bsa-nb .sp .bsa-ph.spine{font-size:12px}

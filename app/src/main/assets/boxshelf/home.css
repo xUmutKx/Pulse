@@ -1,5 +1,5 @@
 /* In-game Home menu (renderer/home.html). Two layouts: a guide panel on the left (default) or a centred card. */
-:root{--ink:#f3f5fb;--dim:rgba(243,245,251,.6);--line:rgba(255,255,255,.12);--accent:#9d8cff;--ui:'Lexend',system-ui,'Segoe UI',sans-serif}
+:root{--ink:#f3f5fb;--dim:rgba(243,245,251,.6);--line:rgba(255,255,255,.12);--accent:#9d8cff;--ui:'Mona Sans',system-ui,'Segoe UI',sans-serif}
 html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:var(--ui);color:var(--ink);user-select:none;-webkit-user-select:none;cursor:none}
 *{box-sizing:border-box}
 
@@ -57,7 +57,7 @@ body.layout-center .sep{display:none}
   box-shadow:0 18px 40px rgba(0,0,0,.5);font-size:15px;font-weight:500;display:flex;align-items:center;gap:10px;opacity:0;transition:opacity .25s,transform .3s cubic-bezier(.2,.9,.2,1)}
 .toast::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
-@media (prefers-reduced-motion:reduce){.panel,.toast,.dim{transition:none}}
+body.reduce-motion .panel,body.reduce-motion .toast,body.reduce-motion .dim{transition:none}
 /* Power sub-list and the shelf version of the menu */
 .subhead{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:2px 6px 8px}
 body.in-power .items{animation:subIn .22s cubic-bezier(.2,.9,.2,1)}

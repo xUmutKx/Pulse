@@ -1,6 +1,6 @@
 // The Home menu overlay, used two ways:
 //  • in a game: Resume, Save/Load state, Screenshot, Power, Quit to shelf (only what that emulator supports)
-//  • on the shelf: Home shelf, Museum, Settings, Power
+//  • on the shelf: Home shelf, Museum, Settings, (beta.12, Seamless play) Go to desktop, Power
 // Power opens a sub-list in place (Sleep, Restart, Shut down, Quit Boxshelf). The main process opens the menu,
 // forwards controller buttons (from the XInput helper) and carries out whatever is chosen here.
 (() => {
@@ -22,10 +22,11 @@
     restart: P('M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7'),
     shutdown: P('M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0'),
     quitapp: P('M6 6l12 12M18 6L6 18'),
+    desktop: P('M3 5h18v11H3zM8 20h8M12 16v4'), // (beta.12) Seamless play: Go to desktop
     back: P('M15 5l-7 7 7 7')
   };
   const LABEL = { resume: 'Resume', save: 'Save state', load: 'Load state', shot: 'Screenshot', quit: 'Quit to shelf', power: 'Power',
-    shelfhome: 'Home shelf', museum: 'Museum', settings: 'Settings',
+    shelfhome: 'Home shelf', museum: 'Museum', settings: 'Settings', desktop: 'Go to desktop',
     sleep: 'Sleep', restart: 'Restart', shutdown: 'Shut down', quitapp: 'Quit Boxshelf', back: 'Back' };
   const HOLD = new Set(['quit', 'restart', 'shutdown', 'quitapp']); // these need A held, so a stray press never does them
   const SEP_BEFORE = new Set(['power', 'quit']);
@@ -99,6 +100,7 @@
     document.documentElement.style.setProperty('--accent', info.accent || '#9d8cff');
     document.body.classList.toggle('layout-center', info.layout === 'center'); document.body.classList.toggle('layout-side', info.layout !== 'center');
     document.body.classList.toggle('is-paused', !!info.paused); document.body.classList.toggle('shelf', !info.inGame);
+    { let rm = false; try { rm = info.reduceMotion === true || (info.reduceMotion === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch {} document.body.classList.toggle('reduce-motion', rm); } // (beta.12) Boxshelf's own Reduce motion
     $('cover').src = info.cover || ''; $('cover').parentNode.style.display = info.cover ? '' : 'none';
     $('sys').textContent = info.system || ''; $('title').textContent = info.title || (info.inGame ? 'Now playing' : 'Home'); $('time').textContent = info.subtitle || '';
     render(); tick(); clearInterval(clockT); clockT = setInterval(tick, 15000);
