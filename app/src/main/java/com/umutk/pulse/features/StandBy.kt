@@ -718,6 +718,7 @@ private fun chargeNames(): List<Pair<Int, String>> = listOf(
     13 to tr("Radar", "Radar"), 14 to tr("Sparks", "Kıvılcım"), 15 to tr("Swirl", "Girdap"), 16 to tr("Edge light", "Kenar ışığı"),
     17 to tr("Confetti", "Konfeti"), 18 to tr("Bubbles", "Baloncuk"), 19 to tr("Rainbow", "Gökkuşağı"), 20 to tr("Smiley", "Gülen yüz"), 21 to tr("Hearts", "Kalpler"),
     22 to tr("Console", "Konsol"), 23 to tr("Words", "Sözcükler"),
+    24 to tr("Neofetch", "Sistem kartı"), 25 to tr("Clock", "Saat"), 26 to tr("Birds", "Kuşlar"), 27 to tr("Poem", "Şiir"), 28 to tr("Warp", "Yıldız geçişi"),
 )
 
 

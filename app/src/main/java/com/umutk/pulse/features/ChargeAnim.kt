@@ -55,6 +55,10 @@ import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.text.style.TextAlign
 
 /**
  * The animation that plays over everything for a few seconds when the charger is plugged in. Sixteen looks (the setting of the cover picks one; it is off until its switch is on):
@@ -124,13 +128,16 @@ private fun ChargeUi(ctx: Context, style: Int) {
 
 /** The colour a look is drawn in (the party looks use their own). */
 internal fun chargeColor(style: Int): Color = when (style) { 1 -> Color(0xFF30D158); 2 -> Color(0xFF4FC3F7); 3 -> Color(0xFFFFD60A); 4 -> Color(0xFFB388FF); 7 -> Color(0xFFFF5C7A); 8 -> Color(0xFF7CFC00); 9 -> Color(0xFF40C4FF); 10 -> Color(0xFF30D158)
-    11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); 22 -> Color(0xFF69F0AE); else -> Color(0xFF69F0AE) }
+    11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); 22 -> Color(0xFF69F0AE); 24 -> Color(0xFF00E5FF); 25 -> Color(0xFFFFFFFF); 26 -> Color(0xFFCFD8DC); 27 -> Color(0xFFFFE082); 28 -> Color(0xFF9FA8FF); else -> Color(0xFF69F0AE) }
 
 /** The picture of one look at [t] (0..1, repeating) and [fill] (0..1): drawn the same for the full screen and for the small previews in the settings; [scale] shrinks the texts. */
 @Composable
 private fun ChargeBody(style: Int, t: Float, fill: Float, col: Color, scale: Float) {
     if (style == 22) { ConsoleCharge(t, fill, col, scale); return }
     if (style == 23) { WordsCharge(t, fill, scale); return }
+    if (style == 24) { NeofetchCharge(t, fill, col, scale); return }
+    if (style == 25) { ClockCharge(fill, col, scale); return }
+    if (style == 27) { PoemCharge(t, fill, scale); return }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             when (style) {
@@ -153,6 +160,8 @@ private fun ChargeBody(style: Int, t: Float, fill: Float, col: Color, scale: Flo
                 19 -> rainbowStyle(t, fill)
                 20 -> smileStyle(t, fill)
                 21 -> heartsStyle(t)
+                26 -> birdsStyle(t, fill, col)
+                28 -> warpStyle(t, col)
                 else -> barStyle(t, fill, col)
             }
         }
@@ -197,6 +206,49 @@ private fun WordsCharge(t: Float, fill: Float, scale: Float) {
                 Text(ch.toString(), color = PARTY[i % PARTY.size], fontSize = (26 * scale).sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = (-14 * scale * bounce).dp))
             }
         }
+    }
+}
+
+/** 24: a system card, like neofetch: a little logo on the left, the phone's lines are typed in on the right, the charge bar ends the list. */
+@Composable
+private fun NeofetchCharge(t: Float, fill: Float, col: Color, scale: Float) {
+    val pct = (fill * 100).toInt(); val bar = 18; val on = (fill * bar).toInt().coerceIn(0, bar)
+    val logo = listOf("   .--.   ", "  |o_o |  ", "  |:_/ |  ", " //   \\ \\ ", "(|     | )", "/'\\_   _/`\\", "\\___)=(___/")
+    val info = listOf("os" to "Android", "device" to "phone", "status" to tr("charging", "şarj oluyor"), "battery" to "$pct%", "port" to "USB-C")
+    val shown = (t * (info.size + 2)).toInt().coerceIn(0, info.size + 1)
+    Row(Modifier.fillMaxSize().padding((16 * scale).dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth(.42f)) { logo.forEach { Text(it, color = col, fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1) } }
+        Column(Modifier.fillMaxWidth()) {
+            Text("pulse@phone", color = col, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = (12 * scale + 1).sp, maxLines = 1)
+            info.take(shown.coerceAtMost(info.size)).forEach { (k, v) -> Text("$k: $v", color = Color.White.copy(alpha = .9f), fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1) }
+            if (shown > info.size) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "]", color = col, fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1)
+        }
+    }
+}
+
+/** 25: the clock of the phone, big and thin, the colon blinking, a thin line under it with the charge. */
+@Composable
+private fun ClockCharge(fill: Float, col: Color, scale: Float) {
+    val cal = java.util.Calendar.getInstance()
+    val hh = cal.get(java.util.Calendar.HOUR_OF_DAY); val mm = cal.get(java.util.Calendar.MINUTE)
+    val colon = if ((System.currentTimeMillis() / 500L) % 2L == 0L) ":" else " "
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text("%02d%s%02d".format(hh, colon, mm), color = Color.White, fontSize = (76 * scale).sp, fontWeight = FontWeight.Thin, maxLines = 1)
+        Box(Modifier.padding(top = (12 * scale).dp).fillMaxWidth(.6f).height((3 * scale + 1).dp).background(Color.White.copy(alpha = .15f))) {
+            Box(Modifier.fillMaxWidth(fill.coerceIn(.01f, 1f)).fillMaxHeight().background(col))
+        }
+        if (scale >= 1f) Text("${(fill * 100).toInt()}%  ·  " + tr("charging", "şarj oluyor"), color = Color.White.copy(alpha = .6f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+/** 27: a short line typed out letter by letter, the cursor blinks, the charge under it. */
+@Composable
+private fun PoemCharge(t: Float, fill: Float, scale: Float) {
+    val full = tr("Slowly, everything fills up.", "Yavaş yavaş, her şey dolar.")
+    val n = (t * 1.5f * full.length).toInt().coerceIn(0, full.length)
+    Column(Modifier.fillMaxSize().padding((22 * scale).dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(full.take(n) + if ((t * 8f).toInt() % 2 == 0) "|" else " ", color = Color.White.copy(alpha = .92f), fontFamily = FontFamily.Serif, fontSize = (22 * scale).sp, textAlign = TextAlign.Center)
+        if (scale >= 1f) Text("${(fill * 100).toInt()}%", color = Color.White.copy(alpha = .55f), fontSize = 15.sp, modifier = Modifier.padding(top = 14.dp))
     }
 }
 
@@ -487,3 +539,38 @@ private fun DrawScope.heartsStyle(t: Float) {
         drawPath(p, cols[i % 3].copy(alpha = .9f))
     }
 }
+
+/** 26: a flock of small birds crossing the screen, their wings beating; the charge is a thin line at the bottom. */
+private fun DrawScope.birdsStyle(t: Float, fill: Float, col: Color) {
+    val w = size.width; val h = size.height; val m = size.minDimension
+    for (i in 0 until 9) {
+        val p = (t + hash(i)) % 1f
+        val x = -.1f * w + p * 1.2f * w
+        val y = h * (.18f + .45f * hash(i + 40)) + sin(t * TAU + i) * m * .02f
+        val sz = m * (.025f + .02f * hash(i + 80))
+        val flap = sin(t * TAU * 3f + i) * sz * .35f
+        val path = Path().apply {
+            moveTo(x - sz, y - sz * .3f + flap)
+            quadraticBezierTo(x - sz * .4f, y - sz * .1f, x, y)
+            quadraticBezierTo(x + sz * .4f, y - sz * .1f, x + sz, y - sz * .3f + flap)
+        }
+        drawPath(path, col.copy(alpha = .85f), style = Stroke(m * .006f))
+    }
+    drawRect(Color.White.copy(alpha = .12f), Offset(w * .2f, h * .86f), Size(w * .6f, m * .01f))
+    drawRect(col, Offset(w * .2f, h * .86f), Size(w * .6f * fill.coerceIn(0f, 1f), m * .01f))
+}
+
+/** 28: stars rushing out from the middle, like a warp jump; they stretch as they come nearer. */
+private fun DrawScope.warpStyle(t: Float, col: Color) {
+    val c = center; val m = size.minDimension
+    for (i in 0 until 60) {
+        val p = (t + hash(i)) % 1f
+        val ang = hash(i + 200) * TAU
+        val r1 = p * p * m * .55f
+        val r0 = r1 * .86f
+        val a = Offset(c.x + cos(ang) * r0, c.y + sin(ang) * r0)
+        val b = Offset(c.x + cos(ang) * r1, c.y + sin(ang) * r1)
+        drawLine(if (i % 3 == 0) col.copy(alpha = p) else Color.White.copy(alpha = p), a, b, strokeWidth = m * .004f + m * .006f * p)
+    }
+}
+
