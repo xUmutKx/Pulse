@@ -1029,7 +1029,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             fun pick(m: Int) {
                                 viewMenu = false
                                 if (viewOwn != null) { viewDir = viewDir + (here to m); exWriteViewMap(ctx, viewDir) }
-                                else { FilesPrefs.grid = m == 1; detailAll = m == 2; FilesPrefs.save(ctx); exWriteInt(ctx, "ex_detail", if (m == 2) 1 else 0) }
+                                else {
+                                    FilesPrefs.grid = m == 1; detailAll = m == 2; FilesPrefs.save(ctx); exWriteInt(ctx, "ex_detail", if (m == 2) 1 else 0)
+                                    // the choice is for every folder: the folders that had a view of their own (set with "Only for this folder") follow it too
+                                    if (viewDir.isNotEmpty()) { viewDir = emptyMap(); exWriteViewMap(ctx, viewDir) }
+                                }
                             }
                             ThemedMenuItem(tr("List", "Liste"), { pick(0) }, checked = cur == 0)
                             ThemedMenuItem(tr("Grid", "Izgara"), { pick(1) }, checked = cur == 1)
