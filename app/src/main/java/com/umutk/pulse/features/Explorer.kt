@@ -651,7 +651,15 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.pendingFile) {
         com.umutk.pulse.files.home.FilesHomeNav.pendingFile?.let { f -> com.umutk.pulse.files.home.FilesHomeNav.pendingFile = null; openFile(f) }
     }
-    fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p }
+    // the last row picked: a long press on a row further down picks everything between the two (as in the Samsung gallery)
+    var lastPick by remember { mutableStateOf<String?>(null) }
+    fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p; lastPick = p }
+    fun longPick(p: String) {
+        val a = lastPick?.let { x -> shownNow.indexOfFirst { it.path == x } } ?: -1
+        val b = shownNow.indexOfFirst { it.path == p }
+        sel = if (sel.isNotEmpty() && a >= 0 && b >= 0) sel + (minOf(a, b)..maxOf(a, b)).map { shownNow[it].path } else sel + p
+        lastPick = p
+    }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
     // paste = into the folder on screen; cut moves (and the clipboard empties), copy copies (the clipboard stays); name clashes get a "1-" prefix (see paste)
     val canPaste = clip?.let { c -> !(c.move && c.files.all { it.parentFile == dir }) } == true
@@ -1108,7 +1116,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 if (grid) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { if (f.path !in sel) sel = sel + f.path }), horizontalAlignment = Alignment.CenterHorizontally) {
+                    onLongClick = { longPick(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, isz.dp) {
@@ -1127,7 +1135,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { if (f.path !in sel) sel = sel + f.path }), verticalAlignment = Alignment.CenterVertically) {
+                    onLongClick = { longPick(f.path) }), verticalAlignment = Alignment.CenterVertically) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, maxOf(isz, 40).dp) {
@@ -1226,7 +1234,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     if (i >= 0) {
                         val from = if (last < 0) i else last
                         sel = sel + (minOf(from, i)..maxOf(from, i)).map { shownNow[it].path }
-                        last = i
+                        last = i; lastPick = shownNow[i].path
                     }
                     val y = listBox?.takeIf { it.isAttached }?.localToRoot(change.position)?.y ?: 0f
                     val dm = ctx.resources.displayMetrics

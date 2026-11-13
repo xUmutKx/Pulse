@@ -164,7 +164,17 @@ open class ExtraToolActivity : ComponentActivity() {
     private var toolLook: ToolLook? = null
     private fun enter() { toolLook?.apply(this) }
 
+    // the own look store of each tool (null: the shared ExtraToolLook)
+    private fun storeOf(start: String): ToolLook? = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "ai" -> AiLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
+
+    // Windows 11: the window is see-through and blurs what is behind it, in every tool (the theme is fixed at start; a look change restarts the page)
+    private var glass = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null) {
+            val r0 = routeOf(intent)
+            if ((storeOf(r0)?.get(this) ?: ExtraToolLook.get(this)) == "win11") { glass = true; setTheme(R.style.Theme_Pulse_Files_Glass) }
+        }
         super.onCreate(savedInstanceState)
         // the clock's status bar is the same black as the screen behind it, with light icons
         if (intent.getStringExtra("route") == "clock") {
@@ -192,15 +202,21 @@ open class ExtraToolActivity : ComponentActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
         taskLook(start)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "ai" -> AiLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
+        val store = storeOf(start)
         toolLook = store
+        if (glass) {
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0))
+            if (android.os.Build.VERSION.SDK_INT >= 31 && getSystemService(android.view.WindowManager::class.java).isCrossWindowBlurEnabled) window.setBackgroundBlurRadius(40)
+        }
         enter()
         setContent {
             var look by remember { mutableStateOf(store?.get(this@ExtraToolActivity) ?: ExtraToolLook.get(this@ExtraToolActivity)) }
             var route by rememberSaveable(start) { mutableStateOf(start) }
             val back: () -> Unit = { if (route != start) route = start else finish() }
             val control = remember(look) {
-                ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it) }
+                ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it)
+                    if (this@ExtraToolActivity::class == ExtraToolActivity::class && (it == "win11") != glass) recreate()
+                }
             }
             CompositionLocalProvider(LocalExtraLook provides control) {
                 // started from the launcher in a Windows look: the page sits in that look's window, with the same look inside
@@ -211,7 +227,7 @@ open class ExtraToolActivity : ComponentActivity() {
                         if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }, if (route != start) back else null) {
                             Box(Modifier.fillMaxSize().background(th.bg)) { SubScreen(route, back) }
                         }
-                        else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding().imePadding()) { SubScreen(route, back) }
+                        else Box(Modifier.fillMaxSize().background(if (glass && shown == "win11") th.bg.copy(alpha = th.glassA) else th.bg).statusBarsPadding().navigationBarsPadding().imePadding()) { SubScreen(route, back) }
                     }
                 }
             }

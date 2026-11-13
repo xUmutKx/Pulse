@@ -63,22 +63,22 @@ fun InkBar(
     penTint: Color = T.text, markerTint: Color = Color(0xFFFDD835),
 ) {
     // a floating bar: it does not touch the edges, it has a shadow and a gap under it
-    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
     Row(
-        Modifier.shadow(10.dp, RoundedCornerShape(28.dp)).clip(RoundedCornerShape(28.dp)).background(T.panel)
-            .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
+        Modifier.shadow(10.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel)
+            .horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp),
     ) {
-        BarBtn(mode == InkMode.KEYBOARD, tr("Keyboard", "Klavye"), true, { onMode(InkMode.KEYBOARD) }) { PIcon("keyboard", it, 22.dp) }
+        BarBtn(mode == InkMode.KEYBOARD, tr("Keyboard", "Klavye"), true, { onMode(InkMode.KEYBOARD) }) { PIcon("keyboard", it, 18.dp) }
         PenTool3D(0, penTint, mode == InkMode.PEN, tr("Pen", "Kalem")) { onMode(InkMode.PEN) }
         PenTool3D(1, markerTint, mode == InkMode.MARKER, tr("Marker", "Fosforlu kalem")) { onMode(InkMode.MARKER) }
         PenTool3D(2, Color(0xFFF48FB1), mode == InkMode.ERASER, tr("Eraser", "Silgi")) { onMode(InkMode.ERASER) }
         BarBtn(mode == InkMode.LASSO, tr("Lasso", "Kement"), true, { onMode(InkMode.LASSO) }) { LassoGlyph(it) }
-        BarBtn(false, tr("Undo", "Geri al"), canUndo, onUndo) { PIcon("undo", it, 22.dp) }
-        BarBtn(false, tr("Redo", "Yinele"), canRedo, onRedo) { PIcon("redo", it, 22.dp) }
-        BarBtn(textOn, tr("Text", "Yazı"), true, onText) { Text("Aa", color = it, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
-        BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 22.dp) }
-        BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 22.dp) }
+        BarBtn(false, tr("Undo", "Geri al"), canUndo, onUndo) { PIcon("undo", it, 18.dp) }
+        BarBtn(false, tr("Redo", "Yinele"), canRedo, onRedo) { PIcon("redo", it, 18.dp) }
+        BarBtn(textOn, tr("Text", "Yazı"), true, onText) { Text("Aa", color = it, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
+        BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 18.dp) }
+        BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 18.dp) }
     }
     }
 }
@@ -94,11 +94,11 @@ private fun PenTool3D(kind: Int, tint: Color, on: Boolean, desc: String, onClick
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val press by androidx.compose.animation.core.animateFloatAsState(if (pressed) .88f else 1f, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 600f), label = "penPress")
-    Box(Modifier.width(34.dp).height(58.dp).graphicsLayer { scaleX = press; scaleY = press; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
+    Box(Modifier.width(26.dp).height(44.dp).graphicsLayer { scaleX = press; scaleY = press; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
         .clickable(interactionSource = src, indication = null) { onClick() }.semantics { contentDescription = desc }) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height
-            val up = lift * 9.dp.toPx()
+            val up = lift * 7.dp.toPx()
             val bw = w * .62f; val x0 = (w - bw) / 2f
             val top = h * .36f - up
             val bodyH = h - top + 8.dp.toPx()
@@ -129,7 +129,7 @@ private fun PenTool3D(kind: Int, tint: Color, on: Boolean, desc: String, onClick
 private fun BarBtn(on: Boolean, desc: String, enabled: Boolean, onClick: () -> Unit, content: @Composable (Color) -> Unit) {
     val tint = if (!enabled) T.text.copy(alpha = .3f) else if (on) T.accent else T.text
     Box(
-        Modifier.size(42.dp).clip(CircleShape).background(if (on) T.accent.copy(alpha = .16f) else Color.Transparent)
+        Modifier.size(34.dp).clip(CircleShape).background(if (on) T.accent.copy(alpha = .16f) else Color.Transparent)
             .clickable(enabled = enabled) { onClick() }.semantics { contentDescription = desc },
         contentAlignment = Alignment.Center,
     ) { content(tint) }
@@ -142,7 +142,7 @@ fun InkPanel(
     finger: Boolean, onFinger: (Boolean) -> Unit, snap: Boolean, onSnap: (Boolean) -> Unit, onClearAll: () -> Unit, autoColor: Color,
 ) {
     // floating right above the bar, like a menu that opens out of the pen
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 8.dp).shadow(10.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(T.panel).padding(horizontal = 14.dp, vertical = 10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 6.dp).shadow(10.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 6.dp)) {
         if (mode == InkMode.PEN) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PEN_STYLES.forEach { s -> PanelChip(tr(s.en, s.tr), style == s.id) { onStyle(s.id) } }
