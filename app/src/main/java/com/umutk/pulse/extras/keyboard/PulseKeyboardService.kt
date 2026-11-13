@@ -720,6 +720,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun type(s: String) {
+        endFlash()
         st.keyTick++
         val c = currentInputConnection ?: return
         if (s.isEmpty()) return
@@ -869,7 +870,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 c.commitText(out + tail, 1)
             }
         }
-        if (!out.equals(typed, true)) flashFix(c, typed, out, tail.length)
+        if (!out.equals(typed, true)) { flashFix(c, typed, out, tail.length); flashLater(out, tail) }
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
@@ -921,6 +922,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     if (rest.isNotEmpty()) { if (open.isEmpty()) c.commitText(rest, 1) else c.setComposingText(open, 1) }
                     c.endBatchEdit()
                     flashFix(c, typed, fix, tail.length + rest.length)
+                    if (rest.isEmpty()) flashLater(fix, tail)
                     if (!st.incognito) KbStats.add(this@PulseKeyboardService, "fixes")
                     if (rest.isEmpty()) { lastCorrection = Correction(typed, fix, sep); corrAt = SystemClock.uptimeMillis() }
                     return@launch
@@ -943,9 +945,45 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    // ---- the mended word is selected for a moment (it shows highlighted, as if picked), then the cursor goes back behind it -------------------------------------------
+    private var flash: IntArray? = null   // start, end of the word and where the cursor goes back to
+    private val flashHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val flashEnd = Runnable { endFlash() }
+
+    /** Puts the cursor back where it was (any key does this first, so a typed letter never replaces the highlighted word). */
+    private fun endFlash() {
+        val f = flash ?: return
+        flash = null; flashHandler.removeCallbacks(flashEnd)
+        runCatching { currentInputConnection?.setSelection(f[2], f[2]); selStart = f[2]; selEnd = f[2] }
+    }
+
+    /** After the key's work is done: the corrected [word] (with [tail] behind it, at the cursor) lights up for a third of a second. */
+    private fun flashLater(word: String, tail: String) {
+        if (!KeyboardPrefs.fixFlash || st.plain) return
+        flashHandler.post {
+            runCatching {
+                val c = currentInputConnection ?: return@post
+                endFlash()
+                if (c.getSelectedText(0)?.isNotEmpty() == true) return@post
+                // the text before the cursor is still exactly the word and what followed it: nothing new was typed meanwhile
+                val before = c.getTextBeforeCursor(word.length + tail.length, 0)?.toString() ?: return@post
+                if (before != word + tail) return@post
+                val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
+                    ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return@post
+                val ws = end - tail.length - word.length
+                if (ws < 0) return@post
+                if (c.setSelection(ws, ws + word.length)) {
+                    flash = intArrayOf(ws, ws + word.length, end)
+                    flashHandler.postDelayed(flashEnd, 340L)
+                }
+            }
+        }
+    }
+
     private fun afterText() { updateCaps(); updateSuggestions() }
 
     override fun space() {
+        endFlash()
         val c = currentInputConnection ?: return
         captureEmail(c)
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
@@ -976,6 +1014,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun enter() {
+        endFlash()
         val c = currentInputConnection ?: return
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
@@ -991,6 +1030,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun backspace() {
+        endFlash()
         val c = currentInputConnection ?: return
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
@@ -1222,6 +1262,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun arrow(code: Int) {
+        endFlash()
         finishWord("", false); lastWasSpace = false
         val c = currentInputConnection
         // left, right, start and end of the line move the cursor through the text field itself: a key event makes Android show its keyboard-navigation highlight over the app
@@ -1239,6 +1280,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun edit(id: String) {
+        endFlash()
         val c = currentInputConnection ?: return
         finishWord("", false)
         when (id) {
@@ -1687,6 +1729,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyEvent(t, t, action, code, 0, meta, android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE)
 
     private fun sendKey(code: Int, extraMeta: Int = 0) {
+        endFlash()
         val c = currentInputConnection ?: return
         val t = SystemClock.uptimeMillis(); val meta = metaNow() or extraMeta
         c.sendKeyEvent(softKey(t, KeyEvent.ACTION_DOWN, code, meta))
@@ -2144,7 +2187,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }.maxByOrNull { it.score }
         // two words that run together (a key typed for the space among them) are split before any other mending
-        val split = if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        // (a word the person typed together by habit is learned as a word, and a word of the list can be two common ones: both are split too; only an inflected form is left whole)
+        val ownBase = codes.maxOfOrNull { KeyboardDictionary.baseScore(it, lower) } ?: 0f
+        val split = if (!fast && !stretched && lower.length >= 6 && !(tr && KeyboardDictionary.trKnown(lower) && ownBase == 0f)) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower, ownBase) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
         // the neural model (CharLm, trained on open Turkish and English text): every near word is weighed by how well it fits the sentence before it, the typing
         // cost (in bits, NN_LAM per unit) taken off; the typed word wins unless a near word beats it by a margin (a real word needs a bigger one).
         // It also reaches a missing or an extra letter ("mrhaba", "gelyorum"), which the old rule could not afford, and orders the bar by the sentence.
