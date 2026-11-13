@@ -87,6 +87,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
+    /**
+     * A suggestion the person tapped for a typo ([original]), which they may still be correcting: a pick that was wrong is replaced by a nearer word, then by the right one.
+     * The typo means the last word of that chain, and the picks on the way were not right for it.
+     */
+    private class Pick(val original: String, val chosen: String, val at: Long)
+    private var pick: Pick? = null
+
+    /** [from], a word that came from a tapped suggestion, was just replaced by [to]: the first typo of the chain means [to] now, and [from] is no answer to it. */
+    private fun learnChain(from: String, to: String) {
+        val pk = pick ?: return
+        if (pk.chosen != from || SystemClock.uptimeMillis() - pk.at > 60_000L || pk.original == to || to.length < 3) return
+        if (!KeyboardPrefs.learn || st.plain || st.incognito) return
+        KeyboardDictionary.reject(this, pk.original, from)
+        KeyboardDictionary.learnTypo(this, pk.original, to, force = true)
+    }
     // the space that came by itself behind a comma: Backspace takes it away with the comma
     private var commaSpace = false
     /** The word as it stood before the user started deleting letters of it: if the corrected form ends as a real word, the first form was a typo. */
@@ -884,7 +899,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
             if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito && a != b && a.length >= 3 && b.length >= 3 && Math.abs(a.length - b.length) <= 2 &&
-                (KeyboardDictionary.similar(a, b) || KeyboardDictionary.similarLoose(a, b)) && KeyboardDictionary.isWord(st.lang, b)) KeyboardDictionary.learnTypo(this, a, b)
+                (KeyboardDictionary.similar(a, b) || KeyboardDictionary.similarLoose(a, b)) && KeyboardDictionary.isWord(st.lang, b)) { KeyboardDictionary.learnTypo(this, a, b); learnChain(a, b) }
         }
         peak = null
         if (nameField && out.length >= 2 && !st.incognito && out.all { it.isLetter() || it == '\'' || it == '-' }) {
@@ -1271,7 +1286,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val typed = word.toString()
             word.clear(); target = null
             // a tapped suggestion that is not a completion: this typo means that word from now on
-            if (!isEmoji && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learnTypo(this, typed.lowercase(lang.locale), w.lowercase(lang.locale))
+            if (!isEmoji && KeyboardPrefs.learn && !st.plain && !st.incognito) {
+                val lt = typed.lowercase(lang.locale); val lw = w.lowercase(lang.locale)
+                // a pick that replaces an earlier pick: the typo at the start of the chain means this word, and the earlier pick was not right for it
+                learnChain(lt, lw)
+                KeyboardDictionary.learnTypo(this, lt, lw)
+                val now = SystemClock.uptimeMillis()
+                pick = if (lt != lw && !lw.startsWith(lt) && lt.length >= 3) Pick(pick?.takeIf { it.chosen == lt && now - it.at < 60_000L }?.original ?: lt, lw, now) else null
+            }
             if (isEmoji) { c.commitText("$w ", 1) } else {
                 c.commitText("$w ", 1)
                 if (KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord, w)

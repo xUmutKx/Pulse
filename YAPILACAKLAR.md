@@ -2469,3 +2469,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Game Hub: dönüşte (2,5 sn+ ayrı kalınca) raf yeniden kurulur (siyah ekran); Pulse telefonda Performans auto = Low
 - HTML oyun ekleme (.html/.zip), yerleşik oyunlara açıklama, arka kapakta sil tuşu (uygulama: kaldır, yerleşik: raftan çıkar, HTML: sil), çıkarılan yerleşikleri geri getir
 - Kitaplar: kütüphane görünümü, koleksiyonlar, internetten kategoriler
+
+## Pulse 1.0.400 ek 2 (derlenmedi)
+- Boxshelf beta.10-12 birleştirme, Pulse rozetleri, Steam mavi kutu (steam.png), kapaksız oyuna çerçeveli kutu, klavye: yanlış öneriden sonra düzeltme zinciri öğrenme
