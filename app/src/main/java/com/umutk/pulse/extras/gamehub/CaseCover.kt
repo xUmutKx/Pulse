@@ -16,11 +16,12 @@ import java.io.FileOutputStream
  * The frames are from the steam-case-covers project (GPL-3.0); the windows are its measured positions (600 x 900 px).
  */
 internal object CaseCover {
-    val STYLES = listOf("steam", "plain", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
+    val STYLES = listOf("steam", "pc", "epic", "gog", "gplay", "android", "ea", "ubisoft", "battlenet", "itch", "plain", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
     /** The mix: the games are dealt evenly to these (a shuffled order, so it is not sorted by name); each keeps its box. */
-    val MIX = listOf("steam", "ps5", "switch", "xboxseries")
+    val MIX = listOf("steam", "pc", "epic", "gog", "gplay", "android", "ps5", "switch", "xboxseries")
     private val WINDOWS = mapOf(
-        "steam" to intArrayOf(16, 116, 584, 884), "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
+        "steam" to intArrayOf(16, 116, 584, 884), "pc" to intArrayOf(16, 116, 584, 884), "epic" to intArrayOf(16, 116, 584, 884), "gog" to intArrayOf(16, 116, 584, 884), "gplay" to intArrayOf(16, 116, 584, 884),
+        "android" to intArrayOf(16, 116, 584, 884), "ea" to intArrayOf(16, 116, 584, 884), "ubisoft" to intArrayOf(16, 116, 584, 884), "battlenet" to intArrayOf(16, 116, 584, 884), "itch" to intArrayOf(16, 116, 584, 884), "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
         "xbox360" to intArrayOf(16, 116, 584, 884), "xboxone" to intArrayOf(16, 116, 584, 884), "xboxseries" to intArrayOf(16, 16, 584, 884),
     )

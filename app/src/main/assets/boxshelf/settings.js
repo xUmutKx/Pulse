@@ -422,7 +422,7 @@ function build(){
     GHX("SteamGridDB key (more covers)","sgdbKey","Your own free SteamGridDB key, for more covers. Stored on this device.",{secret:true,ph:"Not set"}),
     H("Case style"),
     GHC("Case style","caseStyle",[["pc","PC / Steam"],["custom","Custom"],["ps5","PS5"],["ps4","PS4"],["x360","Xbox 360"],["sw","Switch"]],"pc","The case of the games on the shelf."),
-    GHC("Box style","boxStyle",[["steam","Steam"],["plain","Plain cover"],["ps5","PS5"],["ps4","PS4"],["ps3","PS3"],["switch","Switch"],["switch2","Switch 2"],["xbox360","Xbox 360"],["xboxone","Xbox One"],["xboxseries","Xbox Series"],["mix","Mix (even)"]],"steam","The box of each game's cover. Changing it makes the boxes again."),
+    GHC("Box style","boxStyle",[["steam","Steam"],["pc","PC"],["epic","Epic Games"],["gog","GOG"],["gplay","Google Play"],["android","Android"],["ea","EA"],["ubisoft","Ubisoft"],["battlenet","Battle.net"],["itch","itch.io"],["plain","Plain cover"],["ps5","PS5"],["ps4","PS4"],["ps3","PS3"],["switch","Switch"],["switch2","Switch 2"],["xbox360","Xbox 360"],["xboxone","Xbox One"],["xboxseries","Xbox Series"],["mix","Mix (even)"]],"steam","The box of each game's cover. Changing it makes the boxes again."),
     H("In-game menu"),
     GHT("Show the menu over a game","menu",false,"The Pulse menu over a running game (needs the overlay and usage permissions)."),
   ]},
