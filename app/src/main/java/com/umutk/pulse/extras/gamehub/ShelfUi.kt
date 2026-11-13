@@ -412,7 +412,27 @@ internal fun ShelfSetup(pal: Pal, theme: String, onTheme: (String) -> Unit, onAd
  */
 /** Deletes the game (uninstalls the app): the system's own dialog asks first. */
 internal fun uninstallGame(c: Context, pkg: String) {
-    runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    val app = c.applicationContext
+    // with root (or Shizuku) the app is removed straight away, without Android's second question; without them Android asks
+    Thread {
+        var mode = com.umutk.pulse.extras.blackout.Privilege.mode
+        if (mode == com.umutk.pulse.extras.blackout.Privilege.Mode.None) mode = com.umutk.pulse.extras.blackout.Privilege.detect()
+        val ok = mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None && com.umutk.pulse.extras.blackout.Privilege.run("pm uninstall $pkg").text.contains("Success", true)
+        android.os.Handler(android.os.Looper.getMainLooper()).post { if (ok) { forgetGame(app, pkg); ShelfSync.bump() } else systemUninstall(app, pkg) }
+    }.start()
+}
+
+/** Android's own uninstall window; the game leaves the shelf as soon as Android has removed it (it used to stay until the shelf was opened again). */
+private fun systemUninstall(app: Context, pkg: String) {
+    runCatching { app.startActivity(android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    val r = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: Context, i: android.content.Intent) {
+            if (i.data?.schemeSpecificPart == pkg) { forgetGame(app, pkg); ShelfSync.bump(); runCatching { app.unregisterReceiver(this) } }
+        }
+    }
+    val f = android.content.IntentFilter(android.content.Intent.ACTION_PACKAGE_REMOVED).apply { addDataScheme("package") }
+    runCatching { androidx.core.content.ContextCompat.registerReceiver(app, r, f, androidx.core.content.ContextCompat.RECEIVER_EXPORTED) }
+    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ runCatching { app.unregisterReceiver(r) } }, 5 * 60_000L)
 }
 
 @Composable

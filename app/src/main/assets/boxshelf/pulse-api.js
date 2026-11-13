@@ -81,8 +81,29 @@
       try { on = !!(window.__pulseFlipped && window.__pulseFlipped()); g = on && window.__pulseCurGame ? window.__pulseCurGame() : null; } catch (e) {}
       on = !!(on && g && g.pulse);
       const k = on ? kind(g) : '';
-      if (k !== last) { last = k; b.classList.toggle('on', !!k); if (k) b.querySelector('span').textContent = label(k); }
+      // (the bottom button of the back cover is not shown any more: the delete button sits on the cover itself, below)
+      if (k !== last) { last = k; if (k) b.querySelector('span').textContent = label(k); }
     }, 350);
+    // the delete button on the cover: a small round button at the top right corner of the box that is in front, while the shelf is browsed
+    const cv = document.createElement('button'); cv.id = 'pulseDelCover'; cv.type = 'button';
+    cv.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';
+    const cs = document.createElement('style');
+    cs.textContent = '#pulseDelCover{position:fixed;z-index:7900;display:none;width:38px;height:38px;border-radius:19px;border:0;padding:0;background:rgba(40,12,16,.86);box-shadow:0 3px 12px rgba(0,0,0,.5)}#pulseDelCover.on{display:flex;align-items:center;justify-content:center}#pulseDelCover svg{width:20px;height:20px;fill:none;stroke:#ffb4b4;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}';
+    document.head.appendChild(cs);
+    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(cv));
+    if (document.body) document.body.appendChild(cv);
+    cv.addEventListener('pointerdown', e => e.stopPropagation());
+    cv.addEventListener('click', e => { e.stopPropagation(); b.click(); });
+    let lastKey = '', still = 0;
+    setInterval(() => {
+      let g = null, rect = null, m = '', fl = false;
+      try { m = window.__pulseMode ? window.__pulseMode() : ''; fl = !!(window.__pulseFlipped && window.__pulseFlipped()); g = window.__pulseCurGame ? window.__pulseCurGame() : null; rect = window.__pulseCurRect ? window.__pulseCurRect() : null; } catch (e) {}
+      if (!(m === 'browse' && !fl && g && g.pulse && rect && rect.r > 0 && rect.t < innerHeight)) { cv.classList.remove('on'); lastKey = ''; still = 0; return; }
+      const key = [rect.l | 0, rect.t | 0, rect.r | 0].join(',');
+      if (key === lastKey) still++; else { still = 0; lastKey = key; cv.classList.remove('on'); }
+      // shown only once the box has stopped moving, so the button never trails behind a moving shelf
+      if (still >= 1) { cv.style.left = Math.min(innerWidth - 46, Math.max(4, rect.r - 46)) + 'px'; cv.style.top = Math.max(4, rect.t + 8) + 'px'; cv.classList.add('on'); }
+    }, 140);
     b.addEventListener('pointerdown', e => e.stopPropagation()); b.addEventListener('click', e => {
       e.stopPropagation();
       const g = window.__pulseCurGame && window.__pulseCurGame(); if (!g || !g.pulse) return;
