@@ -187,7 +187,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val cm = c.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(c)?.toString().orEmpty().take(500)
     }.getOrDefault("")
-    @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", com.umutk.pulse.Look.theme.id == "amoled")
+    /** The pure black shelf: only when its switch in the shelf's settings is on (the shelf keeps its coloured look otherwise, whatever the look of Pulse). */
+    @JavascriptInterface fun amoled(): Boolean = prefs(c).getBoolean("amoledShelf", false)
     @JavascriptInterface fun caseStyle(): String = prefs(c).getString("caseStyle", "pc") ?: "pc"
     // Game Hub's own settings, read and written from Boxshelf's Settings page: only these keys, each in the type and with the
     // default the Game Hub page uses (the same preferences, so both pages show the same values)
