@@ -39,6 +39,9 @@ object PowerampPrefs {
     /** The "Blended" cover of the now-playing page: the cover edge to edge at the top, fading into its own blurred copy that fills the screen. Off by default. */
     fun blended(c: Context): Boolean = sp(c).getBoolean("blended", false)
     fun setBlended(c: Context, on: Boolean) = sp(c).edit().putBoolean("blended", on).apply()
+    /** A second row of buttons under the mode row (play all, play all shuffled, back and forward 10 s): eight buttons in all. Off by default. */
+    fun twoRows(c: Context): Boolean = sp(c).getBoolean("twoRows", false)
+    fun setTwoRows(c: Context, on: Boolean) = sp(c).edit().putBoolean("twoRows", on).apply()
     /** Lyrics button on the cover: off = only when the track has lyrics; on = always. */
     fun lyricsAlways(c: Context): Boolean = sp(c).getBoolean("lyrics_always", false)
     fun setLyricsAlways(c: Context, on: Boolean) = sp(c).edit().putBoolean("lyrics_always", on).apply()
