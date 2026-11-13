@@ -1369,7 +1369,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "layout" -> st.panel = if (st.panel == "layout") "keys" else "layout"
             // (turned sideways the keyboard has its own two switches)
             "numbers" -> { if (st.land) KeyboardPrefs.landNumberRow = !KeyboardPrefs.landNumberRow else KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
-            "proRow" -> { if (st.land) KeyboardPrefs.landProRow = !KeyboardPrefs.landProRow else KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
+            "proRow" -> { if (KeyboardPrefs.theme == "samsung") KeyboardPrefs.samProRow = !KeyboardPrefs.samProRow else if (st.land) KeyboardPrefs.landProRow = !KeyboardPrefs.landProRow else KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
         }
         if (id == "resize") return
