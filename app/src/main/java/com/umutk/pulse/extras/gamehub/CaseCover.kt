@@ -68,10 +68,14 @@ internal object CaseCover {
         return out
     }
 
+    /** The picture a game's box is made from: the one picked by hand, else Steam's cover, its wide Steam picture, or the store picture of Google Play. */
+    fun source(c: Context, pkg: String): File? = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile }
+        ?: steamHeroFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile }
+
     /** Makes the box of game [pkg] in [style] from its Steam cover (else its wide Steam picture). False when it has neither. */
     fun make(c: Context, pkg: String, style: String): Boolean {
         if (style == "steam") return false
-        val cover = steamCoverFile(c, pkg).takeIf { it.isFile } ?: steamHeroFile(c, pkg).takeIf { it.isFile } ?: return false
+        val cover = source(c, pkg) ?: return false
         val art = BitmapFactory.decodeFile(cover.absolutePath) ?: return false
         val box = compose(c, art, style) ?: return false
         val f = file(c, pkg, style); f.parentFile?.mkdirs()
