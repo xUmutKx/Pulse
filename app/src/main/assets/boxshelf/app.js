@@ -1944,7 +1944,7 @@ function inspectKey(e){
 }
 (function(){
   const el=$("inspect");
-  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(window.BS_PINCH&&BS_PINCH.active())return; /* (beta.12: a second finger is a pinch, not a drag or a tap) */if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}else if(!rd.open&&!isp.ejected){ // a hold on a closed or open case takes the disc straight out (no tap first)
+  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(window.BS_PINCH&&BS_PINCH.active())return;/* the dead zone on the left and right edges (the phone's own edge swipe is not a turn or a hold) */{const ez=+(localStorage.getItem("bsEdge")||24);if(ez>0&&(e.clientX<ez||e.clientX>innerWidth-ez))return} /* (beta.12: a second finger is a pinch, not a drag or a tap) */if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}else if(!rd.open&&!isp.ejected){ // a hold on a closed or open case takes the disc straight out (no tap first)
       clearTimeout(quickEjectT);quickEjectT=setTimeout(()=>{quickEjectT=0;if(mode!=="inspect"||isp.ejected)return;while(isp.state<2)ispAdvance();if(isp.state===2){holdByPtr=true;ejectDisc();if(window.__discGrab)__discGrab()}},260)}
     isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
   // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back.
@@ -3912,8 +3912,8 @@ addEventListener("wheel",e=>{if(mode==="inspect"){e.preventDefault();if(rd.open)
   if(mode!=="browse"&&mode!=="details")return;if(qm.open)return; /* the quick menu scrolls itself; the shelf behind stays put */if(e.target.closest&&e.target.closest(".details,.settings,.setup"))return;e.preventDefault();wheelAcc+=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;const now=performance.now();
   if(Math.abs(wheelAcc)>40&&now-wheelT>70){move(Math.sign(wheelAcc));wheelAcc=0;wheelT=now}},{passive:false});
 let drag=null,dragMoved=false;const slotTap={at:0,i:-1,t:0}; /* (beta.12, Android: the double tap on the case you're on) */
-$("scene").addEventListener("pointerdown",e=>{if(mode!=="browse")return;const sl=e.target.closest(".slot");shelfCoast=null;drag={x:e.clientX,onSel:!!(sl&&slots[sel]&&sl===slots[sel].el),last:e.clientX,acc:0,spin0:spin,v:0,t:performance.now()} /* spin0: a drag carries on from the angle the box already has (right stick, last drag) instead of snapping to the front */;dragMoved=false});
-addEventListener("pointermove",e=>{if(!drag)return;const dx=e.clientX-drag.x;if(Math.abs(dx)>8)dragMoved=true;if(!dragMoved)return;
+$("scene").addEventListener("pointerdown",e=>{if(mode!=="browse")return;/* a second finger (a pinch) ends the drag of the first: the two fingers must never both steer the shelf (it jumped between them, played a sound at every step and stuttered) */if(drag){drag=null;dragMoved=false;shelfCoast=null;return}const sl=e.target.closest(".slot");shelfCoast=null;drag={id:e.pointerId,x:e.clientX,onSel:!!(sl&&slots[sel]&&sl===slots[sel].el),last:e.clientX,acc:0,spin0:spin,v:0,t:performance.now()} /* spin0: a drag carries on from the angle the box already has (right stick, last drag) instead of snapping to the front */;dragMoved=false});
+addEventListener("pointermove",e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x;if(Math.abs(dx)>8)dragMoved=true;if(!dragMoved)return;
   if(drag.onSel){spin=drag.spin0+dx*.6;spinT=spin;slots[sel].box.classList.add("free");applyRotation()}
   else{const now=performance.now(),dt=now-drag.t;if(dt>0)drag.v=.6*drag.v+.4*((e.clientX-drag.last)/dt);drag.t=now;drag.acc+=e.clientX-drag.last;drag.last=e.clientX;const step=bw*.3;while(Math.abs(drag.acc)>step){move(drag.acc>0?-1:1);drag.acc-=Math.sign(drag.acc)*step}}});
 // a flick of the shelf keeps going after the finger lets go: it glides on past a few more games and slows down by itself (a touch stops it)
@@ -3924,7 +3924,7 @@ function shelfGlide(v,acc){const c=shelfCoast={v:v*1.5,acc,t:performance.now()};
     while(Math.abs(c.acc)>step){move(c.acc>0?-1:1);c.acc-=Math.sign(c.acc)*step}
     if(Math.abs(c.v)<.1){shelfCoast=null;return}requestAnimationFrame(tick)};
   requestAnimationFrame(tick)}
-addEventListener("pointerup",()=>{if(!drag)return;if(!drag.onSel&&dragMoved&&Math.abs(drag.v)>.35&&performance.now()-drag.t<90)shelfGlide(drag.v,drag.acc);if(drag.onSel&&dragMoved){spinT=spin;const wasFlipped=flipped;if(!spinSettle()&&flipped!==wasFlipped)sfx.flip()} /* one flip sound: spinSettle plays it for a spine */drag=null;setTimeout(()=>dragMoved=false,0)});
+addEventListener("pointerup",e=>{if(!drag||e.pointerId!==drag.id)return;if(!drag.onSel&&dragMoved&&Math.abs(drag.v)>.35&&performance.now()-drag.t<90)shelfGlide(drag.v,drag.acc);if(drag.onSel&&dragMoved){spinT=spin;const wasFlipped=flipped;if(!spinSettle()&&flipped!==wasFlipped)sfx.flip()} /* one flip sound: spinSettle plays it for a spine */drag=null;setTimeout(()=>dragMoved=false,0)});
 
 /* ---------- touch hooks ----------
    The Android build's touch layer (android-app/web-extras/android-touch.js: swipe to go back, pinch to zoom) asks these
