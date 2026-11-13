@@ -35,6 +35,18 @@ object BookFind {
         return if (text.startsWith("{")) gutendex(text) else opds(text, url)
     }
 
+    /** The books of one category (Gutendex "topic": a subject or a bookshelf), most downloaded first, [count] is how many there are in all. */
+    class Topic(val count: Int, val books: List<Found>)
+
+    /** The categories the shelf offers (Gutenberg subjects). */
+    val TOPICS = listOf("Fiction", "Science fiction", "Adventure", "Mystery", "History", "Philosophy", "Poetry", "Children", "Romance", "Science", "Horror", "Drama")
+
+    /** One page (32 books) of a category, English and Turkish books. Throws when there is no connection. */
+    fun topic(topic: String, page: Int = 1): Topic {
+        val json = get("https://gutendex.com/books/?topic=" + URLEncoder.encode(topic, "UTF-8") + "&languages=en,tr&page=$page")
+        return Topic(JSONObject(json).optInt("count"), gutendex(json))
+    }
+
     /** The free classics of Project Gutenberg, the most downloaded first: some Turkish books, then English ones (shown before anything is searched). */
     fun classics(): List<Found> {
         val tr = runCatching { gutendex(get("https://gutendex.com/books/?languages=tr")) }.getOrDefault(emptyList()).take(12)
