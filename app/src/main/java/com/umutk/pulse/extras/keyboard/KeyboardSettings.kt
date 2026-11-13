@@ -237,6 +237,7 @@ fun KeyboardSettings(back: () -> Unit) {
         KbSection("keyboard", tr("Swipes and keys", "Kaydırma ve tuşlar")) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
+            Switch(tr("Corner swipes", "Köşe kaydırmaları"), tr("Swipe a letter toward a corner for the symbol or key written there (Esc, Tab, Copy ...). Turns swipe typing off", "Harfi köşesine kaydırınca orada yazan sembol ya da tuş çalışır (Esc, Tab, Kopyala ...). Kaydırarak yazmayı kapatır"), KeyboardPrefs.corners) { KeyboardPrefs.corners = it; save() }
             Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
             // (the Samsung look has its own switch, off until it is asked for)
             if (KeyboardPrefs.theme == "samsung") Switch(tr("Extra key row (Samsung look)", "Ek tuş satırı (Samsung görünümü)"), tr("Esc, Tab, Ctrl, Alt, Win, arrows", "Esc, Tab, Ctrl, Alt, Win, oklar"), KeyboardPrefs.samProRow) { KeyboardPrefs.samProRow = it; save() }
