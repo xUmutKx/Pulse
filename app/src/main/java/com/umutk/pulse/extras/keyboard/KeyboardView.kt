@@ -1102,9 +1102,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 else -> {
                     // corner swipes: the small labels on the corners say what a swipe toward them gives
                     if (KeyboardPrefs.corners && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
-                        if (cc.nw.isNotEmpty()) Text(KeyCorners.show(cc.nw), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
-                        if (cc.ne.isNotEmpty()) Text(KeyCorners.show(cc.ne), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
-                        if (cc.s.isNotEmpty()) Text(KeyCorners.show(cc.s), color = th.text.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
+                        val ink = th.text.copy(alpha = .6f)
+                        if (cc.nw.isNotEmpty()) Text(KeyCorners.show(cc.nw), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
+                        if (cc.ne.isNotEmpty()) Text(KeyCorners.show(cc.ne), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
+                        if (cc.sw.isNotEmpty()) Text(KeyCorners.show(cc.sw), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 1.dp, start = 4.dp))
+                        if (cc.se.isNotEmpty()) Text(KeyCorners.show(cc.se), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 1.dp, end = 4.dp))
+                        if (cc.s.isNotEmpty()) Text(KeyCorners.show(cc.s), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
                     }
                     if (!KeyboardPrefs.corners && !special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
