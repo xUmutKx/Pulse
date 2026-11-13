@@ -254,7 +254,7 @@ fun RelayScreen(back: () -> Unit) {
 }
 
 @Composable
-private fun TransferCard(t: TransferSnapshot, devices: List<RelayDevice>, run: (suspend () -> Unit) -> Unit) {
+internal fun TransferCard(t: TransferSnapshot, devices: List<RelayDevice>, run: (suspend () -> Unit) -> Unit) {
     val ctx = LocalContext.current
     val node = remember { RelayHost.node(ctx) }
     val peer = devices.firstOrNull { it.id == t.peerId }?.name ?: tr("Device", "Cihaz")

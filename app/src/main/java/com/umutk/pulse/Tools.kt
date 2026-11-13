@@ -106,7 +106,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
         id == "clock" -> com.umutk.pulse.extras.lucid.LucidClockScreen(back)
         id == "radio" -> com.umutk.pulse.extras.radio.RadioScreen(back)
-        id == "relay" -> com.umutk.pulse.extras.relay.RelayScreen(back)
+        id == "relay" -> com.umutk.pulse.extras.share.ShareHub(back)
         id == "recap" -> com.umutk.pulse.extras.music.stats.RecapScreen(back)
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
         id == "chargewatts" -> com.umutk.pulse.extras.charging.ChargingWattsScreen(back)
@@ -132,7 +132,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "browser" -> com.umutk.pulse.extras.browser.BrowserHub(back)
         id == "office" -> { androidx.activity.compose.BackHandler { back() }; OfficePage() }
         id == "calculator" -> com.umutk.pulse.extras.calculator.CalculatorHub(back)
-        id == "localsend" -> com.umutk.pulse.extras.localsend.LocalSendHub(back)
+        id == "localsend" -> com.umutk.pulse.extras.share.ShareHub(back)
         id == "palette" -> com.umutk.pulse.extras.palette.PaletteHub(back)
         id == "blackout" -> com.umutk.pulse.extras.blackout.BlackOutHub(back)
         id == "gamehub" -> com.umutk.pulse.extras.gamehub.GameHubHub(back)
