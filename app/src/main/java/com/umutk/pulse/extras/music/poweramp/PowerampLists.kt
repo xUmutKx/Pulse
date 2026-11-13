@@ -435,7 +435,8 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         return
     }
     // how the songs are laid out: one per row, or two or three to a row with the cover on top and the name under it
-    var cols by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(1) }
+    // (the column count is back to one list each time the songs are opened: it is not kept for good)
+    var cols by remember { androidx.compose.runtime.mutableIntStateOf(1) }
     // many songs at once: a long press picks the first, a tap picks or drops the next ones; the bin deletes them after one question
     var picked by remember { mutableStateOf(setOf<String>()) }
     var askDelete by remember { mutableStateOf(false) }
