@@ -171,6 +171,8 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     // small apps in the manner of the old desktops, drawn by Pulse itself
     LaunchApp(tr("Notepad", "Not Defteri"), "pulse:x:win:notepad", null, iconKey = "notes"),
     LaunchApp("Snake", "pulse:x:win:snake", null, iconKey = "gridView"),
+    LaunchApp("2048", "pulse:x:win:2048", null, iconKey = "gridView"),
+    LaunchApp(tr("Tic-tac-toe", "XOX"), "pulse:x:win:tictactoe", null, iconKey = "gridView"),
 )
 
 /**
