@@ -68,7 +68,8 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val st = CaseCover.styleOf(c, pkg)
                 val boxed = if (st == "steam") null else runCatching {
                     val src = CaseCover.source(c, pkg); val cf = CaseCover.file(c, pkg, st)
-                    if (src != null && (!cf.isFile || cf.lastModified() < src.lastModified())) CaseCover.make(c, pkg, st)
+                    // a game with no cover at all gets its box made from its icon and name, so it is a real case like the others
+                    if ((src != null && (!cf.isFile || cf.lastModified() < src.lastModified())) || (src == null && !cf.isFile)) CaseCover.make(c, pkg, st)
                     cf.takeIf { it.isFile }
                 }.getOrNull()
                 val f = boxed ?: coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
@@ -125,7 +126,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val showHidden = prefs(c).getBoolean("showHidden", true)
         // in the mix the shelf is in colour groups (Steam, PS5, Switch, Xbox Series), each group in the order of the library
         loadGames(c).filter { showHidden || it.pkg !in hidden }.sortedBy { CaseCover.groupOf(c, it.pkg) }.forEach { g ->
-            val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile
+            val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile ||
+                CaseCover.styleOf(c, g.pkg) != "steam"
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)

@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import androidx.compose.ui.graphics.asAndroidBitmap
 import java.io.File
 import java.io.FileOutputStream
 
@@ -72,11 +73,36 @@ internal object CaseCover {
     fun source(c: Context, pkg: String): File? = coverFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile }
         ?: steamHeroFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile }
 
-    /** Makes the box of game [pkg] in [style] from its Steam cover (else its wide Steam picture). False when it has neither. */
+    /**
+     * A picture for a game that has no cover at all, made from its icon and name: the icon blown up, blurred and darkened behind, the icon as a rounded tile, the name under it.
+     * It goes into the console's frame like any cover, so every box of a console style is a real case (a Switch box beside a Switch box), not a plain card beside it.
+     */
+    private fun iconArt(c: Context, pkg: String, name: String): Bitmap? {
+        val icon = GameArt.icon(c, pkg, 512)?.asAndroidBitmap() ?: return null
+        val w = 600; val h = 900
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val cv = Canvas(out)
+        // blurred by scaling down and up again
+        val small = Bitmap.createScaledBitmap(icon, 12, 18, true)
+        cv.drawBitmap(small, null, android.graphics.Rect(0, 0, w, h), Paint(Paint.FILTER_BITMAP_FLAG))
+        small.recycle()
+        cv.drawColor(0x77000000)
+        val s = 380f; val x = (w - s) / 2f; val y = 190f
+        val clip = android.graphics.Path().apply { addRoundRect(RectF(x, y, x + s, y + s), s * .22f, s * .22f, android.graphics.Path.Direction.CW) }
+        cv.save(); cv.clipPath(clip)
+        cv.drawBitmap(icon, null, RectF(x, y, x + s, y + s), Paint(Paint.FILTER_BITMAP_FLAG)); cv.restore()
+        val tp = android.text.TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = 50f; isFakeBoldText = true; setShadowLayer(8f, 0f, 3f, 0xAA000000.toInt()) }
+        val lay = android.text.StaticLayout.Builder.obtain(name, 0, name.length, tp, w - 120).setAlignment(android.text.Layout.Alignment.ALIGN_CENTER).setMaxLines(3)
+            .setEllipsize(android.text.TextUtils.TruncateAt.END).build()
+        cv.save(); cv.translate(60f, y + s + 40f); lay.draw(cv); cv.restore()
+        return out
+    }
+
+    /** Makes the box of game [pkg] in [style] from its Steam cover (else its wide Steam picture, else a picture made of its icon and name). False when there is nothing to make it from. */
     fun make(c: Context, pkg: String, style: String): Boolean {
         if (style == "steam") return false
-        val cover = source(c, pkg) ?: return false
-        val art = BitmapFactory.decodeFile(cover.absolutePath) ?: return false
+        val cover = source(c, pkg)
+        val art = (if (cover != null) BitmapFactory.decodeFile(cover.absolutePath) else iconArt(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg)) ?: return false
         val box = compose(c, art, style) ?: return false
         val f = file(c, pkg, style); f.parentFile?.mkdirs()
         FileOutputStream(f).use { box.compress(Bitmap.CompressFormat.JPEG, 92, it) }
