@@ -193,7 +193,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 "stopCovers" -> CoverJob.cancel()
                 "checkAccess" -> Thread { Privilege.detect() }.start()
                 // "Add a game" of the shelf's own settings: Game Hub's list of the phone's apps opens
-                "add" -> ShelfAsk.add.value = true
+                "add" -> { ShelfAsk.add.value = true }
             }
         }
     }
