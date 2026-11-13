@@ -49,7 +49,7 @@ fun ofReadText(f: File): String {
     }
 }
 
-fun ofIsText(f: File) = f.extension.lowercase() in OF_TEXT_EXTS || f.extension.lowercase() in setOf("kt", "java", "py", "sh", "properties", "yaml", "cfg", "gradle", "htm")
+fun ofIsText(f: File) = f.extension.lowercase() in OF_TEXT_EXTS || f.extension.lowercase() in setOf("kt", "java", "py", "sh", "properties", "yaml", "cfg", "gradle", "htm", "vcf", "ics", "eml", "gpx", "kml", "sql", "css", "tsv", "conf", "bat")
 
 fun ofCreateText(ext: String, base: String): File {
     val dir = OfficePrefs.folder.apply { mkdirs() }
