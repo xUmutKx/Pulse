@@ -1531,7 +1531,7 @@ private fun inverted(text: String, start: Int, spoken: IntRange, mark: IntRange,
 
 // ---- the library look: big title, filter pills, a staggered cover wall, a floating bar, and collections (own, and categories from the internet) ----
 
-private val LIB_YELLOW = Color(0xFFFFCB47)
+private val LIB_YELLOW = Color(0xFFFFFFFF)   // the library accent is white (it was yellow)
 private val LIB_DARK = Color(0xFF1B0B0B)
 
 private fun Theme.light() = bg.red * .299f + bg.green * .587f + bg.blue * .114f > .5f
