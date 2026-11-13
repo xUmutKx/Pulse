@@ -25,16 +25,19 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Loading / progress bar in the look's own style. [progress] null = indeterminate. Previous (non-authentic) 95 / XP / 7 and the other looks keep the plain bar. */
+/** The state of a progress bar, as Windows Vista and 7 show it: green while it runs, yellow when it is paused, red when it failed. */
+enum class ProgressState { Normal, Paused, Error }
+
+/** Loading / progress bar in the look's own style: the Windows 95, XP, 7, 10 and 11 looks draw their own bar (blocks, glossy green, flat), the other looks keep the plain one. [progress] null = indeterminate. */
 @Composable
-fun PProgress(progress: Float?, modifier: Modifier = Modifier, color: Color = Look.accent.copy(alpha = 1f), h: Dp? = null) {
+fun PProgress(progress: Float?, modifier: Modifier = Modifier, color: Color = Look.accent.copy(alpha = 1f), h: Dp? = null, state: ProgressState = ProgressState.Normal) {
     val t = T
-    if (t.material || !styled(t, Opt.authentic)) {
+    if (t.material || t.id !in setOf("win11", "win10", "win95", "xp", "win7")) {
         if (progress == null) LinearProgressIndicator(modifier.fillMaxWidth(), color = color, trackColor = t.line)
         else LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = modifier.fillMaxWidth(), color = color, trackColor = t.line)
         return
     }
-    ThemedBar(progress, color, modifier, h ?: when (t.id) { "win95", "xp" -> 16.dp; "win7" -> 14.dp; else -> 4.dp }, false)
+    ThemedBar(progress, color, modifier, h ?: when (t.id) { "win95", "xp" -> 16.dp; "win7" -> 14.dp; else -> 4.dp }, false, state)
 }
 
 /** Usage bar (CPU, memory, disk ...) in the look's own style; [color] is the caller's level colour. */
@@ -51,23 +54,24 @@ fun BarMeter(frac: Float, color: Color, modifier: Modifier = Modifier, h: Dp = 1
 private fun styled(t: PTheme, authentic: Boolean) = when (t.id) { "win11", "win10" -> true; "win95", "xp", "win7" -> authentic; else -> false }
 
 @Composable
-private fun ThemedBar(target: Float?, color: Color, modifier: Modifier, h: Dp, usage: Boolean) {
+private fun ThemedBar(target: Float?, color: Color, modifier: Modifier, h: Dp, usage: Boolean, state: ProgressState = ProgressState.Normal) {
     val id = T.id
     val line = T.line
     val ph = if (target == null) rememberInfiniteTransition(label = "pbar").animateFloat(0f, 1f, infiniteRepeatable(tween(if (id == "win11") 1500 else 1800, easing = LinearEasing)), label = "ph") else null
     val sm = if (target != null && (id == "win11" || id == "win10")) animateFloatAsState(target, tween(350), label = "pf") else null
-    val high = usage && (target ?: 0f) > .9f
+    val high = (usage && (target ?: 0f) > .9f) || state == ProgressState.Error
+    val paused = state == ProgressState.Paused
     val m = if (id == "win95") modifier.fillMaxWidth().height(h).background(Color(0xFFC0C0C0)).bevel(false) else modifier.fillMaxWidth().height(h)
     Canvas(m) {
         val f = (sm?.value ?: target ?: 0f).coerceIn(0f, 1f)
         val p = ph?.value ?: 0f
         when (id) {
-            "win95" -> blocks(2.dp.toPx(), f, p, target == null, (size.height * .6f).coerceAtLeast(3.dp.toPx()), 1.dp.toPx(), 0f, SolidBlock(if (high) Color(0xFFC00000) else Color(0xFF000080)))
+            "win95" -> blocks(2.dp.toPx(), f, p, target == null, (size.height * .6f).coerceAtLeast(3.dp.toPx()), 1.dp.toPx(), 0f, SolidBlock(if (high) Color(0xFFC00000) else if (paused) Color(0xFF808000) else Color(0xFF000080)))
             "xp" -> {
                 val r = CornerRadius(3.dp.toPx())
                 drawRoundRect(Color.White, Offset.Zero, size, r)
                 drawRoundRect(Color(0xFF686868), Offset.Zero, size, r, Stroke(1.dp.toPx()))
-                val g = if (high) listOf(Color(0xFFFF9A9A), Color(0xFFD62020), Color(0xFFA01010)) else listOf(Color(0xFF7DE87D), Color(0xFF2BC82B), Color(0xFF22A022))
+                val g = if (high) listOf(Color(0xFFFF9A9A), Color(0xFFD62020), Color(0xFFA01010)) else if (paused) listOf(Color(0xFFFFF59A), Color(0xFFEBD21A), Color(0xFFC4AB0C)) else listOf(Color(0xFF7DE87D), Color(0xFF2BC82B), Color(0xFF22A022))
                 blocks(3.dp.toPx(), f, p, target == null, 7.dp.toPx(), 2.dp.toPx(), 1.5.dp.toPx(), GlossBlock(g))
             }
             "win7" -> {
@@ -76,7 +80,8 @@ private fun ThemedBar(target: Float?, color: Color, modifier: Modifier, h: Dp, u
                 val pad = 1.5.dp.toPx(); val ih = size.height - 2 * pad; val iw = size.width - 2 * pad
                 val (x, w) = if (target == null) { val gw = iw * .35f; (p * (iw + gw) - gw).coerceAtLeast(0f) to (minOf(p * (iw + gw), iw) - (p * (iw + gw) - gw).coerceAtLeast(0f)).coerceAtLeast(0f) } else 0f to iw * f
                 if (w > 0f) {
-                    val cols = if (high) listOf(Color(0xFFFF8A8A), Color(0xFFD02020)) else listOf(Color(0xFF7BE67B), Color(0xFF1FB51F))
+                    // as in Windows 7: green while it runs, yellow when it is paused, red after an error
+                    val cols = if (high) listOf(Color(0xFFFF8A8A), Color(0xFFD02020)) else if (paused) listOf(Color(0xFFFFF27A), Color(0xFFE2C700)) else listOf(Color(0xFF7BE67B), Color(0xFF1FB51F))
                     clipRect(pad + x, pad, pad + x + w, pad + ih) {
                         drawRoundRect(Brush.verticalGradient(cols, pad, pad + ih), Offset(pad, pad), Size(iw, ih), r)
                         drawRect(Color.White.copy(alpha = .3f), Offset(pad, pad), Size(iw, ih / 2))
