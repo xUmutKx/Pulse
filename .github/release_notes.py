@@ -7,8 +7,14 @@ cur_s, prev_s = sys.argv[1], sys.argv[2]
 cur = tuple(int(x) for x in cur_s.split('.'))
 prev = tuple(int(x) for x in prev_s.split('.')) if prev_s else (0, 0, 0)
 entries = []
+def _ver(n):
+    # a file that is not <version>.md (e.g. play-whatsnew-1.0.400.md) sorts first and is skipped below
+    try:
+        return tuple(int(x) for x in n[:-3].split('.'))
+    except ValueError:
+        return (0,)
 if os.path.isdir('.github/notes'):
-    for name in sorted(os.listdir('.github/notes'), key=lambda n: [int(p) for p in n[:-3].split('.')] if n.endswith('.md') else [0]):
+    for name in sorted(os.listdir('.github/notes'), key=_ver):
         if not name.endswith('.md'):
             continue
         try:
