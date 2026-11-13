@@ -79,6 +79,10 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val k = parts.getOrNull(2)?.toIntOrNull() ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(steamShotFile(c, pkg, k).takeIf { it.isFile } ?: return null))
             }
+            "mcover" -> {
+                val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() || ch == '_' } } ?: return null
+                WebResourceResponse("image/webp", null, c.assets.open("megacovers/$id.webp"))
+            }
             "logo" -> {
                 val pkg = parts.getOrNull(1) ?: return null
                 WebResourceResponse("image/png", null, FileInputStream(steamLogoFile(c, pkg).takeIf { it.isFile } ?: return null))
@@ -133,7 +137,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         }
         // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
         if (MegaGames.enabled(c)) MegaGames.LIST.forEach { m ->
-            arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", JSONObject.NULL).put("hero", JSONObject.NULL)
+            arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/mcover/${m.id}").put("hero", JSONObject.NULL)
                 .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         return arr.toString()
