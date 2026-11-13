@@ -14,7 +14,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -41,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,34 +116,91 @@ private fun ChargeUi(ctx: Context, style: Int) {
     val fill = remember { Animatable(0f) }
     LaunchedEffect(Unit) { fill.animateTo(level / 100f, tween(1400, easing = FastOutSlowInEasing)) }
     val t by rememberInfiniteTransition(label = "charge").animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "t")
-    val col = when (style) { 1 -> Color(0xFF30D158); 2 -> Color(0xFF4FC3F7); 3 -> Color(0xFFFFD60A); 4 -> Color(0xFFB388FF); 7 -> Color(0xFFFF5C7A); 8 -> Color(0xFF7CFC00); 9 -> Color(0xFF40C4FF); 10 -> Color(0xFF30D158)
-        11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); else -> Color(0xFF69F0AE) }
+    val col = chargeColor(style)
     Box(Modifier.fillMaxSize().graphicsLayer { alpha = appear.value }.background(Color.Black.copy(alpha = .94f)).pointerInput(Unit) { detectTapGestures(onDoubleTap = { ChargeAnim.hide() }) }, contentAlignment = Alignment.Center) {
+        ChargeBody(style, t, fill.value, col, 1f)
+    }
+}
+
+/** The colour a look is drawn in (the party looks use their own). */
+internal fun chargeColor(style: Int): Color = when (style) { 1 -> Color(0xFF30D158); 2 -> Color(0xFF4FC3F7); 3 -> Color(0xFFFFD60A); 4 -> Color(0xFFB388FF); 7 -> Color(0xFFFF5C7A); 8 -> Color(0xFF7CFC00); 9 -> Color(0xFF40C4FF); 10 -> Color(0xFF30D158)
+    11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); 22 -> Color(0xFF69F0AE); else -> Color(0xFF69F0AE) }
+
+/** The picture of one look at [t] (0..1, repeating) and [fill] (0..1): drawn the same for the full screen and for the small previews in the settings; [scale] shrinks the texts. */
+@Composable
+private fun ChargeBody(style: Int, t: Float, fill: Float, col: Color, scale: Float) {
+    if (style == 22) { ConsoleCharge(t, fill, col, scale); return }
+    if (style == 23) { WordsCharge(t, fill, scale); return }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             when (style) {
-                1 -> ringStyle(t, fill.value, col)
-                2 -> liquidStyle(t, fill.value, col)
+                1 -> ringStyle(t, fill, col)
+                2 -> liquidStyle(t, fill, col)
                 3 -> boltStyle(t, col)
                 4 -> rippleStyle(t, col)
                 7 -> beatStyle(t, col)
                 8 -> risingStyle(t, col)
                 9 -> orbitStyle(t, col)
-                10 -> batteryStyle(t, fill.value, col)
-                11 -> auroraStyle(t, fill.value, col)
-                12 -> hexStyle(t, fill.value, col)
+                10 -> batteryStyle(t, fill, col)
+                11 -> auroraStyle(t, fill, col)
+                12 -> hexStyle(t, fill, col)
                 13 -> radarStyle(t, col)
                 14 -> burstStyle(t, col)
                 15 -> swirlStyle(t, col)
-                16 -> edgeStyle(t, fill.value, col)
-                else -> barStyle(t, fill.value, col)
+                16 -> edgeStyle(t, fill, col)
+                17 -> confettiStyle(t)
+                18 -> bubblesStyle(t)
+                19 -> rainbowStyle(t, fill)
+                20 -> smileStyle(t, fill)
+                21 -> heartsStyle(t)
+                else -> barStyle(t, fill, col)
             }
         }
-        Column(Modifier.padding(top = if (style == 5 || style == 10) 140.dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${(fill.value * 100).toInt()}%", color = Color.White, fontSize = if (style == 5 || style == 10) 40.sp else 56.sp, fontWeight = FontWeight.Light, maxLines = 1)
-            Text(tr("Charging", "Şarj oluyor"), color = Color.White.copy(alpha = .7f), fontSize = 16.sp)
+        Column(Modifier.padding(top = if (style == 5 || style == 10) (140 * scale).dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("${(fill * 100).toInt()}%", color = Color.White, fontSize = ((if (style == 5 || style == 10) 40 else 56) * scale).sp, fontWeight = FontWeight.Light, maxLines = 1)
+            if (scale >= 1f) Text(tr("Charging", "Şarj oluyor"), color = Color.White.copy(alpha = .7f), fontSize = 16.sp)
         }
     }
 }
+
+/** The small live picture of a look for the settings page: it plays by itself, the charge filling again and again. */
+@Composable
+internal fun ChargeMini(style: Int, modifier: Modifier = Modifier) {
+    val tr0 = rememberInfiniteTransition(label = "chp")
+    val t by tr0.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "t")
+    val fill by tr0.animateFloat(.1f, .9f, infiniteRepeatable(tween(3200, easing = LinearEasing)), label = "f")
+    Box(modifier.background(Color.Black)) { ChargeBody(style, t, fill, chargeColor(style), .32f) }
+}
+
+/** 22: a console: the lines are typed one after the other, the charge is a bar of # signs, the cursor blinks. */
+@Composable
+private fun ConsoleCharge(t: Float, fill: Float, col: Color, scale: Float) {
+    val pct = (fill * 100).toInt(); val bar = 20; val on = (fill * bar).toInt().coerceIn(0, bar)
+    val lines = listOf("$ pulse --charger", "> power connected", "> charging $pct%", "[" + "#".repeat(on) + ".".repeat(bar - on) + "]")
+    val shown = ((t * 5f).toInt() + 1).coerceAtMost(lines.size)
+    Column(Modifier.fillMaxSize().padding((18 * scale).dp), verticalArrangement = Arrangement.Center) {
+        lines.take(shown).forEachIndexed { i, l ->
+            Text(l + if (i == shown - 1 && (t * 10f).toInt() % 2 == 0) "_" else "", color = col, fontFamily = FontFamily.Monospace, fontSize = (15 * scale + 1).sp, maxLines = 1)
+        }
+    }
+}
+
+/** 23: the charge as a big number and the word "Charging" in party colours, the letters bouncing in turn. */
+@Composable
+private fun WordsCharge(t: Float, fill: Float, scale: Float) {
+    val word = tr("Charging", "Şarj oluyor")
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text("${(fill * 100).toInt()}%", color = Color.White, fontSize = (64 * scale).sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Row {
+            word.forEachIndexed { i, ch ->
+                val bounce = kotlin.math.abs(sin(t * TAU - i * .45f))
+                Text(ch.toString(), color = PARTY[i % PARTY.size], fontSize = (26 * scale).sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(y = (-14 * scale * bounce).dp))
+            }
+        }
+    }
+}
+
+private val PARTY = listOf(Color(0xFFFF5252), Color(0xFFFFD740), Color(0xFF69F0AE), Color(0xFF40C4FF), Color(0xFFE040FB), Color(0xFFFF9100))
 
 private const val TAU = (2.0 * PI).toFloat()
 
@@ -361,5 +422,68 @@ private fun DrawScope.edgeStyle(t: Float, fill: Float, col: Color) {
         val d = ((t - k * .006f + 1f) % 1f) * per
         val (x, y) = when { d < w -> d to 0f; d < w + h -> w to d - w; d < 2 * w + h -> (w - (d - w - h)) to h; else -> 0f to (h - (d - 2 * w - h)) }
         drawCircle(col.copy(alpha = (1f - k / 14f) * .9f), w * .03f * (1f - k / 20f), Offset(x.coerceIn(w * .012f, w * .988f), y.coerceIn(w * .012f, h - w * .012f)))
+    }
+}
+
+/** 17: confetti falling and turning, in party colours. */
+private fun DrawScope.confettiStyle(t: Float) {
+    for (i in 0 until 46) {
+        val x = hash(i) * size.width
+        val y = ((t * (.5f + hash(i + 100) * .9f) + hash(i + 200)) % 1f) * (size.height + 40f) - 20f
+        val w = 6.dp.toPx() + hash(i + 300) * 6.dp.toPx(); val h = w * .5f
+        rotate(t * 360f * (1f + hash(i + 400)) + hash(i + 500) * 360f, Offset(x, y)) { drawRect(PARTY[i % PARTY.size].copy(alpha = .9f), Offset(x - w / 2, y - h / 2), Size(w, h)) }
+    }
+}
+
+/** 18: colourful bubbles rising, each with a thin rim. */
+private fun DrawScope.bubblesStyle(t: Float) {
+    for (i in 0 until 22) {
+        val r = size.minDimension * (.025f + hash(i) * .05f)
+        val x = hash(i + 50) * size.width + sin(t * TAU + i) * r
+        val y = size.height + r - ((t * (.5f + hash(i + 90)) + hash(i + 130)) % 1f) * (size.height + 2 * r)
+        val c = PARTY[i % PARTY.size]
+        drawCircle(c.copy(alpha = .25f), r, Offset(x, y)); drawCircle(c, r, Offset(x, y), style = Stroke(2.dp.toPx()))
+    }
+}
+
+/** 19: a rainbow whose arcs fill up to the charge, a little sun above it. */
+private fun DrawScope.rainbowStyle(t: Float, fill: Float) {
+    val m = size.minDimension; val c = Offset(size.width / 2f, size.height * .62f); val w = m * .055f
+    PARTY.forEachIndexed { i, col ->
+        val r = m * (.16f + i * .06f)
+        drawArc(col.copy(alpha = .18f), 180f, 180f, false, Offset(c.x - r, c.y - r), Size(r * 2, r * 2), style = Stroke(w))
+        drawArc(col, 180f, 180f * fill.coerceIn(0f, 1f), false, Offset(c.x - r, c.y - r), Size(r * 2, r * 2), style = Stroke(w))
+    }
+    drawCircle(Color(0xFFFFEB3B), m * .045f, Offset(c.x, c.y - m * (.18f + .02f * sin(t * TAU))))
+}
+
+/** 20: a smiling face that bounces, blinks and smiles wider as the charge grows. */
+private fun DrawScope.smileStyle(t: Float, fill: Float) {
+    val m = size.minDimension
+    val c = Offset(center.x, center.y - kotlin.math.abs(sin(t * TAU)) * m * .04f); val r = m * .24f
+    val ink = Color(0xFF4E342E)
+    drawCircle(Color(0xFFFFD740), r, c); drawCircle(Color(0xFFFFB300), r, c, style = Stroke(m * .012f))
+    val blink = if ((t * 6f).toInt() % 6 == 0) .15f else 1f
+    drawOval(ink, Offset(c.x - r * .38f - r * .07f, c.y - r * .25f - r * .12f * blink), Size(r * .14f, r * .24f * blink))
+    drawOval(ink, Offset(c.x + r * .38f - r * .07f, c.y - r * .25f - r * .12f * blink), Size(r * .14f, r * .24f * blink))
+    val mouth = Path().apply { moveTo(c.x - r * .5f, c.y + r * .2f); quadraticBezierTo(c.x, c.y + r * (.2f + .55f * fill.coerceIn(.2f, 1f)), c.x + r * .5f, c.y + r * .2f) }
+    drawPath(mouth, ink, style = Stroke(r * .09f, cap = StrokeCap.Round))
+    drawCircle(Color(0x55FF5252), r * .12f, Offset(c.x - r * .62f, c.y + r * .15f)); drawCircle(Color(0x55FF5252), r * .12f, Offset(c.x + r * .62f, c.y + r * .15f))
+}
+
+/** 21: hearts floating up. */
+private fun DrawScope.heartsStyle(t: Float) {
+    val cols = listOf(Color(0xFFFF5C7A), Color(0xFFFF80AB), Color(0xFFFF8A80))
+    for (i in 0 until 14) {
+        val s = size.minDimension * (.03f + hash(i) * .035f)
+        val x = hash(i + 20) * size.width + sin(t * TAU + i) * s
+        val y = size.height + s - ((t * (.4f + hash(i + 60) * .6f) + hash(i + 80)) % 1f) * (size.height + 2 * s)
+        val p = Path().apply {
+            moveTo(x, y + s * .9f)
+            cubicTo(x - s * 1.6f, y - s * .2f, x - s * .9f, y - s * 1.3f, x, y - s * .4f)
+            cubicTo(x + s * .9f, y - s * 1.3f, x + s * 1.6f, y - s * .2f, x, y + s * .9f)
+            close()
+        }
+        drawPath(p, cols[i % 3].copy(alpha = .9f))
     }
 }
