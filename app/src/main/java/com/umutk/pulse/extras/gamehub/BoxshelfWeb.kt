@@ -82,11 +82,18 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
             }
             "hcover" -> {
                 val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() } } ?: return null
-                WebResourceResponse("image/jpeg", null, FileInputStream(HtmlGames.coverFile(c, id).takeIf { it.isFile } ?: return null))
+                val pkg = HtmlGames.PREFIX + id
+                val st = CaseCover.styleOf(c, pkg)
+                val cased = if (st == "plain") null else runCatching { val cf = CaseCover.file(c, pkg, st); if (!cf.isFile) CaseCover.make(c, pkg, st); cf.takeIf { it.isFile } }.getOrNull()
+                WebResourceResponse("image/jpeg", null, FileInputStream(cased ?: HtmlGames.coverFile(c, id).takeIf { it.isFile } ?: return null))
             }
             "mcover" -> {
                 val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() || ch == '_' } } ?: return null
-                WebResourceResponse("image/webp", null, c.assets.open("megacovers/$id.webp"))
+                // in a case style the built-in game's picture sits in that case like every other game's
+                val pkg = MegaGames.PREFIX + id
+                val st = CaseCover.styleOf(c, pkg)
+                val cased = if (st == "plain") null else runCatching { val cf = CaseCover.file(c, pkg, st); if (!cf.isFile) CaseCover.make(c, pkg, st); cf.takeIf { it.isFile } }.getOrNull()
+                if (cased != null) WebResourceResponse("image/jpeg", null, FileInputStream(cased)) else WebResourceResponse("image/webp", null, c.assets.open("megacovers/$id.webp"))
             }
             "logo" -> {
                 val pkg = parts.getOrNull(1) ?: return null
@@ -144,12 +151,12 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
         if (MegaGames.enabled(c)) MegaGames.LIST.filter { it.id !in MegaGames.removed(c) }.forEach { m ->
             arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/mcover/${m.id}").put("hero", JSONObject.NULL)
-                .put("box", "plain").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+                .put("box", CaseCover.styleOf(c, MegaGames.PREFIX + m.id)).put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         // the games of your own that are web pages (an .html or a .zip added in the shelf's settings)
         HtmlGames.list(c).forEach { m ->
             arr.put(JSONObject().put("pkg", HtmlGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/hcover/${m.id}").put("hero", JSONObject.NULL)
-                .put("box", "plain").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+                .put("box", CaseCover.styleOf(c, HtmlGames.PREFIX + m.id)).put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         return arr.toString()
     }

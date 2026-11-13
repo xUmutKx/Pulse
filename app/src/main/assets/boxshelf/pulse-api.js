@@ -126,6 +126,47 @@
   // Details > More > Game settings: Pulse's own page of the game (performance, profile, cover)
   // the search button beside Menu (Game Hub only): finds a game by name and brings the shelf to it
   // the search button beside Menu is Boxshelf's own Find a game (find.js)
+  // the closed view: every game as a flat closed cover, side by side, in groups (your games, the built-in games, the HTML games). A tap on a cover takes the shelf to that game.
+  (function () {
+    const css = document.createElement('style');
+    css.textContent = '#pulseGrid{position:fixed;inset:0;z-index:8500;background:#07090d;color:#e9edf5;display:none;flex-direction:column;font:15px system-ui,sans-serif}#pulseGrid.on{display:flex}#pulseGrid .gh{display:flex;align-items:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px 10px}#pulseGrid .gh b{font-size:22px;font-weight:600;flex:1}#pulseGrid .gh small{opacity:.55}#pulseGrid .gx{width:40px;height:40px;border:0;border-radius:20px;background:#1a1e27;color:#fff;font-size:20px}#pulseGrid .gb{flex:1;overflow-y:auto;padding:0 16px max(24px,env(safe-area-inset-bottom))}#pulseGrid h3{margin:18px 0 10px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;font-weight:600}#pulseGrid .gg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}#pulseGrid .gt{background:none;border:0;padding:0;color:inherit;text-align:left}#pulseGrid .gc{aspect-ratio:2/3;border-radius:12px;overflow:hidden;background:#1a1e27;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.45)}#pulseGrid .gc img{width:100%;height:100%;object-fit:cover;display:block}#pulseGrid .gc span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;font-weight:600;font-size:13px}#pulseGrid .gn{margin-top:6px;font-size:12px;line-height:1.25;opacity:.85;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}';
+    document.head.appendChild(css);
+    const box = document.createElement('div'); box.id = 'pulseGrid';
+    box.innerHTML = '<div class="gh"><b>All games</b><small></small><button class="gx" type="button" aria-label="Close">&#x2715;</button></div><div class="gb"></div>';
+    const add = () => document.body.appendChild(box);
+    if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
+    const close = () => box.classList.remove('on');
+    box.querySelector('.gx').onclick = close;
+    ['pointerdown', 'click', 'keydown'].forEach(t => box.addEventListener(t, e => e.stopPropagation()));
+    const hue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % 360; };
+    function open() {
+      const F = window.Shelf && Shelf._find; if (!F) return;
+      const list = F.games(), groups = [['Your games', []], ['Built-in games', []], ['HTML games', []]];
+      list.forEach(g => { const id = String(g.id); groups[id.indexOf('app-mega:') === 0 ? 1 : id.indexOf('app-html:') === 0 ? 2 : 0][1].push(g); });
+      const body = box.querySelector('.gb'); body.innerHTML = '';
+      box.querySelector('small').textContent = list.length + ' games';
+      groups.forEach(([name, items]) => {
+        if (!items.length) return;
+        const h = document.createElement('h3'); h.textContent = name + ' · ' + items.length; body.appendChild(h);
+        const grid = document.createElement('div'); grid.className = 'gg';
+        items.forEach(g => {
+          const t = document.createElement('button'); t.type = 'button'; t.className = 'gt';
+          const c = document.createElement('div'); c.className = 'gc';
+          if (g.art) { const im = new Image(); im.alt = ''; im.loading = 'lazy'; im.decoding = 'async'; im.src = g.art; im.onerror = () => { im.remove(); const sp = document.createElement('span'); sp.textContent = g.title; c.style.background = 'hsl(' + hue(g.title) + ' 40% 28%)'; c.appendChild(sp); }; c.appendChild(im); }
+          else { const sp = document.createElement('span'); sp.textContent = g.title; c.style.background = 'hsl(' + hue(g.title) + ' 40% 28%)'; c.appendChild(sp); }
+          const n = document.createElement('div'); n.className = 'gn'; n.textContent = g.title;
+          t.append(c, n);
+          t.onclick = () => { close(); setTimeout(() => { try { F.go(g.id); } catch (e) {} }, 60); };
+          grid.appendChild(t);
+        });
+        body.appendChild(grid);
+      });
+      box.classList.add('on'); body.scrollTop = 0;
+    }
+    document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('gridBtn'); if (b) { b.hidden = false; b.addEventListener('click', e => { e.stopPropagation(); open(); }); } });
+    // Back closes it first
+    window.__pulseBackGrid = () => { if (box.classList.contains('on')) { close(); return true; } return false; };
+  })();
   // "Find a cover": the covers the internet has for the game (Steam's, and SteamGridDB's with a key), in the shelf's own look; a tap makes one the game's cover.
   // The name can be typed again when the game is listed under another one.
   api.coverPick = g => {
@@ -162,6 +203,7 @@
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dPulse'); if (b && window.__pulseCur) api.pulseDetails(window.__pulseCur.appId); }, true);
   // Back (Android's back button): on the bare shelf Pulse leaves it; on any other screen (details, a case in hand, a menu, a list) the page goes one step back
   window.__pulseBack = () => {
+    if (window.__pulseBackGrid && window.__pulseBackGrid()) return;
     const T = window.BS_TOUCH;
     if (!T || !T.screen || T.screen() === 'shelf') { H.back(); return; }
     T.back();

@@ -33,7 +33,7 @@ internal object CaseCover {
     fun style(c: Context): String = sp(c).getString("boxStyle", "steam")?.takeIf { it in STYLES } ?: "steam"
     fun setStyle(c: Context, s: String) { sp(c).edit().putString("boxStyle", s).apply() }
 
-    fun file(c: Context, pkg: String, style: String): File = File(c.filesDir, "gamehub/case_" + pkg.replace('.', '_') + "_$style.jpg")
+    fun file(c: Context, pkg: String, style: String): File = File(c.filesDir, "gamehub/case_" + pkg.replace(Regex("[^A-Za-z0-9_]"), "_") + "_$style.jpg")
 
     /** The box of [pkg] in the chosen style, or null for the plain cover. In the mix each game has its own style (see [applyAll]). */
     fun fileFor(c: Context, pkg: String): File? {
@@ -113,7 +113,13 @@ internal object CaseCover {
     fun make(c: Context, pkg: String, style: String): Boolean {
         if (style == "plain") return false
         val cover = source(c, pkg)
-        val art = (if (cover != null) BitmapFactory.decodeFile(cover.absolutePath) else iconArt(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg)) ?: return false
+        // the built-in games and the games of your own have a picture of their own: it goes into the case too
+        val own: Bitmap? = when {
+            MegaGames.isMega(pkg) -> runCatching { c.assets.open("megacovers/" + pkg.removePrefix(MegaGames.PREFIX) + ".webp").use { BitmapFactory.decodeStream(it) } }.getOrNull()
+            HtmlGames.isHtml(pkg) -> HtmlGames.coverFile(c, HtmlGames.idOf(pkg)).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
+            else -> null
+        }
+        val art = own ?: (if (cover != null) BitmapFactory.decodeFile(cover.absolutePath) else iconArt(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg)) ?: return false
         val box = compose(c, art, style) ?: return false
         val f = file(c, pkg, style); f.parentFile?.mkdirs()
         FileOutputStream(f).use { box.compress(Bitmap.CompressFormat.JPEG, 92, it) }
