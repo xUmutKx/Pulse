@@ -134,6 +134,7 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
     val n = if (LauncherPrefs.badges) LauncherBadges.counts[app.pkg] ?: 0 else 0
     Box(modifier.size(size)) {
         if (bmp != null) Image(bmp, null, Modifier.size(size).clip(shape))
+        else if (app.iconKey != null && tile.alpha == 0f) com.umutk.pulse.PIcon(app.iconKey, letter, size * .95f)   // no tile behind the icon (the old Windows desktops)
         else if (app.iconKey != null) Box(Modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
             com.umutk.pulse.PIcon(app.iconKey, letter, size * .7f)
         }

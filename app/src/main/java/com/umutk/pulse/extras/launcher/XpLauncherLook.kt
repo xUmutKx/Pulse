@@ -197,7 +197,7 @@ class XpLauncherLook : LauncherLook {
     @Composable
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         Column(modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            LaunchAppPicture(app, iconDp.dp, onBlue, taskbar)
+            LaunchAppPicture(app, iconDp.dp, Color.Transparent, taskbar)
             Text(
                 app.label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
                 style = TextStyle(color = onBlue, fontSize = 12.sp, textAlign = TextAlign.Center, shadow = Shadow(Color(0xCC000000), Offset(1f, 1f), 2f)),

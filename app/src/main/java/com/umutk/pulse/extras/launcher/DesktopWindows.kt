@@ -62,6 +62,19 @@ class DWin(val id: Long, val title: String, val start: String, x0: Float, y0: Fl
     /** Size in dp; 0 = the default share of the screen. Changed by the grip at the bottom right. */
     var wDp by mutableFloatStateOf(0f)
     var hDp by mutableFloatStateOf(0f)
+    /** The progress of what the window is doing, shown on its taskbar button: 0..1, -1 while it is not known, null when nothing is going on. */
+    var progress by mutableStateOf<Float?>(null)
+    var pstate by mutableStateOf(com.umutk.pulse.ProgressState.Normal)
+}
+
+/** The window the page is in (null outside the desktop's windows). */
+val LocalDesktopWin = androidx.compose.runtime.compositionLocalOf<DWin?> { null }
+
+/** Tells the window's taskbar button how far what is going on in the window has come: [frac] null = not known. Does nothing outside the desktop's windows. */
+@Composable
+fun TaskbarProgress(frac: Float?, state: com.umutk.pulse.ProgressState = com.umutk.pulse.ProgressState.Normal) {
+    val w = LocalDesktopWin.current ?: return
+    androidx.compose.runtime.DisposableEffect(w, frac, state) { w.progress = frac ?: -1f; w.pstate = state; onDispose { w.progress = null } }
 }
 
 /** The windows of the Windows desktops: several at once, dragged by their title bars, the launcher behind them. */
@@ -108,8 +121,9 @@ private fun glass(skin: WinSkin, c: androidx.compose.ui.graphics.Color) = when (
 @Composable
 private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp, areaH: Dp) {
     val d = LocalDensity.current.density
-    val fw = if (w.max) areaW else if (w.wDp > 0f) w.wDp.dp.coerceIn(160.dp, areaW) else (areaW - 20.dp).coerceAtMost(areaW * .94f)
-    val fh = if (w.max) areaH else if (w.hDp > 0f) w.hDp.dp.coerceIn(120.dp, areaH) else areaH * .64f
+    val fw = if (w.max) areaW else if (w.wDp > 0f) w.wDp.dp.coerceIn(160.dp, areaW) else if (areaW > areaH) areaW * .72f else (areaW - 20.dp).coerceAtMost(areaW * .94f)
+    // a turned screen is wide and short: the window takes more of it, so a list of files shows more than a few rows
+    val fh = if (w.max) areaH else if (w.hDp > 0f) w.hDp.dp.coerceIn(120.dp, areaH) else areaH * (if (areaW > areaH) .88f else .64f)
     val shape = RoundedCornerShape(if (w.max) 0.dp else skin.corner)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -119,7 +133,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
     Box(
         Modifier.offset(if (w.max) 0.dp else w.x.dp, if (w.max) 0.dp else w.y.dp).size(fw, fh)
             // a touch anywhere on the window brings it to the front, without taking the touch from what is inside
-            .pointerInput(w.id) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); DesktopWindows.front(w) } }
+            .pointerInput(w.id, areaW, areaH) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); DesktopWindows.front(w) } }
             .clip(shape).clipToBounds(),
     ) {
     if (wall != null) androidx.compose.foundation.Image(wall, null,
@@ -130,7 +144,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
     ) {
         Row(
             Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .74f; "7" -> .72f; else -> 1f }).padding(start = 8.dp)
-                .pointerInput(w.id) {
+                .pointerInput(w.id, areaW, areaH) {
                     detectDragGestures { c, drag ->
                         c.consume()
                         if (!w.max) { w.x = (w.x + drag.x / d).coerceIn(-areaW.value + 80f, areaW.value - 40f); w.y = (w.y + drag.y / d).coerceIn(0f, areaH.value - 30f) }
@@ -144,11 +158,11 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
             Caption(skin, 0) { DesktopWindows.minimize(w) }; Caption(skin, 1) { w.max = !w.max }; Caption(skin, 2) { DesktopWindows.close(w) }
         }
         Box(Modifier.weight(1f).fillMaxWidth().background(skin.body).clipToBounds()) {
-            CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }) {
+            CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
                 SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
             }
             // the grip at the bottom right resizes the window
-            if (!w.max) Box(Modifier.align(Alignment.BottomEnd).size(28.dp).pointerInput(w.id) {
+            if (!w.max) Box(Modifier.align(Alignment.BottomEnd).size(28.dp).pointerInput(w.id, areaW, areaH) {
                 detectDragGestures { c, drag ->
                     c.consume()
                     if (w.wDp <= 0f) { w.wDp = fw.value; w.hDp = fh.value }

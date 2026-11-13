@@ -32,6 +32,8 @@ enum class ProgressState { Normal, Paused, Error }
 @Composable
 fun PProgress(progress: Float?, modifier: Modifier = Modifier, color: Color = Look.accent.copy(alpha = 1f), h: Dp? = null, state: ProgressState = ProgressState.Normal) {
     val t = T
+    // inside a window of the desktop the taskbar button shows the same progress
+    com.umutk.pulse.extras.launcher.TaskbarProgress(progress, state)
     if (t.material || t.id !in setOf("win11", "win10", "win95", "xp", "win7")) {
         if (progress == null) LinearProgressIndicator(modifier.fillMaxWidth(), color = color, trackColor = t.line)
         else LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) }, modifier = modifier.fillMaxWidth(), color = color, trackColor = t.line)
