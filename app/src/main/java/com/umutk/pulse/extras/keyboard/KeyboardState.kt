@@ -136,6 +136,8 @@ interface KbActions {
     fun moveCursor(delta: Int)
     /** The cursor goes to the line above (negative) or the line below, at the same column. */
     fun moveLine(delta: Int) {}
+    /** A modifier key (Ctrl, Alt, Win, Shift of the extra row) was pressed or let go: held down while another key is pressed it works as on a real keyboard. */
+    fun modHold(id: String, down: Boolean) {}
     fun quickDeleteStart()
     fun quickDelete(chars: Int)
     fun quickDeleteEnd(apply: Boolean)
