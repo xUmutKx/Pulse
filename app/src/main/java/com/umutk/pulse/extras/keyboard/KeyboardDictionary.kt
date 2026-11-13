@@ -333,21 +333,37 @@ object KeyboardDictionary {
         "a", "i", "an", "as", "at", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my", "no", "of", "on", "or", "so", "to", "up", "us", "we")
 
     /** Two words typed without the space between them ("birdahaki"): the split whose two parts are known words and likeliest together, or null. */
-    fun splitWords(code: String, w: String): String? {
+    fun splitWords(code: String, w: String, own: Float = 0f): String? {
         if (w.length < 5 || w.length > 24) return null
         var best: String? = null; var bestScore = -1f
         fun pair(a: String, b: String) {
-            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) return
+            // every part is a word of three letters or more, and the last one is not an ending (siz, den, nin...): "dikkatsiz" and "olandan" are one word
+            if (a.length < 3 || b.length < 3 || b in chainSet) return
             // both parts must be common words (a brand or a rare word that happens to split is left alone). The cheap look-up goes first: a word of the list scores
             // at once, and only then is the (slow) check of inflected Turkish forms asked, so a long run-together word no longer takes a long time
             if (score(code, a) < 8f || score(code, b) < 8f) return
             if (!isWord(code, a) || !isWord(code, b)) return
             val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
+            // a word of the list itself is split only when its parts are far likelier than it is ("birdaha" 6, "bir" and "daha" 13): a real word stays
+            if (minOf(score(code, a), score(code, b)) < own + 4f) return
+            if (own > 0f && (own >= 7.5f || minOf(score(code, a), score(code, b)) < 11f)) return
             if (sc > bestScore) { bestScore = sc; best = "$a $b" }
         }
         for (i in 1 until w.length) pair(w.substring(0, i), w.substring(i))
         // a letter typed in place of the space, one of the keys under the thumb (z x c v b n m): "selamncanım" is "selam canım"
         for (i in 3 until w.length - 2) if (w[i] in "zxcvbnm") pair(w.substring(0, i), w.substring(i + 1))
+        if (best != null) return best
+        // three words run together ("bugünhavaçok"): each part a common word of three letters or more (or one of the short ones)
+        if (w.length < 8) return null
+        fun ok(x: String) = x.length >= 3 && score(code, x) >= 9f && isWord(code, x)
+        var bestSc = -1f
+        for (i in 2 until w.length - 3) for (j in i + 2 until w.length - 1) {
+            val a = w.substring(0, i); val b = w.substring(i, j); val c = w.substring(j)
+            if (!ok(a) || !ok(b) || !ok(c) || c in chainSet) continue
+            val sc = minOf(score(code, a), score(code, b), score(code, c))
+            if (sc < own + 4f || (own > 0f && (own >= 7.5f || sc < 11f))) continue
+            if (sc > bestSc) { bestSc = sc; best = "$a $b $c" }
+        }
         return best
     }
 
