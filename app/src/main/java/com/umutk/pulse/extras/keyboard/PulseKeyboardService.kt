@@ -71,9 +71,20 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** An address bar (Chrome's is one): search words get suggestions and corrections, an address (dots, slashes) is left alone. */
     private var uriField = false
     private fun urlNow(): Boolean {
-        if (!uriField) return false
         val b = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() + word
+        if (!uriField) return linkOrCode(b.takeLastWhile { !it.isWhitespace() })
         return b.any { it == '.' || it == '/' || it == ':' || it == '@' } && !b.contains(' ')
+    }
+
+    // what is being typed is a link, a file name, a handle or a bit of code: nothing in it is mended, split or suggested, in any field
+    private val reDomain = Regex("^[\\p{L}\\d_-]{2,}(\\.[\\p{L}\\d_-]{2,})+")
+    private val reCodeBits = Regex("[\\p{L}\\d]_[\\p{L}\\d]|[\\p{L}\\d]/[\\p{L}\\d]|\\p{Ll}\\p{Lu}|[\\p{L}\\d][=(\\[{<>\\\\]|\\p{L}\\d|\\d\\p{L}")
+    private fun linkOrCode(token: String): Boolean {
+        // the sentence's own marks at the end ("see example.com.") are not part of it
+        val t = token.trimEnd('.', ',', '!', '?', ';', ':')
+        if (t.length < 3) return false
+        return t.contains("://") || t.startsWith("www.", true) || t.startsWith("@") || t.startsWith("#") || t.startsWith("$") || t.startsWith("--") ||
+            reDomain.containsMatchIn(t) || reCodeBits.containsMatchIn(t)
     }
     private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
