@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- the system logo of the app (launcher, app info): only a white pulse line on pure black, kept inside the 66 dp safe circle so no launcher mask cuts it. The in-app logo is ic_launcher_fg. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,54 L41,54 L47.5,38 L57,70 L65,46 L69.5,54 L80,54" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,54 L41,54 L47.5,38 L57,70 L65,46 L69.5,54 L80,54" />
 </vector>
