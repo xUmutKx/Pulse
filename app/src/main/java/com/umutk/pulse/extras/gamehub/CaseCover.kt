@@ -53,8 +53,8 @@ internal object CaseCover {
         return pick
     }
 
-    /** No colour groups: in the mix the shelf keeps the library's order, and every game wears its own case. */
-    fun groupOf(c: Context, pkg: String): Int = 0
+    /** In the mix, games with the same box style are put side by side (each style in the order of the library); with one chosen style there is nothing to group. */
+    fun groupOf(c: Context, pkg: String): Int = if (style(c) == "mix") MIX.indexOf(styleOf(c, pkg)).coerceAtLeast(0) else 0
 
     private fun mixMap(c: Context): Map<String, String> =
         (sp(c).getString("boxMix", "") ?: "").split(';').mapNotNull { e -> e.split('=').takeIf { it.size == 2 }?.let { it[0] to it[1] } }.filter { it.second in MIX }.toMap()

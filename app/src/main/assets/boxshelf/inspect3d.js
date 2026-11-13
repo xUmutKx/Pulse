@@ -338,7 +338,14 @@ window.Inspect3D = (() => {
       const pins = new THREE.Mesh(new THREE.BoxGeometry(cw * .7, ch * .12, cd + .002), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: .8, roughness: .35 })); pins.position.y = -ch / 2 + ch * .08; media.add(pins);
     } else {
       const R = o.ratio * o.size / 2;
-      const label = new THREE.MeshPhysicalMaterial({ map: labelMap, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 });
+      // no disc art of its own: the middle of the cover (a square cut), not the whole tall picture squeezed onto the disc
+      let discMap = labelMap;
+      if (!o.disc && labelMap && labelMap.userData && labelMap.userData.p) {
+        const base = labelMap, lm = new THREE.Texture(); lm.colorSpace = base.colorSpace; lm.anisotropy = base.anisotropy; discMap = lm;
+        base.userData.p.then(ok => { if (!ok || !base.image) return; const iw = base.image.naturalWidth || base.image.width, ih = base.image.naturalHeight || base.image.height; if (!iw || !ih) return;
+          const sq = Math.min(iw, ih); lm.image = base.image; lm.repeat.set(sq / iw, sq / ih); lm.offset.set((1 - sq / iw) / 2, (1 - sq / ih) / 2); lm.needsUpdate = true; });
+      }
+      const label = new THREE.MeshPhysicalMaterial({ map: discMap, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 });
       const fmt = o.sys === 'ps3' || o.sys === 'ps4' || o.sys === 'ps5' || o.sys === 'wiiu' ? 'bd' : o.sys === 'gc' ? 'gc' : 'dvd';
       let hcode = 0; for (const ch of (o.title || 'disc')) hcode = (hcode * 31 + ch.charCodeAt(0)) >>> 0;
       const code = `${(o.sys || 'DSC').toUpperCase()}-${(hcode % 9000 + 1000)}-${String.fromCharCode(65 + hcode % 26)}${String.fromCharCode(65 + (hcode >> 5) % 26)}  ${(hcode >> 9) % 90 + 10}`;
