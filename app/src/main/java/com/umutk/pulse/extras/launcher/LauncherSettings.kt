@@ -281,18 +281,20 @@ fun LauncherSettings(back: () -> Unit) {
         title = { Text(tr("Look", "Görünüm")) },
         text = {
             // every look as a small picture of its home screen, three to a row
+            // each picture has a width of its own: a share of an unmeasured dialog width (weight) made the pictures 276,000 px wide and the screen crashed
+            val itemW = ((androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 120) / 3).coerceIn(64, 100).dp
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LauncherLooks.all.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { l ->
                             val sel = l.id == LauncherPrefs.look
-                            Column(Modifier.weight(1f).clickable { LauncherPrefs.look = l.id; save(); pickLook = false }
+                            Column(Modifier.width(itemW).clickable { LauncherPrefs.look = l.id; save(); pickLook = false }
                                 .border(if (sel) 2.dp else 1.dp, if (sel) com.umutk.pulse.Look.accent else T.line, RoundedCornerShape(8.dp)).padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 LookPicture(l.id, Modifier.fillMaxWidth().aspectRatio(.62f))
                                 Text(tr(l.nameEn, l.nameTr), color = T.text, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
                             }
                         }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        repeat(3 - row.size) { Spacer(Modifier.width(itemW)) }
                     }
                 }
             }
