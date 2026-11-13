@@ -197,7 +197,7 @@ fun KeyboardSettings(back: () -> Unit) {
             // the accessibility keyboard: over any app, switched on here; turning it on sends the phone to its accessibility settings when Pulse is not on there yet
             val accCtx = LocalContext.current
             var accOn by remember { mutableStateOf(AccessKeyboard.on(accCtx)) }
-            Switch(tr("Floating keyboard (accessibility)", "Yüzen klavye (erişilebilirlik)"), tr("Over any app where you type. Pulse's accessibility keyboard must be on in the accessibility settings", "Yazdığınız her uygulamanın üstünde. Erişilebilirlik ayarlarında Pulse klavyesi açık olmalı"), accOn) {
+            Switch(tr("Floating keyboard (always on)", "Yüzen klavye (hep açık)"), tr("A button stays on top of every app and game; it opens the whole Pulse keyboard anywhere on the screen, with or without a text box. The phone's own keyboard still opens in text boxes. Pulse's accessibility service must be on", "Her uygulamanın ve oyunun üstünde duran bir düğme; yazı kutusu olsun olmasın ekranın her yerinde tüm Pulse klavyesini açar. Telefonun klavyesi yazı kutularında yine açılır. Pulse erişilebilirlik hizmeti açık olmalı"), accOn) {
                 accOn = it
                 AccessKeyboard.setOn(accCtx, it)
                 if (it && !AccessKeyboard.serviceEnabled(accCtx)) accCtx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
