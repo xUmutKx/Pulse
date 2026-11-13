@@ -107,7 +107,7 @@ object LauncherPrefs {
     var bootScreen by mutableStateOf(false)
     var loginScreen by mutableStateOf(false)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
-    var swipeDownSearch by mutableStateOf(true)
+    var swipeDownSearch by mutableStateOf(false)
     /** Notification counts on the app pictures. */
     var badges by mutableStateOf(true)
     /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
