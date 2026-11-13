@@ -158,6 +158,10 @@ private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSe
 /** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
 private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 0)) { 0 -> 84; 2 -> 128; else -> 100 }
 private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("showHidden", true)
+/** An uninstalled game is forgotten everywhere: not hidden, not added by hand, no saved name (a hidden one used to stay on the shelf after it was removed). */
+internal fun forgetGame(c: Context, pkg: String) {
+    saveHidden(c, hiddenSet(c) - pkg); saveCustom(c, customSet(c) - pkg); prefs(c).edit().remove("name_$pkg").apply()
+}
 private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
 private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
 

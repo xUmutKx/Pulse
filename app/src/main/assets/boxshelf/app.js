@@ -2242,6 +2242,9 @@ api.onExited(async info=>{uiCrumb("Back from the game");if(info&&info.watched)st
 // Pulse: the back cover of the box is showing (the delete button of the app reads this)
 window.__pulseFlipped=()=>{try{return !!flipped&&(mode==="browse"||mode==="details")}catch{return false}};
 window.__pulseCurGame=()=>{try{return curGame()}catch{return null}};
+/* (Pulse) the selected box's front, for the delete button that sits on it, and the screen that is shown */
+window.__pulseCurRect=()=>{try{const s=slots[sel],el=s&&s.el&&(s.el.querySelector(".f-front")||s.el);if(!el)return null;const r=el.getBoundingClientRect();return{l:r.left,t:r.top,r:r.right,b:r.bottom}}catch{return null}};
+window.__pulseMode=()=>{try{return mode}catch{return ""}};
 window.__pulseUnblack=()=>{try{
   try{dimWake();dimAt=lastInputAt=performance.now()}catch{}
   if(mode==="launch"&&runningKind!=="error"){clearTimeout(insertT);clearTimeout(launchTimer);try{hideInsert()}catch{}endLaunch();returnAt=performance.now()}

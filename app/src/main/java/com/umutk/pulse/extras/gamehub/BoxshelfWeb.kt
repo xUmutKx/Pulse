@@ -370,6 +370,10 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             if (e == Lifecycle.Event.ON_PAUSE) { holder[0]?.onPause(); away[0] = true; pausedAt[0] = android.os.SystemClock.elapsedRealtime() }
             else if (e == Lifecycle.Event.ON_RESUME) {
                 val w = holder[0] ?: return@LifecycleEventObserver
+                // a moment after coming back the page is asked whether it is there; a blank or white page that does not answer is built again
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    holder[0]?.evaluateJavascript("(function(){try{return !!(document.body&&document.body.children.length>0)}catch(e){return false}})()") { r -> if (r != "true") ShelfSync.bump() }
+                }, 3500L)
                 // back after a game (or anything that kept Pulse away for a few seconds): the shelf is built again at once, at the place it was left (the page keeps its
                 // place), instead of trusting a picture that can stay black. A short absence (the shade, a dialog) keeps the page as it is
                 if (away[0] && android.os.SystemClock.elapsedRealtime() - pausedAt[0] > 2500L) { away[0] = false; ShelfSync.bump(); return@LifecycleEventObserver }
