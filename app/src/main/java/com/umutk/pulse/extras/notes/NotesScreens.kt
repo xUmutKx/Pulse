@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -250,10 +251,10 @@ fun HomeView(
     }
     // the round pen button at the bottom right of the Samsung notes: a new note
     if (selected.isEmpty()) Box(
-        Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 22.dp).size(60.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(T.accent)
+        Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp).size(48.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color.Black).border(1.dp, Color.White.copy(alpha = .25f), CircleShape)
             .clickable { onNew() }.semantics { contentDescription = tr("New note", "Yeni not") },
         contentAlignment = Alignment.Center,
-    ) { PIcon("edit", Color.White, 26.dp) }
+    ) { PIcon("add", Color.White, 22.dp) }
     }
 }
 
