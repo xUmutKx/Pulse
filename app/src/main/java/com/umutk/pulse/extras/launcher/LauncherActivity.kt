@@ -168,6 +168,9 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Notification history", "Bildirim geçmişi"), "pulse:x:notifhist", null, iconKey = "bell"),
     LaunchApp(tr("Messages", "Mesajlar"), "pulse:x:messages", null, iconKey = "chat"),
     LaunchApp(tr("Toolkit", "Araç kutusu"), "pulse:x:toolkit", null, iconKey = "settings"),
+    // small apps in the manner of the old desktops, drawn by Pulse itself
+    LaunchApp(tr("Notepad", "Not Defteri"), "pulse:x:win:notepad", null, iconKey = "notes"),
+    LaunchApp("Snake", "pulse:x:win:snake", null, iconKey = "gridView"),
 )
 
 /**
