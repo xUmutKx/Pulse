@@ -904,7 +904,13 @@ function infoRows(g){
   if(g.kind==="emulator")return [["Emulator",s.emulatorName],["Program",s.emulator||"Not set"]];
   if(g.kind==="setup")return [["Games found","None yet"],["Fix it in","Settings → "+s.name]];
   if(g.kind==="random")return [...(g.pick?[["Picked",g.pick.game.title],["Shelf",(g.pick.sh||shelves[g.pick.shelf]).name]]:[]),["Picks from",shuffleAll()?"Every shelf":"This shelf"],["Change","Settings → Shelf"]];
-  if(g.kind==="app")return [["Type",g.pulse?"Game":"Streaming app"],["Program",g.path],["Returns","When you close the app"]];
+  if(g.kind==="app"&&g.pulse){ // a Game Hub game: how much it was played, and where that puts it among the games of the shelf
+    const all=shelves.flatMap(x=>x.games||[]).filter(x=>x.pulse),tot=all.reduce((n,x)=>n+(x.minutes||0),0),top=all.reduce((n,x)=>Math.max(n,x.minutes||0),0),m=g.minutes||0;
+    const hrs=v=>v>=60?`${(v/60).toFixed(1)} hours`:`${v} min`,rank=all.filter(x=>(x.minutes||0)>m).length+1;
+    const rows=[["Played",m?hrs(m):"Not played yet"],["Last played",g.lastPlayed?fmtDate(g.lastPlayed):"Never"]];
+    if(m&&all.length>1){rows.push(["Rank",`#${rank} of ${all.length} games`]);rows.push(["Share",`${Math.max(1,Math.round(m/tot*100))}% of all play time`]);rows.push(["%bar",`${hrs(m)} of ${hrs(top)} (your most played)`,top?m/top:0])}
+    return rows}
+  if(g.kind==="app")return [["Type","Streaming app"],["Program",g.path],["Returns","When you close the app"]];
   if(g.kind==="steam"){const si=g.info||{};return [...(si.release||si.year?[["Released",fmtRelease(si.release,si.year)]]:[]),...(si.dev?[["Developer",si.dev]]:[]),...(si.pub&&si.pub!==si.dev?[["Publisher",si.pub]]:[]),...(si.genres?[["Genre",si.genres.replace(/;/g,", ")]]:[]),...(si.metacritic?[["Metacritic",si.metacritic+" / 100"]]:[]),["Playtime",g.minutes?`${(g.minutes/60).toFixed(1)} hours`:"Not played yet"],["Last played",fmtDate(g.lastPlayed)],["Install size",fmtSize(g.sizeBytes)],["Steam ID",g.appid]];}
   const i=g.info||{};const rows=[];
   if(i.release||i.year)rows.push(["Released",fmtRelease(i.release,i.year)]);
@@ -959,7 +965,7 @@ function fillDetails(){
   {const has=!!shots.length||!$("dTrailer").hidden;$("dNoMedia").hidden=has;$("dTabMedia").classList.toggle("has",has)}
   const grid=$("dGrid");grid.innerHTML="";
   const skip=new Set(g.kind==="rom"?["Released","Genre","Players","Rating","Community score","Format","File"]:[]);
-  infoRows(g).filter(([k,v])=>!skip.has(k)&&v!=null&&String(v).trim()!=="").forEach(([k,v])=>{ /* (beta.7: a fact with no value isn't shown as an empty box) */const box=document.createElement("div");if(/program|file/i.test(k))box.className="wide";const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;box.append(dt,dd);grid.append(box)});
+  infoRows(g).filter(([k,v])=>k!=="%bar"&&!skip.has(k)&&v!=null&&String(v).trim()!=="").forEach(([k,v])=>{ /* (beta.7: a fact with no value isn't shown as an empty box) */const box=document.createElement("div");if(/program|file/i.test(k))box.className="wide";const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;box.append(dt,dd);grid.append(box)});
   // what's on file for this game: the box (front, back, spine), the disc / cartridge label, the manual
   {const box=$("dArt"),row=$("dArtRow");row.innerHTML="";const a=g.art||{},show=g.kind==="rom";box.hidden=!show;$("dTabCopy").hidden=!show;
     if(show){const media=s&&(MEDIA[s.id]||{}).kind==="cart"?"Cartridge":s&&s.id==="psp"?"UMD":"Disc",man=Array.isArray(a.manual)?a.manual.length:0;
@@ -1973,6 +1979,14 @@ api.onExited(async info=>{uiCrumb("Back from the game");if(window.Sound&&Sound.n
   app.classList.remove("returning");returnPrep=false;sfx.back();
   setTimeout(()=>{if(!app.classList.contains("launching"))$("launch").style.background=""},700);
 });
+// Pulse: the shelf is in front again (asked by the app a moment after it comes back from a game): whatever still covers it in black is taken away, whichever
+// step of the return did not run (the launch page, the black cover of the return, the "behind a game" state, the screen dimmer)
+window.__pulseUnblack=()=>{try{
+  try{dimWake();dimAt=lastInputAt=performance.now()}catch{}
+  if(mode==="launch"&&runningKind!=="error"){clearTimeout(insertT);clearTimeout(launchTimer);try{hideInsert()}catch{}endLaunch();returnAt=performance.now()}
+  clearTimeout(returnUndo);clearReturnCover("the app asked, back in front");const l=$("launch");if(l){l.classList.remove("ready");l.style.background=""}
+  quickLaunch=false;
+}catch(e){try{api.log&&api.log("unblack: "+(e&&e.message))}catch{}}};
 function back(){
   if(mode==="sort"){closeSort();return}
   if(mode==="build"){bpDone("");return}

@@ -135,7 +135,7 @@ function drawFront(style,game){
   return c;
 }
 // lines: array of [label, value] shown on the back
-const bkey=(style,game)=>style.id+"|b|"+game.title;
+const bkey=(style,game)=>style.id+"|b|"+game.title+(game.pulse?"|"+(game.minutes||0)+"|"+(game.box||""):""); /* (a Game Hub box prints its play time: a new time is a new back) */
 function back(style,game,lines,blurb){
   const key=bkey(style,game);if(cache.has(key))return cache.get(key);
   const url=pending(key)||c2url(drawBack(style,game,lines,blurb));capCache(key,url);return url;
@@ -144,14 +144,16 @@ function back(style,game,lines,blurb){
 // back made ahead of a flip (or during one) never holds up the shelf
 // the back with the game's own Steam screenshots (up to four, loaded first); a picture that fails is drawn as before
 const loadPic=u=>new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=()=>res(null);im.src=u});
+// the four pictures of a box's back: the game's own screenshots; a Game Hub game with fewer has its wide picture and its cover in the empty frames
+function backPics(game){const shots=(game.shots||[]).slice(0,4);if(game.pulse){const a=game.art||{},more=[a.hero,a.front].filter(u=>u&&typeof u==="string"&&!/^data:/.test(u));for(let i=0;shots.length<4&&more.length&&i<4;i++)shots.push(more[i%more.length])}return shots}
 function backAsync(style,game,lines,blurb){
-  const shots=(game.shots||[]).slice(0,4),key=shots.length?bkey(style,game)+"|shots":bkey(style,game);
+  const shots=backPics(game),key=shots.length?bkey(style,game)+"|shots":bkey(style,game);
   if(cache.has(key))return Promise.resolve(cache.get(key));
   if(pend.has(key))return pend.get(key).p.then(u=>u||back(style,game,lines,blurb));
   if(!shots.length)return encodeAsync(key,drawBack(style,game,lines,blurb)).then(u=>u||back(style,game,lines,blurb));
   return Promise.all(shots.map(loadPic)).then(pics=>encodeAsync(key,drawBack(style,game,lines,blurb,pics)).then(u=>u||back(style,game,lines,blurb)));
 }
-const hasBack=(style,game)=>cache.has(bkey(style,game)+((game.shots||[]).length?"|shots":""));
+const hasBack=(style,game)=>cache.has(bkey(style,game)+(backPics(game).length?"|shots":""));
 function drawBack(style,game,lines,blurb,pics){
   const W=420,Hh=Math.round(W/style.ratio),c=document.createElement("canvas");c.width=W;c.height=Hh;const ctx=c.getContext("2d",{willReadFrequently:true});const r=rng(game.seed^0x9e3779b9);
   // a Game Hub box: its console's own colours (PS5 blue, Switch red, Xbox green-black...), the way the real case's back is; a Steam box keeps the drawn backdrop
@@ -171,7 +173,13 @@ function drawBack(style,game,lines,blurb,pics){
     ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=2;ctx.strokeRect(sx,sy,shotW,shotH)});
   let y=top+shotH*2+44;ctx.font="13px Lexend, sans-serif";
   if(blurb){ctx.fillStyle="rgba(255,255,255,.9)";const bl=wrapLines(ctx,blurb,W*.88).slice(0,6);bl.forEach(l=>{ctx.fillText(l,W*.06,y);y+=17});y+=10}
-  (lines||[]).forEach(([k,v])=>{if(y>Hh-40)return;ctx.fillStyle="rgba(255,255,255,.55)";ctx.fillText(k,W*.06,y);ctx.fillStyle="#fff";const vv=wrapLines(ctx,String(v),W*.6)[0]||"";ctx.fillText(vv,W*.34,y);y+=22});
+  // a line never runs out of the box: a value too long for its place is cut with an ellipsis (a name without spaces cannot be wrapped)
+  const fitText=(t,max)=>{t=String(t);if(ctx.measureText(t).width<=max)return t;while(t.length>1&&ctx.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"};
+  (lines||[]).forEach(([k,v,f])=>{if(y>Hh-40)return;
+    if(k==="%bar"){ // a share shown as a bar (this game's play time beside the most played one)
+      const bw=W*.88,bx=W*.06;ctx.fillStyle="rgba(255,255,255,.16)";ctx.fillRect(bx,y-9,bw,7);ctx.fillStyle=style.spineBand&&style.spineBand.bg&&boxed?"#fff":"rgba(255,255,255,.85)";ctx.fillRect(bx,y-9,Math.max(3,bw*Math.max(0,Math.min(1,f||0))),7);
+      y+=14;ctx.fillStyle="rgba(255,255,255,.6)";ctx.font="11px Lexend, sans-serif";ctx.fillText(fitText(v,bw),bx,y);ctx.font="13px Lexend, sans-serif";y+=20;return}
+    ctx.fillStyle="rgba(255,255,255,.55)";ctx.fillText(fitText(k,W*.3),W*.06,y);ctx.fillStyle="#fff";ctx.fillText(fitText(v,W*.56),W*.38,y);y+=22});
   return c;
 }
 // A cover built around a program's own icon (Stremio, Dolphin…): dark tinted sleeve, the icon large, the name below.

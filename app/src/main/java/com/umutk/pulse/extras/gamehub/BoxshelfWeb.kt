@@ -63,7 +63,15 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
             }
             "cover" -> {
                 val pkg = parts.getOrNull(1) ?: return null
-                val f = coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
+                // a console box style: the game's picture goes in that console's frame, whichever picture the game has (one picked by hand, Steam's, Google
+                // Play's). The framed box is made here when it is missing or older than the picture, so no game of the shelf is left without its frame
+                val st = CaseCover.styleOf(c, pkg)
+                val boxed = if (st == "steam") null else runCatching {
+                    val src = CaseCover.source(c, pkg); val cf = CaseCover.file(c, pkg, st)
+                    if (src != null && (!cf.isFile || cf.lastModified() < src.lastModified())) CaseCover.make(c, pkg, st)
+                    cf.takeIf { it.isFile }
+                }.getOrNull()
+                val f = boxed ?: coverFile(c, pkg).takeIf { it.isFile } ?: caseFile(c, pkg).takeIf { it.isFile } ?: steamCoverFile(c, pkg).takeIf { it.isFile } ?: playCoverFile(c, pkg).takeIf { it.isFile } ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(f))
             }
             "shot" -> {
@@ -231,12 +239,13 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     // Back on the bare shelf leaves Game Hub itself (to whatever was before it): the shelf's own Back handler steps aside first, then the system's goes on
     var leaving by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val holder = remember { arrayOfNulls<WebView>(1) }
+    val away = remember { booleanArrayOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.launcher.LauncherSounds.preloadAlways(ctx, "win11") }
     val owner = LocalLifecycleOwner.current
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_PAUSE) holder[0]?.onPause()
+            if (e == Lifecycle.Event.ON_PAUSE) { holder[0]?.onPause(); away[0] = true }
             else if (e == Lifecycle.Event.ON_RESUME) {
                 val w = holder[0] ?: return@LifecycleEventObserver
                 w.onResume()
@@ -244,10 +253,19 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
                 w.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
                 // back from a game the picture can stay black until something redraws it (a touch did): the layer is reset, and the view is drawn
                 // again several times while the window comes back (the first draws can land before it is in front), the page nudged to paint too
-                w.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
-                w.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                // (the layer type is left alone: switching it to software and back threw the page's 3D drawing away, and the shelf then stayed black with its sounds on)
                 w.invalidate(); w.requestLayout()
                 val h = android.os.Handler(android.os.Looper.getMainLooper())
+                // the page takes away whatever of its own still covers the shelf in black (a step of the return that did not run)
+                for (d in longArrayOf(1200L, 3000L)) h.postDelayed({ if (holder[0] === w) w.evaluateJavascript("window.__pulseUnblack&&window.__pulseUnblack()", null) }, d)
+                // and when the page draws no frame at all two seconds after it is back (its sounds run, its picture does not), the shelf is made again: a black
+                // screen is never left standing
+                // (only after the shelf was really left: at its first start the page is still loading, which is not a black screen)
+                if (away[0]) {
+                    away[0] = false
+                    h.postDelayed({ if (holder[0] === w) w.evaluateJavascript("window.__pulseFrame=0;requestAnimationFrame(function(){window.__pulseFrame=1})", null) }, 600L)
+                    h.postDelayed({ if (holder[0] === w) w.evaluateJavascript("window.__pulseFrame") { v -> if (holder[0] === w && v == "0" && owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) ShelfSync.bump() } }, 2600L)
+                }
                 for (d in longArrayOf(100L, 250L, 500L, 900L, 1500L, 2300L)) h.postDelayed({
                     if (holder[0] !== w) return@postDelayed
                     w.invalidate()
