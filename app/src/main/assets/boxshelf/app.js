@@ -22,6 +22,7 @@ const STYLE={
   psp:{id:"psp",rc:0.055,re:0.24,hue:235,ratio:0.589,depth:0.14,edge:.03,caseColor:"#101014",caseSide:"#07070a",spineInk:"#e8e8f0",band:{bg:"#0a0a0d",fg:"#ffffff",label:"PSP"},spineBand:{bg:"#0a0a0d",fg:"#ffffff",label:"PSP"},tint:["#4a4f63","#0b0c12"],glow:"#cfd6ff"},
   n3ds:{id:"n3ds",rc:0.05,re:0.24,hue:352,ratio:1.127,depth:0.1,h:.64,edge:.03,caseColor:"#f4f4f6",caseSide:"#dcdde2",spineInk:"#3a3d45",band:{bg:"#ffffff",fg:"#d40f2a",label:"NINTENDO 3DS"},spineBand:{bg:"#ffffff",fg:"#d40f2a",label:"3DS"},tint:["#c0182e","#3a0710"],glow:"#ff7a8a"},
   pc:{id:"pc",rc:0.02,re:0.16,hue:207,ratio:.667,depth:.07,edge:.015,caseColor:"#1b1f27",caseSide:"#11141a",spineInk:"#dfe8f3",band:null,spineBand:{bg:"#11141a",fg:"#8fb4d9",label:"PC"},tint:["#1d4a6e","#0a121c"],glow:"#8fc3ff"},
+  stm:{id:"stm",rc:0.03,re:0.2,hue:205,ratio:.667,depth:.075,edge:.02,caseColor:"#1a78d4",caseSide:"#0f4d8a",spineInk:"#ffffff",band:{bg:"#1a78d4",fg:"#ffffff",label:"STEAM"},spineBand:{bg:"#1a78d4",fg:"#ffffff",label:"STEAM"},tint:["#1a5a99","#08182b"],glow:"#66c0f4"}, // Steam: the blue case, a dark band with the Steam mark
   // (beta.4) Custom: PC ports, recomps and games added by hand (Quiver's too); the PC case in a warm tint
   custom:{id:"custom",rc:0.02,re:0.16,hue:28,ratio:.667,depth:.07,edge:.015,caseColor:"#211b17",caseSide:"#15110e",spineInk:"#f3e6da",band:null,spineBand:{bg:"#15110e",fg:"#e0a878",label:"PC"},tint:["#6e3f1d","#1c120a"],glow:"#ffbf8a"},
   home:{id:"home",rc:0.04,re:0.22,hue:268,ratio:.71,depth:.09,edge:.025,caseColor:"#1b1d27",caseSide:"#101218",spineInk:"#e8e8f0",band:{bg:"#1b1d27",fg:"#c9cfe0",label:"HOME"},spineBand:{bg:"#2a2d3a",fg:"#c9cfe0",label:"HOME"},tint:["#3b2f6e","#0a0b16"],glow:"#c9b8ff"},
@@ -279,6 +280,7 @@ function appFrontAsync(style,g){
 function frontUrl(g){return (g.art&&g.art.front)||Covers.front(stOf(g),g)}
 // the console mark on a box's spine: small line pictures (Xbox's sphere, PlayStation's four buttons, Switch's two Joy-Cons), in the band's ink
 const BOX_ICON={
+  steam:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="14.6" cy="9.2" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8.4" cy="14.8" r="1.8" fill="currentColor"/><path d="M9.6 14l3.2-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
   xbox:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.6 6.8c2.3 2.1 3.6 3.6 5.4 5.7 1.8-2.1 3.1-3.6 5.4-5.7M6.6 17.2c2.3-2.1 3.6-3.6 5.4-5.7 1.8 2.1 3.1 3.6 5.4 5.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   ps:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6l2.8 4.8H9.2z"/><circle cx="19.2" cy="12" r="2.7"/><path d="M9.8 17.8l4.4 4.4M14.2 17.8l-4.4 4.4"/><rect x="2.3" y="9.4" width="5.3" height="5.3" rx=".6"/></g></svg>',
   switch:'<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3.4" width="6.2" height="17.2" rx="3"/><rect x="14.8" y="3.4" width="6.2" height="17.2" rx="3"/></g><circle cx="6.1" cy="8.4" r="1.3" fill="currentColor"/><circle cx="17.9" cy="15.6" r="1.3" fill="currentColor"/></svg>'
@@ -286,7 +288,7 @@ const BOX_ICON={
 // the style a game's back is drawn in: a Game Hub box's own console (its colours, band and label), else the shelf's style
 // (a Game Hub box's back has its console's colours but the proportions of the case it is drawn on: a different ratio was cropped by the face, which cut the left of the text and the top of the band)
 const BACK_STYLES={};
-function backStyleOf(g){const id={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];
+function backStyleOf(g){const id={steam:"stm",ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"}[g&&g.box];
   if(!(g&&g.pulse&&id&&STYLE[id]))return stOf(g);const face=stOf(g),k=id+"|"+face.ratio;return BACK_STYLES[k]||(BACK_STYLES[k]=Object.assign({},STYLE[id],{ratio:face.ratio}))}
 function backUrl(g){
   if(g.art&&g.art.back)return g.art.back;
@@ -363,10 +365,10 @@ function mount(s){
   if(g.romm&&g.romm.cloud)slot.classList.add("cloud"); /* (beta.12) a RomM game not on this device yet: Play downloads it */
   // Pulse's own app icon, small under the cover, on a store picture (a cover made from the icon already has it)
   // a Game Hub box's spine is its own console: that console's colours and label (the Steam box keeps the shelf's PC spine)
-  const BOXST={ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"},BOXLAB={ps5:"PS5",ps4:"PS4",ps3:"PS3",switch:"SWITCH",switch2:"SWITCH 2",xbox360:"XBOX 360",xboxone:"XBOX ONE",xboxseries:"XBOX SERIES"};
+  const BOXST={steam:"stm",ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"},BOXLAB={steam:"STEAM",ps5:"PS5",ps4:"PS4",ps3:"PS3",switch:"SWITCH",switch2:"SWITCH 2",xbox360:"XBOX 360",xboxone:"XBOX ONE",xboxseries:"XBOX SERIES"};
   const boxSt=g.pulse&&g.box&&BOXST[g.box]&&STYLE[BOXST[g.box]]&&STYLE[BOXST[g.box]].spineBand;
   const sb=boxSt||os.spineBand;
-  const boxMark=boxSt&&g.kind!=="emulator"&&g.kind!=="setup"?BOX_ICON[/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":"switch"]:null;
+  const boxMark=boxSt&&g.kind!=="emulator"&&g.kind!=="setup"?BOX_ICON[/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":g.box==="steam"?"steam":"switch"]:null;
   // a console box's spine is the console's own colour (PS5 blue, Switch red, Xbox green), not the shelf's black
   if(boxSt){const cs=STYLE[BOXST[g.box]];slot.querySelectorAll(".f-left").forEach(f=>{f.style.background=cs.caseColor});slot.querySelectorAll(".f-right").forEach(f=>{f.style.background=cs.caseSide||cs.caseColor})}
   slot.querySelectorAll(".spine-band").forEach(band=>{band.style.background=sb.bg;band.style.color=sb.fg;if(boxMark){band.innerHTML=boxMark;band.classList.add("has-mark")}else{band.classList.remove("has-mark");band.textContent=g.kind==="emulator"?"EMU":g.kind==="setup"?"ADD":(boxSt&&BOXLAB[g.box]||os.spineBand.label)}});

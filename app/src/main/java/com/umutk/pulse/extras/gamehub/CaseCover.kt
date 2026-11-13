@@ -16,17 +16,17 @@ import java.io.FileOutputStream
  * The frames are from the steam-case-covers project (GPL-3.0); the windows are its measured positions (600 x 900 px).
  */
 internal object CaseCover {
-    val STYLES = listOf("steam", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
+    val STYLES = listOf("steam", "plain", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
     /** The mix: the games are dealt evenly to these (a shuffled order, so it is not sorted by name); each keeps its box. */
     val MIX = listOf("steam", "ps5", "switch", "xboxseries")
     private val WINDOWS = mapOf(
-        "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
+        "steam" to intArrayOf(16, 116, 584, 884), "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
         "xbox360" to intArrayOf(16, 116, 584, 884), "xboxone" to intArrayOf(16, 116, 584, 884), "xboxseries" to intArrayOf(16, 16, 584, 884),
     )
     private fun sp(c: Context) = c.getSharedPreferences("gamehub", Context.MODE_PRIVATE)
 
-    /** The chosen box style: "steam" (the default) or one of the console cases. */
+    /** The chosen box style: "steam" (the default: the blue Steam case), "plain" (the cover as it is, no case) or one of the console cases. */
     fun style(c: Context): String = sp(c).getString("boxStyle", "steam")?.takeIf { it in STYLES } ?: "steam"
     fun setStyle(c: Context, s: String) { sp(c).edit().putString("boxStyle", s).apply() }
 
@@ -36,7 +36,7 @@ internal object CaseCover {
     fun fileFor(c: Context, pkg: String): File? {
         val st = style(c)
         val one = if (st == "mix") mixMap(c)[pkg] ?: return null else st
-        if (one == "steam") return null
+        if (one == "plain") return null
         return file(c, pkg, one)
     }
 
@@ -100,7 +100,7 @@ internal object CaseCover {
 
     /** Makes the box of game [pkg] in [style] from its Steam cover (else its wide Steam picture, else a picture made of its icon and name). False when there is nothing to make it from. */
     fun make(c: Context, pkg: String, style: String): Boolean {
-        if (style == "steam") return false
+        if (style == "plain") return false
         val cover = source(c, pkg)
         val art = (if (cover != null) BitmapFactory.decodeFile(cover.absolutePath) else iconArt(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg)) ?: return false
         val box = compose(c, art, style) ?: return false

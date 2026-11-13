@@ -149,7 +149,7 @@ internal fun setChosenCover(c: Context, pkg: String, url: String): Boolean = run
     steamCoverFile(c, pkg).apply { parentFile?.mkdirs(); writeBytes(bytes) }
     // a picture chosen by hand earlier would still win: this choice takes its place
     runCatching { coverFile(c, pkg).delete() }
-    runCatching { val st = CaseCover.styleOf(c, pkg); if (st != "steam") CaseCover.make(c, pkg, st) }
+    runCatching { val st = CaseCover.styleOf(c, pkg); if (st != "plain") CaseCover.make(c, pkg, st) }
     true
 }.getOrDefault(false)
 

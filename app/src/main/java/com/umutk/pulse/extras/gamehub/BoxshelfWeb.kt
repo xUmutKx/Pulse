@@ -66,7 +66,7 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 // a console box style: the game's picture goes in that console's frame, whichever picture the game has (one picked by hand, Steam's, Google
                 // Play's). The framed box is made here when it is missing or older than the picture, so no game of the shelf is left without its frame
                 val st = CaseCover.styleOf(c, pkg)
-                val boxed = if (st == "steam") null else runCatching {
+                val boxed = if (st == "plain") null else runCatching {
                     val src = CaseCover.source(c, pkg); val cf = CaseCover.file(c, pkg, st)
                     // a game with no cover at all gets its box made from its icon and name, so it is a real case like the others
                     if ((src != null && (!cf.isFile || cf.lastModified() < src.lastModified())) || (src == null && !cf.isFile)) CaseCover.make(c, pkg, st)
@@ -127,7 +127,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         // in the mix the shelf is in colour groups (Steam, PS5, Switch, Xbox Series), each group in the order of the library
         loadGames(c).filter { showHidden || it.pkg !in hidden }.sortedBy { CaseCover.groupOf(c, it.pkg) }.forEach { g ->
             val hasCover = coverFile(c, g.pkg).isFile || caseFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile ||
-                CaseCover.styleOf(c, g.pkg) != "steam"
+                CaseCover.styleOf(c, g.pkg) != "plain"
             arr.put(JSONObject().put("pkg", g.pkg).put("name", g.name).put("hidden", g.pkg in hidden)
                 .put("icon", "https://$HOST/icon/${g.pkg}")
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
@@ -144,12 +144,12 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
         if (MegaGames.enabled(c)) MegaGames.LIST.filter { it.id !in MegaGames.removed(c) }.forEach { m ->
             arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/mcover/${m.id}").put("hero", JSONObject.NULL)
-                .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+                .put("box", "plain").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         // the games of your own that are web pages (an .html or a .zip added in the shelf's settings)
         HtmlGames.list(c).forEach { m ->
             arr.put(JSONObject().put("pkg", HtmlGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/hcover/${m.id}").put("hero", JSONObject.NULL)
-                .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+                .put("box", "plain").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         return arr.toString()
     }
