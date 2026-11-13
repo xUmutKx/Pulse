@@ -66,8 +66,7 @@ private fun flyLook(id: String) = when (id) {
 @Composable
 fun ClockFlyout(lookId: String, taskbar: Dp) {
     if (!LauncherSession.clockOpen) return
-    // a flyout that cannot be drawn closes itself: the launcher and the phone's apps keep running (the reason is kept in the crash report)
-    try { ClockFlyoutBody(lookId, taskbar) } catch (e: Exception) { LauncherSession.clockOpen = false; android.util.Log.w("PulseClock", "clock flyout failed", e) }
+    ClockFlyoutBody(lookId, taskbar)
 }
 
 @Composable
