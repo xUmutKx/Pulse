@@ -137,7 +137,9 @@ private fun MusicHubBody(onBack: () -> Unit) {
     LaunchedEffect(library) { CoverFetch.backfill(ctx, library); OnlineTags.backfill(ctx, library); com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(ctx, library); com.umutk.pulse.extras.lyrics.LyricsAuto.ensure(ctx) }
     androidx.compose.runtime.LaunchedEffect(Unit) { ExtraThemes.load(ctx) }
     // the Lyrics look is gone: a player still set to it opens on Poweramp; the default is Poweramp too, and the Windows Media Player look in a Windows look (the launcher's Windows 7 window, for one)
-    var look by remember { mutableStateOf(runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(if (com.umutk.pulse.T.id in setOf("win7", "win10", "win11", "xp", "win95")) MusicLook.WMP else MusicLook.POWERAMP).let { if (it == MusicLook.LYRICS) MusicLook.POWERAMP else it }) }
+    // in a Windows look's desktop window the player is Windows Media Player, always (the look chosen for the phone's own player is not used there)
+    val onWinDesk = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null && com.umutk.pulse.T.id in setOf("win7", "win10", "win11", "xp", "win95")
+    var look by remember { mutableStateOf(if (onWinDesk) MusicLook.WMP else runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(if (com.umutk.pulse.T.id in setOf("win7", "win10", "win11", "xp", "win95")) MusicLook.WMP else MusicLook.POWERAMP).let { if (it == MusicLook.LYRICS) MusicLook.POWERAMP else it }) }
     var artBg by remember { mutableStateOf(prefs(ctx).getBoolean("artBg", false)) }
     var lyrics by remember { mutableStateOf(false) }
     var nowPlaying by remember { mutableStateOf(false) } // Material's full-screen player is open

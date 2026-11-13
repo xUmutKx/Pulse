@@ -121,9 +121,10 @@ private fun glass(skin: WinSkin, c: androidx.compose.ui.graphics.Color) = when (
 @Composable
 private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp, areaH: Dp) {
     val d = LocalDensity.current.density
-    val fw = if (w.max) areaW else if (w.wDp > 0f) w.wDp.dp.coerceIn(160.dp, areaW) else if (areaW > areaH) areaW * .72f else (areaW - 20.dp).coerceAtMost(areaW * .94f)
+    // the music player is a tall box, as Windows Media Player is: its width is taken from the screen and its height follows that width (it is not a stretched list)
+    val fw = if (w.max) areaW else if (w.wDp > 0f) w.wDp.dp.coerceIn(160.dp, areaW) else if (w.start == "music") (areaW * .9f).coerceAtMost(360.dp) else if (areaW > areaH) areaW * .72f else (areaW - 20.dp).coerceAtMost(areaW * .94f)
     // a turned screen is wide and short: the window takes more of it, so a list of files shows more than a few rows
-    val fh = if (w.max) areaH else if (w.hDp > 0f) w.hDp.dp.coerceIn(120.dp, areaH) else areaH * (if (areaW > areaH) .88f else .64f)
+    val fh = if (w.max) areaH else if (w.hDp > 0f) w.hDp.dp.coerceIn(120.dp, areaH) else if (w.start == "music") (fw * 1.28f).coerceAtMost(areaH * .92f) else areaH * (if (areaW > areaH) .88f else .64f)
     val shape = RoundedCornerShape(if (w.max) 0.dp else skin.corner)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
