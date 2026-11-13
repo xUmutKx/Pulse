@@ -79,6 +79,10 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val k = parts.getOrNull(2)?.toIntOrNull() ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(steamShotFile(c, pkg, k).takeIf { it.isFile } ?: return null))
             }
+            "hcover" -> {
+                val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() } } ?: return null
+                WebResourceResponse("image/jpeg", null, FileInputStream(HtmlGames.coverFile(c, id).takeIf { it.isFile } ?: return null))
+            }
             "mcover" -> {
                 val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() || ch == '_' } } ?: return null
                 WebResourceResponse("image/webp", null, c.assets.open("megacovers/$id.webp"))
@@ -136,16 +140,36 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
-        if (MegaGames.enabled(c)) MegaGames.LIST.forEach { m ->
+        if (MegaGames.enabled(c)) MegaGames.LIST.filter { it.id !in MegaGames.removed(c) }.forEach { m ->
             arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/mcover/${m.id}").put("hero", JSONObject.NULL)
+                .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+        }
+        // the games of your own that are web pages (an .html or a .zip added in the shelf's settings)
+        HtmlGames.list(c).forEach { m ->
+            arr.put(JSONObject().put("pkg", HtmlGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/hcover/${m.id}").put("hero", JSONObject.NULL)
                 .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         return arr.toString()
     }
     /** The case style of the shelf: the id of one of Boxshelf's own cases (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...). */
     /** The guide kept for a game (empty until it was read), and the start of reading it in the background. */
-    @JavascriptInterface fun guideCached(pkg: String): String = GameGuide.cached(c, pkg)
-    @JavascriptInterface fun guideFetch(pkg: String) { GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
+    @JavascriptInterface fun guideCached(pkg: String): String = when {
+        MegaGames.isMega(pkg) -> MegaGames.desc(pkg)
+        HtmlGames.isHtml(pkg) -> HtmlGames.get(c, pkg)?.desc.orEmpty().ifEmpty { com.umutk.pulse.tr("A web game of your own.", "Kendi eklediğin bir web oyunu.") }
+        else -> GameGuide.cached(c, pkg)
+    }
+    /** The back cover's button: an app is uninstalled (the system asks first), a built-in game leaves the shelf, a game of your own is deleted. */
+    @JavascriptInterface fun removeGame(pkg: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            when {
+                MegaGames.isMega(pkg) -> { MegaGames.remove(c, pkg); ShelfSync.bump() }
+                HtmlGames.isHtml(pkg) -> { HtmlGames.remove(c, pkg); ShelfSync.bump() }
+                else -> uninstallGame(c, pkg)
+            }
+        }
+    }
+
+    @JavascriptInterface fun guideFetch(pkg: String) { if (MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)) return; GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
     /** A text box of the page got the focus: the view takes the focus and the keyboard is asked for (a page in a view does not always bring it up by itself). */
     @JavascriptInterface fun showKeyboard() {
@@ -230,6 +254,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 "checkAccess" -> Thread { Privilege.detect() }.start()
                 // "Add a game" of the shelf's own settings: Game Hub's list of the phone's apps opens
                 "add" -> { ShelfAsk.add.value = true }
+                "addHtml" -> { ShelfAsk.addHtml.value = true }
+                "restoreMega" -> { MegaGames.restoreAll(c); ShelfSync.bump() }
             }
         }
     }
@@ -258,7 +284,7 @@ internal object ShelfJs {
 }
 
 /** What the shelf's page asks Game Hub to open (its own dialogs): the list of apps to add a game from. */
-internal object ShelfAsk { val add = androidx.compose.runtime.mutableStateOf(false) }
+internal object ShelfAsk { val add = androidx.compose.runtime.mutableStateOf(false); val addHtml = androidx.compose.runtime.mutableStateOf(false) }
 
 /** The WebView of the shelf. [onLaunch] starts a game, [onDetails] opens Pulse's page for it. Back goes one step back inside the shelf (Esc), as Boxshelf does. */
 @SuppressLint("SetJavaScriptEnabled")
@@ -274,18 +300,37 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)
     val settings by rememberUpdatedState(onSettings)
+    // "Add an HTML game" in the shelf's settings: a .html or .zip is chosen, copied into Pulse and put on the shelf
+    val pickHtml = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
+        if (uri != null) {
+            Thread {
+                val ok = HtmlGames.import(ctx, uri)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(ctx, if (ok) com.umutk.pulse.tr("Game added", "Oyun eklendi") else com.umutk.pulse.tr("This file is not a web game (an .html, or a .zip with an index.html)", "Bu dosya bir web oyunu değil (.html ya da içinde index.html olan .zip)"), android.widget.Toast.LENGTH_LONG).show()
+                    if (ok) ShelfSync.bump()
+                }
+            }.start()
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(ShelfAsk.addHtml.value) {
+        if (ShelfAsk.addHtml.value) { ShelfAsk.addHtml.value = false; pickHtml.launch(arrayOf("text/html", "application/zip", "application/x-zip-compressed", "*/*")) }
+    }
     // Back on the bare shelf leaves Game Hub itself (to whatever was before it): the shelf's own Back handler steps aside first, then the system's goes on
     var leaving by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val holder = remember { arrayOfNulls<WebView>(1) }
     val away = remember { booleanArrayOf(false) }
+    val pausedAt = remember { longArrayOf(0L) }
     androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.launcher.LauncherSounds.preloadAlways(ctx, "win11") }
     val owner = LocalLifecycleOwner.current
     // the shelf is told when Pulse is in front again (a game has closed), and rests while it is away
     DisposableEffect(owner) {
         val obs = LifecycleEventObserver { _, e ->
-            if (e == Lifecycle.Event.ON_PAUSE) { holder[0]?.onPause(); away[0] = true }
+            if (e == Lifecycle.Event.ON_PAUSE) { holder[0]?.onPause(); away[0] = true; pausedAt[0] = android.os.SystemClock.elapsedRealtime() }
             else if (e == Lifecycle.Event.ON_RESUME) {
                 val w = holder[0] ?: return@LifecycleEventObserver
+                // back after a game (or anything that kept Pulse away for a few seconds): the shelf is built again at once, at the place it was left (the page keeps its
+                // place), instead of trusting a picture that can stay black. A short absence (the shade, a dialog) keeps the page as it is
+                if (away[0] && android.os.SystemClock.elapsedRealtime() - pausedAt[0] > 2500L) { away[0] = false; ShelfSync.bump(); return@LifecycleEventObserver }
                 w.onResume()
                 // the page's return step (the shelf comes back) runs once the page is running again: its timers and frames were stopped while it was away
                 w.evaluateJavascript("window.__pulseExited&&window.__pulseExited()", null)
@@ -334,7 +379,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.isHapticFeedbackEnabled = false
             w.settings.allowFileAccess = false
             w.settings.allowContentAccess = false
-            w.addJavascriptInterface(PulseHost(c.applicationContext, { if (MegaGames.isMega(it)) MegaGames.open(ctx, it) else launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
+            w.addJavascriptInterface(PulseHost(c.applicationContext, { if (MegaGames.isMega(it)) MegaGames.open(ctx, it) else if (HtmlGames.isHtml(it)) HtmlGames.open(ctx, it) else launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
             w.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? = serve(c, request.url)
                 // the system took the page's process while another app was in front: the shelf is built again instead of staying a black view

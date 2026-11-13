@@ -1992,6 +1992,9 @@ api.onExited(async info=>{uiCrumb("Back from the game");if(window.Sound&&Sound.n
 });
 // Pulse: the shelf is in front again (asked by the app a moment after it comes back from a game): whatever still covers it in black is taken away, whichever
 // step of the return did not run (the launch page, the black cover of the return, the "behind a game" state, the screen dimmer)
+// Pulse: the back cover of the box is showing (the delete button of the app reads this)
+window.__pulseFlipped=()=>{try{return !!flipped&&(mode==="browse"||mode==="details")}catch{return false}};
+window.__pulseCurGame=()=>{try{return curGame()}catch{return null}};
 window.__pulseUnblack=()=>{try{
   try{dimWake();dimAt=lastInputAt=performance.now()}catch{}
   if(mode==="launch"&&runningKind!=="error"){clearTimeout(insertT);clearTimeout(launchTimer);try{hideInsert()}catch{}endLaunch();returnAt=performance.now()}

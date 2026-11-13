@@ -45,7 +45,7 @@ window.Perf = (() => {
     } catch { tier = 'low'; why.push('no WebGL'); }
     const g = gpu.toLowerCase();
     if (/swiftshader|llvmpipe|softpipe|basic render|microsoft basic|software/.test(g)) { tier = 'low'; why.push('software rendering'); }
-    else if (os === 'android' && tier !== 'low') { guess = { tier: 'handheld', why: 'Android handheld', gpu }; return guess; } // Android handhelds start at Handheld: the desktop tiers assume a PC driving a TV
+    else if (os === 'android' && tier !== 'low') { guess = { tier: window.PulseHost ? 'low' : 'handheld', why: window.PulseHost ? 'Pulse on a phone: smooth first' : 'Android handheld', gpu }; return guess; } // Android handhelds start at Handheld: the desktop tiers assume a PC driving a TV
     else if (/vangogh|custom gpu 0(405|932)/.test(g)) { tier = 'balanced'; why.push('Steam Deck graphics'); } // (beta.10) the Deck's APU (LCD 0405, OLED 0932): a PC handheld, so Balanced (Handheld is tuned for Android phones' GPUs)
     else if (/intel/.test(g) && !/iris|arc|\bxe\b/.test(g)) { tier = 'low'; why.push('Intel HD/UHD graphics'); }
     else if (/iris|radeon\(tm\) graphics|radeon graphics|vega \d+ graphics|radeon r[2-7]\b|geforce mx|mx\s?\d{3}|adreno|mali|apple m1(?! (pro|max|ultra))\b|\bxe\b/.test(g)) { tier = 'balanced'; why.push('integrated graphics'); }

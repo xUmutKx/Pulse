@@ -38,6 +38,68 @@ internal object MegaGames {
     )
     const val PREFIX = "mega:"
 
+    /** What each game is, in a line: English, Turkish (shown on the game's Details). */
+    private val DESC = mapOf(
+        "blade" to ("Sword duels against waves of fighters in a 3D arena." to "Üç boyutlu arenada dalga dalga savaşçılara karşı kılıç düellosu."),
+        "nebula" to ("Fly a ship through a nebula: shoot and dodge." to "Bir nebulanın içinde gemi uçur: vur ve kaç."),
+        "voxel" to ("Mine and build with blocks in a 3D world." to "Üç boyutlu dünyada blok kazı ve inşa et."),
+        "calradia" to ("A medieval war game: lead an army and conquer lands." to "Orta çağ savaş oyunu: ordu yönet, toprak fethet."),
+        "drift3d" to ("Race and drift on a neon highway at night." to "Gece neon otobanda yarış ve drift yap."),
+        "spellmerge" to ("Merge spells to fight your way through a dungeon." to "Büyüleri birleştirerek zindanda ilerle."),
+        "fighter" to ("A 2D fighting game with neon fighters." to "Neon dövüşçülerle 2D dövüş oyunu."),
+        "horde" to ("Survive waves of monsters and grow stronger." to "Canavar dalgalarına karşı hayatta kal, güçlen."),
+        "bastion" to ("Defend your fortress with towers and units." to "Kuleler ve birliklerle kaleni savun."),
+        "dungeon" to ("Explore dungeons, fight and collect loot." to "Zindanları keşfet, savaş, ganimet topla."),
+        "2048" to ("Slide and merge tiles until you reach 2048." to "Kareleri kaydırıp birleştir, 2048'e ulaş."),
+        "tetris" to ("Stack falling blocks and clear lines." to "Düşen blokları diz, satırları temizle."),
+        "sudoku" to ("Fill the 4×4 grid with no repeats." to "4×4 tabloyu tekrarsız doldur."),
+        "minesweeper" to ("Open safe cells and avoid the mines." to "Güvenli kareleri aç, mayınlardan kaç."),
+        "watersort" to ("Pour water until every tube holds one colour." to "Her tüpte tek renk kalana dek suyu aktar."),
+        "sokoban" to ("Push crates onto the marks." to "Kasaları işaretli yerlere it."),
+        "checkers" to ("Capture all of the other player's pieces." to "Rakibin tüm taşlarını ye."),
+        "othello" to ("Flip the other colour by surrounding it." to "Rakibin rengini kuşatarak çevir."),
+        "connect4" to ("Line up four discs before your rival." to "Rakibinden önce dört taşı yan yana getir."),
+        "battleship" to ("Guess where the enemy ships are and sink them." to "Düşman gemilerinin yerini tahmin edip batır."),
+        "bubble" to ("Shoot bubbles and pop groups of three or more." to "Balon at, üç ve fazlasını patlat."),
+        "samegame" to ("Pop groups of same-coloured blocks." to "Aynı renkli blok gruplarını patlat."),
+        "pipes" to ("Connect the pipes before the water flows." to "Su akmadan boruları birleştir."),
+        "td" to ("Build turrets to stop the waves." to "Dalgaları durdurmak için taret kur."),
+        "village" to ("Build a pixel village and keep it fed." to "Piksel köyü kur, halkı doyur."),
+        "colony" to ("Build a colony on the moon." to "Ayda koloni kur."),
+        "p3empire" to ("An idle empire: build, ascend, collect crowns." to "Boşta imparatorluk: kur, yüksel, taç topla."),
+        "p3roads" to ("Draw roads from houses to their targets; do not let traffic jam." to "Evlerden hedeflere yol çiz; trafiğin tıkanmasına izin verme."),
+        "idle" to ("Tap and upgrade your business." to "Dokun ve işini geliştir."),
+        "p14_idle_cookie" to ("Bake cookies, buy ovens and grow the factory." to "Kurabiye yap, fırın al, fabrikayı büyüt."),
+        "farm" to ("Plant, harvest and sell." to "Ek, hasat et, sat."),
+        "factory" to ("Move goods through a production line." to "Malları üretim hattından geçir."),
+        "blockcraft" to ("Mine blocks and build." to "Blok kaz ve bir şeyler inşa et."),
+        "snake" to ("Eat apples and grow without hitting yourself." to "Elma ye, kendine çarpmadan büyü."),
+        "breakout" to ("Break the bricks with a bouncing ball." to "Zıplayan topla tuğlaları kır."),
+        "pac" to ("Eat every pellet and keep away from the ghosts." to "Tüm topları ye, hayaletlerden kaç."),
+        "pinball" to ("Flip the ball, hit bumpers, chase a high score." to "Topu çevir, tamponlara vur, yüksek skorun peşine düş."),
+        "doodle" to ("Jump upward from platform to platform." to "Platformdan platforma yukarı zıpla."),
+        "hillclimb" to ("Drive up the hills and watch your fuel." to "Tepeleri tırman, yakıta dikkat et."),
+        "golf" to ("Putt the ball into the hole in the fewest strokes." to "Topu en az vuruşta deliğe sok."),
+        "pool" to ("Pocket your balls in 8-ball pool." to "8 top bilardoda toplarını cebe sok."),
+        "bowling" to ("Roll the ball and knock down all the pins." to "Topu yuvarla, tüm lobutları devir."),
+        "racing" to ("Race three laps and reach the podium." to "Üç tur yarış, podyuma çık."),
+        "drift" to ("Chain drifts for points." to "Drift'leri zincirle, puan topla."),
+        "invaders" to ("Shoot the descending rows of aliens." to "İnen uzaylı sıralarını vur."),
+        "asteroid" to ("Shoot asteroids and mine them." to "Asteroitleri vur ve kaz."),
+        "tank" to ("Fight enemy tanks." to "Düşman tanklarıyla savaş."),
+        "p4fps" to ("A fast first-person shooter in a neon arena." to "Neon arenada hızlı birinci şahıs nişancı."),
+        "p4marble" to ("Guide a marble through a 3D track." to "Bir bilyeyi 3D parkurdan geçir."),
+        "runner3d" to ("Run through a 3D city and dodge the obstacles." to "3D şehirde engellerden kaçarak koş."),
+    )
+
+    /** What the game is, in the phone's language. */
+    fun desc(pkg: String): String = DESC[pkg.removePrefix(PREFIX)]?.let { com.umutk.pulse.tr(it.first, it.second) }.orEmpty()
+
+    /** Built-in games taken off the shelf by hand (the shelf's back cover), until they are brought back in the settings. */
+    fun removed(c: Context): Set<String> = prefs(c).getStringSet("megaRemoved", emptySet()) ?: emptySet()
+    fun remove(c: Context, pkg: String) { prefs(c).edit().putStringSet("megaRemoved", removed(c) + pkg.removePrefix(PREFIX)).apply() }
+    fun restoreAll(c: Context) { prefs(c).edit().remove("megaRemoved").apply() }
+
     /** On the shelf unless switched off in the shelf's settings. */
     fun enabled(c: Context): Boolean = prefs(c).getBoolean("miniGames", true)
 
