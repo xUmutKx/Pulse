@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.umutk.pulse.PRadio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -157,6 +162,7 @@ fun HomeView(
         onTrash = { drawer = false; onOpenTrash() },
         onClose = { drawer = false },
     )
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             if (selected.isEmpty()) {
@@ -165,7 +171,6 @@ fun HomeView(
                 Spacer(Modifier.weight(1f))
                 NIcon("search", fg, tr("Search", "Ara")) { searchOpen = !searchOpen }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
-                NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
                 NIcon("folder", fg, tr("Link a folder", "Klasör bağla")) { linkFolder.launch(Unit) }
             } else {
                 NIcon("close", fg, tr("Cancel", "İptal")) { onSelect(emptySet()) }
@@ -221,11 +226,11 @@ fun HomeView(
         }
         LazyVerticalGrid(
             // as many columns as the screen takes: two notes across on a phone, more on a tablet (the list gets wider rows there too)
-            columns = if (grid) GridCells.Adaptive(118.dp) else GridCells.Adaptive(340.dp),
+            columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Adaptive(340.dp),
             modifier = Modifier.fillMaxWidth().weight(1f),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (grid) 8.dp else 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             sections.forEach { (label, items) ->
                 if (label.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
@@ -242,6 +247,13 @@ fun HomeView(
                 }
             }
         }
+    }
+    // the round pen button at the bottom right of the Samsung notes: a new note
+    if (selected.isEmpty()) Box(
+        Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 22.dp).size(60.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(T.accent)
+            .clickable { onNew() }.semantics { contentDescription = tr("New note", "Yeni not") },
+        contentAlignment = Alignment.Center,
+    ) { PIcon("edit", Color.White, 26.dp) }
     }
 }
 
@@ -272,14 +284,18 @@ private fun NoteCard(n: Note, query: String, grid: Boolean, showDates: Boolean, 
     val lines = if (hidden) emptyList() else n.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     val preview = (if (n.title.isBlank()) lines.drop(1) else lines).take(2).joinToString("  ")
     val checks = if (hidden) null else Regex("\\[[ xX]]").findAll(n.body).toList().takeIf { it.isNotEmpty() }?.let { all -> all.count { it.value != "[ ]" } to all.size }
+    // a coloured note tints its card; the pen drawing of the note shows small on the card, as in the Samsung notes
     val bg = when {
         selected -> T.accent.copy(alpha = .22f)
+        grid && n.color != 0 -> Color(n.color).copy(alpha = .2f).compositeOver(T.panel)
         grid -> T.panel
         else -> Color.Transparent
     }
+    val strokes = remember(n.ink) { if (hidden || n.ink.isBlank()) emptyList() else NotesInk.decode(n.ink) }
+    val inkBox = remember(strokes) { NotesInk.bounds(strokes) }
     Row(
         Modifier.fillMaxWidth()
-            .then(if (grid) Modifier.clip(RoundedCornerShape(12.dp)) else Modifier)
+            .then(if (grid) Modifier.clip(RoundedCornerShape(22.dp)) else Modifier)
             .background(bg)
             .pointerInput(n, selected) { detectTapGestures(onTap = { onTap() }, onLongPress = { onLong() }) }
             // a swipe to the left of more than 160 px moves the note to the trash
@@ -292,13 +308,20 @@ private fun NoteCard(n: Note, query: String, grid: Boolean, showDates: Boolean, 
                     onHorizontalDrag = { _, dx -> total += dx },
                 )
             }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = if (grid) 14.dp else 10.dp, vertical = if (grid) 12.dp else 8.dp),
     ) {
-        if (n.color != 0) Box(Modifier.width(4.dp).height(if (grid) 40.dp else 36.dp).clip(RoundedCornerShape(2.dp)).background(Color(n.color)))
-        if (n.color != 0) Spacer(Modifier.width(10.dp))
+        if (n.color != 0 && !grid) Box(Modifier.width(4.dp).height(if (grid) 40.dp else 36.dp).clip(RoundedCornerShape(2.dp)).background(Color(n.color)))
+        if (n.color != 0 && !grid) Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(highlight(title, query, T.accent), color = fg, fontSize = (size + 1).sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (NotesPrefs.previews(ctx) && preview.isNotBlank()) Text(highlight(preview, query, T.accent), color = sub, fontSize = (size - 2).sp, maxLines = if (grid) 3 else 2, overflow = TextOverflow.Ellipsis)
+            if (inkBox != null && inkBox.right > 1f && inkBox.bottom > 1f) {
+                val ratio = (inkBox.bottom / inkBox.right).coerceIn(.15f, .9f)
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().padding(top = 6.dp).aspectRatio(1f / ratio).clip(RoundedCornerShape(8.dp))) {
+                    val sc = size.width / inkBox.right
+                    strokes.forEach { st -> drawInkStroke(st.copy(width = (st.width * sc).coerceAtLeast(1.2f), pts = st.pts.map { Offset(it.x * sc, it.y * sc) }, rel = st.rel), Offset.Zero) }
+                }
+            }
             Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (n.pinned) PIcon("pin", sub, 13.dp)
                 if (n.remindAt > 0) PIcon("bell", sub, 13.dp)
