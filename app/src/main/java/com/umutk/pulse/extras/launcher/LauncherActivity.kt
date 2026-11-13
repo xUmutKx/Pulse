@@ -173,7 +173,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp("Snake", "pulse:x:win:snake", null, iconKey = "gridView"),
     LaunchApp("2048", "pulse:x:win:2048", null, iconKey = "gridView"),
     LaunchApp(tr("Tic-tac-toe", "XOX"), "pulse:x:win:tictactoe", null, iconKey = "gridView"),
-)
+) + FunApps.all.map { LaunchApp(tr(it.en, it.tr), "pulse:x:win:fun:${it.id}", null, iconKey = "gridView") }
 
 /**
  * The desktop: icons run down the left edge and start a new column when the screen is full, like a real Windows desktop. A long press picks an icon up and it

@@ -94,6 +94,8 @@ fun ControlPanelHome() {
 @Composable
 fun WindowsSettingsHome() {
     val open = LocalOpenTool.current
+    // Windows 11 has its own Settings: a sidebar, a search box and rounded rows
+    if (T.id == "win11") { Win11SettingsHome(open); return }
     var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
     val all = CONTROL_PANEL.flatMap { g -> g.items.map { g to it } }
     val shown = all.filter { (_, it) -> q.isBlank() || tr(it.en, it.trName).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
