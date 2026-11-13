@@ -96,13 +96,7 @@ class PowerampWidget : AppWidgetProvider() {
          * The widget for every size the home screen may show it at (Android 12 and later tell both, upright and sideways): the home screen picks the one that fits,
          * so the window is never drawn for the wrong one (it used to be drawn small when the phone had been held the other way a moment before).
          */
-        fun build(c: Context, id: Int): RemoteViews {
-            if (android.os.Build.VERSION.SDK_INT >= 31) runCatching {
-                val sizes = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getParcelableArrayList<android.util.SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES).orEmpty().distinct().take(4)
-                if (sizes.size >= 2) return RemoteViews(sizes.associateWith { s -> buildFor(c, id, boxOf(c, s.width, s.height)) })
-            }
-            return buildFor(c, id, boxPx(c, id))
-        }
+        fun build(c: Context, id: Int): RemoteViews = buildFor(c, id, boxPx(c, id))
 
         private fun buildFor(c: Context, id: Int, box: WBox): RemoteViews {
             val bw = box.bw; val bh = box.bh

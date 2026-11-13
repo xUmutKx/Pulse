@@ -24,7 +24,7 @@ internal object ArtFetch {
 
     /** Whether something the shelf shows is still missing for the game. */
     private fun missing(c: Context, pkg: String): Boolean =
-        !steamHeroFile(c, pkg).isFile || !steamLogoFile(c, pkg).isFile || shots(c, pkg) < 4 || rating(c, pkg).isEmpty()
+        !(coverFile(c, pkg).isFile || steamCoverFile(c, pkg).isFile || playCoverFile(c, pkg).isFile) || !steamHeroFile(c, pkg).isFile || !steamLogoFile(c, pkg).isFile || shots(c, pkg) < 4 || rating(c, pkg).isEmpty()
 
     /** The rating shown on the back of the box ("RAWG 4.3 / 5", or Steam's score), or empty. */
     fun rating(c: Context, pkg: String): String = prefs(c).getString("rating_$pkg", "").orEmpty()
@@ -36,11 +36,14 @@ internal object ArtFetch {
         running = true
         Thread {
             try {
+                var any = false
                 for (g in games) {
-                    if (!missing(app, g.pkg)) continue
-                    if (fetch(app, g)) ShelfSync.bump()
+                    if (MegaGames.isMega(g.pkg) || !missing(app, g.pkg)) continue
+                    if (fetch(app, g)) any = true
                     Thread.sleep(500)
                 }
+                // the shelf is made again once, at the end (it used to be made again after every game, so the page reloaded every few seconds)
+                if (any) ShelfSync.bump()
             } catch (_: Throwable) {
             } finally { running = false }
         }.apply { isDaemon = true; name = "art-fetch" }.start()
@@ -54,6 +57,26 @@ internal object ArtFetch {
         }
     }.getOrNull()
 
+    /** The screenshots and the rating from the game's Google Play page (an Android package only). */
+    private fun playExtras(c: Context, g: GameRow): Boolean {
+        if (!g.pkg.contains('.')) return false
+        val html = bytes("https://play.google.com/store/apps/details?id=${g.pkg}&hl=en&gl=US", 3_000_000)?.toString(Charsets.UTF_8) ?: return false
+        var got = false
+        if (rating(c, g.pkg).isEmpty()) Regex("Rated ([0-9.]+) stars").find(html)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }?.let { prefs(c).edit().putString("rating_${g.pkg}", "Google Play ${"%.1f".format(it)} / 5").apply(); got = true }
+        if (shots(c, g.pkg) < 4) {
+            // the first picture is the icon, the next the feature graphic; the screenshots follow
+            val ids = Regex("https://play-lh\\.googleusercontent\\.com/([A-Za-z0-9_\\-]+)=w\\d+-h\\d+").findAll(html).map { it.groupValues[1] }.distinct().toList().drop(2)
+            var k = shots(c, g.pkg)
+            for (id in ids) {
+                if (k >= 4) break
+                val raw = bytes("https://play-lh.googleusercontent.com/$id=w480", 3_000_000) ?: continue
+                if (raw.size < 6000) continue
+                steamShotFile(c, g.pkg, k).apply { parentFile?.mkdirs() }.writeBytes(raw); k++; got = true
+            }
+        }
+        return got
+    }
+
     /** One game: what is missing is looked for; true when something was saved. */
     fun fetch(c: Context, g: GameRow): Boolean {
         val p = prefs(c)
@@ -61,6 +84,8 @@ internal object ArtFetch {
         if (System.currentTimeMillis() - p.getLong(tried, 0L) < 3L * 86_400_000L) return false
         p.edit().putLong(tried, System.currentTimeMillis()).apply()
         var got = false
+        // a game without any cover gets one now (Steam, SteamGridDB, Google Play), as "Look for covers" would
+        if (!(coverFile(c, g.pkg).isFile || steamCoverFile(c, g.pkg).isFile || playCoverFile(c, g.pkg).isFile)) runCatching { if (fetchBestCover(c, g)) got = true }
         // Steam: the id is found once and kept
         val idKey = "steamId_${g.pkg}"
         val id = p.getString(idKey, null)?.takeIf { it.isNotEmpty() } ?: steamAppId(g.name)?.also { p.edit().putString(idKey, it).apply() }
@@ -75,6 +100,8 @@ internal object ArtFetch {
                 if (mc > 0) p.edit().putString("rating_${g.pkg}", "Metacritic $mc / 100").apply()
             }
         }
+        // Google Play: the store page of an Android game has its screenshots and its rating
+        if (shots(c, g.pkg) < 4 || rating(c, g.pkg).isEmpty()) runCatching { got = playExtras(c, g) || got }
         // RAWG: the rating and the screenshots Steam does not have (and a background when Steam has none)
         val key = rawgKey(c)
         if (key.isNotEmpty() && (shots(c, g.pkg) < 4 || rating(c, g.pkg).isEmpty() || !steamHeroFile(c, g.pkg).isFile)) runCatching {
