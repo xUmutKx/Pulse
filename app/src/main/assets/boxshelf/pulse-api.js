@@ -38,7 +38,7 @@
   try {
     if (H.amoled && H.amoled()) {
       const am = document.createElement('style');
-      am.textContent = 'html,body,#app{background:#0d1017!important;background-image:none!important}#app::before,#app::after,body::before,body::after,.theme-canvas,.bg-layer,.theme-fx,.vignette,.sel-halo,.floor,.pv-back{display:none!important;background:none!important}';
+      am.textContent = 'html,body,#app,.bss-root{background:#000!important;background-image:none!important}#app::before,#app::after,body::before,body::after,.theme-canvas,.bg-layer,.theme-fx,.vignette,.sel-halo,.floor,.pv-back,.bss-bg,.bss-mus{display:none!important;background:none!important}';
       document.head.appendChild(am);
     }
   } catch (e) {}
