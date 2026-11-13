@@ -26,4 +26,4 @@ if os.path.isdir('.github/notes'):
             entries.append(f'- {name[:-3]} {text}')
 print(f'## Pulse {cur_s}\n')
 print('\n'.join(entries) if entries else 'Fixes and small changes.')
-print(f'\n**Which file:** `Pulse-{cur_s}.apk` is for Android 12 and newer. `Pulse-{cur_s}-android5.apk` is for older phones (Android 5 and newer). Neither has been tested on every phone, so please report bugs.')
+print(f'\n**Which file:** `Pulse-{cur_s}.apk` is the full app, with Pulse AI (the chat and the speech to text, which run on the phone). `Pulse-{cur_s}-lite.apk` is the same app without Pulse AI: smaller. Both work on Android 5 and newer (Pulse AI itself needs Android 9 and a 64-bit phone). Neither has been tested on every phone, so please report bugs.')
