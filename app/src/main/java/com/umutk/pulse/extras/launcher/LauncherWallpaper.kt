@@ -54,9 +54,20 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     val ctx = LocalContext.current
     val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val res = wallpaperRes(lookId, land)
-    val bmp = remember(res) { res?.let { BitmapFactory.decodeResource(ctx.resources, it, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap() } }
+    // the picture is decoded at its own size: only one at least twice as big as the screen is made smaller (the half-size decode it had made a 1280 x 800 picture 640 x 400 and then stretched it over the screen, which is what looked blurry)
+    val bmp = remember(res) {
+        res?.let { r ->
+            val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeResource(ctx.resources, r, b)
+            val dm = ctx.resources.displayMetrics
+            val need = maxOf(dm.widthPixels, dm.heightPixels)
+            var step = 1
+            while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
+            BitmapFactory.decodeResource(ctx.resources, r, BitmapFactory.Options().apply { inSampleSize = step })?.asImageBitmap()
+        }
+    }
     Box(modifier.fillMaxSize()) {
-        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().then(if (LauncherPrefs.wallBlur > 0) Modifier.blur(LauncherPrefs.wallBlur.dp) else Modifier), contentScale = ContentScale.Crop)
+        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().then(if (LauncherPrefs.wallBlur > 0) Modifier.blur(LauncherPrefs.wallBlur.dp) else Modifier), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
         else Box(Modifier.fillMaxSize().background(fallback))
         if (LauncherPrefs.wallDim > 0) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = LauncherPrefs.wallDim / 100f)))
         content()
