@@ -1,0 +1,99 @@
+<en-US>
+Pulse 1.0.400
+- New Books library: cover wall, collections, free classics by category.
+- Game Hub: 22 box styles with platform logos, random Mix, your own HTML games, delete button on the box back.
+- Keyboard: faster fixes for words corrected in two steps; held Ctrl/Alt/Shift reset on reopen; longer highlight on corrected words.
+- Floating keyboard over apps and games.
+- Notes: formatting bar, PDF and image export, new cards.
+- Charging animations: 15 looks, off until you turn them on.
+</en-US>
+<de-DE>
+Pulse 1.0.400
+- Neue Bibliothek: Covers, Sammlungen, kostenlose Klassiker nach Kategorie.
+- Game Hub: 22 Box-Stile mit Plattform-Logos, zufälliger Mix, eigene HTML-Spiele, Löschtaste auf der Rückseite.
+- Tastatur: schnellere Korrektur in zwei Schritten; Strg/Alt/Shift werden beim Öffnen zurückgesetzt; längere Markierung.
+- Schwebende Tastatur über Apps und Spielen.
+- Notizen: Formatleiste, PDF- und Bildexport, neue Karten.
+- Lade-Animationen: 15 Ansichten, aus bis Sie sie einschalten.
+</de-DE>
+<es-ES>
+Pulse 1.0.400
+- Nueva biblioteca: portadas, colecciones, clásicos gratuitos por categoría.
+- Game Hub: 22 estilos de caja con logos, mezcla aleatoria, tus juegos HTML, botón de borrar en el reverso.
+- Teclado: correcciones más rápidas en dos pasos; Ctrl/Alt/Mayús mantenidos se reinician al reabrir; resaltado más largo.
+- Teclado flotante sobre apps y juegos.
+- Notas: barra de formato, exportación PDF e imagen, tarjetas nuevas.
+- Animaciones de carga: 15 estilos, apagadas hasta activarlas.
+</es-ES>
+<fr-FR>
+Pulse 1.0.400
+- Nouvelle bibliothèque : couvertures, collections, classiques gratuits par catégorie.
+- Game Hub : 22 styles de boîte avec logos, mix aléatoire, vos jeux HTML, bouton supprimer au dos.
+- Clavier: corrections plus rapides en deux étapes ; Ctrl/Alt/Maj réinitialisés à la réouverture ; surlignage plus long.
+- Clavier flottant sur applis/jeux.
+- Notes : barre de mise en forme, export PDF et image, nouvelles cartes.
+- Animations de charge : 15 styles, désactivées jusqu'à activation.
+</fr-FR>
+<it-IT>
+Pulse 1.0.400
+- Nuova libreria: copertine, raccolte, classici gratuiti per categoria.
+- Game Hub: 22 stili di scatola con loghi, mix casuale, i tuoi giochi HTML, tasto elimina sul retro.
+- Tastiera: correzioni più rapide in due passaggi; Ctrl/Alt/Maiusc si azzerano alla riapertura; evidenziazione più lunga.
+- Tastiera mobile su app e giochi.
+- Note: barra di formattazione, esportazione PDF e immagine, nuove schede.
+- Animazioni di ricarica: 15 stili, disattivate finché non le attivi.
+</it-IT>
+<ja-JP>
+Pulse 1.0.400
+- 新しい本のライブラリ：表紙の壁、コレクション、カテゴリ別の無料の名作。
+- Game Hub：ロゴ付きの22種類のボックス、ランダムのミックス、自分のHTMLゲーム、箱の裏の削除ボタン。
+- キーボード：2段階で直した単語の修正が速くなり、Ctrl/Alt/Shiftは再表示時にリセット、ハイライトが長くなりました。
+- 他のアプリやゲームの上に表示できるフローティングキーボード。
+- メモ：書式バー、PDFと画像の書き出し、新しいカード。
+- 充電アニメーション：15種類、オンにするまでオフ。
+</ja-JP>
+<ko-KR>
+Pulse 1.0.400
+- 새 책 보관함: 표지 벽, 컬렉션, 카테고리별 무료 고전.
+- Game Hub: 로고 있는 박스 스타일 22종, 무작위 믹스, 직접 만든 HTML 게임, 박스 뒷면 삭제 버튼.
+- 키보드: 두 단계로 고친 단어 수정이 빨라지고, Ctrl/Alt/Shift는 다시 열 때 초기화되며, 강조가 길어졌습니다.
+- 앱과 게임 위의 플로팅 키보드.
+- 메모: 서식 도구 모음, PDF·이미지 내보내기, 새 카드.
+- 충전 애니메이션: 15가지, 켜기 전까지 꺼짐.
+</ko-KR>
+<pt-BR>
+Pulse 1.0.400
+- Nova biblioteca: capas, coleções, clássicos gratuitos por categoria.
+- Game Hub: 22 estilos de caixa com logos, mistura aleatória, seus jogos HTML, botão de apagar no verso.
+- Teclado: correções mais rápidas em duas etapas; Ctrl/Alt/Shift são zerados ao reabrir; destaque mais longo.
+- Teclado flutuante sobre apps e jogos.
+- Notas: barra de formatação, exportação PDF e imagem, novos cartões.
+- Animações de carregamento: 15 estilos, desligadas até ativar.
+</pt-BR>
+<ru-RU>
+Pulse 1.0.400
+- Новая библиотека: обложки, коллекции, бесплатная классика по категориям.
+- Game Hub: 22 стиля коробок с логотипами, случайный микс, свои HTML-игры, кнопка удаления на обороте.
+- Клавиатура: быстрее исправления в два шага; зажатые Ctrl/Alt/Shift сбрасываются при открытии; дольше подсветка.
+- Плавающая клавиатура поверх приложений и игр.
+- Заметки: панель форматирования, экспорт в PDF и изображение, новые карточки.
+- Анимации зарядки: 15 вариантов, выключены, пока не включите.
+</ru-RU>
+<tr-TR>
+Pulse 1.0.400
+- Yeni Kitaplar kütüphanesi: kapak duvarı, koleksiyonlar, kategorilere göre ücretsiz klasikler.
+- Game Hub: logolu 22 kutu stili, rastgele Mix, kendi HTML oyunların, kutu arkasında silme tuşu.
+- Klavye: iki adımda düzeltilen kelimeler daha hızlı; basılı Ctrl/Alt/Shift açılınca sıfırlanır; vurgu daha uzun.
+- Uygulamaların ve oyunların üstünde yüzen klavye.
+- Notlar: biçimlendirme satırı, PDF ve resim dışa aktarma, yeni kartlar.
+- Şarj animasyonları: 15 görünüm, açana kadar kapalı.
+</tr-TR>
+<zh-CN>
+Pulse 1.0.400
+- 新书库：封面墙、收藏夹、按分类的免费经典。
+- Game Hub：22 种带标志的盒子样式、随机混搭、自己的 HTML 游戏、盒子背面的删除按钮。
+- 键盘：两步修正的单词修正更快；重新打开时 Ctrl/Alt/Shift 复位；高亮时间更长。
+- 悬浮键盘可在应用和游戏上方使用。
+- 备忘录：格式栏、PDF 和图片导出、新卡片。
+- 充电动画：15 种样式，开启前默认关闭。
+</zh-CN>
