@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -139,5 +141,131 @@ fun SnakeGame() {
             }
         }
         Text(tr("Drag to turn. Tap to play again after a crash.", "Çevirmek için kaydır. Çarpınca tekrar oynamak için dokun."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+// ---- 2048 ---------------------------------------------------------------------------------------------------------
+
+private fun slide2048(line: List<Int>): Pair<List<Int>, Int> {
+    val nz = line.filter { it != 0 }
+    val out = ArrayList<Int>(); var gain = 0; var i = 0
+    while (i < nz.size) {
+        if (i + 1 < nz.size && nz[i] == nz[i + 1]) { out += nz[i] * 2; gain += nz[i] * 2; i += 2 } else { out += nz[i]; i++ }
+    }
+    while (out.size < 4) out += 0
+    return out to gain
+}
+
+/** One move of the 4 x 4 board: [dir] 0 left, 1 right, 2 up, 3 down. Returns the new board and the points gained. */
+private fun move2048(b: List<Int>, dir: Int): Pair<List<Int>, Int> {
+    val res = MutableList(16) { 0 }; var gain = 0
+    for (k in 0 until 4) {
+        val idx = (0 until 4).map { j -> when (dir) { 0 -> k * 4 + j; 1 -> k * 4 + (3 - j); 2 -> j * 4 + k; else -> (3 - j) * 4 + k } }
+        val (line, g) = slide2048(idx.map { b[it] }); gain += g
+        idx.forEachIndexed { j, pos -> res[pos] = line[j] }
+    }
+    return res to gain
+}
+
+private fun addTile2048(b: List<Int>): List<Int> {
+    val free = b.indices.filter { b[it] == 0 }
+    if (free.isEmpty()) return b
+    val m = b.toMutableList(); m[free.random()] = if (Math.random() < .9) 2 else 4
+    return m
+}
+
+private fun tileColor(v: Int): Color = when (v) {
+    0 -> Color(0xFFCDC1B4); 2 -> Color(0xFFEEE4DA); 4 -> Color(0xFFEDE0C8); 8 -> Color(0xFFF2B179); 16 -> Color(0xFFF59563); 32 -> Color(0xFFF67C5F)
+    64 -> Color(0xFFF65E3B); 128 -> Color(0xFFEDCF72); 256 -> Color(0xFFEDCC61); 512 -> Color(0xFFEDC850); 1024 -> Color(0xFFEDC53F); else -> Color(0xFFEDC22E)
+}
+
+/** 2048: drag to slide every tile; equal tiles that meet join. */
+@Composable
+fun Game2048() {
+    var board by remember { mutableStateOf(addTile2048(addTile2048(List(16) { 0 }))) }
+    var score by remember { mutableIntStateOf(0) }
+    var over by remember { mutableStateOf(false) }
+    fun go(dir: Int) {
+        val (nb, g) = move2048(board, dir)
+        if (nb == board) return
+        board = addTile2048(nb); score += g
+        if ((0..3).none { move2048(board, it).first != board }) over = true
+    }
+    Column(Modifier.fillMaxSize().background(T.bg).padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (over) tr("Game over: $score", "Oyun bitti: $score") else tr("Score: $score", "Puan: $score"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(tr("New", "Yeni"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { board = addTile2048(addTile2048(List(16) { 0 })); score = 0; over = false }.padding(8.dp))
+        }
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(1f).background(Color(0xFFBBADA0), RoundedCornerShape(6.dp))
+                .pointerInput(Unit) {
+                    var acc = Offset.Zero
+                    detectDragGestures(
+                        onDragStart = { acc = Offset.Zero },
+                        onDragEnd = {
+                            if (!over && maxOf(abs(acc.x), abs(acc.y)) > 24f) go(if (abs(acc.x) > abs(acc.y)) (if (acc.x > 0) 1 else 0) else (if (acc.y > 0) 3 else 2))
+                        },
+                        onDrag = { c, d -> c.consume(); acc += d },
+                    )
+                },
+        ) {
+            Column(Modifier.fillMaxSize().padding(5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                for (r in 0 until 4) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    for (c in 0 until 4) {
+                        val v = board[r * 4 + c]
+                        Box(Modifier.weight(1f).fillMaxHeight().background(tileColor(v), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
+                            if (v > 0) Text("$v", color = if (v <= 4) Color(0xFF776E65) else Color.White, fontWeight = FontWeight.Bold, fontSize = if (v < 100) 24.sp else if (v < 1000) 20.sp else 15.sp)
+                        }
+                    }
+                }
+            }
+        }
+        Text(tr("Drag to slide the tiles.", "Karoları kaydırmak için sürükle."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+// ---- Tic-tac-toe --------------------------------------------------------------------------------------------------
+
+private val TTT_LINES = listOf(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6, 7, 8), listOf(0, 3, 6), listOf(1, 4, 7), listOf(2, 5, 8), listOf(0, 4, 8), listOf(2, 4, 6))
+
+private fun tttWinner(b: List<Char>): Char? = TTT_LINES.firstOrNull { l -> b[l[0]] != ' ' && b[l[0]] == b[l[1]] && b[l[1]] == b[l[2]] }?.let { b[it[0]] }
+
+/** The computer plays O: win if it can, block if it must, else the centre, a corner, anything. */
+private fun tttCpu(b: List<Char>): Int {
+    fun finishing(who: Char): Int? = (0..8).firstOrNull { cell -> b[cell] == ' ' && tttWinner(b.toMutableList().also { m -> m[cell] = who }) == who }
+    return finishing('O') ?: finishing('X') ?: (if (b[4] == ' ') 4 else null) ?: listOf(0, 2, 6, 8).filter { b[it] == ' ' }.randomOrNull() ?: (0..8).filter { b[it] == ' ' }.random()
+}
+
+/** Noughts and crosses against the computer: you are X. */
+@Composable
+fun TicTacToeGame() {
+    var board by remember { mutableStateOf(List(9) { ' ' }) }
+    val win = tttWinner(board)
+    val full = board.none { it == ' ' }
+    Column(Modifier.fillMaxSize().background(T.bg).padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            when { win == 'X' -> tr("You win!", "Kazandın!"); win == 'O' -> tr("The computer wins", "Bilgisayar kazandı"); full -> tr("A draw", "Berabere"); else -> tr("Your turn (X)", "Sıra sende (X)") },
+            color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Column(Modifier.fillMaxWidth().aspectRatio(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (r in 0 until 3) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (c in 0 until 3) {
+                    val i = r * 3 + c
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight().background(T.panel, RoundedCornerShape(6.dp)).clickable {
+                            if (board[i] == ' ' && win == null && !full) {
+                                val nb = board.toMutableList().also { it[i] = 'X' }
+                                if (tttWinner(nb) == null && nb.any { it == ' ' }) nb[tttCpu(nb)] = 'O'
+                                board = nb
+                            }
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (board[i] != ' ') Text(board[i].toString(), color = if (board[i] == 'X') T.accent else T.text, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        Text(tr("New game", "Yeni oyun"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { board = List(9) { ' ' } }.padding(12.dp))
     }
 }
