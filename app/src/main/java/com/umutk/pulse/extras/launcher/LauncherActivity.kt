@@ -248,7 +248,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
         val route = id.removePrefix("pulse:x:")
         val title = desktopItems().firstOrNull { it.pkg == id }?.label ?: route
         if (lookId in WINDOWS_LOOKS) DesktopWindows.open(route, title)
-        else runCatching { ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        // the app opens in the look that is on in the launcher (when it has that look)
+        else runCatching { ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", route).putExtra("look", lookId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         return
     }
     if (lookId in WINDOWS_LOOKS) {
