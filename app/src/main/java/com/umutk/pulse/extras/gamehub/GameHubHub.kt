@@ -993,10 +993,11 @@ fun GameHubHub(onBack: () -> Unit) {
                             else -> showHidden || g.pkg !in hidden
                         }
                     }
-                    if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // (nothing says "no games" while the list is still being read: it is only said once the list is there and is empty)
+                    if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
-                        Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
-                    } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
+                        Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
+                    } } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         Modifier.fillMaxSize().navigationBarsPadding(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open

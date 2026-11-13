@@ -376,6 +376,7 @@ function build(){
     A("Add a game","Add","Any app of the phone can be put on the shelf as a game.",()=>{if(window.Settings&&Settings.close)Settings.close();setTimeout(()=>{if(api.ghRun)api.ghRun("add")},250)},{keys:"add game app plus"}),
     H("Covers"),
     GHT("Fetch covers from Google Play","playCovers",false,"A cover from Google Play when Steam has none."),
+    GHX("RAWG key (screenshots and ratings)","rawgKey","Your own free RAWG key (rawg.io/apikey): the screenshots on the back of a box and the game's rating. Stored on this device.",{secret:true,ph:"Not set"}),
     GHX("SteamGridDB key (more covers)","sgdbKey","Your own free SteamGridDB key, for more covers. Stored on this device.",{secret:true,ph:"Not set"}),
     A("Look for covers",()=>api.ghGet&&api.ghGet("coversRunning")==="true"?"Stop":"Look for covers","Finds the covers of your games on the internet, in the background. Needs the SteamGridDB key.",()=>{if(api.ghRun)api.ghRun(api.ghGet&&api.ghGet("coversRunning")==="true"?"stopCovers":"lookCovers")},{keys:"covers look search steamgriddb"}),
     H("Case style"),
