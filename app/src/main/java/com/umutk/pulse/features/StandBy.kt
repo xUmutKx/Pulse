@@ -156,7 +156,10 @@ object StandByPrefs {
     fun autoCharge(c: Context) = p(c).getBoolean("autoCharge3", false)
     fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge3", v).apply()
     /** The animation that plays when the charger is plugged in: 0 none, 1 to 5 the looks of [ChargeAnim]. */
-    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(0, 6)
+    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(1, 16)
+    /** The charging animation is off until this switch is on. */
+    fun chargeAnimOn(c: Context) = p(c).getBoolean("chargeAnimOn", false)
+    fun setChargeAnimOn(c: Context, v: Boolean) = p(c).edit().putBoolean("chargeAnimOn", v).apply()
     fun setChargeAnim(c: Context, v: Int) = p(c).edit().putInt("chargeAnim", v).apply()
     /** The charge animation also plays when the screen is on while the charger is plugged in (off by default: it only greets a phone whose screen is off). */
     fun chargeScreenOn(c: Context) = p(c).getBoolean("chargeOn", false)
@@ -546,6 +549,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var auto by remember { mutableStateOf(StandByPrefs.autoCharge(ctx)) }
     var idle by remember { mutableStateOf(StandByPrefs.idleSec(ctx)) }
     var chg by remember { mutableIntStateOf(StandByPrefs.chargeAnim(ctx)) }
+    var chgOn by remember { mutableStateOf(StandByPrefs.chargeAnimOn(ctx)) }
     var chargeOn by remember { mutableStateOf(StandByPrefs.chargeScreenOn(ctx)) }
     var side by remember { mutableStateOf(StandByPrefs.sideways(ctx)) }
     var black by remember { mutableStateOf(StandByPrefs.widgetBlack(ctx)) }
@@ -680,10 +684,11 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
-            Text(tr("Animation when the charger is plugged in", "Şarj takılınca animasyon"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+            Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+            val names = listOf(1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Ripple", "Dalga"), 5 to tr("Bar", "Çubuk"), 7 to tr("Heartbeat", "Nabız"), 8 to tr("Rising", "Yükselen"), 9 to tr("Orbit", "Yörünge"),
+                10 to tr("Battery", "Pil"), 11 to tr("Aurora", "Aurora"), 12 to tr("Honeycomb", "Petek"), 13 to tr("Radar", "Radar"), 14 to tr("Sparks", "Kıvılcım"), 15 to tr("Swirl", "Girdap"), 16 to tr("Edge light", "Kenar ışığı"), 6 to tr("Random", "Rastgele"))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Ripple", "Dalga"), 5 to tr("Bar", "Çubuk"), 6 to tr("Random", "Rastgele"))
-                    .forEach { (v, n) -> PChip(chg == v, n) { chg = v; StandByPrefs.setChargeAnim(ctx, v); if (v > 0) ChargeAnim.show(ctx, v) } }
+                names.forEach { (v, n) -> PChip(chg == v, n) { chg = v; StandByPrefs.setChargeAnim(ctx, v); ChargeAnim.show(ctx, v) } }
             }
             sw(tr("Also play it while the screen is on", "Ekran açıkken de oynat"), chargeOn) { chargeOn = it; StandByPrefs.setChargeScreenOn(ctx, it) }
             sw(tr("Home screen widgets: black background", "Ana ekran widget'ları: siyah arka plan"), black) { black = it; StandByPrefs.setWidgetBlack(ctx, it) }
@@ -693,6 +698,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
                 listOf(0 to tr("Off", "Kapalı"), 15 to "15 s", 30 to "30 s", 60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (v, n) -> PChip(idle == v, n) { idle = v; StandByPrefs.setIdleSec(ctx, v) } }
             }
             Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The \"Screen cover\" tile starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"Ekran kapağı\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
+            sw(tr("Charging animation on", "Şarj animasyonu açık"), chgOn) { chgOn = it; StandByPrefs.setChargeAnimOn(ctx, it); if (it) ChargeAnim.show(ctx, chg) else ChargeAnim.hide() }
         }
     }
 }

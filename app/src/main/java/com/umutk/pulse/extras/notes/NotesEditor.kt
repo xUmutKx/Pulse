@@ -193,16 +193,33 @@ fun NoteEditor(
         val t = bodyField.text
         val lo = minOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
         val hi = maxOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
-        val (out, cur) = if (kind == "bold") {
-            if (lo == hi) { val ins = "**" + tr("bold", "kalın") + "**"; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
-            else { val w = "**" + t.substring(lo, hi) + "**"; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
+        val mark = when (kind) { "bold" -> "**"; "italic" -> "*"; "under" -> "__"; "strike" -> "~~"; "mark" -> "=="; else -> "" }
+        val (out, selA, selB) = if (mark.isNotEmpty()) {
+            when {
+                // the selection already sits between the marks: take them off
+                lo >= mark.length && hi + mark.length <= t.length && t.substring(lo - mark.length, lo) == mark && t.substring(hi, hi + mark.length) == mark ->
+                    Triple(t.substring(0, lo - mark.length) + t.substring(lo, hi) + t.substring(hi + mark.length), lo - mark.length, hi - mark.length)
+                lo == hi -> Triple(t.substring(0, lo) + mark + mark + t.substring(hi), lo + mark.length, lo + mark.length)
+                else -> Triple(t.substring(0, lo) + mark + t.substring(lo, hi) + mark + t.substring(hi), lo + mark.length, hi + mark.length)
+            }
         } else {
-            // a line marker goes at the start of the line where the selection starts
-            val prefix = when (kind) { "heading" -> "## "; "bullet" -> "- "; else -> "[ ] " }
+            // a line marker goes on every line the selection touches: the same marker again takes it off, another one replaces it
             val ls = t.lastIndexOf('\n', lo - 1) + 1
-            (t.substring(0, ls) + prefix + t.substring(ls)) to hi + prefix.length
+            val le = t.indexOf('\n', hi).let { if (it < 0) t.length else it }
+            val prefix = when (kind) { "heading" -> "## "; "h1" -> "# "; "bullet" -> "- "; "quote" -> "> "; "number" -> "1. "; else -> "[ ] " }
+            val any = Regex("^(?:#{1,2} |[-*] \\[[ xX]] |\\[[ xX]] |[-*] |> |\\d+\\. )")
+            var k = 0
+            val lines = t.substring(ls, le).split("\n").map { l ->
+                val had = any.find(l)?.value ?: ""
+                val rest = l.removePrefix(had)
+                k++
+                if (had == prefix || (kind == "number" && had.matches(Regex("\\d+\\. ")))) rest
+                else (if (kind == "number") "$k. " else prefix) + rest
+            }
+            val joined = lines.joinToString("\n")
+            Triple(t.substring(0, ls) + joined + t.substring(le), ls + joined.length, ls + joined.length)
         }
-        bodyField = TextFieldValue(out, TextRange(cur.coerceIn(0, out.length)))
+        bodyField = TextFieldValue(out, TextRange(selA.coerceIn(0, out.length), selB.coerceIn(0, out.length)))
         changeBody(out)
     }
     fun toggleRecord() {
@@ -249,6 +266,8 @@ fun NoteEditor(
             NChip(tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
             NChip(if (preview) tr("Edit", "Düzenle") else tr("Preview", "Önizleme"), fg) { preview = !preview }
             NChip(tr("Copy", "Kopyala"), fg) { copyNote(ctx, text) }
+            NChip(tr("Save as PDF", "PDF olarak kaydet"), fg) { NotesExport.share(ctx, NotesExport.pdf(ctx, note), "application/pdf") }
+            NChip(tr("Save as image", "Resim olarak kaydet"), fg) { NotesExport.share(ctx, NotesExport.image(ctx, note), "image/png") }
             NChip(tr("Duplicate", "Çoğalt"), fg) { onDuplicate() }
             NChip(tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
             NChip(tr("Folder", "Klasör"), fg) { onDlg(NDlg.Folder(setOf(note.id))) }
@@ -345,15 +364,26 @@ fun NoteEditor(
             Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
         ) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             listOf(
                 Triple("H", tr("Heading", "Başlık"), "heading"),
                 Triple("B", tr("Bold", "Kalın"), "bold"),
+                Triple("I", tr("Italic", "İtalik"), "italic"),
+                Triple("U", tr("Underline", "Altı çizili"), "under"),
+                Triple("S", tr("Strikethrough", "Üstü çizili"), "strike"),
+                Triple("▮", tr("Highlight", "Vurgula"), "mark"),
                 Triple("•", tr("Bullet", "Madde"), "bullet"),
+                Triple("1.", tr("Numbered", "Numaralı"), "number"),
                 Triple("☐", tr("Checklist", "Kontrol"), "check"),
+                Triple("❝", tr("Quote", "Alıntı"), "quote"),
             ).forEach { (label, desc, kind) ->
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { applyFmt(kind) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
-                    Text(label, color = fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
+                    Text(label, color = if (kind == "mark") Color(0xFFFFC107) else fg, fontSize = 17.sp,
+                        fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold,
+                        fontStyle = if (label == "I") androidx.compose.ui.text.font.FontStyle.Italic else null,
+                        textDecoration = when (label) { "U" -> androidx.compose.ui.text.style.TextDecoration.Underline; "S" -> androidx.compose.ui.text.style.TextDecoration.LineThrough; else -> null })
                 }
+            }
             }
         }
         InkBar(
