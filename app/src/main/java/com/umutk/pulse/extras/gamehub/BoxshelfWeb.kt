@@ -258,6 +258,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 // "Add a game" of the shelf's own settings: Game Hub's list of the phone's apps opens
                 "add" -> { ShelfAsk.add.value = true }
                 "addHtml" -> { ShelfAsk.addHtml.value = true }
+                "reshuffle" -> { Thread { CaseCover.applyAll(c, loadGames(c).map { it.pkg }, "mix"); ShelfSync.bump() }.start() }
                 "restoreMega" -> { MegaGames.restoreAll(c); ShelfSync.bump() }
             }
         }
