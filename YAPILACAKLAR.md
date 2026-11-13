@@ -2460,3 +2460,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Yenilikler metni yeniden yazıldı
 - Klavye: düzeltme hızı, bitişik kelime ayırma, dokunuş adayları
 - Notlar: biçimlendirme satırı, PDF/resim dışa aktarma, kart görünümü, kalem düğmesi
+
+## Pulse 1.0.400 (derlenmedi)
+- Game Hub (Boxshelf) ayarları: Game Hub ilk kategori, PC sayfaları çıkarıldı, API anahtarları kategorisi, ayarların klavyesi telefona sığar + yapıştır, yazı kutuları Android klavyesini ister, beyaz parlama yok, WebView süreci kaybolursa raf yeniden kurulur
+- Yüzen klavye (erişilebilirlik): tüm Pulse klavyesi, hep açık düğme, istenen yere taşınır, yazı kutusu olsun olmasın
