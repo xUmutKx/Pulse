@@ -104,6 +104,8 @@ fun PowerampApp(
     val sleepLeft by engine.sleepLeftMs.collectAsState()
     var lyricsOpen by remember { mutableStateOf(false) }
     var pullShown by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    // the page's pull in either direction (pullShown only counts a pull down): the Blended cover follows it
+    var pullOffset by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     var tagEdit by remember { mutableStateOf(false) }
     var artOpen by remember { mutableStateOf(false) }
     var coverRev by remember { mutableIntStateOf(0) }
@@ -168,11 +170,12 @@ fun PowerampApp(
         val pageKey = tab?.name?.lowercase() ?: "now"
         // "Blended" (Settings > Look): the cover edge to edge at the top, fading into its own blurred copy that fills the screen (the now-playing page only)
         if (tab == null && PowerampPrefs.blended(ctx)) cover?.let { cv ->
-            Image(cv, null, Modifier.fillMaxSize().blur(36.dp), contentScale = ContentScale.Crop)
+            // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
+            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset }.blur(36.dp), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
             Image(cv, null,
                 Modifier.fillMaxWidth().aspectRatio(1f)
-                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .graphicsLayer { translationY = pullOffset; compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
                         drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black, .55f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
@@ -230,7 +233,7 @@ fun PowerampApp(
                             onSleepSet = { m, end -> engine.setSleep(m, end) },
                             onLyrics = { lyricsOpen = true },
                             onLyricsDismiss = { lyricsOpen = false },
-                            onPageOffset = { pullShown = it },
+                            onPageOffset = { pullShown = it; pullOffset = it },
                             onPullDown = { tab = lastTab ?: PowerampTab.LIBRARY },
                             // no suggestions under the player: the now playing page is one screen and does not scroll
                             lyricsOpen = lyricsOpen,

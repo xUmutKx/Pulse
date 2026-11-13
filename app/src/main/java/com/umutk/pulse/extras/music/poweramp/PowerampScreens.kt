@@ -486,6 +486,16 @@ fun NowPlayingScreen(
                     ModeItem(tr("Play all", "Hepsini çal"), false) { onPlayAll?.invoke(false) },
                 ))
             }
+            // Settings > Look > Two rows of buttons: a second row of four under the first (play all, play all shuffled, back and forward 10 seconds)
+            if (PowerampPrefs.twoRows(ctx)) {
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    FlatBtn(Icons.Rounded.PlayArrow, tr("Play all", "Hepsini çal"), false, style) { onPlayAll?.invoke(false) }
+                    FlatBtn(Icons.Rounded.Shuffle, tr("Play all shuffled", "Hepsini karıştırarak çal"), false, style) { onPlayAll?.invoke(true) }
+                    FlatBtn(Icons.Rounded.FastRewind, tr("Back 10 seconds", "10 sn geri"), false, style) { onSeek((positionMs.toInt() - 10_000).coerceAtLeast(0)) }
+                    FlatBtn(Icons.Rounded.FastForward, tr("Forward 10 seconds", "10 sn ileri"), false, style) { onSeek((positionMs.toInt() + 10_000).coerceAtMost(durationMs.toInt())) }
+                }
+            }
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
             // the gap above the transport shows the line that is sung (the setting "Show in player" of the live lyrics decides)
             Box(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {

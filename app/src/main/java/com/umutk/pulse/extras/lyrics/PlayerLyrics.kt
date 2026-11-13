@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -139,6 +140,11 @@ fun PlayerLyrics(
             else picked = cur + i
         }
         Box(Modifier.fillMaxSize().background(Color.Black).nestedScroll(closer).pointerInput(Unit) { tapGestures { } }) {
+            // the Blended look: the lyrics lie on the blurred cover, darkened so the words read, instead of on plain black
+            if (art != null && com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(ctx)) {
+                androidx.compose.foundation.Image(art, null, Modifier.fillMaxSize().blur(36.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .48f)))
+            }
             val (busy, res0) = state
             val res = edited ?: res0
             when {
