@@ -11,7 +11,7 @@ object KeyboardPrefs {
     internal var loaded = false
 
     // look
-    var theme by mutableStateOf("amoled")
+    var theme by mutableStateOf("samsung")
     /** Custom theme colours (ARGB): background, key, key text, special key, accent, toolbar menu. */
     var cBg by mutableStateOf(0xFF000000.toInt())
     var cKey by mutableStateOf(0xFF1F1F1F.toInt())
@@ -274,7 +274,7 @@ object KeyboardPrefs {
 
     /** The theme colours only: the custom theme goes back to its first values. */
     fun resetTheme(c: Context) {
-        theme = "amoled"
+        theme = "samsung"
         cBg = 0xFF000000.toInt(); cKey = 0xFF1F1F1F.toInt(); cText = 0xFFFFFFFF.toInt(); cSpecial = 0xFF151515.toInt(); cAccent = 0xFF4FC3F7.toInt(); cMenu = 0xFF000000.toInt(); cRadius = 10
         save(c)
     }
@@ -283,7 +283,7 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "amoled"; heightPct = 110; landHeightPct = 120; landProRow = false; samProRow = false; landNumberRow = false; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
+        theme = "samsung"; heightPct = 110; landHeightPct = 120; landProRow = false; samProRow = false; landNumberRow = false; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; bottomKey = "emoji"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         numEnter = "enter"; cursorControl = true; cursorSens = 100; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; floatY = 0f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
