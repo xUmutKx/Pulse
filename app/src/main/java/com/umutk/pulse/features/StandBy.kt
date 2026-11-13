@@ -66,6 +66,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -600,6 +602,19 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
         PSwitch(editing in pages, { on -> pages = if (on) (if (editing == "blank") listOf("blank") else (pages - "blank") + editing).distinct() else (pages - editing).ifEmpty { listOf("blank") }; StandByPrefs.setPages(ctx, pages); com.umutk.pulse.widgets.CoverWidget.refreshAll(ctx) })
     }
+    // the charging animation: each look plays in its own small picture; a tap picks it
+    Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+    LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(chargeNames()) { (v, n) ->
+            val shape = RoundedCornerShape(12.dp)
+            Column(Modifier.width(88.dp).clickable { chg = v; StandByPrefs.setChargeAnim(ctx, v) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                ChargeMini(v, Modifier.size(88.dp, 120.dp).clip(shape).border(if (chg == v) 2.dp else 1.dp, if (chg == v) T.accent else T.line, shape))
+                Text(n, color = if (chg == v) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+    }
+    sw(tr("Charging animation on", "Şarj animasyonu açık"), chgOn) { chgOn = it; StandByPrefs.setChargeAnimOn(ctx, it); if (it) ChargeAnim.show(ctx, chg) else ChargeAnim.hide() }
+    Row(Modifier.padding(bottom = 4.dp)) { PChip(false, tr("Play full screen", "Tam ekran oynat")) { ChargeAnim.show(ctx, chg) } }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }
     }
@@ -684,12 +699,6 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
-            Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-            val names = listOf(1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Ripple", "Dalga"), 5 to tr("Bar", "Çubuk"), 7 to tr("Heartbeat", "Nabız"), 8 to tr("Rising", "Yükselen"), 9 to tr("Orbit", "Yörünge"),
-                10 to tr("Battery", "Pil"), 11 to tr("Aurora", "Aurora"), 12 to tr("Honeycomb", "Petek"), 13 to tr("Radar", "Radar"), 14 to tr("Sparks", "Kıvılcım"), 15 to tr("Swirl", "Girdap"), 16 to tr("Edge light", "Kenar ışığı"), 6 to tr("Random", "Rastgele"))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                names.forEach { (v, n) -> PChip(chg == v, n) { chg = v; StandByPrefs.setChargeAnim(ctx, v); ChargeAnim.show(ctx, v) } }
-            }
             sw(tr("Also play it while the screen is on", "Ekran açıkken de oynat"), chargeOn) { chargeOn = it; StandByPrefs.setChargeScreenOn(ctx, it) }
             sw(tr("Home screen widgets: black background", "Ana ekran widget'ları: siyah arka plan"), black) { black = it; StandByPrefs.setWidgetBlack(ctx, it) }
             if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
@@ -698,10 +707,18 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
                 listOf(0 to tr("Off", "Kapalı"), 15 to "15 s", 30 to "30 s", 60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (v, n) -> PChip(idle == v, n) { idle = v; StandByPrefs.setIdleSec(ctx, v) } }
             }
             Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The \"Screen cover\" tile starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"Ekran kapağı\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
-            sw(tr("Charging animation on", "Şarj animasyonu açık"), chgOn) { chgOn = it; StandByPrefs.setChargeAnimOn(ctx, it); if (it) ChargeAnim.show(ctx, chg) else ChargeAnim.hide() }
         }
     }
 }
+
+/** The looks of the charging animation: the id and the name. */
+private fun chargeNames(): List<Pair<Int, String>> = listOf(
+    1 to tr("Ring", "Halka"), 2 to tr("Liquid", "Sıvı"), 3 to tr("Bolt", "Şimşek"), 4 to tr("Ripple", "Dalga"), 5 to tr("Bar", "Çubuk"), 7 to tr("Heartbeat", "Nabız"),
+    8 to tr("Rising", "Yükselen"), 9 to tr("Orbit", "Yörünge"), 10 to tr("Battery", "Pil"), 11 to tr("Aurora", "Aurora"), 12 to tr("Honeycomb", "Petek"),
+    13 to tr("Radar", "Radar"), 14 to tr("Sparks", "Kıvılcım"), 15 to tr("Swirl", "Girdap"), 16 to tr("Edge light", "Kenar ışığı"),
+    17 to tr("Confetti", "Konfeti"), 18 to tr("Bubbles", "Baloncuk"), 19 to tr("Rainbow", "Gökkuşağı"), 20 to tr("Smiley", "Gülen yüz"), 21 to tr("Hearts", "Kalpler"),
+    22 to tr("Console", "Konsol"), 23 to tr("Words", "Sözcükler"),
+)
 
 
 
