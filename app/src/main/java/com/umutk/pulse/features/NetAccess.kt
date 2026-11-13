@@ -43,6 +43,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -134,8 +135,9 @@ object NetPolicy {
         val uid = runCatching { c.packageManager.getApplicationInfo(pkg, 0).uid }.getOrElse { return false }
         val script = buildString {
             // the old rules of this app go first, so they never stack up
-            append("iptables -D OUTPUT -m owner --uid-owner $uid -o wlan+ -j DROP 2>/dev/null; ")
-            append("iptables -D OUTPUT -m owner --uid-owner $uid -o rmnet+ -j DROP 2>/dev/null; ")
+            // (a delete of a rule that is not there is not an error: without "|| true" the last one made lifting every cut look like a failure)
+            append("iptables -D OUTPUT -m owner --uid-owner $uid -o wlan+ -j DROP 2>/dev/null || true; ")
+            append("iptables -D OUTPUT -m owner --uid-owner $uid -o rmnet+ -j DROP 2>/dev/null || true; ")
             if (wifi) append("iptables -A OUTPUT -m owner --uid-owner $uid -o wlan+ -j DROP; ")
             if (mobile) append("iptables -A OUTPUT -m owner --uid-owner $uid -o rmnet+ -j DROP; ")
         }
@@ -214,13 +216,15 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
                             icon?.let { Image(it, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)), contentScale = ContentScale.Fit) }
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = if (wifi || mobile) T.text.copy(alpha = .55f) else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         // the two icons are the buttons: lit when the app may use that network, grey when it is cut off
-                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = wifi; wifi = !wifi; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) wifi = was } }.semantics { contentDescription = "Wi-Fi" }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = wifi; wifi = !wifi; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) { wifi = was; netFail(ctx) } } }.semantics { contentDescription = "Wi-Fi" }, contentAlignment = Alignment.Center) {
                             PIcon("wifi", if (!wifi) T.accent else T.sub.copy(alpha = .35f), 26.dp)
+                            if (wifi) BlockSlash()
                         }
-                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = mobile; mobile = !mobile; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) mobile = was } }.semantics { contentDescription = tr("Mobile", "Mobil") }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = mobile; mobile = !mobile; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) { mobile = was; netFail(ctx) } } }.semantics { contentDescription = tr("Mobile", "Mobil") }, contentAlignment = Alignment.Center) {
                             PIcon("phone", if (!mobile) T.accent else T.sub.copy(alpha = .35f), 26.dp)
+                            if (mobile) BlockSlash()
                         }
                     }
                 }
@@ -228,4 +232,18 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
         },
         confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
     )
+}
+
+/** A red slash over an icon: the app is cut off from this network. */
+@Composable
+private fun BlockSlash() {
+    Box(Modifier.size(30.dp).drawBehind {
+        drawLine(androidx.compose.ui.graphics.Color(0xFFE53935), androidx.compose.ui.geometry.Offset(size.width * .12f, size.height * .88f), androidx.compose.ui.geometry.Offset(size.width * .88f, size.height * .12f), 3.5f, androidx.compose.ui.graphics.StrokeCap.Round)
+    })
+}
+
+private fun netFail(ctx: Context) {
+    val msg = if (Privilege.mode == Privilege.Mode.None) tr("Needs root or Shizuku to cut an app off.", "Bir uygulamayı kesmek için root ya da Shizuku gerekir.")
+    else tr("The cut could not be set (iptables refused it).", "Kesme uygulanamadı (iptables reddetti).")
+    android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show() }
 }
