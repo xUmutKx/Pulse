@@ -35,3 +35,9 @@ local chat and speech to text: llama.cpp and whisper.cpp (MIT, ggml authors), fe
 The Sonic look (extras/music/cassette/SonicPlayer.kt) follows the design of [Sonic](https://github.com/Abhiroop1122/Sonic) by Abhiroop1122 (MIT licence): the deck in glowing lines, the LED windows, the crate of sleeves. The code is written for Pulse in 2D; no file of Sonic is copied (its font and 3D model are not used).
 
 - **Boxshelf** (GPL-3.0, sassiestrhihno/boxshelf-source v1.82.0-beta.10): the shelf screen of Game Hub is Boxshelf's own web screen (the `renderer/` folder and its Android touch extras), run in a WebView from `app/src/main/assets/boxshelf/`. Changes made for Pulse are listed in `assets/boxshelf/NOTICE.txt` (a new `pulse-api.js`, a few lines in `index.html` and `app.js`; the PDF reader, Wii U manual page, image tools, phone companion page and 3D-model optimiser were left out). It carries three.js (MIT) and Fontsource fonts (SIL OFL 1.1).
+
+## Unexpected Keyboard (layout data)
+
+The symbols on the corners of the letter keys (Settings > Keyboard > Corner swipes, `extras/keyboard/KeyboardCorners.kt`) are taken from the QWERTY (US) layout of
+[Unexpected Keyboard](https://github.com/Julow/Unexpected-Keyboard) by Julow (`srcs/layouts/latn_qwerty_us.xml`). Its layout definitions are released under
+CC0 1.0 (public domain); the rest of that project is GPL-3.0 and none of its code is used.
