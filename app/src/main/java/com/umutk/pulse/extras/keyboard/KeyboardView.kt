@@ -673,7 +673,7 @@ private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, ki
     if (h != "none") Icon(toolIcon(th, h), null, tint = if (listening) th.accent else th.text.copy(alpha = .7f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(15.dp))
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRowAt(st.land); "numbers" -> KeyboardPrefs.numberRowAt(st.land); "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> (if (KeyboardPrefs.theme == "samsung") KeyboardPrefs.samProRow else KeyboardPrefs.proRowAt(st.land)); "numbers" -> KeyboardPrefs.numberRowAt(st.land); "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
 
 /** The keyboard is drawn for a screen turned sideways (its own height and rows, see KeyboardPrefs.heightAt). */
 @Composable
@@ -694,7 +694,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val n1 = rows[0].size.toFloat()
     // the direction keyboard: nine swipe keys (letters page only; the symbol pages stay the ordinary ones)
     if (KeyboardPrefs.dirLayout && st.page == 0) { ThumbPanel(th, st, act, keyH); return }
-    if (KeyboardPrefs.proRowAt(land) && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
+    val extraRow = if (th.samsung) KeyboardPrefs.samProRow else KeyboardPrefs.proRowAt(land)
+    if (extraRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         // the key bar: Fn (its twelve keys open from it), Shift, the arrows, Home / End, Page up / down, Esc, Tab and the editing keys
         if (st.fnOpen) {
@@ -769,7 +770,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     }
     if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f)))
     }
-    if (KeyboardPrefs.proRowAt(land) && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f))) }
+    if (extraRow && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f))) }
 }
 
 @Composable

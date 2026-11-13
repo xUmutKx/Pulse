@@ -238,6 +238,8 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
             Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
+            // (the Samsung look has its own switch, off until it is asked for)
+            if (KeyboardPrefs.theme == "samsung") Switch(tr("Extra key row (Samsung look)", "Ek tuş satırı (Samsung görünümü)"), tr("Esc, Tab, Ctrl, Alt, Win, arrows", "Esc, Tab, Ctrl, Alt, Win, oklar"), KeyboardPrefs.samProRow) { KeyboardPrefs.samProRow = it; save() }
             Switch(tr("Extra key row", "Ek tuş satırı"), tr("Esc, Tab, Ctrl, Alt, Win, arrows, F-keys", "Esc, Tab, Ctrl, Alt, Win, oklar, F tuşları"), KeyboardPrefs.proRow) { KeyboardPrefs.proRow = it; save() }
             if (KeyboardPrefs.proRow) {
                 Switch(tr("Under the space row", "Boşluk satırının altında"), "", KeyboardPrefs.proBottom) { KeyboardPrefs.proBottom = it; save() }
