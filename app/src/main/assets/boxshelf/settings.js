@@ -882,7 +882,7 @@ function oskMove(a){const K=keysNow(),pos=[];K.forEach((row,ri)=>row.forEach((k,
 
 /* ---------- editing a text setting ---------- */
 /* (beta.13) On Android a finger opens Boxshelf's own keyboard too: Android's, over a fullscreen page, did not come up */
-const oskTouch=()=>!!(window.bsPlatform&&bsPlatform.os==="android");
+const oskTouch=()=>false; /* Pulse: a finger types with Pulse's own keyboard into a real text box (the host brings it up); Boxshelf's on-screen keyboard is for a game pad only */
 function startEdit(r,first){edit={row:r,value:(first!=null?String(r.get()||"")+first:String(r.get()||"")),idx:rowI};
   if(device==="pad"||oskTouch()){openOsk("edit");render()}else{focus="edit";render();const inp=E.list.querySelector(".bss-edit");if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length)}catch{}}}}
 function paintEdit(){const el=E.list.querySelector(".bss-editv");if(el){el.firstChild.textContent=edit.row.secret?"•".repeat(edit.value.length):edit.value}}
