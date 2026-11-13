@@ -96,6 +96,8 @@ fun LauncherStoreWindow() {
 /** File Explorer with tabs: each tab keeps its own folder, only the open one is shown. */
 @Composable
 fun ExplorerTabsWindow() {
+    // the Windows 7 desktop has its own File Explorer, drawn the way Windows 7 draws it; the other looks keep the tabbed Files page
+    if (T.id == "win7") { Win7Explorer(); return }
     var tabs by remember { mutableIntStateOf(1) }
     var cur by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
