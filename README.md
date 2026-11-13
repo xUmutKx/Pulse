@@ -314,7 +314,7 @@ You need JDK 17 or newer and the Android SDK with platform 34. Put the SDK path 
 gradle :app:assembleRelease
 ```
 
-The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Actions and the Termux script `termux-build.sh`) is signed with the fixed key in `ci/pulse.keystore`, so a new APK installs over the previous one. The key is public because the repository is (see `ci/README.md`); use your own for anything you publish.
+The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Actions) is signed with the fixed key in `ci/pulse.keystore`, so a new APK installs over the previous one. The key is public because the repository is (see `ci/README.md`); use your own for anything you publish.
 
 
 </details>

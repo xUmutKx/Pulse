@@ -1,0 +1,7 @@
+# GitHub's language bar counts only Pulse's own code (Kotlin): bundled web pages, other people's sources and generated data are left out of it
+third_party/** linguist-vendored
+extras/** linguist-vendored
+app/src/main/assets/** linguist-vendored
+app/src/main/java/rikka/** linguist-vendored
+app/src/main/java/moe/** linguist-vendored
+docs/** linguist-documentation
