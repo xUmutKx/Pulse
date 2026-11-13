@@ -274,7 +274,7 @@ class Win7LauncherLook : LauncherLook {
     @Composable
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         Column(modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            LaunchAppPicture(app, iconDp.dp, W7_TILE, Color.White)
+            LaunchAppPicture(app, iconDp.dp, Color.Transparent, Color.White)
             Text(app.label, style = W7_LABEL, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         }
     }

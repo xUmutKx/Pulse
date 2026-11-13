@@ -148,7 +148,7 @@ class Win95LauncherLook : LauncherLook {
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         Column(modifier.width(75.dp).padding(horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.width(75.dp).height(iconDp.dp + 2.dp), contentAlignment = Alignment.BottomCenter) {
-                LaunchAppPicture(app, iconDp.dp, W95.Face, W95.Black)
+                LaunchAppPicture(app, iconDp.dp, Color.Transparent, W95.Black)
             }
             Text(
                 app.label,

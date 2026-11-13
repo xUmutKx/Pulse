@@ -159,6 +159,7 @@ internal fun Caption(skin: WinSkin, i: Int, onClick: () -> Unit) {
         }
         return
     }
+    if (skin.kind == "7") { W7Caption(i, onClick); return }
     val xp = skin.kind == "xp"; val w95 = skin.kind == "95"
     val w = if (w95) 16.dp else if (xp) 22.dp else if (i == 2) 42.dp else 26.dp
     val h = if (w95) 14.dp else if (xp) 22.dp else 20.dp
@@ -178,6 +179,29 @@ internal fun Caption(skin: WinSkin, i: Int, onClick: () -> Unit) {
                 1 -> drawRect(ink, Offset(0f, 0f), androidx.compose.ui.geometry.Size(s, s), style = androidx.compose.ui.graphics.drawscope.Stroke(t))
                 else -> { drawLine(ink, Offset(0f, 0f), Offset(s, s), t * 1.3f); drawLine(ink, Offset(s, 0f), Offset(0f, s), t * 1.3f) }
             }
+        }
+    }
+}
+
+/** The Windows 7 caption buttons: one glass pill that hangs from the top edge (minimise and maximise on glass, close in red), the marks with a soft glow. */
+@Composable
+private fun W7Caption(i: Int, onClick: () -> Unit) {
+    val shape = when (i) { 0 -> RoundedCornerShape(bottomStart = 6.dp); 2 -> RoundedCornerShape(bottomEnd = 6.dp); else -> RoundedCornerShape(0.dp) }
+    val fill: Brush = if (i == 2) Brush.verticalGradient(0f to Color(0xFFEBA99C), .48f to Color(0xFFD9573F), .52f to Color(0xFFC03A22), 1f to Color(0xFFDE6A52))
+    else Brush.verticalGradient(0f to Color(0xD9FFFFFF), .48f to Color(0x80C4D8EE), .52f to Color(0x66A9C3E3), 1f to Color(0x99DCE9F8))
+    Box(Modifier.size(if (i == 2) 45.dp else 28.dp, 19.dp).clip(shape).background(fill).border(1.dp, Color(0x99263F5E), shape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(10.dp)) {
+            val s = size.width; val t = s * .16f
+            fun mark(c: Color, w: Float) {
+                when (i) {
+                    0 -> drawLine(c, Offset(0f, s * .85f), Offset(s * .7f, s * .85f), w * 1.6f)
+                    1 -> drawRect(c, Offset(0f, 0f), androidx.compose.ui.geometry.Size(s, s), style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+                    else -> { drawLine(c, Offset(0f, 0f), Offset(s, s), w * 1.3f); drawLine(c, Offset(s, 0f), Offset(0f, s), w * 1.3f) }
+                }
+            }
+            // the soft outline first, then the mark itself
+            mark(if (i == 2) Color(0xAA3A0A00) else Color.White.copy(alpha = .85f), t * 2.2f)
+            mark(if (i == 2) Color.White else Color(0xFF1F2F46), t)
         }
     }
 }

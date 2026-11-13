@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,6 +65,8 @@ internal val CONTROL_PANEL = listOf(
 /** The Control Panel as a window opens it: the groups with their items and a line under each saying what it holds. A tap opens the page in the same window. */
 @Composable
 fun ControlPanelHome() {
+    // the Windows 7 desktop has the Control Panel in its Category view: the big category names, each with its first tasks under it as links
+    if (T.id == "win7") { Win7ControlPanel(); return }
     val open = LocalOpenTool.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
         Text(tr("Adjust your computer's settings", "Bilgisayar ayarlarınızı düzenleyin"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -110,6 +114,50 @@ fun WindowsSettingsHome() {
                 }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
+        }
+    }
+}
+
+private val W7_CP_TITLE = androidx.compose.ui.graphics.Color(0xFF1E3287)
+private val W7_CP_LINK = androidx.compose.ui.graphics.Color(0xFF0066CC)
+
+/** The Control Panel of Windows 7, Category view: "Adjust your computer's settings", View by Category, the categories in two columns on a wide window. */
+@Composable
+private fun Win7ControlPanel() {
+    val open = LocalOpenTool.current
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFD8E6F6), androidx.compose.ui.graphics.Color.White), 0f, 300f)),
+    ) {
+        val two = maxWidth >= 560.dp
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Adjust your computer's settings", "Bilgisayar ayarlarınızı düzenleyin"), color = W7_CP_TITLE, fontSize = 19.sp, modifier = Modifier.weight(1f))
+                Text(tr("View by: Category \u25BE", "Görüntüleme: Kategori \u25BE"), color = W7_CP_LINK, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(12.dp))
+            CONTROL_PANEL.chunked(if (two) 2 else 1).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    row.forEach { g -> W7Category(g, Modifier.weight(1f)) { open(it) } }
+                    if (row.size == 1 && two) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun W7Category(g: CpGroup, modifier: Modifier, open: (String) -> Unit) {
+    Row(modifier.padding(4.dp), verticalAlignment = Alignment.Top) {
+        val tile = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+        Box(
+            Modifier.size(52.dp).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFF4F8FD), androidx.compose.ui.graphics.Color(0xFFCFE0F3))), tile)
+                .border(1.dp, androidx.compose.ui.graphics.Color(0xFFA9C0DC), tile),
+            contentAlignment = Alignment.Center,
+        ) { PIcon(g.items.first().icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5), 32.dp) }
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Text(tr(g.en, g.trName), color = W7_CP_TITLE, fontSize = 15.sp, modifier = Modifier.clickable { open(g.items.first().route) })
+            g.items.take(3).forEach { it -> Text(tr(it.en, it.trName), color = W7_CP_LINK, fontSize = 12.sp, modifier = Modifier.clickable { open(it.route) }.padding(top = 3.dp)) }
         }
     }
 }
