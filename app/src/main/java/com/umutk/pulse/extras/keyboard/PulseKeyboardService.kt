@@ -967,6 +967,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * [after] is how many characters stand between the end of the word and the cursor.
      */
     private fun flashFix(c: android.view.inputmethod.InputConnection, old: String, new: String, after: Int) {
+        if (!KeyboardPrefs.fixFlash) return
         runCatching {
             val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
                 ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return
@@ -991,7 +992,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** After the key's work is done: the corrected [word] (with [tail] behind it, at the cursor) lights up for most of a second. */
     private fun flashLater(word: String, tail: String) {
-        if (!KeyboardPrefs.fixFlash || st.plain) return
+        if (!KeyboardPrefs.fixSelect || st.plain) return
         flashHandler.post {
             runCatching {
                 val c = currentInputConnection ?: return@post

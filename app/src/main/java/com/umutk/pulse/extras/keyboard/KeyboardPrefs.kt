@@ -76,6 +76,8 @@ object KeyboardPrefs {
     var autocorrect by mutableStateOf(true)
     /** A mended word is highlighted (selected) for a moment, then the cursor goes back behind it. */
     var fixFlash by mutableStateOf(true)
+    /** A corrected word is also selected for a moment (off: only the phone's own blue highlight of a correction shows). */
+    var fixSelect by mutableStateOf(false)
     /** A word that can only be a slip is mended when the typing pauses (no space needed), so the app's own send button sends it corrected. */
     var pauseFix by mutableStateOf(true)
     var undoOnBackspace by mutableStateOf(true)
@@ -184,7 +186,7 @@ object KeyboardPrefs {
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
-        suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); pauseFix = p.getBoolean("pauseFix", pauseFix)
+        suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect", false); pauseFix = p.getBoolean("pauseFix", pauseFix)
         undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill); neural = p.getBoolean("neural", neural)
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
@@ -268,7 +270,7 @@ object KeyboardPrefs {
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
-            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("pauseFix", pauseFix).putBoolean("undoOnBackspace", undoOnBackspace)
+            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
