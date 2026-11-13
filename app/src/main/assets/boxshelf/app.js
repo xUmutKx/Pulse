@@ -157,6 +157,8 @@ function filterFn(v){
   m=/^genre:(.+)$/.exec(v||"");if(m){const n=m[1];return g=>genresOf(g).includes(n)}
   return ()=>true;
 }
+const groupedGame=g=>isGame(g)&&/^app-(mega|html):/.test(String(g.id));
+function groupTile(sh,n){if(!sh._groupTile||sh._groupTile.n!==n)sh._groupTile={kind:"group",n,id:"group-"+sh.id,title:"Built-in games",seed:hash("group"+sh.id),hue:210,scene:"media",art:{front:Covers.groupFront(STYLE[sh.id]||STYLE.media,n)}};return sh._groupTile}
 function arrange(){
   const keep=filterFn(filterBy);
   allShelves.forEach(sh=>{if(sh.kind==="home"||!sh.items)return;if(!sh._base)sh._base=sh.items.slice();
@@ -164,7 +166,9 @@ function arrange(){
     const by=(f,desc)=>(a,b)=>{const x=f(a),y=f(b);if(x==null&&y==null)return base(a,b);if(x==null)return 1;if(y==null)return -1;return (desc?y-x:x-y)||base(a,b)};
     const cmp={year:by(yearOf),recent:by(g=>histOf(g)&&histOf(g).last||null,true),most:by(g=>histOf(g)&&histOf(g).ms||null,true),rating:by(ratingOf,true),
       genre:(a,b)=>{const x=genreOf(a),y=genreOf(b);if(x===y)return base(a,b);if(!x)return 1;if(!y)return -1;return x.localeCompare(y)}}[sortBy]||base;
-    sh.items=[...sh._base.filter(g=>!isGame(g)&&!g.tail),...sh._base.filter(isGame).filter(keep).sort(cmp),...sh._base.filter(g=>g.tail)]; // (beta.7: a tail tile, the Custom shelf's Add games, stays last)
+    // the built-in and HTML games are one group cover at the end of the shelf (opens the list of them); they stay in _base for the search and the list
+    const grp=sh._base.filter(groupedGame);
+    sh.items=[...sh._base.filter(g=>!isGame(g)&&!g.tail),...sh._base.filter(isGame).filter(g=>!groupedGame(g)).filter(keep).sort(cmp),...(grp.length?[groupTile(sh,grp.length)]:[]),...sh._base.filter(g=>g.tail)]; // (beta.7: a tail tile, the Custom shelf's Add games, stays last)
   });
 }
 // re-sort/filter and rebuild, keeping the selected game in view when it's still on the shelf
@@ -1451,6 +1455,7 @@ function play(){
   {const g=curGame();uiCrumb("Play: "+(g?g.title:"?"))}
   const es=!rawItem()&&(mode==="browse"||mode==="details")&&!sysBusy()?emptyShelf():null;if(es){play_("panel");Setup.open({page:es.kind==="steam"?"steam":es.id});return}
   const raw=rawItem();if(!raw||sysBusy()||(mode!=="browse"&&mode!=="details"))return;closeDetails(true);
+  if(raw.kind==="group"){play_("panel");window.__pulseOpenGrid&&window.__pulseOpenGrid();return}
   if(raw.kind==="setup"){const s=shelfFor(raw)||cur();play_("panel");Setup.open({page:raw.addGames?"addgames":s?s.id:"consoles"});return}
   if(raw.kind==="random"){if(raw.pick)playPick(raw);else shuffle();return}
   if(cur()===HOME){playPick({pick:{shelf:shelves.indexOf(shelfFor(raw)),game:raw}});return}
@@ -4952,6 +4957,7 @@ window.Shelf._find={
   thumb:u=>thumb(u,64),snd:(n,o)=>play_(n,o),
   games:()=>{const out=[],seen=new Set();allShelves.forEach(sh=>{if(!sh||sh.kind==="home")return;(sh._base||sh.items||[]).forEach(g=>{if(!g||!(isGame(g)||g.pulse)||seen.has(g.id))return;seen.add(g.id);const h=histOf(g);
     out.push({id:g.id,title:String(g.title||""),sys:sh.name||"",art:(g.art&&g.art.front)||"",hue:g.hue,last:(h&&h.count&&h.last)||0})})});return out},
+  play:id=>{for(let si=0;si<allShelves.length;si++){const s=allShelves[si];if(!s||s.kind==="home")continue;const x=(s._base||s.items||[]).find(y=>y&&(isGame(y)||y.pulse)&&String(y.id)===String(id));if(x){playPick({pick:{shelf:si,game:x}});return true}}return false},
   go:id=>{if(mode!=="browse"||sysBusy())return false;let sh=null,g=null;
     for(const s of allShelves){if(!s||s.kind==="home")continue;const x=(s._base||s.items||[]).find(y=>y&&(isGame(y)||y.pulse)&&String(y.id)===String(id));if(x){sh=s;g=x;break}}
     if(!g)return false;if(sh.items.indexOf(g)<0&&filterBy!=="all"){pickSort(1,"all");toast("Showing all games again")}
