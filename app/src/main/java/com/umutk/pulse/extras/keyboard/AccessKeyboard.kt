@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,12 @@ object AccessKeyboard {
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     fun on(c: Context) = prefs(c).getBoolean("on", false)
     fun setOn(c: Context, v: Boolean) = prefs(c).edit().putBoolean("on", v).apply()
+    /** The strip that opens by itself when a field is focused (it keeps the phone's own keyboard down): off, the phone's keyboard comes up as usual and the floating one is opened by its button. */
+    fun auto(c: Context) = prefs(c).getBoolean("auto", false)
+    /** Where the floating keyboard was left (pixels from the left and the top of the screen); -1 before it was ever moved. */
+    fun padX(c: Context) = prefs(c).getInt("padX", -1)
+    fun padY(c: Context) = prefs(c).getInt("padY", -1)
+    fun setPad(c: Context, x: Int, y: Int) = prefs(c).edit().putInt("padX", x).putInt("padY", y).apply()
 
     /** Whether Pulse's accessibility keyboard is switched on in the phone's accessibility settings. */
     fun serviceEnabled(c: Context): Boolean {
@@ -141,44 +148,138 @@ class AccessKeyboardService : AccessibilityService() {
 
     private fun togglePad() { if (pad != null) hidePad() else showPad() }
 
-    /** The pad: what has been typed, copy and clear, and the keys; the keys write here whenever no field has the focus. */
+    /** A field of the app in front has the focus: the keys write into it; otherwise into the box of the floating keyboard. */
+    private var hasField by mutableStateOf(false)
+    private var padState: KbState? = null
+
+    /**
+     * The floating keyboard: the whole Pulse keyboard (its look, languages, emoji, clipboard and menu) in a window of its own that stays open on top of any app or game,
+     * moved by its handle. It writes into the field that has the focus, and into a box of its own where there is none. It never takes the focus and never hides the phone's keyboard.
+     */
     private fun showPad() {
         if (pad != null) return
         val w = wm ?: return
+        KeyboardPrefs.load(this)
         val d = resources.displayMetrics
+        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val params = WindowManager.LayoutParams(
-            (d.widthPixels * 0.94f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
+            (d.widthPixels * (if (land) 0.62f else 0.94f)).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START; x = (d.widthPixels * 0.03f).toInt(); y = (d.heightPixels * 0.08f).toInt() }
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            val sx = AccessKeyboard.padX(this@AccessKeyboardService); val sy = AccessKeyboard.padY(this@AccessKeyboardService)
+            x = if (sx >= 0) sx.coerceIn(0, (d.widthPixels - width).coerceAtLeast(0)) else ((d.widthPixels - width) / 2)
+            y = if (sy >= 0) sy.coerceIn(0, (d.heightPixels * 0.8f).toInt()) else (d.heightPixels * 0.45f).toInt()
+        }
         padParams = params
+        val st = KbState().apply {
+            dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            lang = KeyboardPrefs.langList().first()
+        }
+        padState = st
+        val act = OverlayActions(this, st)
         val o = AccessOwner().also { it.start() }
         val v = ComposeView(this).apply {
             setViewTreeLifecycleOwner(o)
             setViewTreeSavedStateRegistryOwner(o)
             setContent {
-                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xF01C1C22)).padding(10.dp)) {
-                    Text(AccessScratch.text.ifEmpty { tr("Type here, then copy it", "Buraya yaz, sonra kopyala") }, color = Color.White,
-                        fontSize = 16.sp, maxLines = 4, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(bottom = 6.dp))
-                    Row {
-                        Text(tr("Copy", "Kopyala"), color = Color(0xFF7FB0FF), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { copyPad() }.padding(horizontal = 12.dp, vertical = 8.dp))
-                        Text(tr("Clear", "Temizle"), color = Color(0xFF9AA0B0), fontSize = 14.sp,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { AccessScratch.text = "" }.padding(horizontal = 12.dp, vertical = 8.dp))
+                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xF01C1C22))) {
+                    Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.weight(1f).fillMaxSize().pointerInput(Unit) {
+                                detectDragGestures(onDragEnd = { AccessKeyboard.setPad(this@AccessKeyboardService, params.x, params.y) }) { _, drag ->
+                                    val m = resources.displayMetrics
+                                    params.x = (params.x + drag.x.toInt()).coerceIn(0, (m.widthPixels - params.width).coerceAtLeast(0))
+                                    params.y = (params.y + drag.y.toInt()).coerceIn(0, (m.heightPixels * 0.9f).toInt())
+                                    runCatching { w.updateViewLayout(this@apply, params) }
+                                }
+                            },
+                            contentAlignment = Alignment.Center,
+                        ) { Box(Modifier.width(64.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF6B7080))) }
+                        Text("×", color = Color.White, fontSize = 20.sp, modifier = Modifier.clickable { hidePad() }.padding(horizontal = 14.dp))
                     }
-                    AccessKeys(
-                        onKey = { AccessScratch.text += it },
-                        onBackspace = { AccessScratch.text = AccessScratch.text.dropLast(1) },
-                        onEnter = { AccessScratch.text += "\n" },
-                        onDrag = { dx, dy -> params.x += dx.toInt(); params.y += dy.toInt(); runCatching { w.updateViewLayout(this@apply, params) } },
-                        onClose = { hidePad() },
-                    )
+                    // no field in front (a game, a screen with no text box): what is typed lands here, and can be copied out
+                    if (!hasField) Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
+                        Text(AccessScratch.text.ifEmpty { tr("No text box here: type, then copy it", "Burada yazı kutusu yok: yaz, sonra kopyala") }, color = if (AccessScratch.text.isEmpty()) Color(0xFF9AA0B0) else Color.White,
+                            fontSize = 15.sp, maxLines = 3, modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp))
+                        Row {
+                            Text(tr("Copy", "Kopyala"), color = Color(0xFF7FB0FF), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { copyPad() }.padding(horizontal = 12.dp, vertical = 6.dp))
+                            Text(tr("Clear", "Temizle"), color = Color(0xFF9AA0B0), fontSize = 14.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { AccessScratch.text = "" }.padding(horizontal = 12.dp, vertical = 6.dp))
+                        }
+                    }
+                    CompositionLocalProvider(LocalOverlayKb provides true) { KeyboardView(st, act) }
                 }
             }
         }
         pad = v; padOwner = o
-        runCatching { w.addView(v, params) }.onFailure { pad = null; o.stop(); padOwner = null }
+        hasField = focusedField()?.also { runCatching { it.recycle() } } != null
+        runCatching { w.addView(v, params) }.onFailure { pad = null; o.stop(); padOwner = null; padState = null }
+    }
+
+    // what the keys of the floating keyboard do (called by [OverlayActions])
+    /** A key typed: into the focused field, or into the box of the pad when there is none. */
+    fun typeText(s: String) { if (focusedField()?.also { runCatching { it.recycle() } } != null) commitText(s) else AccessScratch.text += s }
+    fun backspaceKey() { if (focusedField()?.also { runCatching { it.recycle() } } != null) deleteBefore() else AccessScratch.text = AccessScratch.text.dropLast(1) }
+    fun enterKey() { if (focusedField()?.also { runCatching { it.recycle() } } != null) enter() else AccessScratch.text += "\n" }
+
+    /** The cursor of the focused field moves by [delta] characters. */
+    fun moveCursor(delta: Int) {
+        val node = focusedField() ?: return
+        try {
+            val len = node.text?.length ?: 0
+            val a = node.textSelectionStart.let { if (it < 0) len else it.coerceAtMost(len) }
+            val b = node.textSelectionEnd.let { if (it < 0) a else it.coerceIn(0, len) }
+            selectOnly(((if (delta < 0) minOf(a, b) else maxOf(a, b)) + delta).coerceIn(0, len), node)
+        } finally { runCatching { node.recycle() } }
+    }
+
+    /** Left and right (and the start and end of the line) of the arrows. */
+    fun arrowKey(code: Int) {
+        val node = focusedField() ?: return
+        try {
+            val cur = node.text?.toString().orEmpty()
+            val a = node.textSelectionStart.let { if (it < 0) cur.length else it.coerceAtMost(cur.length) }
+            val b = node.textSelectionEnd.let { if (it < 0) a else it.coerceIn(0, cur.length) }
+            val lo = minOf(a, b); val hi = maxOf(a, b)
+            val pos = when (code) {
+                21 -> if (lo != hi) lo else (lo - 1).coerceAtLeast(0)
+                22 -> if (lo != hi) hi else (hi + 1).coerceAtMost(cur.length)
+                122 -> cur.lastIndexOf('\n', (lo - 1).coerceAtLeast(0)).let { if (lo == 0) 0 else it + 1 }
+                123 -> cur.indexOf('\n', hi).let { if (it < 0) cur.length else it }
+                19 -> { val ls = cur.lastIndexOf('\n', (lo - 1).coerceAtLeast(0)).let { if (lo == 0) -1 else it }; if (ls < 0) 0 else { val col = lo - (ls + 1); val ps = cur.lastIndexOf('\n', (ls - 1).coerceAtLeast(0)).let { if (ls == 0) -1 else it }; (ps + 1 + col).coerceAtMost(ls) } }
+                20 -> { val nl = cur.indexOf('\n', hi); if (nl < 0) cur.length else { val ls = cur.lastIndexOf('\n', (hi - 1).coerceAtLeast(0)).let { if (hi == 0) -1 else it }; val col = hi - (ls + 1); val ne = cur.indexOf('\n', nl + 1).let { if (it < 0) cur.length else it }; (nl + 1 + col).coerceAtMost(ne) } }
+                else -> return
+            }
+            selectOnly(pos, node)
+        } finally { runCatching { node.recycle() } }
+    }
+
+    private fun selectOnly(pos: Int, given: AccessibilityNodeInfo? = null) {
+        val node = given ?: focusedField() ?: return
+        val sel = Bundle().apply { putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, pos); putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, pos) }
+        node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, sel)
+        if (given == null) runCatching { node.recycle() }
+    }
+
+    /** Select all, copy, cut, paste of the keyboard's edit row. */
+    fun editAction(id: String) {
+        val node = focusedField() ?: return
+        try {
+            when (id) {
+                "selectAll" -> {
+                    val len = node.text?.length ?: 0
+                    val sel = Bundle().apply { putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0); putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, len) }
+                    node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, sel)
+                }
+                "copy" -> node.performAction(AccessibilityNodeInfo.ACTION_COPY)
+                "cut" -> node.performAction(AccessibilityNodeInfo.ACTION_CUT)
+                "paste" -> node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+            }
+        } finally { runCatching { node.recycle() } }
     }
 
     private fun copyPad() {
@@ -186,6 +287,8 @@ class AccessKeyboardService : AccessibilityService() {
         cm.setPrimaryClip(android.content.ClipData.newPlainText("", AccessScratch.text))
         Toast.makeText(this, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
     }
+
+    fun closePad() = hidePad()
 
     private fun hidePad() {
         val v = pad ?: return
@@ -197,12 +300,14 @@ class AccessKeyboardService : AccessibilityService() {
         if (!AccessKeyboard.on(this)) { hideKeys(); hidePad(); hideBubble(); return }
         showBubble()
         when (event.eventType) {
-            AccessibilityEvent.TYPE_VIEW_FOCUSED, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+            AccessibilityEvent.TYPE_VIEW_FOCUSED, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED, AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 val f = focusedField()
-                if (f != null) { runCatching { f.recycle() }; showKeys() } else hideKeys()
+                val has = f != null
+                if (f != null) runCatching { f.recycle() }
+                if (pad != null) hasField = has
+                // the strip of the earlier version (it opens by itself in every field and keeps the phone's keyboard down) is only there when it is asked for
+                else if (AccessKeyboard.auto(this)) { if (has) showKeys() else if (event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) hideKeys() }
             }
-            // a window changed: the keyboard stays while the field in front still has the focus (the system keyboard hiding is such a change), else it goes
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> { val f = focusedField(); if (f != null) runCatching { f.recycle() } else hideKeys() }
         }
     }
 
@@ -332,6 +437,39 @@ class AccessKeyboardService : AccessibilityService() {
         /** The running service, while the accessibility service is on (the keys write through it). */
         @Volatile var instance: AccessKeyboardService? = null
     }
+}
+
+/** What the keys of the floating keyboard do: they write through the accessibility service into the field that has the focus (or the pad's own box). */
+private class OverlayActions(private val svc: AccessKeyboardService, private val st: KbState) : KbActions by NoKbActions {
+    override fun type(s: String) {
+        st.keyTick++
+        val q = st.emojiQuery
+        if (st.panel == "emoji" && q != null) { st.emojiQuery = q + s; return }
+        svc.typeText(s); if (st.shift == 1) st.shift = 0
+    }
+    override fun backspace() { st.keyTick++; svc.backspaceKey() }
+    override fun enter() = svc.enterKey()
+    override fun space() { st.keyTick++; svc.typeText(" ") }
+    override fun shift() { st.shift = (st.shift + 1) % 3 }
+    override fun page(p: Int) { st.page = p; st.panel = "keys" }
+    override fun emojiPanel() { st.emojiQuery = null; st.panel = if (st.panel == "emoji") "keys" else "emoji" }
+    override fun lang() { val l = KeyboardPrefs.langList(); st.lang = l[(l.indexOf(st.lang) + 1).mod(l.size)] }
+    override fun emoji(e: String) = svc.typeText(e)
+    override fun paste(s: String) = svc.typeText(s)
+    override fun arrow(code: Int) = svc.arrowKey(code)
+    override fun moveCursor(delta: Int) = svc.moveCursor(delta)
+    override fun edit(id: String) { if (id == "capslock") st.shift = if (st.shift == 2) 0 else 2 else svc.editAction(id) }
+    override fun menu(id: String) {
+        when (id) {
+            "menu", "clip", "resize", "keyset", "layout" -> st.panel = if (st.panel == id) "keys" else id
+            "emoji" -> st.panel = "emoji"
+            "back" -> st.panel = "keys"
+            "lang" -> lang()
+            "theme" -> { val l = KeyboardThemes.ids; KeyboardPrefs.theme = l[(l.indexOf(KeyboardPrefs.theme) + 1).mod(l.size)] }
+            "settings", "languages" -> svc.startActivity(android.content.Intent().setClassName(svc, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "keyboard").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+    override fun hide() = svc.closePad()
 }
 
 /** The keys: letters with Shift, a symbols page, space, backspace and enter. The bar on top is dragged; × closes. */

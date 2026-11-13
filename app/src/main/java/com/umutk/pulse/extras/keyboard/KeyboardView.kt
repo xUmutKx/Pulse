@@ -204,6 +204,9 @@ private const val POPUP_W = 44
 /** The running hue (0..360) of the moving colour light; read only while drawing, so the keys do not recompose with it. */
 private val LocalHue = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.State<Float>?> { null }
 
+/** True inside the window of the accessibility keyboard: that window is only as big as the keyboard, so the tall window of the floating mode is not used there. */
+val LocalOverlayKb = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
@@ -241,7 +244,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     }
     var rootH by remember { mutableStateOf(0f) }
     // the floating keyboard: its own height, and the handle's place in the window (the drag is read on the window, which stays still)
-    val float = KeyboardPrefs.floatNow
+    val float = KeyboardPrefs.floatNow && !LocalOverlayKb.current
     var kbH by remember { mutableStateOf(0f) }
     // the bar that stays when the keyboard slides down out of the window
     val barPx = with(LocalDensity.current) { kbBarHeight().toPx() }
@@ -466,7 +469,7 @@ private fun Trail(th: KbTheme, st: KbState) {
 private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
     // the floating keyboard keeps its bar slim, so its keys get the room
-    if (KeyboardPrefs.floatNow) return 31.dp
+    if (KeyboardPrefs.floatNow && !LocalOverlayKb.current) return 31.dp
     return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 30.dp else if (KeyboardPrefs.theme == "samsung") 49.dp else 44.dp
 }
 
