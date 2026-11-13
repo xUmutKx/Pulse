@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +40,7 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
     if (list.isEmpty()) return
     val topZ = list.filter { !it.min }.maxOfOrNull { it.z }
     // the moving band of a progress that has no end in sight, read only where it is drawn
-    val phase = androidx.compose.animation.core.rememberInfiniteTransition(label = "tbp").animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.LinearEasing)), label = "tbpp")
+    val phase = rememberInfiniteTransition(label = "tbp").animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.LinearEasing)), label = "tbpp")
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (kind == "95") 2.dp else 3.dp), verticalAlignment = Alignment.CenterVertically) {
         list.forEach { w ->
             val active = !w.min && w.z == topZ
