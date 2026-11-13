@@ -64,6 +64,23 @@
     }
     return '';
   };
+  // a text box of the page that gets the focus asks Android for its keyboard
+  document.addEventListener('focusin', e => { const t = e.target; if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName) && t.type !== 'checkbox' && t.type !== 'range') { try { H.showKeyboard && H.showKeyboard(); } catch (x) {} } }, true);
+  // the clipboard, for the settings' on-screen keyboard (an API key copied from a browser)
+  api.clipRead = async () => { try { return H.clipRead ? String(H.clipRead() || '') : ''; } catch (e) { return ''; } };
+  // Settings on the phone: Game Hub's own settings first; the pages that belong to a PC (consoles and emulators, Steam, magazines, the phone companion,
+  // RetroAchievements, Windows' start-up) have nothing to do here, so they are left out instead of opening broken
+  window.BS_SETTINGS_PATCH = sections => {
+    const gone = new Set(['consoles', 'pc', 'custom', 'apps', 'reading', 'acct', 'phone', 'museum', 'previews', 'art']);
+    const out = (sections || []).filter(s => s && !gone.has(s.id));
+    const gh = out.find(s => s.id === 'gamehub');
+    const sys = out.find(s => s.id === 'sys');
+    // System keeps only what runs on a phone: About, the report and the update rows
+    if (sys && Array.isArray(sys.rows)) sys.rows = sys.rows.filter(r => r && (r.t === 'head' ? false : /^(About|What.?s new|Report a problem)/i.test(String(r.label || ''))));
+    const rest = out.filter(s => s !== gh && !(s === sys && (!sys.rows || !sys.rows.length)));
+    if (gh) { gh.g = 'Game Hub'; gh.name = 'Game Hub'; }
+    return gh ? [gh, ...rest] : rest;
+  };
   api.quit = async () => { H.back(); return true; };
   // the platform's own "exited": Pulse tells the page when the game has closed and Boxshelf is on the screen again
   // the desktop's "run quitting" step (the shelf is covered in black, then comes back): Android has no such event, so it runs
