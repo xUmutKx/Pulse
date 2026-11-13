@@ -205,6 +205,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Pick(tr("Double tap", "Çift dokunma"), listOf(tr("Off", "Kapalı"), tr("Seek", "Atla"), tr("Pause", "Duraklat"), tr("Both", "İkisi")), { prefs.dtap }, done) { prefs.dtap = it }
                 Num(tr("Swipe range", "Kaydırma aralığı"), listOf(30, 60, 90, 180, 300), { prefs.seekSens }, { "$it s" }, done) { prefs.seekSens = it }
                 Sld(tr("Sensitivity", "Hassasiyet"), "%", 40..250, { prefs.gestSens }, done) { prefs.gestSens = it }
+                Num(tr("Edge dead zone", "Kenar ölü bölge"), listOf(0, 12, 24, 36, 48), { prefs.edgeDead }, { if (it == 0) tr("Off", "Kapalı") else "$it dp" }, done) { prefs.edgeDead = it }
             }
 
             if (cat == "audio") FlatSection(tr("Audio", "Ses")) {
