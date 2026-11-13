@@ -43,6 +43,9 @@ object MusicSettings {
     fun setAiLyrics(c: Context, on: Boolean) = sp(c).edit().putBoolean("aiLyrics", on).apply()
 
     fun skipSilence(c: Context) = sp(c).getBoolean("skipSil", false)
+    /** The wave seek bar shows the song's real waveform (analysed once per song in the background) instead of a pattern. Off by default. */
+    fun realWave(c: Context) = sp(c).getBoolean("realWave", false)
+    fun setRealWave(c: Context, on: Boolean) = sp(c).edit().putBoolean("realWave", on).apply()
     fun setSkipSilence(c: Context, on: Boolean) = sp(c).edit().putBoolean("skipSil", on).apply()
 
     /** Playback speed 0.5..2.0 and whether pitch follows. */

@@ -76,6 +76,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import com.umutk.pulse.extras.music.MusicSettings
+import com.umutk.pulse.extras.music.TrackWave
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -492,7 +494,15 @@ fun NowPlayingScreen(
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
                 val seekAt: () -> Float = liveFrac
                 val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).fillMaxHeight()
+                // the real waveform of the song (Settings > Look: off by default), analysed in the background; until it is ready the pattern shows
+                val waveCtx = androidx.compose.ui.platform.LocalContext.current
+                val realWave = MusicSettings.realWave(waveCtx)
+                val peaks by androidx.compose.runtime.produceState<FloatArray?>(null, track?.path, realWave) {
+                    value = null
+                    if (realWave) track?.path?.let { value = TrackWave.peaks(waveCtx, it) }
+                }
                 SeekBar(
+                    peaks = peaks,
                     progress = seekAt,
                     seed = track?.path?.hashCode() ?: 0,
                     style = style,
@@ -573,6 +583,8 @@ internal fun SeekBar(
     modifier: Modifier,
     onScrub: (Float) -> Unit,
     onCommit: (Float) -> Unit,
+    // the real waveform of the song when it is known (see TrackWave), else the pattern made from [seed]
+    peaks: FloatArray? = null,
     // the share of the track the wave shows at once; below 1 the wave scrolls past a fixed play position (drag it to seek)
     windowFrac: Float = 1f,
     // the bars are drawn this tall while the touch area is the whole (taller) modifier, so a drag beside the bars still seeks
@@ -653,7 +665,7 @@ internal fun SeekBar(
                 if (k < 0 || k * barFrac >= 1f) continue
                 val x = cx + (k + .5f - centre) * slot
                 if (x < -slot || x > size.width + slot) continue
-                val h = waveHeight(seed, k) * barsH
+                val h = (if (peaks != null) peaks[((k * barFrac) * peaks.size).toInt().coerceIn(0, peaks.size - 1)] else waveHeight(seed, k)) * barsH
                 val edge = (kotlin.math.abs(x - cx) / cx).coerceIn(0f, 1f)
                 val c = if (x <= cx) style.accent else off
                 drawLine(c.copy(alpha = c.alpha * (1f - edge * edge * edge * .85f)), Offset(x, cy - h / 2), Offset(x, cy + h / 2), slot * .7f, StrokeCap.Round)
@@ -672,7 +684,7 @@ internal fun SeekBar(
                 val n = if (style.seek == PowerampSeek.WAVE) 40 else 32
                 val slot = size.width / n
                 for (i in 0 until n) {
-                    val h = (if (style.seek == PowerampSeek.WAVE) heights[i] else .55f) * barsH
+                    val h = (if (style.seek == PowerampSeek.WAVE) (if (peaks != null) peaks[(((i + .5f) / n) * peaks.size).toInt().coerceIn(0, peaks.size - 1)] else heights[i]) else .55f) * barsH
                     val x = slot * (i + .5f)
                     drawLine(
                         if ((i + .5f) / n <= p) style.accent else off,
