@@ -58,10 +58,10 @@ fun QuickSearch(state: LauncherState, onClose: () -> Unit) {
     val recents = remember(state.apps) { LauncherPrefs.usage.entries.sortedByDescending { it.value }.mapNotNull { e -> state.apps.firstOrNull { it.pkg == e.key } }.take(8) }
     val found = remember(q, state.apps) { if (q.isBlank()) emptyList() else state.apps.filter { it.label.contains(q.trim(), ignoreCase = true) }.take(30) }
     val none = remember { MutableInteractionSource() }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable(interactionSource = none, indication = null, onClick = onClose)) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .18f)).clickable(interactionSource = none, indication = null, onClick = onClose)) {
         Column(
             Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp).widthIn(max = 540.dp).fillMaxWidth()
-                .background(T.bg).border(1.dp, T.line).clickable(interactionSource = none, indication = null) {}.padding(12.dp),
+                .background(T.bg.copy(alpha = .74f)).border(1.dp, T.line).clickable(interactionSource = none, indication = null) {}.padding(12.dp),
         ) {
             PField(q, { q = it }, tr("Search apps and the web", "Uygulama ve web'de ara"), Modifier.fillMaxWidth().focusRequester(focus), onDone = {
                 found.firstOrNull()?.let { state.open(it); onClose() }
