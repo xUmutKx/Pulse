@@ -26,11 +26,14 @@ android {
         }
     }
     // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
-    flavorDimensions += "store"
+    flavorDimensions += listOf("store", "ai")
     productFlavors {
         // APK_INSTALL: the app may install APK files itself (REQUEST_INSTALL_PACKAGES). Off in the play build: Play declares that permission separately
         create("foss") { dimension = "store"; buildConfigField("boolean", "APK_INSTALL", "true") }
         create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
+        // ai: "full" has Pulse AI inside (llama.cpp chat, whisper.cpp speech to text: native code, about 8 MB more, a longer build); "lite" has neither (the same app, the AI pages say it is not in this build; src/lite has the empty stand-ins)
+        create("full") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "true") }
+        create("lite") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false") }
     }
     buildTypes {
         release {
@@ -61,8 +64,8 @@ dependencies {
     implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
-    implementation(project(":localai")) // Pulse AI chat: llama.cpp (arm64)
-    implementation(project(":aistt")) // Pulse AI speech to text: whisper.cpp (arm64)
+    "fullImplementation"(project(":localai")) // Pulse AI chat: llama.cpp (arm64)
+    "fullImplementation"(project(":aistt")) // Pulse AI speech to text: whisper.cpp (arm64)
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
     add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only

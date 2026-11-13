@@ -8,14 +8,10 @@ on:
         description: "Publish this build as a GitHub release (tag v<versionName>)"
         type: boolean
         default: false
-      play:
-        description: "Also build the Google Play files (play APK and AAB) and attach them to the release"
-        type: boolean
-        default: false
 permissions:
   contents: write
 jobs:
-  # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the Android 5 APK only; a release also makes the Android 12 APK, and the Play files when asked
+  # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes both: the full one (Pulse AI inside) and the lite one (without it)
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -23,14 +19,11 @@ jobs:
     steps:
       - id: p
         run: |
-          V='["android5"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.release }}" = "true" ]; then
-            V='["android5","a12"]'
-            if [ "${{ inputs.play }}" = "true" ]; then V='["android5","a12","play"]'; fi
-          fi
+          V='["full"]'
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.release }}" = "true" ]; then V='["full","lite"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
-  # the builds run side by side on their own machines (each one's R8 takes about 5 minutes; one after the other they took 30)
+  # the builds run side by side on their own machines
   build:
     needs: plan
     runs-on: ubuntu-latest
@@ -92,19 +85,14 @@ jobs:
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           mkdir -p out
           case "$VARIANT" in
-            android5)
-              # Android 5 and newer (the default minSdk)
-              G assembleFossRelease -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease
-              cp app/build/outputs/apk/foss/release/app-foss-release.apk "out/Pulse-$VER-android5.apk" ;;
-            a12)
-              # Android 12 and newer: the same code, built for the newer minimum
-              G assembleFossRelease -PpulseMinSdk=31 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease
-              cp app/build/outputs/apk/foss/release/app-foss-release.apk "out/Pulse-$VER.apk" ;;
-            play)
-              # the Google Play store: the same app with the ads, as an APK and as the bundle (AAB) for the upload, in one Gradle run
-              G assemblePlayRelease bundlePlayRelease -PpulseMinSdk=24 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease
-              cp app/build/outputs/apk/play/release/app-play-release.apk "out/Pulse-$VER-play.apk"
-              cp app/build/outputs/bundle/playRelease/app-play-release.aab "out/Pulse-$VER-play.aab" ;;
+            full)
+              # Pulse AI inside (llama.cpp chat and whisper.cpp speech to text, built natively): the longer build
+              G assembleFossFullRelease -x lintVitalAnalyzeFossFullRelease -x lintVitalReportFossFullRelease -x lintVitalFossFullRelease
+              cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER.apk" ;;
+            lite)
+              # the same app without Pulse AI: no native code to build, so it is the quick one
+              G assembleFossLiteRelease -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
+              cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-lite.apk" ;;
           esac
       - name: Compile errors as annotations
         if: failure()
@@ -136,4 +124,5 @@ jobs:
           ls -l files
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
-          gh release create "v$VER" files/* --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          # the full APK first (an older app's updater takes the first one it finds), then the lite one
+          gh release create "v$VER" "files/Pulse-$VER.apk" "files/Pulse-$VER-lite.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
