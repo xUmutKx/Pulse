@@ -626,7 +626,8 @@ object KeyboardDictionary {
         runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
 
-    fun learnTypo(c: Context, typed: String, word: String) {
+    /** [force]: the person got to [word] in two or more steps from [typed] (a pick that was still wrong, then the right one): that is certain enough to be kept at once. */
+    fun learnTypo(c: Context, typed: String, word: String, force: Boolean = false) {
         if (typed.length < 3 || typed == word || word.startsWith(typed)) return
         if (!userLoaded) loadUser(c)
         if (typos[typed] != word) {
@@ -634,7 +635,7 @@ object KeyboardDictionary {
             val n = (typoSeen[k] ?: 0) + 1
             typoSeen[k] = n
             runCatching { File(c.filesDir, "kbd_typo_seen.txt").writeText(typoSeen.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
-            if (n < (if (isKnown(typed)) 5 else 1)) return
+            if (!force && n < (if (isKnown(typed)) 5 else 1)) return
         }
         typos[typed] = word
         // one letter wrong in a word of the same length: that letter pair is this person's slip
