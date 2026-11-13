@@ -131,6 +131,11 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("shots", JSONArray((0 until 4).filter { steamShotFile(c, g.pkg, it).isFile }.map { "https://$HOST/shot/${g.pkg}/$it" }))
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
+        // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
+        if (MegaGames.enabled(c)) MegaGames.LIST.forEach { m ->
+            arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", JSONObject.NULL).put("hero", JSONObject.NULL)
+                .put("box", "steam").put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
+        }
         return arr.toString()
     }
     /** The case style of the shelf: the id of one of Boxshelf's own cases (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...). */
@@ -151,6 +156,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             "start" -> p.getInt(key, 1).toString()
             "showHidden" -> p.getBoolean(key, true).toString()
             "playCovers" -> p.getBoolean(key, false).toString()
+            "miniGames" -> p.getBoolean(key, true).toString()
             "boxStyle" -> CaseCover.style(c)
             "menu" -> GameMenuService.enabled(c).toString()
             "coversRunning" -> CoverJob.running.value.toString()
@@ -166,10 +172,12 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
             return
         }
         if (key == "menu") { setMenu(value == "true"); return }
+        // the built-in games go on or off the shelf, which reads its games again
+        if (key == "miniGames") { prefs(c).edit().putBoolean(key, value == "true").apply(); ShelfSync.bump(); return }
         if (key == "theme") { if (value in THEMES) prefs(c).edit().putString("theme", value).apply(); return }
         val e = prefs(c).edit()
         when (key) {
-            "caseStyle", "sgdbKey" -> e.putString(key, value)
+            "caseStyle", "sgdbKey", "rawgKey" -> e.putString(key, value)
             "grid", "view", "iconMode", "start" -> e.putInt(key, value.toIntOrNull() ?: 0)
             "showHidden", "playCovers" -> e.putBoolean(key, value == "true")
             else -> return
@@ -302,7 +310,7 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
             w.isHapticFeedbackEnabled = false
             w.settings.allowFileAccess = false
             w.settings.allowContentAccess = false
-            w.addJavascriptInterface(PulseHost(c.applicationContext, { launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
+            w.addJavascriptInterface(PulseHost(c.applicationContext, { if (MegaGames.isMega(it)) MegaGames.open(ctx, it) else launch(it) }, { details(it) }, { exit(); leaving = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ (ctx as? androidx.activity.ComponentActivity)?.onBackPressedDispatcher?.onBackPressed() }, 120L) }, { settings() }), "PulseHost")
             w.webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? = serve(c, request.url)
             }
