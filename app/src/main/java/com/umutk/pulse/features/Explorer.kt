@@ -90,6 +90,8 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.runtime.rememberCoroutineScope
@@ -580,8 +582,16 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     val listingReady = shownState != null
     val shown: List<File> = shownState ?: emptyList()
-    // only the rows near the screen are composed (see ExWindowed), so the whole folder can be long
-    val shownNow = shown
+    // a folder of thousands (Camera) is shown in pages: one scrolled column cannot be taller than the layout system allows, so thousands of rows at once crashed the app
+    var page by remember { mutableIntStateOf(0) }
+    val pages = (shown.size + EX_PAGE - 1) / EX_PAGE
+    LaunchedEffect(here, query, filtNow, recentView, listing) { page = 0 }
+    val pg = page.coerceIn(0, (pages - 1).coerceAtLeast(0))
+    // only the rows near the screen are composed (see ExWindowed), so a page can be long
+    val shownNow = if (shown.size > EX_PAGE) shown.subList(pg * EX_PAGE, minOf(shown.size, (pg + 1) * EX_PAGE)) else shown
+    // the rows on screen, so a finger dragged over them picks them
+    val hits = remember { ExHits() }
+    var listBox by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     val filt = filtDir[here] ?: filtAll
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
@@ -1098,7 +1108,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 if (grid) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
+                    onLongClick = { if (f.path !in sel) sel = sel + f.path }), horizontalAlignment = Alignment.CenterHorizontally) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, isz.dp) {
@@ -1117,7 +1127,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
+                    onLongClick = { if (f.path !in sel) sel = sel + f.path }), verticalAlignment = Alignment.CenterVertically) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, maxOf(isz, 40).dp) {
@@ -1147,7 +1157,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 // same row for folders and files; optional card look (own background, rounded, 2dp gaps)
                 if (FilesPrefs.cards) {
                     val base = if (FilesLook.theme == "amoled") Color(0xFF0A0A0A) else T.panel
-                    val bgc = if (FilesPrefs.alt && shown.indexOf(f) % 2 == 1) T.text.copy(alpha = .05f).compositeOver(base) else base
+                    val bgc = if (FilesPrefs.alt && shownNow.indexOf(f) % 2 == 1) T.text.copy(alpha = .05f).compositeOver(base) else base
                     Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(listOf(8, 14, 22)[FilesPrefs.radius.coerceIn(0, 2)].dp)).background(bgc).padding(horizontal = 10.dp, vertical = 2.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
                 } else Box(Modifier.fillMaxWidth().padding(vertical = 1.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
             } else if (f.isDirectory && (FilesPrefs.folderCards || !T.material)) PCard(Modifier.fillMaxWidth()) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } } else Box(Modifier.fillMaxWidth().padding(vertical = 1.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
@@ -1198,6 +1208,33 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
         }
         // the call recordings folder has a page of its own: the people called, and the calls by day
+        // long press a row, then slide the finger over the others: every row it passes is picked (and the list follows at the edges)
+        Box(Modifier.fillMaxWidth().onGloballyPositioned { listBox = it }.pointerInput(shownNow) {
+            val order = HashMap<String, Int>().also { m -> shownNow.forEachIndexed { i, f -> m[f.path] = i } }
+            var last = -1
+            fun hitAt(p: androidx.compose.ui.geometry.Offset): Int {
+                val root = listBox?.takeIf { it.isAttached }?.localToRoot(p) ?: return -1
+                for ((path, c) in hits.map) if (c.isAttached && c.boundsInRoot().contains(root)) return order[path] ?: -1
+                return -1
+            }
+            detectDragGesturesAfterLongPress(
+                onDragStart = { p -> last = hitAt(p); if (last >= 0) sel = sel + shownNow[last].path },
+                onDragEnd = { last = -1 }, onDragCancel = { last = -1 },
+                onDrag = { change, _ ->
+                    change.consume()
+                    val i = hitAt(change.position)
+                    if (i >= 0) {
+                        val from = if (last < 0) i else last
+                        sel = sel + (minOf(from, i)..maxOf(from, i)).map { shownNow[it].path }
+                        last = i
+                    }
+                    val y = listBox?.takeIf { it.isAttached }?.localToRoot(change.position)?.y ?: 0f
+                    val dm = ctx.resources.displayMetrics
+                    if (y < ExScroll.viewTop + 72 * dm.density) scope.launch { exScroll.scrollBy(-34f) }
+                    else if (y > dm.heightPixels - 200 * dm.density) scope.launch { exScroll.scrollBy(34f) }
+                },
+            )
+        }) {
         if (arcFile == null && isCallRecordings(dir)) CallPane(shownNow) { f -> recents = exAddRecent(ctx, f); ExAudio.play(f) }
         else if (gridNow) BoxWithConstraints(Modifier.fillMaxWidth()) {
             // a tile is its icon plus a little room for the name; the gap between tiles is the same small one at every size,
@@ -1209,13 +1246,20 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val chunks = remember(shownNow, cols) { shownNow.chunked(cols) }
             ExWindowed(chunks.size, exScroll, 0.dp, "g$cols/${FilesPrefs.icon}") { i ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    chunks[i].forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { key(f.path) { item(f) } } }
+                    chunks[i].forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { key(f.path) { ExHit(f.path, hits) { item(f) } } } }
                 }
             }
         } else ExWindowed(shownNow.size, exScroll, 3.dp, "l${FilesPrefs.icon}") { i ->
             val f = shownNow[i]
-            key(f.path) { item(f) }
+            key(f.path) { ExHit(f.path, hits) { item(f) } }
             if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
+        }
+        }
+        // pages of a long folder: back, the range shown, forward
+        if (pages > 1) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clickable(enabled = pg > 0) { page = pg - 1; scope.launch { exScroll.scrollTo(0) } }.alpha(if (pg > 0) 1f else .3f), contentAlignment = Alignment.Center) { ExIcon("back", T.text, 22.dp) }
+            Text("${pg * EX_PAGE + 1}–${minOf(shown.size, (pg + 1) * EX_PAGE)} / ${shown.size}", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            Box(Modifier.size(44.dp).clickable(enabled = pg < pages - 1) { page = pg + 1; scope.launch { exScroll.scrollTo(0) } }.alpha(if (pg < pages - 1) 1f else .3f).rotate(180f), contentAlignment = Alignment.Center) { ExIcon("back", T.text, 22.dp) }
         }
         Spacer(Modifier.height(88.dp))
         }
@@ -2595,6 +2639,18 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
             }
         }
     }
+}
+
+/** Rows drawn at once; a longer folder is split in pages. */
+private const val EX_PAGE = 300
+
+/** The rows now on screen, by path (a finger dragged over them picks them). */
+private class ExHits { val map = HashMap<String, androidx.compose.ui.layout.LayoutCoordinates>() }
+
+@Composable
+private fun ExHit(path: String, hits: ExHits, content: @Composable () -> Unit) {
+    androidx.compose.runtime.DisposableEffect(path) { onDispose { hits.map.remove(path) } }
+    Box(Modifier.onGloballyPositioned { hits.map[path] = it }) { content() }
 }
 
 /**
