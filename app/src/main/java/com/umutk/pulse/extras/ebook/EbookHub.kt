@@ -38,6 +38,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -81,6 +85,8 @@ import com.umutk.pulse.onAccent
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import java.io.File
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -239,6 +245,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     var picked by remember { mutableStateOf(setOf<String>()) }
     var askBulk by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
+    // the library look: the filter pill (all, reading, finished), the collections, the categories fetched from the internet
+    var filter by remember { mutableStateOf(0) }
+    var colls by remember { mutableStateOf(EbookColl.load(ctx)) }
+    var collFor by remember { mutableStateOf<List<String>?>(null) }
+    var newColl by remember { mutableStateOf(false) }
+    var online by remember { mutableStateOf<List<Cat>?>(null) }
+    var onlineBusy by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var showProgress by remember { mutableStateOf(EbookPrefs.showProgress(ctx)) }
@@ -255,12 +268,19 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         1 -> shelf.filter { Ebook.opened(ctx, it.uri) > 0L }.sortedByDescending { Ebook.opened(ctx, it.uri) }
         2 -> shelf.filter { Ebook.isFavorite(ctx, it.uri) }
         else -> shelf
-    }.filter { query.isBlank() || it.title.contains(query, ignoreCase = true) }
+    }.filter { query.isBlank() || it.title.contains(query, ignoreCase = true) }.filter { b ->
+        val pc = Ebook.pct(ctx, b.uri)
+        when (filter) { 1 -> (Ebook.opened(ctx, b.uri) > 0L || pc > 0) && pc < 100; 2 -> pc >= 100; else -> true }
+    }
+    val counts = Triple(shelf.size,
+        shelf.count { val pc = Ebook.pct(ctx, it.uri); (Ebook.opened(ctx, it.uri) > 0L || pc > 0) && pc < 100 },
+        shelf.count { Ebook.pct(ctx, it.uri) >= 100 })
     val title = when (tab) { 1 -> tr("Recent", "Son okunanlar"); 2 -> tr("Favorites", "Favoriler"); else -> tr("My shelf", "Rafım") }
     BackHandler {
         when {
             drawer -> drawer = false
             picked.isNotEmpty() -> picked = emptySet()
+            screen.startsWith("coll:") || screen.startsWith("cat:") -> screen = "collections"
             screen.isNotEmpty() -> screen = ""
             searching -> { searching = false; query = "" }
             else -> onBack()
@@ -295,8 +315,9 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     val allFav = picked.all { Ebook.isFavorite(ctx, it) }
                     picked.forEach { if (Ebook.isFavorite(ctx, it) == allFav) Ebook.toggleFavorite(ctx, it) }
                 }, contentAlignment = Alignment.Center) { PIcon("heart", th.ink, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { collFor = picked.toList() }, contentAlignment = Alignment.Center) { PIcon("folder", th.ink, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { askBulk = true }, contentAlignment = Alignment.Center) { PIcon("recycle", th.ink, 22.dp) }
-            } else Row(verticalAlignment = Alignment.CenterVertically) {
+            } else if (screen == "options" || screen == "find" || screen == "stats") Row(verticalAlignment = Alignment.CenterVertically) {
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", th.ink, 24.dp) }
                 } else {
@@ -345,57 +366,61 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     item { ReaderRow(tr("Page animation", "Sayfa animasyonu"), th, animName(animStyle)) { animStyle = (animStyle + 1) % 4; EbookPrefs.setAnimStyle(ctx, animStyle) } }
                     item { SettingRow(tr("E-ink screen mode", "E-mürekkep ekran"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) } }
                 }
-            } else {
-                if (searching) PField(query, { query = it }, tr("Search the shelf", "Rafta ara"), Modifier.fillMaxWidth().padding(top = 6.dp))
-                if (shelf.isEmpty()) {
-                    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(tr("No books yet", "Henüz kitap yok"), color = th.sub, fontSize = 14.sp)
-                        Spacer(Modifier.height(12.dp))
-                        PButton(tr("Find books on this phone", "Telefondaki kitapları bul"), compact = true) {
-                            // the folders books usually live in: Books and Download on the phone's storage
-                            val found = scanBooks()
-                            shelf = found.also { shelfSave(ctx, it) }
-                            note = if (found.isEmpty()) tr("No EPUB, TXT or PDF in Books or Download", "Books ve Download klasöründe EPUB, TXT veya PDF yok") else ""
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        PButton(tr("Add a book", "Kitap ekle"), compact = true) { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }
-                    }
-                } else if (listed.isEmpty()) {
-                    Text(tr("Nothing here", "Burada boş"), color = th.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
-                } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                    // two or three books in a row; the covers grow to fill the width
-                    // as many covers as the width takes (a landscape screen gets more), unless a number is chosen
-                    val cols = if (perRow > 0) perRow else (maxWidth / 130.dp).toInt().coerceAtLeast(2)
-                    val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
-                    LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
-                        items(listed) { b ->
-                            val sel = b.uri in picked
-                            // a tap opens the book, or picks it while books are picked; a long press picks it
-                            Column(Modifier.combinedClickable(onClick = { if (picked.isNotEmpty()) picked = if (sel) picked - b.uri else picked + b.uri else onOpen(b) }, onLongClick = { picked = picked + b.uri }), horizontalAlignment = Alignment.CenterHorizontally) {
-                                // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
-                                val pic by produceState<ImageBitmap?>(null, b.uri) {
-                                    value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
-                                }
-                                Box(Modifier.size(cw, cw * 1.4f)) {
-                                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
-                                    val shown = pic
-                                    // the whole cover is shown (no cropping into a zoomed part); the card colour fills the rest
-                                    if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                    else Text(b.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp))
-                                    if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
-                                }
-                                // a picked book is dimmed with a check; any other book has its ⋮ at the bottom-right corner
-                                if (sel) Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .35f)))
-                                if (sel) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape).background(th.ink), contentAlignment = Alignment.Center) { PIcon("check", th.bg, 16.dp) }
-                                if (!sel) Box(Modifier.align(Alignment.BottomEnd).padding(4.dp).size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { menuFor = b }, contentAlignment = Alignment.Center) { PIcon("more", Color.White, 18.dp) }
-                                }
-                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else th.ink, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
+            } else if (screen == "home") HomePage(th, ctx, shelf) { onOpen(it) }
+            else if (screen == "collections") CollectionsPage(th, ctx, shelf, colls, online, onlineBusy,
+                onNew = { newColl = true },
+                onOpen = { screen = "coll:" + it.name },
+                onLoadOnline = {
+                    onlineBusy = true
+                    scope.launch {
+                        // every category at once: its count and the first covers (a category that fails is left out)
+                        val cats = withContext(Dispatchers.IO) {
+                            kotlinx.coroutines.coroutineScope {
+                                BookFind.TOPICS.map { t -> async { runCatching { BookFind.topic(t).let { r -> Cat(t, r.count, r.books.mapNotNull { f -> f.cover }.take(3).map { u -> BookFind.image(u)?.asImageBitmap() }) } }.getOrNull() } }.awaitAll().filterNotNull()
                             }
                         }
+                        online = cats; onlineBusy = false
                     }
-                }
+                },
+                onOpenCat = { screen = "cat:" + it.topic })
+            else if (screen.startsWith("cat:")) CategoryBooks(th, ctx, screen.removePrefix("cat:")) { book ->
+                shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
+                screen = ""; tab = 0; onOpen(book)
             }
+            else if (screen.startsWith("coll:")) {
+                val cname = screen.removePrefix("coll:")
+                val c = colls.firstOrNull { it.name == cname }
+                val inC = c?.uris.orEmpty().mapNotNull { u -> shelf.firstOrNull { it.uri == u } }
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(cname, color = th.ink, fontSize = 38.sp, fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(42.dp).clip(CircleShape).clickable {
+                        colls = colls.filter { it.name != cname }.also { EbookColl.save(ctx, it) }; screen = "collections"
+                    }, contentAlignment = Alignment.Center) { PIcon("delete", th.sub, 22.dp) }
+                }
+                if (inC.isEmpty()) Text(tr("Nothing in this collection yet. Add books from a book's ⋮ menu.", "Bu koleksiyon boş. Kitapların ⋮ menüsünden ekle."), color = th.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
+                else CoverWall(ctx, inC, picked, if (perRow > 0) perRow else 3, showProgress,
+                    { b -> if (picked.isNotEmpty()) picked = if (b.uri in picked) picked - b.uri else picked + b.uri else onOpen(b) }, { b -> picked = picked + b.uri }, { b -> menuFor = b })
+            }
+            else LibraryPage(th, ctx, shelf, listed, picked, filter, counts, if (perRow > 0) perRow else 3, showProgress, searching, query, { query = it }, { filter = it },
+                onImport = { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) },
+                onSearch = { searching = !searching; if (!searching) query = "" },
+                onDrawer = { drawer = true },
+                onScan = {
+                    // the folders books usually live in: Books and Download on the phone's storage
+                    val found = scanBooks()
+                    shelf = found.also { shelfSave(ctx, it) }
+                    note = if (found.isEmpty()) tr("No EPUB, TXT or PDF in Books or Download", "Books ve Download klasöründe EPUB, TXT veya PDF yok") else ""
+                },
+                onFind = { screen = "find" },
+                onTap = { b -> if (picked.isNotEmpty()) picked = if (b.uri in picked) picked - b.uri else picked + b.uri else onOpen(b) },
+                onLong = { b -> picked = picked + b.uri },
+                onMore = { b -> menuFor = b })
         }
+        // the floating bar: home, find, library, collections, statistics
+        if (picked.isEmpty() && screen != "options" && !drawer) LibNav(th, when {
+            screen == "" -> ""; screen == "home" -> "home"; screen == "find" -> "find"; screen == "stats" -> "stats"
+            screen == "collections" || screen.startsWith("coll:") || screen.startsWith("cat:") -> "collections"; else -> ""
+        }) { screen = it; searching = false }
         if (drawer) ShelfDrawer(
             tab = tab,
             amoled = amoled,
@@ -418,8 +443,21 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             ShelfMenu(th, bk.title, listOf(
                 Triple("heart", if (fav) tr("Remove from favorites", "Favorilerden çıkar") else tr("Add to favorites", "Favorilere ekle"), { Ebook.toggleFavorite(ctx, bk.uri) }),
                 Triple("check", tr("Select", "Seç"), { picked = picked + bk.uri }),
+                Triple("folder", tr("Add to a collection", "Koleksiyona ekle"), { collFor = listOf(bk.uri) }),
                 Triple("recycle", tr("Remove from shelf", "Raftan kaldır"), { askRemove = bk }),
             ), onDismiss = { menuFor = null })
+        }
+        if (newColl) NewCollDialog(th, onOk = { n ->
+            if (colls.none { it.name == n }) colls = (colls + Coll(n, System.currentTimeMillis(), System.currentTimeMillis(), emptyList())).also { EbookColl.save(ctx, it) }
+            newColl = false
+        }, onDismiss = { newColl = false })
+        collFor?.let { uris ->
+            if (!newColl) PickCollDialog(th, colls,
+                onPick = { c ->
+                    colls = colls.map { x -> if (x.name == c.name) Coll(x.name, x.created, System.currentTimeMillis(), (x.uris + uris).distinct()) else x }.also { EbookColl.save(ctx, it) }
+                    collFor = null; picked = emptySet()
+                },
+                onNew = { newColl = true }, onDismiss = { collFor = null })
         }
         askRemove?.let { bk ->
             PDialog(
@@ -1478,3 +1516,334 @@ private fun inverted(text: String, start: Int, spoken: IntRange, mark: IntRange,
             if (e > a) addStyle(st, a, e)
         }
     }
+
+// ---- the library look: big title, filter pills, a staggered cover wall, a floating bar, and collections (own, and categories from the internet) ----
+
+private val LIB_YELLOW = Color(0xFFFFCB47)
+private val LIB_DARK = Color(0xFF1B0B0B)
+
+private fun Theme.light() = bg.red * .299f + bg.green * .587f + bg.blue * .114f > .5f
+private fun Theme.pill() = if (light()) LIB_DARK else Color(0xFF2B1D1D)
+private fun Theme.card() = if (light()) Color.White else Color(0xFF1C1C1E)
+
+/** A named group of books of the person's own. */
+private class Coll(val name: String, val created: Long, val updated: Long, val uris: List<String>)
+
+private object EbookColl {
+    private fun p(c: Context) = c.getSharedPreferences("ebook_collections", Context.MODE_PRIVATE)
+    fun load(c: Context): List<Coll> = runCatching {
+        val a = org.json.JSONArray(p(c).getString("list", "[]"))
+        List(a.length()) { i ->
+            val o = a.getJSONObject(i); val u = o.getJSONArray("u")
+            Coll(o.getString("n"), o.optLong("c"), o.optLong("t"), List(u.length()) { u.getString(it) })
+        }
+    }.getOrDefault(emptyList())
+    fun save(c: Context, l: List<Coll>) {
+        val a = org.json.JSONArray()
+        l.forEach { a.put(org.json.JSONObject().put("n", it.name).put("c", it.created).put("t", it.updated).put("u", org.json.JSONArray(it.uris))) }
+        p(c).edit().putString("list", a.toString()).apply()
+    }
+}
+
+/** A category fetched from the internet: its name, how many free books it holds, and the first covers. */
+private class Cat(val topic: String, val count: Int, val covers: List<ImageBitmap?>)
+
+private fun topicName(t: String) = when (t) {
+    "Fiction" -> tr("Fiction", "Kurgu"); "Science fiction" -> tr("Science fiction", "Bilim kurgu"); "Adventure" -> tr("Adventure", "Macera")
+    "Mystery" -> tr("Mystery", "Gizem"); "History" -> tr("History", "Tarih"); "Philosophy" -> tr("Philosophy", "Felsefe"); "Poetry" -> tr("Poetry", "Şiir")
+    "Children" -> tr("Children", "Çocuk"); "Romance" -> tr("Romance", "Romantik"); "Science" -> tr("Science", "Bilim"); "Horror" -> tr("Horror", "Korku")
+    "Drama" -> tr("Drama", "Tiyatro"); else -> t
+}
+
+private fun ago(t: Long): String {
+    val m = (System.currentTimeMillis() - t) / 60000
+    return when {
+        m < 1 -> tr("Just now", "Az önce"); m < 60 -> tr("$m min ago", "$m dk önce")
+        m < 1440 -> tr("${m / 60} h ago", "${m / 60} sa önce"); else -> tr("${m / 1440} d ago", "${m / 1440} gün önce")
+    }
+}
+
+/** The big page title, with a dark pill button at its right (yellow plus). */
+@Composable
+private fun LibTitle(th: Theme, title: String, action: String, onAction: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = th.ink, fontSize = 42.sp, fontWeight = FontWeight.Light, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Row(Modifier.clip(CircleShape).background(th.pill()).clickable { onAction() }.padding(start = 6.dp, end = 18.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(38.dp).clip(CircleShape).background(LIB_YELLOW), contentAlignment = Alignment.Center) { PIcon("add", LIB_DARK, 24.dp) }
+            Spacer(Modifier.width(10.dp))
+            Text(action, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun CoverThumb(ctx: Context, b: Book, modifier: Modifier) {
+    val pic by produceState<ImageBitmap?>(null, b.uri) {
+        value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
+    }
+    Box(modifier.background(coverColor(b.title)), contentAlignment = Alignment.Center) {
+        val shown = pic
+        if (shown != null) Image(shown, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        else Text(b.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(6.dp))
+    }
+}
+
+/** One book of the wall: its own height (the cover's shape), rounded, with a soft shadow; a ⋮ in a corner and the reading progress as a thin line. */
+@Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun BookTile(ctx: Context, b: Book, sel: Boolean, showProgress: Boolean, onTap: () -> Unit, onLong: () -> Unit, onMore: () -> Unit) {
+    val pic by produceState<ImageBitmap?>(null, b.uri) {
+        value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
+    }
+    val shown = pic
+    val ratio = shown?.let { (it.width.toFloat() / it.height).coerceIn(.55f, 1.1f) } ?: .68f
+    val shape = RoundedCornerShape(22.dp)
+    Box(Modifier.fillMaxWidth().aspectRatio(ratio).shadow(7.dp, shape).clip(shape).background(coverColor(b.title)).combinedClickable(onClick = onTap, onLongClick = onLong)) {
+        if (shown != null) Image(shown, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        else Text(b.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 6, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.Center).padding(10.dp))
+        val pct = if (showProgress) Ebook.pct(ctx, b.uri) else 0
+        if (pct in 1..99) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth(pct / 100f).height(4.dp).background(LIB_YELLOW))
+        if (sel) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)))
+            Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(26.dp).clip(CircleShape).background(LIB_YELLOW), contentAlignment = Alignment.Center) { PIcon("check", LIB_DARK, 16.dp) }
+        } else Box(Modifier.align(Alignment.BottomEnd).padding(6.dp).size(30.dp).clip(CircleShape).background(Color.Black.copy(alpha = .45f)).clickable { onMore() }, contentAlignment = Alignment.Center) { PIcon("more", Color.White, 16.dp) }
+    }
+}
+
+/** The wall of covers: [cols] columns, every cover as tall as it is, so the columns fall unevenly like a pinboard. */
+@Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun ColumnScope.CoverWall(ctx: Context, books: List<Book>, picked: Set<String>, cols: Int, showProgress: Boolean, onTap: (Book) -> Unit, onLong: (Book) -> Unit, onMore: (Book) -> Unit) {
+    androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
+        columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(cols),
+        verticalItemSpacing = 14.dp, horizontalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp), modifier = Modifier.weight(1f).fillMaxWidth(),
+    ) {
+        items(books, key = { it.uri }) { b -> BookTile(ctx, b, b.uri in picked, showProgress, { onTap(b) }, { onLong(b) }, { onMore(b) }) }
+    }
+}
+
+/** The library page: title with Import, the All / Reading / Finished pills, the search, and the wall of covers. */
+@Composable
+private fun ColumnScope.LibraryPage(
+    th: Theme, ctx: Context, shelf: List<Book>, listed: List<Book>, picked: Set<String>, filter: Int, counts: Triple<Int, Int, Int>, cols: Int, showProgress: Boolean,
+    searching: Boolean, query: String, onQuery: (String) -> Unit, onFilter: (Int) -> Unit, onImport: () -> Unit, onSearch: () -> Unit, onDrawer: () -> Unit,
+    onScan: () -> Unit, onFind: () -> Unit, onTap: (Book) -> Unit, onLong: (Book) -> Unit, onMore: (Book) -> Unit,
+) {
+    LibTitle(th, tr("Library", "Kütüphane"), tr("Import", "Ekle"), onImport)
+    Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(tr("All", "Hepsi") to counts.first, tr("Reading", "Okunan") to counts.second, tr("Finished", "Biten") to counts.third).forEachIndexed { i, (label, n) ->
+            val on = i == filter
+            Row(Modifier.clip(CircleShape).background(if (on) th.pill() else th.card()).clickable { onFilter(i) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = if (on) Color.White else th.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                Spacer(Modifier.width(6.dp))
+                Text("$n", color = if (on) LIB_YELLOW else th.sub, fontSize = 15.sp)
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.size(38.dp).clip(CircleShape).clickable { onSearch() }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
+        Box(Modifier.size(38.dp).clip(CircleShape).clickable { onDrawer() }, contentAlignment = Alignment.Center) { PIcon("menu", th.ink, 22.dp) }
+    }
+    if (searching) PField(query, onQuery, tr("Search the shelf", "Rafta ara"), Modifier.fillMaxWidth().padding(top = 8.dp))
+    if (shelf.isEmpty()) {
+        Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(tr("No books yet", "Henüz kitap yok"), color = th.sub, fontSize = 14.sp)
+            Spacer(Modifier.height(12.dp))
+            PButton(tr("Find books on this phone", "Telefondaki kitapları bul"), compact = true) { onScan() }
+            Spacer(Modifier.height(8.dp))
+            PButton(tr("Find free books online", "İnternetten ücretsiz kitap bul"), compact = true) { onFind() }
+        }
+    } else if (listed.isEmpty()) Text(tr("Nothing here", "Burada boş"), color = th.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
+    else CoverWall(ctx, listed, picked, cols, showProgress, onTap, onLong, onMore)
+}
+
+/** The home page: the book to go on with, what was added last, the favourites. */
+@Composable
+private fun ColumnScope.HomePage(th: Theme, ctx: Context, shelf: List<Book>, onOpen: (Book) -> Unit) {
+    val last = shelf.filter { Ebook.opened(ctx, it.uri) > 0L }.maxByOrNull { Ebook.opened(ctx, it.uri) }
+    val recent = shelf.takeLast(12).reversed()
+    val favs = shelf.filter { Ebook.isFavorite(ctx, it.uri) }
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        item { Text(tr("Home", "Ana sayfa"), color = th.ink, fontSize = 42.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 6.dp)) }
+        if (last != null) item {
+            val pct = Ebook.pct(ctx, last.uri)
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(th.card()).clickable { onOpen(last) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                CoverThumb(ctx, last, Modifier.size(92.dp, 134.dp).clip(RoundedCornerShape(14.dp)))
+                Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                    Text(tr("Continue reading", "Okumaya devam"), color = th.sub, fontSize = 13.sp)
+                    Text(last.title, color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (last.author.isNotEmpty()) Text(last.author, color = th.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(12.dp))
+                    Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(th.ink.copy(alpha = .12f))) { Box(Modifier.fillMaxWidth(pct / 100f).fillMaxHeight().background(LIB_YELLOW)) }
+                    Text("$pct%", color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        }
+        for ((label, list) in listOf(tr("Added lately", "Son eklenenler") to recent, tr("Favourites", "Favoriler") to favs)) if (list.isNotEmpty()) item {
+            Column {
+                Text(label, color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    itemsIndexed(list) { _, b -> CoverThumb(ctx, b, Modifier.size(112.dp, 164.dp).shadow(6.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).clickable { onOpen(b) }) }
+                }
+            }
+        }
+        if (shelf.isEmpty()) item { Text(tr("Add books on the Library page", "Kitapları Kütüphane sayfasından ekle"), color = th.sub, fontSize = 14.sp) }
+    }
+}
+
+/** One card of the collections page: when it changed, how many books, its name, and up to three covers fanned out at the bottom. */
+@Composable
+private fun FanCard(th: Theme, title: String, sub: String, when_: String, count: Int, covers: List<ImageBitmap?>, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(34.dp)).clip(RoundedCornerShape(34.dp)).background(th.card()).clickable { onClick() }) {
+        Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (when_.isNotEmpty()) { PIcon("clock", th.sub, 18.dp); Spacer(Modifier.width(8.dp)); Text(when_, color = th.sub, fontSize = 14.sp) }
+            Spacer(Modifier.weight(1f))
+            PIcon("book", th.sub, 18.dp); Spacer(Modifier.width(6.dp)); Text("$count", color = th.sub, fontSize = 14.sp)
+        }
+        Text(title, color = th.ink, fontSize = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp))
+        if (sub.isNotEmpty()) Text(sub, color = th.sub, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
+        Box(Modifier.fillMaxWidth().height(190.dp).padding(top = 12.dp), contentAlignment = Alignment.BottomCenter) {
+            @Composable fun fan(i: Int, dx: Int, rot: Float, w: Int, h: Int) {
+                val pic = covers.getOrNull(i)
+                Box(Modifier.offset(x = dx.dp, y = if (i == 0) 8.dp else 22.dp).graphicsLayer { rotationZ = rot }.size(w.dp, h.dp)
+                    .shadow(6.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).background(th.ink.copy(alpha = .12f))) {
+                    if (pic != null) Image(pic, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                }
+            }
+            if (covers.size >= 2) fan(1, -96, -7f, 104, 156)
+            if (covers.size >= 3) fan(2, 96, 7f, 104, 156)
+            if (covers.isNotEmpty()) fan(0, 0, 0f, 126, 188)
+        }
+    }
+}
+
+/** The collections page: the person's own groups of books, and (when asked for) categories of free books fetched from the internet. */
+@Composable
+private fun ColumnScope.CollectionsPage(
+    th: Theme, ctx: Context, shelf: List<Book>, colls: List<Coll>, online: List<Cat>?, busy: Boolean,
+    onNew: () -> Unit, onOpen: (Coll) -> Unit, onLoadOnline: () -> Unit, onOpenCat: (Cat) -> Unit,
+) {
+    LibTitle(th, tr("Collections", "Koleksiyonlar"), tr("New", "Yeni"), onNew)
+    LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        items(colls.size) { i ->
+            val c = colls[i]
+            val books = c.uris.mapNotNull { u -> shelf.firstOrNull { it.uri == u } }
+            val covers by produceState<List<ImageBitmap?>>(emptyList(), c.uris) {
+                value = withContext(Dispatchers.IO) { books.take(3).map { b -> Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } } }
+            }
+            val reading = books.count { val p = Ebook.pct(ctx, it.uri); p in 1..99 }
+            FanCard(th, c.name, if (reading > 0) tr("$reading reading", "$reading okunuyor") else "", ago(c.updated), books.size, covers) { onOpen(c) }
+        }
+        if (colls.isEmpty()) item { Text(tr("No collections yet. Make one with New, then add books from a book's ⋮ menu.", "Henüz koleksiyon yok. Yeni ile bir tane yap, sonra kitapların ⋮ menüsünden ekle."), color = th.sub, fontSize = 14.sp) }
+        item { Text(tr("Free books by category", "Kategoriye göre ücretsiz kitaplar"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp)) }
+        if (online == null) item {
+            Column {
+                Text(tr("Categories of free books (Project Gutenberg) can be fetched from the internet, each with its first covers.", "Ücretsiz kitap kategorileri (Project Gutenberg) internetten getirilebilir, her biri ilk kapaklarıyla."), color = th.sub, fontSize = 14.sp)
+                Spacer(Modifier.height(10.dp))
+                PButton(if (busy) tr("Loading...", "Yükleniyor...") else tr("Get categories", "Kategorileri getir"), compact = true) { if (!busy) onLoadOnline() }
+            }
+        } else {
+            if (online.isEmpty()) item { Text(tr("No connection", "Bağlantı yok"), color = th.sub, fontSize = 14.sp) }
+            items(online.size) { i -> val c = online[i]; FanCard(th, topicName(c.topic), "", "", c.count, c.covers) { onOpenCat(c) } }
+        }
+    }
+}
+
+/** The books of one internet category: a wall of covers, a tap downloads the book and opens it. */
+@Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun ColumnScope.CategoryBooks(th: Theme, ctx: Context, topic: String, onGot: (Book) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var books by remember(topic) { mutableStateOf<List<BookFind.Found>>(emptyList()) }
+    var page by remember(topic) { mutableStateOf(0) }
+    var total by remember(topic) { mutableStateOf(0) }
+    var busy by remember(topic) { mutableStateOf("") }
+    val booksDir = File(android.os.Environment.getExternalStorageDirectory(), "Books")
+    fun more() {
+        scope.launch {
+            busy = tr("Loading...", "Yükleniyor...")
+            val r = withContext(Dispatchers.IO) { runCatching { BookFind.topic(topic, page + 1) }.getOrNull() }
+            if (r == null) busy = tr("No connection", "Bağlantı yok")
+            else { books = (books + r.books).distinctBy { it.title.lowercase() }; total = r.count; page += 1; busy = "" }
+        }
+    }
+    LaunchedEffect(topic) { if (page == 0) more() }
+    Text(topicName(topic), color = th.ink, fontSize = 42.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 6.dp))
+    if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
+    androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
+        columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(3),
+        verticalItemSpacing = 14.dp, horizontalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp), modifier = Modifier.weight(1f).fillMaxWidth(),
+    ) {
+        items(books, key = { it.title + it.author }) { f ->
+            val pic by produceState<ImageBitmap?>(null, f.cover) { value = f.cover?.let { u -> withContext(Dispatchers.IO) { BookFind.image(u)?.asImageBitmap() } } }
+            val shown = pic
+            val ratio = shown?.let { (it.width.toFloat() / it.height).coerceIn(.55f, 1.1f) } ?: .68f
+            val shape = RoundedCornerShape(22.dp)
+            Box(Modifier.fillMaxWidth().aspectRatio(ratio).shadow(7.dp, shape).clip(shape).background(coverColor(f.title)).clickable {
+                scope.launch {
+                    busy = tr("Downloading...", "İndiriliyor...")
+                    val file = withContext(Dispatchers.IO) { runCatching { BookFind.download(booksDir, f) }.getOrNull() }
+                    val book = file?.let { withContext(Dispatchers.IO) { runCatching { Ebook.open(ctx, Uri.fromFile(it)) }.getOrNull() } }
+                    busy = ""
+                    if (book != null) onGot(book) else busy = tr("This book cannot be downloaded", "Bu kitap indirilemiyor")
+                }
+            }, contentAlignment = Alignment.Center) {
+                if (shown != null) Image(shown, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else Text(f.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 6, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp))
+            }
+        }
+        if (books.size < total) item(span = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan.FullLine) {
+            Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                Text(tr("More", "Daha fazla"), color = Color.White, fontSize = 15.sp, modifier = Modifier.clip(CircleShape).background(th.pill()).clickable { if (busy.isEmpty()) more() }.padding(horizontal = 22.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
+
+/** The floating bar at the bottom: home, search for free books, the library, the collections, the statistics. */
+@Composable
+private fun BoxScope.LibNav(th: Theme, current: String, onSelect: (String) -> Unit) {
+    val items = listOf("home" to "home", "find" to "search", "" to "book", "collections" to "folder", "stats" to "person")
+    Row(
+        Modifier.align(Alignment.BottomCenter).padding(start = 24.dp, end = 24.dp, bottom = 20.dp).fillMaxWidth().height(74.dp)
+            .shadow(14.dp, CircleShape).clip(CircleShape).background(th.pill()).padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items.forEach { (id, icon) ->
+            val on = id == current
+            Box(Modifier.size(if (on) 62.dp else 52.dp).clip(CircleShape).background(if (on) LIB_YELLOW else Color.Transparent).clickable { onSelect(id) }, contentAlignment = Alignment.Center) {
+                PIcon(icon, if (on) LIB_DARK else Color(0xFFB9A79B), 28.dp)
+            }
+        }
+    }
+}
+
+/** A small dialog: a name for a new collection. */
+@Composable
+private fun NewCollDialog(th: Theme, onOk: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf("") }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.clip(RoundedCornerShape(26.dp)).background(th.card()).padding(20.dp)) {
+            Text(tr("New collection", "Yeni koleksiyon"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(10.dp))
+            OutlinedField(name, th, tr("Name", "Ad")) { name = it }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 15.sp, modifier = Modifier.clip(CircleShape).clickable { onDismiss() }.padding(horizontal = 16.dp, vertical = 10.dp))
+                Text(tr("Make", "Oluştur"), color = LIB_DARK, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).background(LIB_YELLOW).clickable { if (name.isNotBlank()) onOk(name.trim()) }.padding(horizontal = 18.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
+
+/** Which collection the picked books go into. */
+@Composable
+private fun PickCollDialog(th: Theme, colls: List<Coll>, onPick: (Coll) -> Unit, onNew: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.clip(RoundedCornerShape(26.dp)).background(th.card()).padding(vertical = 14.dp)) {
+            Text(tr("Add to a collection", "Koleksiyona ekle"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+            colls.forEach { c -> Text(c.name, color = th.ink, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().clickable { onPick(c) }.padding(horizontal = 20.dp, vertical = 12.dp)) }
+            Text("+ " + tr("New collection", "Yeni koleksiyon"), color = th.ink.copy(alpha = .8f), fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.fillMaxWidth().clickable { onNew() }.padding(horizontal = 20.dp, vertical = 12.dp))
+        }
+    }
+}
