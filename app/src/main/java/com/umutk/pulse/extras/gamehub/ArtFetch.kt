@@ -36,9 +36,12 @@ internal object ArtFetch {
         running = true
         Thread {
             try {
+                // the work is for the background: it starts a while after the shelf is open and has the lowest priority, so moving the shelf is never made to wait for it
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                Thread.sleep(8000)
                 var any = false
                 for (g in games) {
-                    if (MegaGames.isMega(g.pkg) || !missing(app, g.pkg)) continue
+                    if (MegaGames.isMega(g.pkg) || HtmlGames.isHtml(g.pkg) || !missing(app, g.pkg)) continue
                     if (fetch(app, g)) any = true
                     Thread.sleep(500)
                 }

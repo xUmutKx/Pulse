@@ -367,7 +367,7 @@ function applyCase(){const s=st(),a=app.style;a.setProperty("--case",s.caseColor
 // Only the cases near the selection exist in the DOM (like the windowed carousels in ES-DE / Big Box): slots[] holds a
 // light record per game and mount() builds a case's elements when it comes within WIN of the selection; cases that
 // drift past WIN+4 are taken down again, so a 500-game shelf costs the same as a 30-game one.
-const WIN=()=>(fxOn?13:9)+2;
+const WIN=()=>(window.PulseHost&&innerWidth<innerHeight?6:fxOn?13:9)+2; /* Pulse, held upright: only a few cases show at the sides, so fewer are kept built (the rest of the phone has less to draw and restyle per move) */
 function build(){
   track.innerHTML="";slots=[];coverQ=[];
   shelves.forEach(sh=>sh.items.forEach(g=>{if(g.kind==="random"&&(g.revealed||g.pick)){g.revealed=false;g.pick=null;clearTimeout(g.revealT)}}));
