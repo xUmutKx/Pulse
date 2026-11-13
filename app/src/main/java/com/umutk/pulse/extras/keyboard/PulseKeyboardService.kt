@@ -562,7 +562,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     // a keyboard that is closed with the emoji (or clipboard, or tool) page up comes back as the plain keys, whichever way it is shown again
-    private fun backToKeys() { st.panel = "keys"; st.emojiQuery = null; st.toolbar = false }
+    private fun backToKeys() { st.panel = "keys"; st.emojiQuery = null; st.toolbar = false; releaseMods() }
+
+    /** The keyboard closed or opened: the keys of the extra row (Ctrl, Alt, Win, Shift, Fn) are let go, so none of them stays on for the next field. */
+    private fun releaseMods() {
+        st.ctrl = 0; st.alt = 0; st.win = 0; st.shiftMod = 0; st.fnOpen = false
+        heldMods.clear(); heldPrev.clear(); heldUsed.clear()
+    }
     override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
     override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
     override fun onWindowShown() { super.onWindowShown(); backToKeys() }
@@ -983,7 +989,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { currentInputConnection?.setSelection(f[2], f[2]); selStart = f[2]; selEnd = f[2] }
     }
 
-    /** After the key's work is done: the corrected [word] (with [tail] behind it, at the cursor) lights up for a third of a second. */
+    /** After the key's work is done: the corrected [word] (with [tail] behind it, at the cursor) lights up for most of a second. */
     private fun flashLater(word: String, tail: String) {
         if (!KeyboardPrefs.fixFlash || st.plain) return
         flashHandler.post {
@@ -1000,7 +1006,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (ws < 0) return@post
                 if (c.setSelection(ws, ws + word.length)) {
                     flash = intArrayOf(ws, ws + word.length, end)
-                    flashHandler.postDelayed(flashEnd, 340L)
+                    flashHandler.postDelayed(flashEnd, 800L)
                 }
             }
         }
