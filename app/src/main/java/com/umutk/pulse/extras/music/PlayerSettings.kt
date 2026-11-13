@@ -255,6 +255,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var lyricsFont by remember { mutableIntStateOf(MusicSettings.lyricsFont(c)) }
     var coverSwipe by remember { mutableStateOf(CoverGestures.swipeChangesTrack(c)) }
     var realWave by remember { mutableStateOf(MusicSettings.realWave(c)) }
+    var blended by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(c)) }
     var onlineCovers by remember { mutableStateOf(MusicSettings.onlineCovers(c)) }
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
@@ -263,6 +264,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         if (cat == "library") SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
         if (cat == "look") SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
         if (cat == "look") SwitchRow(tr("Real waveform on the wave seek bar (analyses each song once)", "Dalga çubuğunda gerçek dalga biçimi (her şarkıyı bir kez çözümler)"), realWave) { realWave = it; MusicSettings.setRealWave(c, it) }
+        if (cat == "look") SwitchRow(tr("Blended cover (Poweramp look)", "Karışık kapak (Poweramp görünümü)"), blended) { blended = it; com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setBlended(c, it) }
         if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
             onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
             // turning it on looks for the covers that are missing now, not only after the next library scan

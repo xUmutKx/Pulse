@@ -36,6 +36,9 @@ object PowerampPrefs {
     /** Which pages show the blurred cover while the art background is on. Keys: now, library, search, effects, queue. Only now playing is on by default. */
     fun artPage(c: Context, key: String): Boolean = sp(c).getBoolean("artPage_$key", key == "now")
     fun setArtPage(c: Context, key: String, on: Boolean) = sp(c).edit().putBoolean("artPage_$key", on).apply()
+    /** The "Blended" cover of the now-playing page: the cover edge to edge at the top, fading into its own blurred copy that fills the screen. Off by default. */
+    fun blended(c: Context): Boolean = sp(c).getBoolean("blended", false)
+    fun setBlended(c: Context, on: Boolean) = sp(c).edit().putBoolean("blended", on).apply()
     /** Lyrics button on the cover: off = only when the track has lyrics; on = always. */
     fun lyricsAlways(c: Context): Boolean = sp(c).getBoolean("lyrics_always", false)
     fun setLyricsAlways(c: Context, on: Boolean) = sp(c).edit().putBoolean("lyrics_always", on).apply()

@@ -372,6 +372,8 @@ fun NowPlayingScreen(
                         }
                     },
                 ) { a ->
+                    // blended: the cover is drawn behind the whole page by PowerampApp (edge to edge, fading into its blurred copy); here it only takes the touches
+                    if (PowerampPrefs.blended(ctx)) Box(Modifier.fillMaxSize()) else
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))).background(style.panel), contentAlignment = Alignment.Center) {
                         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(96.dp))
