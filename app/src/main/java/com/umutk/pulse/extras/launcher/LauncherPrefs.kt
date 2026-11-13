@@ -46,7 +46,7 @@ object LauncherPrefs {
     /** Widgets on the home screen, one "id|package|class" each (see LauncherWidgets). */
     var widgets by mutableStateOf<List<String>>(emptyList())
     private const val WALL = "wall."
-    val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files", "pulse:settings", "pulse:winsettings", "pulse:store")
+    val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files", "pulse:settings", "pulse:winsettings")
 
     /** The desktop shortcuts that show on the Windows desktops: This PC, Recycle Bin and File Explorer until others are switched on in the settings. */
     /** The round buttons at the top right of the home screen (apps, task manager, settings); off by default: the settings are in the long press menu. */
@@ -172,7 +172,9 @@ object LauncherPrefs {
         clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         // once: the settings (or the Control Panel) and the Store join the desktop of a launcher set up before they existed
-        if (p.getProperty("desktopV2") == null) desktopOn = desktopOn + setOf("pulse:settings", "pulse:winsettings", "pulse:store")
+        if (p.getProperty("desktopV2") == null) desktopOn = desktopOn + setOf("pulse:settings", "pulse:winsettings")
+        // once: the Store is no longer on the desktop by itself (it is still one switch away in the launcher's settings)
+        if (p.getProperty("desktopV3") == null) desktopOn = desktopOn - "pulse:store"
         clock = p.getProperty("clock") == "true"
         desktopClock = p.getProperty("desktopClock") != "false"
         desktopNote = p.getProperty("desktopNote") == "true"
@@ -198,7 +200,7 @@ object LauncherPrefs {
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString())
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
-        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
