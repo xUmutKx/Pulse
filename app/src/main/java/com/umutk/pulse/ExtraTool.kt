@@ -173,7 +173,9 @@ open class ExtraToolActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         if (this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null) {
             val r0 = routeOf(intent)
-            if ((storeOf(r0)?.get(this) ?: ExtraToolLook.get(this)) == "win11") { glass = true; setTheme(R.style.Theme_Pulse_Files_Glass) }
+            // a look handed over by the launcher (the look that is on there) wins over the app's own saved one for this start
+            val l0 = intent.getStringExtra("look")?.takeIf { it in ExtraToolLook.ids } ?: storeOf(r0)?.get(this) ?: ExtraToolLook.get(this)
+            if (l0 == "win11") { glass = true; setTheme(R.style.Theme_Pulse_Files_Glass) }
         }
         super.onCreate(savedInstanceState)
         // the clock's status bar is the same black as the screen behind it, with light icons
@@ -189,7 +191,7 @@ open class ExtraToolActivity : ComponentActivity() {
         // Download manager's "open in Browser instead" hands the page it could not find a download link on
         if (savedInstanceState == null) intent.getStringExtra("browser_url")?.let { com.umutk.pulse.extras.browser.BrowserNav.pendingUrl = it }
         if (savedInstanceState == null && this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null &&
-            intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" }) {
+            intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" || it == "look" }) {
             val mine = routeOf(intent)
             val other = runCatching { getSystemService(android.app.ActivityManager::class.java).appTasks.firstOrNull { t ->
                 t.taskInfo.taskId != taskId && (android.os.Build.VERSION.SDK_INT < 29 || t.taskInfo.numActivities > 0) && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
@@ -210,11 +212,11 @@ open class ExtraToolActivity : ComponentActivity() {
         }
         enter()
         setContent {
-            var look by remember { mutableStateOf(store?.get(this@ExtraToolActivity) ?: ExtraToolLook.get(this@ExtraToolActivity)) }
+            var look by remember { mutableStateOf(intent.getStringExtra("look")?.takeIf { it in ExtraToolLook.ids } ?: store?.get(this@ExtraToolActivity) ?: ExtraToolLook.get(this@ExtraToolActivity)) }
             var route by rememberSaveable(start) { mutableStateOf(start) }
             val back: () -> Unit = { if (route != start) route = start else finish() }
             val control = remember(look) {
-                ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it)
+                ExtraLookControl(look) { look = it; intent.removeExtra("look"); if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it)
                     if (this@ExtraToolActivity::class == ExtraToolActivity::class && (it == "win11") != glass) recreate()
                 }
             }
