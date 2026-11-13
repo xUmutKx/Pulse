@@ -239,7 +239,7 @@ open class ExtraToolActivity : ComponentActivity() {
             "screenrec" -> "launch_screenrec" to tr("Screen recorder", "Ekran kaydı")
             "notifhist" -> "launch_notifhist" to tr("Notification history", "Bildirim geçmişi")
             "extrastore" -> "launch_store" to tr("Store", "Mağaza")
-            "localsend" -> "launch_localsend" to "LocalSend"
+            "localsend" -> "launch_localsend" to tr("Share", "Paylaş")
             "palette" -> "launch_palette" to "Palette"
             "blackout" -> "launch_blackout" to "BlackOut"
             "gamehub" -> "launch_gamehub" to "Game Hub"

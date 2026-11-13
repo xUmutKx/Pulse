@@ -2524,16 +2524,15 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
         if (files.isEmpty()) return@LaunchedEffect
         targets = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
-            // Relay and LocalSend, Pulse's own nearby-device senders, are the first tiles
+            // Share, Pulse's own nearby-device sender (LocalSend and Relay in one list, Quick Share beside them), is the first tile
             val nearby = listOf(
-                ShareTarget(tr("Relay", "Relay"), null, android.content.ComponentName(ctx, "com.umutk.pulse.extras.relay.RelayShareActivity"), "send"),
-                ShareTarget(tr("LocalSend", "LocalSend"), null, android.content.ComponentName(ctx, "com.umutk.pulse.extras.localsend.LocalSendShareActivity"), "wifi"),
+                ShareTarget(tr("Share", "Paylaş"), null, android.content.ComponentName(ctx, "com.umutk.pulse.extras.share.ShareTargetActivity"), "send"),
             )
             nearby + runCatching {
-                pm.queryIntentActivities(sendIntent(files), 0).filter { !it.activityInfo.name.endsWith("LocalSendShareActivity") && !it.activityInfo.name.endsWith("RelayShareActivity") }.distinctBy { it.activityInfo.packageName }
+                pm.queryIntentActivities(sendIntent(files), 0).filter { !it.activityInfo.name.endsWith("ShareTargetActivity") }.distinctBy { it.activityInfo.packageName }
                     // the nearby-device senders come first: Pulse's LocalSend, the LocalSend app, Quick Share
                     .sortedBy { ri -> val n = ri.activityInfo.name; val pk = ri.activityInfo.packageName
-                        when { n.endsWith("LocalSendShareActivity") -> 0; n.endsWith("RelayShareActivity") -> 0; pk == "org.localsend.localsend_app" -> 1; n.contains("nearby.sharing") -> 2; pk == "com.samsung.android.app.sharelive" -> 3; else -> 4 } }
+                        when { n.endsWith("ShareTargetActivity") -> 0; pk == "org.localsend.localsend_app" -> 1; n.contains("nearby.sharing") -> 2; pk == "com.samsung.android.app.sharelive" -> 3; else -> 4 } }
                     .take(12).map { ri ->
                     ShareTarget(ri.loadLabel(pm).toString(), runCatching { ri.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(),
                         android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))

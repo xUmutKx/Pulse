@@ -901,22 +901,18 @@
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
-        <!-- "Pulse · LocalSend" in the Share list: the devices of the network are shown there and a tap sends the files (an alternative to Quick Share) -->
-        <activity android:name="com.umutk.pulse.extras.localsend.LocalSendShareActivity" android:exported="true" android:label="Pulse · LocalSend" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+        <!-- "Pulse · Share" in the system Share list: the devices of LocalSend and Relay in one list, and Quick Share / AirDrop (extras/share/ShareTargetActivity.kt) -->
+        <activity android:name="com.umutk.pulse.extras.share.ShareTargetActivity" android:exported="true" android:label="Pulse · Share" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="*/*" />
             </intent-filter>
-        </activity>
-        <!-- "Pulse · Relay" in the system Share list: files, text and links to a paired Relay device (extras/relay/RelayShareActivity.kt) -->
-        <activity android:name="com.umutk.pulse.extras.relay.RelayShareActivity" android:exported="true" android:label="Pulse · Relay" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="*/*" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
         <service android:name="com.umutk.pulse.extras.keyboard.KeyboardTile" android:exported="true" android:label="Keyboard" android:icon="@drawable/ic_qs_keys"
