@@ -80,6 +80,17 @@ class LauncherActivity : ComponentActivity() {
             val look = LauncherLooks.byId(LauncherPrefs.look)
             val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
             LaunchedEffect(look.id, LauncherPrefs.sounds) { LauncherSounds.prepare(this@LauncherActivity, look.id) }
+            // the readings of This PC and its tiles (processor, memory, temperature, battery) come from the sampler, which the launcher must run itself:
+            // the main app's loop does not run while the launcher is in front. A sample is taken only when none was taken lately (no double work)
+            LaunchedEffect(Unit) {
+                withContext(Dispatchers.IO) {
+                    com.umutk.pulse.Shell.detectRoot()
+                    while (true) {
+                        if (System.currentTimeMillis() - com.umutk.pulse.Sampler.lastSample > 2500L) com.umutk.pulse.Sampler.sample(this@LauncherActivity)
+                        delay(1000L)
+                    }
+                }
+            }
             BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
             val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
             LookHost(lookId = look.id) { th ->
