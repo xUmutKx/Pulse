@@ -585,10 +585,14 @@ internal fun SeekBar(
     val scrub by rememberUpdatedState(onScrub)
     val commit by rememberUpdatedState(onCommit)
     val windowed = style.seek == PowerampSeek.WAVE && windowFrac < .999f
+    // a flick of the wave glides on after the finger lets go and slows down by itself; a new touch stops it where it is
+    val glideScope = androidx.compose.runtime.rememberCoroutineScope()
+    val glide = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     Canvas(
         modifier.pointerInput(windowed, windowFrac) {
             awaitEachGesture {
                 val d = awaitFirstDown()
+                glide[0]?.cancel(); glide[0] = null
                 if (windowed) {
                     // the wave moves with the finger: dragging left plays on, dragging right goes back; a tap jumps to the tapped bar
                     val barFrac = windowFrac / WAVE_BARS
@@ -597,14 +601,31 @@ internal fun SeekBar(
                     var total = 0f
                     var moved = false
                     var f = p0
+                    val vt = androidx.compose.ui.input.pointer.util.VelocityTracker()
                     drag(d.id) {
+                        vt.addPosition(it.uptimeMillis, it.position)
                         total += it.position.x - it.previousPosition.x
                         if (kotlin.math.abs(total) > viewConfiguration.touchSlop) moved = true
                         if (moved) { f = (p0 - total / slotPx * barFrac).coerceIn(0f, 1f); scrub(f) }
                         it.consume()
                     }
                     if (!moved) f = (p0 + (d.position.x - size.width / 2f) / slotPx * barFrac).coerceIn(0f, 1f)
-                    commit(f)
+                    // the speed of the finger at the end, in shares of the track a second
+                    var v = if (moved) -vt.calculateVelocity().x / slotPx * barFrac else 0f
+                    if (kotlin.math.abs(v) * WAVE_BARS / windowFrac < 6f) commit(f)   // slower than six bars a second: no glide
+                    else glide[0] = glideScope.launch {
+                        var pos = f
+                        var last = androidx.compose.runtime.withFrameNanos { it }
+                        try {
+                            while (kotlin.math.abs(v) * WAVE_BARS / windowFrac > 1.5f && pos > 0f && pos < 1f) {
+                                val now = androidx.compose.runtime.withFrameNanos { it }
+                                val dt = ((now - last) / 1e9f).coerceIn(0f, .05f); last = now
+                                pos = (pos + v * dt).coerceIn(0f, 1f)
+                                v *= kotlin.math.exp(-dt / .45f)
+                                scrub(pos)
+                            }
+                        } finally { commit(pos) }
+                    }
                 } else {
                     var f = (d.position.x / size.width).coerceIn(0f, 1f)
                     scrub(f)
