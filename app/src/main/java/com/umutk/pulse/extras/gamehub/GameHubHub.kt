@@ -1006,7 +1006,8 @@ fun GameHubHub(onBack: () -> Unit) {
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
                     } } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
-                        Modifier.fillMaxSize().navigationBarsPadding(),
+                        // black under the page until it is painted (the screen behind is white, and it showed before the shelf)
+                        Modifier.fillMaxSize().background(Color.Black).navigationBarsPadding(),
                         // the Windows 11 click of the launcher's sounds when a game starts or its settings open
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
