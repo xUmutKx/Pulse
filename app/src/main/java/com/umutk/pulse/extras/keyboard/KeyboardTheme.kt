@@ -18,10 +18,10 @@ class KbTheme(
 
 object KeyboardThemes {
     /** The picker's order. */
-    val ids = listOf("amoled", "material", "samsung", "win11", "win10", "win7", "xp", "win95", "custom")
+    val ids = listOf("samsung", "amoled", "material", "win11", "win10", "win7", "xp", "win95", "custom")
 
     fun name(id: String) = when (id) {
-        "amoled" -> "AMOLED"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
+        "amoled" -> "SwiftKey"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
         "xp" -> "Windows XP"; "win95" -> "Windows 95"; else -> "Custom"
     }
 
