@@ -2,3 +2,4 @@ The console case frames in this folder (ps3, ps4, ps5, switch, switch2, xbox360,
 Their window positions are in CaseCover.kt. The platform logos are part of the frames.
 
 The frames steam, pc, epic, gog, gplay, android, ea, ubisoft, battlenet and itch were made for Pulse: a coloured case with a header band. Their logos are the platforms' own marks, fetched from the Simple Icons set (CC0) and, for Windows, from Wikimedia Commons; the marks belong to their owners. The window of each is at 16, 116, 584, 884.
+Also ps1, ps2, xbox, nes, snes, n64, gamecube, wii, wiiu, ds and n3ds, made the same way (their marks are from Simple Icons; the Nintendo ones without a mark of their own wear the Nintendo logo).

@@ -16,12 +16,14 @@ import java.io.FileOutputStream
  * The frames are from the steam-case-covers project (GPL-3.0); the windows are its measured positions (600 x 900 px).
  */
 internal object CaseCover {
-    val STYLES = listOf("steam", "pc", "epic", "gog", "gplay", "android", "ea", "ubisoft", "battlenet", "itch", "plain", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
+    val STYLES = listOf("steam", "pc", "epic", "gog", "gplay", "android", "ea", "ubisoft", "battlenet", "itch", "ps1", "ps2", "xbox", "nes", "snes", "n64", "gamecube", "wii", "wiiu", "ds", "n3ds", "plain", "ps5", "ps4", "ps3", "switch", "switch2", "xbox360", "xboxone", "xboxseries", "mix")
     /** The mix: every game gets one of these cases at random (all the cases there are), and keeps it; "Shuffle the boxes" deals them again. */
     val MIX = STYLES.filter { it != "plain" && it != "mix" }
     private val WINDOWS = mapOf(
         "steam" to intArrayOf(16, 116, 584, 884), "pc" to intArrayOf(16, 116, 584, 884), "epic" to intArrayOf(16, 116, 584, 884), "gog" to intArrayOf(16, 116, 584, 884), "gplay" to intArrayOf(16, 116, 584, 884),
-        "android" to intArrayOf(16, 116, 584, 884), "ea" to intArrayOf(16, 116, 584, 884), "ubisoft" to intArrayOf(16, 116, 584, 884), "battlenet" to intArrayOf(16, 116, 584, 884), "itch" to intArrayOf(16, 116, 584, 884), "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
+        "android" to intArrayOf(16, 116, 584, 884), "ea" to intArrayOf(16, 116, 584, 884), "ubisoft" to intArrayOf(16, 116, 584, 884), "battlenet" to intArrayOf(16, 116, 584, 884), "itch" to intArrayOf(16, 116, 584, 884),
+        "ps1" to intArrayOf(16, 116, 584, 884), "ps2" to intArrayOf(16, 116, 584, 884), "xbox" to intArrayOf(16, 116, 584, 884), "nes" to intArrayOf(16, 116, 584, 884), "snes" to intArrayOf(16, 116, 584, 884), "n64" to intArrayOf(16, 116, 584, 884),
+        "gamecube" to intArrayOf(16, 116, 584, 884), "wii" to intArrayOf(16, 116, 584, 884), "wiiu" to intArrayOf(16, 116, 584, 884), "ds" to intArrayOf(16, 116, 584, 884), "n3ds" to intArrayOf(16, 116, 584, 884), "ps3" to intArrayOf(13, 116, 586, 886), "ps4" to intArrayOf(16, 116, 584, 884), "ps5" to intArrayOf(16, 117, 584, 884),
         "switch" to intArrayOf(16, 16, 584, 884), "switch2" to intArrayOf(16, 165, 584, 884),
         "xbox360" to intArrayOf(16, 116, 584, 884), "xboxone" to intArrayOf(16, 116, 584, 884), "xboxseries" to intArrayOf(16, 16, 584, 884),
     )
