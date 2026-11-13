@@ -630,7 +630,7 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
     val tint = if (on) th.accent else th.text
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         // (the Samsung look: a filled round button, no ring)
-        Box((if (th.samsung) Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) {
+        Box((if (th.samsung) Modifier.size(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) {
             androidx.compose.foundation.Canvas(Modifier.size(20.dp)) {
                 scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
             }
@@ -642,7 +642,7 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
 private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick: () -> Unit) {
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         // (the Samsung look: a filled round button, no ring)
-        Box((if (th.samsung) Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (on) th.accent else th.text, modifier = Modifier.size(20.dp)) }
+        Box((if (th.samsung) Modifier.size(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) th.accent.copy(alpha = .28f) else lerp(th.menu, th.text, .1f)) else Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp))), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (on) th.accent else th.text, modifier = Modifier.size(if (th.samsung) 16.dp else 20.dp)) }
     }
 }
 
@@ -921,7 +921,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
-        Modifier.weight(k.weight).height(if (small) keyH * (if (th.samsung) .83f else .78f) else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
+        Modifier.weight(k.weight).height(if (small) keyH * (if (th.samsung) .86f else .78f) else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
             // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
             .pointerInput(k.kind) {
                 awaitEachGesture {
@@ -1068,7 +1068,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFx, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
             .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
-            val fs = (big * (.85f + .15f * KeyboardPrefs.heightAt(kbLand()) / 100f)).sp
+            // (the Samsung look: the letters are 27 sp and the digits 24 sp, measured on the real keyboard)
+            val fs = if (th.samsung) 27.sp else (big * (.85f + .15f * KeyboardPrefs.heightAt(kbLand()) / 100f)).sp
             when (k.kind) {
                 KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
@@ -1077,14 +1078,14 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.MENU -> { Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.LANG -> { Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.SPACE -> Text(k.label, color = if (th.samsung) th.text else th.sub, fontSize = if (th.samsung) 14.sp else 12.sp, maxLines = 1)
-                KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = if (th.samsung) 17.sp else 15.sp, maxLines = 1)
+                KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = if (th.samsung) 18.sp else 15.sp, maxLines = 1)
                 else -> {
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
                     if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
-                    Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
+                    Text(k.label, color = fg, fontSize = if (small) (if (th.samsung) 24.sp else (fs.value * .82f).sp) else fs, maxLines = 1)
                 }
             }
         }
