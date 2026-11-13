@@ -501,8 +501,10 @@ function pulseDisc(g){
     const bg=await load(a.hero)||await load(g.shots&&g.shots[0]),logo=await load(a.logo);if(!bg&&!logo)return null;
     const S=768,c=document.createElement("canvas");c.width=c.height=S;const x=c.getContext("2d"),r=S/2;
     x.beginPath();x.arc(r,r,r-1,0,Math.PI*2);x.clip();x.fillStyle="#0b1020";x.fillRect(0,0,S,S);
-    if(bg){const k=Math.max(S/bg.width,S/bg.height);x.drawImage(bg,(S-bg.width*k)/2,(S-bg.height*k)/2,bg.width*k,bg.height*k)}
-    const v=x.createRadialGradient(r,r,r*.25,r,r,r);v.addColorStop(0,"rgba(4,8,16,.1)");v.addColorStop(1,"rgba(4,8,16,.62)");x.fillStyle=v;x.fillRect(0,0,S,S);
+    // the disc is not the cover again: a colour of its own (from the game's hue), the wide picture only faintly under it, and the logo on top
+    const hue=(typeof g.hue==="number"?g.hue:(g.seed||0)%360);const sky=x.createRadialGradient(r,r,r*.1,r,r,r);sky.addColorStop(0,`hsl(${hue} 55% 34%)`);sky.addColorStop(1,`hsl(${hue} 60% 9%)`);x.fillStyle=sky;x.fillRect(0,0,S,S);
+    if(bg){x.globalAlpha=.22;const k=Math.max(S/bg.width,S/bg.height);x.drawImage(bg,(S-bg.width*k)/2,(S-bg.height*k)/2,bg.width*k,bg.height*k);x.globalAlpha=1}
+    const v=x.createRadialGradient(r,r,r*.25,r,r,r);v.addColorStop(0,"rgba(4,8,16,.1)");v.addColorStop(1,"rgba(4,8,16,.55)");x.fillStyle=v;x.fillRect(0,0,S,S);
     x.textAlign="center";
     if(logo){const k=Math.min(430/logo.width,150/logo.height);x.save();x.shadowColor="rgba(0,0,0,.75)";x.shadowBlur=16;x.drawImage(logo,r-logo.width*k/2,150-logo.height*k/2,logo.width*k,logo.height*k);x.restore()}
     else{x.fillStyle="#fff";x.font="800 46px Lexend, sans-serif";x.shadowColor="rgba(0,0,0,.8)";x.shadowBlur=12;x.fillText(String(g.title||"").slice(0,22),r,165);x.shadowBlur=0}
@@ -904,14 +906,14 @@ function infoRows(g){
   if(g.kind==="emulator")return [["Emulator",s.emulatorName],["Program",s.emulator||"Not set"]];
   if(g.kind==="setup")return [["Games found","None yet"],["Fix it in","Settings → "+s.name]];
   if(g.kind==="random")return [...(g.pick?[["Picked",g.pick.game.title],["Shelf",(g.pick.sh||shelves[g.pick.shelf]).name]]:[]),["Picks from",shuffleAll()?"Every shelf":"This shelf"],["Change","Settings → Shelf"]];
-  if(g.kind==="app"&&g.pulse){ // a Game Hub game: how much it was played, and where that puts it among the games of the shelf
+  if(g.kind==="app"&&g.pulse){ // a Game Hub game: its rating, how much it was played, and where that puts it among the games of the shelf
     const all=shelves.flatMap(x=>x.games||[]).filter(x=>x.pulse),tot=all.reduce((n,x)=>n+(x.minutes||0),0),top=all.reduce((n,x)=>Math.max(n,x.minutes||0),0),m=g.minutes||0;
     const hrs=v=>v>=60?`${(v/60).toFixed(1)} hours`:`${v} min`,rank=all.filter(x=>(x.minutes||0)>m).length+1;
-    const rows=[["Played",m?hrs(m):"Not played yet"],["Last played",g.lastPlayed?fmtDate(g.lastPlayed):"Never"]];
+    const rows=[...(g.rating?[["Rating",g.rating]]:[]),["Played",m?hrs(m):"Not played yet"],["Last played",g.lastPlayed?fmtDate(g.lastPlayed):"Never"]];
     if(m&&all.length>1){rows.push(["Rank",`#${rank} of ${all.length} games`]);rows.push(["Share",`${Math.max(1,Math.round(m/tot*100))}% of all play time`]);rows.push(["%bar",`${hrs(m)} of ${hrs(top)} (your most played)`,top?m/top:0])}
     return rows}
   if(g.kind==="app")return [["Type","Streaming app"],["Program",g.path],["Returns","When you close the app"]];
-  if(g.kind==="steam"){const si=g.info||{};return [...(si.release||si.year?[["Released",fmtRelease(si.release,si.year)]]:[]),...(si.dev?[["Developer",si.dev]]:[]),...(si.pub&&si.pub!==si.dev?[["Publisher",si.pub]]:[]),...(si.genres?[["Genre",si.genres.replace(/;/g,", ")]]:[]),...(si.metacritic?[["Metacritic",si.metacritic+" / 100"]]:[]),["Playtime",g.minutes?`${(g.minutes/60).toFixed(1)} hours`:"Not played yet"],["Last played",fmtDate(g.lastPlayed)],["Install size",fmtSize(g.sizeBytes)],["Steam ID",g.appid]];}
+  if(g.kind==="steam"){const si=g.info||{};return [...(g.rating?[["Rating",g.rating]]:[]),...(si.release||si.year?[["Released",fmtRelease(si.release,si.year)]]:[]),...(si.dev?[["Developer",si.dev]]:[]),...(si.pub&&si.pub!==si.dev?[["Publisher",si.pub]]:[]),...(si.genres?[["Genre",si.genres.replace(/;/g,", ")]]:[]),...(si.metacritic?[["Metacritic",si.metacritic+" / 100"]]:[]),["Playtime",g.minutes?`${(g.minutes/60).toFixed(1)} hours`:"Not played yet"],["Last played",fmtDate(g.lastPlayed)],["Install size",fmtSize(g.sizeBytes)],["Steam ID",g.appid]];}
   const i=g.info||{};const rows=[];
   if(i.release||i.year)rows.push(["Released",fmtRelease(i.release,i.year)]);
   if(i.dev)rows.push(["Developer",i.dev]);if(i.pub&&i.pub!==i.dev)rows.push(["Publisher",i.pub]);
@@ -1654,7 +1656,7 @@ const CONSOLE_ART={
 };
 const consoleKey=b=>({ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw",xbox360:"x360",xboxone:"xone",xboxseries:"xsx"})[b]||"pc";
 // the disc: a touch or mouse hold ejects it (the box shakes); dragged onto the console below it starts the game; Enter drops it in too
-let holdByPtr=false;
+let holdByPtr=false,quickEjectT=0;
 const discRest=()=>{const d=document.querySelector("#inspect .isp-disc");return d?Math.round(d.offsetHeight*.9):0};
 function ejectDisc(){
   holdByPtr=false;isp.ejected=true;const el=$("inspect"),d=document.querySelector("#inspect .isp-disc");
@@ -1732,7 +1734,9 @@ function inspectKey(e){
 }
 (function(){
   const el=$("inspect");
-  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
+  el.addEventListener("pointerdown",e=>{if(mode!=="inspect"||e.target.closest(".isp-hints"))return;if(rd.open){isp.drag={x:e.clientX,y:e.clientY,moved:false};return}if(isp.state===2){holdByPtr=true;holdBegin()}else if(!rd.open&&!isp.ejected){ // a hold on a closed or open case takes the disc straight out (no tap first)
+      clearTimeout(quickEjectT);quickEjectT=setTimeout(()=>{quickEjectT=0;if(mode!=="inspect"||isp.ejected)return;while(isp.state<2)ispAdvance();if(isp.state===2){holdByPtr=true;ejectDisc();if(window.__discGrab)__discGrab()}},420)}
+    isp.drag={x:e.clientX,y:e.clientY,moved:false};el.classList.add("dragging")});
   // the ejected disc follows the pointer; over the console it lights up, and let go there it starts the game, else it goes back.
   // With the 3D view (WebGL) the disc is drawn in the canvas, so the canvas is what moves; without it, the DOM disc moves
   let dr=null;
@@ -1753,7 +1757,7 @@ function inspectKey(e){
       if(sl){const k=sl.getBoundingClientRect();s.style.transition="translate .26s cubic-bezier(.5,0,.8,.5),scale .26s ease-in,opacity .22s ease-in .06s";s.style.translate=`${cur[0]+(k.left+k.width/2-c.x)}px ${cur[1]+(k.top+k.height/2-c.y)}px`;s.style.scale=".18";s.style.opacity="0";setTimeout(insertDisc,270)}else insertDisc()}
     else{$("ispConsole").classList.remove("over");s.style.transition="translate .35s cubic-bezier(.2,.8,.2,1)";s.style.translate=`${base[0]}px ${base[1]}px`;setTimeout(()=>{if(isp.ejected)resetEject()},360)}});
   addEventListener("pointermove",e=>{if(!isp.drag)return;const dx=e.clientX-isp.drag.x,dy=e.clientY-isp.drag.y;if(Math.abs(dx)+Math.abs(dy)>4){isp.drag.moved=true;holdEnd(true)}if(isp.tz>1&&e.shiftKey)ispPan(dx,dy);else ispTurn(dx*.22,-dy*.16);isp.drag.x=e.clientX;isp.drag.y=e.clientY});
-  addEventListener("pointerup",e=>{if(!isp.drag)return;const click=!isp.drag.moved;isp.drag=null;el.classList.remove("dragging");if(!click&&!rd.open&&isp.tz<=1)ispSnap();const wasHolding=!!holdT;holdEnd(false);if(click&&mode==="inspect"&&!wasHolding){if(rd.open)rdTurn(e.clientX<innerWidth/2?-1:1);else ispAdvance()}});
+  addEventListener("pointerup",e=>{clearTimeout(quickEjectT);quickEjectT=0;if(!isp.drag)return;const click=!isp.drag.moved;isp.drag=null;el.classList.remove("dragging");if(!click&&!rd.open&&isp.tz<=1)ispSnap();const wasHolding=!!holdT;holdEnd(false);if(click&&mode==="inspect"&&!wasHolding){if(rd.open)rdTurn(e.clientX<innerWidth/2?-1:1);else ispAdvance()}});
 })();
 
 // Freeze watch (shelf side): a frame that takes over a quarter second is logged with what was on screen, so a

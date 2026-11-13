@@ -79,6 +79,10 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val k = parts.getOrNull(2)?.toIntOrNull() ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(steamShotFile(c, pkg, k).takeIf { it.isFile } ?: return null))
             }
+            "logo" -> {
+                val pkg = parts.getOrNull(1) ?: return null
+                WebResourceResponse("image/png", null, FileInputStream(steamLogoFile(c, pkg).takeIf { it.isFile } ?: return null))
+            }
             "hero" -> {
                 val pkg = parts.getOrNull(1) ?: return null
                 WebResourceResponse("image/jpeg", null, FileInputStream(steamHeroFile(c, pkg).takeIf { it.isFile } ?: return null))
@@ -119,7 +123,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("cover", if (hasCover) "https://$HOST/cover/${g.pkg}" else JSONObject.NULL)
                 .put("hero", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
                 // the disc inside the case is the game's wide picture, so it is not the same picture as the front cover
-                .put("disc", if (steamHeroFile(c, g.pkg).isFile) "https://$HOST/hero/${g.pkg}" else JSONObject.NULL)
+                .put("logo", if (steamLogoFile(c, g.pkg).isFile) "https://$HOST/logo/${g.pkg}" else JSONObject.NULL)
+                .put("rating", ArtFetch.rating(c, g.pkg).ifEmpty { null } ?: JSONObject.NULL)
                 // the Steam screenshots for the back of the box (up to four; none until the covers were looked for)
                 // the box style the game's box is made in: the spine says its console (Steam: the shelf's own PC spine)
                 .put("box", CaseCover.styleOf(c, g.pkg))
@@ -141,7 +146,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         val p = prefs(c)
         return when (key) {
             "caseStyle" -> p.getString(key, "pc") ?: "pc"
-            "sgdbKey" -> p.getString(key, "") ?: ""
+            "sgdbKey", "rawgKey" -> p.getString(key, "") ?: ""
             "grid", "view", "iconMode" -> p.getInt(key, 0).toString()
             "start" -> p.getInt(key, 1).toString()
             "showHidden" -> p.getBoolean(key, true).toString()
@@ -232,6 +237,8 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     // each time the shelf opens, its opening animation comes first: the + waits for the page to say it ended (or a few seconds)
     androidx.compose.runtime.DisposableEffect(Unit) { ShelfIntro.done.value = false; onDispose { ShelfIntro.done.value = false } }
     androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(4000); ShelfIntro.done.value = true }
+    // the pictures of the games (the wide picture, the logo, the four screenshots, the rating) are looked for when the shelf opens, without a button
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ArtFetch.start(ctx, loadGames(ctx)) } }
     val launch by rememberUpdatedState(onLaunch)
     val details by rememberUpdatedState(onDetails)
     val exit by rememberUpdatedState(onExit)

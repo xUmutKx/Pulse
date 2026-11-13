@@ -104,8 +104,8 @@ class PowerampWidget : AppWidgetProvider() {
             return buildFor(c, id, boxPx(c, id))
         }
 
-        private fun buildFor(c: Context, id: Int, box: Pair<Int, Int>): RemoteViews {
-            val (bw, bh) = box
+        private fun buildFor(c: Context, id: Int, box: WBox): RemoteViews {
+            val bw = box.bw; val bh = box.bh
             val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val dur = e.player.duration.takeIf { it > 0 } ?: 0L
@@ -118,10 +118,10 @@ class PowerampWidget : AppWidgetProvider() {
                 st.index, st.queue.size, PlayModes.shuffle != ShuffleKind.OFF, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c), WidgetOpts.look(c),
             )
             val f = fit(bw, bh)
+            val k = box.shrink
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
                 setImageViewBitmap(R.id.pa_img, bmp)
                 // the transport row sits under the drawn buttons: pad the overlay to the fitted window
-                val k = lastShrink
                 setViewPadding(
                     R.id.pa_overlay,
                     ((f.x + 0.075f * f.w) * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w + 0.075f * f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
@@ -148,25 +148,20 @@ class PowerampWidget : AppWidgetProvider() {
             }
         }
 
-        /** Whole-window fit: the largest scale at which W x H fits the box, centred. */
+        /** Whole-window fit: the largest scale at which W x H fits the box, centred. (Nothing is kept between two sizes: each box carries its own numbers.) */
         fun fit(bw: Int, bh: Int): Fit {
-            // the window never grows past MAX_DP of the screen for each unit: a widget pulled wider or taller keeps the window about the size of a normal one, centred, with empty space around it
-            val s = minOf(bw / W.toFloat(), bh / H.toFloat(), lastCap)
+            val s = minOf(bw / W.toFloat(), bh / H.toFloat())
             val w = (W * s).toInt(); val h = (H * s).toInt()
             return Fit(s, (bw - w) / 2, (bh - h) / 2, w, h)
         }
 
         data class Fit(val scale: Float, val x: Int, val y: Int, val w: Int, val h: Int)
 
-        /** The widget's box in pixels from its options: portrait uses the narrow width and the tall height, landscape the reverse. */
-        /** How much smaller the bitmap is than the widget on screen (set by [boxPx]); the touch padding is in screen pixels. */
-        private var lastShrink = 1f
-        /** The most the window may be scaled in bitmap pixels per unit (set by [boxPx] from [MAX_DP] and the screen's density). */
-        private var lastCap = Float.MAX_VALUE
-        /** The window is at most this many dp per unit: 320 x 200 dp, about a tenth more than the first size of the widget. */
-        private const val MAX_DP = 1.0f
+        /** A widget's box in bitmap pixels ([bw] x [bh]) and how much smaller than the widget on screen the bitmap is ([shrink]; the touch padding is in screen pixels). */
+        class WBox(val bw: Int, val bh: Int, val shrink: Float)
 
-        private fun boxPx(c: Context, id: Int): Pair<Int, Int> {
+        /** The widget's box from its options: portrait uses the narrow width and the tall height, landscape the reverse. */
+        private fun boxPx(c: Context, id: Int): WBox {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
             val d = c.resources.displayMetrics.density
             val portrait = c.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
@@ -178,14 +173,12 @@ class PowerampWidget : AppWidgetProvider() {
         }
 
         /** The box of a widget [w] x [h] dp in bitmap pixels; also sets how much smaller than the screen the bitmap is. */
-        private fun boxOf(c: Context, w: Float, h: Float): Pair<Int, Int> {
+        private fun boxOf(c: Context, w: Float, h: Float): WBox {
             val d = c.resources.displayMetrics.density
             val pw = w * d; val ph = h * d
-            // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
-            val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
-            lastShrink = shrink
-            lastCap = MAX_DP * d / shrink
-            return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
+            // RemoteViews carries bitmaps over a 1 MB binder limit (ARGB, 4 bytes a pixel): about 240k pixels at most
+            val shrink = kotlin.math.sqrt(pw * ph / 240_000f).coerceAtLeast(1f)
+            return WBox((pw / shrink).toInt().coerceAtLeast(1), (ph / shrink).toInt().coerceAtLeast(1), shrink)
         }
 
         private val GREY = 0xFFD2D2D2.toInt()
