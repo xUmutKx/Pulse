@@ -120,6 +120,8 @@ fun GeneralSettings() {
         SwitchRow(tr("Old monitor filter", "Eski monitör filtresi"), tr("Scan lines and dots, like a CRT", "CRT gibi tarama çizgileri ve noktalar"), Opt.crt) { Opt.crt = it; Opt.save(ctx) }
         SwitchRow(tr("Sign-in screen at start", "Açılışta giriş ekranı"), tr("Windows 95, XP, 7, 10 and 11 looks", "Windows 95, XP, 7, 10 ve 11 görünümleri"), Opt.signIn) { Opt.signIn = it; Opt.save(ctx) }
         SwitchRow(tr("Start-up sound", "Açılış sesi"), tr("The Windows sound of the look when Pulse opens (off by default)", "Pulse açılırken görünümün Windows sesi (varsayılan kapalı)"), Opt.startSound) { Opt.startSound = it; Opt.save(ctx) }
+        var crashAsk by remember { mutableStateOf(CrashReport.enabled(ctx)) }
+        SwitchRow(tr("Offer a bug report after a crash", "Çökmeden sonra hata raporu öner"), tr("Opens GitHub with the error filled in; nothing is sent by itself", "GitHub'ı hatayla doldurulmuş açar; kendiliğinden hiçbir şey gönderilmez"), crashAsk) { crashAsk = it; CrashReport.setEnabled(ctx, it) }
         SwitchRow(tr("Opening animation", "Açılış animasyonu"), tr("The Pulse splash at start", "Başlangıçtaki Pulse açılış animasyonu"), Opt.splash) { Opt.splash = it; Opt.save(ctx) }
         SliderRow("Text size ${(Opt.fontScale * 100).toInt()}%", Opt.fontScale, .8f..1.4f, { Opt.fontScale = it }) { Opt.save(ctx) }
     }
