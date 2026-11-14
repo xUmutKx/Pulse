@@ -282,7 +282,9 @@ fun LauncherSettings(back: () -> Unit) {
         text = {
             // every look as a small picture of its home screen, three to a row
             // each picture has a width of its own: a share of an unmeasured dialog width (weight) made the pictures 276,000 px wide and the screen crashed
-            val itemW = ((androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 120) / 3).coerceIn(64, 100).dp
+            // the width of a card comes from the dialog's measured width (a width taken from the screen made the third card of every row squeeze); capped so an unbounded width cannot blow it up
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val itemW = ((maxWidth - 16.dp) / 3).coerceIn(56.dp, 110.dp)
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LauncherLooks.all.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -297,6 +299,7 @@ fun LauncherSettings(back: () -> Unit) {
                         repeat(3 - row.size) { Spacer(Modifier.width(itemW)) }
                     }
                 }
+            }
             }
         },
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })

@@ -37,10 +37,12 @@ data class LaunchApp(val label: String, val pkg: String, val icon: ImageBitmap?,
 enum class StartGroup(val en: String, val tr: String) {
     GAMES("Games", "Oyunlar"), MEDIA("Media", "Medya"), TALK("Communication", "İletişim"), PRODUCTIVITY("Productivity", "Üretkenlik"),
     MAPS("Maps and travel", "Harita ve seyahat"), SYSTEM("System", "Sistem"), OTHER("Other", "Diğer"),
+    /** Pulse's joke apps: their own group, last in the list, so they do not mix with the real programs. */
+    FUN("Fun apps", "Eğlence uygulamaları"),
 }
 
 /** The group of an app by its store category; a system app without one goes to System, anything else to Other. */
-fun startGroup(app: LaunchApp): StartGroup = when (app.category) {
+fun startGroup(app: LaunchApp): StartGroup = if (app.pkg.startsWith("pulse:x:win:fun:")) StartGroup.FUN else when (app.category) {
     ApplicationInfo.CATEGORY_GAME -> StartGroup.GAMES
     ApplicationInfo.CATEGORY_AUDIO, ApplicationInfo.CATEGORY_VIDEO, ApplicationInfo.CATEGORY_IMAGE -> StartGroup.MEDIA
     ApplicationInfo.CATEGORY_SOCIAL, ApplicationInfo.CATEGORY_NEWS -> StartGroup.TALK
