@@ -216,7 +216,7 @@ private fun WordsCharge(t: Float, fill: Float, scale: Float) {
 @Composable
 private fun NeofetchCharge(t: Float, fill: Float, col: Color, scale: Float) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val all = androidx.compose.runtime.remember(scale >= 1f) { com.umutk.pulse.features.NeofetchText.lines(ctx, if (scale >= 1f) 99 else 5) }
+    val all by androidx.compose.runtime.produceState(emptyList<List<NfSeg>>(), scale >= 1f) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { com.umutk.pulse.features.NeofetchText.lines(ctx, if (scale >= 1f) 99 else 5) }.getOrDefault(emptyList()) } }
     val shown = (t * 1.7f * all.size).toInt().coerceIn(0, all.size)
     val pct = (fill * 100).toInt(); val bar = 24; val on = (fill * bar).toInt().coerceIn(0, bar)
     val fs = (if (scale >= 1f) 7.4f else 3.6f * scale * 2f).coerceAtLeast(3f)

@@ -753,7 +753,8 @@ private fun PaletteRow(count: Int, picked: Int, onPick: (Int) -> Unit, tile: @Co
 /** The Neofetch page of the cover: the phone's card (the same one the Terminal prints and the charging animation plays) on black, redrawn each minute. */
 @Composable
 internal fun NeofetchFace(ctx: Context, tick: Long) {
-    val all = remember(tick / 30) { NeofetchText.lines(ctx) }
+    // the card is read off the main thread (it counts the installed apps): the cover keeps drawing while it is made
+    val all by androidx.compose.runtime.produceState(emptyList<List<NfSeg>>(), tick / 30) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { NeofetchText.lines(ctx) }.getOrDefault(emptyList()) } }
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding(10.dp), contentAlignment = Alignment.Center) {
         // the card is about 70 characters wide: the letters are as large as the width allows
         val fs = (maxWidth.value / 44f).coerceIn(2.6f, 13f)
