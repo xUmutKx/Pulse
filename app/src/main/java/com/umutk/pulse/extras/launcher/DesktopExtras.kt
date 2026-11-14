@@ -98,6 +98,8 @@ fun LauncherStoreWindow() {
 fun ExplorerTabsWindow() {
     // the Windows 7 desktop has its own File Explorer, drawn the way Windows 7 draws it; the other looks keep the tabbed Files page
     if (T.id == "win7") { Win7Explorer(); return }
+    // Windows 11 has its own too: a tab, an address bar, a command bar, Quick access cards, see-through panels
+    if (T.id == "win11") { Win11Explorer(); return }
     var tabs by remember { mutableIntStateOf(1) }
     var cur by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
