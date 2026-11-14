@@ -103,9 +103,9 @@ object LauncherPrefs {
     var labels by mutableStateOf(true)
     /** The Office Assistant (Clippy) sits at the bottom right of the Windows 95 and XP desktops. */
     var clippy by mutableStateOf(true)
-    /** The Windows looks show their boot screen and/or sign-in screen when the launcher starts. */
-    var bootScreen by mutableStateOf(false)
-    var loginScreen by mutableStateOf(false)
+    /** The Windows looks show their own boot screen and sign-in screen when the launcher starts (both on by default, with the look's start-up sound). */
+    var bootScreen by mutableStateOf(true)
+    var loginScreen by mutableStateOf(true)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(false)
     /** Notification counts on the app pictures. */
@@ -168,7 +168,7 @@ object LauncherPrefs {
         tileSizes = p.stringPropertyNames().filter { it.startsWith("tile.") }.associate { it.removePrefix("tile.") to p.getProperty(it) }
         rows = p.getProperty("rows")?.toIntOrNull()?.coerceIn(3, 8) ?: 4; pageEffect = p.getProperty("pageEffect") ?: "simple"; pageDots = p.getProperty("pageDots") != "false"
         dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
-        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen") == "true"; loginScreen = p.getProperty("loginScreen") == "true"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen2") != "false"; loginScreen = p.getProperty("loginScreen2") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         links = p.getProperty("links").orEmpty().split('|').filter { it.isNotBlank() }
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
@@ -216,7 +216,7 @@ object LauncherPrefs {
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
-        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen", bootScreen.toString()); p.setProperty("loginScreen", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
         p.setProperty("homeOrder", homeOrder.joinToString(",")); p.setProperty("links", links.joinToString("|"))
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
