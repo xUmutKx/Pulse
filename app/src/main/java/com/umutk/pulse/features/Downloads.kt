@@ -596,7 +596,14 @@ private fun dispositionName(h: String?): String? {
 /** The name a magnet link gives itself ("dn"), as a file name; null when it has none (or it is not a magnet link). */
 private fun magnetName(url: String): String? =
     if (!url.startsWith("magnet:", ignoreCase = true)) null
-    else Downloads.cleanName(Uri.parse(url).getQueryParameter("dn")) ?: "torrent"
+    else Downloads.cleanName(magnetParam(url, "dn")) ?: "torrent"
+
+/** A parameter of a magnet link. (Uri.getQueryParameter throws on it: "This isn't a hierarchical URI".) */
+internal fun magnetParam(url: String, key: String): String? =
+    url.substringAfter('?', "").split('&').firstNotNullOfOrNull { p ->
+        val k = p.substringBefore('=')
+        if (k == key) Uri.decode(p.substringAfter('=', "").replace('+', ' ')) else null
+    }
 
 /**
  * A magnet link: the torrent engine downloads the one file wanted into a working folder, and the finished file takes the place of the empty one reserved for this download.
@@ -1154,16 +1161,9 @@ private fun DownloadsContent() {
         1 -> compareByDescending<DlTask> { it.done.value }
         else -> compareBy<DlTask> { it.file.name.lowercase() }
     }
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PHead("Downloads")
-        if (chosen.isNotEmpty()) PCard {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("${chosen.size}", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Box(Modifier.clickable { chosen = list.filter { cat == "All" || category(it.file) == cat }.toSet() }) { PIcon("check", T.text, 22.dp) }
-                Box(Modifier.clickable { bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
-                Box(Modifier.clickable { chosen = emptySet() }) { PIcon("close", T.sub, 22.dp) }
-            }
-        }
         if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
             title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
             text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
@@ -1266,6 +1266,20 @@ private fun DownloadsContent() {
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
         list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { t -> DownloadRow(t, t in chosen, chosen.isNotEmpty()) { chosen = if (t in chosen) chosen - t else chosen + t } }
+        // room under the last row for the floating bar
+        Spacer(Modifier.height(72.dp))
+    }
+    // the bar of the chosen rows floats at the bottom: it stays in reach while the list scrolls, to delete them one after the other
+    if (chosen.isNotEmpty()) Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()) {
+        PCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("${chosen.size}", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Box(Modifier.clickable { chosen = list.filter { cat == "All" || category(it.file) == cat }.toSet() }) { PIcon("check", T.text, 22.dp) }
+                Box(Modifier.clickable { bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
+                Box(Modifier.clickable { chosen = emptySet() }) { PIcon("close", T.sub, 22.dp) }
+            }
+        }
+    }
     }
 }
 

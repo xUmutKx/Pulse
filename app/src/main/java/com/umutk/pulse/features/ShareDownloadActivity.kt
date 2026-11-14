@@ -144,7 +144,7 @@ private fun ShareUi(url: String, look: String, stream: Boolean = false, close: (
             when (val r = found) {
                 null -> Text(tr("Looking for the download…", "İndirme aranıyor…"), color = T.text, fontSize = 14.sp)
                 is LinkFinder.Result.Direct, is LinkFinder.Result.Failed ->
-                    Text(if (url.startsWith("magnet:", ignoreCase = true)) Uri.parse(url).getQueryParameter("dn") ?: tr("Magnet link", "Magnet bağlantısı") else Uri.decode(url.substringBefore('?').substringAfterLast('/')).ifBlank { url }, color = T.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(if (url.startsWith("magnet:", ignoreCase = true)) magnetParam(url, "dn") ?: tr("Magnet link", "Magnet bağlantısı") else Uri.decode(url.substringBefore('?').substringAfterLast('/')).ifBlank { url }, color = T.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 is LinkFinder.Result.None -> Text(tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"), color = T.text, fontSize = 14.sp)
                 is LinkFinder.Result.Found -> LazyColumn(Modifier.heightIn(max = 260.dp)) {
                     items(r.links, key = { it }) { l ->

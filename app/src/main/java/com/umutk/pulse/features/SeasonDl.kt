@@ -51,7 +51,7 @@ import java.net.URL
 object SeasonDl {
     class Show(val id: String, val name: String, val year: String, val poster: String = "")
     class Ep(val id: String, val season: Int, val episode: Int, val title: String, val thumb: String = "", val overview: String = "")
-    class Pick(val url: String, val size: Long, val label: String)
+    class Pick(val url: String, val size: Long, val label: String, val over: Boolean = false)
 
     private const val META = "https://v3-cinemeta.strem.io"
     private fun p(c: Context) = c.getSharedPreferences("season_dl", Context.MODE_PRIVATE)
@@ -104,29 +104,41 @@ object SeasonDl {
         return (n * if (m.groupValues[2].startsWith("G", true)) 1_073_741_824.0 else 1_048_576.0).toLong()
     }
 
-    /** The largest stream of the episode that is under [maxBytes], or null when there is none (or none says its size). */
+    /** The id of an episode in a path: the colons stay as they are ("tt0773262:1:2"), as the apps ask for it (an encoded colon was not found by the add-ons). */
+    private fun pathId(id: String) = Uri.encode(id, ":")
+
+    /** The address of a stream: a plain link as it is; a torrent as a magnet link (the file number goes along when the stream names one). */
+    private fun streamUrl(s: JSONObject): String? {
+        s.optString("url").takeIf { it.startsWith("http") }?.let { return it }
+        val hash = s.optString("infoHash").takeIf { it.length == 40 } ?: return null
+        val idx = if (s.has("fileIdx")) s.optInt("fileIdx", -1) else -1
+        val src = s.optJSONArray("sources")
+        val tr = (0 until (src?.length() ?: 0)).joinToString("&") { "tr=" + Uri.encode(src!!.optString(it)) }
+        // the engine in Pulse when it is there (no other app needed); else the Stremio server on the phone
+        return if (TorrentEngine.available) "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + (if (idx >= 0) "&pulse_idx=$idx" else "")
+        else "http://127.0.0.1:11470/$hash/${maxOf(idx, 0)}" + if (tr.isNotEmpty()) "?$tr" else ""
+    }
+
+    /**
+     * The largest stream of the episode that is under [maxBytes]. When there is none under it, the smallest one there is (marked [Pick.over]), so an episode is not left out
+     * just because everything is bigger. Null only when the add-on has no stream that says its size.
+     */
     suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? = withContext(Dispatchers.IO) {
-        val base = (normalizeAddon(addonBase) ?: addonBase.trim()).removeSuffix("/manifest.json").removeSuffix("/")
-        val a = get("$base/stream/$kind/${Uri.encode(ep.id)}.json").optJSONArray("streams") ?: return@withContext null
-        var best: Pick? = null
+        // a "|" in the add-on's settings part of the address is sent encoded
+        val base = (normalizeAddon(addonBase) ?: addonBase.trim()).removeSuffix("/manifest.json").removeSuffix("/").replace("|", "%7C")
+        val a = get("$base/stream/$kind/${pathId(ep.id)}.json").optJSONArray("streams") ?: return@withContext null
+        var best: Pick? = null; var smallest: Pick? = null
         for (i in 0 until a.length()) {
             val s = a.optJSONObject(i) ?: continue
             val text = s.optString("title") + " " + s.optString("name") + " " + s.optJSONObject("behaviorHints")?.optString("filename").orEmpty()
             val size = s.optJSONObject("behaviorHints")?.optLong("videoSize", 0L)?.takeIf { it > 0 } ?: sizeIn(text)
-            if (size <= 0 || size > maxBytes || (best != null && size <= best.size)) continue
-            val url = s.optString("url").takeIf { it.startsWith("http") } ?: run {
-                val hash = s.optString("infoHash").takeIf { it.length == 40 } ?: return@run null
-                val idx = if (s.has("fileIdx")) s.optInt("fileIdx", -1) else -1
-                if (idx < 0) return@run null
-                val src = s.optJSONArray("sources")
-                val tr = (0 until (src?.length() ?: 0)).joinToString("&") { "tr=" + Uri.encode(src!!.optString(it)) }
-                // the engine in Pulse when it is there (no other app needed); else the Stremio server on the phone
-                if (TorrentEngine.available) "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + "&pulse_idx=$idx"
-                else "http://127.0.0.1:11470/$hash/$idx" + if (tr.isNotEmpty()) "?$tr" else ""
-            } ?: continue
-            best = Pick(url, size, text.trim().lineSequence().firstOrNull().orEmpty())
+            if (size <= 0) continue
+            val url = streamUrl(s) ?: continue
+            val p = Pick(url, size, text.trim().lineSequence().firstOrNull().orEmpty())
+            if (smallest == null || size < smallest.size) smallest = p
+            if (size <= maxBytes && (best == null || size > best.size)) best = p
         }
-        best
+        best ?: smallest?.let { Pick(it.url, it.size, it.label, over = true) }
     }
 
     private val posters = android.util.LruCache<String, android.graphics.Bitmap>(40)
@@ -204,10 +216,12 @@ object SeasonDl {
         var note by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
         var season by remember { mutableStateOf<Int?>(null) }
+        // the stream chosen for each episode of the open season (null = looked at, none says its size); found in the background as soon as a season opens
+        var found by remember { mutableStateOf<Map<String, Pick?>>(emptyMap()) }
         var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
         fun limit() = mb * 1_048_576L
         fun clean(s: String) = s.replace(Regex("[^\\p{L}\\p{N} ._()-]"), "").trim()
-        fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = ""; season = null; picked = emptySet() }
+        fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = ""; season = null; picked = emptySet(); found = emptyMap() }
         /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
         suspend fun start(picks: List<Pair<String, String>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
@@ -256,7 +270,7 @@ object SeasonDl {
                     // 2. the size limit: the largest stream still under it is taken
                     Caption(tr("2  Largest size per ${if (movies) "movie" else "episode"}", "2  ${if (movies) "Film" else "Bölüm"} başına en büyük boyut"))
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(SIZES) { n -> PChip(mb == n, if (n >= 1000) "${n / 1000f} GB".replace(".0", "") else "$n MB") { mb = n; save(ctx, addon, n.toFloat()) } }
+                        items(SIZES) { n -> PChip(mb == n, if (n >= 1000) "${n / 1000f} GB".replace(".0", "") else "$n MB") { mb = n; save(ctx, addon, n.toFloat()); found = emptyMap() } }
                     }
                     // 3. what to download
                     Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
@@ -274,7 +288,7 @@ object SeasonDl {
                         // the results: a tap chooses one, and the list gives way to it (its seasons or its download button come right under it)
                         shows.forEach { s -> key(s.id) {
                             Row(Modifier.fillMaxWidth().clickable {
-                                show = s; eps = emptyList(); season = null; picked = emptySet()
+                                show = s; eps = emptyList(); season = null; picked = emptySet(); found = emptyMap()
                                 if (!movies) {
                                     note = tr("Reading the episodes…", "Bölümler okunuyor…")
                                     scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
@@ -316,25 +330,46 @@ object SeasonDl {
                                 if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return }
                                 save(ctx, addon, mb.toFloat()); busy = true
                                 scope.launch {
-                                    var skipped = 0
+                                    var skipped = 0; var over = 0
                                     val picks = ArrayList<Pair<String, String>>()
                                     val name = clean(sel.name)
                                     list.forEachIndexed { i, ep ->
                                         note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
-                                        val pick = runCatching { best(addon, ep, limit()) }.getOrNull()
-                                        if (pick == null) skipped++ else picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode))
+                                        // the stream already found for the list is used; else it is looked for now
+                                        val pick = if (found.containsKey(ep.id)) found[ep.id] else runCatching { best(addon, ep, limit()) }.getOrNull()
+                                        if (pick == null) skipped++ else { if (pick.over) over++; picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode)) }
                                     }
                                     note = tr("Starting…", "Başlıyor…")
                                     start(picks)
                                     busy = false
                                     if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} started (up to $mb MB each)", "${picks.size} başladı (her biri en çok $mb MB)") +
-                                        if (skipped > 0) tr(", $skipped had nothing under the limit", ", $skipped için sınırın altında yayın yok") else ""
+                                        (if (over > 0) tr(", $over over the limit (the smallest there was)", ", $over sınırın üstünde (bulunan en küçük)") else "") +
+                                        (if (skipped > 0) tr(", $skipped without a stream", ", $skipped için yayın yok") else "")
                                 }
                             }
+                            /** The size of the stream that would be taken is looked up for every episode of the season, three at a time, and shown on its row. */
+                            fun lookUp(sn: Int) {
+                                val todo = eps.filter { it.season == sn && !found.containsKey(it.id) }
+                                if (todo.isEmpty() || addon.isBlank()) return
+                                val sem = kotlinx.coroutines.sync.Semaphore(3)
+                                scope.launch {
+                                    todo.map { ep -> scope.launch { sem.acquire(); try { val p = runCatching { best(addon, ep, limit()) }.getOrNull(); found = found + (ep.id to p) } finally { sem.release() } } }
+                                }
+                            }
+                            // the sizes are looked up as soon as a season is open, and again when the size limit or the add-on changes
+                            androidx.compose.runtime.LaunchedEffect(season, mb, addon) { season?.let { lookUp(it) } }
                             if (seasons.isNotEmpty()) {
-                                Caption(tr("Season", "Sezon"))
-                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(seasons) { sn -> PChip(season == sn, "$sn") { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() } }
+                                Caption(tr("Seasons", "Sezonlar"))
+                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    items(seasons) { sn ->
+                                        val n = eps.count { it.season == sn }
+                                        Column(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                            // Cinemeta has no picture of its own for a season: the series poster stands for it, the number on it when it is not there
+                                            Poster(sel.poster, 64.dp, 92.dp, "S$sn")
+                                            Text(tr("Season $sn", "Sezon $sn"), color = if (season == sn) T.accent else T.text, fontSize = 13.sp)
+                                            Text(tr("$n ep", "$n bölüm"), color = T.sub, fontSize = 11.sp)
+                                        }
+                                    }
                                 }
                                 val sn = season
                                 if (sn != null) {
@@ -359,6 +394,9 @@ object SeasonDl {
                                                 Text("E%02d".format(ep.episode) + if (ep.title.isNotBlank()) "  ·  " + ep.title else "", color = if (on) T.text else T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                                 if (ep.overview.isNotBlank()) Text(ep.overview, color = T.sub, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                             }
+                                            // the size of the stream that would be taken ("…" while it is being looked for, "—" when there is none)
+                                            val f = found[ep.id]
+                                            Text(if (!found.containsKey(ep.id)) "…" else if (f == null) "—" else (if (f.over) "↑ " else "") + sizeText(f.size), color = if (f?.over == true) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.sub, fontSize = 12.sp)
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
                                     }
