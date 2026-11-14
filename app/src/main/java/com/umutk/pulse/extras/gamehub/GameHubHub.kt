@@ -1633,9 +1633,13 @@ class GameMenuService : android.app.Service() {
         if (g == null) { if (++nullStreak >= 2) hide() } else { nullStreak = 0; if (shown != g) show(g); warn() }
     }
 
-    private fun lp(w: Int, hgt: Int, x: Int = 0) = android.view.WindowManager.LayoutParams(w, hgt, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+    /** The side of the screen the handle sits on (true = right) and its height from the middle, in pixels; both are remembered. */
+    private fun onRight() = prefs(this).getBoolean("menuRight", true)
+    private fun handleY() = prefs(this).getInt("menuY", 0)
+
+    private fun lp(w: Int, hgt: Int, x: Int = 0, y: Int = 0) = android.view.WindowManager.LayoutParams(w, hgt, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
         android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, android.graphics.PixelFormat.TRANSLUCENT).apply {
-        gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL; this.x = x
+        gravity = (if (onRight()) android.view.Gravity.END else android.view.Gravity.START) or android.view.Gravity.CENTER_VERTICAL; this.x = x; this.y = y
     }
 
     private fun show(pkg: String) {
@@ -1643,11 +1647,35 @@ class GameMenuService : android.app.Service() {
         shown = pkg
         val d = resources.displayMetrics.density
         val v = android.widget.TextView(this).apply {
-            text = "\u2039"; textSize = 22f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadii = floatArrayOf(14 * d, 14 * d, 0f, 0f, 0f, 0f, 14 * d, 14 * d) }
-            setOnClickListener { togglePanel(pkg) }
+            text = if (onRight()) "\u2039" else "\u203A"; textSize = 22f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadii = if (onRight()) floatArrayOf(14 * d, 14 * d, 0f, 0f, 0f, 0f, 14 * d, 14 * d) else floatArrayOf(0f, 0f, 14 * d, 14 * d, 14 * d, 14 * d, 0f, 0f) }
         }
-        if (runCatching { wm.addView(v, lp((26 * d).toInt(), (64 * d).toInt())) }.isSuccess) handle = v
+        // a tap opens the menu; a drag moves the handle anywhere along the screen's sides and it settles on the nearer side
+        var downX = 0f; var downY = 0f; var startY = 0; var moved = false
+        v.setOnTouchListener { view, ev ->
+            val l = view.layoutParams as android.view.WindowManager.LayoutParams
+            when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { downX = ev.rawX; downY = ev.rawY; startY = l.y; moved = false; true }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (Math.abs(ev.rawX - downX) > 12 * d || Math.abs(ev.rawY - downY) > 12 * d) moved = true
+                    if (moved) { closePanel(); l.y = startY + (ev.rawY - downY).toInt(); runCatching { wm.updateViewLayout(view, l) } }
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    if (!moved) togglePanel(pkg)
+                    else {
+                        val w = resources.displayMetrics.widthPixels
+                        val right = ev.rawX > w / 2f
+                        val half = resources.displayMetrics.heightPixels / 2 - (32 * d).toInt()
+                        prefs(this).edit().putBoolean("menuRight", right).putInt("menuY", l.y.coerceIn(-half, half)).apply()
+                        show(pkg)
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+        if (runCatching { wm.addView(v, lp((26 * d).toInt(), (64 * d).toInt(), 0, handleY())) }.isSuccess) handle = v
         if (prefs(this).getBoolean("menuFps", false)) showFps()
     }
 
@@ -1743,8 +1771,39 @@ class GameMenuService : android.app.Service() {
             }, 450)
         })
         col.addView(button(tr("Close background apps", "Arka plan uygulamalarını kapat")) { sh("am kill-all") { toast(this, tr("Done", "Tamam")); closePanel() } })
-        val v = col
-        if (runCatching { wm.addView(v, lp(px(270), -2, px(34))) }.isSuccess) panel = v
+        // a pair of buttons side by side: "−" and "+" for the brightness and the volume
+        fun pair(title: String, minus: () -> Unit, plus: () -> Unit) {
+            val r = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) } }
+            fun small(t: String, on: () -> Unit) = android.widget.TextView(this).apply {
+                text = t; textSize = 18f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
+                setPadding(px(18), px(6), px(18), px(6))
+                background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
+                setOnClickListener { on() }
+            }
+            r.addView(small("\u2212", minus))
+            r.addView(label(title, 13f, 0xFFB0B0B0.toInt()).apply { gravity = android.view.Gravity.CENTER; layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) })
+            r.addView(small("+", plus))
+            col.addView(r)
+        }
+        fun bright(delta: Int) = sh("settings put system screen_brightness_mode 0; cur=\$(settings get system screen_brightness); settings put system screen_brightness \$(( cur + ($delta) < 5 ? 5 : (cur + ($delta) > 255 ? 255 : cur + ($delta)) ))")
+        pair(tr("Brightness", "Parlaklık"), { bright(-30) }, { bright(30) })
+        val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        pair(tr("Volume", "Ses"), { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_LOWER, android.media.AudioManager.FLAG_SHOW_UI) }, { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_RAISE, android.media.AudioManager.FLAG_SHOW_UI) })
+        // the screen's turning: locked, or free
+        lateinit var rot: android.widget.TextView
+        fun rotOn() = android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1) == 1
+        fun rotText() = tr("Auto-rotate", "Otomatik döndür") + ": " + if (rotOn()) tr("on", "açık") else tr("off", "kapalı")
+        rot = button(rotText()) { sh("settings put system accelerometer_rotation ${if (rotOn()) 0 else 1}") { h.postDelayed({ rot.text = rotText() }, 300) } }
+        col.addView(rot)
+        col.addView(button(tr("Move the handle to the other side", "Tutamağı diğer tarafa al")) { prefs(this).edit().putBoolean("menuRight", !onRight()).apply(); show(pkg) })
+        col.addView(button(tr("Close the game", "Oyunu kapat")) { sh("am force-stop $pkg") { closePanel() } })
+        // the panel scrolls when the screen is low (landscape)
+        val scroll = android.widget.ScrollView(this).apply { addView(col) }
+        val maxH = (resources.displayMetrics.heightPixels * 0.88f).toInt()
+        val lpPanel = lp(px(270), -2, px(34), handleY())
+        col.measure(android.view.View.MeasureSpec.makeMeasureSpec(px(270), android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.UNSPECIFIED)
+        if (col.measuredHeight > maxH) lpPanel.height = maxH
+        if (runCatching { wm.addView(scroll, lpPanel) }.isSuccess) panel = scroll
     }
 }
 
