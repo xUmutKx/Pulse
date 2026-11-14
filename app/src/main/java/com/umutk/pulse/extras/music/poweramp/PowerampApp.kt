@@ -171,11 +171,16 @@ fun PowerampApp(
         // "Blended" (Settings > Look): the cover edge to edge at the top, fading into its own blurred copy that fills the screen (the now-playing page only)
         if (tab == null && PowerampPrefs.blended(ctx)) cover?.let { cv ->
             // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
-            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset }.blur(36.dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
+            // while the page is slid down it is a sheet: rounded at the top, with a small pill bar over its edge (neither shows when it is at rest)
+            val sheet = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.blur(36.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.background(Color.Black.copy(alpha = .28f)))
+            Box(Modifier.fillMaxWidth().graphicsLayer { translationY = pullOffset + 8.dp.toPx(); alpha = (pullOffset / 60f).coerceIn(0f, 1f) }, contentAlignment = Alignment.TopCenter) {
+                Box(Modifier.size(width = 44.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = .65f)))
+            }
             Image(cv, null,
                 Modifier.fillMaxWidth().aspectRatio(1f)
-                    .graphicsLayer { translationY = pullOffset; compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f; compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
                         drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black, .55f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
