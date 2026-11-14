@@ -1512,7 +1512,7 @@ function openInspect(){uiCrumb("Inspect");
     const onStart=()=>{if(isp.tok!==tok||mode!=="inspect")return;if(hs&&hs.el){hs.el.classList.remove("unhold");hs.el.classList.add("held");isp.held=hs}app.classList.add("inspecting");el.classList.add("on")};
     el.classList.add("gl");gl=Inspect3D.open({from,where:from?()=>slotPose(hs):null,standIn:from&&hs.img,onStart,sys:s.id,rc:style.rc||.04,ratio:style.ratio,depth:style.depth,caseColor:style.caseColor,caseSide:style.caseSide,spineInk:style.spineInk,edge:style.edge||0,wrap:!!style.wrap,title:g.title,kind:m.kind,form:m.form||"",size:m.size,
       // sized copies (still sharp up close): full-size scans cost ~70 MB of video memory per game and half a second to upload
-      front:thumb(front,1536),back:g.art&&g.art.back?thumb(g.art.back,1536):null,spine:g.art&&g.art.spine?thumb(g.art.spine,1536):null,disc:g.art&&g.art.disc?(/^data:/.test(g.art.disc)?g.art.disc:thumb(g.art.disc,1024)):null,manual:manualCover(g)?thumb(manualCover(g),2048):null,modelUrl:th.media||null,modelOpts:th.mediaOpts||null});
+      cleanDisc:!!g.pulse,inside:/^xbox/.test(g.box||"")?"#0e6b14":null,front:thumb(front,1536),back:g.art&&g.art.back?thumb(g.art.back,1536):null,spine:g.art&&g.art.spine?thumb(g.art.spine,1536):null,disc:g.art&&g.art.disc?(/^data:/.test(g.art.disc)?g.art.disc:thumb(g.art.disc,1024)):null,manual:manualCover(g)?thumb(manualCover(g),2048):null,modelUrl:th.media||null,modelOpts:th.mediaOpts||null});
   }}catch(err){gl=false;console.warn("3D inspect failed",err);api.log&&api.log("3D inspect failed: "+(err&&err.stack||err))}
   // the CSS case is only drawn without WebGL; don't decode its scans (or generate a back) when it's hidden
   if(!gl){$("ispFront").src=front;$("ispManual").src=rdSrc(manualCover(g)||front);$("ispBack").src=backUrl(g)}else["ispFront","ispManual","ispBack"].forEach(id=>$(id).removeAttribute("src"));
@@ -1542,7 +1542,7 @@ function closeInspect(){
   if(mode==="inspect")mode="browse"; // before leave(): it can hand the box back straight away (reduce motion)
   if(window.Inspect3D&&Inspect3D.isActive())Inspect3D.leave(tgt,done);else done(true);
   // safety net: nothing stays hidden if a flight can't finish (lost GPU, paused…); never while one is still running
-  clearTimeout(isp.wd);const wd=()=>{if(mode==="inspect")return;if(window.Inspect3D&&Inspect3D.busy&&Inspect3D.busy()){isp.wd=setTimeout(wd,400);return}mounted().forEach(o=>unhold(o.el,true))};isp.wd=setTimeout(wd,1200);
+  clearTimeout(isp.wd);const wd=()=>{if(mode==="inspect")return;if(window.Inspect3D&&Inspect3D.busy&&Inspect3D.busy()){isp.wd=setTimeout(wd,400);return}try{if(window.Inspect3D&&Inspect3D.forceClose)Inspect3D.forceClose()}catch{}app.classList.remove("inspecting");mounted().forEach(o=>unhold(o.el,true))};isp.wd=setTimeout(wd,1200);
   setTimeout(()=>{if(mode==="inspect")return;el.classList.remove("open","out")},320);
 }
 function ispLoop(t){
@@ -1621,12 +1621,12 @@ function makeBooklet(g){
       if(!cover){x.fillStyle="rgba(60,50,30,.55)";x.font="500 20px Lexend, sans-serif";x.textAlign="center";x.fillText("Booklet made by Boxshelf · not an original manual",W/2,H-34);x.textAlign="left"}
       const b=await bookletJpeg(c);c.width=c.height=0;urls.push(URL.createObjectURL(b))};
     const wrap=(x,text,X,Y,maxW,lh,maxLines)=>{const words=String(text||"").split(/\s+/);let line="",y=Y,n=0;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){x.fillText(line,X,y);y+=lh;line=w;if(++n>=maxLines-1)break}else line=t}if(line&&n<maxLines){x.fillText(n>=maxLines-1&&words.length>0?line+"…":line,X,y);y+=lh}return y};
-    const band=x=>{x.fillStyle=st.caseColor||"#222";x.fillRect(0,0,W,90);x.fillStyle=(st.band&&st.band.fg)||"#fff";x.font="700 34px Lexend, sans-serif";x.fillText((sh&&sh.name||"").toUpperCase(),48,58)};
+    const band=x=>{x.fillStyle=g.pulse?"#101114":(st.caseColor||"#222");x.fillRect(0,0,W,90);x.fillStyle=g.pulse?"#f2f2f5":((st.band&&st.band.fg)||"#fff");x.font="700 34px Lexend, sans-serif";x.fillText((sh&&sh.name||"").toUpperCase(),48,58)};
     const front=await load((g.pulse&&((g.shots&&g.shots[0])||(g.art&&g.art.hero)))||(g.art&&g.art.front)||await appFrontAsync(stOf(g),g)),back=await load(g.art&&g.art.back); /* (a Game Hub game: the booklet inside the case shows a screenshot or the wide picture, not the cover again) */ /* a generated cover: the worker-encoded one (the synchronous one finished its encode here, on the main thread) */
     // the front, laid out like an original instruction booklet: the box art full-bleed under a thin console band,
     // and a footer strip with "INSTRUCTION BOOKLET" and the console's name, the way the real ones are printed. A small
     // Boxshelf mark in the strip says it's ours, not a scan.
-    await page(async x=>{const bg=st.caseColor||"#222",fg=(st.band&&st.band.fg)||"#fff",bb=(st.band&&st.band.bg)||bg,lab=(st.band&&st.band.label)||(sh&&sh.name||"").toUpperCase();
+    await page(async x=>{const bg=g.pulse?"#15161a":(st.caseColor||"#222"),fg=g.pulse?"#f2f2f5":((st.band&&st.band.fg)||"#fff"),bb=g.pulse?"#101114":((st.band&&st.band.bg)||bg),lab=(st.band&&st.band.label)||(sh&&sh.name||"").toUpperCase();
       x.fillStyle=bg;x.fillRect(0,0,W,H);
       const top=70,bot=H-120;
       if(front){const k=Math.max(W/front.width,(bot-top)/front.height),w=front.width*k,h=front.height*k;x.save();x.beginPath();x.rect(0,top,W,bot-top);x.clip();x.drawImage(front,(W-w)/2,top+(bot-top-h)/2,w,h);x.restore()}
@@ -2260,6 +2260,8 @@ window.__pulseUnblack=()=>{try{
   // the dark insert screen (the disc going into the console) is taken down for good, whatever step it was left at
   const ins=$("insert");if(ins){ins.classList.remove("on","go","out","slide");ins.setAttribute("aria-hidden","true");const fx=$("bsFx");if(fx)fx.innerHTML=""}
   const isx=$("inspect");if(isx&&mode!=="inspect"){isx.classList.remove("on","disc-out");app.classList.remove("inspecting")}
+  // the 3D case's own canvas, if it is still up over the shelf when the shelf is not in Inspect
+  try{if(mode!=="inspect"&&window.Inspect3D&&Inspect3D.forceClose&&!(Inspect3D.busy&&Inspect3D.busy()))Inspect3D.forceClose()}catch{}
 }catch(e){try{api.log&&api.log("unblack: "+(e&&e.message))}catch{}}};
 function back(){
   if(mode==="sort"){closeSort();return}

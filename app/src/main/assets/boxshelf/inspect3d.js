@@ -263,7 +263,7 @@ window.Inspect3D = (() => {
     const face = (W, H, R, mat) => { const g = new THREE.ShapeGeometry(rr(W, H, R), 12), uv = g.attributes.uv, pos = g.attributes.position; for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / W + .5, pos.getY(i) / H + .5); uv.needsUpdate = true; return new THREE.Mesh(g, mat); };
     const slab = (W, H, R, T, mat) => { const g = new THREE.ExtrudeGeometry(rr(W - 2 * bev, H - 2 * bev, Math.max(.002, R - bev)), { depth: Math.max(.0005, T - 2 * bev), bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 12 }); g.translate(0, 0, -(T - 2 * bev) / 2); return new THREE.Mesh(g, mat); };
     const back = slab(w, h, rc, tb, side); back.position.z = -D / 2 + tb / 2; caseG.add(back);
-    { const inFace = face(w - .02, h - .02, rc * .8, plastic(0xffffff, { map: interiorCached(o.caseSide, o.kind, w - .02, h - .02, o.ratio * o.size / 2, o.sys), roughness: .7, clearcoat: .1 })); inFace.position.z = -D / 2 + tb + .0004; caseG.add(inFace);
+    { const inFace = face(w - .02, h - .02, rc * .8, plastic(0xffffff, { map: interiorCached(o.inside || o.caseSide, o.kind, w - .02, h - .02, o.ratio * o.size / 2, o.sys), roughness: .7, clearcoat: .1 })); inFace.position.z = -D / 2 + tb + .0004; caseG.add(inFace);
       const eb = o.back ? Math.max(0, Math.min(.08, o.edge || 0)) * w : 0; if (eb > .0015) { const rimB = face(w - .004, h - .004, rc, plastic(o.caseColor)); rimB.rotation.y = Math.PI; rimB.position.z = -D / 2 - .0003; caseG.add(rimB); }
       // (beta.11) o.wrap (Xbox 360): no border on the spine side, the sheet runs on round the spine
       const bw2 = w - .004 - (o.wrap ? eb : 2 * eb);
@@ -343,7 +343,8 @@ window.Inspect3D = (() => {
       if (!o.disc && labelMap && labelMap.userData && labelMap.userData.p) {
         const base = labelMap, lm = new THREE.Texture(); lm.colorSpace = base.colorSpace; lm.anisotropy = base.anisotropy; discMap = lm;
         base.userData.p.then(ok => { if (!ok || !base.image) return; const iw = base.image.naturalWidth || base.image.width, ih = base.image.naturalHeight || base.image.height; if (!iw || !ih) return;
-          const sq = Math.min(iw, ih); lm.image = base.image; lm.repeat.set(sq / iw, sq / ih); lm.offset.set((1 - sq / iw) / 2, (1 - sq / ih) / 2); lm.needsUpdate = true; });
+          // (a Game Hub box front has the console's coloured sides: the disc takes only the middle of it, so no green or blue edge reaches the print)
+          const sq = Math.min(iw, ih) * (o.cleanDisc ? .78 : 1); lm.image = base.image; lm.repeat.set(sq / iw, sq / ih); lm.offset.set((1 - sq / iw) / 2, (1 - sq / ih) / 2); lm.needsUpdate = true; });
       }
       const label = new THREE.MeshPhysicalMaterial({ map: discMap, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 });
       const fmt = o.sys === 'ps3' || o.sys === 'ps4' || o.sys === 'ps5' || o.sys === 'wiiu' ? 'bd' : o.sys === 'gc' ? 'gc' : 'dvd';
@@ -621,7 +622,9 @@ window.Inspect3D = (() => {
   addEventListener('resize', () => { if (renderer && active) resize(); });
   // the lid's manual, when it arrives late (Boxshelf's own booklet is drawn after the case opens)
   function setManual(url) { if (!manualPlane || !url || (cur && cur.manual)) return; const m = manualPlane.material, t = loadTex(url); m.map = t; m.color.set(0xffffff); m.needsUpdate = true; if (cur) cur.manual = url; }
-  return { setManual, kit: { interiorTexture, discBackTexture, discLift, coverRect, fitCover, coverCrop }, available, open, close, leave, setPose, setState, bump, hitAt, setPaused, isActive: () => active,
+  // a canvas that is still up after the case went home (a flight that never finished, a lost GPU): closed for good
+  function forceClose() { try { if (active || (canvas && canvas.classList.contains('on'))) { finish(); } } catch (e) { try { close(); } catch {} } if (canvas) { canvas.style.opacity = '0'; canvas.classList.remove('on'); } }
+  return { forceClose, setManual, kit: { interiorTexture, discBackTexture, discLift, coverRect, fitCover, coverCrop }, available, open, close, leave, setPose, setState, bump, hitAt, setPaused, isActive: () => active,
     busy: () => !paused && (phase === 'out' || phase === 'fade' || phase === 'wait' || phase === 'in'), _st: () => ({ phase, in: st.in, ry: st.ry, rotY: rot ? Math.round(rot.rotation.y / DEG) : null, ready, fade: !!fadeT0, pend: !!pend, op: canvas && canvas.style.opacity, on: !!(canvas && canvas.classList.contains('on')), from: cur && cur.from, standIn: !!standInTex, tok, disc: discPose(), manual: manualXY(), spine: !!(spineM && spineM.parent && spineM.parent.parent) }) }; // (beta.11 spine: the printed spine is on the case)
   // (test hook) where on the screen the middle of the lid's manual is, in page pixels (null when it isn't drawn)
   function manualXY() { if (!manualPlane || !camera || !canvas) return null; const THREE = T(); scene.updateMatrixWorld(true); const p = manualPlane.getWorldPosition(new THREE.Vector3()).project(camera), r = canvas.getBoundingClientRect();
