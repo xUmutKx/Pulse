@@ -108,6 +108,12 @@ object LauncherPrefs {
     var loginScreen by mutableStateOf(true)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(false)
+    /** The apps list of the phone looks as one A-Z list with a letter strip at the edge (off: the store groups). */
+    var drawerAz by mutableStateOf(true)
+    /** What a double tap, a long swipe up and a long swipe down on the home do: one of [GESTURE_ACTIONS]. */
+    var gDouble by mutableStateOf("none")
+    var gUp by mutableStateOf("none")
+    var gDown by mutableStateOf("none")
     /** Notification counts on the app pictures. */
     var badges by mutableStateOf(true)
     /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
@@ -182,6 +188,11 @@ object LauncherPrefs {
         names = p.stringPropertyNames().filter { it.startsWith("lname.") }.associate { it.removePrefix("lname.") to p.getProperty(it) }
         iconFree = p.stringPropertyNames().filter { it.startsWith("ifree.") }.associate { it.removePrefix("ifree.") to p.getProperty(it) }
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
+        // the chosen actions; from the older switches when the choice was never made
+        drawerAz = p.getProperty("drawerAz") != "false"
+        gDouble = p.getProperty("gDouble") ?: if (gestureLock) "lock" else "none"
+        gUp = p.getProperty("gUp") ?: if (swipeUpApps) "apps" else "none"
+        gDown = p.getProperty("gDown") ?: if (swipeDownShade) "shade" else if (swipeDownSearch) "search" else "none"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
         wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
         clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
@@ -211,7 +222,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString()); p.setProperty("drawerIconDp", drawerIconDp.toString()); p.setProperty("labelScale", labelScale.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
+        p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString())
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
@@ -247,6 +258,7 @@ object LauncherPrefs {
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
@@ -286,3 +298,10 @@ object LauncherPrefs {
         savedPulse = null
     }
 }
+
+/** The actions a gesture of the home can be given: key, English name, Turkish name. */
+val GESTURE_ACTIONS = listOf(
+    Triple("none", "Nothing", "Hiçbir şey"), Triple("lock", "Lock the screen", "Ekranı kilitle"), Triple("shade", "Notifications", "Bildirimler"),
+    Triple("quick", "Quick settings", "Hızlı ayarlar"), Triple("apps", "Apps list", "Uygulama listesi"), Triple("search", "Quick search", "Hızlı arama"),
+    Triple("settings", "Launcher settings", "Başlatıcı ayarları"), Triple("recents", "Recent apps", "Son uygulamalar"), Triple("power", "Power menu", "Güç menüsü"),
+)

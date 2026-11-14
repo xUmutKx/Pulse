@@ -79,6 +79,8 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
     var pickDock by remember { mutableStateOf(false) }
     var pickPack by remember { mutableStateOf(false) }
     var pickSort by remember { mutableStateOf(false) }
+    // 0 none, 1 double tap, 2 swipe up, 3 swipe down: the list of actions to give it
+    var pickGesture by remember { mutableStateOf(0) }
     var pickHidden by remember { mutableStateOf(false) }
     var pickWall by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
@@ -183,6 +185,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
             SwitchLine("grid", tr("Icons snap to a grid (off: place them anywhere)", "Simgeler ızgaraya oturur (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
             SliderRow("${tr("Space between icons", "Simgeler arası boşluk")}: ${LauncherPrefs.iconSpace}%", LauncherPrefs.iconSpace.toFloat(), 60f..130f) { LauncherPrefs.iconSpace = it.roundToInt(); save() }
             SliderRow("${tr("Label size", "Ad yazısı boyutu")}: ${LauncherPrefs.labelScale}%", LauncherPrefs.labelScale.toFloat(), 60f..160f) { LauncherPrefs.labelScale = it.roundToInt(); save() }
+            SwitchLine("sort", tr("Apps list A-Z with a letter strip", "Uygulama listesi A-Z, kenarda harf şeridi"), LauncherPrefs.drawerAz) { LauncherPrefs.drawerAz = it; save() }
             SwitchLine("gridView", tr("Page dots", "Sayfa noktaları"), LauncherPrefs.pageDots) { LauncherPrefs.pageDots = it; save() }
             Text(tr("Page effect", "Sayfa efekti"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -212,10 +215,10 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
         }
         if (cat == "gestures") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // gestures
-            SwitchLine("lock", tr("Double tap to lock the screen", "Çift dokunuşla ekranı kilitle"), LauncherPrefs.gestureLock) { LauncherPrefs.gestureLock = it; save() }
-            SwitchLine("chevron", tr("Swipe down: notifications", "Aşağı kaydır: bildirimler"), LauncherPrefs.swipeDownShade) { LauncherPrefs.swipeDownShade = it; save() }
-            SwitchLine("search", tr("Swipe down: quick search", "Aşağı kaydır: hızlı arama"), LauncherPrefs.swipeDownSearch) { LauncherPrefs.swipeDownSearch = it; save() }
-            SwitchLine("apps", tr("Swipe up: apps list", "Yukarı kaydır: uygulama listesi"), LauncherPrefs.swipeUpApps) { LauncherPrefs.swipeUpApps = it; save() }
+            fun gname(k: String) = GESTURE_ACTIONS.firstOrNull { it.first == k }?.let { tr(it.second, it.third) }.orEmpty()
+            ValueRow("lock", tr("Double tap", "Çift dokunuş"), gname(LauncherPrefs.gDouble)) { pickGesture = 1 }
+            ValueRow("up", tr("Swipe up", "Yukarı kaydır"), gname(LauncherPrefs.gUp)) { pickGesture = 2 }
+            ValueRow("down", tr("Swipe down", "Aşağı kaydır"), gname(LauncherPrefs.gDown)) { pickGesture = 3 }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
         }
@@ -311,6 +314,16 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
     if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
+    }
+    if (pickGesture != 0) {
+        val cur = when (pickGesture) { 1 -> LauncherPrefs.gDouble; 2 -> LauncherPrefs.gUp; else -> LauncherPrefs.gDown }
+        PickDialog(when (pickGesture) { 1 -> tr("Double tap", "Çift dokunuş"); 2 -> tr("Swipe up", "Yukarı kaydır"); else -> tr("Swipe down", "Aşağı kaydır") },
+            GESTURE_ACTIONS.map { tr(it.second, it.third) to (it.first == cur) }, onDismiss = { pickGesture = 0 },
+            extra = { Text(tr("The lock, the notifications, the quick settings, the recents and the power menu need Pulse's accessibility service", "Kilit, bildirimler, hızlı ayarlar, son uygulamalar ve güç menüsü için Pulse'un erişilebilirlik hizmeti gerekir"), color = T.sub, fontSize = 12.sp) }) { i ->
+            val k = GESTURE_ACTIONS[i].first
+            when (pickGesture) { 1 -> LauncherPrefs.gDouble = k; 2 -> LauncherPrefs.gUp = k; else -> LauncherPrefs.gDown = k }
+            save(); pickGesture = 0
+        }
     }
     if (pickSort) PickDialog(tr("Sort", "Sıralama"),
         SORTS.map { sortLabel(it) to (it == LauncherPrefs.sort) },

@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -117,6 +119,29 @@ class MaterialLauncherLook(
                 if (query.isNotEmpty()) Box(Modifier.size(40.dp).clip(CircleShape).clickable { query = "" }, contentAlignment = Alignment.Center) {
                     PIcon("close", sub(), 22.dp)
                 }
+            }
+            if (query.isBlank() && LauncherPrefs.drawerAz) {
+                // one A-Z list, the letter strip at the right edge jumps to a letter
+                val az = remember(state.apps) { lettered(state.apps) }
+                val rows = remember(az, state.columns) { az.map { (l, apps) -> l to apps.chunked(state.columns) } }
+                val starts = remember(rows) { var n = 0; rows.associate { (l, r) -> val at = n; n += 1 + r.size; l to at } }
+                val lst = androidx.compose.foundation.lazy.rememberLazyListState()
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                Row(Modifier.fillMaxSize()) {
+                    LazyColumn(Modifier.weight(1f).fillMaxHeight(), state = lst) {
+                        rows.forEach { (l, rs) ->
+                            item(key = "h$l") { Text(l, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp)) }
+                            items(rs.size, key = { "r$l$it" }) { i ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    rs[i].forEach { app -> Box(Modifier.weight(1f).appTap(state, app) { state.open(app); onClose() }) { IconCell(app, state.iconDp, Modifier.fillMaxWidth()) } }
+                                    repeat(state.columns - rs[i].size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
+                    LetterBar(az.map { it.first }, sub(), high(), { l -> starts[l]?.let { scope.launch { lst.scrollToItem(it) } } })
+                }
+                return@Column
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 items(sections, key = { it.first }) { (label, apps) ->
