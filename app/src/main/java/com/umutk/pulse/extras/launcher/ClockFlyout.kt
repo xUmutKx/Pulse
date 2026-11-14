@@ -48,6 +48,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private class FlyLook(val bg: Color, val ink: Color, val sub: Color, val edge: Color, val hi: Color, val corner: Dp, val tiles: Boolean)
 
@@ -76,33 +77,46 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
     val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val none = remember { MutableInteractionSource() }
     val cal = Calendar.getInstance().apply { timeInMillis = now }
-    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.clockOpen = false }) {
-        Column(
-            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).widthIn(max = 330.dp).fillMaxWidth(.92f)
-                .clip(RoundedCornerShape(look.corner)).background(look.bg).border(1.dp, look.edge, RoundedCornerShape(look.corner))
-                .clickable(interactionSource = none, indication = null) {}.padding(14.dp),
-        ) {
-            if (look.tiles) {
-                // quick tiles: the first eight, each opens its system page
-                QUICK.take(8).chunked(4).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        row.forEach { t ->
-                            Column(Modifier.weight(1f).aspectRatio(1.15f).clip(RoundedCornerShape(look.corner.coerceAtMost(6.dp))).background(Color(0x33FFFFFF)).clickable { t.run(ctx) }.padding(6.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                                Icon(t.icon, null, tint = look.ink, modifier = Modifier.size(20.dp))
-                                Text(tr(t.en, t.trName), color = look.ink, fontSize = 10.sp, maxLines = 1)
-                            }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var rev by androidx.compose.runtime.mutableIntStateOf(0)
+    // the tiles: the switches of the phone first, each lit when it is on and a tap switches it (with root or Shizuku; else it opens the settings page)
+    val tiles = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Quiet hours", "Location", "Rotation lock", "Cellular", "Flashlight").mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
+    val ons = remember(rev, now / 2000L) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
+    val acrylic = lookId == "win11"
+    val shape = RoundedCornerShape(look.corner)
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+        if (look.tiles) {
+            tiles.chunked(4).forEachIndexed { r, row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    row.forEachIndexed { c, t ->
+                        val on = ons.getOrNull(r * 4 + c) == true
+                        Column(Modifier.weight(1f).aspectRatio(1.15f).clip(RoundedCornerShape(look.corner.coerceAtMost(6.dp))).background(if (on) look.hi else Color(0x33FFFFFF))
+                            .clickable { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }.padding(6.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            Icon(t.icon, null, tint = if (on) Color.White else look.ink, modifier = Modifier.size(20.dp))
+                            Text(tr(t.en, t.trName), color = if (on) Color.White else look.ink, fontSize = 10.sp, maxLines = 1)
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
                 }
-                VolumeRow(ctx, look)
-                Spacer(Modifier.height(10.dp))
-                Text(tr("No new notifications", "Yeni bildirim yok"), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+                Spacer(Modifier.height(4.dp))
             }
-            Text(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(now)), color = look.ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
-            Text(SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(Date(now)), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-            MonthGrid(cal, look)
+            VolumeRow(ctx, look)
+            Spacer(Modifier.height(10.dp))
+            Text(tr("No new notifications", "Yeni bildirim yok"), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
         }
+        Text(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(now)), color = look.ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
+        Text(SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(Date(now)), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
+        MonthGrid(cal, look)
+    }
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.clockOpen = false }) {
+        val place = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).widthIn(max = 330.dp).fillMaxWidth(.92f)
+        if (acrylic) {
+            // Windows 11: the desktop's picture, blurred, shows through a light tint (Mica), with a thin light edge
+            AcrylicBox("win11", Color(0x7A1B2232), place.border(1.dp, Color(0x40FFFFFF), shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
+                Column(Modifier.padding(14.dp), content = body)
+            }
+        } else Column(
+            place.clip(shape).background(look.bg).border(1.dp, look.edge, shape).clickable(interactionSource = none, indication = null) {}.padding(14.dp), content = body,
+        )
     }
 }
 

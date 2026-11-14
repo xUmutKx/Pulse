@@ -69,6 +69,11 @@ fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Mo
         .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
 }
 
+/** A tap opens the app; a long press asks for its menu only when [menuOnLongPress] (the desktop moves an icon with the long press, and opens the menu when the finger lifts without having moved it). */
+fun Modifier.tapOnly(onTap: () -> Unit, menuOnLongPress: (() -> Unit)? = null): Modifier = this.pointerInput(menuOnLongPress != null) {
+    detectTapGestures(onTap = { onTap() }, onLongPress = menuOnLongPress?.let { m -> { m() } })
+}
+
 /** Dock = the chosen packages that are installed (max 5); none until the user pins some. */
 fun dockApps(apps: List<LaunchApp>, pkgs: List<String>): List<LaunchApp> =
     pkgs.take(LauncherPrefs.dockCount).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }

@@ -63,6 +63,8 @@ import kotlinx.coroutines.Dispatchers
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import kotlinx.coroutines.delay
@@ -253,20 +255,25 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)
             var drag by remember(app.pkg) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+            // the long press moves the icon; lifting the finger without having moved it opens its menu (where the icon is, at the finger)
+            var origin by remember(app.pkg) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+            var downAt by remember(app.pkg) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+            var movedPx by remember(app.pkg) { mutableStateOf(0f) }
             // free placement (snap off): the place is the exact spot it was put down at; else the cell of the grid
             val free = if (!LauncherPrefs.snapIcons) LauncherPrefs.iconFree[app.pkg]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 } else null
             val x = drag?.x ?: (free?.get(0) ?: (col * cellW)); val y = drag?.y ?: (free?.get(1) ?: (row * cellH))
             Box(
-                Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f)
+                Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f).onGloballyPositioned { origin = it.positionInRoot() }
                     // a little smaller and a touch see-through while it is carried
                     .graphicsLayer { val k = if (drag != null) .9f else 1f; scaleX = k; scaleY = k; alpha = if (drag != null) .85f else 1f }
                     .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg]) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
-                            onDragStart = { drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW), free?.get(1) ?: (row * cellH)) },
-                            onDrag = { c, dr -> c.consume(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
+                            onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW), free?.get(1) ?: (row * cellH)) },
+                            onDrag = { c, dr -> c.consume(); movedPx += dr.getDistance(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
                             onDragEnd = {
                                 val p = drag; drag = null
-                                if (p != null && !LauncherPrefs.snapIcons) {
+                                if (movedPx < 12f * d) { LauncherSession.pressAt = origin + downAt; state.longPress(app) }
+                                else if (p != null && !LauncherPrefs.snapIcons) {
                                     LauncherPrefs.iconFree = LauncherPrefs.iconFree + (app.pkg to "${p.x.coerceAtLeast(0f)},${p.y.coerceAtLeast(0f)}"); LauncherPrefs.save(ctx)
                                 } else if (p != null) {
                                     var nc = Math.round(p.x / cellW).coerceIn(0, cols - 1); var nr = Math.round(p.y / cellH).coerceIn(0, perColumn - 1)
@@ -280,7 +287,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                             onDragCancel = { drag = null },
                         )
                     },
-                        ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).appTap(state, app) { open(app) }) }
+                        ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).tapOnly({ open(app) }, if (LauncherPrefs.lockLayout) ({ LauncherSession.pressAt = origin + androidx.compose.ui.geometry.Offset(40f * d, 40f * d); state.longPress(app) }) else null)) }
         }
     }
 }
