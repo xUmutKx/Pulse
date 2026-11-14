@@ -149,6 +149,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "win:tictactoe" -> com.umutk.pulse.extras.launcher.TicTacToeGame()
         id.startsWith("win:fun:") -> com.umutk.pulse.extras.launcher.FunAppScreen(id.removePrefix("win:fun:"))
         // the launcher's own settings in a window of the desktop: they change the launcher (its look, wallpaper, icons), not the app
+        id == "win:lsettings:menu" -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true, startCat = "menu") }
         id == "win:lsettings" -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true) }
         id == "win:gallery" -> com.umutk.pulse.extras.launcher.GalleryWindow()
         id.startsWith("view:") -> com.umutk.pulse.extras.launcher.FileWindow(id.removePrefix("view:"))

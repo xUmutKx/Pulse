@@ -77,6 +77,7 @@ fun HomeSheet() {
         ActionRow("light", tr("Display settings", "Ekran ayarları"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
         ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
         if (LauncherPrefs.look in setOf("win11", "win10", "win7", "xp", "win95")) ActionRow("notes", tr("Sticky note", "Yapışkan not"), w.text) { HomeSheetState.sheet = false; stickyNoteProvider(ctx)?.let(addWidget) }
+        ActionRow("menu", tr("Customize the menu", "Menüyü düzenle"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).putExtra("cat", "menu")) }
         ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
         var addOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
         ActionRow("add", tr("New", "Yeni"), w.text) { addOpen = !addOpen }

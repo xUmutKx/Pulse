@@ -69,11 +69,11 @@ import kotlin.math.roundToInt
 
 /** Settings of the Pulse Launcher. Drawn in the look passed in by its host; writes only LauncherPrefs. */
 @Composable
-fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
+fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: String = "") {
     val ctx = LocalContext.current
     // Pulse's process never runs LauncherActivity, so read the stored values before showing or saving them
     remember(ctx) { LauncherPrefs.load(ctx) }
-    var cat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var cat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startCat) }
     BackHandler { if (cat.isNotEmpty()) cat = "" else back() }
     var pickLook by remember { mutableStateOf(false) }
     var pickDock by remember { mutableStateOf(false) }
@@ -263,6 +263,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
                 }
             }
         }
+        if (cat == "menu") MenuEditor()
         if (cat == "badges") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SwitchLine("bell", tr("Notification badges on the app pictures", "Uygulama resimlerinde bildirim sayısı"), LauncherPrefs.badges) { LauncherPrefs.badges = it; save() }
             if (LauncherPrefs.badges) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -358,6 +359,7 @@ private val LAUNCHER_CATS = listOf(
     LCat("desktop", 0xFF26A69A, "folder", "Desktop icons", "Masaüstü simgeleri", "Which shortcuts sit on the Windows desktops", "Windows masaüstlerindeki kısayollar"),
     LCat("feel", 0xFF8E24AA, "palette", "Look and feel", "Görünüm ve his", "Icon shape, wallpaper effects, sounds, boot screens", "Simge şekli, duvar kağıdı efektleri, sesler, açılış ekranları"),
     LCat("gestures", 0xFFD81B60, "sensors", "Gestures and inputs", "Hareketler ve girişler", "Double tap, swipes, vibration", "Çift dokunuş, kaydırmalar, titreşim"),
+    LCat("menu", 0xFF5C6BC0, "menu", "Context menu", "Sağ tık menüsü", "Which actions an app's menu has and their order", "Uygulama menüsündeki eylemler ve sırası"),
     LCat("badges", 0xFFE53935, "bell", "Notification badges", "Bildirim rozetleri", "Numbers or dots on the apps", "Uygulamalarda sayı ya da nokta"),
     LCat("screen", 0xFF00897B, "clock", "Clock and screen", "Saat ve ekran", "Clock formats, screen on, layout lock", "Saat biçimi, ekran açık kalsın, düzen kilidi"),
     LCat("backup", 0xFF546E7A, "save", "Backup and reset", "Yedek ve sıfırlama", "Export, import, reset", "Dışa aktar, içe aktar, sıfırla"),

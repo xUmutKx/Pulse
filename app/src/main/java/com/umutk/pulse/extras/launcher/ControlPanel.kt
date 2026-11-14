@@ -57,6 +57,7 @@ internal val CONTROL_PANEL = listOf(
     )),
     CpGroup("Appearance and Personalization", "Görünüm ve Kişiselleştirme", listOf(
         CpItem("settings", "Personalization", "Kişiselleştirme", "Look of the desktop, wallpaper, icons, dock", "Masaüstünün görünümü, duvar kağıdı, simgeler, dok", "win:lsettings"),
+        CpItem("menu", "Context menu", "Sağ tık menüsü", "Choose and order the actions of an app's menu", "Uygulama menüsündeki eylemleri seç ve sırala", "win:lsettings:menu"),
         CpItem("details", "Fonts", "Yazı tipleri", "Change the system font", "Sistem yazı tipini değiştir", "fonts"),
         CpItem("run", "Command Prompt", "Komut İstemi", "Run commands", "Komut çalıştır", "page:terminal"),
     )),
