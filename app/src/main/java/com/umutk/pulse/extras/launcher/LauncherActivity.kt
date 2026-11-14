@@ -105,8 +105,12 @@ class LauncherActivity : ComponentActivity() {
                 }
                 // the Windows looks start like a PC: boot screen, then the sign-in screen (once per launcher process)
                 if (!LauncherSession.booted && th.id in com.umutk.pulse.loginLooks) {
-                    var stage by remember { mutableIntStateOf(if (LauncherPrefs.bootScreen) 0 else if (LauncherPrefs.loginScreen) 1 else 2) }
+                    // now and then a surprise first: the BIOS screen of an old PC, very rarely a fake blue screen (stage -1)
+                    val egg = remember { if (LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }
+                    var stage by remember { mutableIntStateOf(if (egg != 0) -1 else if (LauncherPrefs.bootScreen) 0 else if (LauncherPrefs.loginScreen) 1 else 2) }
                     when (stage) {
+                        -1 -> if (egg == 2) BsodScreen(th.id) { stage = if (LauncherPrefs.bootScreen) 0 else if (LauncherPrefs.loginScreen) 1 else 2 }
+                            else BiosScreen { stage = if (LauncherPrefs.bootScreen) 0 else if (LauncherPrefs.loginScreen) 1 else 2 }
                         0 -> com.umutk.pulse.Splash(th) { stage = if (LauncherPrefs.loginScreen) 1 else 2 }
                         1 -> com.umutk.pulse.LoginScreen(th) { stage = 2 }
                         else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(this@LauncherActivity, th.id) }
