@@ -156,7 +156,10 @@ fun TerminalPage() {
             if (Shell.root == true) Text(if (TermSession.asRoot) "sh" else "su", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot) }.padding(4.dp))
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(top = 6.dp)) {
-            Text(ansi(TermSession.shown, fg), color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
+            // the colour codes are worked out once per output, not on every frame (up to 60,000 characters)
+            val shownText = TermSession.shown
+            val coloured = remember(shownText) { ansi(shownText, fg) }
+            Text(coloured, color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
         }
         Text(TermSession.cwd, color = Color(0xFF729FCF), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
