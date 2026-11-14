@@ -58,6 +58,10 @@ Looks: Windows 95, XP, 7, 10, 11, Material, AMOLED (+ One UI, ColorOS where they
 - When the user lists several changes, do them in order in the same turn, without asking which first. Ask only for things that need the user's device, an account, or a secret.
 - Commit and push each finished part (the stop hook asks for it); build only on "derle".
 
+## Releases and notes
+
+- Every release updates BOTH the notes file `.github/notes/<version>.md` and the in-app "What's new" list (`WHATS_NEW` in `Welcome.kt`, shown once after an update; English + Turkish). An old list shows an old version's notes after an update, so write it again for every version.
+
 ## Pitfalls seen
 
 - `FilesActivity` must not depend on process-global `Look`/`Cfg`/`Opt`; use its own provider.

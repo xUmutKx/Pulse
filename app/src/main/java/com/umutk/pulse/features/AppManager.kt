@@ -149,6 +149,13 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
     }.plus(hiddenRows)
 }
 
+/** Reads the app list in the background a little after Pulse starts, so the App manager opens with the list already there and the saved filter and sort apply to it at once (no empty page while it loads). */
+fun prewarmAppManager(ctx: Context) {
+    if (AmKept.rows != null) return
+    val rows = runCatching { loadAmRows(ctx.applicationContext) }.getOrNull() ?: return
+    if (AmKept.rows == null) AmKept.rows = rows
+}
+
 private fun lastUsedByPackage(ctx: Context): Map<String, Long> {
     val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     val now = System.currentTimeMillis()

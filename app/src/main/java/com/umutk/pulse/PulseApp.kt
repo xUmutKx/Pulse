@@ -23,6 +23,11 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
         // the ads start (play build) and Premium is checked with Google Play, so a reinstall gets it back
         com.umutk.pulse.ads.PulseAds.init(this)
         com.umutk.pulse.ads.PulseAds.restorePremium(this)
+        // the main process only: the list of the App manager is read in the background, so that page opens already filled
+        if (runCatching { Application.getProcessName() == packageName }.getOrDefault(false)) CoroutineScope(Dispatchers.IO).launch {
+            kotlinx.coroutines.delay(2500)
+            runCatching { com.umutk.pulse.features.prewarmAppManager(this@PulseApp) }
+        }
     }
 
     override fun onTrimMemory(level: Int) {

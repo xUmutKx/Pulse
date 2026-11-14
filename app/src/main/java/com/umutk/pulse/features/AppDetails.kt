@@ -300,9 +300,10 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
             }
             Text(pkg, color = T.sub, fontSize = 12.sp)
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                @Composable fun act(icon: String, desc: String, danger: Boolean = false, onClick: () -> Unit) {
+                @Composable fun act(icon: String, desc: String, danger: Boolean = false, tint: androidx.compose.ui.graphics.Color? = null, onClick: () -> Unit) {
                     Box(Modifier.size(50.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background((if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text).copy(alpha = .12f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-                        com.umutk.pulse.extras.gamehub.FluentIcon(icon, if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text, 24.dp)
+                        // the look's own coloured icons for the usual actions; the two without a coloured picture are Fluent glyphs in a colour of their own
+                        if (tint != null) com.umutk.pulse.extras.gamehub.FluentIcon(icon, tint, 24.dp) else com.umutk.pulse.PIcon(icon, if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text, 24.dp)
                     }
                 }
                 act("play", tr("Open", "Aç")) {
@@ -316,11 +317,11 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 }
-                act("forceStop", tr("Force stop", "Durmaya zorla")) {
+                act("forceStop", tr("Force stop", "Durmaya zorla"), tint = androidx.compose.ui.graphics.Color(0xFFF5A524)) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                act("apkPackage", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
+                act("apkPackage", tr("Extract APK", "APK çıkar"), tint = androidx.compose.ui.graphics.Color(0xFF34D3C0)) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
                 if (d != null && !d.isSystem) act("delete", tr("Uninstall", "Kaldır"), danger = true) { confirmUninstall = true }
             }
             if (note.isNotEmpty()) Text(note, color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp)

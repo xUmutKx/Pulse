@@ -496,7 +496,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val nUri = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
         val nName = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
         // a terminal app asks for no input type at all: its keys stay plain (no open word), the bar of suggestions stays on
-        val nTerm = info.inputType == 0 && Regex("(?i)termux|terminal|androidterm|connectbot|juicessh|ssh|shell").containsMatchIn(info.packageName.orEmpty())
+        // (an editor that declares no input type at all, a custom text box of an app, is treated the same way: its keys are plain, but the bar opens with the usual words)
+        val nTerm = info.inputType == 0
         st.terminal = nTerm
         val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
         noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
@@ -551,6 +552,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         kbRoot?.let { v -> v.post { st.refreshInsets?.invoke(); v.requestLayout() } }
         // the app may still change the field's kind a moment after the start: it is looked at twice more
         kbRoot?.let { v -> v.postDelayed({ syncKind(currentInputEditorInfo) }, 120); v.postDelayed({ syncKind(currentInputEditorInfo) }, 450) }
+        // the bar never opens empty: when nothing was put on it (the field answered late), the usual words of the language stand there
+        kbRoot?.let { v -> v.postDelayed({ fillEmptyBar() }, 250); v.postDelayed({ fillEmptyBar() }, 700) }
+    }
+
+    private fun fillEmptyBar() {
+        if (!KeyboardPrefs.suggestions || word.isNotEmpty() || st.panel != "keys" || st.slots.any { it.isNotBlank() }) return
+        if (currentInputConnection == null) return
+        val fb = commonNext(st.lang, st.shift > 0)
+        slotWords = fb.toTypedArray(); st.slots = fb; target = null
     }
 
     /**
