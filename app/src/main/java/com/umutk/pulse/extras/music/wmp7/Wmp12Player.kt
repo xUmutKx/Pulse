@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -59,7 +60,10 @@ fun Wmp12Player(
     title: String, artist: String, album: String?, cover: ImageBitmap?, playing: Boolean, pos: Int, dur: Int,
     onPrev: () -> Unit, onPlayPause: () -> Unit, onNext: () -> Unit, onStop: () -> Unit, onSeek: (Int) -> Unit, modifier: Modifier = Modifier,
     queue: List<String> = emptyList(), current: Int = -1, onPick: (Int) -> Unit = {},
+    albums: List<Wmp12Album> = emptyList(), albumCover: suspend (String) -> ImageBitmap? = { null }, onAlbum: (String) -> Unit = {},
 ) {
+    // "Library": the albums of the phone as a grid of covers (the Media Library page of the real player); a tap plays the album
+    var showLib by remember { androidx.compose.runtime.mutableStateOf(false) }
     // "Show list" (top right, as in the real player) swaps the cover for the play queue; the volume slider is the phone's media volume
     var showList by remember { androidx.compose.runtime.mutableStateOf(false) }
     val vctx = androidx.compose.ui.platform.LocalContext.current
@@ -72,13 +76,27 @@ fun Wmp12Player(
         Column(Modifier.fillMaxSize().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (queue.isNotEmpty()) Text(if (showList) "Hide list" else "Show list", color = Color(0xFF9CD3F5), fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, top = 6.dp).clickable { showList = !showList })
+                if (albums.isNotEmpty()) Text(if (showLib) "Now playing" else "Library", color = Color(0xFF9CD3F5), fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, top = 6.dp).clickable { showLib = !showLib; showList = false })
+                if (queue.isNotEmpty() && !showLib) Text(if (showList) "Hide list" else "Show list", color = Color(0xFF9CD3F5), fontSize = 12.sp, modifier = Modifier.padding(start = 12.dp, top = 6.dp).clickable { showList = !showList })
             }
             val sub = listOfNotNull(artist.takeIf { it.isNotBlank() }, album?.takeIf { it.isNotBlank() }).joinToString(" - ")
             if (sub.isNotEmpty()) Text(sub, color = Color(0xFFC7DCE8), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             Spacer(Modifier.height(10.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
-              if (showList) LazyColumn(Modifier.fillMaxSize()) {
+              if (showLib) androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Adaptive(92.dp), Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(albums.size) { i ->
+                    val a = albums[i]
+                    val cv by androidx.compose.runtime.produceState<ImageBitmap?>(null, a.firstPath) { value = albumCover(a.firstPath) }
+                    Column(Modifier.clickable { onAlbum(a.name); showLib = false }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(2.dp)).background(Color(0x33FFFFFF)), contentAlignment = Alignment.Center) {
+                            val b = cv
+                            if (b != null) Image(b, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else com.umutk.pulse.PIcon("music", Color(0xFF9CD3F5), 34.dp)
+                        }
+                        Text(a.name, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                        Text(a.artist, color = Color(0xFFB5CFDF), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+              } else if (showList) LazyColumn(Modifier.fillMaxSize()) {
                 itemsIndexed(queue) { i, name ->
                     Text(name, color = if (i == current) Color.White else Color(0xFFB5CFDF), fontSize = 14.sp, fontWeight = if (i == current) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth().background(if (i == current) Color(0x33FFFFFF) else Color.Transparent).clickable { onPick(i) }.padding(horizontal = 8.dp, vertical = 7.dp))
@@ -151,3 +169,6 @@ private fun WmpFlat(icon: androidx.compose.ui.graphics.vector.ImageVector, onCli
 }
 
 private fun mmss(ms: Int) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
+
+/** One album of the phone for the Library page: its name, its artist and the file of its first song (its cover is read from there). */
+class Wmp12Album(val name: String, val artist: String, val firstPath: String)
