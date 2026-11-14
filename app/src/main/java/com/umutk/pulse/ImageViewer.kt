@@ -29,6 +29,7 @@ import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -140,12 +141,18 @@ class ImageViewActivity : ComponentActivity() {
         }
         // started from the launcher (no picture): the gallery of the device, a tap opens the viewer and back returns to the gallery
         val gallery = items.isEmpty()
+        if (gallery) PhotosCache.prewarm(this)
         PhotosPrefs.launchSender = { sender -> favAsk.launch(androidx.activity.result.IntentSenderRequest.Builder(sender).build()) }
         setContent { LookHost(transparent = false, lookId = PhotosPrefs.look) { th ->
             if (PhotosPrefs.amoled && th.material) Look.resolved = PhotosPrefs.black(th)
             var viewing by remember { mutableStateOf(!gallery) }
-            if (viewing) ImgViewerScreen(items, startIdx) { if (gallery) { viewing = false; items.clear() } else finish() }
-            else androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { PhotosGalleryScreen { l, i -> items.clear(); items.addAll(l); startIdx = i; viewing = true } }
+            // the gallery stays composed under the viewer: coming back leaves it where it was (nothing is read or drawn again), the viewer lies over it
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                if (gallery) androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { PhotosGalleryScreen { l, i -> items.clear(); items.addAll(l); startIdx = i; viewing = true } }
+                if (viewing) androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(th.bg).pointerInput(Unit) { detectTapGestures { } }) {
+                    ImgViewerScreen(items, startIdx) { if (gallery) { viewing = false; items.clear() } else finish() }
+                }
+            }
         } }
     }
 
@@ -209,7 +216,7 @@ private fun videoThumb(ctx: Context, s: ImgSrc, px: Int): Bitmap? = runCatching 
 
 /** Small thumbnails shared by the grid and the filmstrip. */
 internal object ImgThumbs {
-    private val cache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 12).toInt().coerceAtLeast(2 * 1024 * 1024)) {
+    private val cache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt().coerceAtLeast(2 * 1024 * 1024)) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
     fun get(k: String): Bitmap? = cache.get(k)
@@ -221,7 +228,13 @@ internal fun ImgThumb(src: ImgSrc, modifier: Modifier = Modifier, px: Int = 220)
     val ctx = LocalContext.current
     val key = src.uri.toString() + "|" + (src.file?.lastModified() ?: 0L)
     val bmp by produceState<Bitmap?>(ImgThumbs.get(key), key) {
-        if (value == null) value = withContext(Dispatchers.IO) { (imgDecode(ctx, src, px) ?: videoThumb(ctx, src, px))?.also { ImgThumbs.put(key, it) } }
+        if (value == null) value = withContext(Dispatchers.IO) {
+            // the small pictures are kept on disk too, so the grid fills at once the next time (reading the big photos again was what made it slow)
+            val f = java.io.File(ctx.cacheDir, "phthumb/" + Integer.toHexString(key.hashCode()) + "_$px.jpg")
+            (runCatching { if (f.isFile) BitmapFactory.decodeFile(f.path) else null }.getOrNull()
+                ?: (imgDecode(ctx, src, px) ?: videoThumb(ctx, src, px))?.also { b -> runCatching { f.parentFile?.mkdirs(); f.outputStream().use { o -> b.compress(Bitmap.CompressFormat.JPEG, 82, o) } } })
+                ?.also { ImgThumbs.put(key, it) }
+        }
     }
     val b = bmp
     val fade by androidx.compose.animation.core.animateFloatAsState(if (b != null) 1f else 0f, androidx.compose.animation.core.tween(180), label = "thumb")
@@ -487,7 +500,7 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
     LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggle(Offset(box.width / 2f, box.height / 2f)) } }
     LaunchedEffect(scale > 1.01f, active) { if (active) onZoomed(scale > 1.01f) }
 
-    Box(Modifier.fillMaxSize().onSizeChanged { box = it }
+    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.systemGestureExclusion() // (a pinch near the edge was taken for Android's back swipe and closed the picture)
         .pointerInput(b, live) { detectTapGestures(onTap = { if (vid != null) vid = null else onTap() }, onDoubleTap = { p -> toggle(p) }, onLongPress = { if (live != null) playLive() }) }
         .pointerInput(b) {
             awaitEachGesture {
