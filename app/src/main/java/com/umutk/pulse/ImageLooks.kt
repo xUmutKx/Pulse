@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.unit.sp
 
 /** The chrome families of the photo viewer / editor. */
@@ -99,7 +100,16 @@ private fun ImgBar(visible: Boolean, top: Boolean, overlay: Boolean, content: @C
 private fun ImgFilmstrip(items: List<ImgSrc>, index: Int, onPick: (Int) -> Unit, corner: Dp, modifier: Modifier = Modifier) {
     if (items.size < 2 || !PhotosPrefs.filmstrip) return
     val ls = rememberLazyListState()
-    LaunchedEffect(index, items.size) { if (index in items.indices) runCatching { ls.animateScrollToItem(index) } }
+    val dens = androidx.compose.ui.platform.LocalDensity.current
+    // the current picture goes to the middle of the strip (not to its left edge): the strip's width is known once it is laid out
+    LaunchedEffect(index, items.size) {
+        if (index !in items.indices) return@LaunchedEffect
+        runCatching {
+            val vw = androidx.compose.runtime.snapshotFlow { ls.layoutInfo.viewportSize.width }.first { it > 0 }
+            val itemPx = with(dens) { 52.dp.roundToPx() }
+            ls.animateScrollToItem(index, -(vw / 2 - itemPx / 2))
+        }
+    }
     val sh = RoundedCornerShape(corner)
     LazyRow(state = ls, modifier = modifier.fillMaxWidth().height(62.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
