@@ -26,7 +26,15 @@
   });
   // the look of the cases: the id of one of Boxshelf's own case styles (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...), chosen in Game Hub
   const sid = () => { try { return (H.caseStyle && H.caseStyle()) || 'pc'; } catch (e) { return 'pc'; } };
-  const shelf = () => [{ id: sid(), kind: 'apps', name: 'Games', games: list().map(entry) }];
+  // two shelves: the phone's own games, and the library of Pulse's built-in and HTML games (they have a shelf of their own, reached from the all-games button)
+  window.PULSE_LIB_ID = 'plib';
+  const isLib = g => /^(mega|html):/.test(String(g.pkg));
+  const shelf = () => {
+    const all = list(), lib = all.filter(isLib).map(entry);
+    const out = [{ id: sid(), kind: 'apps', name: 'Games', games: all.filter(g => !isLib(g)).map(entry) }];
+    if (lib.length) out.push({ id: 'plib', kind: 'apps', name: 'Library', games: lib });
+    return out;
+  };
   // the heading of the shelf, whatever case style it wears
   window.PULSE_WORDMARKS = Object.fromEntries(['pc', 'custom', 'ps5', 'ps4', 'ps3', 'ps2', 'x360', 'sw', 'sw2', 'gc', 'wii', 'wiiu', 'psp', 'n3ds'].map(k => [k, ['Games', 'On this phone']]));
   api.platform = { os: 'android', caps: {} };
