@@ -127,6 +127,8 @@ object LauncherPrefs {
     var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
     /** true: desktop icons snap to the grid where they are dropped (the default); false: they stay exactly where they are put down. */
     var snapIcons by mutableStateOf(true)
+    /** On Windows desktops Pulse's own apps open in windows of the desktop (the default); off: each opens as an app of its own, full screen. */
+    var windowedApps by mutableStateOf(true)
     /** The free places (dp, "x,y") of the icons while [snapIcons] is off. */
     var iconFree by mutableStateOf<Map<String, String>>(emptyMap())
 
@@ -171,6 +173,7 @@ object LauncherPrefs {
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons") != "false"
+        windowedApps = p.getProperty("windowedApps") != "false"
         iconFree = p.stringPropertyNames().filter { it.startsWith("ifree.") }.associate { it.removePrefix("ifree.") to p.getProperty(it) }
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
@@ -216,6 +219,7 @@ object LauncherPrefs {
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
         p.setProperty("snapIcons", snapIcons.toString())
+        p.setProperty("windowedApps", windowedApps.toString())
         iconFree.forEach { (id, v) -> p.setProperty("ifree.$id", v) }
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
