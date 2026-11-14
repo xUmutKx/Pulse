@@ -202,6 +202,8 @@ object SeasonDl {
 
     @Composable
     fun Card() {
+        // the free-software builds only: the Google Play build has neither this card nor the torrent engine
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return
         val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
         var open by remember { mutableStateOf(false) }
