@@ -104,7 +104,8 @@ body.reduce-motion .fg-box{transform:none}
 /* the Search button: the glass as big as Menu's text, and a 72 px (48 dp) place to press that doesn't make the row taller */
 .platform-android .find-btn{position:relative;padding:6px 10px}
 .platform-android .find-btn svg{width:19px;height:19px}
-.platform-android .find-btn::after{content:"";position:absolute;left:50%;top:50%;width:72px;height:72px;transform:translate(-64%,-50%)}
+/* (only taller, never wider: three of these buttons stand side by side now, and a wide invisible target on each covered its neighbours, so every tap hit the wrong button) */
+.platform-android .find-btn::after{content:"";position:absolute;left:0;right:0;top:50%;height:72px;transform:translateY(-50%)}
 
 /* ---------- a narrow window (a phone held upright; the Android page there is about 450 px wide): one column, the
    results under the field; the letter grid, when a controller is used, between them ---------- */
@@ -119,7 +120,7 @@ body.reduce-motion .fg-box{transform:none}
   .fg-s{max-width:36%}
   .fg-row,.fg .fg-row{padding-left:10px;padding-right:10px;gap:12px}
   .fg-cap,.fg-empty{padding-left:10px;padding-right:10px}
-  .platform-android .find-btn::after{width:56px;height:56px}
+  .platform-android .find-btn::after{height:56px}
 }
 
 /* (beta.12, Android) the Thor with its bottom screen on: the bottom screen is the keyboard, so only the field and the
