@@ -110,7 +110,7 @@ import java.nio.file.StandardOpenOption
 import java.util.concurrent.atomic.AtomicLong
 
 /** Parallel connections for a file the server can split. */
-private const val PARTS = 4
+private const val PARTS = 8 // (a copy split in the old four keeps its four: the number is read back from the saved positions)
 /** Smaller files are one connection; splitting them costs more than it saves. */
 private const val MIN_SPLIT = 4L shl 20
 private const val BUF = 256 * 1024
@@ -180,14 +180,14 @@ class DlTask(val url: String, file: File) {
     val nid: Int get() = hashCode()
 
     /** Bytes a split download has already written, from its part positions. */
-    fun partBytes(): Long = partPos?.let { p -> val step = partStep(total.value); p.indices.sumOf { p[it] - it * step } } ?: 0L
+    fun partBytes(): Long = partPos?.let { p -> val step = partStep(total.value, p.size); p.indices.sumOf { p[it] - it * step } } ?: 0L
 
     /** What If-Range sends; a weak ETag is not allowed there. */
     fun validator(): String? = etag?.takeUnless { it.startsWith("W/") } ?: lastMod
 }
 
 /** Size of each range of a split download. */
-private fun partStep(total: Long) = (total + PARTS - 1) / PARTS
+private fun partStep(total: Long, parts: Int = PARTS) = (total + parts - 1) / parts
 
 /**
  * Downloads run in this process and keep going while the app is in the background: [DownloadService] holds the
@@ -694,13 +694,14 @@ private suspend fun DlTask.transfer(): Boolean {
 /** Writes each range from its own connection at its own place in the file. [partPos] keeps where each part has got to, so a resume goes on from there. */
 private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
     resumable = false
-    val step = partStep(total)
+    val parts = partPos?.size ?: PARTS
+    val step = partStep(total, parts)
     val fresh = partPos == null
-    val pos = partPos ?: LongArray(PARTS) { it * step }.also { partPos = it }
+    val pos = partPos ?: LongArray(parts) { it * step }.also { partPos = it }
     val tag = validator()
     java.io.RandomAccessFile(file, "rw").also { if (fresh) it.setLength(0) }.channel.use { ch ->
         done.value = pos.indices.sumOf { pos[it] - it * step }
-        (0 until PARTS).map { i ->
+        (0 until parts).map { i ->
             async(Dispatchers.IO) {
                 val end = minOf(total, (i + 1) * step) - 1
                 if (pos[i] > end) return@async
