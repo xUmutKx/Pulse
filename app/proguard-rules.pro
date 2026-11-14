@@ -51,3 +51,7 @@
 -keepattributes Signature
 -keepattributes *Annotation*
 
+
+# the torrent engine: JNI (swig) classes are called from native code
+-keep class org.libtorrent4j.** { *; }
+-dontwarn org.libtorrent4j.**

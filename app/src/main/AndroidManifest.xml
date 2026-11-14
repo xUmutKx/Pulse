@@ -894,6 +894,13 @@
                 <data android:scheme="http" android:mimeType="application/vnd.apple.mpegurl" />
                 <data android:scheme="https" android:mimeType="application/vnd.apple.mpegurl" />
             </intent-filter>
+            <!-- a magnet link opened from a browser or any app: Pulse downloads it (the torrent engine is in the full build) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="magnet" />
+            </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
