@@ -42,8 +42,13 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
         wallpaperRes(lookId, land)?.let { r -> runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, r, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }.getOrNull() }
     }
     var pos by remember { mutableStateOf(Offset.Zero) }
+    // the picture is as big as the window really is (the launcher may scale the screen, so the screen size of the configuration is not the window's)
+    val view = androidx.compose.ui.platform.LocalView.current
+    val dens = androidx.compose.ui.platform.LocalDensity.current
+    val rootW = with(dens) { view.rootView.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { view.rootView.height.coerceAtLeast(1).toDp() }
+    val amount = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
-        if (wall != null) Image(wall, null, Modifier.requiredSize(cfg.screenWidthDp.dp, cfg.screenHeightDp.dp).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(blur), contentScale = ContentScale.Crop)
+        if (wall != null) Image(wall, null, Modifier.requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(tint))
         content()
     }

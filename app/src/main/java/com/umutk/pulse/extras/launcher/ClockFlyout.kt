@@ -28,6 +28,9 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -82,7 +85,7 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
     // the tiles: the switches of the phone first, each lit when it is on and a tap switches it (with root or Shizuku; else it opens the settings page)
     val tiles = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Quiet hours", "Location", "Rotation lock", "Cellular", "Flashlight").mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
     val ons = remember(rev, now / 2000L) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
-    val acrylic = lookId == "win11"
+    val acrylic = lookId == "win11" || LauncherPrefs.blurAll
     val shape = RoundedCornerShape(look.corner)
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         if (look.tiles) {
@@ -91,9 +94,9 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
                     row.forEachIndexed { c, t ->
                         val on = ons.getOrNull(r * 4 + c) == true
                         Column(Modifier.weight(1f).aspectRatio(1.15f).clip(RoundedCornerShape(look.corner.coerceAtMost(6.dp))).background(if (on) look.hi else Color(0x33FFFFFF))
-                            .clickable { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }.padding(6.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            .clickable { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }.padding(5.dp), verticalArrangement = Arrangement.SpaceBetween) {
                             Icon(t.icon, null, tint = if (on) Color.White else look.ink, modifier = Modifier.size(20.dp))
-                            Text(tr(t.en, t.trName), color = if (on) Color.White else look.ink, fontSize = 10.sp, maxLines = 1)
+                            FitLabel(tr(t.en, t.trName), if (on) Color.White else look.ink)
                         }
                     }
                 }
@@ -108,14 +111,15 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
         MonthGrid(cal, look)
     }
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.clockOpen = false }) {
-        val place = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).widthIn(max = 330.dp).fillMaxWidth(.92f)
+        // the panel never grows past the free room above the taskbar and the status bar: what does not fit scrolls
+        val place = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).statusBarsPadding().widthIn(max = 330.dp).fillMaxWidth(.92f).wrapContentHeight(align = Alignment.Bottom)
         if (acrylic) {
             // Windows 11: the desktop's picture, blurred, shows through a light tint (Mica), with a thin light edge
-            AcrylicBox("win11", Color(0x7A1B2232), place.border(1.dp, Color(0x40FFFFFF), shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
-                Column(Modifier.padding(14.dp), content = body)
+            AcrylicBox(if (lookId == "win11") "win11" else lookId, Color(0x7A1B2232), place.border(1.dp, Color(0x40FFFFFF), shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(14.dp), content = body)
             }
         } else Column(
-            place.clip(shape).background(look.bg).border(1.dp, look.edge, shape).clickable(interactionSource = none, indication = null) {}.padding(14.dp), content = body,
+            place.clip(shape).background(look.bg).border(1.dp, look.edge, shape).clickable(interactionSource = none, indication = null) {}.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(14.dp), content = body,
         )
     }
 }
@@ -154,4 +158,11 @@ private fun MonthGrid(cal: Calendar, look: FlyLook) {
             repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
         }
     }
+}
+
+/** A tile's name that shrinks until it fits on one line (a wide system font cut "Bluetooth" and "Flashlight"). */
+@Composable
+private fun FitLabel(text: String, color: Color) {
+    var fs by remember(text) { mutableFloatStateOf(10f) }
+    Text(text, color = color, fontSize = fs.sp, maxLines = 1, softWrap = false, letterSpacing = 0.sp, onTextLayout = { if (it.hasVisualOverflow && fs > 6f) fs -= .5f })
 }
