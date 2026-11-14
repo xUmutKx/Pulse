@@ -971,6 +971,8 @@ function iplCap(){return !window.bsPlatform||bsPlatform.has("dolphinIpl")}
 // folders found earlier (det) never offer it again: added back that way it couldn't be read. Picking it again works
 function rdGone(){return rdGone.s||(rdGone.s=new Set())}
 function openSearch(viaPad){searchIdx=null;if(edit)cancelEdit();grab=null;if(!results)preSearch={secI,rowI,sub,subRet,focus,studio,stack,sRet};studio=null;stack=[];sSig="";runSearch();focus="search";if(viaPad)openOsk("search");render()}
+/* Pulse on a phone: the search is typed in Android's own text dialog (the keyboard always comes up there), the matches fill the page when it is done */
+function nativeSearch(){window.__pulseTextDone=t=>{window.__pulseTextDone=null;if(t==null)return;query=String(t);runSearch();focus=results&&results.length?"page":"search";render()};try{PulseHost.editText("Search settings",query)}catch{window.__pulseTextDone=null}}
 function closeSearch(){searchIdx=null;secDrop();results=null;query="";closeOsk();if(preSearch){({secI,rowI,sub,subRet}=preSearch);if(preSearch.studio){studio=preSearch.studio;stack=preSearch.stack||[];sRet=preSearch.sRet||0;sSig=""}focus=preSearch.focus==="search"||preSearch.focus==="osk"?"side":preSearch.focus}else focus="side";preSearch=null;render()}
 function typeChar(c){if(edit){edit.value+=c;paintEdit();return}query+=c;runSearch();if(focus!=="osk")focus="search";render()}
 function backspace(){if(edit){edit.value=edit.value.slice(0,-1);paintEdit();return}query=query.slice(0,-1);runSearch();render()}
@@ -2411,7 +2413,7 @@ function renderSearchBox(){const sb=E.side.querySelector(".bss-search");if(!sb)r
   const h=(query?`<span class="q">${esc(query)}</span>`:`<span class="ph">Search settings</span>`)+'<span class="caret"></span>'+(device==="pad"?`<span class="kb">${viewWord()}</span>`:'<span class="kb">type</span>');if(sb._h!==h){sb._h=h;sb.innerHTML=svg("search")+h}}
 function renderSide(){
   if(sideSig!==SECTIONS.map(s=>s.id).join()){sideSig=SECTIONS.map(s=>s.id).join();E.side.innerHTML='<div class="bss-brand">SETTINGS</div>';
-    const sb=document.createElement("div");sb.className="bss-search";sb.onclick=()=>{if(edit)commitEdit();openSearch(device==="pad"||!!(window.bsPlatform&&bsPlatform.os==="android"))};E.side.append(sb);
+    const sb=document.createElement("div");sb.className="bss-search";sb.onclick=()=>{if(edit)commitEdit();const and=!!(window.bsPlatform&&bsPlatform.os==="android");if(and&&device!=="pad"&&window.PulseHost&&PulseHost.editText){openSearch(false);nativeSearch();return}openSearch(device==="pad"||and)};E.side.append(sb);
     let g="";sideNavs=SECTIONS.map((s,i)=>{if(s.g!==g){g=s.g;E.side.insertAdjacentHTML("beforeend",`<div class="bss-grp">${esc(g)}</div>`)}
       const n=document.createElement("div");n.className="bss-nav";n.innerHTML=svg(s.ic)+`<span>${esc(s.name)}</span><span class="badge"></span>`;
       n.onclick=()=>{if(edit)commitEdit();if(results){results=null;query="";closeOsk();preSearch=null}goSec(i);focus="page";rowI=0;render()};E.side.append(n);return n});
