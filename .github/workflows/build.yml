@@ -107,6 +107,13 @@ jobs:
           name: pulse-${{ matrix.variant }}
           path: out/*
           if-no-files-found: error
+      # the R8 name map of this build: a crash report of a release shows letters (Q5.dl), this file turns them back into names
+      - uses: actions/upload-artifact@v5
+        with:
+          name: mapping-${{ matrix.variant }}
+          path: app/build/outputs/mapping/**/mapping.txt
+          if-no-files-found: warn
+          retention-days: 90
 
   # the release, once every build is done: the files from the builds above, and the notes of every version since the last release
   publish:
