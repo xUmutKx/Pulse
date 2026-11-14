@@ -56,7 +56,7 @@ internal val CONTROL_PANEL = listOf(
         CpItem("globe", "DNS and TTL", "DNS ve TTL", "Private DNS and packet TTL", "Özel DNS ve paket TTL", "dns"),
     )),
     CpGroup("Appearance and Personalization", "Görünüm ve Kişiselleştirme", listOf(
-        CpItem("settings", "Personalization", "Kişiselleştirme", "Theme, accent, icons and pages of Pulse", "Pulse'un teması, vurgusu, ikonları ve sayfaları", "page:settings"),
+        CpItem("settings", "Personalization", "Kişiselleştirme", "Look of the desktop, wallpaper, icons, dock", "Masaüstünün görünümü, duvar kağıdı, simgeler, dok", "win:lsettings"),
         CpItem("details", "Fonts", "Yazı tipleri", "Change the system font", "Sistem yazı tipini değiştir", "fonts"),
         CpItem("run", "Command Prompt", "Komut İstemi", "Run commands", "Komut çalıştır", "page:terminal"),
     )),
