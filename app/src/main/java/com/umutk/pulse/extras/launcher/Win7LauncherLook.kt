@@ -142,11 +142,11 @@ class Win7LauncherLook : LauncherLook {
                     // (the joke apps are only in All programs, under their own group, not among the first nine)
                     // the dock first, then the programs opened most often (as the real Start menu lists them), the rest by name
                     val pinned = remember(state.dock, state.apps, LauncherPrefs.usage) { (state.dock + state.apps.sortedByDescending { LauncherPrefs.usage[it.pkg] ?: 0L }).filter { !it.pkg.startsWith("pulse:x:win:fun:") }.distinctBy { it.pkg }.take(9) }
-                    val found = remember(query, state.apps) { state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) } }
+                    val found = remember(query, state.apps) { state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) } }
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 4.dp)) {
                         when {
                             query.isNotBlank() -> items(found, key = { it.pkg + it.label }) { W7Row(it, state, onClose) }
-                            all -> groupedApps(state.apps).forEach { (g, apps) ->
+                            all -> groupedApps(state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") }).forEach { (g, apps) ->
                                 item { W7Folder(tr(g.en, g.tr)) }
                                 items(apps, key = { it.pkg + it.label }) { Box(Modifier.padding(start = 14.dp)) { W7Row(it, state, onClose) } }
                             }
@@ -285,7 +285,7 @@ class Win7LauncherLook : LauncherLook {
     /** Glossy round orb: radial body, a rim, the Windows flag in four panes and a top gloss. */
     @Composable
     private fun StartOrb() {
-        Canvas(Modifier.size(36.dp)) {
+        Canvas(Modifier.size(32.dp)) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val r = size.minDimension / 2f
             drawCircle(
@@ -294,7 +294,7 @@ class Win7LauncherLook : LauncherLook {
             )
             drawCircle(W7_ORB_RIM, radius = r - .5f, center = c, style = Stroke(width = 1f))
             // the flag: four waving panes in red, green, blue and yellow
-            val u = r * .17f; val g = r * .05f; val x0 = c.x - u * 2 - g / 2; val y0 = c.y - u * 2 - g / 2
+            val u = r * .14f; val g = r * .045f; val x0 = c.x - u * 2 - g / 2; val y0 = c.y - u * 2 - g / 2
             fun pane(i: Int, j: Int, col: Color) = drawRect(col, Offset(x0 + i * (u * 2 + g) + (if (j == 1) u * .0f else 0f), y0 + j * (u * 2 + g) + i * u * .12f), Size(u * 2, u * 2))
             pane(0, 0, Color(0xFFF25022)); pane(1, 0, Color(0xFF7FBA00)); pane(0, 1, Color(0xFF00A4EF)); pane(1, 1, Color(0xFFFFB900))
             drawOval(

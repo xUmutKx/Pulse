@@ -53,7 +53,8 @@ fun startGroup(app: LaunchApp): StartGroup = if (app.pkg.startsWith("pulse:x:win
 
 /** The apps split into their groups, in group order; empty groups are left out. */
 fun groupedApps(all: List<LaunchApp>): List<Pair<StartGroup, List<LaunchApp>>> =
-    StartGroup.values().map { g -> g to all.filter { startGroup(it) == g } }.filter { it.second.isNotEmpty() }
+    // the joke apps are on the desktop only, not in the lists of the Start menus
+    StartGroup.values().filter { it != StartGroup.FUN }.map { g -> g to all.filter { startGroup(it) == g } }.filter { it.second.isNotEmpty() }
 
 /** [columns] is the drawer's column count; [longPress] opens the app's action sheet. */
 class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val columns: Int, val iconDp: Int, val dock: List<LaunchApp>,
@@ -77,7 +78,7 @@ val LocalLauncherEdge = compositionLocalOf { 0.dp }
 
 /** Start menu data: the pinned apps (only while nothing is typed) and every app whose label matches the search. */
 fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<LaunchApp>> =
-    (if (query.isBlank()) state.dock else emptyList()) to state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) }
+    (if (query.isBlank()) state.dock else emptyList()) to state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) }
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
