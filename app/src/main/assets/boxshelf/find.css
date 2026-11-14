@@ -155,3 +155,5 @@ body.find-slim #hints{visibility:hidden}
 .fg.bottomkb .fg-t{align-self:end;font-size:21px;line-height:1.25}
 .fg.bottomkb .fg-s{align-self:start;max-width:none;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
 #libBtn{gap:6px;align-items:center}#libBtn[hidden]{display:none}#libBtn span{font-size:12px;letter-spacing:.04em}
+
+.hud-buttons .find-btn,.hud-buttons .menu-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}

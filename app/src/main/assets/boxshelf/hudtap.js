@@ -25,6 +25,17 @@
     try { act[d.id](); } catch (x) { console.warn('hud', x); }
   }, true);
   addEventListener('pointercancel', () => { down = null; }, true);
+  // the same on the touch events themselves, for a view where the pointer events of a finger do not come through as they should (the buttons without a word on them did not react)
+  let tdown = null;
+  addEventListener('touchstart', e => { const b = e.touches.length === 1 ? btn(e) : null; const f = e.touches[0]; tdown = b && f ? { id: b.id, x: f.clientX, y: f.clientY, t: performance.now() } : null; if (b) wasFind = !!(window.BS_FIND && BS_FIND.isOpen()); }, { capture: true, passive: true });
+  addEventListener('touchend', e => {
+    const d = tdown; tdown = null; if (!d || performance.now() - doneAt < 450) return;
+    const f = e.changedTouches[0]; if (!f) return;
+    const el = document.elementFromPoint(f.clientX, f.clientY), b = el && el.closest ? el.closest('#findBtn,#detBtn,#gridBtn,#libBtn,#menuBtn') : null;
+    if (!b || b.id !== d.id || Math.hypot(f.clientX - d.x, f.clientY - d.y) > 14 || performance.now() - d.t > 700) return;
+    doneAt = performance.now();
+    try { act[d.id](); } catch (x) { console.warn('hud', x); }
+  }, { capture: true, passive: true });
   // the click that follows a tap already handled: the buttons' own handlers must not run a second time
   addEventListener('click', e => { if (btn(e) && performance.now() - doneAt < 900) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 })();
