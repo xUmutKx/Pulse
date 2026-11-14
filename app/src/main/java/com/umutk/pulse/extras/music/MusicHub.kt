@@ -379,6 +379,8 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
             shuffleOn = com.umutk.pulse.extras.music.PlayModes.shuffle != com.umutk.pulse.extras.music.ShuffleKind.OFF, repeat = repeat,
             onShuffle = { com.umutk.pulse.extras.music.PlayModes.cycleShuffle(wctx) }, onRepeat = { repeat = com.umutk.pulse.extras.music.PlayModes.cycleRepeat(wctx) },
             maximized = winMax,
+            // a window of Windows 11 or 10 gets the Fluent player (Mica on 11), the other looks keep the Aero one
+            fluent = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null && com.umutk.pulse.T.id in setOf("win11", "win10", "win10black"), mica = com.umutk.pulse.T.id == "win11",
         )
         return
     }
