@@ -1532,10 +1532,10 @@ private fun inverted(text: String, start: Int, spoken: IntRange, mark: IntRange,
 // ---- the library look: big title, filter pills, a staggered cover wall, a floating bar, and collections (own, and categories from the internet) ----
 
 private val LIB_YELLOW = Color(0xFFFFFFFF)   // the library accent is white (it was yellow)
-private val LIB_DARK = Color(0xFF1B0B0B)
+private val LIB_DARK = Color(0xFF111113)
 
 private fun Theme.light() = bg.red * .299f + bg.green * .587f + bg.blue * .114f > .5f
-private fun Theme.pill() = if (light()) LIB_DARK else Color(0xFF2B1D1D)
+private fun Theme.pill() = if (light()) LIB_DARK else Color(0xFF2A2A2E)
 private fun Theme.card() = if (light()) Color.White else Color(0xFF1C1C1E)
 
 /** A named group of books of the person's own. */
@@ -1825,7 +1825,7 @@ private fun BoxScope.LibNav(th: Theme, current: String, onSelect: (String) -> Un
         items.forEach { (id, icon) ->
             val on = id == current
             Box(Modifier.size(if (on) 62.dp else 52.dp).clip(CircleShape).background(if (on) LIB_YELLOW else Color.Transparent).clickable { onSelect(id) }, contentAlignment = Alignment.Center) {
-                PIcon(icon, if (on) LIB_DARK else Color(0xFFB9A79B), 28.dp)
+                PIcon(icon, if (on) LIB_DARK else Color(0xFF9A9AA2), 28.dp)
             }
         }
     }
