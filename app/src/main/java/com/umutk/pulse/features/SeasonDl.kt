@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,6 +56,22 @@ object SeasonDl {
     private const val META = "https://v3-cinemeta.strem.io"
     private fun p(c: Context) = c.getSharedPreferences("season_dl", Context.MODE_PRIVATE)
     fun addon(c: Context) = p(c).getString("addon", "") ?: ""
+
+    /**
+     * Any link that belongs to an add-on becomes the address Pulse needs: "stremio://…" is https, and a configure page ("…/configure") or a bare site address is its
+     * manifest ("…/manifest.json"). Null when the text is not a link at all.
+     */
+    fun normalizeAddon(raw: String): String? {
+        var s = raw.trim().replaceFirst(Regex("^stremio://", RegexOption.IGNORE_CASE), "https://")
+        if (!s.startsWith("http", ignoreCase = true) || s.contains(' ')) return null
+        s = s.substringBefore('#').substringBefore('?').trimEnd('/')
+        s = when {
+            s.endsWith("/manifest.json", true) -> s
+            s.endsWith("/configure", true) -> s.removeSuffix("/configure") + "/manifest.json"
+            else -> "$s/manifest.json"
+        }
+        return s
+    }
     fun maxMb(c: Context) = p(c).getFloat("maxMb", 800f)
     fun save(c: Context, addon: String, mb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxMb", mb).apply() }
 
@@ -89,7 +106,7 @@ object SeasonDl {
 
     /** The largest stream of the episode that is under [maxBytes], or null when there is none (or none says its size). */
     suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? = withContext(Dispatchers.IO) {
-        val base = addonBase.trim().replaceFirst(Regex("^stremio://", RegexOption.IGNORE_CASE), "https://").removeSuffix("/manifest.json").removeSuffix("/")
+        val base = (normalizeAddon(addonBase) ?: addonBase.trim()).removeSuffix("/manifest.json").removeSuffix("/")
         val a = get("$base/stream/$kind/${Uri.encode(ep.id)}.json").optJSONArray("streams") ?: return@withContext null
         var best: Pick? = null
         for (i in 0 until a.length()) {
@@ -118,6 +135,8 @@ object SeasonDl {
     @Composable
     private fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
         val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get(url), url) {
+            // a new link starts from its own cached picture (or none): the picture of the link before must not stay (a list that changes kept the old posters)
+            value = posters.get(url)
             if (value == null && url.startsWith("http")) value = withContext(Dispatchers.IO) {
                 runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }) } }.getOrNull()?.also { posters.put(url, it) }
             }
@@ -202,6 +221,14 @@ object SeasonDl {
                     Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                     PIcon("chevron", T.sub, 18.dp)
                 }
+                // opened without an add-on: the link copied last is taken if it is one (nothing to paste by hand)
+                androidx.compose.runtime.LaunchedEffect(open) {
+                    if (open && addon.isBlank()) {
+                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val s = runCatching { cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString().orEmpty() }.getOrDefault("")
+                        normalizeAddon(s)?.takeIf { it.contains("manifest.json") && s.trim().length < 500 }?.let { addon = it; save(ctx, it, mb.toFloat()); editAddon = false; note = tr("Add-on taken from what you copied", "Eklenti, kopyaladığından alındı") }
+                    }
+                }
                 if (open) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PChip(!movies, tr("Series", "Diziler")) { movies = false; reset() }
@@ -219,11 +246,13 @@ object SeasonDl {
                         PButton(tr("Paste", "Yapıştır"), compact = true) {
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                             val s = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()?.trim().orEmpty()
-                            if (s.startsWith("http") || s.startsWith("stremio://")) { addon = s; save(ctx, s, mb.toFloat()); editAddon = false; note = "" }
+                            val n = normalizeAddon(s)
+                            if (n != null) { addon = n; save(ctx, n, mb.toFloat()); editAddon = false; note = "" }
                             else note = tr("Copy the add-on link first", "Önce eklenti bağlantısını kopyala")
                         }
-                        if (addon.isNotBlank()) { Spacer(Modifier.width(6.dp)); PButton(tr("OK", "Tamam"), compact = true) { save(ctx, addon, mb.toFloat()); editAddon = false } }
+                        if (addon.isNotBlank()) { Spacer(Modifier.width(6.dp)); PButton(tr("OK", "Tamam"), compact = true) { val n = normalizeAddon(addon); if (n != null) { addon = n; save(ctx, n, mb.toFloat()); editAddon = false } else note = tr("That is not a link", "Bu bir bağlantı değil") } }
                     }
+                    if (addon.isBlank() || editAddon) Text(tr("Open the add-on's page in your browser, copy the link of its page or of its Install button, and come back: Pulse takes it from what you copied (or press Paste).", "Eklentinin sayfasını tarayıcıda aç, sayfanın ya da Yükle düğmesinin bağlantısını kopyala ve buraya dön: Pulse kopyaladığından kendisi alır (ya da Yapıştır'a bas)."), color = T.sub, fontSize = 12.sp)
                     // 2. the size limit: the largest stream still under it is taken
                     Caption(tr("2  Largest size per ${if (movies) "movie" else "episode"}", "2  ${if (movies) "Film" else "Bölüm"} başına en büyük boyut"))
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,7 +272,7 @@ object SeasonDl {
                     val sel = show
                     if (sel == null) {
                         // the results: a tap chooses one, and the list gives way to it (its seasons or its download button come right under it)
-                        shows.forEach { s ->
+                        shows.forEach { s -> key(s.id) {
                             Row(Modifier.fillMaxWidth().clickable {
                                 show = s; eps = emptyList(); season = null; picked = emptySet()
                                 if (!movies) {
@@ -258,7 +287,7 @@ object SeasonDl {
                                     if (s.year.isNotBlank()) Text(s.year, color = T.sub, fontSize = 12.sp)
                                 }
                             }
-                        }
+                        } }
                     } else {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Poster(sel.poster)
@@ -318,7 +347,7 @@ object SeasonDl {
                                         PChip(chosen.isEmpty(), tr("None", "Hiçbiri")) { picked = emptySet() }
                                     }
                                     // the episodes: a tap ticks or unticks one, the arrow downloads just that one
-                                    list.forEach { ep ->
+                                    list.forEach { ep -> key(ep.id) {
                                         val on = ep.id in picked
                                         Row(Modifier.fillMaxWidth().clickable { picked = if (on) picked - ep.id else picked + ep.id }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                             androidx.compose.foundation.layout.Box(Modifier.width(22.dp).height(22.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { if (on) PIcon("check", T.accent, 20.dp) }
@@ -332,6 +361,7 @@ object SeasonDl {
                                             }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
+                                    }
                                     }
                                 }
                             }
