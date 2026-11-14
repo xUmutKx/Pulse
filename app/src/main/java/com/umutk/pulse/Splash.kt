@@ -80,7 +80,8 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
     LaunchedEffect(Unit) {
         launch { fade.animateTo(1f, tween(200)) }
         when (th.id) {
-            "xp", "win7" -> { delay(1100); welcome = true; delay(900) }
+            "xp" -> { delay(1100); welcome = true; delay(900) }
+            "win7" -> { delay(2100); welcome = true; delay(900) }
             "win10" -> delay(1800)
             else -> delay(850)
         }
@@ -303,15 +304,52 @@ private fun XpWelcome() {
 
 /** Windows 7 "Starting Windows": the coloured logo with a breathing glow on black. */
 @Composable
-private fun Win7Boot(t: Float) {
+private fun Win7Boot(@Suppress("UNUSED_PARAMETER") t: Float) {
+    // the start of Windows 7: four coloured lights come out of the dark, swirl in and gather into the flag, which blooms with a soft glow; "Starting Windows" appears under it
+    val p = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { p.animateTo(1f, tween(2000, easing = LinearEasing)) }
+    val v = p.value
+    val glowPulse = if (v > .75f) .5f + .5f * sin((v - .75f) * 4f * PI.toFloat() * 2f) else 0f
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier.size(220.dp).background(Brush.radialGradient(listOf(Color.White.copy(alpha = .12f + .25f * pingPong(t)), Color.Transparent))),
-                contentAlignment = Alignment.Center,
-            ) { Image(painterResource(R.drawable.logo_win7), null, Modifier.size(150.dp).graphicsLayer { alpha = .75f + .25f * pingPong(t) }) }
-            Spacer(Modifier.height(24.dp))
-            Text("Starting Windows", color = Color(0xFFE8E8E8), fontSize = 20.sp)
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val c = Offset(w / 2f, h * .44f)
+            val s = minOf(w, h) * .24f
+            // the targets of the four lights: the centres of the four panes
+            val targets = listOf(Offset(c.x - s * .25f, c.y - s * .25f), Offset(c.x + s * .25f, c.y - s * .22f), Offset(c.x - s * .25f, c.y + s * .27f), Offset(c.x + s * .25f, c.y + s * .3f))
+            val starts = listOf(Offset(-w * .1f, h * .15f), Offset(w * 1.1f, h * .05f), Offset(-w * .15f, h * .85f), Offset(w * 1.1f, h * .9f))
+            val tIn = (v / .55f).coerceIn(0f, 1f)
+            // the bloom behind the flag: grows as the lights arrive
+            val bloom = ((v - .35f) / .4f).coerceIn(0f, 1f)
+            if (bloom > 0f) {
+                drawCircle(Brush.radialGradient(listOf(Color(0xFFBFD9FF).copy(alpha = .35f * bloom + .12f * glowPulse), Color(0xFF3A6FCF).copy(alpha = .16f * bloom), Color.Transparent), center = c, radius = s * 2.3f), radius = s * 2.3f, center = c)
+                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .5f * bloom * (1f - .35f * glowPulse)), Color.Transparent), center = c, radius = s * .95f), radius = s * .95f, center = c)
+            }
+            // each light flies along a curve, with a fading tail
+            if (v < .62f) for (k in 0 until 4) {
+                val col = WIN7_FLAG[k]
+                for (n in 0..18) {
+                    val tt = (tIn - n * .018f).coerceIn(0f, 1f)
+                    val e = tt * tt * (3f - 2f * tt)
+                    val swirl = sin(e * PI.toFloat()) * (if (k % 2 == 0) 1f else -1f) * s * .9f
+                    val pos = Offset(starts[k].x + (targets[k].x - starts[k].x) * e + swirl * .6f, starts[k].y + (targets[k].y - starts[k].y) * e - swirl * .5f)
+                    val a = (1f - n / 18f) * (1f - ((v - .5f) / .12f).coerceIn(0f, 1f))
+                    drawCircle(col.copy(alpha = .55f * a), s * (.07f + .03f * (1f - n / 18f)), pos)
+                    if (n == 0) drawCircle(Color.White.copy(alpha = .9f * a), s * .035f, pos)
+                }
+            }
+            // the flag forms: each pane comes in with its own light
+            val pa = List(4) { k -> ((v - .42f - k * .03f) / .22f).coerceIn(0f, 1f) }
+            if (v > .4f) win7Flag(c, s, 1f, pa)
+            // a soft glint across the flag as it settles
+            val gl = ((v - .7f) / .3f).coerceIn(0f, 1f)
+            if (gl > 0f && gl < 1f) drawRect(Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = .28f * sin(gl * PI.toFloat())), Color.Transparent), startX = c.x - s * .6f + gl * s * 1.2f - s * .2f, endX = c.x - s * .6f + gl * s * 1.2f + s * .2f), topLeft = Offset(c.x - s * .6f, c.y - s * .55f), size = Size(s * 1.2f, s * 1.1f))
+        }
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.weight(.62f))
+            Text("Starting Windows", color = Color(0xFFE8E8E8).copy(alpha = ((v - .6f) / .25f).coerceIn(0f, 1f)), fontSize = 21.sp, fontWeight = FontWeight.Light,
+                style = TextStyle(shadow = Shadow(Color(0x66AFCBFF), Offset(0f, 0f), 12f)))
+            Spacer(Modifier.weight(.38f))
         }
     }
 }
