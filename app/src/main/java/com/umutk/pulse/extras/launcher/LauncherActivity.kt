@@ -66,6 +66,11 @@ import androidx.compose.ui.zIndex
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.size
 
 /** Pulse Launcher: a HOME app with its own look and layout. Runs in its own process, so Pulse's Look / Cfg / Opt stay untouched. */
 class LauncherActivity : ComponentActivity() {
@@ -208,6 +213,24 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                 cells[a.pkg] = (next / perColumn) to (next % perColumn)
             }
         }
+        // a slide on the empty desktop draws a see-through blue box and picks the icons it touches; a tap on the empty desktop clears the pick
+        var picked by remember { mutableStateOf(setOf<String>()) }
+        var box by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+        fun boundsOf(app: LaunchApp): androidx.compose.ui.geometry.Rect {
+            val (c, r) = cells.getValue(app.pkg)
+            val free = if (!LauncherPrefs.snapIcons) LauncherPrefs.iconFree[app.pkg]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 } else null
+            val x = (free?.get(0) ?: (c * cellW)) * d; val y = (free?.get(1) ?: (r * cellH)) * d
+            return androidx.compose.ui.geometry.Rect(x, y, x + 88f * d, y + cellH * d)
+        }
+        Box(Modifier.fillMaxSize().pointerInput(items.size) {
+            var start = androidx.compose.ui.geometry.Offset.Zero
+            detectDragGestures(
+                onDragStart = { o -> start = o; box = androidx.compose.ui.geometry.Rect(o, o) },
+                onDrag = { c, _ -> c.consume(); val r = androidx.compose.ui.geometry.Rect(minOf(start.x, c.position.x), minOf(start.y, c.position.y), maxOf(start.x, c.position.x), maxOf(start.y, c.position.y)); box = r; picked = items.filter { boundsOf(it).overlaps(r) }.map { it.pkg }.toSet() },
+                onDragEnd = { box = null }, onDragCancel = { box = null },
+            )
+        }.pointerInput(Unit) { detectTapGestures { picked = emptySet() } })
+        box?.let { r -> Box(Modifier.offset((r.left / d).dp, (r.top / d).dp).size((r.width / d).dp, (r.height / d).dp).background(Color(0x553E8BFF)).border(1.dp, Color(0xCC9CC8FF))) }
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)
             var drag by remember(app.pkg) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
@@ -236,7 +259,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                             onDragCancel = { drag = null },
                         )
                     },
-            ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) }) }
+                        ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).appTap(state, app) { open(app) }) }
         }
     }
 }
