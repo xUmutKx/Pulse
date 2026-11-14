@@ -105,7 +105,7 @@ fun Wmp12Player(
     library: List<Track> = emptyList(), albumCover: suspend (String) -> ImageBitmap? = { null }, onPlayTracks: (List<Track>, Int) -> Unit = { _, _ -> },
     playlists: List<String> = emptyList(), loadPlaylist: (String) -> List<Track> = { emptyList() },
     shuffleOn: Boolean = false, repeat: Int = 0, onShuffle: () -> Unit = {}, onRepeat: () -> Unit = {},
-    maximized: Boolean = false,
+    maximized: Boolean = false, fluent: Boolean = false, mica: Boolean = false,
 ) {
     var lib by remember { mutableStateOf(false) }
     var showList by remember { mutableStateOf(false) }
@@ -117,21 +117,22 @@ fun Wmp12Player(
     // the title bar of the window is glass (the desktop shows through it, as the Aero frame of the real player)
     val deskWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
-    androidx.compose.runtime.CompositionLocalProvider(LocalWmpAcc provides Color(th.accent)) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalWmpAcc provides (if (fluent) Color(0xFF4CC2FF) else Color(th.accent))) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        WmpBackdrop(th, cover)
+        if (fluent) FluentBackdrop(mica, cover) else WmpBackdrop(th, cover)
         // the list stands beside the cover when there is room, or when the window is maximized
         val side = maxWidth >= 520.dp || (maximized && maxWidth >= 340.dp)
         val roomy = maxWidth >= 520.dp
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (lib) WmpLibrary(library, queue, current, albumCover, onPlayTracks, playlists, loadPlaylist, roomy, onBack = { lib = false })
-                else NowPlaying(title, artist, album, cover, queue, current, onPick, side, showList, { showList = !showList })
+                else NowPlaying(title, artist, album, cover, queue, current, onPick, side, showList, { showList = !showList }, fluent)
             }
-            Transport(pos, dur, playing, onPrev, onPlayPause, onNext, onStop, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty(), { picking = !picking })
+            if (fluent) FluentTransport(pos, dur, playing, onPrev, onPlayPause, onNext, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty())
+            else Transport(pos, dur, playing, onPrev, onPlayPause, onNext, onStop, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty(), { picking = !picking })
         }
         // the looks to choose from: round swatches over the pill
-        if (picking) Row(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 78.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xDD0B1118)).border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(20.dp)).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (picking && !fluent) Row(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 78.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xDD0B1118)).border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(20.dp)).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WTHEMES.forEach { t ->
                 Box(Modifier.size(24.dp).clip(CircleShape).background(Brush.radialGradient(listOf(Color(t.glow), Color(t.base)))).border(if (t.id == th.id) 2.dp else 1.dp, if (t.id == th.id) Color.White else Color(0x66FFFFFF), CircleShape)
                     .clickable { themeId = t.id; sp.edit().putString("theme", t.id).apply(); picking = false })
@@ -173,7 +174,7 @@ private fun WmpBackdrop(th: WTheme, cover: ImageBitmap?) {
 @Composable
 private fun NowPlaying(
     title: String, artist: String, album: String?, cover: ImageBitmap?, queue: List<Track>, current: Int, onPick: (Int) -> Unit,
-    side: Boolean, showList: Boolean, toggleList: () -> Unit,
+    side: Boolean, showList: Boolean, toggleList: () -> Unit, fluent: Boolean = false,
 ) {
     Row(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 18.dp, end = if (side) 10.dp else 18.dp, top = 14.dp, bottom = 6.dp)) {
@@ -195,7 +196,8 @@ private fun NowPlaying(
                 else {
                     // the cover is as large as the room allows, square, in a thin frame
                     val s = minOf(maxWidth, maxHeight).coerceAtLeast(60.dp)
-                    Box(Modifier.size(s).clip(RoundedCornerShape(2.dp)).background(Color(0x22FFFFFF)).border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(2.dp)), contentAlignment = Alignment.Center) {
+                    val cs = RoundedCornerShape(if (fluent) 12.dp else 2.dp)
+                    Box(Modifier.size(s).then(if (fluent) Modifier.shadow(16.dp, cs) else Modifier).clip(cs).background(Color(0x22FFFFFF)).then(if (fluent) Modifier else Modifier.border(1.dp, Color(0x66FFFFFF), cs)), contentAlignment = Alignment.Center) {
                         if (cover != null) Image(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         // no picture of the song: the glossy note the real player shows in its place
                         else com.umutk.pulse.PIcon("music", Color(0xFFBFE3FA), s * .55f)
@@ -467,3 +469,82 @@ private fun ListMark() {
 
 private fun mmss(ms: Int) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
 private fun len(sec: Int) = "%d:%02d".format(sec / 60, sec % 60)
+
+
+/** The ground of the Windows 11 player: the window's own blurred desktop shows through a dark tint (Mica), and the cover glows softly behind it; Windows 10 is flat dark. */
+@Composable
+private fun FluentBackdrop(mica: Boolean, cover: ImageBitmap?) {
+    Box(Modifier.fillMaxSize().background(if (mica) Color(0x8C101826) else Color(0xFF1B1B1F))) {
+        if (cover != null) Image(cover, null, Modifier.fillMaxSize().blur(60.dp), contentScale = ContentScale.Crop, alpha = if (mica) .28f else .18f)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22FFFFFF), Color.Transparent, Color(0x55000000)))))
+    }
+}
+
+/** The controls of the Windows 11 player: no glass pill, a thin progress line and flat Fluent buttons around one round play button in the system blue. */
+@Composable
+private fun FluentTransport(
+    pos: Int, dur: Int, playing: Boolean, onPrev: () -> Unit, onPlayPause: () -> Unit, onNext: () -> Unit, onSeek: (Int) -> Unit,
+    shuffleOn: Boolean, repeat: Int, onShuffle: () -> Unit, onRepeat: () -> Unit, lib: Boolean, toggleLib: () -> Unit, hasLib: Boolean,
+) {
+    val vctx = androidx.compose.ui.platform.LocalContext.current
+    val am = remember { vctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val vmax = remember { am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1) }
+    var vol by remember { mutableFloatStateOf(am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / vmax) }
+    var drag by remember { mutableFloatStateOf(-1f) }
+    val frac = if (drag >= 0f) drag else if (dur > 0) (pos.toFloat() / dur).coerceIn(0f, 1f) else 0f
+    val blue = acc()
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(mmss(pos), color = W_SUB, fontSize = 11.sp, modifier = Modifier.width(38.dp))
+            Box(
+                Modifier.weight(1f).height(20.dp)
+                    .pointerInput(dur) { detectTapGestures { o -> if (dur > 0) onSeek((o.x / size.width * dur).toInt().coerceIn(0, dur)) } }
+                    .pointerInput(dur) {
+                        detectHorizontalDragGestures(onDragStart = { o -> drag = (o.x / size.width).coerceIn(0f, 1f) },
+                            onDragEnd = { if (dur > 0 && drag >= 0f) onSeek((drag * dur).toInt()); drag = -1f }, onDragCancel = { drag = -1f }) { c, _ -> drag = (c.position.x / size.width).coerceIn(0f, 1f) }
+                    },
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x40FFFFFF)))
+                Box(Modifier.fillMaxWidth(frac.coerceAtLeast(0.001f)).height(3.dp).clip(RoundedCornerShape(2.dp)).background(blue))
+                BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 12.dp).coerceAtLeast(0.dp) * frac).size(12.dp).clip(CircleShape).background(Color.White)) }
+            }
+            Text(mmss(dur), color = W_SUB, fontSize = 11.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.End)
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            // the volume at the left
+            Row(Modifier.width(92.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.VolumeUp, null, tint = W_SUB, modifier = Modifier.size(18.dp))
+                Box(
+                    Modifier.weight(1f).height(24.dp).padding(start = 4.dp)
+                        .pointerInput(Unit) { detectTapGestures { o -> vol = (o.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } }
+                        .pointerInput(Unit) { detectHorizontalDragGestures { c, _ -> vol = (c.position.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x40FFFFFF)))
+                    Box(Modifier.fillMaxWidth(vol.coerceAtLeast(0.001f)).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFFE6E6E6)))
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FluentBtn(Icons.Rounded.Shuffle, if (shuffleOn) blue else Color(0xFFE6E6E6), onShuffle)
+                FluentBtn(Icons.Rounded.SkipPrevious, Color.White, onPrev)
+                Box(Modifier.size(46.dp).clip(CircleShape).background(blue).clickable { onPlayPause() }, contentAlignment = Alignment.Center) {
+                    Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = Color(0xFF0B1220), modifier = Modifier.size(28.dp))
+                }
+                FluentBtn(Icons.Rounded.SkipNext, Color.White, onNext)
+                FluentBtn(if (repeat == 2) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, if (repeat != 0) blue else Color(0xFFE6E6E6), onRepeat)
+            }
+            // the switch between Now playing and the Library
+            Box(Modifier.width(92.dp), contentAlignment = Alignment.CenterEnd) {
+                if (hasLib) Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x22FFFFFF)).clickable { toggleLib() }, contentAlignment = Alignment.Center) {
+                    com.umutk.pulse.extras.gamehub.FluentIcon(if (lib) "play" else "music", Color(0xFFE6E6E6), 18.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FluentBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, onClick: () -> Unit) {
+    Box(Modifier.size(36.dp).clip(CircleShape).clickable { onClick() }, contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp)) }
+}
