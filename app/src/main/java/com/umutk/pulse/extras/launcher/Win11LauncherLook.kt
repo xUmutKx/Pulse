@@ -137,6 +137,9 @@ class Win11LauncherLook : LauncherLook {
         val shape = RoundedCornerShape(8.dp)
         var query by remember { mutableStateOf("") }
         var allPage by remember { mutableStateOf(false) }
+        // two layouts: the upright phone gets a tall panel of four columns, a turned phone a wide, low one of six (as the desktop's Start menu)
+        val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val cols = if (land) 6 else 4
         val (pinned, all) = startLists(state, query)
         // Recommended: the newest installs (the launcher keeps no usage data)
         val recent = if (query.isBlank()) state.apps.filter { it.installed > 0L }.sortedByDescending { it.installed }.take(4) else emptyList<LaunchApp>()
@@ -146,8 +149,8 @@ class Win11LauncherLook : LauncherLook {
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     .fillMaxWidth()
-                    .widthIn(max = 640.dp)
-                    .fillMaxHeight(.78f)
+                    .widthIn(max = if (land) 560.dp else 640.dp)
+                    .fillMaxHeight(if (land) .9f else .78f)
                     .shadow(24.dp, shape, clip = false)
                     .clip(shape)
                     .let { glass(it, flyoutFill(), shape) }
@@ -188,9 +191,9 @@ class Win11LauncherLook : LauncherLook {
                                 Box(Modifier.size(32.dp).clip(shape).clickable { allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
                             }
-                            LazyVerticalGrid(GridCells.Fixed(state.columns), Modifier.fillMaxWidth().weight(1f)) {
+                            LazyVerticalGrid(GridCells.Fixed(cols), Modifier.fillMaxWidth().weight(1f)) {
                                 if (query.isBlank()) groupedApps(all).forEach { (g, apps) ->
-                                    item(span = { GridItemSpan(state.columns) }) { Win11Heading(tr(g.en, g.tr), fg) }
+                                    item(span = { GridItemSpan(cols) }) { Win11Heading(tr(g.en, g.tr), fg) }
                                     items(apps, key = { it.pkg }) { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.fillMaxWidth().clip(shape).appTap(state, app) { launch(app) }) }
                                 } else items(all, key = { it.pkg }) { app ->
                                     StartCell(app, state.iconDp, fg, tileC, Modifier.fillMaxWidth().clip(shape).appTap(state, app) { launch(app) })
@@ -199,18 +202,22 @@ class Win11LauncherLook : LauncherLook {
                         }
                     } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         LiveTiles(8.dp, Modifier.padding(bottom = 8.dp))
-                        Win11Heading(if (pinned.isNotEmpty()) tr("Pinned", "Sabitlenenler") else null, fg) {
+                        Win11Heading(tr("Apps", "Uygulamalar"), fg) {
                             Row(Modifier.clip(shape).clickable { allPage = true }.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 12.sp)
                                 Spacer(Modifier.width(4.dp))
                                 Glyph("chevron", fg, 12.dp, Modifier.rotate(-90f))
                             }
                         }
-                        pinned.chunked(state.columns).forEach { row ->
+                        pinned.chunked(cols).forEach { row ->
                             Row(Modifier.fillMaxWidth()) {
                                 row.forEach { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.weight(1f).clip(shape).appTap(state, app) { launch(app) }) }
-                                repeat(state.columns - row.size) { Spacer(Modifier.weight(1f)) }
+                                repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
                             }
+                        }
+                        if (recent.isEmpty()) {
+                            Win11Heading(tr("Recommended", "Önerilen"), fg)
+                            Text(tr("The more you use your device, we will show you new apps here.", "Cihazını kullandıkça yeni uygulamaları burada göstereceğiz."), color = fg.copy(alpha = .6f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
                         }
                         if (recent.isNotEmpty()) {
                             Win11Heading(tr("Recommended", "Önerilen"), fg)
@@ -228,10 +235,13 @@ class Win11LauncherLook : LauncherLook {
                 }
                 // the foot of the menu stays in view: the way out of the desktop into the rest of Pulse
                 val logCtx = androidx.compose.ui.platform.LocalContext.current
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
-                    Row(Modifier.clip(shape).clickable { onClose(); logOff(logCtx) }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.umutk.pulse.PIcon("power", fg, 18.dp); Spacer(Modifier.width(8.dp)); Text(tr("Log off", "Oturumu kapat"), color = fg, fontSize = 13.sp)
+                // the user at the left (this PC), the power button at the right, as in Windows 11
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).clip(shape).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fg.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Glyph("person", fg, 16.dp) }
+                        Text(tr("This PC", "Bu bilgisayar"), color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
                     }
+                    Box(Modifier.size(36.dp).clip(shape).clickable { onClose(); logOff(logCtx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
                 }
             }
         }
