@@ -495,6 +495,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val nEmail = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
         val nUri = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
         val nName = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+        // a terminal app asks for no input type at all: its keys stay plain (no open word), the bar of suggestions stays on
+        val nTerm = info.inputType == 0 && Regex("(?i)termux|terminal|androidterm|connectbot|juicessh|ssh|shell").containsMatchIn(info.packageName.orEmpty())
+        st.terminal = nTerm
         val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
         noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
         return changed
@@ -2073,7 +2076,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private fun updateSuggestions() {
         // no text field to write in (a game, a screen with no field): the bar has nothing to suggest, and nothing looks like typing
-        if (currentInputConnection == null || currentInputEditorInfo?.inputType == 0) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        if (currentInputConnection == null || (currentInputEditorInfo?.inputType == 0 && !st.terminal)) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
         if (runCatching { loginSuggestions() }.getOrDefault(false)) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
@@ -2085,7 +2088,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(hit.getOrElse(0) { "" }, hit.getOrElse(1) { "" }, hit.getOrElse(2) { "" }); st.slots = slotWords.toList(); return
             }
         }
-        if (!KeyboardPrefs.suggestions || st.plain || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        if (!KeyboardPrefs.suggestions || (st.plain && !st.terminal) || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the text before the word, for the neural model (the word itself is the open one at the end)
@@ -2127,6 +2130,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             kotlinx.coroutines.delay(20)
             if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
+            // nothing to suggest (an unknown word before, no completion): the bar is never left empty, it offers the words that most often come next
+            if (word.toString() == typed && typed.isEmpty() && res.first.all { it.isBlank() }) {
+                val fb = commonNext(code, up)
+                slotWords = fb.toTypedArray(); st.slots = fb; target = null
+                showClipSlot()
+                return@launch
+            }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
                 // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
@@ -2170,6 +2180,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         put(2, p[0])
         if (p.size > 1 && !s.getOrElse(0) { "" }.startsWith("\"")) put(0, p[1])
         slotWords = w; st.slots = s
+    }
+
+    /** The most common words of the language, for a bar that would stay empty (capital at the start when shift is on). */
+    private fun commonNext(code: String, up: Boolean): List<String> {
+        val w = if (KeyboardLayouts.dict(code) == "tr") listOf("ve", "bir", "bu") else listOf("the", "to", "and")
+        return if (up) w.map { it.replaceFirstChar { c -> c.uppercase() } } else w
     }
 
     /** How many words the bar shows: three on a phone, five from 600 dp of width, six from 900 dp (a tablet, also in landscape). */

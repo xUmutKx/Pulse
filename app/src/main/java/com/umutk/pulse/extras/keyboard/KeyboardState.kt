@@ -80,6 +80,8 @@ class KbState {
     var refreshInsets: (() -> Unit)? = null
     /** The field wants no suggestions or learning (password, email, URL). */
     var plain by mutableStateOf(false)
+    /** The field is a terminal (Termux and the like): plain keys, but the suggestion bar stays on. */
+    var terminal by mutableStateOf(false)
     /** A number, phone, date or numeric-password field: only the number pad shows. */
     var numpad by mutableStateOf(false)
     /** Picked by hand from the Layouts panel, over the field's own kind: null (the field decides), "numpad" or "game". */
