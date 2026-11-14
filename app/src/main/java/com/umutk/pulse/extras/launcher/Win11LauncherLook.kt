@@ -102,8 +102,10 @@ class Win11LauncherLook : LauncherLook {
         val edge = LocalLauncherEdge.current
         val shape = RoundedCornerShape(8.dp)
         // the edge padding keeps the clock out of the rounded screen corners
-        Box(glass(modifier.fillMaxWidth().height(taskbarHeight), taskbarFill()).padding(horizontal = edge), contentAlignment = Alignment.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        // Windows 11: the taskbar is acrylic, the desktop's picture blurred behind a light tint, and its buttons start at the left
+        AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.foundation.shape.RectangleShape, 30.dp) {
+          Box(Modifier.fillMaxSize().padding(horizontal = edge), contentAlignment = Alignment.CenterStart) {
+            Row(Modifier.padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
                 Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
                     StartGlyph(fg)
                     if (open) Indicator(accent, Modifier.align(Alignment.BottomCenter))
@@ -126,6 +128,7 @@ class Win11LauncherLook : LauncherLook {
                 TaskbarClock(fg, Modifier)
             }
         }
+          }
     }
 
     @Composable
@@ -288,13 +291,13 @@ private fun Indicator(color: Color, modifier: Modifier) {
 
 /** Start button: four plain squares in a 2x2 Path (no Microsoft mark). */
 @Composable
-private fun StartGlyph(color: Color) {
-    Canvas(Modifier.size(20.dp)) {
-        val gap = size.minDimension * .08f
+private fun StartGlyph(@Suppress("UNUSED_PARAMETER") color: Color) {
+    // the Windows 11 logo: four panes in the blue of the system, light at the top and deeper at the bottom
+    Canvas(Modifier.size(22.dp)) {
+        val gap = size.minDimension * .09f
         val q = (size.minDimension - gap) / 2f
-        val path = Path()
-        for (x in listOf(0f, q + gap)) for (y in listOf(0f, q + gap)) path.addRect(Rect(x, y, x + q, y + q))
-        drawPath(path, color)
+        val brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF7CD0FF), Color(0xFF1E8CF0), Color(0xFF0A5FCC)), startY = 0f, endY = size.height)
+        for (x in listOf(0f, q + gap)) for (y in listOf(0f, q + gap)) drawRoundRect(brush, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Size(q, q), androidx.compose.ui.geometry.CornerRadius(q * .12f))
     }
 }
 

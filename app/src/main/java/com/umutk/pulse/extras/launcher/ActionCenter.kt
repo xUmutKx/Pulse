@@ -69,7 +69,28 @@ object ActionCenter {
     var torch by mutableStateOf(false)
 }
 
-internal class QTile(val icon: ImageVector, val en: String, val trName: String, val run: (Context) -> Unit)
+/** A quick tile. [state] says whether the thing is on (null: it is not a switch, the tile only opens something). */
+internal class QTile(val icon: ImageVector, val en: String, val trName: String, val run: (Context) -> Unit, val state: ((Context) -> Boolean)? = null)
+
+/** True when root or Shizuku can run a command for the app (the tiles then switch things in place; without them they open the settings page). */
+private fun privileged(): Boolean = com.umutk.pulse.extras.blackout.Privilege.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None
+
+/** A tile that is a switch: with root or Shizuku the command [on] / [off] runs at once, else the settings page [fallback] opens. */
+private fun toggle(isOn: (Context) -> Boolean, on: String, off: String, fallback: String): (Context) -> Unit = { c ->
+    if (!privileged()) settings(fallback)(c)
+    else { val now = runCatching { isOn(c) }.getOrDefault(false); Thread { com.umutk.pulse.extras.blackout.Privilege.run(if (now) off else on) }.start() }
+}
+
+private fun settingsInt(c: Context, global: Boolean, key: String, def: Int): Int = runCatching { if (global) Settings.Global.getInt(c.contentResolver, key, def) else Settings.System.getInt(c.contentResolver, key, def) }.getOrDefault(def)
+
+private fun wifiOn(c: Context) = runCatching { (c.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled }.getOrDefault(false)
+private fun btOn(c: Context) = runCatching { android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled == true }.getOrDefault(false)
+private fun locOn(c: Context) = runCatching { (c.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager).isLocationEnabled }.getOrDefault(false)
+private fun dndOn(c: Context) = runCatching { (c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }.getOrDefault(false)
+private fun airOn(c: Context) = settingsInt(c, true, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+private fun dataOn(c: Context) = settingsInt(c, true, "mobile_data", 1) == 1
+private fun autoBrightOn(c: Context) = settingsInt(c, false, Settings.System.SCREEN_BRIGHTNESS_MODE, 0) == 1
+private fun rotationLocked(c: Context) = settingsInt(c, false, Settings.System.ACCELEROMETER_ROTATION, 1) == 0
 
 private fun settings(a: String): (Context) -> Unit = { c -> runCatching { c.startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 
@@ -81,17 +102,17 @@ private fun airplane(c: Context) {
 }
 
 internal val QUICK = listOf(
-    QTile(Icons.Outlined.SignalCellularAlt, "Cellular", "Hücresel", settings(Settings.ACTION_WIRELESS_SETTINGS)),
+    QTile(Icons.Outlined.SignalCellularAlt, "Cellular", "Hücresel", toggle(::dataOn, "svc data enable", "svc data disable", Settings.ACTION_WIRELESS_SETTINGS), ::dataOn),
     QTile(Icons.Outlined.WifiTethering, "Mobile hotspot", "Mobil erişim noktası", settings("android.settings.TETHER_SETTINGS")),
-    QTile(Icons.Outlined.NightsStay, "Quiet hours", "Sessiz saatler", settings(Settings.ACTION_SOUND_SETTINGS)),
-    QTile(Icons.Outlined.BrightnessAuto, "Automatic", "Otomatik", settings(Settings.ACTION_DISPLAY_SETTINGS)),
+    QTile(Icons.Outlined.NightsStay, "Quiet hours", "Sessiz saatler", toggle(::dndOn, "cmd notification set_dnd on", "cmd notification set_dnd off", Settings.ACTION_SOUND_SETTINGS), ::dndOn),
+    QTile(Icons.Outlined.BrightnessAuto, "Automatic", "Otomatik", toggle(::autoBrightOn, "settings put system screen_brightness_mode 1", "settings put system screen_brightness_mode 0", Settings.ACTION_DISPLAY_SETTINGS), ::autoBrightOn),
     QTile(Icons.Outlined.VpnKey, "VPN", "VPN", settings(Settings.ACTION_VPN_SETTINGS)),
-    QTile(Icons.Outlined.LocationOn, "Location", "Konum", settings(Settings.ACTION_LOCATION_SOURCE_SETTINGS)),
-    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane),
+    QTile(Icons.Outlined.LocationOn, "Location", "Konum", toggle(::locOn, "cmd location set-location-enabled true", "cmd location set-location-enabled false", Settings.ACTION_LOCATION_SOURCE_SETTINGS), ::locOn),
+    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane, ::airOn),
     QTile(Icons.Outlined.CameraAlt, "Camera", "Kamera", { c -> runCatching { c.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
     QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
-    QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", { c ->
+    QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", state = { ActionCenter.torch }, run = { c ->
         runCatching {
             val m = c.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             val id = m.cameraIdList.first()
@@ -100,9 +121,9 @@ internal val QUICK = listOf(
         }
     }),
     QTile(Icons.Outlined.StickyNote2, "Note", "Not", { c -> runCatching { c.startActivity(Intent(c, ExtraToolActivity::class.java).putExtra("route", "notes").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
-    QTile(Icons.Outlined.Wifi, "Wi-Fi", "Wi-Fi", settings(Settings.ACTION_WIFI_SETTINGS)),
-    QTile(Icons.Outlined.Bluetooth, "Bluetooth", "Bluetooth", settings(Settings.ACTION_BLUETOOTH_SETTINGS)),
-    QTile(Icons.Outlined.ScreenLockRotation, "Rotation lock", "Döndürme kilidi", settings(Settings.ACTION_DISPLAY_SETTINGS)),
+    QTile(Icons.Outlined.Wifi, "Wi-Fi", "Wi-Fi", toggle(::wifiOn, "svc wifi enable", "svc wifi disable", Settings.ACTION_WIFI_SETTINGS), ::wifiOn),
+    QTile(Icons.Outlined.Bluetooth, "Bluetooth", "Bluetooth", toggle(::btOn, "svc bluetooth enable", "svc bluetooth disable", Settings.ACTION_BLUETOOTH_SETTINGS), ::btOn),
+    QTile(Icons.Outlined.ScreenLockRotation, "Rotation lock", "Döndürme kilidi", toggle(::rotationLocked, "settings put system accelerometer_rotation 0", "settings put system accelerometer_rotation 1", Settings.ACTION_DISPLAY_SETTINGS), ::rotationLocked),
     QTile(Icons.Outlined.Settings, "All settings", "Tüm ayarlar", settings(Settings.ACTION_SETTINGS)),
 )
 
@@ -132,7 +153,7 @@ fun ActionCenterPanel() {
         QUICK.chunked(4).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.forEach { t ->
-                    val on = t.en == "Flashlight" && ActionCenter.torch
+                    val on = runCatching { t.state?.invoke(c) == true }.getOrDefault(false)
                     Column(Modifier.weight(1f).aspectRatio(1.1f).background(if (on) teal else Color(0xFF2D2D2D)).clickable { t.run(c) }.padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                         Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
                         Text(tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1)
