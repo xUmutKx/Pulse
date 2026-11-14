@@ -201,11 +201,57 @@ class Win7LauncherLook : LauncherLook {
         }
     }
 
+    /** The Pictures, Music and Games places of the Windows 7 Start menu, drawn in the glossy Aero style of its folder icons. */
+    @Composable
+    private fun W7Glyph(kind: String) {
+        Canvas(Modifier.size(24.dp)) {
+            val w = size.width
+            fun rr(x: Float, y: Float, a: Float, b: Float, r: Float, br: Brush, edge: Color) {
+                drawRoundRect(br, Offset(x * w, y * w), Size(a * w, b * w), androidx.compose.ui.geometry.CornerRadius(r * w))
+                drawRoundRect(edge, Offset(x * w, y * w), Size(a * w, b * w), androidx.compose.ui.geometry.CornerRadius(r * w), style = Stroke(width = w * .04f))
+            }
+            when (kind) {
+                "image" -> {
+                    // a white-framed photograph: sky, a green hill and a sun, with a gloss across the top
+                    rr(.06f, .12f, .88f, .76f, .06f, Brush.verticalGradient(listOf(Color.White, Color(0xFFDDE6EE))), Color(0xFF7B8794))
+                    rr(.14f, .2f, .72f, .58f, .02f, Brush.verticalGradient(listOf(Color(0xFF4FA3E8), Color(0xFFBFE3FA))), Color(0xFF3A6E9E))
+                    drawCircle(Color(0xFFFFE066), radius = w * .07f, center = Offset(w * .66f, w * .33f))
+                    val hill = androidx.compose.ui.graphics.Path().apply { moveTo(w * .14f, w * .78f); cubicTo(w * .3f, w * .5f, w * .55f, w * .5f, w * .86f, w * .78f); close() }
+                    drawPath(hill, Brush.verticalGradient(listOf(Color(0xFF7AC943), Color(0xFF2E7D32)), startY = w * .5f, endY = w * .78f))
+                    drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .5f), Color.Transparent), startY = w * .2f, endY = w * .45f), Offset(w * .14f, w * .2f), Size(w * .72f, w * .25f))
+                }
+                "music" -> {
+                    // a silver disc with a blue sheen and a note on it
+                    drawCircle(Brush.sweepGradient(listOf(Color(0xFFE8EEF4), Color(0xFF8FA3B8), Color(0xFFF7FAFD), Color(0xFF7F93A8), Color(0xFFE8EEF4))), radius = w * .46f, center = center)
+                    drawCircle(Color(0xFF5E7085), radius = w * .46f, center = center, style = Stroke(width = w * .03f))
+                    drawCircle(Brush.radialGradient(listOf(Color(0xFF9AD8FF), Color(0xFF1E6FD0)), center = Offset(w * .45f, w * .4f), radius = w * .3f), radius = w * .27f, center = center)
+                    drawCircle(Color(0xFF1B2B3F), radius = w * .06f, center = center)
+                    val note = androidx.compose.ui.graphics.Path().apply { moveTo(w * .58f, w * .26f); lineTo(w * .58f, w * .6f); lineTo(w * .53f, w * .6f); lineTo(w * .53f, w * .3f); close() }
+                    drawPath(note, Color.White)
+                    drawOval(Color.White, Offset(w * .4f, w * .56f), Size(w * .15f, w * .11f))
+                    drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(w * .58f, w * .26f); cubicTo(w * .66f, w * .3f, w * .68f, w * .38f, w * .62f, w * .44f); lineTo(w * .58f, w * .4f); close() }, Color.White)
+                }
+                else -> {
+                    // Games: a green felt table with a playing card (the ace of hearts) on it
+                    rr(.06f, .14f, .88f, .72f, .08f, Brush.verticalGradient(listOf(Color(0xFF4CAF50), Color(0xFF1B5E20))), Color(0xFF0F3D13))
+                    drawRoundRect(Color.White, Offset(w * .3f, w * .18f), Size(w * .4f, w * .64f), androidx.compose.ui.geometry.CornerRadius(w * .05f))
+                    drawRoundRect(Color(0xFF9AA5B1), Offset(w * .3f, w * .18f), Size(w * .4f, w * .64f), androidx.compose.ui.geometry.CornerRadius(w * .05f), style = Stroke(width = w * .025f))
+                    val heart = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * .5f, w * .62f); cubicTo(w * .34f, w * .5f, w * .38f, w * .34f, w * .5f, w * .42f); cubicTo(w * .62f, w * .34f, w * .66f, w * .5f, w * .5f, w * .62f); close()
+                    }
+                    drawPath(heart, Color(0xFFD32F2F))
+                    drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = .35f), Color.Transparent), startY = w * .14f, endY = w * .4f), Offset(w * .06f, w * .14f), Size(w * .88f, w * .26f))
+                }
+            }
+        }
+    }
+
     /** One place of the right pane: the classic Windows 7 icon and a white label. */
     @Composable
     private fun W7Place(icon: String, text: String, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().height(32.dp).clickable(onClick = onClick).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            com.umutk.pulse.PIcon(icon, Color.White, 22.dp)
+            // Pictures, Music and Games have no picture in the Windows 7 set: drawn here in its glossy Aero style
+            if (icon == "image" || icon == "music" || icon == "gridView") W7Glyph(icon) else com.umutk.pulse.PIcon(icon, Color.White, 22.dp)
             Spacer(Modifier.width(8.dp))
             Text(text, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
