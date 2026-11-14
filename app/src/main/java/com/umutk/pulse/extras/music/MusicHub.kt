@@ -197,7 +197,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
         // Poweramp draws its own backdrop on the now-playing page, so this one is for the other looks only
         if (artBg && cover != null && look != MusicLook.POWERAMP) Image(cover, null, Modifier.fillMaxSize().blur(40.dp).alpha(.45f), contentScale = ContentScale.Crop)
         // the Material now-playing screen and Poweramp take the whole window: no header, no inset
-        val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL)
+        val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL) || (look == MusicLook.WMP && prefs(ctx).getBoolean("wmp12", true))
         Column(Modifier.fillMaxSize().padding(horizontal = if (fullNow) 0.dp else 12.dp, vertical = if (fullNow) 0.dp else 8.dp)) {
             // the Winamp look has no bar: its window starts at the top and its SET button sits in the window
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -357,6 +357,20 @@ private fun WinampPage(engine: MusicPlayerEngine, st: PlaybackState, onEject: ()
 @Composable
 private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track>, onOpen: () -> Unit, onPlaylists: () -> Unit) {
     val (pos, dur) = rememberPosition(engine, st).value
+    // Windows Media Player 12 (the new look, the default): the song, its real artist and cover, the glossy play button; the old WMP 7 below is the other choice (Settings > Look)
+    val wctx = LocalContext.current
+    if (prefs(wctx).getBoolean("wmp12", true)) {
+        val t = st.current
+        val cover by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, t?.path) {
+            value = t?.let { tr0 -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.umutk.pulse.extras.music.poweramp.PowerampCovers.saved(wctx, tr0.path) ?: trackArt(wctx, tr0) }.getOrNull() } }
+        }
+        val artist = remember(t?.path) { t?.artistFor(wctx).orEmpty() }
+        com.umutk.pulse.extras.music.wmp7.Wmp12Player(
+            title = t?.displayName().orEmpty(), artist = artist, album = t?.album, cover = cover, playing = st.isPlaying, pos = pos.toInt(), dur = dur.toInt(),
+            onPrev = engine::previous, onPlayPause = engine::togglePlayPause, onNext = engine::next, onStop = { engine.pause(); engine.seekTo(0) }, onSeek = { engine.seekTo(it) },
+        )
+        return
+    }
     var mode by remember { mutableStateOf(Wmp7Mode.FULL) }
     var nav by remember { mutableIntStateOf(0) }
     val navLabels = listOf(tr("Now Playing", "Çalıyor"), tr("Media Library", "Ortam Kitaplığı"), tr("Playlists", "Çalma listeleri"))
