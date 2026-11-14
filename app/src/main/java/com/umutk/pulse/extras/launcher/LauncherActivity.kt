@@ -78,7 +78,7 @@ class LauncherActivity : ComponentActivity() {
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
         setContent {
             val look = LauncherLooks.byId(LauncherPrefs.look)
-            val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
+            val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack, LauncherPrefs.look) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
             LaunchedEffect(look.id, LauncherPrefs.sounds) { LauncherSounds.prepare(this@LauncherActivity, look.id) }
             // the readings of This PC and its tiles (processor, memory, temperature, battery) come from the sampler, which the launcher must run itself:
             // the main app's loop does not run while the launcher is in front. A sample is taken only when none was taken lately (no double work)
@@ -325,7 +325,8 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
                 category = ri.activityInfo.applicationInfo.category)
         }
         // Pulse's own apps (Music player, Notes, Video, Weather...) are in the list too, so they can be opened, hidden and put on the home screen or the dock like any other app
-        .let { it + desktopItems().filter { d -> d.pkg.startsWith("pulse:x:") } }
+        // the joke apps belong to the Windows desktops only (their Programs list and Start menu); the phone looks' app list leaves them out
+        .let { it + desktopItems().filter { d -> d.pkg.startsWith("pulse:x:") && (LauncherPrefs.look in WINDOWS_LOOKS || !d.pkg.startsWith("pulse:x:win:fun:")) } }
         .sortedBy { it.label.lowercase() }
 }
 
