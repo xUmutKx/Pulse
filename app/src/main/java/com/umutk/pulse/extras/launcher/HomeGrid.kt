@@ -135,7 +135,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
         val order = items.map { it.key }.toMutableList()
         val targetItem = items.firstOrNull { it.key == target }
         // the middle of a cell is "onto it" (a folder), the rim is "next to it" (a new place)
-        val onto = target != null && rects[target]!!.let { r -> abs(finger.x - r.center.x) < r.width * .26f && abs(finger.y - r.center.y) < r.height * .26f }
+        val onto = target != null && (rects[target]?.let { r -> abs(finger.x - r.center.x) < r.width * .26f && abs(finger.y - r.center.y) < r.height * .26f } ?: false)
         when {
             onto && targetItem is HomeItem.Folder && dragged is HomeItem.App -> {
                 val v = LauncherPrefs.folders[targetItem.id].orEmpty(); val (n, p) = parseFolder(v)

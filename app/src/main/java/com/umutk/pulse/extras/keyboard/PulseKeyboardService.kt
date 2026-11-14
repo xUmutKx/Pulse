@@ -1107,8 +1107,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the predicted word is only added when the field really ends in the word we remember (not after a sign, a deleted word, a paste or a moved cursor):
         // otherwise Space would write words the user never asked for
         if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null && c.getSelectedText(0).isNullOrEmpty()) {
-            val tail = c.getTextBeforeCursor(prevWord!!.length + 1, 0)?.toString().orEmpty()
-            val ends = tail.length == prevWord!!.length + 1 && tail.last() == ' ' && tail.dropLast(1).equals(prevWord, true)
+            val pwQ = prevWord ?: ""
+            val tail = c.getTextBeforeCursor(pwQ.length + 1, 0)?.toString().orEmpty()
+            val ends = pwQ.isNotEmpty() && tail.length == pwQ.length + 1 && tail.last() == ' ' && tail.dropLast(1).equals(pwQ, true)
             if (ends && !punctTyped) {
                 c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
             }
