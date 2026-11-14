@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.border
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.withContext
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -66,7 +67,36 @@ fun ClockHeader(modifier: Modifier) {
     Column(modifier.padding(horizontal = maxOf(20.dp, edge), vertical = 12.dp)) {
         Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(d), color = T.text, fontSize = 44.sp, fontWeight = FontWeight.Light)
         Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(d), color = T.text, fontSize = 14.sp)
+        // "At a glance": the next alarm, the next event of the calendar and the battery, in one quiet line
+        if (LauncherPrefs.glance) {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val line by produceState("") { while (true) { value = withContext(kotlinx.coroutines.Dispatchers.IO) { glanceLine(ctx) }; delay(30_000) } }
+            if (line.isNotEmpty()) Text(line, color = T.text.copy(alpha = .75f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+        }
     }
+}
+
+/** The pieces of the "At a glance" line, joined with a dot: the next alarm clock, the next event of the calendar (when the calendar may be read), the battery while it is charging or low. */
+private fun glanceLine(ctx: Context): String {
+    val parts = ArrayList<String>()
+    runCatching {
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        am.nextAlarmClock?.let { parts.add("\u23F0 " + SimpleDateFormat("EEE HH:mm", Locale.getDefault()).format(Date(it.triggerTime))) }
+    }
+    if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CALENDAR) == android.content.pm.PackageManager.PERMISSION_GRANTED) runCatching {
+        val now = System.currentTimeMillis()
+        val uri = android.provider.CalendarContract.Instances.CONTENT_URI.buildUpon().also { android.content.ContentUris.appendId(it, now); android.content.ContentUris.appendId(it, now + 24L * 3600_000L) }.build()
+        ctx.contentResolver.query(uri, arrayOf(android.provider.CalendarContract.Instances.TITLE, android.provider.CalendarContract.Instances.BEGIN), null, null, android.provider.CalendarContract.Instances.BEGIN + " ASC")?.use { c ->
+            if (c.moveToFirst()) parts.add(c.getString(0).orEmpty().take(24) + " " + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(c.getLong(1))))
+        }
+    }
+    runCatching {
+        val b = ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val pct = b?.let { 100 * it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: -1
+        val plugged = (b?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        if (pct >= 0 && (plugged || pct <= 20)) parts.add((if (plugged) "\u26A1 " else "\uD83D\uDD0B ") + "$pct%")
+    }
+    return parts.joinToString("  \u00B7  ")
 }
 
 /** One dot per home page; the current one is larger and stronger. */
