@@ -194,7 +194,7 @@ class IslandService : Service() {
             lastColor = lastArt?.let { b -> runCatching { androidx.palette.graphics.Palette.from(b).generate().let { p -> p.getVibrantColor(p.getMutedColor(p.getDominantColor(0))) } }.getOrDefault(0) } ?: 0
         }
         val dur = m.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        val ps = c.playbackState!!
+        val ps = c.playbackState ?: return
         val pos = ps.position + if (playing) ((SystemClock.elapsedRealtime() - ps.lastPositionUpdateTime) * ps.playbackSpeed).toLong() else 0L
         val pkg = c.packageName
         val old = items["music"]

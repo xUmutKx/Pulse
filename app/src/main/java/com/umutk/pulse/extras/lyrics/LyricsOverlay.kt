@@ -232,7 +232,7 @@ object MiniLyrics {
         val m = c.metadata ?: return null
         val title = m.getString(android.media.MediaMetadata.METADATA_KEY_TITLE) ?: return null
         val artist = m.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST) ?: m.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM_ARTIST) ?: ""
-        val ps = c.playbackState!!
+        val ps = c.playbackState ?: return null
         val pos = ps.position + ((SystemClock.elapsedRealtime() - ps.lastPositionUpdateTime) * ps.playbackSpeed).toLong()
         return Playing("${c.packageName}|$artist|$title", title, artist, m.getString(android.media.MediaMetadata.METADATA_KEY_ALBUM), m.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION), pos)
     }
