@@ -55,6 +55,8 @@ private fun pathOf(ctx: android.content.Context, uri: android.net.Uri): String? 
 @Composable
 fun HomeSheet() {
     val ctx = LocalContext.current
+    // the Properties window of an app (opened from its menu) is drawn from here, at the top level of the home
+    PropertiesHost()
     val addWidget = rememberWidgetAdd { }
     val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // a file or a picture for the home screen: its place on the phone is kept, the file itself is not copied

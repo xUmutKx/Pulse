@@ -84,7 +84,7 @@ class LauncherActivity : ComponentActivity() {
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
         setContent {
             val look = LauncherLooks.byId(LauncherPrefs.look)
-            val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack, LauncherPrefs.look) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
+            val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack, LauncherPrefs.look, LauncherPrefs.names) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
             LaunchedEffect(look.id, LauncherPrefs.sounds) { LauncherSounds.prepare(this@LauncherActivity, look.id) }
             // the readings of This PC and its tiles (processor, memory, temperature, battery) come from the sampler, which the launcher must run itself:
             // the main app's loop does not run while the launcher is in front. A sample is taken only when none was taken lately (no double work)
@@ -349,7 +349,7 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
     return found.withIndex()
         .map { (i, ri) ->
             val pkg = ri.activityInfo.packageName
-            LaunchApp(ri.loadLabel(pm).toString(), pkg,
+            LaunchApp(LauncherPrefs.names[pkg] ?: ri.loadLabel(pm).toString(), pkg,
                 (if (builtin) drawn.getOrNull(i) else null) ?: runCatching { (IconPacks.icon(ctx, pack, packMap, pkg, ri.activityInfo.name) ?: ri.loadIcon(pm)).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
                 installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L),
                 system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
