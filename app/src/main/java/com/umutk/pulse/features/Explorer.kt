@@ -619,9 +619,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             else -> go((dir.parentFile ?: top).path)
         }
     }
+    // inside a window of a Windows desktop (every launcher look) a file opens in a window of its own, not in another app; an APK and an archive keep their own ways
+    val inDeskWindow = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
     // an APK asks first: view its contents, or install it (a tap on other files opens them as before)
     fun openFile(f: File) {
         if (filePick != null) { if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
+        if (inDeskWindow && f.isFile && !f.extension.equals("apk", true) && !isArchiveFile(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.extras.launcher.DesktopWindows.open("view:" + f.path, f.name); return }
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
         // a video plays in Pulse's own player straight away; "Open as" holds the gallery and the other apps
