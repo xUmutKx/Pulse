@@ -300,8 +300,8 @@ function groupFront(style,n){
     ctx.fillStyle="rgba(255,255,255,.22)";ctx.fillRect(x+tw*.14,y+th*.14,tw*.72,th*.07);
   }
   // twine round the bundle, a bow where it crosses: the games are tied together until the bundle is opened
-  const tw=(x0,y0,x1,y1,bend)=>{ctx.lineCap="round";ctx.strokeStyle="#7a5a32";ctx.lineWidth=W*.022;ctx.beginPath();ctx.moveTo(x0,y0);ctx.quadraticCurveTo((x0+x1)/2,(y0+y1)/2+bend,x1,y1);ctx.stroke();ctx.strokeStyle="#c9a574";ctx.lineWidth=W*.012;ctx.setLineDash([W*.02,W*.012]);ctx.stroke();ctx.setLineDash([])};
-  const ry=top+th+gap/2;tw(0,ry-W*.01,W,ry+W*.012,W*.02);tw(W/2-W*.01,bandH,W/2+W*.01,Hh,0);
+  const twine=(x0,y0,x1,y1,bend)=>{ctx.lineCap="round";ctx.strokeStyle="#7a5a32";ctx.lineWidth=W*.022;ctx.beginPath();ctx.moveTo(x0,y0);ctx.quadraticCurveTo((x0+x1)/2,(y0+y1)/2+bend,x1,y1);ctx.stroke();ctx.strokeStyle="#c9a574";ctx.lineWidth=W*.012;ctx.setLineDash([W*.02,W*.012]);ctx.stroke();ctx.setLineDash([])};
+  const ry=top+th+gap/2;twine(0,ry-W*.01,W,ry+W*.012,W*.02);twine(W/2-W*.01,bandH,W/2+W*.01,Hh,0);
   const kx=W/2,ky=ry;ctx.fillStyle="#9b7440";ctx.beginPath();ctx.arc(kx,ky,W*.03,0,7);ctx.fill();ctx.strokeStyle="#c9a574";ctx.lineWidth=W*.014;for(const sgn of [-1,1]){ctx.beginPath();ctx.moveTo(kx,ky);ctx.bezierCurveTo(kx+sgn*W*.09,ky-W*.07,kx+sgn*W*.13,ky+W*.01,kx+sgn*W*.07,ky+W*.05);ctx.stroke()}
   ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillStyle="rgba(255,255,255,.96)";ctx.font=`700 ${W*.075}px Lexend, sans-serif`;ctx.fillText("Built-in games",W/2,Hh*.9);
   ctx.fillStyle="rgba(255,255,255,.55)";ctx.font=`500 ${W*.042}px Lexend, sans-serif`;ctx.fillText(n+" games",W/2,Hh*.9+W*.06);
