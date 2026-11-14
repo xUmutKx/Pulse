@@ -257,6 +257,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var realWave by remember { mutableStateOf(MusicSettings.realWave(c)) }
     var blended by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(c)) }
     var twoRows by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.twoRows(c)) }
+    var wmp12 by remember { mutableStateOf(c.getSharedPreferences("music_hub", android.content.Context.MODE_PRIVATE).getBoolean("wmp12", true)) }
     var blendBlur by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blendBlur(c)) }
     var onlineCovers by remember { mutableStateOf(MusicSettings.onlineCovers(c)) }
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
@@ -268,6 +269,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         if (cat == "look") SwitchRow(tr("Real waveform on the wave seek bar (analyses each song once)", "Dalga çubuğunda gerçek dalga biçimi (her şarkıyı bir kez çözümler)"), realWave) { realWave = it; MusicSettings.setRealWave(c, it) }
         if (cat == "look") SwitchRow(tr("Blended cover (Poweramp look)", "Karışık kapak (Poweramp görünümü)"), blended) { blended = it; com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setBlended(c, it) }
         if (cat == "look" && blended) SliderRow("${tr("Blur strength (cover and lyrics)", "Bulanıklık gücü (kapak ve sözler)")}  $blendBlur", blendBlur.toFloat(), 10f..90f) { blendBlur = it.toInt(); com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setBlendBlur(c, blendBlur) }
+        if (cat == "look") SwitchRow(tr("Windows Media Player 12 look (off: the old WMP 7)", "Windows Media Player 12 görünümü (kapalı: eski WMP 7)"), wmp12) { wmp12 = it; c.getSharedPreferences("music_hub", android.content.Context.MODE_PRIVATE).edit().putBoolean("wmp12", it).apply() }
         if (cat == "look") SwitchRow(tr("Two rows of buttons (8 icons)", "İki satır düğme (8 simge)"), twoRows) { twoRows = it; com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setTwoRows(c, it) }
         if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
             onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
