@@ -46,8 +46,6 @@ internal object CaseCover {
     @Synchronized
     fun styleOf(c: Context, pkg: String): String {
         if (style(c) != "mix") return style(c)
-        // the built-in games and the HTML games are Pulse's own: they share one box style (Android), so they stand together on one shelf instead of among the consoles
-        if (MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)) return "android"
         val map = mixMap(c)
         map[pkg]?.let { return it }
         val pick = MIX.random()
