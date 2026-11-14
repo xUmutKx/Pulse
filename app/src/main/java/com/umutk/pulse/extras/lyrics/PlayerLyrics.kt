@@ -142,7 +142,7 @@ fun PlayerLyrics(
         Box(Modifier.fillMaxSize().background(Color.Black).nestedScroll(closer).pointerInput(Unit) { tapGestures { } }) {
             // the Blended look: the lyrics lie on the blurred cover, darkened so the words read, instead of on plain black
             if (art != null && com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(ctx)) {
-                androidx.compose.foundation.Image(art, null, Modifier.fillMaxSize().blur(36.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                androidx.compose.foundation.Image(art, null, Modifier.fillMaxSize().blur(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blendBlur(ctx).dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .48f)))
             }
             val (busy, res0) = state

@@ -173,7 +173,7 @@ fun PowerampApp(
             // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
             // while the page is slid down it is a sheet: rounded at the top, with a small pill bar over its edge (neither shows when it is at rest)
             val sheet = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.blur(36.dp), contentScale = ContentScale.Crop)
+            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.blur(PowerampPrefs.blendBlur(ctx).dp), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.background(Color.Black.copy(alpha = .28f)))
             Box(Modifier.fillMaxWidth().graphicsLayer { translationY = pullOffset + 8.dp.toPx(); alpha = (pullOffset / 60f).coerceIn(0f, 1f) }, contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(width = 44.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = .65f)))

@@ -626,10 +626,13 @@ private fun WeatherMapScreen(onBack: () -> Unit, at: Place? = null) {
                     drawCircle(acc, 6.5.dp.toPx(), c)
                     drawIntoCanvas { cv ->
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.WHITE; textSize = 14.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            color = android.graphics.Color.WHITE; textSize = 11.dp.toPx(); typeface = android.graphics.Typeface.DEFAULT_BOLD
                             textAlign = android.graphics.Paint.Align.CENTER; setShadowLayer(4.dp.toPx(), 0f, 1.dp.toPx(), android.graphics.Color.BLACK)
                         }
-                        cv.nativeCanvas.drawText(hp.name, c.x, c.y - 16.dp.toPx(), paint)
+                        // a short label: the place and its country ("Tekirdağ, Türkiye"), not the whole address
+                        val parts = hp.name.replace("Republic of Türkiye", "Türkiye").replace("Republic of Turkey", "Türkiye").replace("Turkey", "Türkiye").split(", ").map { it.trim() }.filter { it.isNotEmpty() }
+                        val label = if (parts.size > 2) parts.first() + ", " + parts.last() else parts.joinToString(", ")
+                        cv.nativeCanvas.drawText(label, c.x, c.y - 16.dp.toPx(), paint)
                     }
                 }
             }

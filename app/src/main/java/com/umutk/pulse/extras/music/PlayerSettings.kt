@@ -257,6 +257,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var realWave by remember { mutableStateOf(MusicSettings.realWave(c)) }
     var blended by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(c)) }
     var twoRows by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.twoRows(c)) }
+    var blendBlur by remember { mutableStateOf(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blendBlur(c)) }
     var onlineCovers by remember { mutableStateOf(MusicSettings.onlineCovers(c)) }
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
@@ -266,6 +267,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         if (cat == "look") SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
         if (cat == "look") SwitchRow(tr("Real waveform on the wave seek bar (analyses each song once)", "Dalga çubuğunda gerçek dalga biçimi (her şarkıyı bir kez çözümler)"), realWave) { realWave = it; MusicSettings.setRealWave(c, it) }
         if (cat == "look") SwitchRow(tr("Blended cover (Poweramp look)", "Karışık kapak (Poweramp görünümü)"), blended) { blended = it; com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setBlended(c, it) }
+        if (cat == "look" && blended) SliderRow("${tr("Blur strength (cover and lyrics)", "Bulanıklık gücü (kapak ve sözler)")}  $blendBlur", blendBlur.toFloat(), 10f..90f) { blendBlur = it.toInt(); com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setBlendBlur(c, blendBlur) }
         if (cat == "look") SwitchRow(tr("Two rows of buttons (8 icons)", "İki satır düğme (8 simge)"), twoRows) { twoRows = it; com.umutk.pulse.extras.music.poweramp.PowerampPrefs.setTwoRows(c, it) }
         if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
             onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
@@ -307,7 +309,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         }
         if (cat == "library") SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
         if (cat == "look") { var lf by remember { mutableStateOf(MusicSettings.lyricsFull(c)) }; SwitchRow(tr("Full screen lyrics", "Tam ekran sözler"), lf) { lf = it; MusicSettings.setLyricsFull(c, it) } }
-        if (cat == "look") SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
+        if (cat == "look") SliderRow("${tr("Lyrics size in the player", "Oynatıcıdaki söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
+        if (cat == "look") { var lk by remember { mutableStateOf(com.umutk.pulse.extras.lyrics.LiveLyrics.lockFont(c)) }
+            SwitchRow(tr("Own size for the lock screen lyrics", "Kilit ekranı sözleri için ayrı boyut"), lk > 0) { lk = if (it) lyricsFont.coerceIn(12, 44) else 0; com.umutk.pulse.extras.lyrics.LiveLyrics.setLockFont(c, lk) }
+            if (lk > 0) SliderRow("${tr("Lock screen lyrics size", "Kilit ekranı söz boyutu")}  $lk", lk.toFloat(), 12f..44f) { lk = it.toInt(); com.umutk.pulse.extras.lyrics.LiveLyrics.setLockFont(c, lk) } }
         if (cat == "audio") Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("timer", T.sub, 22.dp)
             listOf(0 to tr("Off", "Kapalı"), 15 to "15", 30 to "30", 60 to "60", -1 to tr("Track end", "Parça sonu")).forEach { (m, l) ->
