@@ -125,6 +125,10 @@ object LauncherPrefs {
     var tileMode by mutableStateOf("auto")
     /** Where each desktop shortcut sits on the Windows desktops: "x,y" in dp, by shortcut id. */
     var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
+    /** true: desktop icons snap to the grid where they are dropped (the default); false: they stay exactly where they are put down. */
+    var snapIcons by mutableStateOf(true)
+    /** The free places (dp, "x,y") of the icons while [snapIcons] is off. */
+    var iconFree by mutableStateOf<Map<String, String>>(emptyMap())
 
     fun wallIndex(look: String): Int = walls[look] ?: 0
     fun setWallIndex(look: String, i: Int) { walls = walls + (look to i) }
@@ -166,6 +170,8 @@ object LauncherPrefs {
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
+        snapIcons = p.getProperty("snapIcons") != "false"
+        iconFree = p.stringPropertyNames().filter { it.startsWith("ifree.") }.associate { it.removePrefix("ifree.") to p.getProperty(it) }
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
         wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
@@ -209,6 +215,8 @@ object LauncherPrefs {
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
+        p.setProperty("snapIcons", snapIcons.toString())
+        iconFree.forEach { (id, v) -> p.setProperty("ifree.$id", v) }
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
         walls.forEach { (lookId, i) -> p.setProperty(WALL + lookId, i.toString()) }

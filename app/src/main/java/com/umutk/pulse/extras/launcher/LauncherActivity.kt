@@ -211,16 +211,20 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)
             var drag by remember(app.pkg) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
-            val x = drag?.x ?: (col * cellW); val y = drag?.y ?: (row * cellH)
+            // free placement (snap off): the place is the exact spot it was put down at; else the cell of the grid
+            val free = if (!LauncherPrefs.snapIcons) LauncherPrefs.iconFree[app.pkg]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 } else null
+            val x = drag?.x ?: (free?.get(0) ?: (col * cellW)); val y = drag?.y ?: (free?.get(1) ?: (row * cellH))
             Box(
                 Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f)
-                    .pointerInput(app.pkg, LauncherPrefs.lockLayout) {
+                    .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg]) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
-                            onDragStart = { drag = androidx.compose.ui.geometry.Offset(col * cellW, row * cellH) },
+                            onDragStart = { drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW), free?.get(1) ?: (row * cellH)) },
                             onDrag = { c, dr -> c.consume(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
                             onDragEnd = {
                                 val p = drag; drag = null
-                                if (p != null) {
+                                if (p != null && !LauncherPrefs.snapIcons) {
+                                    LauncherPrefs.iconFree = LauncherPrefs.iconFree + (app.pkg to "${p.x.coerceAtLeast(0f)},${p.y.coerceAtLeast(0f)}"); LauncherPrefs.save(ctx)
+                                } else if (p != null) {
                                     var nc = Math.round(p.x / cellW).coerceIn(0, cols - 1); var nr = Math.round(p.y / cellH).coerceIn(0, perColumn - 1)
                                     // a taken cell: the nearest free one down that column, then the next columns
                                     val taken = cells.filterKeys { it != app.pkg }.values.toSet()
