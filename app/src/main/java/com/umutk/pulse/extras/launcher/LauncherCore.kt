@@ -87,6 +87,8 @@ fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
+    /** The hidden taskbar is shown for a moment (a tap or a swipe on the screen edge); it hides again by itself. */
+    var taskbarPeek by androidx.compose.runtime.mutableStateOf(false)
     /** Window position of the last long press on an app (px). */
     var pressAt = androidx.compose.ui.geometry.Offset.Zero
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */

@@ -40,6 +40,8 @@ object HomeSheetState {
     var newFolder by mutableStateOf(false)
     /** What the "New" name box makes: a "folder", a "text" document or a web address ("url"). */
     var newKind by mutableStateOf("folder")
+    /** The taskbar's own menu (a long press on the taskbar). */
+    var taskbar by mutableStateOf(false)
 }
 
 /** The file behind a document the picker returned ("primary:Download/x.pdf" is /storage/emulated/0/Download/x.pdf), or null. */
@@ -68,6 +70,20 @@ fun HomeSheet() {
     }
     val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
     var folderName by androidx.compose.runtime.remember { mutableStateOf("") }
+    // the taskbar's menu, as on Windows: Task Manager, hiding the taskbar by itself, the taskbar's settings
+    if (HomeSheetState.taskbar) ContextPopup(240.dp, 200.dp, onDismiss = { HomeSheetState.taskbar = false }) {
+        val w = com.umutk.pulse.LocalWindowLook.current
+        val ink = LocalMenuSkin.current?.text ?: w.text
+        ActionRow("processes", tr("Task Manager", "Görev Yöneticisi"), ink) { HomeSheetState.taskbar = false; openDesktopItem(ctx, "pulse:taskmgr", LauncherPrefs.look) }
+        ActionRow(if (LauncherPrefs.taskbarAutoHide) "check" else "eyeOff", tr("Automatically hide the taskbar", "Görev çubuğunu otomatik gizle"), ink) {
+            HomeSheetState.taskbar = false; LauncherPrefs.taskbarAutoHide = !LauncherPrefs.taskbarAutoHide; LauncherSession.taskbarPeek = false; LauncherPrefs.save(ctx)
+        }
+        ActionRow("settings", tr("Taskbar settings", "Görev çubuğu ayarları"), ink) { HomeSheetState.taskbar = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+    }
+    // the hidden taskbar shown from the edge goes away again after a few seconds
+    androidx.compose.runtime.LaunchedEffect(LauncherSession.taskbarPeek, LauncherSession.startOpen, LauncherSession.clockOpen) {
+        if (LauncherSession.taskbarPeek && !LauncherSession.startOpen && !LauncherSession.clockOpen) { kotlinx.coroutines.delay(4000); LauncherSession.taskbarPeek = false }
+    }
     if (HomeSheetState.sheet) ContextPopup(220.dp, 400.dp, onDismiss = { HomeSheetState.sheet = false }) {
         val w = com.umutk.pulse.LocalWindowLook.current
         ActionRow("settings", tr("Settings", "Ayarlar"), w.text) {

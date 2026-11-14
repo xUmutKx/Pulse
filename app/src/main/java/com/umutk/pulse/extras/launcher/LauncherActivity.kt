@@ -72,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.border
@@ -315,7 +316,7 @@ private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
 }
 
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
-private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
+internal fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     LauncherSounds.click(lookId)
     // Windows looks show Pulse's own pages in a window of that Windows
     if (id.startsWith("pulse:x:")) {
@@ -462,7 +463,12 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
             if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())
-            if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.sheet = true } else Modifier))
+            // the taskbar: a long press opens its own menu (Task Manager, auto-hide, settings); hidden, a thin edge strip brings it back for a moment
+            if (look.taskbarTop && LauncherPrefs.dockShown) {
+                val hide = look.id in WINDOWS_LOOKS && LauncherPrefs.taskbarAutoHide && !LauncherSession.taskbarPeek && !LauncherSession.startOpen && !LauncherSession.clockOpen
+                if (!hide) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.taskbar = true } else Modifier))
+                else Box(Modifier.fillMaxWidth().height(14.dp).pointerInput(Unit) { detectTapGestures(onTap = { LauncherSession.taskbarPeek = true }, onLongPress = { HomeSheetState.taskbar = true }) }.pointerInput("drag") { detectVerticalDragGestures { _, d -> if (d > 4f) LauncherSession.taskbarPeek = true } })
+            }
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
                 if (desktop && !LauncherPrefs.homeApps) {
@@ -480,7 +486,12 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     }
                 } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone") || linkItems.isNotEmpty()) LabelScale { HomeGrid(look, state, (if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible + linkItems else linkItems).distinctBy { it.pkg }, columns, iconDp, edge, open) }
             }
-            if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.sheet = true } else Modifier))
+            // the taskbar: a long press opens its own menu (Task Manager, auto-hide, settings); hidden, a thin edge strip brings it back for a moment
+            if (!look.taskbarTop && LauncherPrefs.dockShown) {
+                val hide = look.id in WINDOWS_LOOKS && LauncherPrefs.taskbarAutoHide && !LauncherSession.taskbarPeek && !LauncherSession.startOpen && !LauncherSession.clockOpen
+                if (!hide) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.taskbar = true } else Modifier))
+                else Box(Modifier.fillMaxWidth().height(14.dp).pointerInput(Unit) { detectTapGestures(onTap = { LauncherSession.taskbarPeek = true }, onLongPress = { HomeSheetState.taskbar = true }) }.pointerInput("drag") { detectVerticalDragGestures { _, d -> if (d < -4f) LauncherSession.taskbarPeek = true } })
+            }
         }
         }
         // settings and (with the dock hidden) the apps list stay reachable from the home screen
