@@ -294,7 +294,8 @@ object Downloads {
         app = c
         scope.launch {
             val dir = File(dirPath)
-            val name = cleanName(Uri.parse(url).lastPathSegment) ?: "download"
+            // a link of the local Stremio server ends in the file's number in the torrent ("…/64"): its real name is asked from the server, else it is named after the torrent and the number
+            val name = withContext(Dispatchers.IO) { streamName(url) }?.let { cleanName(it) } ?: cleanName(Uri.parse(url).lastPathSegment) ?: "download"
             val t = try { DlTask(url, reserve(dir, name)) } catch (e: Exception) {
                 DlTask(url, File(dir, name)).apply { state.value = DlState.FAILED; error.value = "cannot write to ${dir.path}: ${e.message ?: e.javaClass.simpleName}" }
             }
@@ -536,6 +537,38 @@ private fun reserve(dir: File, name: String): File {
     return f
 }
 
+/**
+ * A torrent stream link of the Stremio server on the phone (http://127.0.0.1:11470/<info hash>/<file number>?tr=...): the name of the video, from the server's own
+ * stats page; when that is not there yet, "video-<start of the hash>-<number>". Null for any other link.
+ */
+private fun streamName(url: String): String? {
+    val u = runCatching { Uri.parse(url) }.getOrNull() ?: return null
+    val host = u.host ?: return null
+    if (host != "127.0.0.1" && host != "localhost") return null
+    val seg = u.pathSegments
+    if (seg.size < 2 || !Regex("[0-9a-fA-F]{40}").matches(seg[0]) || seg[1].toIntOrNull() == null) return null
+    val fallback = "video-" + seg[0].take(8) + "-" + seg[1]
+    return runCatching {
+        val c = java.net.URL("${u.scheme}://${u.authority}/${seg[0]}/${seg[1]}/stats.json").openConnection() as HttpURLConnection
+        c.connectTimeout = 3000; c.readTimeout = 4000
+        try { org.json.JSONObject(c.inputStream.bufferedReader().use { it.readText() }).optString("streamName").takeIf { it.isNotBlank() } } finally { c.disconnect() }
+    }.getOrNull() ?: fallback
+}
+
+/** [name] with the extension the content type tells, when the name has none (a stream link has no file name in it). */
+private fun withExtension(name: String, contentType: String?): String {
+    val ext = name.substringAfterLast('.', "")
+    if (ext.length in 1..5 && ext.any { it.isLetter() }) return name
+    val e = when (contentType?.substringBefore(';')?.trim()?.lowercase()) {
+        "video/mp4" -> "mp4"; "video/x-matroska" -> "mkv"; "video/webm" -> "webm"; "video/x-msvideo" -> "avi"; "video/quicktime" -> "mov"; "video/mpeg" -> "mpg"
+        "audio/mpeg" -> "mp3"; "audio/mp4", "audio/x-m4a" -> "m4a"; "audio/flac" -> "flac"; "audio/ogg" -> "ogg"; "audio/wav" -> "wav"
+        "image/jpeg" -> "jpg"; "image/png" -> "png"; "image/gif" -> "gif"; "image/webp" -> "webp"
+        "application/pdf" -> "pdf"; "application/zip" -> "zip"; "application/vnd.android.package-archive" -> "apk"
+        else -> null
+    } ?: return name
+    return "$name.$e"
+}
+
 /** The name from a Content-Disposition header: filename* (RFC 5987) first, else filename. */
 private fun dispositionName(h: String?): String? {
     if (h == null) return null
@@ -673,7 +706,10 @@ private suspend fun DlTask.transfer(): Boolean {
         if (started && ranged && ((etag != null && tag != etag) || (lastMod != null && mod != lastMod) || (total.value > 0 && size != total.value))) throw Changed()
         etag = tag
         lastMod = mod
-        if (!started && !quiet) rename(dispositionName(first.getHeaderField("Content-Disposition")) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url })
+        if (!started && !quiet) {
+            val given = dispositionName(first.getHeaderField("Content-Disposition")) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url }
+            rename(withExtension(given ?: file.name, first.contentType))
+        }
         // no ranges this time: the parts cannot go on, the copy below starts from the first byte
         if (partPos != null && !ranged) partPos = null
         total.value = size
