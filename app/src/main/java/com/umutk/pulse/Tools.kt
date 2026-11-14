@@ -148,6 +148,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "win:2048" -> com.umutk.pulse.extras.launcher.Game2048()
         id == "win:tictactoe" -> com.umutk.pulse.extras.launcher.TicTacToeGame()
         id.startsWith("win:fun:") -> com.umutk.pulse.extras.launcher.FunAppScreen(id.removePrefix("win:fun:"))
+        id.startsWith("view:") -> com.umutk.pulse.extras.launcher.FileWindow(id.removePrefix("view:"))
         id == "game:minesweeper" -> com.umutk.pulse.extras.launcher.MinesweeperGame()
         id == "game:hub" -> com.umutk.pulse.extras.launcher.GameHub()
         id == "game:freecell" -> com.umutk.pulse.extras.launcher.FreeCellGame()

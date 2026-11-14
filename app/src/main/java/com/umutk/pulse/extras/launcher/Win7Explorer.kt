@@ -79,7 +79,12 @@ fun Win7Explorer() {
     var menu by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" } }
-    fun open(f: File) { if (f.isDirectory) go(f) else com.umutk.pulse.features.exHandOver(ctx, f, false) }
+    // a picture or a text file opens in a window of the desktop; the other kinds go to another app
+    fun open(f: File) {
+        if (f.isDirectory) go(f)
+        else if (opensInWindow(f)) DesktopWindows.open("view:" + f.path, f.name)
+        else com.umutk.pulse.features.exHandOver(ctx, f, false)
+    }
     val files by produceState(emptyList<File>(), dir, hidden, rev) {
         value = withContext(Dispatchers.IO) {
             runCatching {
