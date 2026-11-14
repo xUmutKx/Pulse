@@ -76,16 +76,18 @@ class ShareDownloadActivity : ComponentActivity() {
             var look by remember { mutableStateOf(ShareLook.get(ctx)) }
             val control = remember(look) { ExtraLookControl(look) { look = it; ShareLook.set(ctx, it) } }
             CompositionLocalProvider(LocalExtraLook provides control) {
-                LookHost(transparent = true, lookId = look) { _ -> ShareUi(url, look) { finish() } }
+                LookHost(transparent = true, lookId = look) { _ -> ShareUi(url, look, stream = intent.action == Intent.ACTION_VIEW) { finish() } }
             }
         }
     }
 }
 
 @Composable
-private fun ShareUi(url: String, look: String, close: () -> Unit) {
+private fun ShareUi(url: String, look: String, stream: Boolean = false, close: () -> Unit) {
     val ctx = LocalContext.current
-    val found by produceState<LinkFinder.Result?>(null, url) { value = LinkFinder.find(url) }
+    // a stream opened from a player app ("external player" in Stremio and the like) is a file to take as it is: the window shows its Download button at once, without
+    // asking the stream's server first (a torrent or relay server can take a long while to answer, and the window stayed empty meanwhile)
+    val found by produceState<LinkFinder.Result?>(null, url) { value = if (stream) LinkFinder.Result.Direct else LinkFinder.find(url) }
     var chosen by remember { mutableStateOf<String?>(null) }
     val target = chosen ?: if (found is LinkFinder.Result.Direct || found is LinkFinder.Result.Failed) url else null
     // the window stays open after "Download": it shows the download's progress until it is done; tapping outside or Back closes it
