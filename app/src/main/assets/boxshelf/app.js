@@ -4958,7 +4958,7 @@ window.Shelf._find={
   pad:()=>showPad(),glyph:k=>glyph(k),can:()=>mode==="browse"&&!sysBusy()&&!smoothTest.on&&!app.classList.contains("launching")&&!app.classList.contains("returning")&&!document.querySelector("#insert.on,#launch.on"), /* (never over a game starting: the insert, the Starting… screen) */
   thumb:u=>thumb(u,64),snd:(n,o)=>play_(n,o),
   games:()=>{const out=[],seen=new Set();allShelves.forEach(sh=>{if(!sh||sh.kind==="home")return;(sh._base||sh.items||[]).forEach(g=>{if(!g||!(isGame(g)||g.pulse)||seen.has(g.id))return;seen.add(g.id);const h=histOf(g);
-    out.push({id:g.id,title:String(g.title||""),sys:sh.name||"",sp:spineInfo(g,sh),art:(g.art&&g.art.front)||"",hue:g.hue,last:(h&&h.count&&h.last)||0})})});return out},
+    out.push({id:g.id,title:String(g.title||""),sys:sh.name||"",art:(g.art&&g.art.front)||"",hue:g.hue,last:(h&&h.count&&h.last)||0})})});return out},
   play:id=>{for(let si=0;si<allShelves.length;si++){const s=allShelves[si];if(!s||s.kind==="home")continue;const x=(s._base||s.items||[]).find(y=>y&&(isGame(y)||y.pulse)&&String(y.id)===String(id));if(x){playPick({pick:{shelf:si,game:x}});return true}}return false},
   go:id=>{if(mode!=="browse"||sysBusy())return false;let sh=null,g=null;
     for(const s of allShelves){if(!s||s.kind==="home")continue;const x=(s._base||s.items||[]).find(y=>y&&(isGame(y)||y.pulse)&&String(y.id)===String(id));if(x){sh=s;g=x;break}}
@@ -5139,10 +5139,3 @@ Promise.race([ready,new Promise(r=>setTimeout(r,2500))]).then(start,start);
 
 /* a Details button beside Search and Menu: Details opened only with a swipe up or the hint bar (which a phone without a controller does not show) */
 (function(){const b=$("detBtn");if(!b)return;b.addEventListener("click",()=>{try{if(mode==="browse"&&curGame())openDetails();else if(mode==="details")closeDetails()}catch(e){}})})();
-
-/* the colours of a game's spine for the shelf of spines (pulse-api.js): its own console's (a Game Hub box) or its shelf's: the body in the case colour, a band with the label at the top */
-function spineInfo(g,sh){
-  const BM=Object.assign(Object.fromEntries(Object.keys(BOX_VAR).map(k=>[k,BOX_VAR[k][0]])),{ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"});
-  const bs=g&&g.pulse&&g.box&&BM[g.box]&&STYLE[BM[g.box]],s=bs||STYLE[sh&&sh.id]||STYLE.media,sb=s.spineBand||s.band||{bg:s.caseColor,fg:"#fff",label:""};
-  return{body:s.caseColor,side:s.caseSide||s.caseColor,band:sb.bg,fg:sb.fg,ink:s.spineInk||"#fff",label:String(sb.label||(sh&&sh.name)||"")};
-}
