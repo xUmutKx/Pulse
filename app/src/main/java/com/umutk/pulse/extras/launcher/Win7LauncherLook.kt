@@ -140,7 +140,8 @@ class Win7LauncherLook : LauncherLook {
                 // left pane: the programs, All programs as a folder tree, the search at the foot
                 Column(Modifier.weight(1.25f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color.White)) {
                     // (the joke apps are only in All programs, under their own group, not among the first nine)
-                    val pinned = remember(state.dock, state.apps) { (state.dock + state.apps).filter { !it.pkg.startsWith("pulse:x:win:fun:") }.distinctBy { it.pkg }.take(9) }
+                    // the dock first, then the programs opened most often (as the real Start menu lists them), the rest by name
+                    val pinned = remember(state.dock, state.apps, LauncherPrefs.usage) { (state.dock + state.apps.sortedByDescending { LauncherPrefs.usage[it.pkg] ?: 0L }).filter { !it.pkg.startsWith("pulse:x:win:fun:") }.distinctBy { it.pkg }.take(9) }
                     val found = remember(query, state.apps) { state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) } }
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 4.dp)) {
                         when {
