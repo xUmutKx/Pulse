@@ -34,7 +34,10 @@ import kotlinx.coroutines.delay
  * A text is "English|Turkish". kinds: "oracle" (a tap gives a random answer), "click" (a counter with a line for each count),
  * "scan" (a fake progress bar that ends on a result), "press" (a button that goes on to the next line).
  */
-class FunApp(val id: String, val en: String, val tr: String, val kind: String, val items: List<String>)
+class FunApp(val id: String, val en: String, val tr: String, val kind: String, val items: List<String>) {
+    /** A small picture for the app's tile: one per kind (dice for answers, heart for counters, magnifier for scans, speech for lines). */
+    val icon: String get() = when (kind) { "oracle" -> "dice"; "click" -> "heart"; "scan" -> "search"; else -> "chat" }
+}
 
 object FunApps {
     val all: List<FunApp> = listOf(

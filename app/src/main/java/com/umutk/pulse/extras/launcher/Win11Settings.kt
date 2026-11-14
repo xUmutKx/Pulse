@@ -46,7 +46,10 @@ internal fun Win11SettingsHome(open: (String) -> Unit) {
     var inGroup by remember { mutableStateOf(false) }
     val groups = CONTROL_PANEL
     val accent = T.accent
-    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg)) {
+    // Mica: the window's body is see-through for Settings and the page is tinted, so the desktop shows through it
+    val deskWin = LocalDesktopWin.current
+    androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
+    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .5f else 1f))) {
         val wide = maxWidth >= 600.dp
         val pageOf: @Composable (CpGroup) -> Unit = { g -> Win11Page(g, open) }
         if (wide) {
@@ -106,7 +109,7 @@ private fun Win11Profile() {
 
 @Composable
 private fun Win11Search(q: String, onChange: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon("search", T.sub, 16.dp)
         Spacer(Modifier.width(8.dp))
         com.umutk.pulse.PField(q, onChange, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth())
@@ -117,7 +120,7 @@ private fun Win11Search(q: String, onChange: (String) -> Unit) {
 private fun Win11NavRow(g: CpGroup, selected: Boolean, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(8.dp))
-            .background(if (selected) T.panel else androidx.compose.ui.graphics.Color.Transparent)
+            .background(if (selected) T.panel.copy(alpha = .72f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { onClick() }.padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -133,7 +136,7 @@ private fun Win11NavRow(g: CpGroup, selected: Boolean, accent: androidx.compose.
 private fun Win11Page(g: CpGroup, open: (String) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(tr(g.en, g.trName), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 14.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f))) {
             g.items.forEachIndexed { i, it ->
                 Win11Row(it, open)
                 if (i < g.items.lastIndex) Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(T.sub.copy(alpha = .12f)))
@@ -147,7 +150,7 @@ private fun Win11Results(q: String, open: (String) -> Unit) {
     val hits = CONTROL_PANEL.flatMap { it.items }.filter { tr(it.en, it.trName).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
     Column(Modifier.fillMaxWidth()) {
         Text(tr("Results", "Sonuçlar"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f))) {
             if (hits.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
             hits.forEachIndexed { i, it ->
                 Win11Row(it, open)

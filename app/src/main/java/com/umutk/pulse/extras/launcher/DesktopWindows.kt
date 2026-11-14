@@ -160,7 +160,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Caption(skin, 0) { DesktopWindows.minimize(w) }; Caption(skin, 1) { w.max = !w.max }; Caption(skin, 2) { DesktopWindows.close(w) }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(if (skin.kind == "7" && w.glass) Color.Transparent else skin.body).clipToBounds()) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(if ((skin.kind == "7" || skin.kind == "11") && w.glass) Color.Transparent else skin.body).clipToBounds()) {
             CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
                 SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
             }
