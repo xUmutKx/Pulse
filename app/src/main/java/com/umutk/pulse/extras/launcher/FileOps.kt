@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -59,14 +60,12 @@ fun pasteInto(dir: File): String? {
 }
 
 /** Long press on a row (position kept for the menu) and tap. */
-fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit): Modifier = composed2 { 
+fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit): Modifier = composed {
     var origin by remember { mutableStateOf(Offset.Zero) }
-    this.onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(Unit) {
+    onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(Unit) {
         detectTapGestures(onTap = { onTap() }, onLongPress = { LauncherSession.pressAt = origin + it; onLong() })
     }
 }
-
-private fun Modifier.composed2(f: @Composable Modifier.() -> Modifier): Modifier = androidx.compose.ui.composed { f() }
 
 /** A physical keyboard in a file window: Ctrl+C / X / V, Delete, F2, Enter, Backspace and Alt+Left. */
 fun Modifier.fileKeys(copy: () -> Unit, cut: () -> Unit, paste: () -> Unit, delete: () -> Unit, rename: () -> Unit, open: () -> Unit, back: () -> Unit): Modifier =
