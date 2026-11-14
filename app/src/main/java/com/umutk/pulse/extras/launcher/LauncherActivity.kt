@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.awaitEachGesture
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -245,7 +246,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         }.pointerInput(Unit) {
             // a plain tap on the empty desktop drops the picked icons. The press is NOT consumed here (detectTapGestures consumes it), or the long press behind it, which opens the
             // desktop's right-click menu, would never see the touch.
-            androidx.compose.foundation.gestures.awaitEachGesture {
+            awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 val up = waitForUpOrCancellation()
                 if (up != null) picked = emptySet()
