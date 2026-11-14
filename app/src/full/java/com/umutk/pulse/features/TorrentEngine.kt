@@ -29,7 +29,7 @@ object TorrentEngine {
      */
     suspend fun download(ctx: Context, magnet: String, dir: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? = withContext(Dispatchers.IO) {
         val s = try { sm() } catch (e: Throwable) { throw IOException("the torrent engine could not start: ${e.message ?: e.javaClass.simpleName}") }
-        val idx = Uri.parse(magnet).getQueryParameter("pulse_idx")?.toIntOrNull() ?: -1
+        val idx = magnetParam(magnet, "pulse_idx")?.toIntOrNull() ?: -1
         dir.mkdirs()
         // the file list comes from the peers: it can take a while when there are few of them
         var data: ByteArray? = null
