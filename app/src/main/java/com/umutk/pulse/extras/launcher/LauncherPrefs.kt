@@ -117,6 +117,8 @@ object LauncherPrefs {
     var menuOff by mutableStateOf<Set<String>>(emptySet())
     /** The "At a glance" line under the home clock: next alarm, next calendar event, battery. */
     var glance by mutableStateOf(true)
+    /** Windows: the taskbar hides itself and comes back from the screen edge, as "Automatically hide the taskbar". */
+    var taskbarAutoHide by mutableStateOf(false)
     /** The apps list of the phone looks as one A-Z list with a letter strip at the edge (off: the store groups). */
     var drawerAz by mutableStateOf(true)
     /** What a double tap, a long swipe up and a long swipe down on the home do: one of [GESTURE_ACTIONS]. */
@@ -197,6 +199,7 @@ object LauncherPrefs {
         snapIcons = p.getProperty("snapIcons2") == "true"
         blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
         bootEvery = p.getProperty("bootEvery") == "true"
+        taskbarAutoHide = p.getProperty("taskbarAutoHide") == "true"
         iconSpace = p.getProperty("iconSpace2")?.toIntOrNull()?.coerceIn(60, 160) ?: 110
         windowedApps = p.getProperty("windowedApps") != "false"
         names = p.stringPropertyNames().filter { it.startsWith("lname.") }.associate { it.removePrefix("lname.") to p.getProperty(it) }
@@ -253,6 +256,7 @@ object LauncherPrefs {
         p.setProperty("snapIcons2", snapIcons.toString())
         p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
         p.setProperty("bootEvery", bootEvery.toString())
+        p.setProperty("taskbarAutoHide", taskbarAutoHide.toString())
         p.setProperty("iconSpace2", iconSpace.toString())
         p.setProperty("windowedApps", windowedApps.toString())
         names.forEach { (id, v) -> p.setProperty("lname.$id", v) }
