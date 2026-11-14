@@ -1122,8 +1122,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
                 if (grid) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
-                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { longPick(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
+                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) }), horizontalAlignment = Alignment.CenterHorizontally) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, isz.dp) {
@@ -1141,8 +1140,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 // the pick pill is thicker than the row's content (4 dp above and below it); the gaps between rows stay small
                 else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
-                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { longPick(f.path) }), verticalAlignment = Alignment.CenterVertically) {
+                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) }), verticalAlignment = Alignment.CenterVertically) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
                     val thumb = if (f.isDirectory) AppDataFolders.icon(ctx, f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, maxOf(isz, 40).dp) {
@@ -1233,7 +1231,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 return -1
             }
             detectDragGesturesAfterLongPress(
-                onDragStart = { p -> last = hitAt(p); if (last >= 0) sel = sel + shownNow[last].path },
+                // the first long press picks the row and goes straight on into the slide (the row itself has no long press of its own any more, so nothing has to be picked first)
+                onDragStart = { p -> last = hitAt(p); if (last >= 0) longPick(shownNow[last].path) },
                 onDragEnd = { last = -1 }, onDragCancel = { last = -1 },
                 onDrag = { change, _ ->
                     change.consume()
