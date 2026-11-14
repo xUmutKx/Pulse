@@ -61,6 +61,7 @@ import com.umutk.pulse.Opt
 import com.umutk.pulse.T
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -239,6 +240,8 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
             val x = drag?.x ?: (free?.get(0) ?: (col * cellW)); val y = drag?.y ?: (free?.get(1) ?: (row * cellH))
             Box(
                 Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f)
+                    // a little smaller and a touch see-through while it is carried
+                    .graphicsLayer { val k = if (drag != null) .9f else 1f; scaleX = k; scaleY = k; alpha = if (drag != null) .85f else 1f }
                     .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg]) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
                             onDragStart = { drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW), free?.get(1) ?: (row * cellH)) },
@@ -427,7 +430,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
             if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())
-            if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
+            if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.sheet = true } else Modifier))
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
                 if (desktop && !LauncherPrefs.homeApps) {
@@ -445,7 +448,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     }
                 } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone") || linkItems.isNotEmpty()) LabelScale { HomeGrid(look, state, (if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible + linkItems else linkItems).distinctBy { it.pkg }, columns, iconDp, edge, open) }
             }
-            if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
+            if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight).then(if (look.id in WINDOWS_LOOKS) Modifier.homeLongPress { HomeSheetState.sheet = true } else Modifier))
         }
         }
         // settings and (with the dock hidden) the apps list stay reachable from the home screen

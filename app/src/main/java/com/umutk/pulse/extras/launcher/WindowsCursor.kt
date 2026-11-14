@@ -31,11 +31,22 @@ import kotlinx.coroutines.delay
 fun WindowsCursor(enabled: Boolean, content: @Composable () -> Unit) {
     var pos by remember { mutableStateOf<Offset?>(null) }
     var tick by remember { mutableIntStateOf(0) }
+    var held by remember { mutableStateOf(false) }
     val alpha = remember { Animatable(0f) }
-    LaunchedEffect(tick) { if (tick > 0) { alpha.snapTo(1f); delay(900); alpha.animateTo(0f, tween(400)) } }
+    LaunchedEffect(tick) { if (tick > 0) { alpha.snapTo(1f); if (!held) { delay(900); alpha.animateTo(0f, tween(400)) } } }
     Box(Modifier.fillMaxSize().pointerInput(enabled) {
         if (!enabled) return@pointerInput
-        awaitEachGesture { val d = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); pos = d.position; tick++ }
+        awaitEachGesture {
+            val d = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); pos = d.position; held = true; tick++
+            // the arrow goes with the finger while it is down (a drag of an icon, a window, a scroll)
+            while (true) {
+                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                val c = ev.changes.firstOrNull { it.id == d.id } ?: break
+                if (!c.pressed) break
+                pos = c.position
+            }
+            held = false; tick++
+        }
     }) {
         content()
         val p = pos
