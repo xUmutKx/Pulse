@@ -210,6 +210,7 @@ object Downloads {
     /** false while there is no working network; transfers wait for it instead of failing */
     val online = MutableStateFlow(true)
     private var app: Context? = null
+    internal fun appContext(): Context? = app
     private var loaded = false
     private var lastTick = 0L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -301,7 +302,7 @@ object Downloads {
             val dir = File(dirPath)
             // a link of the local Stremio server ends in the file's number in the torrent ("…/64"): it is named after the torrent and the number at first, and takes the real
             // name once the server has answered (asked then, not before: the start must not wait for it)
-            val name = fixedName?.let { cleanName(it) } ?: streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"
+            val name = fixedName?.let { cleanName(it) } ?: magnetName(url) ?: streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"
             val t = try { DlTask(url, reserve(dir, name)) } catch (e: Exception) {
                 DlTask(url, File(dir, name)).apply { state.value = DlState.FAILED; error.value = "cannot write to ${dir.path}: ${e.message ?: e.javaClass.simpleName}" }
             }
@@ -592,6 +593,38 @@ private fun dispositionName(h: String?): String? {
     return Regex("filename\\s*=\\s*\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(h)?.groupValues?.get(1)?.trim()
 }
 
+/** The name a magnet link gives itself ("dn"), as a file name; null when it has none (or it is not a magnet link). */
+private fun magnetName(url: String): String? =
+    if (!url.startsWith("magnet:", ignoreCase = true)) null
+    else Downloads.cleanName(Uri.parse(url).getQueryParameter("dn")) ?: "torrent"
+
+/**
+ * A magnet link: the torrent engine downloads the one file wanted into a working folder, and the finished file takes the place of the empty one reserved for this download.
+ * Pausing or removing stops it and keeps what is there, so a continue goes on from the pieces already on disk.
+ */
+private suspend fun DlTask.transferTorrent(): Boolean {
+    if (!TorrentEngine.available) throw IOException("the torrent engine is in the full build, on 64-bit phones")
+    val c = Downloads.appContext() ?: throw IOException("no context for the torrent engine")
+    resumable = false
+    val work = File(file.parentFile, ".torrent-" + Integer.toHexString(url.hashCode()))
+    val got = TorrentEngine.download(c, url, work, { cancelled || paused },
+        { name ->
+            // the file's own name (or the chosen name with its extension), while nothing is written yet
+            if (!quiet && done.value == 0L) {
+                val ext = name.substringAfterLast('.', "")
+                rename(if (keepName) file.nameWithoutExtension + (if (ext.isNotEmpty()) ".$ext" else "") else name)
+            }
+        },
+        { d, t, _ -> total.value = t; done.value = d },
+    ) ?: return false
+    file.delete()
+    if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }
+    runCatching { work.deleteRecursively() }
+    total.value = file.length(); done.value = file.length()
+    Downloads.persist()
+    return true
+}
+
 /** A link to an HLS playlist (.m3u8): a list of the video's pieces, not a video. */
 internal fun isHlsUrl(u: String) = Regex("\\.m3u8(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u)
 
@@ -796,6 +829,8 @@ private fun DlTask.rename(raw: String?) {
 
 /** true when the whole file arrived; false when it was paused or removed on the way. */
 private suspend fun DlTask.transfer(): Boolean {
+    // a magnet link: the torrent engine fetches the file from the peers
+    if (url.startsWith("magnet:", ignoreCase = true)) return transferTorrent()
     // a playlist (m3u8) is not the video: its pieces are fetched one after the other into one file
     if (isHlsUrl(url)) return transferHls()
     // split parts written into a file that is gone would leave holes
@@ -1168,13 +1203,15 @@ private fun DownloadsContent() {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
                 Box(Modifier.padding(start = 8.dp).clickable {
                     // one link, or several pasted together (one per line, or run on): each one is taken, so a whole season's links go in at once
-                    val urls = Regex("https?://.*?(?=https?://|\\s|$)").findAll(link.trim()).map { it.value }.filter { it.length > 8 }.distinct().toList()
+                    val urls = Regex("(?:https?://|magnet:\\?).*?(?=https?://|magnet:\\?|\\s|$)", RegexOption.IGNORE_CASE).findAll(link.trim()).map { it.value }.filter { it.length > 8 }.distinct().toList()
                     if (urls.isNotEmpty()) {
                         // the links leave the field at once and are looked at in the background, so the next ones can be pasted straight away
                         link = ""; findNote = ""; noLinkUrl = ""
                         urls.forEach { u ->
                             pending.add(u)
                             findScope.launch {
+                                // a magnet link is a download of its own: it starts at once
+                                if (u.startsWith("magnet:", ignoreCase = true)) { Downloads.add(ctx, u); pending.remove(u); return@launch }
                                 // a file starts at once; a web page is read for its download links
                                 when (val r = LinkFinder.find(u)) {
                                     is LinkFinder.Result.Direct -> Downloads.add(ctx, u)

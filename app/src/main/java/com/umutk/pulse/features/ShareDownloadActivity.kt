@@ -69,7 +69,7 @@ class ShareDownloadActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         // a shared text (SEND), or a stream opened from another app (VIEW with the link as its data)
         val raw = if (intent.action == Intent.ACTION_VIEW) intent.dataString.orEmpty() else intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-        val url = Regex("https?://\\S+").find(raw)?.value
+        val url = Regex("(?:https?://|magnet:\\?)\\S+", RegexOption.IGNORE_CASE).find(raw)?.value
         if (url == null) { finish(); return }
         setContent {
             val ctx = LocalContext.current
@@ -144,7 +144,7 @@ private fun ShareUi(url: String, look: String, stream: Boolean = false, close: (
             when (val r = found) {
                 null -> Text(tr("Looking for the download…", "İndirme aranıyor…"), color = T.text, fontSize = 14.sp)
                 is LinkFinder.Result.Direct, is LinkFinder.Result.Failed ->
-                    Text(Uri.decode(url.substringBefore('?').substringAfterLast('/')).ifBlank { url }, color = T.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(if (url.startsWith("magnet:", ignoreCase = true)) Uri.parse(url).getQueryParameter("dn") ?: tr("Magnet link", "Magnet bağlantısı") else Uri.decode(url.substringBefore('?').substringAfterLast('/')).ifBlank { url }, color = T.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 is LinkFinder.Result.None -> Text(tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"), color = T.text, fontSize = 14.sp)
                 is LinkFinder.Result.Found -> LazyColumn(Modifier.heightIn(max = 260.dp)) {
                     items(r.links, key = { it }) { l ->

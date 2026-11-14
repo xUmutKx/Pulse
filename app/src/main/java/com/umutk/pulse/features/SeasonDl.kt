@@ -101,7 +101,9 @@ object SeasonDl {
                 if (idx < 0) return@run null
                 val src = s.optJSONArray("sources")
                 val tr = (0 until (src?.length() ?: 0)).joinToString("&") { "tr=" + Uri.encode(src!!.optString(it)) }
-                "http://127.0.0.1:11470/$hash/$idx" + if (tr.isNotEmpty()) "?$tr" else ""
+                // the engine in Pulse when it is there (no other app needed); else the Stremio server on the phone
+                if (TorrentEngine.available) "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + "&pulse_idx=$idx"
+                else "http://127.0.0.1:11470/$hash/$idx" + if (tr.isNotEmpty()) "?$tr" else ""
             } ?: continue
             best = Pick(url, size, text.trim().lineSequence().firstOrNull().orEmpty())
         }
