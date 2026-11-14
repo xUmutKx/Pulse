@@ -613,8 +613,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     if (!TorrentEngine.available) throw IOException("the torrent engine is in the full build, on 64-bit phones")
     val c = Downloads.appContext() ?: throw IOException("no context for the torrent engine")
     resumable = false
-    val work = File(file.parentFile, ".torrent-" + Integer.toHexString(url.hashCode()))
-    val got = TorrentEngine.download(c, url, torrent, work, { cancelled || paused },
+    // the torrent's own working folder sits next to the downloads (shared by the downloads of the same torrent: the episodes of a season pack)
+    val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
@@ -622,11 +622,16 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
                 rename(if (keepName) file.nameWithoutExtension + (if (ext.isNotEmpty()) ".$ext" else "") else name)
             }
         },
-        { d, t, _ -> total.value = t; done.value = d },
+        { d, t, p ->
+            // while the file list is on its way, or no peer is sending yet, the row says so (instead of a still "0 MB")
+            if (t > 0) total.value = t
+            done.value = d
+            error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
+        },
     ) ?: return false
     file.delete()
     if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }
-    runCatching { work.deleteRecursively() }
+    TorrentEngine.done(got)
     total.value = file.length(); done.value = file.length()
     Downloads.persist()
     return true
