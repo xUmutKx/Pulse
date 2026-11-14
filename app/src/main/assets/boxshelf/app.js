@@ -2861,6 +2861,7 @@ function qmPick(){if(!qm.open)return;if(qm.sub!=null)qsChoose();else qsPick()}
 function qmBack(){if(!qm.open)return;if(qm.sub!=null)qsCollapse();else qmClose()}
 function paintMenuGlyph(){const g=$("menuGlyph");if(!g)return;const h=showPad()?glyph("☰"):'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';if(g.dataset.h!==h){g.dataset.h=h;g.innerHTML=h}} // only when it changes: this runs with the hints on every shelf step
 $("menuBtn").addEventListener("click",e=>{e.stopPropagation();setInput("pointer");qm.open?qmClose():qmOpen()});
+window.__hudMenu=()=>{setInput("pointer");qm.open?qmClose():qmOpen()}; // (hudtap.js: the Menu button acts on the finger lifting)
 addEventListener("keydown",e=>{if(!qm.open||(window.BS_TOUR&&BS_TOUR.on()))return;if(mode!=="browse"&&mode!=="details"){qmClose(true);return} /* something else took over (Settings, a launch): the menu goes, the key is theirs */const k=e.key;const eat=()=>{e.preventDefault();e.stopImmediatePropagation()};setInput("kbd");
   if(k==="ArrowLeft"||k==="ArrowRight"){eat();qmSide(k==="ArrowRight"?1:-1)}else if(k==="ArrowDown"||k==="ArrowUp"){eat();qmMove(k==="ArrowDown"?1:-1)}
   else if(k==="Enter"||k===" "){eat();if(!e.repeat)qmPick()}else if(k==="Escape"||k==="Backspace"){eat();qmBack()}else if(k==="Tab"){eat();qmClose()}else if(k.length===1||/^F\d/.test(k)||/^(PageUp|PageDown|Home|End)$/.test(k))qmClose()},true); // a shortcut (M, G, S…) closes the Quick Shelf and does its thing
