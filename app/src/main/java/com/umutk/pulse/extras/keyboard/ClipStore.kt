@@ -82,7 +82,10 @@ object ClipStore {
             if (heif) {
                 val jpg = File(dir(c), "$now.jpg")
                 val ok = runCatching {
-                    val bmp = android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
+                    // ImageDecoder turns the picture the way the camera held the phone (a photo taken upright stays upright); BitmapFactory leaves it on its side
+                    val bmp = if (android.os.Build.VERSION.SDK_INT >= 28) android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(f)) { d, _, _ ->
+                        d.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE; d.setTargetSampleSize(2)
+                    } else android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
                     bmp != null && jpg.outputStream().use { o -> bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, o) }
                 }.getOrDefault(false)
                 if (ok) { f.delete(); items = items + ClipItem(now, "", jpg.path, now, false); trim(c); write(c); return load(c) }
