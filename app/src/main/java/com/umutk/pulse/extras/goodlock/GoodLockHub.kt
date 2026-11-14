@@ -178,7 +178,7 @@ fun GoodLockHub(onBack: () -> Unit) {
                         modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Look.accent).clickable { openStore(ctx, m.pkg) }.padding(horizontal = 12.dp, vertical = 6.dp))
                     Spacer(Modifier.width(6.dp))
                     // the system asks for the confirmation itself
-                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).clickable { uninstall(ctx, m.pkg) }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).clickable { com.umutk.pulse.features.AppUninstall.run(ctx, m.pkg) { reload() } }, contentAlignment = Alignment.Center) {
                         PIcon("delete", T.sub, 20.dp)
                     }
                 }
@@ -243,11 +243,6 @@ private fun openModule(ctx: Context, pkg: String) {
     val intent = launch ?: any?.let { Intent(Intent.ACTION_MAIN).setClassName(it.packageName, it.name) }
     if (intent != null && runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     runCatching { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-}
-
-/** The system's uninstall screen for [pkg]; the system asks for the confirmation. */
-private fun uninstall(ctx: Context, pkg: String) {
-    runCatching { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
 /** The app's page in the Galaxy Store (where the update is made), else its page on the store's website. */

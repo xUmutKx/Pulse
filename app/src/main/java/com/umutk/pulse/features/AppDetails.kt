@@ -302,7 +302,7 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 @Composable fun act(icon: String, desc: String, danger: Boolean = false, onClick: () -> Unit) {
                     Box(Modifier.size(50.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background((if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text).copy(alpha = .12f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-                        com.umutk.pulse.PIcon(icon, if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text, 24.dp)
+                        com.umutk.pulse.extras.gamehub.FluentIcon(icon, if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text, 24.dp)
                     }
                 }
                 act("play", tr("Open", "Aç")) {
@@ -359,14 +359,15 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     if (confirmUninstall && d != null) {
         val uninstall = {
             confirmUninstall = false
-            ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            // root or Shizuku removes it at once; otherwise Android asks. The page closes and the list drops the app when it is gone
+            AppUninstall.run(ctx, pkg) { ok -> if (ok) onBack() }
         }
         // the Windows looks frame the button themselves, so they get a plain TextButton inside it
         val winBtn = com.umutk.pulse.LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
         WinAlert(
             onDismissRequest = { confirmUninstall = false },
             title = { Text("Uninstall") },
-            text = { Text("Uninstall ${d.label}? The system will ask you to confirm the removal.", color = T.sub) },
+            text = { Text(if (com.umutk.pulse.extras.blackout.Privilege.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None) "Uninstall ${d.label}?" else "Uninstall ${d.label}? The system will ask you to confirm the removal.", color = T.sub) },
             confirmButton = { if (winBtn) androidx.compose.material3.TextButton(uninstall) { Text("Uninstall") } else PButton("Uninstall", danger = true, onClick = uninstall) },
             dismissButton = { if (winBtn) androidx.compose.material3.TextButton({ confirmUninstall = false }) { Text("Cancel") } else PButton("Cancel") { confirmUninstall = false } },
             warn = true,
