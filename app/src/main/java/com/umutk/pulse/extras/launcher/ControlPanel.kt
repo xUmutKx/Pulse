@@ -128,7 +128,7 @@ private val W7_CP_LINK = androidx.compose.ui.graphics.Color(0xFF0066CC)
 private fun Win7ControlPanel() {
     val open = LocalOpenTool.current
     androidx.compose.foundation.layout.BoxWithConstraints(
-        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFD8E6F6), androidx.compose.ui.graphics.Color.White), 0f, 300f)),
+        Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(if (LocalDesktopWin.current != null) listOf(androidx.compose.ui.graphics.Color(0xB8D8E6F6), androidx.compose.ui.graphics.Color(0xB8FFFFFF)) else listOf(androidx.compose.ui.graphics.Color(0xFFD8E6F6), androidx.compose.ui.graphics.Color.White), 0f, 300f)),
     ) {
         val two = maxWidth >= 560.dp
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
