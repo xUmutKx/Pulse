@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +49,7 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     val rootW = with(dens) { view.rootView.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { view.rootView.height.coerceAtLeast(1).toDp() }
     val amount = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
-        if (wall != null) Image(wall, null, Modifier.requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
+        if (wall != null) Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(tint))
         content()
     }
