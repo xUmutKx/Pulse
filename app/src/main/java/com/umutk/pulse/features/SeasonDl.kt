@@ -49,7 +49,7 @@ import java.net.URL
  */
 object SeasonDl {
     class Show(val id: String, val name: String, val year: String, val poster: String = "")
-    class Ep(val id: String, val season: Int, val episode: Int, val title: String)
+    class Ep(val id: String, val season: Int, val episode: Int, val title: String, val thumb: String = "", val overview: String = "")
     class Pick(val url: String, val size: Long, val label: String)
 
     private const val META = "https://v3-cinemeta.strem.io"
@@ -76,7 +76,7 @@ object SeasonDl {
         (0 until a.length()).mapNotNull { i ->
             val v = a.optJSONObject(i) ?: return@mapNotNull null
             val s = v.optInt("season", -1); val e = if (v.has("episode")) v.optInt("episode", -1) else v.optInt("number", -1)
-            if (s < 0 || e < 0) null else Ep(v.optString("id"), s, e, v.optString("title").ifBlank { v.optString("name") })
+            if (s < 0 || e < 0) null else Ep(v.optString("id"), s, e, v.optString("title").ifBlank { v.optString("name") }, v.optString("thumbnail"), v.optString("overview").ifBlank { v.optString("description") })
         }.filter { it.id.isNotBlank() }.sortedWith(compareBy({ it.season }, { it.episode }))
     }
 
@@ -114,16 +114,18 @@ object SeasonDl {
 
     private val posters = android.util.LruCache<String, android.graphics.Bitmap>(40)
 
+    /** A picture of the catalogue, loaded as it is shown; while it is not there (or there is none) the box shows [label], so a missing picture never leaves a hole. */
     @Composable
-    private fun Poster(url: String) {
+    private fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
         val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get(url), url) {
             if (value == null && url.startsWith("http")) value = withContext(Dispatchers.IO) {
                 runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }) } }.getOrNull()?.also { posters.put(url, it) }
             }
         }
         val b = bmp
-        androidx.compose.foundation.layout.Box(Modifier.width(46.dp).height(68.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(T.line.copy(alpha = .35f))) {
-            if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.fillMaxWidth().height(68.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        androidx.compose.foundation.layout.Box(Modifier.width(w).height(h).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(T.line.copy(alpha = .35f)), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.width(w).height(h), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            else if (label.isNotEmpty()) Text(label, color = T.sub, fontSize = 13.sp)
         }
     }
 
@@ -321,7 +323,13 @@ object SeasonDl {
                                         Row(Modifier.fillMaxWidth().clickable { picked = if (on) picked - ep.id else picked + ep.id }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                             androidx.compose.foundation.layout.Box(Modifier.width(22.dp).height(22.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { if (on) PIcon("check", T.accent, 20.dp) }
                                             Spacer(Modifier.width(8.dp))
-                                            Text("E%02d".format(ep.episode) + if (ep.title.isNotBlank()) "  ·  " + ep.title else "", color = if (on) T.text else T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                            // the episode's own picture; without one the series poster, and without that the number
+                                            Poster(ep.thumb.ifBlank { sel.poster }, 96.dp, 54.dp, "E%02d".format(ep.episode))
+                                            Spacer(Modifier.width(10.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text("E%02d".format(ep.episode) + if (ep.title.isNotBlank()) "  ·  " + ep.title else "", color = if (on) T.text else T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                if (ep.overview.isNotBlank()) Text(ep.overview, color = T.sub, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                            }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
                                     }
