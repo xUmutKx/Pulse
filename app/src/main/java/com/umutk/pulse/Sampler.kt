@@ -227,9 +227,32 @@ object Sampler {
 
     // a file the app cannot read (a GPU counter of another maker) is not asked again through a root shell every second: the empty answer is remembered for a minute
     private val unreadable = HashMap<String, Long>()
-    private fun readFile(path: String): String = try { File(path).readText() } catch (e: Exception) {
+    private var detected = false
+    private fun readFile(path: String): String = try { File(path).readText() } catch (e: Throwable) {
         val now = System.currentTimeMillis()
-        if (now - (unreadable[path] ?: 0L) < 60_000L) "" else if (Shell.root == true) Shell.run("cat $path").also { if (it.isBlank()) unreadable[path] = now } else "".also { unreadable[path] = now }
+        if (now - (unreadable[path] ?: 0L) < 60_000L) "" else {
+            // a file the app may not read (/proc/stat since Android 8): root or Shizuku reads it for the app, when either is there
+            if (!detected) { detected = true; runCatching { com.umutk.pulse.extras.blackout.Privilege.detect() } }
+            val out = if (com.umutk.pulse.extras.blackout.Privilege.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching { com.umutk.pulse.extras.blackout.Privilege.run("cat $path").text }.getOrDefault("")
+                else if (Shell.root == true) runCatching { Shell.run("cat $path") }.getOrDefault("") else ""
+            if (out.isBlank()) unreadable[path] = now
+            out
+        }
+    }
+
+    /** Without /proc/stat (no root, no Shizuku): how busy each core is, estimated from its clock between its lowest and highest speed (the files of the clock are open to every app). */
+    private fun freqLoad(): Pair<Int, List<Core>>? {
+        val n = Runtime.getRuntime().availableProcessors()
+        val cores = (0 until n).mapNotNull { i ->
+            val base = "/sys/devices/system/cpu/cpu$i/cpufreq/"
+            val cur = (runCatching { File(base + "scaling_cur_freq").readText().trim().toLongOrNull() }.getOrNull()) ?: return@mapNotNull null
+            val lo = runCatching { File(base + "cpuinfo_min_freq").readText().trim().toLongOrNull() }.getOrNull() ?: 0L
+            val hi = runCatching { File(base + "cpuinfo_max_freq").readText().trim().toLongOrNull() }.getOrNull() ?: return@mapNotNull null
+            if (hi <= lo) return@mapNotNull null
+            Core((100 * (cur - lo) / (hi - lo)).toInt().coerceIn(0, 100), (cur / 1000).toInt())
+        }
+        if (cores.isEmpty()) return null
+        return cores.map { it.usage }.average().toInt() to cores
     }
 
     private fun cpuTimes(): List<LongArray> =
@@ -256,7 +279,7 @@ object Sampler {
         val now = System.currentTimeMillis()
         lastSample = now
         // CPU
-        val cur = cpuTimes()
+        val cur = runCatching { cpuTimes() }.getOrDefault(emptyList())
         val prev = prevStat
         var total = 0
         var cores = emptyList<Core>()
@@ -266,6 +289,9 @@ object Sampler {
                 val khz = readFile("/sys/devices/system/cpu/cpu${i - 1}/cpufreq/scaling_cur_freq").trim().toIntOrNull() ?: 0
                 Core(usage(prev[i], cur[i]), khz / 1000)
             }
+        } else if (cur.size <= 1) {
+            // nothing could be read (no root, no Shizuku): the estimate from the clocks, so the figure is not stuck at 0
+            runCatching { freqLoad() }.getOrNull()?.let { total = it.first; cores = it.second }
         }
         prevStat = cur
         // RAM
