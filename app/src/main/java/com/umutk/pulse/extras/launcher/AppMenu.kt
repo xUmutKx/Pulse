@@ -204,3 +204,28 @@ fun MenuEditor() {
         com.umutk.pulse.PButton(tr("Reset the menu", "Menüyü sıfırla"), Modifier.padding(top = 8.dp)) { LauncherPrefs.menuOrder = emptyList(); LauncherPrefs.menuOff = emptySet(); LauncherPrefs.save(ctx) }
     }
 }
+
+
+/**
+ * The menu of a thing on the desktop that is not an installed app: a desktop shortcut (This PC, Recycle Bin, ...), a file, a folder, a picture or a web address. Open, take it off the
+ * desktop (the file itself stays), and Properties. It is drawn by the look like every other menu.
+ */
+@Composable
+fun DesktopItemMenu(app: LaunchApp, open: (LaunchApp) -> Unit, onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val w = LocalWindowLook.current
+    ContextPopup(236.dp, 230.dp, onDismiss) {
+        val ink = LocalMenuSkin.current?.text ?: w.text
+        ActionRow("open", tr("Open", "Aç"), ink) { onDismiss(); open(app) }
+        if (app.pkg.startsWith("pulse:")) ActionRow("eyeOff", tr("Remove from the desktop", "Masaüstünden kaldır"), ink) {
+            LauncherPrefs.desktopOn = LauncherPrefs.desktopOn - app.pkg; LauncherPrefs.save(ctx); onDismiss()
+        } else ActionRow("close", tr("Remove from the desktop", "Masaüstünden kaldır"), ink) {
+            LauncherPrefs.links = LauncherPrefs.links - app.pkg; LauncherPrefs.save(ctx); onDismiss()
+            android.widget.Toast.makeText(ctx, tr("Removed from the desktop", "Masaüstünden kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show()
+        }
+        ActionRow("properties", tr("Properties", "Özellikler"), ink) { onDismiss(); PropState.app = app; PropState.tab = 0 }
+        ActionRow("settings", tr("Customize this menu", "Bu menüyü düzenle"), ink) {
+            onDismiss(); runCatching { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).putExtra("cat", "menu")) }
+        }
+    }
+}

@@ -69,6 +69,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
@@ -234,7 +236,15 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                 onDrag = { c, _ -> c.consume(); val r = androidx.compose.ui.geometry.Rect(minOf(start.x, c.position.x), minOf(start.y, c.position.y), maxOf(start.x, c.position.x), maxOf(start.y, c.position.y)); box = r; picked = items.filter { boundsOf(it).overlaps(r) }.map { it.pkg }.toSet() },
                 onDragEnd = { box = null }, onDragCancel = { box = null },
             )
-        }.pointerInput(Unit) { detectTapGestures { picked = emptySet() } })
+        }.pointerInput(Unit) {
+            // a plain tap on the empty desktop drops the picked icons. The press is NOT consumed here (detectTapGestures consumes it), or the long press behind it, which opens the
+            // desktop's right-click menu, would never see the touch.
+            androidx.compose.foundation.gestures.awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                val up = waitForUpOrCancellation()
+                if (up != null) picked = emptySet()
+            }
+        })
         box?.let { r -> Box(Modifier.offset((r.left / d).dp, (r.top / d).dp).size((r.width / d).dp, (r.height / d).dp).background(Color(0x553E8BFF)).border(1.dp, Color(0xCC9CC8FF))) }
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)
@@ -399,6 +409,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (query.isBlank()) drawerBase else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
     }
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
+    var deskItemFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
         // the look's click when anything opens (the desktop shortcuts played it already)
         if (!app.pkg.startsWith("pulse:")) { LauncherSounds.prepare(ctx, look.id); LauncherSounds.click(look.id) }
@@ -413,9 +424,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     // what was put on the home screen by hand: files, pictures, folders, apps
     val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) {
-        // a file, picture or folder put on the home screen: a long press takes it off again (the file itself stays)
-        if (it.pkg.startsWith("file:") || it.pkg.startsWith("url:")) { LauncherPrefs.links = LauncherPrefs.links - it.pkg; LauncherPrefs.save(ctx); android.widget.Toast.makeText(ctx, tr("Removed from the home screen", "Ana ekrandan kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show() }
-        else if (!it.pkg.startsWith("pulse:")) actionFor = it
+        // a long press opens the menu of the thing: an app has its own, a desktop shortcut, a file, a picture or a web address has one too (Open, Remove, Properties)
+        if (it.pkg.startsWith("file:") || it.pkg.startsWith("url:") || it.pkg.startsWith("pulse:")) deskItemFor = it
+        else actionFor = it
     }
 
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
@@ -494,6 +505,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         FolderDialogs(visible, open) { actionFor = it }
         if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
+        deskItemFor?.let { app -> DesktopItemMenu(app, open) { deskItemFor = null } }
     }
 }
 

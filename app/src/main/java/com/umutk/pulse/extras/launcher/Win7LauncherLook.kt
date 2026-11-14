@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
+import com.umutk.pulse.win7Flag
 
 internal val W7_WINDOW = WinSkin("7", Brush.verticalGradient(listOf(Color(0xFFC4D8EE), Color(0xFF9DBBE0))), Color.Black, Color(0xFF7B9EC8), 5.dp, 7.dp,
     Color.White, Color(0xFFEEF3FA), Color.White, Color.Black, Color(0xFF6D6D6D), Color(0xFFCDE5FA), Color.Black, Color(0xFF7DA2CE))
@@ -184,8 +185,10 @@ class Win7LauncherLook : LauncherLook {
                     // the shut-down button sits at the bottom right of the right pane, with its arrow for the other ways out
                     Box(Modifier.fillMaxWidth().padding(end = 8.dp), contentAlignment = Alignment.CenterEnd) {
                         val shut = RoundedCornerShape(4.dp)
-                        Row(Modifier.height(26.dp).clip(shut).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, shut), verticalAlignment = Alignment.CenterVertically) {
-                            Text(tr("Log off", "Oturumu kapat"), color = Color(0xFF1B2B3F), fontSize = 12.sp, modifier = Modifier.clickable { onClose(); logOff(ctx) }.padding(horizontal = 10.dp).padding(vertical = 4.dp))
+                        Row(Modifier.height(30.dp).clip(shut).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, shut), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.fillMaxHeight().clickable { onClose(); logOff(ctx) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                                Text(tr("Log off", "Oturumu kapat"), color = Color(0xFF1B2B3F), fontSize = 12.sp, maxLines = 1, softWrap = false, lineHeight = 14.sp)
+                            }
                             Box(Modifier.width(1.dp).fillMaxHeight().background(W7_SHUT_EDGE))
                             Box(Modifier.width(22.dp).fillMaxHeight().clickable { power = !power }, contentAlignment = Alignment.Center) { Text("▸", color = Color(0xFF1B2B3F), fontSize = 12.sp) }
                         }
@@ -328,10 +331,10 @@ class Win7LauncherLook : LauncherLook {
         }
     }
 
-    /** Glossy round orb: radial body, a rim, the Windows flag in four panes and a top gloss. */
+    /** Glossy round orb: radial body, a rim, the waving Windows flag and a top gloss. */
     @Composable
     private fun StartOrb() {
-        Canvas(Modifier.size(32.dp)) {
+        Canvas(Modifier.size(38.dp)) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val r = size.minDimension / 2f
             drawCircle(
@@ -339,13 +342,11 @@ class Win7LauncherLook : LauncherLook {
                 radius = r, center = c,
             )
             drawCircle(W7_ORB_RIM, radius = r - .5f, center = c, style = Stroke(width = 1f))
-            // the flag: four waving panes in red, green, blue and yellow
-            val u = r * .14f; val g = r * .045f; val x0 = c.x - u * 2 - g / 2; val y0 = c.y - u * 2 - g / 2
-            fun pane(i: Int, j: Int, col: Color) = drawRect(col, Offset(x0 + i * (u * 2 + g) + (if (j == 1) u * .0f else 0f), y0 + j * (u * 2 + g) + i * u * .12f), Size(u * 2, u * 2))
-            pane(0, 0, Color(0xFFF25022)); pane(1, 0, Color(0xFF7FBA00)); pane(0, 1, Color(0xFF00A4EF)); pane(1, 1, Color(0xFFFFB900))
+            // the flag: the waving Windows flag, large enough to read as the logo
+            win7Flag(Offset(c.x, c.y + r * .02f), r * 1.0f)
             drawOval(
-                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.White.copy(alpha = 0f)), startY = c.y - r * .85f, endY = c.y),
-                topLeft = Offset(c.x - r * .7f, c.y - r * .85f), size = Size(r * 1.4f, r * .9f),
+                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .5f), Color.White.copy(alpha = 0f)), startY = c.y - r * .9f, endY = c.y - r * .1f),
+                topLeft = Offset(c.x - r * .72f, c.y - r * .92f), size = Size(r * 1.44f, r * .85f),
             )
         }
     }

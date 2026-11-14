@@ -128,6 +128,14 @@ fun PropertiesHost() {
                             Rule()
                             Fact(tr("Type", "Tür"), if (info.installed) tr("Application", "Uygulama") else tr("Shortcut", "Kısayol"))
                             Fact(tr("Opens with", "Şununla açılır"), "Pulse")
+                            // a file, a folder or a picture on the desktop: its real place, size and dates
+                            if (app.pkg.startsWith("file:")) {
+                                val f = java.io.File(app.pkg.removePrefix("file:"))
+                                Fact(tr("Location", "Konum"), f.parent.orEmpty())
+                                if (f.isFile) Fact(tr("Size", "Boyut"), size(f.length()))
+                                Fact(tr("Modified", "Değiştirme"), date(f.lastModified()))
+                            }
+                            if (app.pkg.startsWith("url:")) Fact(tr("Address", "Adres"), app.pkg.removePrefix("url:"))
                             if (info.installed) {
                                 Fact(tr("Location", "Konum"), info.dir)
                                 Fact(tr("Size", "Boyut"), size(info.bytes))
