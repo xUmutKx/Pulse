@@ -5136,3 +5136,6 @@ async function start(){bootMark("fonts");
 const ready=document.fonts&&document.fonts.load?Promise.all(["Lilita One","Bungee","Audiowide"].map(f=>document.fonts.load(`40px "${f}"`))):Promise.resolve();
 Promise.race([ready,new Promise(r=>setTimeout(r,2500))]).then(start,start);
 })();
+
+/* a Details button beside Search and Menu: Details opened only with a swipe up or the hint bar (which a phone without a controller does not show) */
+(function(){const b=$("detBtn");if(!b)return;b.addEventListener("click",()=>{try{if(mode==="browse"&&curGame())openDetails();else if(mode==="details")closeDetails()}catch(e){}})})();
