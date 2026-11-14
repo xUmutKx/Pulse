@@ -81,7 +81,7 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         launch { fade.animateTo(1f, tween(200)) }
         when (th.id) {
             "xp" -> { delay(1100); welcome = true; delay(900) }
-            "win7" -> { delay(2100); welcome = true; delay(900) }
+            "win7" -> { delay(2800); welcome = true; delay(900) }
             "win10" -> delay(1800)
             else -> delay(850)
         }
@@ -307,7 +307,7 @@ private fun XpWelcome() {
 private fun Win7Boot(@Suppress("UNUSED_PARAMETER") t: Float) {
     // the start of Windows 7: four coloured lights come out of the dark, swirl in and gather into the flag, which blooms with a soft glow; "Starting Windows" appears under it
     val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, tween(2000, easing = LinearEasing)) }
+    LaunchedEffect(Unit) { p.animateTo(1f, tween(2600, easing = LinearEasing)) }
     val v = p.value
     val glowPulse = if (v > .75f) .5f + .5f * sin((v - .75f) * 4f * PI.toFloat() * 2f) else 0f
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -322,17 +322,20 @@ private fun Win7Boot(@Suppress("UNUSED_PARAMETER") t: Float) {
             // the bloom behind the flag: grows as the lights arrive
             val bloom = ((v - .35f) / .4f).coerceIn(0f, 1f)
             if (bloom > 0f) {
-                drawCircle(Brush.radialGradient(listOf(Color(0xFFBFD9FF).copy(alpha = .35f * bloom + .12f * glowPulse), Color(0xFF3A6FCF).copy(alpha = .16f * bloom), Color.Transparent), center = c, radius = s * 2.3f), radius = s * 2.3f, center = c)
-                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .5f * bloom * (1f - .35f * glowPulse)), Color.Transparent), center = c, radius = s * .95f), radius = s * .95f, center = c)
+                // only a faint white halo round the flag (the real boot has no blue cloud)
+                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .16f * bloom + .06f * glowPulse), Color.Transparent), center = c, radius = s * 1.5f), radius = s * 1.5f, center = c)
             }
-            // each light flies along a curve, with a fading tail
+            // each light rises from the bottom and spirals in to its pane, with a fading tail
             if (v < .62f) for (k in 0 until 4) {
                 val col = WIN7_FLAG[k]
+                val dir = if (k % 2 == 0) 1f else -1f
+                val base = (k * 90f + 45f) * PI.toFloat() / 180f
                 for (n in 0..18) {
                     val tt = (tIn - n * .018f).coerceIn(0f, 1f)
                     val e = tt * tt * (3f - 2f * tt)
-                    val swirl = sin(e * PI.toFloat()) * (if (k % 2 == 0) 1f else -1f) * s * .9f
-                    val pos = Offset(starts[k].x + (targets[k].x - starts[k].x) * e + swirl * .6f, starts[k].y + (targets[k].y - starts[k].y) * e - swirl * .5f)
+                    val ang = base + dir * (1f - e) * 2.4f * PI.toFloat()
+                    val rad = (1f - e) * h * .32f
+                    val pos = Offset(targets[k].x + rad * cos(ang), targets[k].y + rad * sin(ang) * .8f + (1f - e) * h * .22f)
                     val a = (1f - n / 18f) * (1f - ((v - .5f) / .12f).coerceIn(0f, 1f))
                     drawCircle(col.copy(alpha = .55f * a), s * (.07f + .03f * (1f - n / 18f)), pos)
                     if (n == 0) drawCircle(Color.White.copy(alpha = .9f * a), s * .035f, pos)
@@ -351,6 +354,7 @@ private fun Win7Boot(@Suppress("UNUSED_PARAMETER") t: Float) {
                 style = TextStyle(shadow = Shadow(Color(0x66AFCBFF), Offset(0f, 0f), 12f)))
             Spacer(Modifier.weight(.38f))
         }
+        Text("Copyright © Microsoft Corporation", Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp), color = Color(0xFFB8B8B8).copy(alpha = ((v - .5f) / .3f).coerceIn(0f, 1f)), fontSize = 11.sp)
     }
 }
 
