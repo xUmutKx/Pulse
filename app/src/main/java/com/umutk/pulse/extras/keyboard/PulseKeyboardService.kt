@@ -637,7 +637,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var shiftDropAt = 0L
     private val corrExec = java.util.concurrent.Executors.newSingleThreadExecutor()
 
+    // a text field in this same process (Pulse's own fields) answers an edit with a selection report at once, on the same thread: finishing the open word from inside the report
+    // reported again, and again, until the stack was full. One report is worked on at a time; a report that arrives meanwhile is only noted.
+    private var inSelection = false
+
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        if (inSelection) { selStart = newSelStart; selEnd = newSelEnd; return }
+        inSelection = true
+        try { handleSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd) } finally { inSelection = false }
+    }
+
+    private fun handleSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         if (st.numpad != (currentInputEditorInfo?.inputType?.and(InputType.TYPE_MASK_CLASS).let { it == InputType.TYPE_CLASS_NUMBER || it == InputType.TYPE_CLASS_PHONE || it == InputType.TYPE_CLASS_DATETIME })) syncKind(currentInputEditorInfo)
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
@@ -649,8 +659,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // (the report may be late: a report right after our own edit is not the user's tap, and the open word is closed, never dropped)
         if (word.isNotEmpty() && SystemClock.uptimeMillis() - editAt > 250 && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd || newSelStart < candidatesEnd)) {
             // (a tap inside the word closes it too, so Backspace deletes at the cursor and not at the end of the word)
-            currentInputConnection?.finishComposingText()
-            word.clear(); peak = null; lastCorrection = null; updateSuggestions()
+            // the open word is dropped first: closing it reports the selection again, and a report must never find the word still open
+            val ic = currentInputConnection
+            word.clear(); peak = null; lastCorrection = null
+            ic?.finishComposingText()
+            updateSuggestions()
         }
         // the cursor came back to the end of a word (a tap behind it, or a delete that stopped there): the word opens again, so it stands in the middle of the bar
         // with its own suggestions and the next letter goes on with it, instead of the bar moving on to a new word
