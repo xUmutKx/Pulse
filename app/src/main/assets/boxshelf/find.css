@@ -154,3 +154,4 @@ body.find-slim #hints{visibility:hidden}
 .fg.bottomkb .fg-th{grid-row:1/span 2;width:60px;height:60px;border-radius:6px}
 .fg.bottomkb .fg-t{align-self:end;font-size:21px;line-height:1.25}
 .fg.bottomkb .fg-s{align-self:start;max-width:none;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
+#libBtn{gap:6px;align-items:center}#libBtn[hidden]{display:none}#libBtn span{font-size:12px;letter-spacing:.04em}

@@ -5,10 +5,11 @@
 (() => {
   const IDS = ['findBtn', 'detBtn', 'gridBtn', 'menuBtn'];
   let down = null, doneAt = -1e9, wasFind = false;
-  const btn = e => { const t = e.target; return t && t.closest ? t.closest('#findBtn,#detBtn,#gridBtn,#menuBtn') : null; };
+  const btn = e => { const t = e.target; return t && t.closest ? t.closest('#findBtn,#detBtn,#gridBtn,#libBtn,#menuBtn') : null; };
   const act = {
     findBtn: () => { const F = window.BS_FIND; if (!F) return; if (wasFind) F.close(); else F.open('ptr'); },
     detBtn: () => { const S = window.Shelf; if (!S) return; if (S.getMode && S.getMode() === 'details') S.closeDetails && S.closeDetails(); else S.openDetails && S.openDetails(); },
+    libBtn: () => { if (window.Shelf && Shelf.switchLib) Shelf.switchLib(); },
     gridBtn: () => { if (window.__pulseOpenGrid) window.__pulseOpenGrid(); },
     menuBtn: () => { if (window.__hudMenu) window.__hudMenu(); },
   };
