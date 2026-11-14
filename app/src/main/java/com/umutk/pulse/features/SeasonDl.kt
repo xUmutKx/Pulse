@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -248,7 +249,7 @@ object SeasonDl {
                     if (seasons.isNotEmpty() && sel != null && !movies) {
                         Text(tr("Season", "Sezon"), color = T.sub, fontSize = 12.sp)
                         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            androidx.compose.foundation.lazy.items(seasons) { sn ->
+                            items(seasons) { sn ->
                                 PButton("$sn", compact = true) {
                                     val list = eps.filter { it.season == sn }
                                     if (busy) return@PButton
