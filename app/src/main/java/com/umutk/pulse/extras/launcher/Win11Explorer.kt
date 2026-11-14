@@ -2,6 +2,8 @@ package com.umutk.pulse.extras.launcher
 
 import android.os.Environment
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -76,6 +78,8 @@ fun Win11Explorer() {
     var viewMenu by remember { mutableStateOf(false) }
     var sort by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
+    var menuFor by remember { mutableStateOf<File?>(null) }
+    val fr = remember { androidx.compose.ui.focus.FocusRequester() }
     fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" } }
     fun open(f: File) {
         if (f.isDirectory) go(f)
@@ -92,12 +96,24 @@ fun Win11Explorer() {
         }
     }
     val shown = if (query.isBlank()) files else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    fun selFile() = files.firstOrNull { it.path == sel }
+    val keys = Modifier.focusRequester(fr).focusable().fileKeys(
+        copy = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = false } },
+        cut = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = true } },
+        paste = { pasteInto(dir); rev++ },
+        delete = { selFile()?.let { menuFor = it } },
+        rename = { selFile()?.let { menuFor = it } },
+        open = { selFile()?.let { open(it) } },
+        back = { if (back.isNotEmpty()) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" } },
+    )
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
+    FileMenu(menuFor, dir, { menuFor = null }, { open(it) }) { rev++; if (it != null) sel = it }
     // the body of the window is see-through for this tool; its own panels are tinted
     val deskWin = LocalDesktopWin.current
     DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
     val pane = T.panel.copy(alpha = .55f)
     val line = T.sub.copy(alpha = .22f)
-    Column(Modifier.fillMaxSize().background(T.bg.copy(alpha = .35f))) {
+    Column(Modifier.fillMaxSize().then(keys).background(T.bg.copy(alpha = .35f))) {
         // the tab
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(Modifier.clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(pane).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -200,7 +216,7 @@ fun Win11Explorer() {
                         val on = f.path == sel
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).then(if (on) Modifier.background(T.accent.copy(alpha = .22f)) else Modifier)
-                                .clickable { if (on) open(f) else sel = f.path }.padding(horizontal = 8.dp, vertical = 8.dp),
+                                .fileRow({ fr.requestFocus(); if (on) open(f) else sel = f.path }, { sel = f.path; menuFor = f }).padding(horizontal = 8.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             PIcon(if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f), if (isDir) W11_FOLDER else T.accent, 18.dp)

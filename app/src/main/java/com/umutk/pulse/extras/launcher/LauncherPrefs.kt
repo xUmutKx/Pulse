@@ -143,7 +143,7 @@ object LauncherPrefs {
     /** The names the user gave to apps (package -> name), shown in every list of the launcher. */
     var names by mutableStateOf<Map<String, String>>(emptyMap())
     /** The room between the desktop icons, as a percent of the grid cell (smaller packs them closer). */
-    var iconSpace by mutableStateOf(88)
+    var iconSpace by mutableStateOf(110)
     /** On Windows desktops Pulse's own apps open in windows of the desktop (the default); off: each opens as an app of its own, full screen. */
     var windowedApps by mutableStateOf(true)
     /** The free places (dp, "x,y") of the icons while [snapIcons] is off. */
@@ -190,7 +190,7 @@ object LauncherPrefs {
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons2") == "true"
-        iconSpace = p.getProperty("iconSpace")?.toIntOrNull()?.coerceIn(60, 130) ?: 88
+        iconSpace = p.getProperty("iconSpace2")?.toIntOrNull()?.coerceIn(60, 160) ?: 110
         windowedApps = p.getProperty("windowedApps") != "false"
         names = p.stringPropertyNames().filter { it.startsWith("lname.") }.associate { it.removePrefix("lname.") to p.getProperty(it) }
         iconFree = p.stringPropertyNames().filter { it.startsWith("ifree.") }.associate { it.removePrefix("ifree.") to p.getProperty(it) }
@@ -244,7 +244,7 @@ object LauncherPrefs {
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
         p.setProperty("snapIcons2", snapIcons.toString())
-        p.setProperty("iconSpace", iconSpace.toString())
+        p.setProperty("iconSpace2", iconSpace.toString())
         p.setProperty("windowedApps", windowedApps.toString())
         names.forEach { (id, v) -> p.setProperty("lname.$id", v) }
         iconFree.forEach { (id, v) -> p.setProperty("ifree.$id", v) }
