@@ -161,6 +161,8 @@ class DlTask(val url: String, file: File) {
     @Volatile var waiting = false
     /** an HLS (m3u8) download: how many of its pieces are already in the file */
     @Volatile var hlsNext = 0
+    /** the name was chosen by the caller (a season episode): the server's own name is not taken */
+    @Volatile var keepName = false
     /** a store download: keeps the name it was given, is not saved in the list and posts no end notification */
     @Volatile var quiet = false
     private var pending = 0L
@@ -291,19 +293,21 @@ object Downloads {
     internal fun cleanName(raw: String?): String? = raw?.substringAfterLast('/')?.substringAfterLast('\\')
         ?.replace(Regex("[:*?\"<>|\\x00-\\x1f]"), "_")?.trim()?.trimStart('.')?.take(120)?.takeIf { it.isNotBlank() }
 
-    fun add(ctx: Context, url: String) {
+    /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
+    fun add(ctx: Context, url: String, fixedName: String? = null) {
         val c = ctx.applicationContext
         app = c
         scope.launch {
             val dir = File(dirPath)
             // a link of the local Stremio server ends in the file's number in the torrent ("…/64"): it is named after the torrent and the number at first, and takes the real
             // name once the server has answered (asked then, not before: the start must not wait for it)
-            val name = streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"
+            val name = fixedName?.let { cleanName(it) } ?: streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"
             val t = try { DlTask(url, reserve(dir, name)) } catch (e: Exception) {
                 DlTask(url, File(dir, name)).apply { state.value = DlState.FAILED; error.value = "cannot write to ${dir.path}: ${e.message ?: e.javaClass.simpleName}" }
             }
             // a torrent stream gives its first pieces in order: eight connections asking for eight places made it fetch pieces all over the file and start slowly
             if (isStreamLink(url)) t.noSplit = true
+            if (fixedName != null) t.keepName = true
             tasks.update { it + t }
             persist()
             if (t.state.value != DlState.RUNNING) return@launch
@@ -815,7 +819,7 @@ private suspend fun DlTask.transfer(): Boolean {
         etag = tag
         lastMod = mod
         if (!started && !quiet) {
-            val given = dispositionName(first.getHeaderField("Content-Disposition")) ?: streamName(url) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url }
+            val given = if (keepName) null else dispositionName(first.getHeaderField("Content-Disposition")) ?: streamName(url) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url }
             rename(withExtension(given ?: file.name, first.contentType))
         }
         // no ranges this time: the parts cannot go on, the copy below starts from the first byte
@@ -1187,6 +1191,7 @@ private fun DownloadsContent() {
                 }
             }
         }
+        SeasonDl.Card()
         // a link still being looked at: a row with a small spinner, until its download starts (then its own row with the bar takes over)
         pending.forEach { u ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
