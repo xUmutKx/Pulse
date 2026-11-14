@@ -1225,6 +1225,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         Box(Modifier.fillMaxWidth().onGloballyPositioned { listBox = it }.pointerInput(shownNow) {
             val order = HashMap<String, Int>().also { m -> shownNow.forEachIndexed { i, f -> m[f.path] = i } }
             var last = -1
+            // the picks from before the slide and the row it started on: the finger picks the rows between that row and where it is now, so going back over rows lets them go again
+            var anchor = -1
+            var base: Set<String> = emptySet()
             fun hitAt(p: androidx.compose.ui.geometry.Offset): Int {
                 val root = listBox?.takeIf { it.isAttached }?.localToRoot(p) ?: return -1
                 for ((path, c) in hits.map) if (c.isAttached && c.boundsInRoot().contains(root)) return order[path] ?: -1
@@ -1232,20 +1235,19 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
             detectDragGesturesAfterLongPress(
                 // the first long press picks the row and goes straight on into the slide (the row itself has no long press of its own any more, so nothing has to be picked first)
-                onDragStart = { p -> last = hitAt(p); if (last >= 0) longPick(shownNow[last].path) },
-                onDragEnd = { last = -1 }, onDragCancel = { last = -1 },
+                onDragStart = { p -> last = hitAt(p); anchor = last; if (last >= 0) { longPick(shownNow[last].path); base = sel } },
+                onDragEnd = { last = -1; anchor = -1 }, onDragCancel = { last = -1; anchor = -1 },
                 onDrag = { change, _ ->
                     change.consume()
                     val i = hitAt(change.position)
-                    if (i >= 0) {
-                        val from = if (last < 0) i else last
-                        sel = sel + (minOf(from, i)..maxOf(from, i)).map { shownNow[it].path }
+                    if (i >= 0 && anchor >= 0) {
+                        sel = base + (minOf(anchor, i)..maxOf(anchor, i)).map { shownNow[it].path }
                         last = i; lastPick = shownNow[i].path
                     }
                     val y = listBox?.takeIf { it.isAttached }?.localToRoot(change.position)?.y ?: 0f
                     val dm = ctx.resources.displayMetrics
-                    if (y < ExScroll.viewTop + 72 * dm.density) scope.launch { exScroll.scrollBy(-34f) }
-                    else if (y > dm.heightPixels - 200 * dm.density) scope.launch { exScroll.scrollBy(34f) }
+                    if (y < ExScroll.viewTop + 72 * dm.density) scope.launch { exScroll.scrollBy(-20f) }
+                    else if (y > dm.heightPixels - 200 * dm.density) scope.launch { exScroll.scrollBy(20f) }
                 },
             )
         }) {
