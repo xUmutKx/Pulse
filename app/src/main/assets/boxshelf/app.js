@@ -5138,8 +5138,9 @@ async function start(){bootMark("fonts");
 // the faces the generated covers use (bundled in fonts/, linked from index.html) — so covers never bake in fallback fonts
 const ready=document.fonts&&document.fonts.load?Promise.all(["Lilita One","Bungee","Audiowide"].map(f=>document.fonts.load(`40px "${f}"`))):Promise.resolve();
 Promise.race([ready,new Promise(r=>setTimeout(r,2500))]).then(start,start);
-})();
-
+// (Pulse additions: inside the shelf's own scope, where $, mode, shelves and BOX_VAR are)
+if(!window.Shelf.openDetails)window.Shelf.openDetails=()=>{if(mode==="browse"&&curGame())openDetails()};
+if(!window.Shelf.closeDetails)window.Shelf.closeDetails=()=>closeDetails(true);
 /* a Details button beside Search and Menu: Details opened only with a swipe up or the hint bar (which a phone without a controller does not show) */
 (function(){const b=$("detBtn");if(!b)return;b.addEventListener("click",()=>{try{if(mode==="browse"&&curGame())openDetails();else if(mode==="details")closeDetails()}catch(e){}})})();
 
@@ -5155,3 +5156,4 @@ function spineInfo(g,sh){
 window.Shelf.switchLib=()=>{if(shelves.length<2||(mode!=="browse"&&mode!=="details")||sysBusy())return false;setSystem(((pendingSys>=0?pendingSys:sysIdx)+1)%shelves.length);return true};
 $("libBtn")&&$("libBtn").addEventListener("click",()=>{try{Shelf.switchLib()}catch(e){}});
 setInterval(()=>{const b=$("libBtn");if(!b)return;const two=shelves&&shelves.length>1;if(b.hidden===two)b.hidden=!two;if(two){const t=(shelves[sysIdx]&&shelves[sysIdx].name)||"";const s=b.querySelector("span");if(s&&s.textContent!==t)s.textContent=t;b.title="Library: "+t}},1000);
+})();
