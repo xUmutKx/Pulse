@@ -24,15 +24,16 @@ object TorrentEngine {
     private fun sm(): SessionManager = session ?: SessionManager().also { it.start(); session = it }
 
     /**
-     * Downloads the wanted file of [magnet] into [dir] and returns it; null when [stop] said so first (the partial data stays for a later go).
+     * Downloads the wanted file of [magnet] (or of the .torrent file [torrent], when there is one) into [dir] and returns it; null when [stop] said so first (the partial data stays for a later go).
      * [onName] gets the file's name once the file list is known; [onProgress] the bytes of the wanted file so far, its size, and the peers.
      */
-    suspend fun download(ctx: Context, magnet: String, dir: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? = withContext(Dispatchers.IO) {
+    suspend fun download(ctx: Context, magnet: String, torrent: ByteArray?, dir: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? = withContext(Dispatchers.IO) {
         val s = try { sm() } catch (e: Throwable) { throw IOException("the torrent engine could not start: ${e.message ?: e.javaClass.simpleName}") }
         val idx = magnetParam(magnet, "pulse_idx")?.toIntOrNull() ?: -1
         dir.mkdirs()
         // the file list comes from the peers: it can take a while when there are few of them
-        var data: ByteArray? = null
+        // a .torrent file brings the list itself; a magnet link asks the peers for it
+        var data: ByteArray? = torrent
         var tries = 0
         while (data == null && tries < 3) {
             if (stop()) return@withContext null

@@ -609,12 +609,12 @@ internal fun magnetParam(url: String, key: String): String? =
  * A magnet link: the torrent engine downloads the one file wanted into a working folder, and the finished file takes the place of the empty one reserved for this download.
  * Pausing or removing stops it and keeps what is there, so a continue goes on from the pieces already on disk.
  */
-private suspend fun DlTask.transferTorrent(): Boolean {
+private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     if (!TorrentEngine.available) throw IOException("the torrent engine is in the full build, on 64-bit phones")
     val c = Downloads.appContext() ?: throw IOException("no context for the torrent engine")
     resumable = false
     val work = File(file.parentFile, ".torrent-" + Integer.toHexString(url.hashCode()))
-    val got = TorrentEngine.download(c, url, work, { cancelled || paused },
+    val got = TorrentEngine.download(c, url, torrent, work, { cancelled || paused },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
@@ -631,6 +631,9 @@ private suspend fun DlTask.transferTorrent(): Boolean {
     Downloads.persist()
     return true
 }
+
+/** A link to a .torrent file. */
+internal fun isTorrentFileUrl(u: String) = Regex("\\.torrent(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u)
 
 /** A link to an HLS playlist (.m3u8): a list of the video's pieces, not a video. */
 internal fun isHlsUrl(u: String) = Regex("\\.m3u8(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u)
@@ -837,7 +840,9 @@ private fun DlTask.rename(raw: String?) {
 /** true when the whole file arrived; false when it was paused or removed on the way. */
 private suspend fun DlTask.transfer(): Boolean {
     // a magnet link: the torrent engine fetches the file from the peers
-    if (url.startsWith("magnet:", ignoreCase = true)) return transferTorrent()
+    if (url.startsWith("magnet:", ignoreCase = true)) return transferTorrent(null)
+    // a link to a .torrent file: the small file is fetched, and the engine downloads what it lists
+    if (isTorrentFileUrl(url)) return transferTorrent(hlsBytes(url))
     // a playlist (m3u8) is not the video: its pieces are fetched one after the other into one file
     if (isHlsUrl(url)) return transferHls()
     // split parts written into a file that is gone would leave holes
@@ -852,6 +857,7 @@ private suspend fun DlTask.transfer(): Boolean {
         if (code == 416 && have > 0) { if (have == total.value) return true; throw Changed() }
         if (code !in 200..299) throw IOException("HTTP $code")
         if (!started && first.contentType?.contains("mpegurl", ignoreCase = true) == true) { first.disconnect(); return transferHls() }
+        if (!started && first.contentType?.contains("bittorrent", ignoreCase = true) == true) { first.disconnect(); return transferTorrent(hlsBytes(url)) }
         val ranged = code == 206
         val size = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else com.umutk.pulse.Compat.contentLength(first)
         val tag = first.getHeaderField("ETag")
