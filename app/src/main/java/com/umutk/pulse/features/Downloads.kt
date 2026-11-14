@@ -159,6 +159,8 @@ class DlTask(val url: String, file: File) {
     @Volatile var lastMod: String? = null
     /** true while the transfer waits for the network to come back */
     @Volatile var waiting = false
+    /** an HLS (m3u8) download: how many of its pieces are already in the file */
+    @Volatile var hlsNext = 0
     /** a store download: keeps the name it was given, is not saved in the list and posts no end notification */
     @Volatile var quiet = false
     private var pending = 0L
@@ -296,7 +298,7 @@ object Downloads {
             val dir = File(dirPath)
             // a link of the local Stremio server ends in the file's number in the torrent ("…/64"): it is named after the torrent and the number at first, and takes the real
             // name once the server has answered (asked then, not before: the start must not wait for it)
-            val name = streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment) ?: "download"
+            val name = streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"
             val t = try { DlTask(url, reserve(dir, name)) } catch (e: Exception) {
                 DlTask(url, File(dir, name)).apply { state.value = DlState.FAILED; error.value = "cannot write to ${dir.path}: ${e.message ?: e.javaClass.simpleName}" }
             }
@@ -586,6 +588,97 @@ private fun dispositionName(h: String?): String? {
     return Regex("filename\\s*=\\s*\"?([^\";]+)\"?", RegexOption.IGNORE_CASE).find(h)?.groupValues?.get(1)?.trim()
 }
 
+/** A link to an HLS playlist (.m3u8): a list of the video's pieces, not a video. */
+internal fun isHlsUrl(u: String) = Regex("\\.m3u8(\\?|#|$)", RegexOption.IGNORE_CASE).containsMatchIn(u)
+
+private class HlsSeg(val uri: String, val keyUri: String?, val iv: ByteArray?, val seq: Long)
+
+private fun hlsBytes(u: String): ByteArray {
+    val c = open(u, "bytes=0-")
+    try {
+        if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
+        return c.inputStream.use { it.readBytes() }
+    } finally { c.disconnect() }
+}
+
+private fun hlsResolve(base: String, ref: String): String = java.net.URI(base).resolve(ref.trim()).toString()
+private fun hlsAttr(line: String, key: String): String? =
+    Regex("(?:^|[,:])" + key + "=(\"[^\"]*\"|[^,]*)").find(line)?.groupValues?.get(1)?.trim('"')
+
+/**
+ * Downloads an HLS playlist: the best quality of a master list, then every piece in order into one file (.ts, or .mp4 when the pieces are fragmented MP4),
+ * four pieces at a time. AES-128 encrypted pieces are decrypted. A retry goes on from the piece it had reached.
+ */
+private suspend fun DlTask.transferHls(): Boolean {
+    resumable = false
+    var listUrl = url
+    var text = String(hlsBytes(listUrl))
+    if (text.contains("#EXT-X-STREAM-INF")) {
+        val ls = text.lines(); var best = -1L; var pick: String? = null
+        for (i in ls.indices) if (ls[i].startsWith("#EXT-X-STREAM-INF")) {
+            val bw = hlsAttr(ls[i], "BANDWIDTH")?.toLongOrNull() ?: 0L
+            val uri = ls.drop(i + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") }
+            if (uri != null && bw >= best) { best = bw; pick = uri }
+        }
+        listUrl = hlsResolve(listUrl, pick ?: throw IOException("no video in the playlist"))
+        text = String(hlsBytes(listUrl))
+    }
+    var seq = 0L; var keyUri: String? = null; var iv: ByteArray? = null; var map: String? = null
+    val segs = ArrayList<HlsSeg>()
+    for (ln in text.lines()) {
+        val l = ln.trim()
+        when {
+            l.startsWith("#EXT-X-MEDIA-SEQUENCE:") -> seq = l.substringAfter(':').trim().toLongOrNull() ?: 0L
+            l.startsWith("#EXT-X-KEY:") -> {
+                if (hlsAttr(l, "METHOD") == "AES-128") {
+                    keyUri = hlsAttr(l, "URI")?.let { hlsResolve(listUrl, it) }
+                    iv = hlsAttr(l, "IV")?.removePrefix("0x")?.removePrefix("0X")?.padStart(32, '0')?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
+                } else if (hlsAttr(l, "METHOD") == "NONE") { keyUri = null; iv = null }
+                else throw IOException("this playlist is encrypted in a way Pulse cannot read")
+            }
+            l.startsWith("#EXT-X-MAP:") -> map = hlsAttr(l, "URI")?.let { hlsResolve(listUrl, it) }
+            l.isNotEmpty() && !l.startsWith("#") -> { segs.add(HlsSeg(hlsResolve(listUrl, l), keyUri, iv, seq)); seq++ }
+        }
+    }
+    if (segs.isEmpty()) throw IOException("the playlist has no pieces")
+    // the file takes the right extension while nothing is written yet
+    if (hlsNext == 0 && !quiet) rename(file.nameWithoutExtension.ifBlank { "video" } + if (map != null) ".mp4" else ".ts")
+    val keys = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+    fun piece(s: HlsSeg): ByteArray {
+        var raw = hlsBytes(s.uri)
+        val k = s.keyUri
+        if (k != null) {
+            val key = keys.getOrPut(k) { hlsBytes(k) }
+            val v = s.iv ?: ByteArray(16).also { b -> var n = s.seq; for (i in 15 downTo 8) { b[i] = (n and 0xff).toByte(); n = n shr 8 } }
+            val c = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
+            c.init(javax.crypto.Cipher.DECRYPT_MODE, javax.crypto.spec.SecretKeySpec(key, "AES"), javax.crypto.spec.IvParameterSpec(v))
+            raw = c.doFinal(raw)
+        }
+        return raw
+    }
+    val fresh = hlsNext == 0
+    if (fresh) { done.value = 0L; lastDone = 0L }
+    val out = FileOutputStream(file, !fresh)
+    try {
+        if (fresh && map != null) { val init = hlsBytes(map); out.write(init); count(init.size.toLong()) }
+        var i = hlsNext
+        while (i < segs.size) {
+            if (cancelled || paused) { return false }
+            val chunk = segs.subList(i, minOf(i + 4, segs.size))
+            val got = coroutineScope { chunk.map { s -> async(Dispatchers.IO) { piece(s) } }.awaitAll() }
+            for (b in got) { out.write(b); count(b.size.toLong()) }
+            i += chunk.size
+            hlsNext = i
+            // the size is not known before the end: it is guessed from the pieces so far (the percent and the time left follow it)
+            total.value = if (i > 0) maxOf(done.value + 1, (done.value.toDouble() / i * segs.size).toLong()) else -1L
+        }
+        out.flush()
+    } finally { runCatching { out.close() }; flush() }
+    total.value = done.value
+    Downloads.persist()
+    return true
+}
+
 /** Errors without progress in a row before a download fails. Time offline does not count. */
 private const val RETRIES = 8
 
@@ -677,6 +770,7 @@ private suspend fun DlTask.waitForNetwork() {
 
 /** Drops every saved byte: the next try fetches the file from the start. */
 private fun DlTask.startOver() {
+    hlsNext = 0
     partPos = null
     resumable = false
     etag = null
@@ -698,6 +792,8 @@ private fun DlTask.rename(raw: String?) {
 
 /** true when the whole file arrived; false when it was paused or removed on the way. */
 private suspend fun DlTask.transfer(): Boolean {
+    // a playlist (m3u8) is not the video: its pieces are fetched one after the other into one file
+    if (isHlsUrl(url)) return transferHls()
     // split parts written into a file that is gone would leave holes
     if (partPos != null && !file.isFile) partPos = null
     // a single sequential copy resumes from its length; a split download resumes from its part positions
@@ -709,6 +805,7 @@ private suspend fun DlTask.transfer(): Boolean {
         // asked from the end of the file: the saved copy is already whole, or the file shrank
         if (code == 416 && have > 0) { if (have == total.value) return true; throw Changed() }
         if (code !in 200..299) throw IOException("HTTP $code")
+        if (!started && first.contentType?.contains("mpegurl", ignoreCase = true) == true) { first.disconnect(); return transferHls() }
         val ranged = code == 206
         val size = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else com.umutk.pulse.Compat.contentLength(first)
         val tag = first.getHeaderField("ETag")
