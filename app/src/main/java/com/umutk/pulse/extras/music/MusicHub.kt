@@ -365,14 +365,20 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
             value = t?.let { tr0 -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.umutk.pulse.extras.music.poweramp.PowerampCovers.saved(wctx, tr0.path) ?: trackArt(wctx, tr0) }.getOrNull() } }
         }
         val artist = remember(t?.path) { t?.artistFor(wctx).orEmpty() }
-        val albums = remember(library) { library.groupBy { it.album.orEmpty().ifBlank { "—" } }.map { (n, ts) -> com.umutk.pulse.extras.music.wmp7.Wmp12Album(n, ts.first().shownArtist(), ts.first().path) }.sortedBy { it.name.lowercase() }.take(400) }
+        // shuffle and repeat as the phone's player has them now (a press goes to the next mode of PlayModes)
+        var repeat by remember { mutableIntStateOf(engine.player.repeatMode) }
+        val winMax = com.umutk.pulse.extras.launcher.LocalDesktopWin.current?.max == true
         com.umutk.pulse.extras.music.wmp7.Wmp12Player(
             title = t?.displayName().orEmpty(), artist = artist, album = t?.album, cover = cover, playing = st.isPlaying, pos = pos.toInt(), dur = dur.toInt(),
             onPrev = engine::previous, onPlayPause = engine::togglePlayPause, onNext = engine::next, onStop = { engine.pause(); engine.seekTo(0) }, onSeek = { engine.seekTo(it) },
-            queue = st.queue.map { it.displayName() }, current = st.index, onPick = engine::playAt,
-            albums = albums,
+            queue = st.queue, current = st.index, onPick = engine::playAt,
+            library = library,
             albumCover = { path -> library.firstOrNull { it.path == path }?.let { tr1 -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { com.umutk.pulse.extras.music.poweramp.PowerampCovers.saved(wctx, tr1.path) ?: trackArt(wctx, tr1) }.getOrNull() } } },
-            onAlbum = { name -> library.filter { (it.album.orEmpty().ifBlank { "—" }) == name }.let { l -> if (l.isNotEmpty()) engine.playQueue(l, 0) } },
+            onPlayTracks = { l, at -> if (l.isNotEmpty()) engine.playQueue(l, at) },
+            playlists = remember { com.umutk.pulse.extras.music.Playlists.names(wctx) }, loadPlaylist = { n -> com.umutk.pulse.extras.music.Playlists.load(wctx, n) },
+            shuffleOn = com.umutk.pulse.extras.music.PlayModes.shuffle != com.umutk.pulse.extras.music.ShuffleKind.OFF, repeat = repeat,
+            onShuffle = { com.umutk.pulse.extras.music.PlayModes.cycleShuffle(wctx) }, onRepeat = { repeat = com.umutk.pulse.extras.music.PlayModes.cycleRepeat(wctx) },
+            maximized = winMax,
         )
         return
     }
