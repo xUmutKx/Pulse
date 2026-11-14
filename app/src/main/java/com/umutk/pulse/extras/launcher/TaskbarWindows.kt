@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +54,7 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
                 else -> Modifier.clip(shape).background(Color.White.copy(alpha = if (active) .14f else .06f))
             }
             Box(
-                Modifier.width(if (kind == "95") 120.dp else 112.dp).height(height).then(look).drawBehind {
+                Modifier.width(if (kind == "95") 120.dp else if (kind == "7" || kind == "10" || kind == "11") 46.dp else 112.dp).height(height).then(look).drawBehind {
                     // what the window is doing, on its button: Windows 7 fills the button with glossy colour, the others a bar along its foot
                     val f = w.progress ?: return@drawBehind
                     val bad = w.pstate == ProgressState.Error; val pz = w.pstate == ProgressState.Paused
@@ -76,6 +77,11 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
                 }.clickable { if (active) DesktopWindows.minimize(w) else { w.min = false; DesktopWindows.front(w) } }.padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
+                // Windows 7, 10 and 11 show the app's picture on the button, as the real taskbars do; 95 and XP keep the caption
+                if (kind == "7" || kind == "10" || kind == "11") {
+                    val key = remember(w.start) { taskbarIconKey(w.start) }
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon(key, ink, 20.dp) }
+                } else
                 Text(w.title, color = if (kind == "95") Color.Black else ink, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     fontWeight = if (kind == "95" && active) androidx.compose.ui.text.font.FontWeight.Bold else null)
                 // the underline of Windows 10 / 11: the open window, longer when it is in front
@@ -84,3 +90,12 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
         }
     }
 }
+
+/** The picture of a taskbar button: the picture of the app's own entry, else one by the kind of page it shows. */
+internal fun taskbarIconKey(route: String): String =
+    desktopItems().firstOrNull { it.pkg == "pulse:x:$route" }?.iconKey ?: when {
+        route == "page:device" -> "phone"; route == "page:filestabs" || route.startsWith("view:") -> "folder"
+        route == "controlpanel" || route == "winsettings" -> "settings"; route == "page:processes" || route == "page:performance" -> "performance"
+        route == "paint" -> "palette"; route == "win:gallery" -> "image"; route.startsWith("win:fun:") -> "chat"
+        else -> "gridView"
+    }

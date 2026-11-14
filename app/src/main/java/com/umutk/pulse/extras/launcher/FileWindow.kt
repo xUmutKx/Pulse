@@ -154,3 +154,13 @@ private fun WinBtn(label: String, onClick: () -> Unit) {
         Text(label, color = T.text, fontSize = 14.sp)
     }
 }
+
+/** The pictures of the phone in a window of the desktop (the "Pictures" place of the Start menu): the camera folder as thumbnails, a tap opens the picture in its own window. */
+@Composable
+fun GalleryWindow() {
+    val root = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DCIM)
+    val folder = remember { File(root, "Camera").takeIf { it.isDirectory } ?: root }
+    Box(Modifier.fillMaxSize().background(T.bg)) {
+        com.umutk.pulse.ImageGalleryGrid(folder) { f -> DesktopWindows.open("view:" + f.path, f.name) }
+    }
+}

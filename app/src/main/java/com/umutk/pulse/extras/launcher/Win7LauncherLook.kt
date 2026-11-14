@@ -138,7 +138,8 @@ class Win7LauncherLook : LauncherLook {
             ) {
                 // left pane: the programs, All programs as a folder tree, the search at the foot
                 Column(Modifier.weight(1.25f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color.White)) {
-                    val pinned = remember(state.dock, state.apps) { (state.dock + state.apps).distinctBy { it.pkg }.take(9) }
+                    // (the joke apps are only in All programs, under their own group, not among the first nine)
+                    val pinned = remember(state.dock, state.apps) { (state.dock + state.apps).filter { !it.pkg.startsWith("pulse:x:win:fun:") }.distinctBy { it.pkg }.take(9) }
                     val found = remember(query, state.apps) { state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) } }
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 4.dp)) {
                         when {
@@ -168,7 +169,7 @@ class Win7LauncherLook : LauncherLook {
                     }
                     Spacer(Modifier.height(4.dp))
                     W7Place("folder", tr("Documents", "Belgeler")) { go("pulse:files") }
-                    W7Place("image", tr("Pictures", "Resimler")) { go("pulse:files") }
+                    W7Place("image", tr("Pictures", "Resimler")) { DesktopWindows.open("win:gallery", tr("Pictures", "Resimler")) }
                     W7Place("music", tr("Music", "Müzik")) { go("pulse:x:music") }
                     W7Place("gridView", tr("Games", "Oyunlar")) { go("pulse:games") }
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(Color(0x44FFFFFF)))
