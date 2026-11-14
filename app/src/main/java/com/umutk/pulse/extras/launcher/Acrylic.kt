@@ -1,11 +1,10 @@
 package com.umutk.pulse.extras.launcher
 
-import androidx.compose.foundation.shape.RectangleShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
@@ -34,7 +33,7 @@ import androidx.compose.ui.unit.dp
  * the desktop show through the taskbar, the flyouts and the menus. [tint] sets how much of the picture shows (the less opaque, the more).
  */
 @Composable
-fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape: Shape = androidx.compose.foundation.shape.RectangleShape, blur: Dp = 26.dp, content: @Composable BoxScope.() -> Unit) {
+fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape: Shape = androidx.compose.ui.graphics.RectangleShape, blur: Dp = 26.dp, content: @Composable BoxScope.() -> Unit) {
     val ctx = LocalContext.current
     val cfg = LocalConfiguration.current
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -44,7 +43,7 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     var pos by remember { mutableStateOf(Offset.Zero) }
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
         if (wall != null) Image(wall, null, Modifier.requiredSize(cfg.screenWidthDp.dp, cfg.screenHeightDp.dp).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(blur), contentScale = ContentScale.Crop)
-        Box(Modifier.matchParentSize().background(tint))
+        Box(Modifier.fillMaxSize().background(tint))
         content()
     }
 }

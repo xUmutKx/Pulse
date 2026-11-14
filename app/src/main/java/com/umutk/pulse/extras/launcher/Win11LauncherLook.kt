@@ -1,6 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
-import androidx.compose.foundation.shape.RectangleShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,7 +44,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.scale
@@ -104,7 +103,7 @@ class Win11LauncherLook : LauncherLook {
         val shape = RoundedCornerShape(8.dp)
         // the edge padding keeps the clock out of the rounded screen corners
         // Windows 11: the taskbar is acrylic, the desktop's picture blurred behind a light tint, and its buttons start at the left
-        AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.foundation.shape.RectangleShape, 30.dp) {
+        AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.ui.graphics.RectangleShape, 30.dp) {
           Box(Modifier.fillMaxSize().padding(horizontal = edge), contentAlignment = Alignment.CenterStart) {
             Row(Modifier.padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
                 Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
