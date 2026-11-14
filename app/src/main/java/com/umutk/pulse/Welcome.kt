@@ -271,16 +271,20 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "star" to (tr("Keyboard: faster and better corrections for Turkish and English, run-together words are split, and the word you meant is guessed from where your finger lands.",
-        "Klavye: Türkçe ve İngilizce için daha hızlı ve iyi düzeltme, bitişik yazılan kelimeler ayrılır, parmağının bastığı yere göre ne yazmak istediğin tahmin edilir.")),
-    "apps" to (tr("Keyboard: the Samsung look is the default now, held Ctrl/Alt work for shortcuts, and landscape has its own settings.",
-        "Klavye: Samsung görünümü artık varsayılan, basılı tutulan Ctrl/Alt kısayollarda çalışır, yatay modun kendi ayarları var.")),
-    "music" to (tr("Music: edited tags, covers and lyrics are saved into the file. The Poweramp widget keeps its size and lets you place text and cover.",
-        "Müzik: düzenlenen etiket, kapak ve sözler dosyaya kaydedilir. Poweramp widget'ı boyutunu korur, yazı ve kapak yerleşimi seçilebilir.")),
-    "apps" to (tr("Game Hub: real consoles and discs, covers and ratings fetched by themselves, 50 built-in browser games.",
-        "Game Hub: gerçek konsol ve diskler, kendiliğinden gelen kapak ve puanlar, 50 yerleşik tarayıcı oyunu.")),
-    "star" to (tr("Charging animation: 15 looks to pick from in the screen cover settings. It is off until you switch it on.",
-        "Şarj animasyonu: ekran kapağı ayarlarında 15 görünüm. Sen açana kadar kapalı.")),
+    "star" to (tr("Launcher: right-click menus for every Windows look (Windows 11 with an icon row), a Properties window, renamable apps and an editable menu; assignable gestures, an A-Z apps list with a letter strip and an \"At a glance\" line; a Terminal look.",
+        "Launcher: her Windows görünümü için sağ tık menüleri (Windows 11'de simge satırıyla), Özellikler penceresi, adı değiştirilebilen uygulamalar ve düzenlenebilir menü; atanabilir hareketler, harf şeritli A-Z uygulama listesi ve \"Bir bakışta\" satırı; Terminal görünümü.")),
+    "apps" to (tr("Desktop: icons are placed anywhere by default (spacing is a setting), the mouse arrow follows the finger, a long press on the taskbar opens the menu; a boot screen and sign-in screen with the look's sound, now and then a BIOS screen and, rarely, a fake blue screen.",
+        "Masaüstü: simgeler varsayılan olarak istediğin yere konur (boşluk ayarlı), fare oku parmağı izler, görev çubuğuna basılı tutunca menü açılır; açılışta görünümün sesiyle önyükleme ve giriş ekranı, ara sıra BIOS ekranı, nadiren sahte mavi ekran.")),
+    "music" to (tr("Music: a real Windows Media Player 12 look (Aero glass, big cover, the list beside it, a Library page, six looks to choose).",
+        "Müzik: gerçek Windows Media Player 12 görünümü (Aero cam, büyük kapak, yanında liste, Kitaplık sayfası, seçilebilir altı görünüm).")),
+    "star" to (tr("Game Hub: the in-game menu is made of icon tiles with a screen cover, and its handle can be dragged; Add a game works again.",
+        "Game Hub: oyun içi menü simge kutularından oluşur ve ekran perdesi vardır, tutamağı sürüklenebilir; Oyun ekle yeniden çalışır.")),
+    "apps" to (tr("Terminal: drawn as a terminal with colours and a built-in neofetch; Neofetch also plays while charging and as a screen cover page.",
+        "Terminal: renkli ve yerleşik neofetch'li gerçek terminal görünümü; Neofetch şarj animasyonunda ve ekran perdesi sayfası olarak da var.")),
+    "info" to (tr("Apps: root or Shizuku removes an app at once, and Play Store links can open in Pulse. Device: processor, temperature, GPU and memory also work without root.",
+        "Uygulamalar: root veya Shizuku uygulamayı hemen kaldırır, Play Store linkleri Pulse'ta açılabilir. Cihaz: işlemci, sıcaklık, GPU ve bellek root olmadan da çalışır.")),
+    "keyboard" to (tr("Keyboard: the bar is not empty for unknown words, names keep their capitals, earlier wrong words are mended in the background, and a stack overflow is fixed.",
+        "Klavye: bilinmeyen kelimede çubuk boş kalmaz, isimler büyük harfle kalır, önceki yanlış kelimeler arkadan düzeltilir, bir yığın taşması hatası giderildi.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */

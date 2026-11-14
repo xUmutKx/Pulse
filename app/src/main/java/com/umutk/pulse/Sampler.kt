@@ -381,14 +381,29 @@ object Sampler {
         val now = System.currentTimeMillis()
         val dtSec = if (lastWall == 0L) 0.0 else (now - lastWall) / 1000.0
         val seen = HashMap<Int, Long>()
-        val list = Shell.run("ps -A -o PID,RSS,%CPU,USER,S,VSZ,NI,PPID,NAME").lineSequence().drop(1).mapNotNull { l ->
+        val psText = Shell.run("ps -A -o PID,RSS,%CPU,USER,S,VSZ,NI,PPID,NAME")
+        // another app's /proc/<pid>/stat is closed to the app on most phones, and then ps's %CPU (the average since the process began, not the load now) was shown as if it were
+        // the load now. The ticks of every process are read in ONE go through the shell (root or Shizuku) when the app cannot read them itself.
+        val blob: Map<Int, Long> = run {
+            val probe = psText.lineSequence().drop(1).mapNotNull { it.trim().split(Regex("\\s+"), 9).firstOrNull()?.toIntOrNull() }.take(12).toList()
+            if (probe.isEmpty() || probe.count { ticksOf(it) != null } * 2 >= probe.size) emptyMap() else runCatching {
+                val m = HashMap<Int, Long>()
+                Shell.run("cat /proc/[0-9]*/stat 2>/dev/null").lineSequence().forEach { l ->
+                    val pid = l.substringBefore(' ').toIntOrNull() ?: return@forEach
+                    val f = l.substringAfterLast(')').trim().split(' ')
+                    if (f.size > 12) m[pid] = (f[11].toLongOrNull() ?: 0L) + (f[12].toLongOrNull() ?: 0L)
+                }
+                m
+            }.getOrDefault(emptyMap())
+        }
+        val list = psText.lineSequence().drop(1).mapNotNull { l ->
             val f = l.trim().split(Regex("\\s+"), 9)
             if (f.size < 9) null else {
                 val pid = f[0].toIntOrNull() ?: return@mapNotNull null
                 val fallback = (f[2].toFloatOrNull() ?: 0f) / cores
-                val t = ticksOf(pid)
+                val t = ticksOf(pid) ?: blob[pid]
                 val cpu = if (t != null) { seen[pid] = t; val prev = lastTicks[pid]
-                    if (prev != null && dtSec > 0) (((t - prev) / 100.0) / (dtSec * cores) * 100).toFloat().coerceIn(0f, 100f) else fallback
+                    if (prev != null && dtSec > 0) (((t - prev) / 100.0) / (dtSec * cores) * 100).toFloat().coerceIn(0f, 100f) else 0f
                 } else fallback
                 Proc(pid, f[8], (f[1].toIntOrNull() ?: 0) / 1024, cpu,
                     f[3], f[4], (f[5].toIntOrNull() ?: 0) / 1024, f[6].toIntOrNull() ?: 0, f[7].toIntOrNull() ?: 0)
