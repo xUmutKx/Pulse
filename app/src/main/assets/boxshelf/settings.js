@@ -407,6 +407,7 @@ function build(){
     H("Look"),
     GHT("AMOLED black background","amoledShelf",false,"A pure black background behind the shelf and the settings, for AMOLED screens. The shelf is built again when this changes."),
     H("Library"),
+    A("Select games","Open","Choose which games are shown on the shelves: switch a game off to hide it from every shelf.",()=>{if(window.__pulseSelectGames)window.__pulseSelectGames()},{keys:"select games hide show library choose"}),
     GHT("Show hidden games in All games","showHidden",true,"Hidden games are listed in All games too."),
     H("Icons"),
     GHC("Icons","iconMode",[[0,"Cover, else APK icon"],[1,"APK icon only"]],0,"What each game shows: its cover, or its app icon when it has none."),

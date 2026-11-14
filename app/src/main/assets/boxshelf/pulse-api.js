@@ -231,6 +231,41 @@
     // Back closes it first
     window.__pulseBackGrid = () => { if (box.classList.contains('on')) { close(); return true; } return false; };
   })();
+  // Settings → Game Hub → Library → Select games: every game in a list with a switch; off = hidden from every shelf (the same hiding as Details → Hide from shelf)
+  (function () {
+    const st = document.createElement('style');
+    st.textContent = '#pulseSel{position:fixed;inset:0;z-index:9500;background:#07090d;color:#e9edf5;display:none;flex-direction:column;font:15px system-ui,sans-serif}#pulseSel.on{display:flex}#pulseSel .sh{display:flex;align-items:center;gap:8px;padding:max(12px,env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid #1c2230}#pulseSel .sh b{font-size:18px;flex:1}#pulseSel .sh button{background:#1b2030;color:#e9edf5;border:1px solid #39404d;border-radius:10px;padding:8px 12px;font:inherit}#pulseSel .sb{flex:1;overflow:auto;padding:6px 14px 24px}#pulseSel h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8d97ab;margin:16px 0 6px}#pulseSel label{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid #141a26}#pulseSel label span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pulseSel input{width:22px;height:22px;accent-color:#4cc2ff}';
+    document.head.appendChild(st);
+    const box = document.createElement('div'); box.id = 'pulseSel';
+    box.innerHTML = '<div class="sh"><b>Select games</b><button class="all" type="button">All</button><button class="none" type="button">None</button><button class="x" type="button" aria-label="Close">&#x2715;</button></div><div class="sb"></div>';
+    const add = () => document.body.appendChild(box);
+    if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
+    ['pointerdown', 'click', 'keydown'].forEach(t => box.addEventListener(t, e => e.stopPropagation()));
+    const close = () => box.classList.remove('on');
+    box.querySelector('.x').onclick = close;
+    const hiddenIds = () => { try { const c = window.Shelf && Shelf.config && Shelf.config(); const h = c && c.config && c.config.ui && c.config.ui.hidden; return new Set(Array.isArray(h) ? h.map(String) : []); } catch (e) { return new Set(); } };
+    let rows = [];
+    async function setAll(on) { for (const r of rows) { if (r.cb.checked !== on) { r.cb.checked = on; try { await Shelf.setHidden(r.id, !on); } catch (e) {} } } }
+    box.querySelector('.all').onclick = () => setAll(true);
+    box.querySelector('.none').onclick = () => setAll(false);
+    window.__pulseSelectGames = () => {
+      const body = box.querySelector('.sb'); body.innerHTML = ''; rows = [];
+      const hid = hiddenIds(), groups = [['Games on this phone', []], ['Built-in games', []], ['HTML games', []]];
+      list().forEach(g => groups[/^mega:/.test(g.pkg) ? 1 : /^html:/.test(g.pkg) ? 2 : 0][1].push(g));
+      groups.forEach(([name, items]) => {
+        if (!items.length) return;
+        const h = document.createElement('h3'); h.textContent = name + ' · ' + items.length; body.appendChild(h);
+        items.sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
+          const id = 'app-' + g.pkg, l = document.createElement('label'), cb = document.createElement('input'), s = document.createElement('span');
+          cb.type = 'checkbox'; cb.checked = !hid.has(id); s.textContent = g.name || g.pkg;
+          cb.onchange = () => { try { Shelf.setHidden(id, !cb.checked); } catch (e) {} };
+          l.append(cb, s); body.appendChild(l); rows.push({ id, cb });
+        });
+      });
+      box.classList.add('on'); body.scrollTop = 0;
+    };
+    window.__pulseSelBack = () => { if (box.classList.contains('on')) { close(); return true; } return false; };
+  })();
   // "Find a cover": the covers the internet has for the game (Steam's, and SteamGridDB's with a key), in the shelf's own look; a tap makes one the game's cover.
   // The name can be typed again when the game is listed under another one.
   api.coverPick = g => {
@@ -267,6 +302,7 @@
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#dPulse'); if (b && window.__pulseCur) api.pulseDetails(window.__pulseCur.appId); }, true);
   // Back (Android's back button): on the bare shelf Pulse leaves it; on any other screen (details, a case in hand, a menu, a list) the page goes one step back
   window.__pulseBack = () => {
+    if (window.__pulseSelBack && window.__pulseSelBack()) return;
     if (window.__pulseBackGrid && window.__pulseBackGrid()) return;
     const T = window.BS_TOUCH;
     if (!T || !T.screen || T.screen() === 'shelf') { H.back(); return; }
