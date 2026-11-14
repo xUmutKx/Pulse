@@ -108,6 +108,8 @@ object LauncherPrefs {
     var loginScreen by mutableStateOf(true)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(false)
+    /** The surprise screens of the start: now and then a BIOS screen, very rarely a fake blue screen (only with the boot screen on). */
+    var bootEggs by mutableStateOf(true)
     /** The order of the actions in the menu of an app (empty: the default order) and the ones switched off. */
     var menuOrder by mutableStateOf<List<String>>(emptyList())
     var menuOff by mutableStateOf<Set<String>>(emptySet())
@@ -195,7 +197,7 @@ object LauncherPrefs {
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
         // the chosen actions; from the older switches when the choice was never made
         menuOrder = p.getProperty("menuOrder").orEmpty().split(",").filter { it.isNotBlank() }; menuOff = p.getProperty("menuOff").orEmpty().split(",").filter { it.isNotBlank() }.toSet()
-        drawerAz = p.getProperty("drawerAz") != "false"; glance = p.getProperty("glance") != "false"
+        bootEggs = p.getProperty("bootEggs") != "false"; drawerAz = p.getProperty("drawerAz") != "false"; glance = p.getProperty("glance") != "false"
         gDouble = p.getProperty("gDouble") ?: if (gestureLock) "lock" else "none"
         gUp = p.getProperty("gUp") ?: if (swipeUpApps) "apps" else "none"
         gDown = p.getProperty("gDown") ?: if (swipeDownShade) "shade" else if (swipeDownSearch) "search" else "none"
@@ -228,7 +230,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString()); p.setProperty("drawerIconDp", drawerIconDp.toString()); p.setProperty("labelScale", labelScale.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
+        p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("bootEggs", bootEggs.toString()); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString())
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
@@ -264,7 +266,7 @@ object LauncherPrefs {
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
-        gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; menuOrder = emptyList(); menuOff = emptySet()
+        gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
