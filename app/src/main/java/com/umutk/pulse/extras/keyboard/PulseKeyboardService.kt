@@ -2229,6 +2229,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (sc == null) schedulePauseFix(typed, res.third, code, l.locale)
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
                 else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
+                // nothing found for what is being typed (a first word, a name, a word no list knows): the bar is not left empty, it shows the word as typed (a tap keeps it)
+                // and the same word with a capital (a name), so something is always there to tap
+                if (typed.isNotEmpty() && st.slots.all { it.isBlank() }) {
+                    val cap = typed.replaceFirstChar { it.uppercase() }.takeIf { it != typed }.orEmpty()
+                    slotWords = arrayOf(typed, cap, "")
+                    st.slots = listOf("\"$typed\"", cap, "")
+                    target = null
+                }
                 showClipSlot()
             }
         }

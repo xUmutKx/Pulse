@@ -137,7 +137,17 @@
     E.kcur = k ? E.key[k] : null; if (E.kcur) E.kcur.classList.add('cur');
   }
   const snd = (n, o) => { try { B().snd(n, o); } catch {} };
-  const focusIn = () => { try { E.in.focus({ preventScroll: true }); } catch {} };
+  // on the phone (Pulse) the title is typed in the phone's own text box, a real one that always brings the phone's keyboard up (a field inside the page did not, in some
+  // views); what is typed fills the field and the matches follow. Elsewhere the field of the page is used as it was.
+  let nativeAsk = 0;
+  const focusIn = () => {
+    if (ANDROID() && window.PulseHost && window.PulseHost.editText && S.open && !S.pad && !S.bottomKb) {
+      if (performance.now() - nativeAsk < 600) return; nativeAsk = performance.now();
+      window.__pulseTextDone = t => { window.__pulseTextDone = null; if (!S.open || t == null) return; E.in.value = String(t); S.q = String(t); update(); };
+      try { window.PulseHost.editText('Find a game', S.q || ''); return; } catch { window.__pulseTextDone = null; }
+    }
+    try { E.in.focus({ preventScroll: true }); } catch {}
+  };
 
   // ---------- moving and typing ----------
   function listMove(d) { const n = S.res.length; if (!n) return; const i = Math.max(0, Math.min(n - 1, S.sel + d)); if (i === S.sel) return; S.sel = i; paintSel(true); snd('tick', { dir: d > 0 ? 1 : -1 }); followSoon(); }
