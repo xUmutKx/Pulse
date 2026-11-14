@@ -833,6 +833,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var mode by remember { mutableStateOf(Privilege.mode) }
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
+    // "Add a game" in the shelf's own settings: the list of the phone's apps opens from here, whatever page or layout is showing
+    LaunchedEffect(ShelfAsk.add.value) { if (ShelfAsk.add.value) { ShelfAsk.add.value = false; addOpen = true } }
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
@@ -1052,7 +1054,6 @@ fun GameHubHub(onBack: () -> Unit) {
                     ) { FluentIcon("search", pal.text, 22.dp) }
                     // the + waits for Boxshelf's opening animation to end (it is not drawn over the animation)
                     // (the shelf has no button of Pulse's over it: "Add a game" is in the shelf's own settings and asks for the same list)
-                    if (webShelf && ShelfAsk.add.value) { ShelfAsk.add.value = false; addOpen = true }
                     if (!webShelf) FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
