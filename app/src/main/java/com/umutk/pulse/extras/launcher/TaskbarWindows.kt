@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.launcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -35,8 +36,10 @@ import com.umutk.pulse.bevel
  * The open windows of the desktop as buttons on the taskbar, each in the look's own style: a tap on the one in front sends it down, a tap on any other
  * brings it up (also from the taskbar when it was minimised). [kind] is "95", "xp", "7", "10" or "11".
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Modifier) {
+    val tbCtx = androidx.compose.ui.platform.LocalContext.current
     val list = DesktopWindows.list
     if (list.isEmpty()) return
     val topZ = list.filter { !it.min }.maxOfOrNull { it.z }
@@ -74,7 +77,15 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
                             else drawRect(Brush.verticalGradient(listOf(top, bot), size.height - bh, size.height), Offset(l, size.height - bh), Size(r - l, bh))
                         }
                     }
-                }.clickable { if (active) DesktopWindows.minimize(w) else { w.min = false; DesktopWindows.front(w) } }.padding(horizontal = 8.dp),
+                }.combinedClickable(
+                    onClick = { if (active) DesktopWindows.minimize(w) else { w.min = false; DesktopWindows.front(w) } },
+                    // a long press on the button opens the window's app as an app of its own (full screen, no window) and closes the window
+                    onLongClick = {
+                        val look = when (kind) { "7" -> "win7"; "11" -> "win11"; "10" -> "win10"; "xp" -> "xp"; else -> "win95" }
+                        runCatching { tbCtx.startActivity(android.content.Intent(tbCtx, com.umutk.pulse.ExtraToolActivity::class.java).putExtra("route", w.route).putExtra("look", look).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        DesktopWindows.close(w)
+                    },
+                ).padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 // Windows 7, 10 and 11 show the app's picture on the button, as the real taskbars do; 95 and XP keep the caption

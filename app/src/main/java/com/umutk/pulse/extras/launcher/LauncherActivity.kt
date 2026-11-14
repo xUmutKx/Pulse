@@ -290,7 +290,7 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     if (id.startsWith("pulse:x:")) {
         val route = id.removePrefix("pulse:x:")
         val title = desktopItems().firstOrNull { it.pkg == id }?.label ?: route
-        if (lookId in WINDOWS_LOOKS) DesktopWindows.open(route, title)
+        if (lookId in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, title)
         // the app opens in the look that is on in the launcher (when it has that look)
         else runCatching { ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", route).putExtra("look", lookId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         return
@@ -305,8 +305,9 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:store" -> "store:launcher" to tr("Store", "Mağaza"); "pulse:control" -> "controlcenter" to tr("Control Center", "Denetim Merkezi")
             "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
-            // a window of the desktop itself: dragged, several at once, the launcher stays behind
-            DesktopWindows.open(r.first, r.second)
+            // a window of the desktop itself: dragged, several at once, the launcher stays behind (or, with windows turned off, an app of its own)
+            if (LauncherPrefs.windowedApps) DesktopWindows.open(r.first, r.second)
+            else runCatching { ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", r.first).putExtra("look", lookId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             return
         }
     }
