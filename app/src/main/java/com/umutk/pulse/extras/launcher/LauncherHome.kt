@@ -36,6 +36,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
@@ -130,7 +131,12 @@ fun ContextPopup(menuW: androidx.compose.ui.unit.Dp, menuH: androidx.compose.ui.
         alignment = Alignment.TopStart, offset = androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt()), onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.PopupProperties(focusable = true),
     ) {
-        Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp), content = content)
+        val sk = menuSkin(w.id, w.dark)
+        if (sk == null) Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp), content = content)
+        else androidx.compose.runtime.CompositionLocalProvider(LocalMenuSkin provides sk) {
+            // each Windows look draws its own context menu: Windows 11 rounded and soft, 10 flat, 7 Aero with a gutter, XP and 95 the classic bar
+            Column(Modifier.width(menuW).shadow(sk.shadow, RoundedCornerShape(sk.radius)).clip(RoundedCornerShape(sk.radius)).background(sk.bg).border(sk.borderW, sk.border, RoundedCornerShape(sk.radius)).padding(horizontal = sk.padH, vertical = sk.padV), content = content)
+        }
     }
 }
 
@@ -170,7 +176,7 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val tiles = LauncherPrefs.look == "winphone" && LauncherPrefs.phoneTiles
     if (isFolder(app)) { ContextPopup(230.dp, 250.dp, onDismiss) { FolderActionRows(app, onDismiss) }; return }
     val inFolder = LauncherFolders.of(app.pkg) != null
-    ContextPopup(230.dp, if (tiles) 380.dp else 250.dp, onDismiss) {
+    ContextPopup(230.dp, if (tiles) 440.dp else 330.dp, onDismiss) {
         Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
         // Windows Phone: the size of this app's tile
         if (tiles) listOf("s" to tr("Small tile", "Küçük kutucuk"), "m" to tr("Medium tile", "Orta kutucuk"), "w" to tr("Wide tile", "Geniş kutucuk")).forEach { (k, n) ->
@@ -190,11 +196,21 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
         ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
             act { togglePin(ctx, app.pkg, auto) }
         }
+        ActionRow("rename", tr("Rename", "Yeniden adlandır"), w.text) { act { PropState.app = app; PropState.tab = 0 } }
+        ActionRow("properties", tr("Properties", "Özellikler"), w.text) { act { PropState.app = app; PropState.tab = 0 } }
     }
 }
 
 @Composable
 internal fun ActionRow(icon: String, label: String, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    val sk = LocalMenuSkin.current
+    if (sk != null) {
+        Row(Modifier.fillMaxWidth().height(sk.rowH).clip(RoundedCornerShape(sk.rowRadius)).clickable(onClick = onClick).padding(horizontal = sk.rowPad), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(sk.gutter), contentAlignment = Alignment.CenterStart) { PIcon(icon, sk.text, sk.icon) }
+            Text(label, color = sk.text, fontSize = sk.font, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        return
+    }
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon(icon, tint, 22.dp)
         Spacer(Modifier.width(12.dp))
