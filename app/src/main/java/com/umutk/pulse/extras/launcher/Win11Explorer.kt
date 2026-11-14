@@ -161,6 +161,7 @@ fun Win11Explorer() {
         Box(Modifier.fillMaxWidth().height(1.dp).background(line))
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val wide = maxWidth >= 380.dp
+            val quickCols = if (maxWidth >= 480.dp) 3 else 2
             Row(Modifier.fillMaxSize()) {
                 // the navigation pane
                 if (wide) Column(Modifier.width(128.dp).fillMaxHeight().background(pane).verticalScroll(rememberScrollState()).padding(vertical = 6.dp, horizontal = 4.dp)) {
@@ -181,7 +182,7 @@ fun Win11Explorer() {
                             tr("Downloads", "İndirilenler") to Environment.DIRECTORY_DOWNLOADS, tr("Documents", "Belgeler") to Environment.DIRECTORY_DOCUMENTS,
                             tr("Pictures", "Resimler") to Environment.DIRECTORY_PICTURES, tr("Music", "Müzik") to Environment.DIRECTORY_MUSIC, tr("Videos", "Videolar") to Environment.DIRECTORY_MOVIES, "DCIM" to Environment.DIRECTORY_DCIM,
                         ).filter { File(root, it.second).exists() }
-                        quick.chunked(if (maxWidth >= 480.dp) 3 else 2).forEach { rowQ ->
+                        quick.chunked(quickCols).forEach { rowQ ->
                             Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 rowQ.forEach { (l, n) ->
                                     Row(Modifier.weight(1f).clip(RoundedCornerShape(6.dp)).background(pane).clickable { go(File(root, n)) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +190,7 @@ fun Win11Explorer() {
                                         Text(l, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp))
                                     }
                                 }
-                                repeat(((if (maxWidth >= 480.dp) 3 else 2) - rowQ.size).coerceAtLeast(0)) { Box(Modifier.weight(1f)) }
+                                repeat((quickCols - rowQ.size).coerceAtLeast(0)) { Box(Modifier.weight(1f)) }
                             }
                         }
                         Text(tr("All files", "Tüm dosyalar"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
