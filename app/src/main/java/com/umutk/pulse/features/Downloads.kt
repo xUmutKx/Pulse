@@ -1163,19 +1163,23 @@ private fun DownloadsContent() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
                 Box(Modifier.padding(start = 8.dp).clickable {
-                    if (link.startsWith("http")) {
-                        // the link leaves the field at once and is looked at in the background, so the next one can be pasted straight away
-                        val u = link.trim(); link = ""; findNote = ""; noLinkUrl = ""
-                        pending.add(u)
-                        findScope.launch {
-                            // a file starts at once; a web page is read for its download links
-                            when (val r = LinkFinder.find(u)) {
-                                is LinkFinder.Result.Direct -> Downloads.add(ctx, u)
-                                is LinkFinder.Result.Found -> { if (found == null) found = r.links else foundQueue.add(r.links) }
-                                is LinkFinder.Result.None -> { findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"); noLinkUrl = u }
-                                is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u) }
+                    // one link, or several pasted together (one per line, or run on): each one is taken, so a whole season's links go in at once
+                    val urls = Regex("https?://.*?(?=https?://|\\s|$)").findAll(link.trim()).map { it.value }.filter { it.length > 8 }.distinct().toList()
+                    if (urls.isNotEmpty()) {
+                        // the links leave the field at once and are looked at in the background, so the next ones can be pasted straight away
+                        link = ""; findNote = ""; noLinkUrl = ""
+                        urls.forEach { u ->
+                            pending.add(u)
+                            findScope.launch {
+                                // a file starts at once; a web page is read for its download links
+                                when (val r = LinkFinder.find(u)) {
+                                    is LinkFinder.Result.Direct -> Downloads.add(ctx, u)
+                                    is LinkFinder.Result.Found -> { if (found == null) found = r.links else foundQueue.add(r.links) }
+                                    is LinkFinder.Result.None -> { findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"); noLinkUrl = u }
+                                    is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u) }
+                                }
+                                pending.remove(u)
                             }
-                            pending.remove(u)
                         }
                     }
                 }) {
