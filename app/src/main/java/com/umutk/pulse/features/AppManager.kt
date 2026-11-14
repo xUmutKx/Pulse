@@ -313,6 +313,18 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                 AmRowItem("disk", tr("Show system apps", "Sistem uygulamalarını göster"), { showSystem = !showSystem }) { PSwitch(showSystem, { showSystem = it }) }
                 AmRowItem("delete", tr("Show disabled", "Devre dışıları göster"), { showDisabled = !showDisabled }) { PSwitch(showDisabled, { showDisabled = it }) }
                 AmRowItem("view", tr("Hide Pulse", "Pulse'u gizle"), { hidePulse = !hidePulse }) { PSwitch(hidePulse, { hidePulse = it }) }
+                // Play Store links: Pulse takes them (root or Shizuku sets the system's "open supported links" for it)
+                var playLinks by remember { mutableStateOf(ctx.getSharedPreferences("am", android.content.Context.MODE_PRIVATE).getBoolean("playLinks", false)) }
+                val setPlay = { on: Boolean ->
+                    Thread {
+                        val ok = com.umutk.pulse.features.PlayLinks.take(ctx.packageName, on)
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            if (ok) { playLinks = on; ctx.getSharedPreferences("am", android.content.Context.MODE_PRIVATE).edit().putBoolean("playLinks", on).apply() }
+                            android.widget.Toast.makeText(ctx, if (ok) tr(if (on) "Pulse takes Play Store links" else "Play Store takes its links again", if (on) "Play Store linklerini Pulse alıyor" else "Play Store linkleri geri aldı") else tr("Needs root or Shizuku (Android 12 or newer)", "Root veya Shizuku gerekir (Android 12 ve üstü)"), android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }.start()
+                }
+                AmRowItem("download", tr("Play Store links open in Pulse", "Play Store linkleri Pulse'ta açılsın"), { setPlay(!playLinks) }) { PSwitch(playLinks, { setPlay(it) }) }
             }
         },
         confirmButton = { PButton(tr("Apply", "Uygula")) { filterOpen = false } },

@@ -93,6 +93,21 @@
         android:roundIcon="@mipmap/ic_pulse_logo"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pulse">
+        <!-- Google Play links: an app on the phone opens on its page in Pulse's app manager, any other goes on to the Play Store -->
+        <activity android:name=".features.PlayLinkActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="play.google.com" android:pathPrefix="/store/apps/details" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="market" android:host="details" />
+            </intent-filter>
+        </activity>
         <activity android:name=".MainActivity" android:exported="true" android:supportsPictureInPicture="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode">
             <!-- "Share" a link from a browser: Pulse starts the download (see MainActivity.handleShare) -->
             <!-- long press on a Pulse Quick Settings tile opens that tile's page (see tilePage) -->
