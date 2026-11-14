@@ -2,6 +2,8 @@ package com.umutk.pulse.extras.launcher
 
 import android.os.Environment
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -78,6 +80,8 @@ fun Win7Explorer() {
     var rev by remember { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    var menuFor by remember { mutableStateOf<File?>(null) }
+    val fr = remember { androidx.compose.ui.focus.FocusRequester() }
     fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" } }
     // a picture or a text file opens in a window of the desktop; the other kinds go to another app
     fun open(f: File) {
@@ -94,10 +98,22 @@ fun Win7Explorer() {
         }
     }
     val shown = if (query.isBlank()) files else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    fun selFile() = files.firstOrNull { it.path == sel }
+    val keys = Modifier.focusRequester(fr).focusable().fileKeys(
+        copy = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = false } },
+        cut = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = true } },
+        paste = { pasteInto(dir); rev++ },
+        delete = { selFile()?.let { menuFor = it } },
+        rename = { selFile()?.let { menuFor = it } },
+        open = { selFile()?.let { open(it) } },
+        back = { if (back.isNotEmpty()) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" } },
+    )
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
+    FileMenu(menuFor, dir, { menuFor = null }, { open(it) }) { rev++; if (it != null) sel = it }
     // the window's body is see-through for this tool: only the file area below is white
     val deskWin = LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().then(keys)) {
         // the back and forward buttons, the address bar and the search box
         Row(Modifier.fillMaxWidth().background(W7_GLASS).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
             W7Round(back.isNotEmpty(), false) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" }
@@ -120,8 +136,8 @@ fun Win7Explorer() {
                     Text(if (i == 0) tr("Internal storage", "Dahili depolama") else d.name, color = W7_INK, fontSize = 12.sp, maxLines = 1, modifier = Modifier.clickable { go(d) })
                 }
             }
-            Spacer(Modifier.width(6.dp))
-            Box(Modifier.width(96.dp).height(28.dp).background(Color.White, RoundedCornerShape(2.dp)).border(1.dp, W7_EDGE, RoundedCornerShape(2.dp)).padding(horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
+            Spacer(Modifier.width(12.dp))
+            Box(Modifier.width(88.dp).height(28.dp).background(Color.White, RoundedCornerShape(2.dp)).border(1.dp, W7_EDGE, RoundedCornerShape(2.dp)).padding(horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
                 BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = W7_INK, fontSize = 12.sp), cursorBrush = SolidColor(W7_INK), modifier = Modifier.fillMaxWidth())
                 if (query.isEmpty()) Text(tr("Search", "Ara"), color = Color(0xFF8A97AB), fontSize = 12.sp)
             }
@@ -179,7 +195,7 @@ fun Win7Explorer() {
                             val on = f.path == sel
                             Row(
                                 Modifier.fillMaxWidth().then(if (on) Modifier.background(W7_SEL).border(1.dp, Color(0xFF7DA2CE)) else Modifier)
-                                    .clickable { if (on) open(f) else sel = f.path }.padding(horizontal = 8.dp, vertical = 7.dp),
+                                    .fileRow({ fr.requestFocus(); if (on) open(f) else sel = f.path }, { sel = f.path; menuFor = f }).padding(horizontal = 8.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
