@@ -281,7 +281,7 @@
     if (k === 'F11' || k === 'F12' || (e.ctrlKey && e.shiftKey && (k === 'I' || k === 'i'))) return; // (full screen, DevTools; no other Ctrl+Shift key reaches the shelf behind)
     e.stopImmediatePropagation();
     if (k === 'Escape') { e.preventDefault(); if (!e.repeat) { S.eat = k; close(); } return; }
-    if (k === 'Enter') { e.preventDefault(); if (e.repeat || e.isComposing) return; S.eat = k; if (S.pad) act(); else choose(S.sel); return; }
+    if (k === 'Enter') { e.preventDefault(); if (e.repeat) return; /* (a phone's keyboard still has the word it is composing when it sends Enter: that must go too) */ S.eat = k; if (S.pad) act(); else choose(S.sel); return; }
     if (k === 'ArrowDown' || k === 'ArrowUp') { e.preventDefault(); const d = k === 'ArrowDown' ? 1 : -1; if (S.pad) move(0, d); else listMove(d); return; }
     if (k === 'PageDown' || k === 'PageUp') { e.preventDefault(); if (!S.pad || S.zone === 'list') listMove(k === 'PageDown' ? 5 : -5); return; }
     if (k === 'ArrowLeft' || k === 'ArrowRight') { if (S.pad) { e.preventDefault(); move(k === 'ArrowRight' ? 1 : -1, 0); } else if (S.bottomKb && document.activeElement !== E.in) { e.preventDefault(); listMove(k === 'ArrowRight' ? 1 : -1); } return; } // (in the field they're the caret's; the slim bar's one row of matches steps with them)
