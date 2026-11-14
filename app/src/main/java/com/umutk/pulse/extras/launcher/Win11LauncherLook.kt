@@ -118,7 +118,13 @@ class Win11LauncherLook : LauncherLook {
                 }
                 TaskbarWindows("11", fg, 36.dp)
             }
-            TaskbarClock(fg, Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
+            // the tray: the connection, the sound and the battery in one button that opens the quick settings (tiles, volume), then the clock, as in Windows 11
+            Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.clip(shape).clickable { LauncherSession.clockOpen = true }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Glyph("language", fg, 16.dp); Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
+                }
+                TaskbarClock(fg, Modifier)
+            }
         }
     }
 
