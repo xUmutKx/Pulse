@@ -69,7 +69,7 @@ import kotlin.math.roundToInt
 
 /** Settings of the Pulse Launcher. Drawn in the look passed in by its host; writes only LauncherPrefs. */
 @Composable
-fun LauncherSettings(back: () -> Unit) {
+fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
     val ctx = LocalContext.current
     // Pulse's process never runs LauncherActivity, so read the stored values before showing or saving them
     remember(ctx) { LauncherPrefs.load(ctx) }
@@ -98,7 +98,8 @@ fun LauncherSettings(back: () -> Unit) {
             Text(if (cat.isEmpty()) tr("Launcher", "Ana ekran") else LAUNCHER_CATS.first { it.key == cat }.let { tr(it.en, it.trName) }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         }
         // to try the launcher as it is: starts its own screen (the home screen itself is only ever the default home app)
-        if (cat.isEmpty()) PButton(tr("Open the launcher to test", "Test için launcher'ı aç"), Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        // the test button is for the main app only: inside the launcher (its settings page or a window of the desktop) the launcher is already open
+        if (cat.isEmpty() && !fromLauncher && LocalDesktopWin.current == null) PButton(tr("Open the launcher to test", "Test için launcher'ı aç"), Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
             runCatching { ctx.startActivity(Intent().setClassName(ctx.packageName, "com.umutk.pulse.extras.launcher.LauncherActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
         // the first page is the list of categories; each one opens as a page of its own
