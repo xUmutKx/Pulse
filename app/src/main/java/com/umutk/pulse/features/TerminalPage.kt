@@ -76,78 +76,97 @@ private object TermSession {
     val alive get() = proc?.let { runCatching { it.exitValue(); false }.getOrDefault(true) } == true
 }
 
-/** ADB-style shell commands for quick use: name, icon and command. Run on the phone's shell (root when available). */
-private val presets = listOf(
-    Triple("Model", "phone", "getprop ro.product.model"),
-    Triple("Android", "info", "getprop ro.build.version.release"),
-    Triple("Battery", "battery", "dumpsys battery"),
-    Triple("Packages", "users", "pm list packages -3"),
-    Triple("Top app", "processes", "dumpsys activity activities | grep -m 3 mResumedActivity"),
-    Triple("Screen", "palette", "wm size; wm density"),
-    Triple("Settings", "settings", "settings list global | head -n 40"),
-    Triple("Log", "table", "logcat -d -t 100"),
-)
+/** Colours of the 16 ANSI codes (the Ubuntu-like palette of a terminal). */
+private val ANSI16 = listOf(0xFF2E3436, 0xFFCC0000, 0xFF4E9A06, 0xFFC4A000, 0xFF3465A4, 0xFF75507B, 0xFF06989A, 0xFFD3D7CF,
+    0xFF555753, 0xFFEF2929, 0xFF8AE234, 0xFFFCE94F, 0xFF729FCF, 0xFFAD7FA8, 0xFF34E2E2, 0xFFEEEEEC).map { Color(it) }
 
-/** Terminal: an embedded shell session (sh, or su when root is on) running inside Pulse with live output. */
+/** The output with its colour codes (ESC [ ... m: the 16 colours, bold, reset, and 38;2;r;g;b) drawn as colours; any other escape code is dropped. */
+private fun ansi(src: String, base: Color): androidx.compose.ui.text.AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
+    var color = base; var bold = false
+    var i = 0
+    val esc = Regex("\u001B\\[([0-9;]*)([A-Za-z])")
+    while (i < src.length) {
+        val m = esc.find(src, i)
+        val end = m?.range?.first ?: src.length
+        if (end > i) {
+            val st = androidx.compose.ui.text.SpanStyle(color = color, fontWeight = if (bold) androidx.compose.ui.text.font.FontWeight.Bold else null)
+            pushStyle(st); append(src.substring(i, end)); pop()
+        }
+        if (m == null) break
+        if (m.groupValues[2] == "m") {
+            val ps = m.groupValues[1].split(';').mapNotNull { it.toIntOrNull() }.ifEmpty { listOf(0) }
+            var k = 0
+            while (k < ps.size) {
+                val c = ps[k]
+                when {
+                    c == 0 -> { color = base; bold = false }
+                    c == 1 -> bold = true
+                    c in 30..37 -> color = ANSI16[c - 30]
+                    c in 90..97 -> color = ANSI16[c - 90 + 8]
+                    c == 39 -> color = base
+                    c == 38 && ps.getOrNull(k + 1) == 2 && k + 4 < ps.size + 0 -> { color = Color(ps[k + 2], ps[k + 3].coerceIn(0, 255), ps[k + 4].coerceIn(0, 255)); k += 4 }
+                }
+                k++
+            }
+        }
+        i = m.range.last + 1
+    }
+}
+
+/** The neofetch card as the terminal prints it: ANSI colour codes around each run. */
+private fun neofetchOut(ctx: android.content.Context): String = NeofetchText.lines(ctx).joinToString("\n") { line ->
+    line.joinToString("") { s ->
+        val c = s.color
+        if (c == null && !s.bold) s.text
+        else "\u001B[" + (if (s.bold) "1;" else "") + (if (c != null) "38;2;${(c.red * 255).toInt()};${(c.green * 255).toInt()};${(c.blue * 255).toInt()}" else "0") + "m" + s.text + "\u001B[0m"
+    }
+} + "\n"
+
+/**
+ * Terminal: an embedded shell session (sh, or su when root is on) running inside Pulse with live output, drawn as a terminal window: black, monospace, a prompt line at the foot.
+ * `neofetch` is built in, so the phone answers it as if it were installed; the colour codes of any program are drawn.
+ */
 @Composable
 fun TerminalPage() {
     val ctx = LocalContext.current
     val home = remember { ctx.filesDir.absolutePath }
     var cmd by remember { mutableStateOf("") }
-    var presetsOpen by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
     LaunchedEffect(Unit) { if (!TermSession.alive) TermSession.start(home, false) }
     LaunchedEffect(TermSession.text.length) { scroll.animateScrollTo(scroll.maxValue) }
+    val fg = Color(0xFFE6E6E6); val green = Color(0xFF3DDC84)
+    var hi by remember { mutableStateOf(-1) }
     fun go() {
         val c = cmd.trim()
         if (c.isEmpty()) return
-        termHistory.remove(c); termHistory.add(0, c)
+        termHistory.remove(c); termHistory.add(0, c); hi = -1
         while (termHistory.size > 20) termHistory.removeAt(termHistory.lastIndex)
         if (!TermSession.alive) TermSession.start(TermSession.cwd.ifEmpty { home }, TermSession.asRoot)
+        // neofetch is part of the terminal, as if it were installed
+        if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx); cmd = ""; return }
+        if (c == "clear") { TermSession.text = ""; cmd = ""; return }
         TermSession.send(c); cmd = ""
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PHead("Terminal", if (TermSession.asRoot) "root" else "", guide = "terminal")
-        PCard {
-            Column(Modifier.fillMaxWidth().height(300.dp)
-                .background(if (T.dark) Color(0xFF0C0C0C) else Color(0xFFF4F4F4), RoundedCornerShape(T.radius))
-                .verticalScroll(scroll).padding(8.dp)) {
-                Text(TermSession.shown, color = T.text, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-            }
-            Text(TermSession.cwd, color = T.sub, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PField(cmd, { cmd = it }, "Command", Modifier.weight(1f), onDone = { go() })
-                Box(Modifier.size(40.dp).clickable { go() }, contentAlignment = Alignment.Center) { PIcon("run", Look.accent, 24.dp) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("Ctrl-C", Modifier.weight(1f), compact = true) { TermSession.interrupt() }
-                PButton("Clear", Modifier.weight(1f), compact = true) { TermSession.text = "" }
-                if (Shell.root == true) PButton(if (TermSession.asRoot) "sh" else "su", Modifier.weight(1f), compact = true) {
-                    TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot)
-                }
-            }
-            Row(Modifier.fillMaxWidth().clickable { presetsOpen = !presetsOpen }, verticalAlignment = Alignment.CenterVertically) {
-                PIcon("chevron", T.sub, 16.dp, Modifier.rotate(if (presetsOpen) 90f else 0f))
-                Spacer(Modifier.width(8.dp))
-                Text("ADB commands", color = T.text, fontSize = 14.sp)
-            }
-            if (presetsOpen) presets.forEach { (name, icon, c) ->
-                Row(Modifier.fillMaxWidth().clickable { cmd = c }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon(icon, Look.accent, 18.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(name, color = T.text, fontSize = 14.sp)
-                        Text(c, color = T.sub, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                    }
-                }
-            }
+    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 10.dp, vertical = 8.dp)) {
+        // the window's title line and its few buttons
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("pulse@phone" + if (TermSession.asRoot) " (root)" else "", color = green, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f), maxLines = 1)
+            Text("^C", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.interrupt() }.padding(4.dp))
+            Text("clear", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.text = "" }.padding(4.dp))
+            if (Shell.root == true) Text(if (TermSession.asRoot) "sh" else "su", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot) }.padding(4.dp))
         }
-        PCard {
-            Text("History", color = T.sub, fontSize = 12.sp)
-            termHistory.forEach { c ->
-                Text(c, Modifier.fillMaxWidth().clickable { cmd = c }.padding(vertical = 4.dp), color = T.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
-            }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(top = 6.dp)) {
+            Text(ansi(TermSession.shown, fg), color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
         }
-        Spacer(Modifier.height(12.dp))
+        Text(TermSession.cwd, color = Color(0xFF729FCF), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("$ ", color = green, fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            androidx.compose.foundation.text.BasicTextField(cmd, { cmd = it }, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = fg, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = androidx.compose.ui.graphics.SolidColor(green),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go, autoCorrect = false),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { go() }), modifier = Modifier.weight(1f))
+            // the last commands, one press back each
+            Text("\u2191", color = fg, fontSize = 18.sp, modifier = Modifier.clickable { if (termHistory.isNotEmpty()) { hi = (hi + 1).coerceAtMost(termHistory.lastIndex); cmd = termHistory[hi] } }.padding(8.dp))
+        }
     }
 }
