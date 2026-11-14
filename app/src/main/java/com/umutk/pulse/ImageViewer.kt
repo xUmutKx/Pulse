@@ -202,7 +202,15 @@ internal fun imgDecode(ctx: Context, s: ImgSrc, maxDim: Int): Bitmap? = runCatch
     var sample = 1
     while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxDim) sample *= 2
     val opts = BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 }
-    val raw = imgStream(ctx, s)?.use { BitmapFactory.decodeStream(it, null, opts) } ?: return@runCatching null
+    var raw = imgStream(ctx, s)?.use { BitmapFactory.decodeStream(it, null, opts) } ?: return@runCatching null
+    // the sub-sample is a power of two, so the picture can still be up to twice the wanted size (a 50 MP photo came out 4000 px and about 50 MB, more than a texture
+    // of the phone's graphics chip or the heap allows once it is drawn zoomed): it is brought down to exactly the wanted long edge
+    val long = max(raw.width, raw.height)
+    if (long > maxDim) {
+        val k = maxDim.toFloat() / long
+        val sm = Bitmap.createScaledBitmap(raw, (raw.width * k).toInt().coerceAtLeast(1), (raw.height * k).toInt().coerceAtLeast(1), true)
+        if (sm !== raw) { raw.recycle(); raw = sm }
+    }
     val m = imgExifMatrix(ctx, s)
     if (m == null) raw else (Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true).also { if (it !== raw) raw.recycle() })
 }.getOrNull()
@@ -509,7 +517,7 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
                     val ev = awaitPointerEvent()
                     val n = ev.changes.count { it.pressed }
                     if (n >= 2 || scale > 1.01f) {
-                        val z = ev.calculateZoom(); val pan = ev.calculatePan()
+                        val z = ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f; val pan = ev.calculatePan().let { if (it.x.isFinite() && it.y.isFinite()) it else Offset.Zero }
                         val c = ev.calculateCentroid() - Offset(box.width / 2f, box.height / 2f)
                         val ns = (scale * z).coerceIn(1f, 8f); val k = ns / scale
                         val mo = maxOff(ns)
