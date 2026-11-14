@@ -76,6 +76,16 @@ fun FileWindow(path: String) {
         ext in EX_VIDEO -> com.umutk.pulse.extras.video.VideoPlayerScreen(Uri.fromFile(f), { win?.let { DesktopWindows.close(it) } })
         ext in EX_AUDIO -> AudioWindow(f)
         ext == "pdf" -> PdfWindow(f)
+        ext in OFFICE_EXTS -> {
+            // Word, Excel, PowerPoint and LibreOffice documents: their words, as plain text (the pictures and the layout are not shown)
+            val text = remember(path) { runCatching { officeText(f).take(300_000) }.getOrDefault("") }
+            Box(Modifier.fillMaxSize().background(T.bg)) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp)) {
+                    Text(tr("Text of the document (no pictures or layout)", "Belgenin metni (resim ve düzen yok)"), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(bottom = 6.dp))
+                    if (text.isBlank()) FileCard(f) else SelectionContainer { Text(text, color = T.text, fontSize = 13.sp) }
+                }
+            }
+        }
         ofIsText(f) -> {
             val text = remember(path) { runCatching { ofReadText(f).take(300_000) }.getOrDefault("") }
             Box(Modifier.fillMaxSize().background(T.bg)) {
@@ -163,4 +173,28 @@ fun GalleryWindow() {
     Box(Modifier.fillMaxSize().background(T.bg)) {
         com.umutk.pulse.ImageGalleryGrid(folder) { f -> DesktopWindows.open("view:" + f.path, f.name) }
     }
+}
+
+private val OFFICE_EXTS = setOf("docx", "xlsx", "pptx", "odt", "ods", "odp")
+
+/** The words of an Office or LibreOffice file: the text of its XML parts, a line to a paragraph, a slide or a row. */
+private fun officeText(f: File): String {
+    val parts = ArrayList<Pair<String, String>>()
+    java.util.zip.ZipFile(f).use { z ->
+        val names = z.entries().toList().map { it.name }
+        val wanted = when (f.extension.lowercase()) {
+            "docx" -> listOf("word/document.xml")
+            "xlsx" -> listOf("xl/sharedStrings.xml")
+            "pptx" -> names.filter { it.startsWith("ppt/slides/slide") && it.endsWith(".xml") }.sortedBy { it.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
+            else -> listOf("content.xml")
+        }
+        wanted.forEachIndexed { i, n -> z.getEntry(n)?.let { e -> parts.add(n to z.getInputStream(e).use { it.readBytes().toString(Charsets.UTF_8) }) } }
+    }
+    val sb = StringBuilder()
+    parts.forEachIndexed { i, (n, xml) ->
+        if (f.extension.equals("pptx", true)) sb.append("— ").append(i + 1).append(" —\n")
+        val withBreaks = xml.replace(Regex("</(w:p|a:p|text:p|text:h|si|row|table:table-row)>"), "\n").replace(Regex("<(w:br|w:tab|text:tab|text:line-break)[^>]*/>"), " ")
+        sb.append(withBreaks.replace(Regex("<[^>]+>"), "").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'")).append("\n")
+    }
+    return sb.toString().lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
 }
