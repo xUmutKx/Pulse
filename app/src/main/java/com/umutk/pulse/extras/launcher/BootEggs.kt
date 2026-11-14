@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,7 +91,30 @@ object BootSounds {
 
 private val MONO = FontFamily.Monospace
 
-/** The BIOS screen of an old PC: grey text on black, the maker line, the memory count, the drives, then "booting". A tap skips it. */
+/** The AMI logo's idea drawn by hand: an orange pyramid of stripes (they widen towards the foot), with the dark "V" cut out of its middle. */
+@Composable
+private fun AmiLogo(modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val orange = Color(0xFFF26A1F)
+        val w = size.width; val h = size.height
+        val n = 11
+        for (i in 0 until n) {
+            val top = h * i / n; val bot = h * (i + .62f) / n
+            val half = { y: Float -> w / 2f * (y / h) }
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w / 2f - half(top), top); lineTo(w / 2f + half(top), top); lineTo(w / 2f + half(bot), bot); lineTo(w / 2f - half(bot), bot); close()
+            }
+            drawPath(path, orange)
+        }
+        // the dark notch of the middle
+        val v = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * .50f, h * .30f); lineTo(w * .68f, h * .66f); lineTo(w * .32f, h * .66f); close()
+        }
+        drawPath(v, Color(0xFF0A0A12))
+    }
+}
+
+/** The BIOS screen of an old PC, laid out as the AMI one: the logo and name, the maker line, the machine's own CPU and memory, the drives, "Press F1 to Run SETUP". A tap skips it. */
 @Composable
 fun BiosScreen(onDone: () -> Unit) {
     val ctx = LocalContext.current
@@ -98,44 +122,53 @@ fun BiosScreen(onDone: () -> Unit) {
     var mem by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {
         BootSounds.postBeep(ctx)
+        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val totalMb = ((android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem) / (1024 * 1024)).toInt().coerceAtLeast(1024)
+        val cores = Runtime.getRuntime().availableProcessors()
+        val model = android.os.Build.MODEL.uppercase().take(28)
         val script = listOf(
-            "AMIBIOS (C)2009 American Megatrends, Inc." to 120L,
-            "PULSE-PH 1.00  BIOS Date: 11/14/26 08:00:00 Ver: 08.00.15" to 80L,
-            "CPU : Pulse Octa-Core Processor" to 60L,
-            "       Speed : 3.20 GHz" to 100L,
+            "AMIBIOS(C)2021 American Megatrends, Inc." to 140L,
+            "" to 30L,
+            "$model ACPI BIOS Revision 6042" to 90L,
+            "CPU: ${android.os.Build.HARDWARE.replaceFirstChar { it.uppercase() }} $cores-Core Processor" to 80L,
+            " Speed: 3200MHz" to 110L,
             "" to 40L,
-            "Press DEL to run Setup" to 120L,
-            "Press F8 for BBS POPUP" to 120L,
         )
         for ((l, d) in script) { lines.add(l); delay(d) }
-        // the memory count
         lines.add("MEM"); val mi = lines.lastIndex
-        val total = 8_388_608
         var m = 0
-        while (m < total) { m = (m + 524_288).coerceAtMost(total); mem = m; delay(28) }
-        lines[mi] = "Memory Test : ${total}K OK"
+        while (m < totalMb) { m = (m + totalMb / 14).coerceAtMost(totalMb); mem = m; delay(34) }
+        lines[mi] = "Total Memory: ${totalMb}MB (LPDDR5)"
         val rest = listOf(
             "" to 40L,
-            "Initializing USB Controllers .. Done." to 150L,
-            "8192MB OK" to 60L,
-            "Auto-Detecting Pri Master..IDE Hard Disk" to 130L,
-            "Pri Master : Pulse Phone Flash 256GB" to 90L,
-            "Auto-Detecting Pri Slave..Not Detected" to 90L,
-            "" to 60L,
-            "Booting from Hard Disk..." to 300L,
+            "USB Devices total: 0 Drive, 1 Keyboard, 1 Mouse, 0 Hub" to 140L,
+            "" to 40L,
+            "Detected ATA/ATAPI Devices..." to 160L,
+            "SATA6G_1:  PULSE PHONE FLASH" to 120L,
+            "" to 90L,
+            "Press F1 to Run SETUP" to 520L,
         )
         for ((l, d) in rest) { lines.add(l); delay(d) }
-        delay(250)
+        delay(350)
         onDone()
     }
-    Column(Modifier.fillMaxSize().background(Color.Black).clickable { onDone() }.statusBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Column(Modifier.fillMaxSize().background(Color(0xFF0A0A12)).clickable { onDone() }.statusBarsPadding().padding(horizontal = 10.dp, vertical = 10.dp)) {
+        androidx.compose.foundation.layout.Row(Modifier.padding(bottom = 18.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            AmiLogo(Modifier.size(width = 74.dp, height = 40.dp))
+            Column(Modifier.padding(start = 10.dp)) {
+                Text("American", color = Color(0xFFF2F2F2), fontFamily = FontFamily.Serif, fontSize = 27.sp, lineHeight = 26.sp)
+                Text("Megatrends", color = Color(0xFFF2F2F2), fontFamily = FontFamily.Serif, fontSize = 27.sp, lineHeight = 26.sp)
+            }
+        }
         lines.forEach { l ->
-            val shown = if (l == "MEM") "Memory Test : ${mem}K" else l
+            val shown = if (l == "MEM") "Total Memory: ${mem}MB" else l
             if (shown.isEmpty()) Spacer(Modifier.height(10.dp))
-            else Text(shown, color = if (l.startsWith("Press")) Color(0xFFFFFFFF) else Color(0xFFC0C0C0), fontFamily = MONO, fontSize = 11.sp, lineHeight = 15.sp)
+            else Text(shown, color = Color(0xFFE8E8E8), fontFamily = BIOS_FONT, fontSize = 15.sp, lineHeight = 17.sp)
         }
     }
 }
+
+private val BIOS_FONT = FontFamily(androidx.compose.ui.text.font.Font(com.umutk.pulse.R.font.vt323_regular))
 
 /**
  * A blue screen in the style of the look (95 and XP and 7 the white-on-blue text, 10 the sad face on blue, 11 the same on black) with its stop code, a percent counter, and a line that

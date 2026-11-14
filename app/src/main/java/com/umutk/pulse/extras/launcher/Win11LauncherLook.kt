@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.launcher
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -148,18 +149,19 @@ class Win11LauncherLook : LauncherLook {
         val recent = if (query.isBlank()) state.apps.filter { it.installed > 0L }.sortedByDescending { it.installed }.take(4) else emptyList<LaunchApp>()
         val launch: (LaunchApp) -> Unit = { state.open(it); onClose() }
         Box(modifier.fillMaxSize().clickable(onClick = onClose)) {
-            Column(
+            // the Start menu is acrylic: the desktop picture, blurred, shows through a tint
+            AcrylicBox(
+                "win11", if (dark()) Color(0x8C141B2A) else Color(0x9AF3F3F3),
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     .fillMaxWidth()
                     .widthIn(max = if (land) 560.dp else 640.dp)
                     .fillMaxHeight(if (land) .9f else .78f)
                     .shadow(24.dp, shape, clip = false)
-                    .clip(shape)
-                    .let { glass(it, flyoutFill(), shape) }
-                    .clickable(enabled = false) {}
-                    .padding(16.dp),
-            ) {
+                    .border(1.dp, Color(0x33FFFFFF), shape)
+                    .clickable(enabled = false) {},
+                shape, 30.dp,
+            ) { Column(Modifier.fillMaxSize().padding(16.dp)) {
                 Box(
                     Modifier.fillMaxWidth().height(40.dp).clip(shape).background(field())
                         .drawBehind { drawRect(accent, Offset(0f, size.height - 2.dp.toPx()), Size(size.width, 2.dp.toPx())) }
@@ -204,7 +206,7 @@ class Win11LauncherLook : LauncherLook {
                             }
                         }
                     } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        LiveTiles(8.dp, Modifier.padding(bottom = 8.dp))
+                        LiveTiles(8.dp, Modifier.padding(bottom = 8.dp), see = .55f)
                         Win11Heading(tr("Apps", "Uygulamalar"), fg) {
                             Row(Modifier.clip(shape).clickable { allPage = true }.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 12.sp)
@@ -246,6 +248,7 @@ class Win11LauncherLook : LauncherLook {
                     }
                     Box(Modifier.size(36.dp).clip(shape).clickable { onClose(); logOff(logCtx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
                 }
+            }
             }
         }
     }

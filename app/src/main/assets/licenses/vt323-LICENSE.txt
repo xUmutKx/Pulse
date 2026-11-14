@@ -1,0 +1,2 @@
+VT323 (c) 2011 The VT323 Project Authors (Peter Hull). SIL Open Font License 1.1, https://openfontlicense.org
+Used for the fake BIOS screen of the launcher boot easter egg.
