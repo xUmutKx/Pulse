@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PButton
+import com.umutk.pulse.PChip
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
@@ -159,7 +160,12 @@ object SeasonDl {
         false
     }
 
-    private fun mb(b: Long) = if (b >= 1_073_741_824L) "%.1f GB".format(b / 1_073_741_824.0) else "${b / 1_048_576} MB"
+    private fun sizeText(b: Long) = if (b >= 1_073_741_824L) "%.1f GB".format(b / 1_073_741_824.0) else "${b / 1_048_576} MB"
+
+    private val SIZES = listOf(500, 800, 1500, 3000, 6000)
+
+    @Composable
+    private fun Caption(s: String) = Text(s, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
     @Composable
     fun Card() {
@@ -168,16 +174,18 @@ object SeasonDl {
         var open by remember { mutableStateOf(false) }
         var movies by remember { mutableStateOf(false) }
         var addon by remember { mutableStateOf(addon(ctx)) }
-        var mbText by remember { mutableStateOf(maxMb(ctx).toInt().toString()) }
+        var editAddon by remember { mutableStateOf(addon(ctx).isBlank()) }
+        var mb by remember { mutableStateOf(maxMb(ctx).toInt()) }
         var q by remember { mutableStateOf("") }
         var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
         var show by remember { mutableStateOf<Show?>(null) }
         var eps by remember { mutableStateOf<List<Ep>>(emptyList()) }
         var note by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
-        fun limit() = ((mbText.toFloatOrNull() ?: 800f) * 1_048_576.0).toLong()
+        fun limit() = mb * 1_048_576L
         fun clean(s: String) = s.replace(Regex("[^\\p{L}\\p{N} ._()-]"), "").trim()
-        /** The server first (the Stremio app is opened if it is not running), then every pick is added. */
+        fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = "" }
+        /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
         suspend fun start(picks: List<Pair<String, String>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
             picks.forEach { (u, n) -> Downloads.add(ctx, u, n) }
@@ -192,83 +200,108 @@ object SeasonDl {
                 }
                 if (open) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PButton(tr("Series", "Diziler"), compact = true) { movies = false; shows = emptyList(); show = null; eps = emptyList(); note = "" }
-                        PButton(tr("Movies", "Filmler"), compact = true) { movies = true; shows = emptyList(); show = null; eps = emptyList(); note = "" }
-                        Text(if (movies) tr("Movies", "Filmler") else tr("Series", "Diziler"), color = T.accent, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
+                        PChip(!movies, tr("Series", "Diziler")) { movies = false; reset() }
+                        PChip(movies, tr("Movies", "Filmler")) { movies = true; reset() }
                     }
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        PField(addon, { addon = it }, tr("Add-on link, once (…/manifest.json or stremio://…)", "Eklenti bağlantısı, bir kez (…/manifest.json veya stremio://…)"), Modifier.weight(1f))
+                    // 1. where the streams come from
+                    Caption(tr("1  Add-on (paste its link once)", "1  Eklenti (bağlantısını bir kez yapıştır)"))
+                    if (addon.isNotBlank() && !editAddon) Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Text("✓  " + (runCatching { Uri.parse(addon.replaceFirst(Regex("^stremio://", RegexOption.IGNORE_CASE), "https://")).host }.getOrNull() ?: addon), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        PChip(false, tr("Change", "Değiştir")) { editAddon = true }
+                    } else Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        PField(addon, { addon = it }, "https://…/manifest.json", Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
                         // the link copied from the add-on's page goes in with one press
                         PButton(tr("Paste", "Yapıştır"), compact = true) {
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                             val s = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()?.trim().orEmpty()
-                            if (s.startsWith("http") || s.startsWith("stremio://")) { addon = s; save(ctx, s, mbText.toFloatOrNull() ?: 800f) }
+                            if (s.startsWith("http") || s.startsWith("stremio://")) { addon = s; save(ctx, s, mb.toFloat()); editAddon = false; note = "" }
                             else note = tr("Copy the add-on link first", "Önce eklenti bağlantısını kopyala")
                         }
+                        if (addon.isNotBlank()) { Spacer(Modifier.width(6.dp)); PButton(tr("OK", "Tamam"), compact = true) { save(ctx, addon, mb.toFloat()); editAddon = false } }
                     }
-                    PField(mbText, { mbText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, tr("Largest size (MB)", "En büyük boyut (MB)"), Modifier.fillMaxWidth())
+                    // 2. the size limit: the largest stream still under it is taken
+                    Caption(tr("2  Largest size per ${if (movies) "movie" else "episode"}", "2  ${if (movies) "Film" else "Bölüm"} başına en büyük boyut"))
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(SIZES) { n -> PChip(mb == n, if (n >= 1000) "${n / 1000f} GB".replace(".0", "") else "$n MB") { mb = n; save(ctx, addon, n.toFloat()) } }
+                    }
+                    // 3. what to download
+                    Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
                     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.weight(1f))
+                        PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.weight(1f), onDone = null)
                         Spacer(Modifier.width(8.dp))
                         PButton(tr("Find", "Bul"), compact = true) {
                             if (q.isBlank()) return@PButton
-                            note = tr("Looking…", "Aranıyor…"); show = null; eps = emptyList()
+                            reset(); note = tr("Looking…", "Aranıyor…")
                             scope.launch { shows = runCatching { search(q.trim(), if (movies) "movie" else "series") }.getOrDefault(emptyList()); note = if (shows.isEmpty()) tr("Nothing found", "Bulunamadı") else "" }
                         }
                     }
-                    shows.forEach { s ->
-                        Row(Modifier.fillMaxWidth().clickable {
-                            show = s; eps = emptyList()
-                            if (!movies) {
-                                note = tr("Reading the episodes…", "Bölümler okunuyor…")
-                                scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
-                            } else note = ""
-                        }.padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Poster(s.poster)
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(s.name, color = if (show?.id == s.id) T.accent else T.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                if (s.year.isNotBlank()) Text(s.year, color = T.sub, fontSize = 12.sp)
+                    val sel = show
+                    if (sel == null) {
+                        // the results: a tap chooses one, and the list gives way to it (its seasons or its download button come right under it)
+                        shows.forEach { s ->
+                            Row(Modifier.fillMaxWidth().clickable {
+                                show = s; eps = emptyList()
+                                if (!movies) {
+                                    note = tr("Reading the episodes…", "Bölümler okunuyor…")
+                                    scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
+                                } else note = ""
+                            }.padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Poster(s.poster)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(s.name, color = T.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    if (s.year.isNotBlank()) Text(s.year, color = T.sub, fontSize = 12.sp)
+                                }
                             }
                         }
-                    }
-                    val sel = show
-                    if (sel != null && movies) PButton(tr("Download the movie", "Filmi indir"), Modifier.fillMaxWidth()) {
-                        if (busy) return@PButton
-                        if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
-                        save(ctx, addon, mbText.toFloatOrNull() ?: 800f); busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
-                        scope.launch {
-                            val pick = runCatching { best(addon, Ep(sel.id, 0, 0, ""), limit(), "movie") }.getOrNull()
-                            if (pick == null) note = tr("Nothing under ${mb(limit())}", "${mb(limit())} altında yayın yok")
-                            else { start(listOf(pick.url to clean(sel.name + if (sel.year.isNotBlank()) " (" + sel.year.take(4) + ")" else ""))); if (note.startsWith(tr("Finding", "Yayın"))) note = tr("Started (${mb(pick.size)})", "Başladı (${mb(pick.size)})") }
-                            busy = false
+                    } else {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Poster(sel.poster)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(sel.name, color = T.accent, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                if (sel.year.isNotBlank()) Text(sel.year, color = T.sub, fontSize = 12.sp)
+                            }
+                            PChip(false, tr("Back", "Geri")) { show = null; eps = emptyList(); note = "" }
                         }
-                    }
-                    val seasons = eps.map { it.season }.filter { it > 0 }.distinct()
-                    if (seasons.isNotEmpty() && sel != null && !movies) {
-                        Text(tr("Season", "Sezon"), color = T.sub, fontSize = 12.sp)
-                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(seasons) { sn ->
-                                PButton("$sn", compact = true) {
-                                    val list = eps.filter { it.season == sn }
-                                    if (busy) return@PButton
-                                    if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
-                                    save(ctx, addon, mbText.toFloatOrNull() ?: 800f); busy = true
-                                    scope.launch {
-                                        var skipped = 0
-                                        val picks = ArrayList<Pair<String, String>>()
-                                        val name = clean(sel.name)
-                                        list.forEachIndexed { i, ep ->
-                                            note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
-                                            val pick = runCatching { best(addon, ep, limit()) }.getOrNull()
-                                            if (pick == null) skipped++ else picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode))
+                        if (movies) PButton(tr("Download the movie (up to ${mb} MB)", "Filmi indir (en çok ${mb} MB)"), Modifier.fillMaxWidth()) {
+                            if (busy) return@PButton
+                            if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
+                            busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
+                            scope.launch {
+                                val pick = runCatching { best(addon, Ep(sel.id, 0, 0, ""), limit(), "movie") }.getOrNull()
+                                if (pick == null) note = tr("Nothing under $mb MB", "$mb MB altında yayın yok")
+                                else { start(listOf(pick.url to clean(sel.name + if (sel.year.isNotBlank()) " (" + sel.year.take(4) + ")" else ""))); if (note.startsWith(tr("Finding", "Yayın"))) note = tr("Started (${sizeText(pick.size)})", "Başladı (${sizeText(pick.size)})") }
+                                busy = false
+                            }
+                        } else {
+                            val seasons = eps.map { it.season }.filter { it > 0 }.distinct()
+                            if (seasons.isNotEmpty()) {
+                                Caption(tr("Tap a season to download all of its episodes", "Bir sezona basınca bütün bölümleri iner"))
+                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(seasons) { sn ->
+                                        val list = eps.filter { it.season == sn }
+                                        PButton(tr("Season $sn · ${list.size} ep", "Sezon $sn · ${list.size} bölüm"), compact = true) {
+                                            if (busy) return@PButton
+                                            if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
+                                            save(ctx, addon, mb.toFloat()); busy = true
+                                            scope.launch {
+                                                var skipped = 0
+                                                val picks = ArrayList<Pair<String, String>>()
+                                                val name = clean(sel.name)
+                                                list.forEachIndexed { i, ep ->
+                                                    note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
+                                                    val pick = runCatching { best(addon, ep, limit()) }.getOrNull()
+                                                    if (pick == null) skipped++ else picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode))
+                                                }
+                                                note = tr("Starting…", "Başlıyor…")
+                                                start(picks)
+                                                busy = false
+                                                if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} episodes started (up to $mb MB each)", "${picks.size} bölüm başladı (her biri en çok $mb MB)") +
+                                                    if (skipped > 0) tr(", $skipped had nothing under the limit", ", $skipped için sınırın altında yayın yok") else ""
+                                            }
                                         }
-                                        note = tr("Starting…", "Başlıyor…")
-                                        start(picks)
-                                        busy = false
-                                        if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} episodes started (${mb(limit())} at most each)", "${picks.size} bölüm başladı (her biri en çok ${mb(limit())})") +
-                                            if (skipped > 0) tr(", $skipped had nothing under the limit", ", $skipped için sınırın altında yayın yok") else ""
                                     }
                                 }
                             }
