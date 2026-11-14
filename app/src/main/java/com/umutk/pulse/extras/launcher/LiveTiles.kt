@@ -43,7 +43,7 @@ import java.util.Locale
  * notifications waiting and the day of the year. They refresh while the menu is open.
  */
 @Composable
-fun LiveTiles(corner: Dp, modifier: Modifier = Modifier) {
+fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f) {
     val ctx = LocalContext.current
     val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val battery by produceState(0 to false) {
@@ -61,7 +61,7 @@ fun LiveTiles(corner: Dp, modifier: Modifier = Modifier) {
     val turn = (now / 4000L) % 2L == 0L
     val shape = RoundedCornerShape(corner)
     val notes = LauncherBadges.counts.values.sum()
-    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(88.dp).clip(shape).background(c).padding(10.dp), contentAlignment = Alignment.BottomStart) { content() }
+    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(88.dp).clip(shape).background(c.copy(alpha = c.alpha * see)).padding(10.dp), contentAlignment = Alignment.BottomStart) { content() }
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(2f)) { tile(2f, Color(0xFF0078D7)) {
