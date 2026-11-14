@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1680,7 +1681,7 @@ class GameMenuService : android.app.Service() {
     }
 
     private fun hide() {
-        closePanel(); hideFps()
+        closePanel(); hideFps(); hideCover()
         handle?.let { v -> runCatching { wm.removeView(v) } }
         handle = null; shown = null
     }
@@ -1691,65 +1692,121 @@ class GameMenuService : android.app.Service() {
 
     private fun sh(cmd: String, done: (Privilege.Out) -> Unit = {}) { Thread { val o = Privilege.run(cmd); h.post { done(o) } }.start() }
 
+    /** A Fluent icon (the 24 px outlines of FluentPaths) drawn as a plain view for the overlay. */
+    private class GlyphView(c: Context, key: String, var tint: Int) : android.view.View(c) {
+        private val paths = (com.umutk.pulse.FluentPaths.map[key] ?: emptyList()).mapNotNull { runCatching { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath().asAndroidPath() }.getOrNull() }
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.FILL }
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            paint.color = tint
+            val sc = minOf(width, height) / 24f
+            canvas.save(); canvas.translate((width - 24 * sc) / 2f, (height - 24 * sc) / 2f); canvas.scale(sc, sc)
+            paths.forEach { canvas.drawPath(it, paint) }
+            canvas.restore()
+        }
+    }
+
+    private var cover: android.view.View? = null
+
+    /** The screen cover: the whole screen turns black (saves an OLED screen's power) and ignores touches; a double tap takes it off. */
+    private fun showCover() {
+        if (cover != null) return
+        val d = resources.displayMetrics.density
+        val hint = android.widget.TextView(this).apply { text = tr("Double tap to turn the screen back on", "Ekranı geri açmak için çift dokun"); setTextColor(0x55FFFFFF); textSize = 12f; gravity = android.view.Gravity.CENTER }
+        val box = android.widget.FrameLayout(this).apply { setBackgroundColor(0xFF000000.toInt()); addView(hint, android.widget.FrameLayout.LayoutParams(-1, -1)) }
+        val gd = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: android.view.MotionEvent) = true
+            override fun onDoubleTap(e: android.view.MotionEvent): Boolean { hideCover(); return true }
+        })
+        box.setOnTouchListener { _, ev -> gd.onTouchEvent(ev); true }
+        hint.postDelayed({ hint.animate().alpha(0f).setDuration(600).start() }, 3000)
+        val l = android.view.WindowManager.LayoutParams(-1, -1, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, android.graphics.PixelFormat.OPAQUE)
+        if (runCatching { wm.addView(box, l) }.isSuccess) cover = box
+        handle?.visibility = android.view.View.INVISIBLE
+    }
+
+    private fun hideCover() { cover?.let { v -> runCatching { wm.removeView(v) } }; cover = null; handle?.visibility = android.view.View.VISIBLE }
+
     private fun openPanel(pkg: String) {
         val d = resources.displayMetrics.density
         fun px(v: Int) = (v * d).toInt()
+        val white = 0xFFFFFFFF.toInt(); val dim = 0xFFB0B0B0.toInt(); val tile = 0xFF262628.toInt(); val accent = 0xFF4CC2FF.toInt()
         val col = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(px(14), px(12), px(14), px(12))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xF0141414.toInt()); cornerRadius = 18 * d }
+            setPadding(px(12), px(12), px(12), px(12))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xF2121214.toInt()); cornerRadius = 20 * d }
         }
-        fun label(t: String, size: Float, c: Int = 0xFFFFFFFF.toInt()) = android.widget.TextView(this).apply { text = t; textSize = size; setTextColor(c) }
-        fun button(t: String, on: () -> Unit) = android.widget.TextView(this).apply {
-            text = t; textSize = 14f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
-            setPadding(px(10), px(9), px(10), px(9))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
-            setOnClickListener { on() }
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) }
+        fun label(t: String, size: Float, c: Int = white) = android.widget.TextView(this).apply { text = t; textSize = size; setTextColor(c) }
+        fun round(c: Int, r: Float = 14f) = android.graphics.drawable.GradientDrawable().apply { setColor(c); cornerRadius = r * d }
+        /** A square tile: an icon over a short caption; [on] tints it with the accent. Returns the tile and lets the caller change both later. */
+        class Tile(val box: android.widget.LinearLayout, val icon: GlyphView, val cap: android.widget.TextView) {
+            fun set(text: String, active: Boolean) { cap.text = text; icon.tint = if (active) accent else white; icon.invalidate(); box.background = round(if (active) 0xFF1F3A4A.toInt() else tile) }
         }
+        fun tile(key: String, text: String, active: Boolean = false, on: () -> Unit): Tile {
+            val g = GlyphView(this, key, white).apply { layoutParams = android.widget.LinearLayout.LayoutParams(px(26), px(26)) }
+            val cap = label(text, 11f, dim).apply { gravity = android.view.Gravity.CENTER; maxLines = 2; setPadding(0, px(4), 0, 0) }
+            val b = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL; gravity = android.view.Gravity.CENTER
+                setPadding(px(4), px(10), px(4), px(8))
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(px(3), px(3), px(3), px(3)) }
+                addView(g); addView(cap); setOnClickListener { on() }
+            }
+            return Tile(b, g, cap).also { it.set(text, active) }
+        }
+        fun rowOf(vararg t: Tile) { col.addView(android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; t.forEach { addView(it.box) } }) }
+
+        // the title and the phone's state, as small chips
         val name = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
-        col.addView(label(name, 16f))
+        col.addView(label(name, 16f).apply { setPadding(px(4), 0, px(4), px(6)); maxLines = 1 })
         val bat = registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         val pct = bat?.let { 100 * it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0
         val temp = (bat?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
         val mi = android.app.ActivityManager.MemoryInfo().also { (getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }
-        col.addView(label("%d%%  ·  %.1f \u00B0C  ·  %.1f GB".format(pct, temp, mi.availMem / 1_073_741_824.0), 13f, if (temp >= 43f || pct <= 15) 0xFFFF6E6E.toInt() else 0xFFB0B0B0.toInt()))
-        // do not disturb
-        val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
-        lateinit var dnd: android.widget.TextView
-        fun dndText() = tr("Do not disturb", "Rahatsız etme") + ": " + if (dndOn()) tr("on", "açık") else tr("off", "kapalı")
-        dnd = button(dndText()) { sh("cmd notification set_dnd ${if (dndOn()) "off" else "on"}") { h.postDelayed({ dnd.text = dndText() }, 300) } }
-        col.addView(dnd)
-        // the performance mode
-        val row = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) } }
-        listOf("standard" to tr("Standard", "Standart"), "performance" to tr("Performance", "Performans"), "battery" to tr("Battery", "Pil")).forEach { (k, t) ->
-            row.addView(android.widget.TextView(this).apply {
-                text = if (tuneOf(this@GameMenuService, pkg).first == k) "\u25CF $t" else t; textSize = 12f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
-                setPadding(px(4), px(9), px(4), px(9))
-                background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
-                layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = px(4) }
-                setOnClickListener {
-                    prefs(this@GameMenuService).edit().putString("tm_$pkg", k).apply()
-                    sh("cmd game mode $k $pkg") { o -> toast(this@GameMenuService, if (o.code >= 0 && !Regex("(?i)error|exception|unknown|denied").containsMatchIn(o.text)) t else tr("The phone did not take this setting", "Telefon bu ayarı kabul etmedi")); closePanel() }
-                }
-            })
+        val chips = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
+        fun chip(key: String, t: String, warn: Boolean) {
+            val r = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(px(8), px(5), px(8), px(5)); background = round(0xFF1C1C1E.toInt(), 10f)
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(px(3), 0, px(3), px(4)) }
+            }
+            r.addView(GlyphView(this, key, if (warn) 0xFFFF6E6E.toInt() else dim).apply { layoutParams = android.widget.LinearLayout.LayoutParams(px(16), px(16)) })
+            r.addView(label(t, 12f, if (warn) 0xFFFF6E6E.toInt() else dim).apply { setPadding(px(4), 0, 0, 0); maxLines = 1 })
+            chips.addView(r)
         }
-        col.addView(row)
-        // the frame counter in the corner
-        lateinit var fpsBtn: android.widget.TextView
-        fun fpsText() = "FPS: " + if (fpsView != null) tr("on", "açık") else tr("off", "kapalı")
-        fpsBtn = button(fpsText()) {
+        chip("battery", "$pct%", pct <= 15)
+        chip("thermal", "%.0f\u00B0".format(temp), temp >= 43f)
+        chip("memory", "%.1f GB".format(mi.availMem / 1_073_741_824.0), false)
+        col.addView(chips)
+
+        // the performance mode: three icon tiles
+        val cur = tuneOf(this, pkg).first
+        fun mode(k: String, key: String, t: String) = tile(key, t, cur == k) {
+            prefs(this).edit().putString("tm_$pkg", k).apply()
+            sh("cmd game mode $k $pkg") { o -> toast(this, if (o.code >= 0 && !Regex("(?i)error|exception|unknown|denied").containsMatchIn(o.text)) t else tr("The phone did not take this setting", "Telefon bu ayarı kabul etmedi")); closePanel() }
+        }
+        rowOf(mode("standard", "settings", tr("Standard", "Standart")), mode("performance", "speed", tr("Performance", "Performans")), mode("battery", "battery", tr("Battery", "Pil")))
+
+        // do not disturb, the frame counter, the rotation
+        val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
+        lateinit var dnd: Tile
+        dnd = tile("notifications", tr("Do not disturb", "Rahatsız etme"), dndOn()) { sh("cmd notification set_dnd ${if (dndOn()) "off" else "on"}") { h.postDelayed({ dnd.set(dnd.cap.text.toString(), dndOn()) }, 300) } }
+        lateinit var fpsT: Tile
+        fpsT = tile("stopwatch", "FPS", fpsView != null) {
             val on = fpsView == null
             prefs(this).edit().putBoolean("menuFps", on).apply()
             if (on) showFps() else hideFps()
-            fpsBtn.text = fpsText()
+            fpsT.set("FPS", on)
         }
-        col.addView(fpsBtn)
-        // the screen recording (up to three minutes), saved in Movies
-        lateinit var recBtn: android.widget.TextView
-        fun recText() = if (recordingSince > 0L && android.os.SystemClock.elapsedRealtime() - recordingSince < 180_000L) tr("Stop recording", "Kaydı durdur") else tr("Record screen", "Ekranı kaydet")
-        recBtn = button(recText()) {
-            if (recText() == tr("Stop recording", "Kaydı durdur")) {
+        fun rotOn() = android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1) == 1
+        lateinit var rot: Tile
+        rot = tile("rotate", tr("Auto-rotate", "Döndürme"), rotOn()) { sh("settings put system accelerometer_rotation ${if (rotOn()) 0 else 1}") { h.postDelayed({ rot.set(rot.cap.text.toString(), rotOn()) }, 300) } }
+        rowOf(dnd, fpsT, rot)
+
+        // the screen cover, the screenshot, the recording
+        lateinit var recT: Tile
+        fun recing() = recordingSince > 0L && android.os.SystemClock.elapsedRealtime() - recordingSince < 180_000L
+        recT = tile("record", if (recing()) tr("Stop", "Durdur") else tr("Record", "Kaydet"), recing()) {
+            if (recing()) {
                 recordingSince = 0L
                 sh("pkill -2 screenrecord") { toast(this, tr("Saved in Movies", "Movies klasörüne kaydedildi")) }
             } else {
@@ -1757,10 +1814,8 @@ class GameMenuService : android.app.Service() {
                 closePanel()
                 sh("mkdir -p /sdcard/Movies && (nohup screenrecord --time-limit 180 /sdcard/Movies/Game_${System.currentTimeMillis()}.mp4 >/dev/null 2>&1 &)") { toast(this, tr("Recording", "Kayıt başladı")) }
             }
-            recBtn.text = recText()
         }
-        col.addView(recBtn)
-        col.addView(button(tr("Screenshot", "Ekran görüntüsü")) {
+        val shot = tile("screenshot", tr("Screenshot", "Ekran görüntüsü")) {
             closePanel(); handle?.visibility = android.view.View.INVISIBLE
             h.postDelayed({
                 val f = "/sdcard/Pictures/Screenshots/Game_" + System.currentTimeMillis() + ".png"
@@ -1769,41 +1824,40 @@ class GameMenuService : android.app.Service() {
                     toast(this, if (o.code == 0 || o.text.isBlank()) tr("Saved", "Kaydedildi") else o.text.take(80))
                 }
             }, 450)
-        })
-        col.addView(button(tr("Close background apps", "Arka plan uygulamalarını kapat")) { sh("am kill-all") { toast(this, tr("Done", "Tamam")); closePanel() } })
-        // a pair of buttons side by side: "−" and "+" for the brightness and the volume
-        fun pair(title: String, minus: () -> Unit, plus: () -> Unit) {
-            val r = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) } }
+        }
+        val cov = tile("extraBlackOut", tr("Screen cover", "Ekran perdesi")) { closePanel(); showCover() }
+        rowOf(cov, shot, recT)
+
+        // the brightness and the volume: an icon between "−" and "+"
+        fun pair(key: String, minus: () -> Unit, plus: () -> Unit) {
+            val r = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { setMargins(px(3), px(3), px(3), px(3)) }; background = round(tile) }
             fun small(t: String, on: () -> Unit) = android.widget.TextView(this).apply {
-                text = t; textSize = 18f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
-                setPadding(px(18), px(6), px(18), px(6))
-                background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF2A2A2A.toInt()); cornerRadius = 10 * d }
-                setOnClickListener { on() }
+                text = t; textSize = 20f; setTextColor(white); gravity = android.view.Gravity.CENTER
+                setPadding(px(22), px(8), px(22), px(8)); setOnClickListener { on() }
             }
             r.addView(small("\u2212", minus))
-            r.addView(label(title, 13f, 0xFFB0B0B0.toInt()).apply { gravity = android.view.Gravity.CENTER; layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f) })
+            r.addView(GlyphView(this, key, dim).apply { layoutParams = android.widget.LinearLayout.LayoutParams(0, px(24), 1f) })
             r.addView(small("+", plus))
             col.addView(r)
         }
         fun bright(delta: Int) = sh("settings put system screen_brightness_mode 0; cur=\$(settings get system screen_brightness); settings put system screen_brightness \$(( cur + ($delta) < 5 ? 5 : (cur + ($delta) > 255 ? 255 : cur + ($delta)) ))")
-        pair(tr("Brightness", "Parlaklık"), { bright(-30) }, { bright(30) })
+        pair("light", { bright(-30) }, { bright(30) })
         val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        pair(tr("Volume", "Ses"), { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_LOWER, android.media.AudioManager.FLAG_SHOW_UI) }, { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_RAISE, android.media.AudioManager.FLAG_SHOW_UI) })
-        // the screen's turning: locked, or free
-        lateinit var rot: android.widget.TextView
-        fun rotOn() = android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1) == 1
-        fun rotText() = tr("Auto-rotate", "Otomatik döndür") + ": " + if (rotOn()) tr("on", "açık") else tr("off", "kapalı")
-        rot = button(rotText()) { sh("settings put system accelerometer_rotation ${if (rotOn()) 0 else 1}") { h.postDelayed({ rot.text = rotText() }, 300) } }
-        col.addView(rot)
-        col.addView(button(tr("Move the handle to the other side", "Tutamağı diğer tarafa al")) { prefs(this).edit().putBoolean("menuRight", !onRight()).apply(); show(pkg) })
-        col.addView(button(tr("Close the game", "Oyunu kapat")) { sh("am force-stop $pkg") { closePanel() } })
+        pair("volume", { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_LOWER, android.media.AudioManager.FLAG_SHOW_UI) }, { am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_RAISE, android.media.AudioManager.FLAG_SHOW_UI) })
+
+        // the cleaning, the handle's side, the game's end
+        val clean = tile("clean", tr("Free memory", "Belleği boşalt")) { sh("am kill-all") { toast(this, tr("Done", "Tamam")); closePanel() } }
+        val side = tile("pin", tr("Other side", "Diğer taraf")) { prefs(this).edit().putBoolean("menuRight", !onRight()).apply(); show(pkg) }
+        val quit = tile("close", tr("Close game", "Oyunu kapat")) { sh("am force-stop $pkg") { closePanel() } }
+        rowOf(clean, side, quit)
+
         // the panel scrolls when the screen is low (landscape)
-        val scroll = android.widget.ScrollView(this).apply { addView(col) }
-        val maxH = (resources.displayMetrics.heightPixels * 0.88f).toInt()
-        val lpPanel = lp(px(270), -2, px(34), handleY())
-        col.measure(android.view.View.MeasureSpec.makeMeasureSpec(px(270), android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.UNSPECIFIED)
+        val scroll = android.widget.ScrollView(this).apply { addView(col); isVerticalScrollBarEnabled = false }
+        val maxH = (resources.displayMetrics.heightPixels * 0.9f).toInt()
+        val wPanel = px(300)
+        val lpPanel = lp(wPanel, -2, px(34), handleY())
+        col.measure(android.view.View.MeasureSpec.makeMeasureSpec(wPanel, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.UNSPECIFIED)
         if (col.measuredHeight > maxH) lpPanel.height = maxH
         if (runCatching { wm.addView(scroll, lpPanel) }.isSuccess) panel = scroll
     }
 }
-
