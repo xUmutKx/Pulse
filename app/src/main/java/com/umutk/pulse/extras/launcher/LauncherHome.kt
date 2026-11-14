@@ -97,18 +97,30 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
         .pointerInput(onLong) {
             detectTapGestures(
                 onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; onLong() },
-                onDoubleTap = { if (LauncherPrefs.gestureLock) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN) },
+                onDoubleTap = { runGesture(ctx, LauncherPrefs.gDouble) },
             )
         }
         .pointerInput(Unit) {
             // a long swipe on the home: down opens the notification shade, up opens the apps list (each is a setting)
             var total = 0f
             detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = {
-                if (total > 140f && LauncherPrefs.swipeDownShade) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
-                else if (total > 140f && LauncherPrefs.swipeDownSearch) LauncherSession.searchOpen = true
-                else if (total < -140f && LauncherPrefs.swipeUpApps) LauncherSession.startOpen = true
+                if (total > 140f) runGesture(ctx, LauncherPrefs.gDown) else if (total < -140f) runGesture(ctx, LauncherPrefs.gUp)
             }) { _, d -> total += d }
         }
+}
+
+/** Does what a gesture of the home was given (see [GESTURE_ACTIONS]). */
+fun runGesture(ctx: Context, key: String) {
+    when (key) {
+        "lock" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        "shade" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+        "quick" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
+        "recents" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS)
+        "power" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
+        "apps" -> LauncherSession.startOpen = true
+        "search" -> LauncherSession.searchOpen = true
+        "settings" -> runCatching { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
 }
 
 /** Asks Pulse's accessibility service (it lives in the main process, the launcher is a process of its own) to do a system action: lock the screen, open the shade. */
