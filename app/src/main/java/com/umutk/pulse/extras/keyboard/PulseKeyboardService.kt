@@ -935,7 +935,40 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         word.clear(); target = null
         // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
         if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow, ctxNow, pending)
+        // writing a long message: a word a little further back that was left wrong and has a clear correction is mended now, in its place
+        if (correct && (sep == " " || sep == "") && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions) sweepBack()
         return true
+    }
+
+    private val swept = LinkedHashSet<String>()
+
+    /**
+     * Looks at the words just before the one that was ended (the last three): a word that is no word of the list, nothing like a name or a code, and has a clear correction is mended in
+     * place with the same highlight as any other correction. A word is looked at once (a word the person put back is never touched again).
+     */
+    private fun sweepBack() {
+        val c = currentInputConnection ?: return
+        if (st.plain || urlNow() || emailField || KeyboardPrefs.practicing || st.incognito) return
+        val before = c.getTextBeforeCursor(140, 0)?.toString() ?: return
+        val ms = Regex("\\p{L}+").findAll(before.dropLast(1)).toList()
+        // the word just ended is the last one; the three before it are the candidates
+        val cands = ms.dropLast(1).takeLast(3)
+        val codeNow = st.lang; val locNow = lang.locale
+        for (m in cands) {
+            val w = m.value
+            val lw = w.lowercase(locNow)
+            if (w.length < 4 || w.any { it.isUpperCase() } || KeyboardDictionary.isKept(w)) continue
+            val end = m.range.last + 1
+            // a word followed by a single space, which is what lateFix looks for
+            if (before.getOrNull(end) != ' ') continue
+            if (dictCodes(codeNow).any { KeyboardDictionary.isWord(it, lw) || KeyboardDictionary.inLexicon(it, lw) } || KeyboardDictionary.userCount(lw) > 0) continue
+            val key = lw + "|" + before.substring(maxOf(0, m.range.first - 10), m.range.first)
+            if (!swept.add(key)) continue
+            if (swept.size > 300) swept.remove(swept.first())
+            val ctx = before.substring(0, m.range.first)
+            val words = Regex("\\p{L}+").findAll(ctx).map { it.value }.toList()
+            lateFix(w, " ", " ", codeNow, locNow, words.lastOrNull(), words.getOrNull(words.size - 2), false, ctx)
+        }
     }
 
     /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
@@ -1169,8 +1202,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         autoOffTap = wasAuto && st.shift == 0
         autoShift = false
         lastShiftTap = now
-        // a word is open: the bar shows (or drops) its capital-letter form
-        if (word.isNotEmpty()) updateSuggestions()
+        // the bar follows the shift key at once: an open word shows (or drops) its capital-letter form, and with no word open the next words (portakal) turn to capitals (Portakal)
+        updateSuggestions()
     }
 
     override fun page(p: Int) { finishWord("", false); st.page = p; st.panel = "keys"; if (p == 0) updateCaps() }
@@ -1891,6 +1924,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             info.inputType and InputType.TYPE_MASK_VARIATION !in listOf(InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
         st.shift = if (c.getCursorCapsMode(info.inputType) != 0 || (own && info.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0 && info.inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD == 0 && (!noAuto || untouched))) 1 else 0
         autoShift = st.shift == 1
+        // a name goes on in capitals: after "Umut Kıvanç" the next word (şahin) starts with a capital, as the saved full names and the names of the list say
+        if (st.shift == 0 && (lang.code == "tr" || lang.code == "en")) {
+            val b2 = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+            val toks = if (b2.endsWith(" ")) b2.split(' ').filter { t -> t.isNotBlank() } else emptyList()
+            if (toks.size >= 2) {
+                val a = toks[toks.size - 2]; val b = toks[toks.size - 1]
+                fun cap(t: String) = t.length >= 2 && t[0].isUpperCase() && t.drop(1).all { it.isLowerCase() || it == '\'' }
+                if (cap(a) && cap(b)) {
+                    val lc = lang.locale
+                    val named = a.lowercase(lc) in KeyboardDictionary.properNouns || b.lowercase(lc) in KeyboardDictionary.properNouns ||
+                        getSharedPreferences("pulse_kb_fullnames", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').any { it.startsWith("$a $b", true) } ||
+                        getSharedPreferences("pulse_kb_names", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').any { it.equals(a, true) }
+                    if (named) { st.shift = 1; autoShift = true }
+                }
+            }
+        }
     }
 
     private val EN_GRAMMAR: Map<String, String> = mapOf(
@@ -2210,6 +2259,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return newList to newWords
     }
 
+    /** Two words run together with a slip in one of them: one half a word of the list, the other a near word ("kşabye" -> "kısa bye"). Null when there is no such pair. */
+    private fun looseSplit(code: String, lower: String): String? {
+        var best: Pair<String, Float>? = null
+        for (i in 2..lower.length - 2) {
+            val a = lower.substring(0, i); val b = lower.substring(i)
+            val aw = KeyboardDictionary.isWord(code, a); val bw = KeyboardDictionary.isWord(code, b)
+            if (!aw && !bw) continue
+            val ca = if (aw) KeyboardDictionary.Cand(a, 0f, 0f) else KeyboardDictionary.correct(code, a, .9f).filter { !KeyboardDictionary.isBanned(it.word) }.minByOrNull { it.cost } ?: continue
+            val cb = if (bw) KeyboardDictionary.Cand(b, 0f, 0f) else KeyboardDictionary.correct(code, b, .9f).filter { !KeyboardDictionary.isBanned(it.word) }.minByOrNull { it.cost } ?: continue
+            val cost = ca.cost + cb.cost
+            if (best == null || cost < best.second) best = (ca.word + " " + cb.word) to cost
+        }
+        return best?.takeIf { it.second <= 1.2f }?.first
+    }
+
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false, ctxText: String? = null): Triple<List<String>, Array<String>, String?> {
         KeyboardDictionary.begin()
@@ -2324,15 +2388,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val fix = swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0
         val others = (comp.map { it.word } + corr.map { it.word } + nnScore.keys).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
             .let { o -> if (nnScore.isEmpty()) o else o.sortedByDescending { nnScore[it] ?: -1e9f } }
+        // a word nothing is near (a slip the rule cannot reach): the bar is not left empty. A wider look for near words, and two words run together ("kşabye": "kısa bye")
+        val others2 = if (!fast && fix == null && others.size < 2 && lower.length >= 3 && !stretched && !keepCase) {
+            val wide = candCodes.flatMap { KeyboardDictionary.correct(it, lower, limit + 1.6f, tc) }.filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) }
+                .sortedBy { it.cost }.distinctBy { it.word }.map { it.word }.take(3)
+            val pair = if (lower.length in 5..16) candCodes.firstNotNullOfOrNull { c0 -> looseSplit(c0, lower) } else null
+            (others + listOfNotNull(pair) + wide).distinct().filter { it != lower }
+        } else others
         val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String
         // Shift pressed while the word is open: the middle holds the capital-letter form (the one the correction would give, when there is one), and a tap puts it in
         val loc = lang.locale
         val capital = up && typed.isNotEmpty() && typed[0].isLetter() && typed[0].isLowerCase()
         fun capped(w: String) = if (capital) w.replaceFirstChar { it.titlecase(loc) } else w
-        if (fix != null) { mid = capped(cased(fix.word, typed)); left = "\"$typed\""; right = emoji ?: others.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
-        else if (capital) { mid = capped(typed); left = "\"$typed\""; right = emoji ?: others.getOrNull(0)?.let { capped(cased(it, typed)) }.orEmpty() }
-        else { mid = typed; left = others.getOrNull(0)?.let { cased(it, typed) }.orEmpty(); right = emoji ?: others.getOrNull(1)?.let { cased(it, typed) }.orEmpty() }
+        if (fix != null) { mid = capped(cased(fix.word, typed)); left = "\"$typed\""; right = emoji ?: others2.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
+        else if (capital) { mid = capped(typed); left = "\"$typed\""; right = emoji ?: others2.getOrNull(0)?.let { capped(cased(it, typed)) }.orEmpty() }
+        else { mid = typed; left = others2.getOrNull(0)?.let { cased(it, typed) }.orEmpty(); right = emoji ?: others2.getOrNull(1)?.let { cased(it, typed) }.orEmpty() }
         val words = arrayOf(if (fix != null || capital) typed else left, mid, right)
         return Triple(listOf(left, mid, right), words, fix?.let { capped(cased(it.word, typed)) })
     }
