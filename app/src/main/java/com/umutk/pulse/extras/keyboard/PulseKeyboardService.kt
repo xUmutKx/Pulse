@@ -2043,10 +2043,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // an address you saved that fits what is typed comes first (a tap writes it whole), then the domains, the ones used most first: four show, four more are a swipe away
                 (mine.take(2) + dom.take(8)).distinct()
             }
+            // the first letters of an address typed before ("umut"): in an e-mail field its saved addresses that begin so are offered whole, a tap writes one
+            emailField -> saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }.take(6)
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }
         val list = list0.filter { !KeyboardDictionary.isBanned(it) }
+        // the system's autofill chips do not follow what is typed (they kept showing other addresses after "umut"): once there is text, only the bar's own suggestions stay
+        if (tok.isNotEmpty() && st.inline.isNotEmpty()) st.inline = emptyList()
         // at least three slots, so the code that reads the first three never meets a short list
         slotWords = (list + listOf("", "", "")).take(maxOf(3, list.size)).toTypedArray()
         st.slots = slotWords.toList()
