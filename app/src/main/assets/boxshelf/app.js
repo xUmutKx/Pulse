@@ -5144,5 +5144,6 @@ Promise.race([ready,new Promise(r=>setTimeout(r,2500))]).then(start,start);
 function spineInfo(g,sh){
   const BM=Object.assign(Object.fromEntries(Object.keys(BOX_VAR).map(k=>[k,BOX_VAR[k][0]])),{ps5:"ps5",ps4:"ps4",ps3:"ps3",switch:"sw",switch2:"sw2",xbox360:"x360",xboxone:"x360",xboxseries:"x360"});
   const bs=g&&g.pulse&&g.box&&BM[g.box]&&STYLE[BM[g.box]],s=bs||STYLE[sh&&sh.id]||STYLE.media,sb=s.spineBand||s.band||{bg:s.caseColor,fg:"#fff",label:""};
-  return{body:s.caseColor,side:s.caseSide||s.caseColor,band:sb.bg,fg:sb.fg,ink:s.spineInk||"#fff",label:String(sb.label||(sh&&sh.name)||"")};
+  const key=bs&&g.box?(BOX_VAR[g.box]?g.box:/^xbox/.test(g.box)?"xbox":/^ps/.test(g.box)?"ps":/^switch|^sw/.test(g.box)?"switch":null):null;
+  return{body:s.caseColor,side:s.caseSide||s.caseColor,band:sb.bg,fg:sb.fg,ink:s.spineInk||"#fff",label:String(sb.label||(sh&&sh.name)||""),mark:key&&BOX_ICON[key]||""};
 }
