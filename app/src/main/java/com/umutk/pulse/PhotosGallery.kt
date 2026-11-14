@@ -170,6 +170,16 @@ internal object PhotosPrefs {
 internal class Ph(val src: ImgSrc, val date: Long, val album: String, val fav: Boolean = false, val mod: Long = 0, val video: Boolean = false)
 
 /** Device pictures, newest first. With all-files access each item is a File (editable in the viewer), otherwise just a content URI. */
+/** The last list read from the phone, kept for the whole process: the gallery shows it at once when it opens again, and reads the phone again behind it. */
+internal object PhotosCache {
+    @Volatile var list: List<Ph>? = null
+    /** Reads the phone's pictures in the background before the gallery is on screen. */
+    fun prewarm(ctx: Context) {
+        val c = ctx.applicationContext
+        Thread { runCatching { val l = queryPhotos(c); if (l.isNotEmpty()) list = l } }.start()
+    }
+}
+
 internal fun queryPhotos(ctx: Context): List<Ph> {
     val all = com.umutk.pulse.Compat.isStorageManager()
     val out = ArrayList<Ph>()
@@ -224,13 +234,13 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     var ok by remember { mutableStateOf(granted()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok = granted() }
     LaunchedEffect(Unit) { if (!ok) ask.launch(perm) }
-    var all by remember { mutableStateOf<List<Ph>?>(null) }
+    var all by remember { mutableStateOf<List<Ph>?>(PhotosCache.list) }
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) PhotosPrefs.tick++ }
         owner.lifecycle.addObserver(ob); onDispose { owner.lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(ok, PhotosPrefs.tick, PhotosPrefs.showVideos) { if (ok) { val l = withContext(Dispatchers.IO) { queryPhotos(ctx) }; PhotosPrefs.sync(ctx, l); all = l } }
+    LaunchedEffect(ok, PhotosPrefs.tick, PhotosPrefs.showVideos) { if (ok) { val l = withContext(Dispatchers.IO) { queryPhotos(ctx) }; PhotosPrefs.sync(ctx, l); if (l.isNotEmpty()) PhotosCache.list = l; if (l != all) all = l } }
 
     var tab by rememberSaveable { mutableIntStateOf(PhotosPrefs.startTab) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
