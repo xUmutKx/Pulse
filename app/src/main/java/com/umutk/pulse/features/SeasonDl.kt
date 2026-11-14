@@ -50,8 +50,8 @@ object SeasonDl {
     private const val META = "https://v3-cinemeta.strem.io"
     private fun p(c: Context) = c.getSharedPreferences("season_dl", Context.MODE_PRIVATE)
     fun addon(c: Context) = p(c).getString("addon", "") ?: ""
-    fun maxGb(c: Context) = p(c).getFloat("maxGb", 1.5f)
-    fun save(c: Context, addon: String, gb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxGb", gb).apply() }
+    fun maxMb(c: Context) = p(c).getFloat("maxMb", 800f)
+    fun save(c: Context, addon: String, mb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxMb", mb).apply() }
 
     private fun get(u: String): JSONObject {
         val c = URL(u).openConnection() as HttpURLConnection
@@ -83,7 +83,7 @@ object SeasonDl {
 
     /** The largest stream of the episode that is under [maxBytes], or null when there is none (or none says its size). */
     suspend fun best(addonBase: String, ep: Ep, maxBytes: Long): Pick? = withContext(Dispatchers.IO) {
-        val base = addonBase.trim().removeSuffix("/manifest.json").removeSuffix("/")
+        val base = addonBase.trim().replaceFirst(Regex("^stremio://", RegexOption.IGNORE_CASE), "https://").removeSuffix("/manifest.json").removeSuffix("/")
         val a = get("$base/stream/series/${Uri.encode(ep.id)}.json").optJSONArray("streams") ?: return@withContext null
         var best: Pick? = null
         for (i in 0 until a.length()) {
@@ -112,7 +112,7 @@ object SeasonDl {
         val scope = rememberCoroutineScope()
         var open by remember { mutableStateOf(false) }
         var addon by remember { mutableStateOf(addon(ctx)) }
-        var gb by remember { mutableStateOf(maxGb(ctx).toString().removeSuffix(".0")) }
+        var gb by remember { mutableStateOf(maxMb(ctx).toInt().toString()) }
         var q by remember { mutableStateOf("") }
         var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
         var show by remember { mutableStateOf<Show?>(null) }
@@ -128,8 +128,8 @@ object SeasonDl {
                     PIcon("chevron", T.sub, 18.dp)
                 }
                 if (open) {
-                    PField(addon, { addon = it }, tr("Add-on link (…/manifest.json)", "Eklenti bağlantısı (…/manifest.json)"), Modifier.fillMaxWidth())
-                    PField(gb, { gb = it.filter { c -> c.isDigit() || c == '.' }.take(5) }, tr("Largest size per episode (GB)", "Bölüm başına en büyük boyut (GB)"), Modifier.fillMaxWidth())
+                    PField(addon, { addon = it }, tr("Add-on link, once (…/manifest.json or stremio://…)", "Eklenti bağlantısı, bir kez (…/manifest.json veya stremio://…)"), Modifier.fillMaxWidth())
+                    PField(gb, { gb = it.filter { c -> c.isDigit() || c == '.' }.take(5) }, tr("Largest size per episode (MB)", "Bölüm başına en büyük boyut (MB)"), Modifier.fillMaxWidth())
                     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         PField(q, { q = it }, tr("Show name", "Dizi adı"), Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
@@ -154,8 +154,8 @@ object SeasonDl {
                                 PButton("$sn", compact = true) {
                                     val list = eps.filter { it.season == sn }
                                     if (busy) return@PButton
-                                    val limit = ((gb.toFloatOrNull() ?: 1.5f) * 1_073_741_824.0).toLong()
-                                    save(ctx, addon, gb.toFloatOrNull() ?: 1.5f)
+                                    val limit = ((gb.toFloatOrNull() ?: 800f) * 1_048_576.0).toLong()
+                                    save(ctx, addon, gb.toFloatOrNull() ?: 800f)
                                     if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
                                     busy = true
                                     scope.launch {
