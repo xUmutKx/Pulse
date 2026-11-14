@@ -156,20 +156,51 @@
     css.textContent = '#pulseGrid{position:fixed;inset:0;z-index:8500;background:#07090d;color:#e9edf5;display:none;flex-direction:column;font:15px system-ui,sans-serif}#pulseGrid.on{display:flex}#pulseGrid .gh{display:flex;align-items:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px 10px}#pulseGrid .gh b{font-size:22px;font-weight:600;flex:1}#pulseGrid .gh small{opacity:.55}#pulseGrid .gx{width:40px;height:40px;border:0;border-radius:20px;background:#1a1e27;color:#fff;font-size:20px}#pulseGrid .gb{flex:1;overflow-y:auto;padding:0 16px max(24px,env(safe-area-inset-bottom))}#pulseGrid h3{margin:18px 0 10px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;font-weight:600}#pulseGrid .gg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}#pulseGrid .gt{background:none;border:0;padding:0;color:inherit;text-align:left}#pulseGrid .gc{aspect-ratio:2/3;border-radius:12px;overflow:hidden;background:#1a1e27;position:relative;box-shadow:0 4px 14px rgba(0,0,0,.45)}#pulseGrid .gc img{width:100%;height:100%;object-fit:cover;display:block}#pulseGrid .gc span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;font-weight:600;font-size:13px}#pulseGrid .gn{margin-top:6px;font-size:12px;line-height:1.25;opacity:.85;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}';
     document.head.appendChild(css);
     const box = document.createElement('div'); box.id = 'pulseGrid';
-    box.innerHTML = '<div class="gh"><b>All games</b><small></small><button class="gx" type="button" aria-label="Close">&#x2715;</button></div><div class="gb"></div>';
+    box.innerHTML = '<div class="gh"><b>All games</b><small></small><button class="gv" type="button" aria-label="Spines or covers"></button><button class="gx" type="button" aria-label="Close">&#x2715;</button></div><div class="gb"></div>';
     const add = () => document.body.appendChild(box);
     if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
     const close = () => box.classList.remove('on');
     box.querySelector('.gx').onclick = close;
+    // the shelf of spines: every game stands with its spine out, close together, the console's own colour, a plank under each row (the way games stand on a real shelf)
+    const st2 = document.createElement('style');
+    st2.textContent = '#pulseGrid .gv{margin-left:auto;margin-right:8px;background:#1b2030;color:#e9edf5;border:1px solid #39404d;border-radius:10px;padding:6px 12px;font:inherit}#pulseGrid .gb.sp{background:linear-gradient(#cdbfa8,#b9a98f 70%);padding:10px 8px 24px}#pulseGrid .gb.sp h3{color:#4a3d2a;font-size:13px;margin:14px 4px 6px;letter-spacing:.06em}#pulseGrid .sr{display:flex;align-items:flex-end;padding:0 6px;min-height:176px}#pulseGrid .pl{height:12px;margin:0 0 6px;background:linear-gradient(#f3f4f6,#c9ccd2);border-radius:0 0 3px 3px;box-shadow:0 3px 5px rgba(0,0,0,.25)}#pulseGrid .sp1{display:block;flex:none;width:30px;height:170px;margin:0 1px;padding:0;border:0;border-radius:2px 2px 0 0;position:relative;overflow:hidden;cursor:pointer;transition:transform .12s}#pulseGrid .sp1:active{transform:translateY(-12px)}#pulseGrid .sp1 i{position:absolute;left:0;right:0;top:0;height:34px;font:700 7px/34px system-ui,sans-serif;font-style:normal;text-align:center;letter-spacing:0;overflow:hidden;white-space:nowrap}#pulseGrid .sp1 b{position:absolute;left:0;right:0;top:38px;bottom:4px;writing-mode:vertical-rl;font:600 12px/30px system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#pulseGrid .sp1::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.18),rgba(0,0,0,0) 35%,rgba(0,0,0,.22));pointer-events:none}';
+    document.head.appendChild(st2);
+    let view = 'spines'; try { view = localStorage.getItem('pulseGridView') || 'spines'; } catch (e) {}
+    const gv = box.querySelector('.gv');
+    gv.onclick = () => { view = view === 'spines' ? 'covers' : 'spines'; try { localStorage.setItem('pulseGridView', view); } catch (e) {} open(); };
+    function renderSpines(body, list, F) {
+      body.classList.add('sp');
+      const per = Math.max(4, Math.floor((Math.min(window.innerWidth, 900) - 28) / 32));
+      const order = [], by = {};
+      list.forEach(g => { const k = (g.sp && g.sp.label) || g.sys || 'Games'; if (!by[k]) { by[k] = []; order.push(k); } by[k].push(g); });
+      order.forEach(k => {
+        const items = by[k];
+        const h = document.createElement('h3'); h.textContent = k + ' · ' + items.length; body.appendChild(h);
+        for (let i = 0; i < items.length; i += per) {
+          const row = document.createElement('div'); row.className = 'sr';
+          items.slice(i, i + per).forEach(g => {
+            const s = g.sp || {}, b = document.createElement('button'); b.type = 'button'; b.className = 'sp1'; b.title = g.title;
+            b.style.background = s.body || '#222';
+            const band = document.createElement('i'); band.textContent = String(s.label || '').split(' ')[0].slice(0, 5); band.style.background = s.band || s.body; band.style.color = s.fg || '#fff';
+            const t = document.createElement('b'); t.textContent = g.title; t.style.color = s.ink || '#fff';
+            b.append(band, t);
+            b.onclick = () => { close(); setTimeout(() => { try { if (!F.go(g.id)) F.play(g.id); } catch (e) {} }, 60); };
+            row.appendChild(b);
+          });
+          body.appendChild(row);
+          const pl = document.createElement('div'); pl.className = 'pl'; body.appendChild(pl);
+        }
+      });
+    }
     ['pointerdown', 'click', 'keydown'].forEach(t => box.addEventListener(t, e => e.stopPropagation()));
     const hue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % 360; };
     function open() {
       const F = window.Shelf && Shelf._find; if (!F) return;
       const list = F.games(), groups = [['Your games', []], ['Built-in games', []], ['HTML games', []]];
       list.forEach(g => { const id = String(g.id); groups[id.indexOf('app-mega:') === 0 ? 1 : id.indexOf('app-html:') === 0 ? 2 : 0][1].push(g); });
-      const body = box.querySelector('.gb'); body.innerHTML = '';
+      const body = box.querySelector('.gb'); body.innerHTML = ''; body.classList.remove('sp'); gv.textContent = view === 'spines' ? 'Covers' : 'Spines';
       box.querySelector('small').textContent = list.length + ' games';
-      groups.forEach(([name, items]) => {
+      if (view === 'spines') renderSpines(body, list, F); else groups.forEach(([name, items]) => {
         if (!items.length) return;
         const h = document.createElement('h3'); h.textContent = name + ' · ' + items.length; body.appendChild(h);
         const grid = document.createElement('div'); grid.className = 'gg';
