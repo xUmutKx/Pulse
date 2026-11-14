@@ -209,20 +209,27 @@ private fun WordsCharge(t: Float, fill: Float, scale: Float) {
     }
 }
 
-/** 24: a system card, like neofetch: a little logo on the left, the phone's lines are typed in on the right, the charge bar ends the list. */
+/**
+ * 24: the phone's neofetch card (the same one the Terminal prints): the Android robot of its generation at the left in green, the lines of the phone at the right, the two rows of colour
+ * blocks, then the charge as a bar. The lines are typed in one after the other and the card stays whole for the rest of the turn. Black ground, as on an AMOLED terminal.
+ */
 @Composable
 private fun NeofetchCharge(t: Float, fill: Float, col: Color, scale: Float) {
-    val pct = (fill * 100).toInt(); val bar = 18; val on = (fill * bar).toInt().coerceIn(0, bar)
-    val logo = listOf("   .--.   ", "  |o_o |  ", "  |:_/ |  ", " //   \\ \\ ", "(|     | )", "/'\\_   _/`\\", "\\___)=(___/")
-    val info = listOf("os" to "Android", "device" to "phone", "status" to tr("charging", "şarj oluyor"), "battery" to "$pct%", "port" to "USB-C")
-    val shown = (t * (info.size + 2)).toInt().coerceIn(0, info.size + 1)
-    Row(Modifier.fillMaxSize().padding((16 * scale).dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.fillMaxWidth(.42f)) { logo.forEach { Text(it, color = col, fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1) } }
-        Column(Modifier.fillMaxWidth()) {
-            Text("pulse@phone", color = col, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = (12 * scale + 1).sp, maxLines = 1)
-            info.take(shown.coerceAtMost(info.size)).forEach { (k, v) -> Text("$k: $v", color = Color.White.copy(alpha = .9f), fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1) }
-            if (shown > info.size) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "]", color = col, fontFamily = FontFamily.Monospace, fontSize = (11 * scale + 1).sp, maxLines = 1)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val all = androidx.compose.runtime.remember(scale >= 1f) { com.umutk.pulse.features.NeofetchText.lines(ctx, if (scale >= 1f) 99 else 5) }
+    val shown = (t * 1.7f * all.size).toInt().coerceIn(0, all.size)
+    val pct = (fill * 100).toInt(); val bar = 24; val on = (fill * bar).toInt().coerceIn(0, bar)
+    val fs = (if (scale >= 1f) 7.4f else 3.6f * scale * 2f).coerceAtLeast(3f)
+    Column(Modifier.fillMaxSize().background(Color.Black).padding((10 * scale).dp), verticalArrangement = Arrangement.Center) {
+        all.take(shown).forEach { line ->
+            val a = androidx.compose.ui.text.buildAnnotatedString {
+                line.forEach { seg ->
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = seg.color ?: Color(0xFFE6E6E6), fontWeight = if (seg.bold) FontWeight.Bold else null)); append(seg.text); pop()
+                }
+            }
+            Text(a, fontFamily = FontFamily.Monospace, fontSize = fs.sp, lineHeight = (fs * 1.25f).sp, maxLines = 1, softWrap = false)
         }
+        if (shown >= all.size) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "] $pct%", color = col, fontFamily = FontFamily.Monospace, fontSize = fs.sp, modifier = Modifier.padding(top = (4 * scale).dp))
     }
 }
 
