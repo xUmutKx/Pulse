@@ -5155,5 +5155,5 @@ function spineInfo(g,sh){
 /* a button for the two libraries (the phone's own games and the built-in / HTML games): it switches to the other shelf and shows which one is open */
 window.Shelf.switchLib=()=>{if(shelves.length<2||(mode!=="browse"&&mode!=="details")||sysBusy())return false;setSystem(((pendingSys>=0?pendingSys:sysIdx)+1)%shelves.length);return true};
 $("libBtn")&&$("libBtn").addEventListener("click",()=>{try{Shelf.switchLib()}catch(e){}});
-setInterval(()=>{const b=$("libBtn");if(!b)return;const two=shelves&&shelves.length>1;if(b.hidden===two)b.hidden=!two;if(two){const t=(shelves[sysIdx]&&shelves[sysIdx].name)||"";const s=b.querySelector("span");if(s&&s.textContent!==t)s.textContent=t;b.title="Library: "+t}},1000);
+setInterval(()=>{const b=$("libBtn");if(!b)return;const two=shelves&&shelves.length>1;if(b.hidden===two)b.hidden=!two;if(two){const t=(shelves[sysIdx]&&shelves[sysIdx].name)||"";b.title="Library: "+t}},1000);
 })();

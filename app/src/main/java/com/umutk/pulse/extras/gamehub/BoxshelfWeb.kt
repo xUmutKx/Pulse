@@ -188,6 +188,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 w.requestFocus()
                 val imm = c.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                 imm.showSoftInput(w, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                // a page in a view often needs a second ask once the field really has the focus
+                w.postDelayed({ runCatching { w.requestFocus(); imm.showSoftInput(w, 0) } }, 250)
             }
         }
     }
