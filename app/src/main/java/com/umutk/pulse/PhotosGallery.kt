@@ -176,8 +176,30 @@ internal object PhotosCache {
     /** Reads the phone's pictures in the background before the gallery is on screen. */
     fun prewarm(ctx: Context) {
         val c = ctx.applicationContext
-        Thread { runCatching { val l = queryPhotos(c); if (l.isNotEmpty()) list = l } }.start()
+        Thread { runCatching { val l = queryPhotos(c); if (l.isNotEmpty()) { list = l; save(c, l) } } }.start()
     }
+    /** The index on disk: the list of the last reading, so even the first opening after a restart shows the pictures at once. */
+    private fun file(c: Context) = File(c.filesDir, "photos_index.tsv")
+    private fun clean(s: String) = s.replace('\t', ' ').replace('\n', ' ')
+    fun save(c: Context, l: List<Ph>) = runCatching {
+        val sb = StringBuilder(l.size * 120)
+        l.forEach { p -> sb.append(p.src.uri).append('\t').append(p.src.file?.path ?: "").append('\t').append(clean(p.src.name)).append('\t').append(p.date).append('\t')
+            .append(clean(p.album)).append('\t').append(if (p.fav) 1 else 0).append('\t').append(p.mod).append('\t').append(if (p.video) 1 else 0).append('\n') }
+        val tmp = File(c.filesDir, "photos_index.tmp"); tmp.writeText(sb.toString()); tmp.renameTo(file(c))
+    }
+    fun load(c: Context): List<Ph>? {
+        list?.let { return it }
+        return runCatching {
+            val f = file(c); if (!f.isFile) return null
+            f.readLines().mapNotNull { ln ->
+                val p = ln.split('\t'); if (p.size < 8) return@mapNotNull null
+                val file = p[1].takeIf { it.isNotEmpty() }?.let { File(it) }
+                Ph(ImgSrc(Uri.parse(p[0]), file, p[2]), p[3].toLongOrNull() ?: 0L, p[4], p[5] == "1", p[6].toLongOrNull() ?: 0L, p[7] == "1")
+            }.takeIf { it.isNotEmpty() }?.also { list = it }
+        }.getOrNull()
+    }
+    /** Whether two readings hold the same pictures (so the grid is not rebuilt for nothing). */
+    fun same(a: List<Ph>?, b: List<Ph>): Boolean = a != null && a.size == b.size && a.indices.all { a[it].src.uri == b[it].src.uri && a[it].mod == b[it].mod && a[it].fav == b[it].fav }
 }
 
 internal fun queryPhotos(ctx: Context): List<Ph> {
@@ -187,7 +209,7 @@ internal fun queryPhotos(ctx: Context): List<Ph> {
         ctx.contentResolver.query(base, arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED, MediaStore.MediaColumns.BUCKET_DISPLAY_NAME) + (if (Build.VERSION.SDK_INT >= 30) arrayOf(MediaStore.MediaColumns.IS_FAVORITE) else emptyArray()), null, null, null)?.use { c ->
             while (c.moveToNext()) {
                 val name = c.getString(1) ?: "image"
-                val f = if (all) c.getString(2)?.let { File(it) }?.takeIf { it.isFile } else null
+                val f = if (all) c.getString(2)?.takeIf { it.isNotEmpty() }?.let { File(it) } else null // (no file check per row: MediaStore lists what is there, and a check per picture made a big library slow)
                 val uri = if (f != null) Uri.fromFile(f) else ContentUris.withAppendedId(base, c.getLong(0))
                 val d = c.getLong(3).takeIf { it > 0 } ?: (c.getLong(4) * 1000)
                 out.add(Ph(ImgSrc(uri, f, name), d, c.getString(5) ?: "?", Build.VERSION.SDK_INT >= 30 && c.getInt(6) == 1, c.getLong(4) * 1000, video))
@@ -234,13 +256,13 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     var ok by remember { mutableStateOf(granted()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok = granted() }
     LaunchedEffect(Unit) { if (!ok) ask.launch(perm) }
-    var all by remember { mutableStateOf<List<Ph>?>(PhotosCache.list) }
+    var all by remember { mutableStateOf<List<Ph>?>(PhotosCache.load(ctx)) }
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) PhotosPrefs.tick++ }
         owner.lifecycle.addObserver(ob); onDispose { owner.lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(ok, PhotosPrefs.tick, PhotosPrefs.showVideos) { if (ok) { val l = withContext(Dispatchers.IO) { queryPhotos(ctx) }; PhotosPrefs.sync(ctx, l); if (l.isNotEmpty()) PhotosCache.list = l; if (l != all) all = l } }
+    LaunchedEffect(ok, PhotosPrefs.tick, PhotosPrefs.showVideos) { if (ok) { val l = withContext(Dispatchers.IO) { queryPhotos(ctx).also { if (it.isNotEmpty()) { PhotosCache.list = it; PhotosCache.save(ctx, it) } } }; PhotosPrefs.sync(ctx, l); if (!PhotosCache.same(all, l)) all = l } }
 
     var tab by rememberSaveable { mutableIntStateOf(PhotosPrefs.startTab) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
@@ -415,7 +437,8 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
         // floating bottom tabs (icons only)
         if (sel.isEmpty() && !results && !settings) Row(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 14.dp).height(60.dp).clip(RoundedCornerShape(30.dp))
             .background(T.panel).border(1.dp, T.line, RoundedCornerShape(30.dp)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            listOf(Icons.Outlined.PhotoLibrary, Icons.Outlined.Collections, Icons.Outlined.FavoriteBorder).forEachIndexed { i, ic ->
+            // (Albums is a folder: the photos and albums pictures of Material are nearly the same)
+            listOf(Icons.Outlined.PhotoLibrary, Icons.Outlined.Folder, Icons.Outlined.FavoriteBorder).forEachIndexed { i, ic ->
                 val on = tab == i
                 Box(Modifier.padding(horizontal = 4.dp).size(width = 64.dp, height = 44.dp).clip(CircleShape).background(if (on) Look.accent.copy(alpha = .22f) else Color.Transparent)
                     .clickable { tab = i; album = null }, contentAlignment = Alignment.Center) {
@@ -569,6 +592,7 @@ internal fun SetSection(title: String, icon: @Composable () -> Unit, startOpen: 
 internal fun iconKeyOf(v: androidx.compose.ui.graphics.vector.ImageVector): String = when (v) {
     Icons.Outlined.PhotoLibrary, Icons.Outlined.Image, Icons.Outlined.PhotoCamera, Icons.Outlined.Wallpaper -> "image"
     Icons.Outlined.Collections, Icons.Outlined.ViewAgenda -> "gridView"
+    Icons.Outlined.Folder -> "folder"
     Icons.Outlined.FavoriteBorder, Icons.Filled.Favorite -> "heart"
     Icons.Outlined.ArrowBack, Icons.AutoMirrored.Outlined.ArrowBack -> "back"
     Icons.Outlined.Close -> "close"; Icons.Outlined.Share -> "share"; Icons.Outlined.Delete -> "delete"; Icons.Outlined.Search -> "search"

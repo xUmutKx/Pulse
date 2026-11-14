@@ -222,6 +222,13 @@ private fun videoThumb(ctx: Context, s: ImgSrc, px: Int): Bitmap? = runCatching 
     if (s.file != null) android.media.ThumbnailUtils.createVideoThumbnail(s.file, sz, null) else ctx.contentResolver.loadThumbnail(s.uri, sz, null)
 }.getOrNull()
 
+/** The last few pictures opened full size: a page that is made again (turning back, zooming) shows its picture at once instead of a blank. */
+internal object ImgFull {
+    private val cache = object : LruCache<String, Bitmap>(3) {}
+    fun get(k: String): Bitmap? = cache.get(k)
+    fun put(k: String, b: Bitmap) { cache.put(k, b) }
+}
+
 /** Small thumbnails shared by the grid and the filmstrip. */
 internal object ImgThumbs {
     private val cache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 6).toInt().coerceAtLeast(2 * 1024 * 1024)) {
@@ -479,7 +486,15 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
         busy = true
         scope.launch { vid = withContext(Dispatchers.IO) { imgLiveFile(ctx, s, li) }; busy = false }
     }
-    val ld by produceState<Pair<Boolean, Bitmap?>>(false to null, s, rev) { value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2560) } }
+    val activeNow by androidx.compose.runtime.rememberUpdatedState(active)
+    val zoomedNow by androidx.compose.runtime.rememberUpdatedState(onZoomed)
+    val fullKey = s.uri.toString() + "|" + rev
+    val ld by produceState<Pair<Boolean, Bitmap?>>(ImgFull.get(fullKey)?.let { true to it } ?: (false to null), s, rev) {
+        val hit = ImgFull.get(fullKey)
+        if (hit != null) { value = true to hit; return@produceState }
+        if (value.second != null) value = false to null
+        value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2560)?.also { ImgFull.put(fullKey, it) } }
+    }
     var scale by remember { mutableFloatStateOf(1f) }
     var ox by remember { mutableFloatStateOf(0f) }
     var oy by remember { mutableFloatStateOf(0f) }
@@ -516,6 +531,8 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
                 do {
                     val ev = awaitPointerEvent()
                     val n = ev.changes.count { it.pressed }
+                    // two fingers: the pager stops turning pages at once (it took the pinch for a swipe and showed the black edge of the next page on release)
+                    if (n >= 2 && activeNow) zoomedNow(true)
                     if (n >= 2 || scale > 1.01f) {
                         val z = ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f; val pan = ev.calculatePan().let { if (it.x.isFinite() && it.y.isFinite()) it else Offset.Zero }
                         val c = ev.calculateCentroid() - Offset(box.width / 2f, box.height / 2f)
@@ -528,6 +545,7 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
                         ev.changes.forEach { if (it.positionChanged()) it.consume() }
                     }
                 } while (ev.changes.any { it.pressed })
+                if (activeNow) zoomedNow(scale > 1.01f)
             }
         }, contentAlignment = Alignment.Center) {
         when {

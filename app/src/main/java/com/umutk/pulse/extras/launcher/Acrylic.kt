@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -49,8 +50,11 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     val rootW = with(dens) { view.rootView.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { view.rootView.height.coerceAtLeast(1).toDp() }
     val amount = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
-        if (wall != null) Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(tint))
+        // the picture and the tint only fill the box: they never make it bigger (the screen-sized picture made every panel as tall as the screen)
+        if (wall != null) Box(Modifier.matchParentSize().clipToBounds()) {
+            Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
+        }
+        Box(Modifier.matchParentSize().background(tint))
         content()
     }
 }
