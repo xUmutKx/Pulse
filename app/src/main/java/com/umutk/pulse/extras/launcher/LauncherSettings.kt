@@ -181,6 +181,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
             SwitchLine("window", tr("Open apps in windows on the Windows desktops (off: each app opens by itself)", "Windows masaüstlerinde uygulamalar pencerede açılır (kapalı: her biri kendi başına açılır)"), LauncherPrefs.windowedApps) { LauncherPrefs.windowedApps = it; save() }
             SwitchLine("grid", tr("Icons snap to a grid (off: place them anywhere)", "Simgeler ızgaraya oturur (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
+            SliderRow("${tr("Space between icons", "Simgeler arası boşluk")}: ${LauncherPrefs.iconSpace}%", LauncherPrefs.iconSpace.toFloat(), 60f..130f) { LauncherPrefs.iconSpace = it.roundToInt(); save() }
             SliderRow("${tr("Label size", "Ad yazısı boyutu")}: ${LauncherPrefs.labelScale}%", LauncherPrefs.labelScale.toFloat(), 60f..160f) { LauncherPrefs.labelScale = it.roundToInt(); save() }
             SwitchLine("gridView", tr("Page dots", "Sayfa noktaları"), LauncherPrefs.pageDots) { LauncherPrefs.pageDots = it; save() }
             Text(tr("Page effect", "Sayfa efekti"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))

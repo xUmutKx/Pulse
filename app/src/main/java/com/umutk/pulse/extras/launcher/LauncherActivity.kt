@@ -201,7 +201,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
     val ctx = LocalContext.current
     val d = LocalDensity.current.density
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
-        val cellW = 92f; val cellH = (iconDp + 48).toFloat()
+        val cellW = 92f * LauncherPrefs.iconSpace / 100f; val cellH = (iconDp + 48).toFloat() * LauncherPrefs.iconSpace / 100f
         val perColumn = (maxHeight.value / cellH).toInt().coerceAtLeast(1)
         val cols = (maxWidth.value / cellW).toInt().coerceAtLeast(1)
         // the cell (column, row) of each shortcut: the one it was put down on, else the next free place down the left edge

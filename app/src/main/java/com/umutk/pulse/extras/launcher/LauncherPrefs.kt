@@ -125,8 +125,10 @@ object LauncherPrefs {
     var tileMode by mutableStateOf("auto")
     /** Where each desktop shortcut sits on the Windows desktops: "x,y" in dp, by shortcut id. */
     var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
-    /** true: desktop icons snap to the grid where they are dropped (the default); false: they stay exactly where they are put down. */
-    var snapIcons by mutableStateOf(true)
+    /** true: desktop icons snap to the grid where they are dropped; false (the default): they stay exactly where they are put down. */
+    var snapIcons by mutableStateOf(false)
+    /** The room between the desktop icons, as a percent of the grid cell (smaller packs them closer). */
+    var iconSpace by mutableStateOf(88)
     /** On Windows desktops Pulse's own apps open in windows of the desktop (the default); off: each opens as an app of its own, full screen. */
     var windowedApps by mutableStateOf(true)
     /** The free places (dp, "x,y") of the icons while [snapIcons] is off. */
@@ -172,7 +174,8 @@ object LauncherPrefs {
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
-        snapIcons = p.getProperty("snapIcons") != "false"
+        snapIcons = p.getProperty("snapIcons2") == "true"
+        iconSpace = p.getProperty("iconSpace")?.toIntOrNull()?.coerceIn(60, 130) ?: 88
         windowedApps = p.getProperty("windowedApps") != "false"
         iconFree = p.stringPropertyNames().filter { it.startsWith("ifree.") }.associate { it.removePrefix("ifree.") to p.getProperty(it) }
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
@@ -218,7 +221,8 @@ object LauncherPrefs {
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
-        p.setProperty("snapIcons", snapIcons.toString())
+        p.setProperty("snapIcons2", snapIcons.toString())
+        p.setProperty("iconSpace", iconSpace.toString())
         p.setProperty("windowedApps", windowedApps.toString())
         iconFree.forEach { (id, v) -> p.setProperty("ifree.$id", v) }
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
