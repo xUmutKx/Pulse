@@ -229,6 +229,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             if (cur.id in com.umutk.pulse.loginLooks) {
                 SwitchLine("power", tr("Boot screen when the launcher starts", "Başlatıcı açılırken önyükleme ekranı"), LauncherPrefs.bootScreen) { LauncherPrefs.bootScreen = it; save() }
                 SwitchLine("users", tr("Sign-in screen when the launcher starts", "Başlatıcı açılırken giriş ekranı"), LauncherPrefs.loginScreen) { LauncherPrefs.loginScreen = it; save() }
+                SwitchLine("refresh", tr("Show them at every start (off: only now and then)", "Her açılışta göster (kapalı: yalnızca ara sıra)"), LauncherPrefs.bootEvery) { LauncherPrefs.bootEvery = it; save() }
                 SwitchLine("bug", tr("Surprises at the start (now and then a BIOS screen, rarely a fake blue screen)", "Açılışta sürprizler (ara sıra BIOS ekranı, nadiren sahte mavi ekran)"), LauncherPrefs.bootEggs) { LauncherPrefs.bootEggs = it; save() }
             }
             if (cur.id in setOf("win95", "xp")) SwitchLine("help", tr("Office Assistant (Clippy) on the desktop", "Masaüstünde Office Yardımcısı (Clippy)"), LauncherPrefs.clippy) { LauncherPrefs.clippy = it; save() }

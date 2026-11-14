@@ -111,7 +111,9 @@ class LauncherActivity : ComponentActivity() {
                 // the looks that boot start like what they imitate (once per launcher process): a Windows desktop with its boot screen and sign-in screen, the Terminal like a Linux
                 // machine, Windows Phone with its own start
                 val ownBoot = look.id == "terminal" || look.id.startsWith("winphone")
-                if (!LauncherSession.booted && (th.id in com.umutk.pulse.loginLooks || ownBoot)) {
+                // the boot and sign-in screens do not show at every start: now and then (about one start in three), unless the setting says every time
+                val bootShow = remember { LauncherPrefs.bootEvery || Math.random() < 0.34 }
+                if (!LauncherSession.booted && bootShow && (th.id in com.umutk.pulse.loginLooks || ownBoot)) {
                     val win = th.id in com.umutk.pulse.loginLooks
                     // now and then a surprise first on a Windows desktop: the BIOS screen of an old PC, very rarely a fake blue screen (stage -1)
                     val egg = remember { if (win && LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }

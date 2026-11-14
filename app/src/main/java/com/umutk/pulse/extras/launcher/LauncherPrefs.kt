@@ -105,6 +105,8 @@ object LauncherPrefs {
     var clippy by mutableStateOf(true)
     /** The Windows looks show their own boot screen and sign-in screen when the launcher starts (both on by default, with the look's start-up sound). */
     var bootScreen by mutableStateOf(true)
+    /** True: the boot and sign-in screens show at every start; false (default): only now and then, so they stay a surprise. */
+    var bootEvery by mutableStateOf(false)
     var loginScreen by mutableStateOf(true)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(false)
@@ -194,6 +196,7 @@ object LauncherPrefs {
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons2") == "true"
         blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
+        bootEvery = p.getProperty("bootEvery") == "true"
         iconSpace = p.getProperty("iconSpace2")?.toIntOrNull()?.coerceIn(60, 160) ?: 110
         windowedApps = p.getProperty("windowedApps") != "false"
         names = p.stringPropertyNames().filter { it.startsWith("lname.") }.associate { it.removePrefix("lname.") to p.getProperty(it) }
@@ -249,6 +252,7 @@ object LauncherPrefs {
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
         p.setProperty("snapIcons2", snapIcons.toString())
         p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
+        p.setProperty("bootEvery", bootEvery.toString())
         p.setProperty("iconSpace2", iconSpace.toString())
         p.setProperty("windowedApps", windowedApps.toString())
         names.forEach { (id, v) -> p.setProperty("lname.$id", v) }
