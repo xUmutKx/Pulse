@@ -149,12 +149,12 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 .put("playMs", times[g.pkg] ?: 0L).put("lastUsed", used[g.pkg]?.lastTimeUsed ?: 0L))
         }
         // the built-in games (Mega Games), after the phone's own: each a game of the shelf with a drawn cover
-        if (MegaGames.enabled(c)) MegaGames.LIST.filter { it.id !in MegaGames.removed(c) }.forEach { m ->
+        if (MegaGames.enabled(c)) MegaGames.LIST.filter { it.id !in MegaGames.removed(c) }.sortedBy { CaseCover.groupOf(c, MegaGames.PREFIX + it.id) }.forEach { m ->
             arr.put(JSONObject().put("pkg", MegaGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/mcover/${m.id}").put("hero", JSONObject.NULL)
                 .put("box", CaseCover.styleOf(c, MegaGames.PREFIX + m.id)).put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
         // the games of your own that are web pages (an .html or a .zip added in the shelf's settings)
-        HtmlGames.list(c).forEach { m ->
+        HtmlGames.list(c).sortedBy { CaseCover.groupOf(c, HtmlGames.PREFIX + it.id) }.forEach { m ->
             arr.put(JSONObject().put("pkg", HtmlGames.PREFIX + m.id).put("name", m.name).put("hidden", false).put("cover", "https://$HOST/hcover/${m.id}").put("hero", JSONObject.NULL)
                 .put("box", CaseCover.styleOf(c, HtmlGames.PREFIX + m.id)).put("shots", JSONArray()).put("playMs", 0L).put("lastUsed", 0L))
         }
