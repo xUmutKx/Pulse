@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.shape.RectangleShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
