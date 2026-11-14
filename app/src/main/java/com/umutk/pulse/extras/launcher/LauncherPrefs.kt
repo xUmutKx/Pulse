@@ -295,7 +295,7 @@ object LauncherPrefs {
         Look.accentIdx = -1
         Look.windowTheme = "win"
         // the Windows 11 desktop is dark (Mica), so the pages inside its windows are dark too
-        Look.mode = if (look == "win11") "dark" else "system"
+        Look.mode = if (look == "win11" || look == "terminal") "dark" else "system"
     }
 
     private var savedPulse: Triple<Int, String, String>? = null

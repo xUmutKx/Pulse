@@ -440,6 +440,7 @@ internal fun LookPicture(id: String, modifier: Modifier) {
         id == "xp" -> { bg = Brush.verticalGradient(listOf(Color(0xFF3A93FF), Color(0xFF4CA32C))); bar = Color(0xFF0831D9); tiles = listOf(Color(0xFFFFFFFF), Color(0xFFD6E6FF)) }
         id == "win95" -> { bg = SolidColor(Color(0xFF008080)); bar = Color(0xFFC0C0C0); tiles = listOf(Color(0xFFC0C0C0), Color(0xFFFFFF00)) }
         id.startsWith("winphone") -> { bg = SolidColor(Color.Black); bar = null; tiles = listOf(Color(0xFF0078D7), Color(0xFFE51400), Color(0xFF60A917), Color(0xFFF0A30A)) }
+        id == "terminal" -> { bg = SolidColor(Color.Black); bar = Color(0xFF0B2A0B); tiles = listOf(Color(0xFF33FF33), Color(0xFF1F9E1F)) }
         id == "amoled" -> { bg = SolidColor(Color.Black); bar = Color(0xFF2B2B2B); tiles = listOf(Color.White, Color(0xFF777777)) }
         else -> { bg = Brush.verticalGradient(listOf(Color(0xFFF3EDF7), Color(0xFFD0BCFF))); bar = Color(0xFFE8DEF8); tiles = listOf(Color(0xFF6750A4), Color(0xFFB3A0E0)) }
     }

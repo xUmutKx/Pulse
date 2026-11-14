@@ -125,6 +125,7 @@ object LauncherLooks {
         WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = true),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
+        TerminalLauncherLook(),
     )
     fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: defaultLook
 }

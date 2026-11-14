@@ -38,6 +38,8 @@ object HomeSheetState {
     var widgets by mutableStateOf(false)
     var pickApp by mutableStateOf(false)
     var newFolder by mutableStateOf(false)
+    /** What the "New" name box makes: a "folder", a "text" document or a web address ("url"). */
+    var newKind by mutableStateOf("folder")
 }
 
 /** The file behind a document the picker returned ("primary:Download/x.pdf" is /storage/emulated/0/Download/x.pdf), or null. */
@@ -85,7 +87,9 @@ fun HomeSheet() {
             ActionRow("apps", tr("App", "Uygulama"), w.text) { HomeSheetState.sheet = false; HomeSheetState.pickApp = true }
             ActionRow("document", tr("File", "Dosya"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("*/*")) }
             ActionRow("image", tr("Picture", "Resim"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("image/*")) }
-            ActionRow("folder", tr("Folder", "Klasör"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newFolder = true }
+            ActionRow("folder", tr("Folder", "Klasör"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newKind = "folder"; HomeSheetState.newFolder = true }
+            ActionRow("notes", tr("Text document", "Metin belgesi"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newKind = "text"; HomeSheetState.newFolder = true }
+            ActionRow("globe", tr("Website", "Web sitesi"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newKind = "url"; HomeSheetState.newFolder = true }
         }
     }
     if (HomeSheetState.pickApp) AppCheckDialog(tr("Add an app", "Uygulama ekle"), emptyList(), Int.MAX_VALUE, onDismiss = { HomeSheetState.pickApp = false }) { pkgs ->
@@ -93,13 +97,29 @@ fun HomeSheet() {
     }
     if (HomeSheetState.newFolder) com.umutk.pulse.WinAlert(
         onDismissRequest = { HomeSheetState.newFolder = false },
-        title = { Text(tr("New folder", "Yeni klasör")) },
-        text = { com.umutk.pulse.PField(folderName, { folderName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth()) },
+        title = { Text(when (HomeSheetState.newKind) { "text" -> tr("New text document", "Yeni metin belgesi"); "url" -> tr("New website", "Yeni web sitesi"); else -> tr("New folder", "Yeni klasör") }) },
+        text = { com.umutk.pulse.PField(folderName, { folderName = it }, if (HomeSheetState.newKind == "url") "https://" else tr("Name", "Ad"), Modifier.fillMaxWidth()) },
         confirmButton = { com.umutk.pulse.PButton(tr("Create", "Oluştur")) {
-            val n = folderName.trim().replace(Regex("[/\\\\:*?\"<>|]"), "_")
-            if (n.isNotEmpty()) {
-                val d = java.io.File(android.os.Environment.getExternalStorageDirectory(), "Documents/$n")
-                if (d.exists() || d.mkdirs()) addLink(d.path) else android.widget.Toast.makeText(ctx, tr("Could not create the folder", "Klasör oluşturulamadı"), android.widget.Toast.LENGTH_SHORT).show()
+            val raw = folderName.trim()
+            when (HomeSheetState.newKind) {
+                "url" -> if (raw.isNotEmpty()) {
+                    val u = if (raw.startsWith("http://") || raw.startsWith("https://")) raw else "https://$raw"
+                    LauncherPrefs.links = (LauncherPrefs.links + "url:$u").distinct(); LauncherPrefs.save(ctx)
+                }
+                "text" -> {
+                    val n = raw.replace(Regex("[/\\\\:*?\"<>|]"), "_").ifEmpty { tr("New text document", "Yeni metin belgesi") }
+                    val dir = java.io.File(android.os.Environment.getExternalStorageDirectory(), "Documents").also { it.mkdirs() }
+                    var f = java.io.File(dir, "$n.txt"); var k = 2
+                    while (f.exists()) f = java.io.File(dir, "$n ($k).txt").also { k++ }
+                    if (runCatching { f.createNewFile() }.getOrDefault(false)) addLink(f.path) else android.widget.Toast.makeText(ctx, tr("Could not create the file", "Dosya oluşturulamadı"), android.widget.Toast.LENGTH_SHORT).show()
+                }
+                else -> {
+                    val n = raw.replace(Regex("[/\\\\:*?\"<>|]"), "_")
+                    if (n.isNotEmpty()) {
+                        val d = java.io.File(android.os.Environment.getExternalStorageDirectory(), "Documents/$n")
+                        if (d.exists() || d.mkdirs()) addLink(d.path) else android.widget.Toast.makeText(ctx, tr("Could not create the folder", "Klasör oluşturulamadı"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
             HomeSheetState.newFolder = false
         } },

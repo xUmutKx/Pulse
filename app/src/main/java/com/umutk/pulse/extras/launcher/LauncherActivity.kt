@@ -99,7 +99,7 @@ class LauncherActivity : ComponentActivity() {
             }
             BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
             val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
-            LookHost(lookId = look.id) { th ->
+            LookHost(lookId = if (look.id == "terminal") "amoled" else look.id) { th ->
                 WindowsCursor(th.id in com.umutk.pulse.loginLooks) {
                 key(look.id) { CompositionLocalProvider(LocalLauncherEdge provides edge) { LauncherRoot(look, apps) } }
                 }
@@ -403,6 +403,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // the look's click when anything opens (the desktop shortcuts played it already)
         if (!app.pkg.startsWith("pulse:")) { LauncherSounds.prepare(ctx, look.id); LauncherSounds.click(look.id) }
         if (isFolder(app)) FolderUi.open = app.pkg.removePrefix(FOLDER_PREFIX)
+        else if (app.pkg.startsWith("url:")) runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(app.pkg.removePrefix("url:"))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        // on a Windows desktop a file opens in a window of its own (the picture, the text, the PDF); a folder and the other looks go to the system
+        else if (app.pkg.startsWith("file:") && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps && java.io.File(app.pkg.removePrefix("file:")).isFile) DesktopWindows.open("view:" + app.pkg.removePrefix("file:"), app.label)
         else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
@@ -411,7 +414,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) {
         // a file, picture or folder put on the home screen: a long press takes it off again (the file itself stays)
-        if (it.pkg.startsWith("file:")) { LauncherPrefs.links = LauncherPrefs.links - it.pkg; LauncherPrefs.save(ctx); android.widget.Toast.makeText(ctx, tr("Removed from the home screen", "Ana ekrandan kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show() }
+        if (it.pkg.startsWith("file:") || it.pkg.startsWith("url:")) { LauncherPrefs.links = LauncherPrefs.links - it.pkg; LauncherPrefs.save(ctx); android.widget.Toast.makeText(ctx, tr("Removed from the home screen", "Ana ekrandan kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show() }
         else if (!it.pkg.startsWith("pulse:")) actionFor = it
     }
 
@@ -508,6 +511,8 @@ internal fun LabelScale(content: @Composable () -> Unit) {
 /** A thing put on the home screen: its name, and the picture of the look's own icon set (a folder, a picture, a document) or the app itself. */
 internal fun linkApp(link: String, apps: List<LaunchApp>): LaunchApp? {
     if (link.startsWith("app:")) return apps.firstOrNull { it.pkg == link.removePrefix("app:") }
+    // a web address put on the home screen: its host is the name, the globe its picture
+    if (link.startsWith("url:")) return LaunchApp(link.removePrefix("url:").removePrefix("https://").removePrefix("http://").removePrefix("www.").trimEnd('/').take(28), link, null, iconKey = "globe")
     val path = link.removePrefix("file:")
     val f = java.io.File(path)
     if (!f.exists()) return null

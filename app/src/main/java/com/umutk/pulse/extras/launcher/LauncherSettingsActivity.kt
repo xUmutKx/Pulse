@@ -19,7 +19,7 @@ class LauncherSettingsActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            LookHost(lookId = LauncherPrefs.look) { th -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { LauncherSettings(back = { finish() }, fromLauncher = true, startCat = intent.getStringExtra("cat").orEmpty()) } }
+            LookHost(lookId = if (LauncherPrefs.look == "terminal") "amoled" else LauncherPrefs.look) { th -> androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { LauncherSettings(back = { finish() }, fromLauncher = true, startCat = intent.getStringExtra("cat").orEmpty()) } }
         }
     }
 
