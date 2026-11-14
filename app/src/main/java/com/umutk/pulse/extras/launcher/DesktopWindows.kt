@@ -56,6 +56,8 @@ class DWin(val id: Long, val title: String, val start: String, x0: Float, y0: Fl
     var x by mutableFloatStateOf(x0)
     var y by mutableFloatStateOf(y0)
     var max by mutableStateOf(false)
+    /** A tool that draws its own top bars over the glass (Windows 7 File Explorer) asks for a see-through body; the rest of the window is drawn by the tool. */
+    var glass by mutableStateOf(false)
     var z by mutableIntStateOf(z0)
     /** Sent to the taskbar strip: hidden until its chip is tapped. */
     var min by mutableStateOf(false)
@@ -114,7 +116,7 @@ fun DesktopWindowLayer(lookId: String, bottom: Dp) {
 /** Mica on Windows 11 and Aero glass on Windows 7: the frame and title let the desktop show through, the body stays opaque. */
 private fun glass(skin: WinSkin, c: androidx.compose.ui.graphics.Color) = when (skin.kind) {
     "11" -> c.copy(alpha = .74f)
-    "7" -> c.copy(alpha = .72f)
+    "7" -> c.copy(alpha = .5f)
     else -> c
 }
 
@@ -144,7 +146,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         Modifier.fillMaxSize().background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .74f; "7" -> .72f; else -> 1f }).padding(start = 8.dp)
+            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .74f; "7" -> .5f; else -> 1f }).padding(start = 8.dp)
                 .pointerInput(w.id, areaW, areaH) {
                     detectDragGestures { c, drag ->
                         c.consume()
@@ -158,7 +160,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Caption(skin, 0) { DesktopWindows.minimize(w) }; Caption(skin, 1) { w.max = !w.max }; Caption(skin, 2) { DesktopWindows.close(w) }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(skin.body).clipToBounds()) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(if (skin.kind == "7" && w.glass) Color.Transparent else skin.body).clipToBounds()) {
             CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
                 SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
             }

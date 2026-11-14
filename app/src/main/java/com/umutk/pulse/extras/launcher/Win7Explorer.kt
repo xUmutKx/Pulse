@@ -60,6 +60,8 @@ import java.io.File
 private val W7_INK = Color(0xFF1E395B)
 private val W7_EDGE = Color(0xFF9EB1CC)
 private val W7_BAR = Brush.verticalGradient(listOf(Color(0xFFFAFBFD), Color(0xFFE2E8F0)))
+/** The address and command bars lie on the window's glass: light, but the desktop shows through them. */
+private val W7_GLASS = Brush.verticalGradient(listOf(Color(0xAAFFFFFF), Color(0x77DCE6F2)))
 private val W7_HEAD = Brush.verticalGradient(listOf(Color.White, Color(0xFFF0F3F8)))
 private val W7_SEL = Brush.verticalGradient(listOf(Color(0xFFEBF4FD), Color(0xFFD2E5FA)))
 private val W7_FOLDER = Color(0xFFE9C24D)
@@ -87,9 +89,12 @@ fun Win7Explorer() {
         }
     }
     val shown = if (query.isBlank()) files else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
-    Column(Modifier.fillMaxSize().background(Color.White)) {
+    // the window's body is see-through for this tool: only the file area below is white
+    val deskWin = LocalDesktopWin.current
+    androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
+    Column(Modifier.fillMaxSize()) {
         // the back and forward buttons, the address bar and the search box
-        Row(Modifier.fillMaxWidth().background(W7_BAR).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(W7_GLASS).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
             W7Round(back.isNotEmpty(), false) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" }
             Spacer(Modifier.width(4.dp))
             W7Round(fwd.isNotEmpty(), true) { val n = fwd.removeAt(fwd.lastIndex); back.add(dir); dir = n; sel = null; query = "" }
@@ -117,7 +122,7 @@ fun Win7Explorer() {
             }
         }
         // the command bar
-        Row(Modifier.fillMaxWidth().background(W7_BAR).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(W7_GLASS).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
                 W7Cmd(tr("Organize ▾", "Düzenle ▾")) { menu = true }
                 DropdownMenu(menu, { menu = false }) {
@@ -135,7 +140,7 @@ fun Win7Explorer() {
             Text("${shown.size}", color = Color(0xFF6B7B93), fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(W7_EDGE))
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().background(Color.White)) {
             val wide = maxWidth >= 380.dp
             val cols = maxWidth >= 520.dp
             Row(Modifier.fillMaxSize()) {
