@@ -186,6 +186,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false) {
             SliderRow("${tr("Space between icons", "Simgeler arası boşluk")}: ${LauncherPrefs.iconSpace}%", LauncherPrefs.iconSpace.toFloat(), 60f..130f) { LauncherPrefs.iconSpace = it.roundToInt(); save() }
             SliderRow("${tr("Label size", "Ad yazısı boyutu")}: ${LauncherPrefs.labelScale}%", LauncherPrefs.labelScale.toFloat(), 60f..160f) { LauncherPrefs.labelScale = it.roundToInt(); save() }
             SwitchLine("sort", tr("Apps list A-Z with a letter strip", "Uygulama listesi A-Z, kenarda harf şeridi"), LauncherPrefs.drawerAz) { LauncherPrefs.drawerAz = it; save() }
+            SwitchLine("calendar", tr("At a glance: alarm, next event, battery under the clock", "Bir bakışta: saatin altında alarm, sıradaki etkinlik, pil"), LauncherPrefs.glance) { LauncherPrefs.glance = it; save() }
             SwitchLine("gridView", tr("Page dots", "Sayfa noktaları"), LauncherPrefs.pageDots) { LauncherPrefs.pageDots = it; save() }
             Text(tr("Page effect", "Sayfa efekti"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
