@@ -193,7 +193,17 @@ object SeasonDl {
                         PButton(tr("Movies", "Filmler"), compact = true) { movies = true; shows = emptyList(); show = null; eps = emptyList(); note = "" }
                         Text(if (movies) tr("Movies", "Filmler") else tr("Series", "Diziler"), color = T.accent, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
                     }
-                    PField(addon, { addon = it }, tr("Add-on link, once (…/manifest.json or stremio://…)", "Eklenti bağlantısı, bir kez (…/manifest.json veya stremio://…)"), Modifier.fillMaxWidth())
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        PField(addon, { addon = it }, tr("Add-on link, once (…/manifest.json or stremio://…)", "Eklenti bağlantısı, bir kez (…/manifest.json veya stremio://…)"), Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                        // the link copied from the add-on's page goes in with one press
+                        PButton(tr("Paste", "Yapıştır"), compact = true) {
+                            val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val s = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()?.trim().orEmpty()
+                            if (s.startsWith("http") || s.startsWith("stremio://")) { addon = s; save(ctx, s, mbText.toFloatOrNull() ?: 800f) }
+                            else note = tr("Copy the add-on link first", "Önce eklenti bağlantısını kopyala")
+                        }
+                    }
                     PField(mbText, { mbText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, tr("Largest size (MB)", "En büyük boyut (MB)"), Modifier.fillMaxWidth())
                     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.weight(1f))
