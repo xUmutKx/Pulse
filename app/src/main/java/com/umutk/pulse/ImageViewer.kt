@@ -243,6 +243,8 @@ internal fun ImgThumb(src: ImgSrc, modifier: Modifier = Modifier, px: Int = 220)
     val ctx = LocalContext.current
     val key = src.uri.toString() + "|" + (src.file?.lastModified() ?: 0L)
     val bmp by produceState<Bitmap?>(ImgThumbs.get(key), key) {
+        // a new picture starts from its own cached thumbnail (or none): the one shown for the key before must not stay
+        value = ImgThumbs.get(key)
         if (value == null) value = withContext(Dispatchers.IO) {
             // the small pictures are kept on disk too, so the grid fills at once the next time (reading the big photos again was what made it slow)
             val f = java.io.File(ctx.cacheDir, "phthumb/" + Integer.toHexString(key.hashCode()) + "_$px.jpg")
