@@ -96,7 +96,7 @@ import kotlin.math.sin
 
 /** The pages of the advanced cover: single widgets full screen, and "duo" pages with two widgets side by side (stacked when the phone stands upright). */
 val STANDBY_PAGES = listOf(
-    "blank" to ("Blank (black)" to "Boş (siyah)"),
+    "blank" to ("Blank (black)" to "Boş (siyah)"), "neofetch" to ("Neofetch" to "Sistem kartı (neofetch)"),
     "clock" to ("Digital clock" to "Dijital saat"), "analog" to ("Analog clock" to "Analog saat"), "date" to ("Clock with date" to "Tarihli saat"),
     "calendar" to ("Calendar" to "Takvim"), "battery" to ("Battery" to "Pil"), "music" to ("Now playing" to "Çalan şarkı"),
     "duo_clock_battery" to ("Clock + battery" to "Saat + pil"), "duo_clock_calendar" to ("Clock + calendar" to "Saat + takvim"),
@@ -328,6 +328,7 @@ internal fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id
     "analog" -> AnalogFace(ink, tick)
     "date" -> DigitalFace(ctx, ink, tick, withDate = true)
     "calendar" -> MonthFace(ink)
+    "neofetch" -> NeofetchFace(ctx, tick)
     "battery" -> BatteryFace(ctx, ink, tick)
     "music" -> MusicFace(ctx, ink)
     "seg" -> SegmentedFace(ctx, ink, tick, false)
@@ -577,6 +578,19 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     }
     val hasFont = editing in setOf("clock", "date", "duo_clock_battery", "duo_clock_calendar", "duo_analog_digital", "duo_music_clock")
     val palette = editing in setOf("crop", "flip", "solar")
+    // the charging animation: each look plays in its own small picture; a tap picks it
+    Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+    LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(chargeNames()) { (v, n) ->
+            val shape = RoundedCornerShape(12.dp)
+            Column(Modifier.width(88.dp).clickable { chg = v; StandByPrefs.setChargeAnim(ctx, v) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                ChargeMini(v, Modifier.size(88.dp, 120.dp).clip(shape).border(if (chg == v) 2.dp else 1.dp, if (chg == v) T.accent else T.line, shape))
+                Text(n, color = if (chg == v) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+    }
+    sw(tr("Charging animation on", "Şarj animasyonu açık"), chgOn) { chgOn = it; StandByPrefs.setChargeAnimOn(ctx, it); if (it) ChargeAnim.show(ctx, chg) else ChargeAnim.hide() }
+    Row(Modifier.padding(bottom = 4.dp)) { PChip(false, tr("Play full screen", "Tam ekran oynat")) { ChargeAnim.show(ctx, chg) } }
     BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp)) {
         // the page as the cover draws it with the phone lying down and standing up
         val mw = maxWidth
@@ -602,19 +616,6 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
         PSwitch(editing in pages, { on -> pages = if (on) (if (editing == "blank") listOf("blank") else (pages - "blank") + editing).distinct() else (pages - editing).ifEmpty { listOf("blank") }; StandByPrefs.setPages(ctx, pages); com.umutk.pulse.widgets.CoverWidget.refreshAll(ctx) })
     }
-    // the charging animation: each look plays in its own small picture; a tap picks it
-    Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
-    LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(chargeNames()) { (v, n) ->
-            val shape = RoundedCornerShape(12.dp)
-            Column(Modifier.width(88.dp).clickable { chg = v; StandByPrefs.setChargeAnim(ctx, v) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                ChargeMini(v, Modifier.size(88.dp, 120.dp).clip(shape).border(if (chg == v) 2.dp else 1.dp, if (chg == v) T.accent else T.line, shape))
-                Text(n, color = if (chg == v) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
-            }
-        }
-    }
-    sw(tr("Charging animation on", "Şarj animasyonu açık"), chgOn) { chgOn = it; StandByPrefs.setChargeAnimOn(ctx, it); if (it) ChargeAnim.show(ctx, chg) else ChargeAnim.hide() }
-    Row(Modifier.padding(bottom = 4.dp)) { PChip(false, tr("Play full screen", "Tam ekran oynat")) { ChargeAnim.show(ctx, chg) } }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }
     }
@@ -745,5 +746,24 @@ private fun PaletteRow(count: Int, picked: Int, onPick: (Int) -> Unit, tile: @Co
     var cur by remember { mutableIntStateOf(picked) }
     Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for (i in 0 until count) Box(Modifier.clickable { cur = i; onPick(i) }) { tile(i, i == cur) }
+    }
+}
+
+
+/** The Neofetch page of the cover: the phone's card (the same one the Terminal prints and the charging animation plays) on black, redrawn each minute. */
+@Composable
+internal fun NeofetchFace(ctx: Context, tick: Long) {
+    val all = remember(tick / 30) { NeofetchText.lines(ctx) }
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding(10.dp), contentAlignment = Alignment.Center) {
+        // the card is about 70 characters wide: the letters are as large as the width allows
+        val fs = (maxWidth.value / 44f).coerceIn(2.6f, 13f)
+        Column(verticalArrangement = Arrangement.Center) {
+            all.forEach { line ->
+                val a = androidx.compose.ui.text.buildAnnotatedString {
+                    line.forEach { seg -> pushStyle(androidx.compose.ui.text.SpanStyle(color = seg.color ?: Color(0xFFE6E6E6), fontWeight = if (seg.bold) FontWeight.Bold else null)); append(seg.text); pop() }
+                }
+                Text(a, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = fs.sp, lineHeight = (fs * 1.25f).sp, maxLines = 1, softWrap = false)
+            }
+        }
     }
 }
