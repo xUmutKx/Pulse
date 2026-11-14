@@ -268,11 +268,23 @@ object Sampler {
 
     private fun temp(): Float = Guard.cpuTemp()
 
+    /** The graphics load: the counters of the makers (Adreno, Mali), then an estimate from the clock of the GPU between its lowest and highest speed; -1 when nothing can be read. */
     private fun gpu(): Int {
         val a = readFile("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage").filter { it.isDigit() }
         if (a.isNotEmpty()) return a.toInt()
+        // Adreno: "busy total" counters since the last read
+        readFile("/sys/class/kgsl/kgsl-3d0/gpubusy").trim().split(Regex("\\s+")).mapNotNull { it.toLongOrNull() }.let { v -> if (v.size >= 2 && v[1] > 0) return (100 * v[0] / v[1]).toInt().coerceIn(0, 100) }
         val b = readFile("/sys/class/misc/mali0/device/utilisation").trim().toIntOrNull()
-        return b ?: -1
+        if (b != null) return b
+        readFile("/sys/devices/platform/mali/utilisation").trim().toIntOrNull()?.let { return it }
+        // the clock between its lowest and highest speed (a devfreq node of the GPU)
+        for (d in listOf("/sys/class/kgsl/kgsl-3d0/devfreq", "/sys/class/devfreq/gpufreq", "/sys/devices/platform/mali/devfreq/mali", "/sys/class/devfreq/soc:qcom,gpubw")) {
+            val cur = readFile("$d/cur_freq").trim().toLongOrNull() ?: continue
+            val lo = readFile("$d/min_freq").trim().toLongOrNull() ?: 0L
+            val hi = readFile("$d/max_freq").trim().toLongOrNull() ?: continue
+            if (hi > lo) return (100 * (cur - lo) / (hi - lo)).toInt().coerceIn(0, 100)
+        }
+        return -1
     }
 
     fun sample(ctx: Context) {
@@ -296,8 +308,13 @@ object Sampler {
         prevStat = cur
         // RAM
         val mem = readFile("/proc/meminfo").lineSequence().associate { l -> l.substringBefore(':') to (l.substringAfter(':').trim().substringBefore(' ').toLongOrNull() ?: 0L) }
-        val totalMb = ((mem["MemTotal"] ?: 0) / 1024).toInt()
-        val usedMb = totalMb - ((mem["MemAvailable"] ?: 0) / 1024).toInt()
+        var totalMb = ((mem["MemTotal"] ?: 0) / 1024).toInt()
+        var usedMb = totalMb - ((mem["MemAvailable"] ?: 0) / 1024).toInt()
+        // /proc/meminfo closed to the app: the system's own figures
+        if (totalMb <= 0) runCatching {
+            val mi = android.app.ActivityManager.MemoryInfo().also { (ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getMemoryInfo(it) }
+            totalMb = (mi.totalMem / 1048576).toInt(); usedMb = totalMb - (mi.availMem / 1048576).toInt()
+        }
         // Network
         val rx = TrafficStats.getTotalRxBytes()
         val tx = TrafficStats.getTotalTxBytes()

@@ -47,7 +47,15 @@ import java.io.File
 object Guard {
     class Zone(val name: String, val group: String, val c: Float)
 
-    private fun read(path: String): String = try { File(path).readText().trim() } catch (e: Exception) { if (Shell.root == true) Shell.run("cat $path").trim() else "" }
+    private fun privileged() = com.umutk.pulse.extras.blackout.Privilege.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None
+
+    /** A file as text: read directly; a file the app may not read is read through root or Shizuku when either is there; empty otherwise. Never throws. */
+    private fun read(path: String): String = try { File(path).readText().trim() } catch (e: Throwable) {
+        runCatching {
+            if (privileged()) com.umutk.pulse.extras.blackout.Privilege.run("cat $path").text.trim()
+            else if (Shell.root == true) Shell.run("cat $path").trim() else ""
+        }.getOrDefault("")
+    }
 
     private fun group(type: String): String {
         val s = type.lowercase()
@@ -71,11 +79,20 @@ object Guard {
             val type = try { File("/sys/class/thermal/thermal_zone$i/type").readText().trim() } catch (e: Exception) { "zone$i" }
             out += Zone(type, group(type), c)
         }
+        // the thermal files are closed to the app on many phones: root or Shizuku reads every zone in one go
+        if (out.isEmpty() && privileged()) runCatching {
+            val txt = com.umutk.pulse.extras.blackout.Privilege.run("for z in /sys/class/thermal/thermal_zone*; do echo \"\$(cat \$z/type 2>/dev/null)|\$(cat \$z/temp 2>/dev/null)\"; done").text
+            txt.lineSequence().forEach { l ->
+                val type = l.substringBefore('|').trim(); val raw = l.substringAfter('|', "").trim().toFloatOrNull() ?: return@forEach
+                val c = if (raw > 1000) raw / 1000 else raw
+                if (type.isNotEmpty() && c in 5f..150f) out += Zone(type, group(type), c)
+            }
+        }
         return out
     }
 
     /** CPU temperature: the hottest processor zone only. Battery, modem, skin and GPU zones are left out. shortcut: a phone whose zone names match no processor keyword reads 0 (shown as —). */
-    fun cpuTemp(): Float = zones().filter { it.group == "Processor" }.maxOfOrNull { it.c } ?: 0f
+    fun cpuTemp(): Float = zones().let { z -> z.filter { it.group == "Processor" }.maxOfOrNull { it.c } ?: z.filter { it.group != "Battery" && it.group != "Radio" }.maxOfOrNull { it.c } ?: 0f }
 
     class Bat(val plug: String, val health: String, val cycles: Int, val tech: String, val remMah: Int, val fullMah: Int, val designMah: Int)
 
