@@ -262,20 +262,24 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             if (hr == null || !hr.contains(d.position)) return@awaitEachGesture
             d.consume()
             var last = d.position
+            var moved = 0f
             while (true) {
                 val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dx = c.position.x - last.x; val dy = c.position.y - last.y
                 last = c.position
+                moved += abs(dx) + abs(dy)
                 c.consume()
                 // down: the keyboard may slide out until only its top bar is left in the window; up: to the top
                 val minY = -((kbH - barPx) / (rootH - kbH).coerceAtLeast(1f)).coerceAtLeast(0f)
                 KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(minY, 1f)
-                // the keyboard is 70 percent wide: its free room is the other 30, from the left edge to the right one
-                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                // the keyboard is 92 percent wide: its free room is the other 8, from the left edge to the right one
+                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .08f).coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
             KeyboardPrefs.saveFloat()
+            // a tap on the handle (no drag) closes the keyboard
+            if (moved < 12.dp.toPx()) act.hide()
         }
     }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
@@ -296,8 +300,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (float) Modifier.fillMaxWidth(.7f).align(Alignment.BottomStart)
-                .offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
+            (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
+                .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
                 .onSizeChanged { kbH = it.height.toFloat() }
                 .onGloballyPositioned { c ->
                     // the keyboard's place tells the system which part of the window takes touches; the rest of the window belongs to the app
@@ -312,6 +316,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
                 Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
+                Box(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", th.sub, 16.dp) }
             }
             // the number pad has no bar, except while the password manager has a saved login or password to offer for the field
             if (!st.numpad || st.emailBar || st.inline.isNotEmpty()) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {

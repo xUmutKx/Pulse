@@ -595,7 +595,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
     override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
     override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
-    override fun onWindowShown() { super.onWindowShown(); backToKeys() }
+    override fun onWindowShown() {
+        super.onWindowShown(); backToKeys()
+        // the floating keyboard's tall window must not swallow touches outside its keys: the app behind stays usable
+        window.window?.let { w ->
+            val f = android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            if (KeyboardPrefs.floatNow) w.addFlags(f) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+        }
+        st.refreshInsets?.invoke()
+    }
 
     /**
      * The login the keyboard sees being typed: a user name box (e-mail, a label that says user / login, a number box) is remembered, and when a password box is left or sent
