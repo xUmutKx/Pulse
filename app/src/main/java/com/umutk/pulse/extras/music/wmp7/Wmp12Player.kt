@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,16 +58,32 @@ import androidx.compose.ui.unit.sp
 fun Wmp12Player(
     title: String, artist: String, album: String?, cover: ImageBitmap?, playing: Boolean, pos: Int, dur: Int,
     onPrev: () -> Unit, onPlayPause: () -> Unit, onNext: () -> Unit, onStop: () -> Unit, onSeek: (Int) -> Unit, modifier: Modifier = Modifier,
+    queue: List<String> = emptyList(), current: Int = -1, onPick: (Int) -> Unit = {},
 ) {
+    // "Show list" (top right, as in the real player) swaps the cover for the play queue; the volume slider is the phone's media volume
+    var showList by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val vctx = androidx.compose.ui.platform.LocalContext.current
+    val am = remember { vctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+    val vmax = remember { am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1) }
+    var vol by remember { mutableFloatStateOf(am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / vmax) }
     val glow = Brush.radialGradient(listOf(Color(0xFF14677F), Color(0xFF0A2C3E), Color(0xFF040C14)), center = androidx.compose.ui.geometry.Offset(900f, 500f), radius = 1400f)
     BoxWithConstraints(modifier.fillMaxSize().background(glow)) {
         val coverSize = (maxWidth * .44f).coerceIn(90.dp, 200.dp)
         Column(Modifier.fillMaxSize().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 12.dp)) {
-            Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.Top) {
+                Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (queue.isNotEmpty()) Text(if (showList) "Hide list" else "Show list", color = Color(0xFF9CD3F5), fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, top = 6.dp).clickable { showList = !showList })
+            }
             val sub = listOfNotNull(artist.takeIf { it.isNotBlank() }, album?.takeIf { it.isNotBlank() }).joinToString(" - ")
             if (sub.isNotEmpty()) Text(sub, color = Color(0xFFC7DCE8), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             Spacer(Modifier.height(10.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
+              if (showList) LazyColumn(Modifier.fillMaxSize()) {
+                itemsIndexed(queue) { i, name ->
+                    Text(name, color = if (i == current) Color.White else Color(0xFFB5CFDF), fontSize = 14.sp, fontWeight = if (i == current) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().background(if (i == current) Color(0x33FFFFFF) else Color.Transparent).clickable { onPick(i) }.padding(horizontal = 8.dp, vertical = 7.dp))
+                }
+              } else
                 Box(Modifier.size(coverSize).clip(RoundedCornerShape(2.dp)).background(Color(0x33FFFFFF)).border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(2.dp)), contentAlignment = Alignment.Center) {
                     if (cover != null) Image(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     // no picture of the song: the glossy note WMP shows in its place
@@ -108,6 +126,16 @@ fun Wmp12Player(
                     }
                     WmpFlat(Icons.Rounded.SkipNext, onNext)
                     Icon(Icons.Rounded.VolumeUp, null, tint = Color(0xFF8CC9F2), modifier = Modifier.size(20.dp))
+                    // the volume: a thin slider, a tap or a slide sets it
+                    Box(
+                        Modifier.width(54.dp).height(24.dp)
+                            .pointerInput(Unit) { detectTapGestures { o -> vol = (o.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } }
+                            .pointerInput(Unit) { detectHorizontalDragGestures { c, _ -> vol = (c.position.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } },
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x44FFFFFF)))
+                        Box(Modifier.fillMaxWidth(vol.coerceAtLeast(0.001f)).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF8CD0FF)))
+                    }
                 }
                 Text(mmss(dur), color = Color(0xFFC7DCE8), fontSize = 12.sp, modifier = Modifier.width(44.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
             }

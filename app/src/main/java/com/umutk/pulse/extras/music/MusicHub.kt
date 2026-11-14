@@ -368,6 +368,7 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         com.umutk.pulse.extras.music.wmp7.Wmp12Player(
             title = t?.displayName().orEmpty(), artist = artist, album = t?.album, cover = cover, playing = st.isPlaying, pos = pos.toInt(), dur = dur.toInt(),
             onPrev = engine::previous, onPlayPause = engine::togglePlayPause, onNext = engine::next, onStop = { engine.pause(); engine.seekTo(0) }, onSeek = { engine.seekTo(it) },
+            queue = st.queue.map { it.displayName() }, current = st.index, onPick = engine::playAt,
         )
         return
     }

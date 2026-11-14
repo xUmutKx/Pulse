@@ -95,7 +95,8 @@ class Win7LauncherLook : LauncherLook {
         Column(modifier.fillMaxWidth().height(taskbarHeight).background(W7_TASKBAR)) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(W7_TASKBAR_HI))
             // the edge padding keeps the orb and the clock out of the rounded screen corners
-            Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = edge), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).fillMaxWidth().padding(start = (edge - 16.dp).coerceAtLeast(0.dp), end = edge), verticalAlignment = Alignment.CenterVertically) {
+                // (the start button sits a little to the left, so the buttons of the open windows have room)
                 Box(Modifier.width(46.dp).fillMaxHeight().clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
                     StartOrb()
                 }
