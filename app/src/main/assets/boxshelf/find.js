@@ -137,16 +137,11 @@
     E.kcur = k ? E.key[k] : null; if (E.kcur) E.kcur.classList.add('cur');
   }
   const snd = (n, o) => { try { B().snd(n, o); } catch {} };
-  // on the phone (Pulse) the title is typed in the phone's own text box, a real one that always brings the phone's keyboard up (a field inside the page did not, in some
-  // views); what is typed fills the field and the matches follow. Elsewhere the field of the page is used as it was.
-  let nativeAsk = 0;
+  // on the phone (Pulse) the title is typed in the field of the page with the phone's own keyboard (asked for at once); Boxshelf's own letter grid is only for a
+  // controller (S.pad). (An Android text dialog was tried before: it looked out of place and did not bring the keyboard either.)
   const focusIn = () => {
-    if (ANDROID() && window.PulseHost && window.PulseHost.editText && S.open && !S.pad && !S.bottomKb) {
-      if (performance.now() - nativeAsk < 600) return; nativeAsk = performance.now();
-      window.__pulseTextDone = t => { window.__pulseTextDone = null; if (!S.open || t == null) return; E.in.value = String(t); S.q = String(t); update(); };
-      try { window.PulseHost.editText('Find a game', S.q || ''); return; } catch { window.__pulseTextDone = null; }
-    }
     try { E.in.focus({ preventScroll: true }); } catch {}
+    if (ANDROID() && window.PulseHost && window.PulseHost.showKeyboard && S.open && !S.pad && !S.bottomKb) { try { window.PulseHost.showKeyboard(); } catch {} }
   };
 
   // ---------- moving and typing ----------

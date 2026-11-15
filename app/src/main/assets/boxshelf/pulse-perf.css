@@ -6,3 +6,15 @@ body.perf-low .inspect:not(.on),body.perf-low .insert:not(.on){visibility:hidden
 body.perf-low .inspect.on,body.perf-low .insert.on{visibility:visible;transition:opacity .3s,visibility 0s}
 /* the moving shine over every case: a layer of its own on each one, redrawn at every step of the shelf */
 body.perf-low .box .glare,body.perf-low .box .sheen{display:none}
+
+/* WebViews older than Chrome 111 do not know color-mix(): a background written with it is dropped whole, and the shelf showed through the search and the settings
+   (their words over the shelf's). Plain colours that every WebView knows stand in for them there. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .fg,.fg.bottomkb{background:linear-gradient(180deg,#0d0f1a,#07080e 70%)}
+  .fg{--hl:rgba(107,140,255,.26);--hlRing:inset 0 0 0 2px rgba(169,191,255,.85)}
+  .bss-bg{background:linear-gradient(180deg,#0d0f1a,#07080e 70%)}
+  .bss-sw.on{background:var(--acc)}
+}
+/* the search on the phone: the field a rounded pill, the title clear of the status bar */
+html .fg-box{padding-top:max(calc(var(--k)*3),env(safe-area-inset-top))}
+html .fg-field{border-radius:999px}

@@ -590,14 +590,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * so the input devices are asked too (a real keyboard with letter keys, not the phone's own virtual one).
      */
     private fun hardwareAttached(): Boolean {
-        if (resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS) return true
+        // only a real keyboard with letter keys counts; a game controller (which also says "keyboard" for its buttons, and can change the configuration) does not:
+        // with one connected, the screen keyboard came up as its suggestion bar only, in Game Hub and everywhere
         return runCatching {
             android.view.InputDevice.getDeviceIds().any { id ->
                 val d = android.view.InputDevice.getDevice(id) ?: return@any false
-                !d.isVirtual && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
+                val pad = (d.sources and android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD ||
+                    (d.sources and android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
+                !d.isVirtual && !pad && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
                     d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
             }
-        }.getOrDefault(false)
+        }.getOrDefault(resources.configuration.keyboard == android.content.res.Configuration.KEYBOARD_QWERTY)
     }
 
     // a keyboard plugged in or paired while a field is open: the screen keyboard follows at once (no key press needed)
