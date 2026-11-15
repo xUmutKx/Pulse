@@ -71,7 +71,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** An address bar (Chrome's is one): search words get suggestions and corrections, an address (dots, slashes) is left alone. */
     private var uriField = false
     private fun urlNow(): Boolean {
-        val b = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() + word
+        // (the text before the cursor already holds the open word: adding it again made "GünaydınGünaydın", whose "nG" looked like code, so a capitalised first word of a message got no suggestions at all)
+        val before = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+        val b = if (word.isNotEmpty() && before.endsWith(word)) before else before + word
         if (!uriField) return linkOrCode(b.takeLastWhile { !it.isWhitespace() })
         return b.any { it == '.' || it == '/' || it == ':' || it == '@' } && !b.contains(' ')
     }
