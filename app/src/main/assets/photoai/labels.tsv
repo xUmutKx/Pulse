@@ -1,0 +1,1000 @@
+0	tench	balık,hayvan,animal
+1	goldfish	balık,hayvan,animal
+2	great white shark	balık,köpekbalığı,hayvan,animal
+3	tiger shark	balık,köpekbalığı,hayvan,animal
+4	hammerhead	balık,köpekbalığı,hayvan,animal
+5	electric ray	balık,vatoz,hayvan,animal
+6	stingray	balık,vatoz,hayvan,animal
+7	cock	kuş,horoz,tavuk,hayvan,animal
+8	hen	kuş,tavuk,hayvan,animal
+9	ostrich	kuş,devekuşu,hayvan,animal
+10	brambling	kuş,hayvan,animal
+11	goldfinch	kuş,hayvan,animal
+12	house finch	kuş,hayvan,animal
+13	junco	kuş,hayvan,animal
+14	indigo bunting	kuş,hayvan,animal
+15	robin	kuş,hayvan,animal
+16	bulbul	kuş,hayvan,animal
+17	jay	kuş,hayvan,animal
+18	magpie	kuş,hayvan,animal
+19	chickadee	kuş,hayvan,animal
+20	water ouzel	kuş,hayvan,animal
+21	kite	kuş,hayvan,animal
+22	bald eagle	kuş,kartal,hayvan,animal
+23	vulture	kuş,akbaba,hayvan,animal
+24	great grey owl	kuş,baykuş,hayvan,animal
+25	European fire salamander	kurbağa,semender,hayvan,animal
+26	common newt	kurbağa,semender,hayvan,animal
+27	eft	kurbağa,semender,hayvan,animal
+28	spotted salamander	kurbağa,semender,hayvan,animal
+29	axolotl	kurbağa,semender,hayvan,animal
+30	bullfrog	kurbağa,hayvan,animal
+31	tree frog	kurbağa,hayvan,animal
+32	tailed frog	kurbağa,hayvan,animal
+33	loggerhead	kaplumbağa,hayvan,animal
+34	leatherback turtle	kaplumbağa,hayvan,animal
+35	mud turtle	kaplumbağa,hayvan,animal
+36	terrapin	kaplumbağa,hayvan,animal
+37	box turtle	kaplumbağa,hayvan,animal
+38	banded gecko	kertenkele,sürüngen,hayvan,animal
+39	common iguana	kertenkele,sürüngen,hayvan,animal
+40	American chameleon	kertenkele,sürüngen,hayvan,animal
+41	whiptail	kertenkele,sürüngen,hayvan,animal
+42	agama	kertenkele,sürüngen,hayvan,animal
+43	frilled lizard	kertenkele,sürüngen,hayvan,animal
+44	alligator lizard	kertenkele,sürüngen,hayvan,animal
+45	Gila monster	kertenkele,sürüngen,hayvan,animal
+46	green lizard	kertenkele,sürüngen,hayvan,animal
+47	African chameleon	kertenkele,sürüngen,hayvan,animal
+48	Komodo dragon	kertenkele,sürüngen,hayvan,animal
+49	African crocodile	timsah,sürüngen,hayvan,animal
+50	American alligator	timsah,sürüngen,hayvan,animal
+51	triceratops	dinozor,hayvan,animal
+52	thunder snake	yılan,sürüngen,hayvan,animal
+53	ringneck snake	yılan,sürüngen,hayvan,animal
+54	hognose snake	yılan,sürüngen,hayvan,animal
+55	green snake	yılan,sürüngen,hayvan,animal
+56	king snake	yılan,sürüngen,hayvan,animal
+57	garter snake	yılan,sürüngen,hayvan,animal
+58	water snake	yılan,sürüngen,hayvan,animal
+59	vine snake	yılan,sürüngen,hayvan,animal
+60	night snake	yılan,sürüngen,hayvan,animal
+61	boa constrictor	yılan,sürüngen,hayvan,animal
+62	rock python	yılan,sürüngen,hayvan,animal
+63	Indian cobra	yılan,sürüngen,hayvan,animal
+64	green mamba	yılan,sürüngen,hayvan,animal
+65	sea snake	yılan,sürüngen,hayvan,animal
+66	horned viper	yılan,sürüngen,hayvan,animal
+67	diamondback	yılan,sürüngen,hayvan,animal
+68	sidewinder	yılan,sürüngen,hayvan,animal
+69	trilobite	hayvan,animal
+70	harvestman	hayvan,animal
+71	scorpion	akrep,hayvan,animal
+72	black and gold garden spider	örümcek,hayvan,animal
+73	barn spider	örümcek,hayvan,animal
+74	garden spider	örümcek,hayvan,animal
+75	black widow	örümcek,hayvan,animal
+76	tarantula	örümcek,hayvan,animal
+77	wolf spider	örümcek,hayvan,animal
+78	tick	kene,hayvan,animal
+79	centipede	kırkayak,hayvan,animal
+80	black grouse	kuş,hayvan,animal
+81	ptarmigan	kuş,hayvan,animal
+82	ruffed grouse	kuş,hayvan,animal
+83	prairie chicken	kuş,hayvan,animal
+84	peacock	kuş,tavus kuşu,hayvan,animal
+85	quail	kuş,hayvan,animal
+86	partridge	kuş,hayvan,animal
+87	African grey	kuş,papağan,hayvan,animal
+88	macaw	kuş,papağan,hayvan,animal
+89	sulphur-crested cockatoo	kuş,papağan,hayvan,animal
+90	lorikeet	kuş,papağan,hayvan,animal
+91	coucal	kuş,hayvan,animal
+92	bee eater	kuş,hayvan,animal
+93	hornbill	kuş,hayvan,animal
+94	hummingbird	kuş,sinekkuşu,hayvan,animal
+95	jacamar	kuş,hayvan,animal
+96	toucan	kuş,tukan,hayvan,animal
+97	drake	kuş,hayvan,animal
+98	red-breasted merganser	kuş,hayvan,animal
+99	goose	kuş,kaz,hayvan,animal
+100	black swan	kuş,kuğu,hayvan,animal
+101	tusker	fil,hayvan,animal
+102	echidna	hayvan,animal
+103	platypus	hayvan,animal
+104	wallaby	hayvan,animal
+105	koala	hayvan,animal
+106	wombat	hayvan,animal
+107	jellyfish	deniz canlısı,denizanası,hayvan,animal
+108	sea anemone	deniz canlısı,hayvan,animal
+109	brain coral	deniz canlısı,hayvan,animal
+110	flatworm	deniz canlısı,hayvan,animal
+111	nematode	deniz canlısı,hayvan,animal
+112	conch	deniz canlısı,salyangoz,hayvan,animal
+113	snail	deniz canlısı,salyangoz,hayvan,animal
+114	slug	deniz canlısı,hayvan,animal
+115	sea slug	deniz canlısı,hayvan,animal
+116	chiton	deniz canlısı,hayvan,animal
+117	chambered nautilus	deniz canlısı,hayvan,animal
+118	Dungeness crab	yengeç,hayvan,animal
+119	rock crab	yengeç,hayvan,animal
+120	fiddler crab	yengeç,hayvan,animal
+121	king crab	yengeç,hayvan,animal
+122	American lobster	ıstakoz,hayvan,animal
+123	spiny lobster	ıstakoz,hayvan,animal
+124	crayfish	kerevit,hayvan,animal
+125	hermit crab	yengeç,hayvan,animal
+126	isopod	hayvan,animal
+127	white stork	kuş,hayvan,animal
+128	black stork	kuş,hayvan,animal
+129	spoonbill	kuş,hayvan,animal
+130	flamingo	kuş,flamingo,hayvan,animal
+131	little blue heron	kuş,hayvan,animal
+132	American egret	kuş,hayvan,animal
+133	bittern	kuş,hayvan,animal
+134	crane	kuş,hayvan,animal
+135	limpkin	kuş,hayvan,animal
+136	European gallinule	kuş,hayvan,animal
+137	American coot	kuş,hayvan,animal
+138	bustard	kuş,hayvan,animal
+139	ruddy turnstone	kuş,hayvan,animal
+140	red-backed sandpiper	kuş,hayvan,animal
+141	redshank	kuş,hayvan,animal
+142	dowitcher	kuş,hayvan,animal
+143	oystercatcher	kuş,hayvan,animal
+144	pelican	kuş,pelikan,hayvan,animal
+145	king penguin	kuş,penguen,hayvan,animal
+146	albatross	kuş,hayvan,animal
+147	grey whale	deniz memelisi,balina,hayvan,animal
+148	killer whale	deniz memelisi,balina,hayvan,animal
+149	dugong	deniz memelisi,hayvan,animal
+150	sea lion	deniz memelisi,fok,hayvan,animal
+151	Chihuahua	köpek,hayvan,animal
+152	Japanese spaniel	köpek,hayvan,animal
+153	Maltese dog	köpek,hayvan,animal
+154	Pekinese	köpek,hayvan,animal
+155	Shih-Tzu	köpek,hayvan,animal
+156	Blenheim spaniel	köpek,hayvan,animal
+157	papillon	köpek,hayvan,animal
+158	toy terrier	köpek,hayvan,animal
+159	Rhodesian ridgeback	köpek,hayvan,animal
+160	Afghan hound	köpek,hayvan,animal
+161	basset	köpek,hayvan,animal
+162	beagle	köpek,beagle,hayvan,animal
+163	bloodhound	köpek,hayvan,animal
+164	bluetick	köpek,hayvan,animal
+165	black-and-tan coonhound	köpek,hayvan,animal
+166	Walker hound	köpek,hayvan,animal
+167	English foxhound	köpek,hayvan,animal
+168	redbone	köpek,hayvan,animal
+169	borzoi	köpek,hayvan,animal
+170	Irish wolfhound	köpek,hayvan,animal
+171	Italian greyhound	köpek,hayvan,animal
+172	whippet	köpek,hayvan,animal
+173	Ibizan hound	köpek,hayvan,animal
+174	Norwegian elkhound	köpek,hayvan,animal
+175	otterhound	köpek,hayvan,animal
+176	Saluki	köpek,hayvan,animal
+177	Scottish deerhound	köpek,hayvan,animal
+178	Weimaraner	köpek,hayvan,animal
+179	Staffordshire bullterrier	köpek,hayvan,animal
+180	American Staffordshire terrier	köpek,hayvan,animal
+181	Bedlington terrier	köpek,hayvan,animal
+182	Border terrier	köpek,hayvan,animal
+183	Kerry blue terrier	köpek,hayvan,animal
+184	Irish terrier	köpek,hayvan,animal
+185	Norfolk terrier	köpek,hayvan,animal
+186	Norwich terrier	köpek,hayvan,animal
+187	Yorkshire terrier	köpek,yorkshire terrier,hayvan,animal
+188	wire-haired fox terrier	köpek,hayvan,animal
+189	Lakeland terrier	köpek,hayvan,animal
+190	Sealyham terrier	köpek,hayvan,animal
+191	Airedale	köpek,hayvan,animal
+192	cairn	köpek,hayvan,animal
+193	Australian terrier	köpek,hayvan,animal
+194	Dandie Dinmont	köpek,hayvan,animal
+195	Boston bull	köpek,hayvan,animal
+196	miniature schnauzer	köpek,hayvan,animal
+197	giant schnauzer	köpek,hayvan,animal
+198	standard schnauzer	köpek,hayvan,animal
+199	Scotch terrier	köpek,hayvan,animal
+200	Tibetan terrier	köpek,hayvan,animal
+201	silky terrier	köpek,hayvan,animal
+202	soft-coated wheaten terrier	köpek,hayvan,animal
+203	West Highland white terrier	köpek,hayvan,animal
+204	Lhasa	köpek,hayvan,animal
+205	flat-coated retriever	köpek,hayvan,animal
+206	curly-coated retriever	köpek,hayvan,animal
+207	golden retriever	köpek,golden retriever,hayvan,animal
+208	Labrador retriever	köpek,labrador,hayvan,animal
+209	Chesapeake Bay retriever	köpek,hayvan,animal
+210	German short-haired pointer	köpek,hayvan,animal
+211	vizsla	köpek,hayvan,animal
+212	English setter	köpek,hayvan,animal
+213	Irish setter	köpek,hayvan,animal
+214	Gordon setter	köpek,hayvan,animal
+215	Brittany spaniel	köpek,hayvan,animal
+216	clumber	köpek,hayvan,animal
+217	English springer	köpek,hayvan,animal
+218	Welsh springer spaniel	köpek,hayvan,animal
+219	cocker spaniel	köpek,hayvan,animal
+220	Sussex spaniel	köpek,hayvan,animal
+221	Irish water spaniel	köpek,hayvan,animal
+222	kuvasz	köpek,hayvan,animal
+223	schipperke	köpek,hayvan,animal
+224	groenendael	köpek,hayvan,animal
+225	malinois	köpek,hayvan,animal
+226	briard	köpek,hayvan,animal
+227	kelpie	köpek,hayvan,animal
+228	komondor	köpek,hayvan,animal
+229	Old English sheepdog	köpek,hayvan,animal
+230	Shetland sheepdog	köpek,hayvan,animal
+231	collie	köpek,hayvan,animal
+232	Border collie	köpek,hayvan,animal
+233	Bouvier des Flandres	köpek,hayvan,animal
+234	Rottweiler	köpek,hayvan,animal
+235	German shepherd	köpek,alman çoban köpeği,hayvan,animal
+236	Doberman	köpek,hayvan,animal
+237	miniature pinscher	köpek,hayvan,animal
+238	Greater Swiss Mountain dog	köpek,hayvan,animal
+239	Bernese mountain dog	köpek,hayvan,animal
+240	Appenzeller	köpek,hayvan,animal
+241	EntleBucher	köpek,hayvan,animal
+242	boxer	köpek,hayvan,animal
+243	bull mastiff	köpek,hayvan,animal
+244	Tibetan mastiff	köpek,hayvan,animal
+245	French bulldog	köpek,hayvan,animal
+246	Great Dane	köpek,hayvan,animal
+247	Saint Bernard	köpek,saint bernard,hayvan,animal
+248	Eskimo dog	köpek,hayvan,animal
+249	malamute	köpek,hayvan,animal
+250	Siberian husky	köpek,husky,hayvan,animal
+251	dalmatian	köpek,dalmaçyalı,hayvan,animal
+252	affenpinscher	köpek,hayvan,animal
+253	basenji	köpek,hayvan,animal
+254	pug	köpek,pug,hayvan,animal
+255	Leonberg	köpek,hayvan,animal
+256	Newfoundland	köpek,hayvan,animal
+257	Great Pyrenees	köpek,hayvan,animal
+258	Samoyed	köpek,hayvan,animal
+259	Pomeranian	köpek,pomeranian,spitz,hayvan,animal
+260	chow	köpek,hayvan,animal
+261	keeshond	köpek,hayvan,animal
+262	Brabancon griffon	köpek,hayvan,animal
+263	Pembroke	köpek,hayvan,animal
+264	Cardigan	köpek,hayvan,animal
+265	toy poodle	köpek,hayvan,animal
+266	miniature poodle	köpek,hayvan,animal
+267	standard poodle	köpek,hayvan,animal
+268	Mexican hairless	köpek,hayvan,animal
+269	timber wolf	kurt,hayvan,animal
+270	white wolf	kurt,hayvan,animal
+271	red wolf	kurt,hayvan,animal
+272	coyote	çakal,yabani köpek,hayvan,animal
+273	dingo	çakal,yabani köpek,hayvan,animal
+274	dhole	çakal,yabani köpek,hayvan,animal
+275	African hunting dog	çakal,yabani köpek,hayvan,animal
+276	hyena	sırtlan,hayvan,animal
+277	red fox	tilki,hayvan,animal
+278	kit fox	tilki,hayvan,animal
+279	Arctic fox	tilki,hayvan,animal
+280	grey fox	tilki,hayvan,animal
+281	tabby	kedi,hayvan,animal
+282	tiger cat	kedi,hayvan,animal
+283	Persian cat	kedi,hayvan,animal
+284	Siamese cat	kedi,hayvan,animal
+285	Egyptian cat	kedi,hayvan,animal
+286	cougar	büyük kedi,puma,hayvan,animal
+287	lynx	büyük kedi,vaşak,hayvan,animal
+288	leopard	büyük kedi,leopar,hayvan,animal
+289	snow leopard	büyük kedi,kar leoparı,hayvan,animal
+290	jaguar	büyük kedi,jaguar,hayvan,animal
+291	lion	büyük kedi,aslan,hayvan,animal
+292	tiger	büyük kedi,kaplan,hayvan,animal
+293	cheetah	büyük kedi,çita,hayvan,animal
+294	brown bear	ayı,hayvan,animal
+295	American black bear	ayı,hayvan,animal
+296	ice bear	ayı,kutup ayısı,hayvan,animal
+297	sloth bear	ayı,hayvan,animal
+298	mongoose	firavun faresi,mirket,hayvan,animal
+299	meerkat	firavun faresi,mirket,hayvan,animal
+300	tiger beetle	böcek,hayvan,animal
+301	ladybug	böcek,uğur böceği,hayvan,animal
+302	ground beetle	böcek,hayvan,animal
+303	long-horned beetle	böcek,hayvan,animal
+304	leaf beetle	böcek,hayvan,animal
+305	dung beetle	böcek,hayvan,animal
+306	rhinoceros beetle	böcek,hayvan,animal
+307	weevil	böcek,hayvan,animal
+308	fly	böcek,sinek,hayvan,animal
+309	bee	böcek,arı,hayvan,animal
+310	ant	böcek,karınca,hayvan,animal
+311	grasshopper	böcek,çekirge,hayvan,animal
+312	cricket	böcek,cırcır böceği,hayvan,animal
+313	walking stick	böcek,hayvan,animal
+314	cockroach	böcek,hamam böceği,hayvan,animal
+315	mantis	böcek,peygamber devesi,hayvan,animal
+316	cicada	böcek,ağustos böceği,hayvan,animal
+317	leafhopper	böcek,hayvan,animal
+318	lacewing	böcek,hayvan,animal
+319	dragonfly	böcek,yusufçuk,hayvan,animal
+320	damselfly	böcek,yusufçuk,hayvan,animal
+321	admiral	böcek,kelebek,hayvan,animal
+322	ringlet	böcek,kelebek,hayvan,animal
+323	monarch	böcek,kelebek,hayvan,animal
+324	cabbage butterfly	böcek,kelebek,hayvan,animal
+325	sulphur butterfly	böcek,kelebek,hayvan,animal
+326	lycaenid	böcek,kelebek,hayvan,animal
+327	starfish	deniz yıldızı,deniz canlısı,hayvan,animal
+328	sea urchin	deniz yıldızı,deniz canlısı,hayvan,animal
+329	sea cucumber	deniz yıldızı,deniz canlısı,hayvan,animal
+330	wood rabbit	tavşan,hayvan,animal
+331	hare	tavşan,hayvan,animal
+332	Angora	tavşan,hayvan,animal
+333	hamster	hamster,hayvan,animal
+334	porcupine	kirpi,hayvan,animal
+335	fox squirrel	sincap,hayvan,animal
+336	marmot	dağ sıçanı,hayvan,animal
+337	beaver	kunduz,hayvan,animal
+338	guinea pig	kobay,gine domuzu,hayvan,animal
+339	sorrel	at,hayvan,animal
+340	zebra	zebra,hayvan,animal
+341	hog	domuz,hayvan,animal
+342	wild boar	yaban domuzu,domuz,hayvan,animal
+343	warthog	yaban domuzu,hayvan,animal
+344	hippopotamus	su aygırı,hayvan,animal
+345	ox	öküz,sığır,inek,hayvan,animal
+346	water buffalo	manda,hayvan,animal
+347	bison	bizon,hayvan,animal
+348	ram	koç,koyun,hayvan,animal
+349	bighorn	koyun,dağ koyunu,hayvan,animal
+350	ibex	dağ keçisi,keçi,hayvan,animal
+351	hartebeest	hayvan,animal
+352	impala	antilop,ceylan,hayvan,animal
+353	gazelle	ceylan,antilop,hayvan,animal
+354	Arabian camel	deve,hayvan,animal
+355	llama	lama,hayvan,animal
+356	weasel	gelincik,hayvan,animal
+357	mink	hayvan,animal
+358	polecat	hayvan,animal
+359	black-footed ferret	hayvan,animal
+360	otter	su samuru,hayvan,animal
+361	skunk	kokarca,hayvan,animal
+362	badger	porsuk,hayvan,animal
+363	armadillo	armadillo,hayvan,animal
+364	three-toed sloth	tembel hayvan,hayvan,animal
+365	orangutan	orangutan,maymun,maymun,hayvan,animal
+366	gorilla	goril,maymun,maymun,hayvan,animal
+367	chimpanzee	şempanze,maymun,maymun,hayvan,animal
+368	gibbon	maymun,hayvan,animal
+369	siamang	maymun,hayvan,animal
+370	guenon	maymun,hayvan,animal
+371	patas	maymun,hayvan,animal
+372	baboon	babun,maymun,maymun,hayvan,animal
+373	macaque	maymun,hayvan,animal
+374	langur	maymun,hayvan,animal
+375	colobus	maymun,hayvan,animal
+376	proboscis monkey	maymun,hayvan,animal
+377	marmoset	maymun,hayvan,animal
+378	capuchin	maymun,hayvan,animal
+379	howler monkey	maymun,hayvan,animal
+380	titi	maymun,hayvan,animal
+381	spider monkey	maymun,hayvan,animal
+382	squirrel monkey	maymun,hayvan,animal
+383	Madagascar cat	maymun,hayvan,animal
+384	indri	maymun,hayvan,animal
+385	Indian elephant	fil,hayvan,animal
+386	African elephant	fil,hayvan,animal
+387	lesser panda	küçük panda,hayvan,animal
+388	giant panda	panda,hayvan,animal
+389	barracouta	balık,hayvan,animal
+390	eel	balık,hayvan,animal
+391	coho	balık,hayvan,animal
+392	rock beauty	balık,hayvan,animal
+393	anemone fish	balık,hayvan,animal
+394	sturgeon	balık,hayvan,animal
+395	gar	balık,hayvan,animal
+396	lionfish	balık,hayvan,animal
+397	puffer	balık,hayvan,animal
+398	abacus	abaküs
+399	abaya	abaya,kaftan
+400	academic gown	cüppe
+401	accordion	akordeon
+402	acoustic guitar	gitar,akustik gitar,enstrüman
+403	aircraft carrier	uçak gemisi,gemi,araç,vehicle
+404	airliner	uçak,yolcu uçağı,araç,vehicle
+405	airship	zeplin,hava gemisi,araç,vehicle
+406	altar	sunak
+407	ambulance	ambulans,araç,vehicle
+408	amphibian	
+409	analog clock	saat,duvar saati
+410	apiary	
+411	apron	önlük
+412	ashcan	çöp kutusu
+413	assault rifle	tüfek
+414	backpack	sırt çantası,çanta
+415	bakery	fırın,pastane
+416	balance beam	
+417	balloon	balon
+418	ballpoint	tükenmez kalem,kalem
+419	Band Aid	yara bandı
+420	banjo	banjo,enstrüman
+421	bannister	korkuluk
+422	barbell	halter
+423	barber chair	berber koltuğu
+424	barbershop	berber
+425	barn	ahır
+426	barometer	barometre
+427	barrel	varil,fıçı
+428	barrow	el arabası
+429	baseball	beyzbol topu,top
+430	basketball	basketbol topu,top
+431	bassinet	beşik
+432	bassoon	fagot,enstrüman
+433	bathing cap	bone
+434	bath towel	havlu,banyo havlusu
+435	bathtub	küvet,banyo
+436	beach wagon	araba,station wagon,araç,vehicle
+437	beacon	deniz feneri,fener
+438	beaker	beher
+439	bearskin	
+440	beer bottle	bira şişesi,şişe
+441	beer glass	bira bardağı,bira
+442	bell cote	
+443	bib	
+444	bicycle-built-for-two	tandem bisiklet,bisiklet,araç,vehicle
+445	bikini	bikini,mayo
+446	binder	klasör
+447	binoculars	dürbün
+448	birdhouse	kuş evi
+449	boathouse	kayıkhane
+450	bobsled	bobsled,kızak,araç,vehicle
+451	bolo tie	kravat
+452	bonnet	bere,şapka
+453	bookcase	kitaplık
+454	bookshop	kitapçı
+455	bottlecap	şişe kapağı
+456	bow	yay,ok
+457	bow tie	papyon
+458	brass	
+459	brassiere	sütyen
+460	breakwater	dalgakıran
+461	breastplate	
+462	broom	süpürge
+463	bucket	kova
+464	buckle	toka
+465	bulletproof vest	kurşun geçirmez yelek
+466	bullet train	hızlı tren,tren,araç,vehicle
+467	butcher shop	kasap
+468	cab	taksi,araba,araç,vehicle
+469	caldron	kazan
+470	candle	mum
+471	cannon	top
+472	canoe	kano,tekne,araç,vehicle
+473	can opener	konserve açacağı
+474	cardigan	hırka
+475	car mirror	
+476	carousel	atlıkarınca
+477	carpenter's kit	
+478	carton	karton,kutu
+479	car wheel	araba jantı,jant,teker,lastik
+480	cash machine	bankamatik,atm
+481	cassette	kaset
+482	cassette player	kasetçalar
+483	castle	kale,şato
+484	catamaran	katamaran,tekne,araç,vehicle
+485	CD player	cd çalar
+486	cello	çello,enstrüman
+487	cellular telephone	telefon,cep telefonu
+488	chain	zincir
+489	chainlink fence	tel örgü,çit
+490	chain mail	zırh
+491	chain saw	motorlu testere
+492	chest	sandık
+493	chiffonier	şifonyer,komodin
+494	chime	
+495	china cabinet	vitrin,dolap
+496	Christmas stocking	noel çorabı
+497	church	kilise
+498	cinema	sinema
+499	cleaver	satır
+500	cliff dwelling	kaya evi
+501	cloak	pelerin
+502	clog	takunya
+503	cocktail shaker	shaker,kokteyl
+504	coffee mug	kupa,kahve fincanı,fincan
+505	coffeepot	cezve,kahve makinesi
+506	coil	
+507	combination lock	kilit
+508	computer keyboard	klavye,bilgisayar klavyesi
+509	confectionery	şekerci,tatlıcı
+510	container ship	konteyner gemisi,gemi,araç,vehicle
+511	convertible	üstü açık araba,cabrio,araba,araç,vehicle
+512	corkscrew	tirbuşon
+513	cornet	kornet,enstrüman
+514	cowboy boot	kovboy botu,bot,ayakkabı
+515	cowboy hat	kovboy şapkası,şapka
+516	cradle	beşik
+517	crane	vinç
+518	crash helmet	kask
+519	crate	kasa
+520	crib	bebek yatağı
+521	Crock Pot	yavaş pişirici
+522	croquet ball	kroket topu
+523	crutch	koltuk değneği,değnek
+524	cuirass	
+525	dam	baraj
+526	desk	masa,çalışma masası
+527	desktop computer	bilgisayar,masaüstü bilgisayar
+528	dial telephone	telefon
+529	diaper	bebek bezi
+530	digital clock	dijital saat,saat
+531	digital watch	dijital saat,kol saati,saat
+532	dining table	yemek masası,masa
+533	dishrag	bulaşık bezi
+534	dishwasher	bulaşık makinesi
+535	disk brake	disk fren
+536	dock	iskele,rıhtım
+537	dogsled	kızak
+538	dome	kubbe
+539	doormat	paspas,kapı paspası
+540	drilling platform	petrol platformu
+541	drum	davul,enstrüman
+542	drumstick	davul çubuğu
+543	dumbbell	dambıl
+544	Dutch oven	
+545	electric fan	vantilatör,fan
+546	electric guitar	elektro gitar,gitar,enstrüman
+547	electric locomotive	lokomotif,tren,araç,vehicle
+548	entertainment center	tv ünitesi
+549	envelope	zarf
+550	espresso maker	espresso makinesi,kahve makinesi
+551	face powder	pudra
+552	feather boa	
+553	file	eğe,dosya
+554	fireboat	yangın botu,tekne,araç,vehicle
+555	fire engine	itfaiye,itfaiye aracı,araç,vehicle
+556	fire screen	
+557	flagpole	bayrak direği
+558	flute	flüt,enstrüman
+559	folding chair	katlanır sandalye,sandalye
+560	football helmet	futbol kaskı,kask
+561	forklift	forklift,araç,vehicle
+562	fountain	çeşme,fıskiye
+563	fountain pen	dolma kalem,kalem
+564	four-poster	baldaken yatak,yatak
+565	freight car	yük vagonu,vagon,araç,vehicle
+566	French horn	korno,enstrüman
+567	frying pan	tava
+568	fur coat	kürk manto,manto
+569	garbage truck	çöp kamyonu,kamyon,araç,vehicle
+570	gasmask	gaz maskesi
+571	gas pump	benzin pompası
+572	goblet	kadeh
+573	go-kart	go-kart,araç,vehicle
+574	golf ball	golf topu
+575	golfcart	golf arabası,araç,vehicle
+576	gondola	gondol,araç,vehicle
+577	gong	gong
+578	gown	elbise,gece elbisesi
+579	grand piano	kuyruklu piyano,piyano,enstrüman
+580	greenhouse	sera
+581	grille	ızgara
+582	grocery store	market,bakkal
+583	guillotine	giyotin
+584	hair slide	toka,saç tokası
+585	hair spray	saç spreyi
+586	half track	
+587	hammer	çekiç
+588	hamper	sepet
+589	hand blower	saç kurutma makinesi,fön
+590	hand-held computer	el bilgisayarı
+591	handkerchief	mendil
+592	hard disc	sabit disk,hard disk
+593	harmonica	mızıka,enstrüman
+594	harp	arp,enstrüman
+595	harvester	biçerdöver
+596	hatchet	balta
+597	holster	silah kılıfı
+598	home theater	ev sineması
+599	honeycomb	petek,bal peteği
+600	hook	kanca
+601	hoopskirt	kabarık etek
+602	horizontal bar	barfiks
+603	horse cart	at arabası
+604	hourglass	kum saati
+605	iPod	ipod,mp3 çalar
+606	iron	ütü
+607	jack-o'-lantern	cadılar bayramı kabağı,balkabağı
+608	jean	kot,kot pantolon,pantolon
+609	jeep	cip,araba,araç,vehicle
+610	jersey	forma,tişört
+611	jigsaw puzzle	yapboz,puzzle
+612	jinrikisha	
+613	joystick	joystick,kumanda
+614	kimono	kimono
+615	knee pad	dizlik
+616	knot	düğüm
+617	lab coat	laboratuvar önlüğü,önlük,doktor
+618	ladle	kepçe
+619	lampshade	abajur
+620	laptop	laptop,dizüstü bilgisayar,bilgisayar
+621	lawn mower	çim biçme makinesi
+622	lens cap	lens kapağı
+623	letter opener	kağıt açacağı
+624	library	kütüphane
+625	lifeboat	can filikası
+626	lighter	çakmak
+627	limousine	limuzin,araba,araç,vehicle
+628	liner	transatlantik,gemi
+629	lipstick	ruj
+630	Loafer	makosen,ayakkabı
+631	lotion	losyon,krem
+632	loudspeaker	hoparlör
+633	loupe	büyüteç
+634	lumbermill	kereste fabrikası
+635	magnetic compass	pusula
+636	mailbag	posta çantası
+637	mailbox	posta kutusu
+638	maillot	mayo
+639	maillot	mayo
+640	manhole cover	rögar kapağı
+641	maraca	marakas,enstrüman
+642	marimba	marimba,enstrüman
+643	mask	maske
+644	matchstick	kibrit
+645	maypole	şenlik direği
+646	maze	labirent
+647	measuring cup	ölçü kabı
+648	medicine chest	ilaç dolabı
+649	megalith	
+650	microphone	mikrofon
+651	microwave	mikrodalga,mikrodalga fırın
+652	military uniform	askeri üniforma,üniforma
+653	milk can	süt bidonu
+654	minibus	minibüs,araç,vehicle
+655	miniskirt	mini etek,etek
+656	minivan	minivan,araba,araç,vehicle
+657	missile	füze
+658	mitten	eldiven
+659	mixing bowl	karıştırma kasesi
+660	mobile home	karavan,araç,vehicle
+661	Model T	klasik araba,araba,araç,vehicle
+662	modem	modem
+663	monastery	manastır
+664	monitor	monitör,ekran
+665	moped	moped,motosiklet,araç,vehicle
+666	mortar	havan
+667	mortarboard	mezuniyet şapkası
+668	mosque	cami
+669	mosquito net	cibinlik
+670	motor scooter	scooter,motor,motosiklet,araç,vehicle
+671	mountain bike	dağ bisikleti,bisiklet,araç,vehicle
+672	mountain tent	dağ çadırı,çadır
+673	mouse	fare,bilgisayar faresi
+674	mousetrap	fare kapanı
+675	moving van	nakliye kamyonu,kamyon,araç,vehicle
+676	muzzle	ağızlık
+677	nail	çivi
+678	neck brace	boyunluk
+679	necklace	kolye
+680	nipple	
+681	notebook	defter,dizüstü
+682	obelisk	dikilitaş
+683	oboe	obua,enstrüman
+684	ocarina	okarina,enstrüman
+685	odometer	kilometre sayacı
+686	oil filter	yağ filtresi
+687	organ	org,enstrüman
+688	oscilloscope	osiloskop
+689	overskirt	
+690	oxcart	öküz arabası
+691	oxygen mask	oksijen maskesi
+692	packet	paket
+693	paddle	kürek
+694	paddlewheel	çarklı vapur,gemi
+695	padlock	asma kilit,kilit
+696	paintbrush	fırça,boya fırçası
+697	pajama	pijama
+698	palace	saray
+699	panpipe	pan flüt,enstrüman
+700	paper towel	kağıt havlu
+701	parachute	paraşüt
+702	parallel bars	paralel bar
+703	park bench	park bankı,bank
+704	parking meter	parkmetre
+705	passenger car	yolcu vagonu,vagon,araç,vehicle
+706	patio	teras,veranda
+707	pay-phone	ankesörlü telefon
+708	pedestal	kaide
+709	pencil box	kalem kutusu
+710	pencil sharpener	kalemtıraş
+711	perfume	parfüm
+712	Petri dish	petri kabı
+713	photocopier	fotokopi makinesi
+714	pick	pena
+715	pickelhaube	miğfer
+716	picket fence	çit,beyaz çit
+717	pickup	pikap,kamyonet,araba,araç,vehicle
+718	pier	iskele
+719	piggy bank	kumbara
+720	pill bottle	ilaç şişesi,hap kutusu,ilaç
+721	pillow	yastık
+722	ping-pong ball	masa tenisi topu
+723	pinwheel	rüzgar gülü
+724	pirate	korsan
+725	pitcher	sürahi
+726	plane	uçak,araç,vehicle
+727	planetarium	planetaryum
+728	plastic bag	plastik poşet,poşet
+729	plate rack	tabak rafı
+730	plow	pulluk,saban
+731	plunger	vantuz
+732	Polaroid camera	polaroid,fotoğraf makinesi,kamera
+733	pole	direk
+734	police van	polis aracı,polis,araba,araç,vehicle
+735	poncho	panço
+736	pool table	bilardo masası,bilardo
+737	pop bottle	gazoz şişesi,şişe
+738	pot	tencere,saksı
+739	potter's wheel	çömlekçi çarkı
+740	power drill	matkap
+741	prayer rug	seccade,namaz halısı
+742	printer	yazıcı
+743	prison	hapishane,cezaevi
+744	projectile	mermi
+745	projector	projeksiyon
+746	puck	disk
+747	punching bag	boks torbası
+748	purse	çanta,el çantası,cüzdan
+749	quill	tüy kalem
+750	quilt	yorgan,kapitone
+751	racer	yarış arabası,araba,araç,vehicle
+752	racket	raket
+753	radiator	radyatör,kalorifer
+754	radio	radyo
+755	radio telescope	radyo teleskop
+756	rain barrel	yağmur varili
+757	recreational vehicle	karavan,araç,vehicle
+758	reel	makara
+759	reflex camera	refleks kamera,kamera,fotoğraf makinesi
+760	refrigerator	buzdolabı
+761	remote control	kumanda,uzaktan kumanda
+762	restaurant	restoran,lokanta
+763	revolver	tabanca,revolver
+764	rifle	tüfek
+765	rocking chair	sallanan sandalye,sandalye
+766	rotisserie	döner
+767	rubber eraser	silgi
+768	rugby ball	ragbi topu
+769	rule	cetvel
+770	running shoe	koşu ayakkabısı,spor ayakkabı,ayakkabı
+771	safe	kasa
+772	safety pin	çengelli iğne
+773	saltshaker	tuzluk
+774	sandal	sandalet,terlik,ayakkabı
+775	sarong	pareo
+776	sax	saksafon,enstrüman
+777	scabbard	kın
+778	scale	tartı,terazi
+779	school bus	okul otobüsü,otobüs,araç,vehicle
+780	schooner	yelkenli,tekne,araç,vehicle
+781	scoreboard	skorboard
+782	screen	ekran
+783	screw	vida
+784	screwdriver	tornavida
+785	seat belt	emniyet kemeri
+786	sewing machine	dikiş makinesi
+787	shield	kalkan
+788	shoe shop	ayakkabı mağazası
+789	shoji	
+790	shopping basket	alışveriş sepeti,sepet
+791	shopping cart	alışveriş arabası
+792	shovel	kürek
+793	shower cap	duş bonesi
+794	shower curtain	duş perdesi
+795	ski	kayak
+796	ski mask	kar maskesi
+797	sleeping bag	uyku tulumu
+798	slide rule	hesap cetveli
+799	sliding door	sürgülü kapı
+800	slot	
+801	snorkel	şnorkel
+802	snowmobile	kar motosikleti,araç,vehicle
+803	snowplow	kar küreme,araç,vehicle
+804	soap dispenser	sabunluk
+805	soccer ball	futbol topu,top
+806	sock	çorap
+807	solar dish	güneş çanağı
+808	sombrero	sombrero,şapka
+809	soup bowl	çorba kasesi
+810	space bar	boşluk tuşu
+811	space heater	soba,ısıtıcı
+812	space shuttle	uzay mekiği,araç,vehicle
+813	spatula	spatula
+814	speedboat	sürat teknesi,tekne,araç,vehicle
+815	spider web	örümcek ağı
+816	spindle	
+817	sports car	spor araba,araba,araç,vehicle
+818	spotlight	spot ışığı
+819	stage	sahne
+820	steam locomotive	buharlı lokomotif,tren,araç,vehicle
+821	steel arch bridge	çelik kemer köprü,köprü
+822	steel drum	çelik davul,enstrüman
+823	stethoscope	stetoskop,tıbbi,doktor
+824	stole	etol,şal
+825	stone wall	taş duvar,duvar
+826	stopwatch	kronometre
+827	stove	ocak,soba
+828	strainer	süzgeç
+829	streetcar	tramvay,araç,vehicle
+830	stretcher	sedye
+831	studio couch	kanepe,koltuk
+832	stupa	stupa
+833	submarine	denizaltı,araç,vehicle
+834	suit	takım elbise,takım,ceket
+835	sundial	güneş saati
+836	sunglass	güneş gözlüğü,gözlük
+837	sunglasses	güneş gözlüğü,gözlük
+838	sunscreen	güneş kremi
+839	suspension bridge	asma köprü,köprü
+840	swab	
+841	sweatshirt	sweatshirt,kazak
+842	swimming trunks	mayo,şort
+843	swing	salıncak
+844	switch	anahtar,şalter
+845	syringe	şırınga,enjektör,tıbbi
+846	table lamp	masa lambası,lamba
+847	tank	tank,araç,vehicle
+848	tape player	teyp
+849	teapot	çaydanlık,demlik,çay
+850	teddy	oyuncak ayı,ayıcık,oyuncak
+851	television	televizyon,tv
+852	tennis ball	tenis topu
+853	thatch	çatı örtüsü
+854	theater curtain	tiyatro perdesi
+855	thimble	yüksük
+856	thresher	
+857	throne	taht
+858	tile roof	kiremit çatı
+859	toaster	tost makinesi,ekmek kızartma
+860	tobacco shop	tütün dükkanı
+861	toilet seat	klozet kapağı
+862	torch	meşale
+863	totem pole	totem
+864	tow truck	çekici,çekici araç,araç,vehicle
+865	toyshop	oyuncakçı
+866	tractor	traktör,araç,vehicle
+867	trailer truck	tır,kamyon,araç,vehicle
+868	tray	tepsi
+869	trench coat	trençkot
+870	tricycle	üç tekerlekli bisiklet,araç,vehicle
+871	trimaran	trimaran,tekne,araç,vehicle
+872	tripod	tripod,üçayak
+873	triumphal arch	zafer takı
+874	trolleybus	troleybüs,araç,vehicle
+875	trombone	trombon,enstrüman
+876	tub	küvet,leğen
+877	turnstile	turnike
+878	typewriter keyboard	daktilo,klavye
+879	umbrella	şemsiye
+880	unicycle	tek tekerlekli bisiklet,araç,vehicle
+881	upright	dik piyano,piyano,enstrüman
+882	vacuum	elektrikli süpürge,süpürge
+883	vase	vazo
+884	vault	tonoz
+885	velvet	kadife
+886	vending machine	otomat
+887	vestment	cüppe
+888	viaduct	viyadük
+889	violin	keman,enstrüman
+890	volleyball	voleybol topu,top
+891	waffle iron	waffle makinesi
+892	wall clock	duvar saati,saat
+893	wallet	cüzdan
+894	wardrobe	gardrop,dolap
+895	warplane	savaş uçağı,uçak,araç,vehicle
+896	washbasin	lavabo
+897	washer	çamaşır makinesi
+898	water bottle	su şişesi,şişe
+899	water jug	sürahi,testi
+900	water tower	su kulesi
+901	whiskey jug	viski sürahisi
+902	whistle	düdük
+903	wig	peruk
+904	window screen	tel kafes
+905	window shade	perde,jaluzi
+906	Windsor tie	kravat
+907	wine bottle	şarap şişesi,şarap,şişe
+908	wing	kanat
+909	wok	wok
+910	wooden spoon	tahta kaşık,kaşık
+911	wool	yün
+912	worm fence	çit
+913	wreck	enkaz,batık
+914	yawl	yelkenli,tekne,araç,vehicle
+915	yurt	yurt
+916	web site	web sitesi,ekran görüntüsü,site
+917	comic book	çizgi roman,dergi
+918	crossword puzzle	bulmaca
+919	street sign	tabela,sokak tabelası
+920	traffic light	trafik ışığı
+921	book jacket	kitap kapağı,kitap
+922	menu	menü
+923	plate	tabak
+924	guacamole	guacamole,yemek
+925	consomme	çorba,yemek
+926	hot pot	güveç,yemek
+927	trifle	tatlı,trifle,yemek
+928	ice cream	dondurma,tatlı,yemek
+929	ice lolly	buzlu şeker,yemek
+930	French loaf	baget,ekmek,yemek
+931	bagel	simit,bagel,yemek
+932	pretzel	pretzel,yemek
+933	cheeseburger	hamburger,çizburger,yemek
+934	hotdog	sosisli,hot dog,yemek
+935	mashed potato	patates püresi,yemek
+936	head cabbage	lahana,sebze,yemek
+937	broccoli	brokoli,sebze,yemek
+938	cauliflower	karnabahar,sebze,yemek
+939	zucchini	kabak,sebze,yemek
+940	spaghetti squash	kabak,sebze,yemek
+941	acorn squash	kabak,sebze,yemek
+942	butternut squash	kabak,sebze,yemek
+943	cucumber	salatalık,sebze,yemek
+944	artichoke	enginar,sebze,yemek
+945	bell pepper	biber,sebze,yemek
+946	cardoon	kardon,sebze,yemek
+947	mushroom	mantar,yemek
+948	Granny Smith	elma,meyve,yemek
+949	strawberry	çilek,meyve,yemek
+950	orange	portakal,meyve,yemek
+951	lemon	limon,meyve,yemek
+952	fig	incir,meyve,yemek
+953	pineapple	ananas,meyve,yemek
+954	banana	muz,meyve,yemek
+955	jackfruit	jackfruit,meyve,yemek
+956	custard apple	şeker elması,meyve,yemek
+957	pomegranate	nar,meyve,yemek
+958	hay	saman
+959	carbonara	karbonara,makarna,yemek
+960	chocolate sauce	çikolata sosu,çikolata,yemek
+961	dough	hamur,yemek
+962	meat loaf	köfte,et,yemek
+963	pizza	pizza,yemek
+964	potpie	börek,turta,yemek
+965	burrito	dürüm,burrito,yemek
+966	red wine	kırmızı şarap,şarap,içecek
+967	espresso	espresso,kahve,içecek
+968	cup	fincan,kahve,içecek
+969	eggnog	eggnog,içecek
+970	alp	dağ,alpler,doğa,manzara
+971	bubble	baloncuk
+972	cliff	uçurum,doğa,manzara
+973	coral reef	mercan resifi,deniz,doğa,manzara
+974	geyser	gayzer,doğa,manzara
+975	lakeside	göl kenarı,göl,doğa,manzara
+976	promontory	burun,kayalık,doğa,manzara
+977	sandbar	kum seti,doğa,manzara
+978	seashore	deniz kıyısı,plaj,sahil,deniz,doğa,manzara
+979	valley	vadi,doğa,manzara
+980	volcano	yanardağ,volkan,doğa,manzara
+981	ballplayer	oyuncu,sporcu
+982	groom	damat
+983	scuba diver	dalgıç
+984	rapeseed	kolza,çiçek,bitki
+985	daisy	papatya,çiçek,bitki
+986	yellow lady's slipper	çiçek,bitki
+987	corn	mısır,bitki
+988	acorn	meşe palamudu,bitki
+989	hip	kuşburnu,bitki
+990	buckeye	atkestanesi,bitki
+991	coral fungus	mantar
+992	agaric	mantar
+993	gyromitra	mantar
+994	stinkhorn	mantar
+995	earthstar	mantar
+996	hen-of-the-woods	mantar
+997	bolete	mantar
+998	ear	başak,mısır,bitki
+999	toilet tissue	tuvalet kağıdı

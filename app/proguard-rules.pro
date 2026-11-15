@@ -55,3 +55,6 @@
 # the torrent engine: JNI (swig) classes are called from native code
 -keep class org.libtorrent4j.** { *; }
 -dontwarn org.libtorrent4j.**
+# TensorFlow Lite (the gallery search): its optional GPU delegate is not used
+-dontwarn org.tensorflow.lite.gpu.GpuDelegateFactory$Options
+-dontwarn org.tensorflow.lite.gpu.**
