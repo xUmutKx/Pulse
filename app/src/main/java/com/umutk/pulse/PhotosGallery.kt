@@ -348,7 +348,12 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
         }
     }
     fun toggle(u: String) { sel = if (u in sel) sel - u else sel + u }
-    val r = if (T.material) 6.dp else 0.dp
+    val r = 0.dp // square tiles with thin gaps, as in Samsung's Gallery
+    // the big title at the top of the pictures (Samsung's Gallery: "Pictures" large in the free space above the grid); the small one in the bar shows once it has scrolled away
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val bigTitle = !results && sel.isEmpty() && !showAlbums && visible.isNotEmpty()
+    val smallTitleA by animateFloatAsState(if (!bigTitle || gridState.firstVisibleItemIndex > 0) 1f else 0f, label = "smallTitle")
+    val titleText = album ?: when (tab) { 1 -> tr("Albums", "Albümler"); 2 -> tr("Favorites", "Favoriler"); else -> tr("Pictures", "Resimler") }
 
     Box(Modifier.fillMaxSize().background(T.bg)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -367,9 +372,9 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                     }
                     else -> {
                         if (album != null) TopBtn(Icons.Outlined.ArrowBack, { album = null })
-                        Text(album ?: when (tab) { 1 -> tr("Albums", "Albümler"); 2 -> tr("Favorites", "Favoriler"); else -> tr("Photos", "Fotoğraflar") },
-                            color = T.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(start = if (album != null) 4.dp else 10.dp))
+                        Text(titleText,
+                            color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(start = if (album != null) 4.dp else 10.dp).graphicsLayer { alpha = smallTitleA })
                         TopBtn(Icons.Outlined.Settings, { settings = true })
                     }
                 }
@@ -416,7 +421,14 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                                 }
                             } while (ev.changes.any { it.pressed })
                         }
-                    }, contentPadding = PaddingValues(2.dp, 0.dp, 2.dp, 170.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    }, state = gridState, contentPadding = PaddingValues(2.dp, 0.dp, 2.dp, 170.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        if (bigTitle) item(key = "bigTitle", span = { GridItemSpan(maxLineSpan) }) {
+                            val nPics = visible.count { !it.video }; val nVids = visible.size - nPics
+                            Column(Modifier.fillMaxWidth().height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .24f).dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(titleText, color = T.text, fontSize = 34.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(tr("$nPics pictures", "$nPics resim") + if (nVids > 0) tr(", $nVids videos", ", $nVids video") else "", color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                            }
+                        }
                         items(entries.size, key = { i -> entries[i].let { if (it is Ph) it.src.uri.toString() else if (it is String) "h$i" else "albums" } },
                             span = { i -> if (entries[i] is Ph) GridItemSpan(1) else GridItemSpan(maxLineSpan) },
                             contentType = { i -> entries[i] is Ph }) { i ->
@@ -461,11 +473,12 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
         if (sel.isEmpty() && !results && !settings) Row(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 14.dp).height(60.dp).clip(RoundedCornerShape(30.dp))
             .background(T.panel).border(1.dp, T.line, RoundedCornerShape(30.dp)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             // (Albums is a folder: the photos and albums pictures of Material are nearly the same)
-            listOf(Icons.Outlined.PhotoLibrary, Icons.Outlined.Folder, Icons.Outlined.FavoriteBorder).forEachIndexed { i, ic ->
+            listOf(Icons.Outlined.PhotoLibrary to tr("Pictures", "Resimler"), Icons.Outlined.Folder to tr("Albums", "Albümler"), Icons.Outlined.FavoriteBorder to tr("Favorites", "Favoriler")).forEachIndexed { i, (ic, name) ->
                 val on = tab == i
-                Box(Modifier.padding(horizontal = 4.dp).size(width = 64.dp, height = 44.dp).clip(CircleShape).background(if (on) Look.accent.copy(alpha = .22f) else Color.Transparent)
-                    .clickable { tab = i; album = null }, contentAlignment = Alignment.Center) {
-                    LIc(ic, if (on) T.text else T.sub, 24.dp)
+                Column(Modifier.padding(horizontal = 3.dp).width(78.dp).height(50.dp).clip(RoundedCornerShape(25.dp)).background(if (on) Look.accent.copy(alpha = .22f) else Color.Transparent)
+                    .clickable { tab = i; album = null }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    LIc(ic, if (on) T.text else T.sub, 21.dp)
+                    Text(name, color = if (on) T.text else T.sub, fontSize = 11.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                 }
             }
         }
@@ -529,25 +542,25 @@ private fun PhotosSettings(onClose: () -> Unit) {
     Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TopBtn(Icons.Outlined.ArrowBack, onClose)
-            Text(tr("Settings", "Ayarlar"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+            Text(tr("Gallery settings", "Galeri ayarları"), color = T.text, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
         }
         val sc = rememberScrollState()
-        Column(Modifier.weight(1f).verticalScroll(sc).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(sc).padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             com.umutk.pulse.ExtraDefaultRow("PhotosLauncher")
-            SetSection(tr("Look", "Görünüm"), ic(Icons.Outlined.Palette), true) {
+            GallerySection(tr("Look", "Görünüm"), ic(Icons.Outlined.Palette), true) {
                 SetRow(ic(Icons.Outlined.Palette), tr("Look", "Görünüm"), looks.first { it.first == PhotosPrefs.look }.second, { dlg = "look" })
             }
-            SetSection(tr("Colours", "Renkler"), ic(Icons.Outlined.ColorLens), true) {
+            GallerySection(tr("Colours", "Renkler"), ic(Icons.Outlined.ColorLens), true) {
                 SetSwitchRow(ic(Icons.Outlined.DarkMode), "AMOLED", PhotosPrefs.amoled) { v -> change { PhotosPrefs.amoled = v } }
                 if (T.material && !PhotosPrefs.amoled) {
                     if (Build.VERSION.SDK_INT >= 31) SetSwitchRow(ic(Icons.Outlined.Palette), "Material You", PhotosPrefs.dynamic) { v -> change { PhotosPrefs.dynamic = v } }
                     if (!PhotosPrefs.dynamic || Build.VERSION.SDK_INT < 31) SetRow(ic(Icons.Outlined.ColorLens), tr("Accent", "Vurgu"), null, { dlg = "accent" }) { MaterialAccents.getOrNull(PhotosPrefs.accent)?.let { ColorDot(it) } }
                 }
             }
-            SetSection(tr("Language", "Dil"), ic(Icons.Outlined.Language)) {
+            GallerySection(tr("Language", "Dil"), ic(Icons.Outlined.Language)) {
                 SetRow(ic(Icons.Outlined.Language), tr("Language", "Dil"), if (PhotosPrefs.lang == "tr") "Türkçe" else "English", { dlg = "lang" })
             }
-            SetSection(tr("Library", "Kitaplık"), ic(Icons.Outlined.PhotoLibrary)) {
+            GallerySection(tr("Library", "Kitaplık"), ic(Icons.Outlined.PhotoLibrary)) {
                 SetRow(ic(Icons.Outlined.Collections), tr("Start tab", "Açılış sekmesi"), tabs.first { it.first == PhotosPrefs.startTab }.second, { dlg = "tab" })
                 SetRow(ic(Icons.Outlined.GridView), tr("Columns", "Sütun"), PhotosPrefs.cols.toString(), { dlg = "cols" })
                 SetSwitchRow(ic(Icons.Outlined.Videocam), tr("Videos", "Videolar"), PhotosPrefs.showVideos) { v -> change { PhotosPrefs.showVideos = v } }
@@ -558,7 +571,7 @@ private fun PhotosSettings(onClose: () -> Unit) {
                 SetSwitchRow(ic(Icons.Outlined.Sort), tr("Oldest first", "Eskiden yeniye"), PhotosPrefs.sortAsc) { v -> change { PhotosPrefs.sortAsc = v } }
                 SetRow(ic(Icons.Outlined.ViewAgenda), tr("Group by", "Grupla"), groups.first { it.first == PhotosPrefs.group }.second, { dlg = "group" })
             }
-            SetSection(tr("Viewer", "Görüntüleyici"), ic(Icons.Outlined.Image)) {
+            GallerySection(tr("Viewer", "Görüntüleyici"), ic(Icons.Outlined.Image)) {
                 SetRow(ic(Icons.Outlined.Slideshow), tr("Slideshow", "Slayt"), "${PhotosPrefs.slideSec} s", { dlg = "slide" })
                 SetSwitchRow(ic(Icons.Outlined.Collections), tr("Film strip", "Film şeridi"), PhotosPrefs.filmstrip) { v -> change { PhotosPrefs.filmstrip = v } }
                 SetSwitchRow(ic(Icons.Outlined.Repeat), tr("Loop live video", "Canlı videoyu döngüle"), PhotosPrefs.loopVideos) { v -> change { PhotosPrefs.loopVideos = v } }
@@ -600,6 +613,15 @@ internal fun LookFade(key: Any = Look.theme.id, content: @Composable () -> Unit)
     var first by remember { mutableStateOf(true) }
     LaunchedEffect(key) { if (first) first = false else { a.snapTo(.25f); a.animateTo(1f, androidx.compose.animation.core.tween(220)) } }
     Box(Modifier.fillMaxSize().graphicsLayer { alpha = a.value }) { content() }
+}
+
+/** The gallery's settings group, after Samsung's Gallery: a small grey title over a rounded card that holds its rows, always open. */
+@Composable
+internal fun GallerySection(title: String, icon: @Composable () -> Unit = {}, startOpen: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Text(title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 18.dp, bottom = 6.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (T.material) 24.dp else 6.dp)).background(T.panel).padding(horizontal = 18.dp, vertical = 6.dp), content = content)
+    }
 }
 
 /** Collapsible settings section: icon + title + rotating chevron (plain header, no pill); the body expands and collapses with animation. */
