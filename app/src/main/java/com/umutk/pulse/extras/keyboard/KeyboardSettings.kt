@@ -40,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import com.umutk.pulse.extras.keyboard.KeyboardEffects.keyWash
+import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -356,16 +358,51 @@ fun KeyboardSettings(back: () -> Unit) {
 
         // feel
         KbSection("effects", tr("Effects", "Efektler")) {
-            @Composable fun chips(title: String, names: List<Pair<String, String>>, cur: Int, set: (Int) -> Unit) {
-                Text(title, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    names.forEachIndexed { i, n -> PChip(cur == i, tr(n.first, n.second)) { set(i); save() } }
+            // every option shows what it does: a small keyboard with the colour wash, a key with its colour effect, a key pressed over and over with its motion, a sound that plays on a tap
+            @Composable fun chips(title: String, names: List<Pair<String, String>>, cur: Int, set: (Int) -> Unit, preview: @Composable (Int) -> Unit) {
+                Text(title, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    names.forEachIndexed { i, n ->
+                        val on = cur == i
+                        val sh = RoundedCornerShape(14.dp)
+                        Column(Modifier.clip(sh).background(if (on) T.accent.copy(alpha = .18f) else T.text.copy(alpha = .05f)).border(if (on) 2.dp else 1.dp, if (on) T.accent else T.text.copy(alpha = .12f), sh)
+                            .clickable { set(i); save() }.padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            preview(i)
+                            Text(tr(n.first, n.second), color = if (on) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+                        }
+                    }
                 }
             }
-            chips(tr("Keyboard colour effect", "Klavye renk efekti"), KeyboardEffects.boardNames, KeyboardPrefs.boardFx) { KeyboardPrefs.boardFx = it }
-            chips(tr("Key colour effect", "Tuş renk efekti"), KeyboardEffects.keyNames, KeyboardPrefs.keyFx) { KeyboardPrefs.keyFx = it }
-            chips(tr("Key motion effect", "Tuş hareket efekti"), KeyboardEffects.motionNames, KeyboardPrefs.motionFx) { KeyboardPrefs.motionFx = it }
-            chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind) { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }
+            val keyFill = Color(0xFF2A2B31)
+            val cornerPx = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
+            chips(tr("Keyboard colour effect", "Klavye renk efekti"), KeyboardEffects.boardNames, KeyboardPrefs.boardFx, { KeyboardPrefs.boardFx = it }) { i ->
+                Box(Modifier.size(width = 84.dp, height = 50.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF15161B)).boardWash(i), contentAlignment = Alignment.Center) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        repeat(2) { Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) { repeat(5) { Box(Modifier.size(width = 12.dp, height = 12.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = .2f))) } } }
+                    }
+                }
+            }
+            chips(tr("Key colour effect", "Tuş renk efekti"), KeyboardEffects.keyNames, KeyboardPrefs.keyFx, { KeyboardPrefs.keyFx = it }) { i ->
+                Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(keyFill).keyWash(i, T.accent, cornerPx), contentAlignment = Alignment.Center) {
+                    Text("A", color = Color.White, fontSize = 17.sp)
+                }
+            }
+            chips(tr("Key motion effect", "Tuş hareket efekti"), KeyboardEffects.motionNames, KeyboardPrefs.motionFx, { KeyboardPrefs.motionFx = it }) { i ->
+                var down by remember { mutableStateOf(false) }
+                LaunchedEffect(i) { while (true) { kotlinx.coroutines.delay(750); down = true; kotlinx.coroutines.delay(280); down = false } }
+                // the same press size and spring as the real key
+                val pressed = when (i) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
+                val sc by androidx.compose.animation.core.animateFloatAsState(if (down) pressed else 1f,
+                    if (i == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else androidx.compose.animation.core.tween(70), label = "fxm")
+                Box(Modifier.size(width = 52.dp, height = 46.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(width = 44.dp, height = 40.dp).graphicsLayer { scaleX = sc; scaleY = sc }.clip(RoundedCornerShape(8.dp)).background(keyFill), contentAlignment = Alignment.Center) {
+                        Text("A", color = Color.White, fontSize = 17.sp)
+                    }
+                }
+            }
+            chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind, { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }) { _ ->
+                Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(keyFill), contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
+            }
         }
         KbSection("vibrate", tr("Feel", "His")) {
             Switch(tr("Vibrate on keypress", "Tuşta titreşim"), "", KeyboardPrefs.haptic) { KeyboardPrefs.haptic = it; save() }
@@ -465,6 +502,28 @@ fun KeyboardSettings(back: () -> Unit) {
             if (lnote.isNotEmpty()) Text(lnote, color = T.sub, fontSize = 12.sp)
         }
 
+        // the e-mail addresses the bar offers from their first letters in any field: the ones typed or copied are kept by themselves, and one can be added by hand here
+        KbSection("edit", tr("Your e-mail addresses", "E-posta adreslerin")) {
+            val sp = remember { ctx.getSharedPreferences("pulse_kb_emails", android.content.Context.MODE_PRIVATE) }
+            var mails by remember { mutableStateOf(sp.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }) }
+            var addM by remember { mutableStateOf("") }
+            fun saveMails(l: List<String>) { mails = l; sp.edit().putString("list", l.joinToString("\n")).apply() }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PField(addM, { addM = it }, tr("Add an address", "Adres ekle"), Modifier.weight(1f))
+                PButton(tr("Add", "Ekle"), compact = true) {
+                    val m = addM.trim().lowercase()
+                    if (Regex("^[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$").matches(m)) { saveMails((listOf(m) + mails.filter { it != m }).take(12)); addM = "" }
+                }
+            }
+            mails.forEach { m ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(m, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(32.dp).clickable { saveMails(mails.filter { it != m }) }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+                }
+            }
+            if (mails.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
+        }
+
         // the suggestions blocked from the bar (a word, a name or an e-mail address held and blocked): a tap brings one back
         KbSection("eyeOff", tr("Blocked suggestions", "Engellenen öneriler")) {
             var blocked by remember { mutableStateOf(KeyboardDictionary.bannedList(ctx)) }
@@ -484,37 +543,33 @@ fun KeyboardSettings(back: () -> Unit) {
             @Composable fun row(label: String, v: Int?) = Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f)); Text("${v ?: 0}", color = T.text, fontSize = 13.sp)
             }
-            // how far the keyboard has learned this person: a big ring for the whole, four small ones for its parts, then the numbers and the last two weeks
+            // the figures that are measured, nothing made up: how many of the automatic corrections were kept (every way a correction was taken back counts: the undo,
+            // a backspace into the word, a word retyped), how often it corrected, and what it knows. (There was a "learned" percentage made of four rings that were full
+            // after a few thousand words, so it always read about 99; it is gone.)
             val words = KbStats.get(ctx, "words"); val fixes = KbStats.get(ctx, "fixes"); val undone = KbStats.get(ctx, "undone")
-            val parts = listOf(
-                tr("Your words", "Kelimelerin") to ((st2["words"] ?: 0) / 3000f).coerceIn(0f, 1f),
-                tr("Your typos", "Yazım hataların") to ((st2["typos"] ?: 0) / 400f).coerceIn(0f, 1f),
-                tr("Touch model", "Dokunuş modeli") to ((st2["letters"] ?: 0) / 30000f).coerceIn(0f, 1f),
-                tr("Accuracy", "İsabet") to (if (fixes < 20) 0f else (1f - undone.toFloat() / fixes).coerceIn(0f, 1f)),
-            )
-            val overall = parts.map { it.second }.average().toFloat()
+            val reversed = maxOf(undone, KeyboardDictionary.rejectTotal()).coerceAtMost(fixes)
+            val kept: Float? = if (fixes < 20) null else ((fixes - reversed).toFloat() / fixes).coerceIn(0f, 1f)
+            val per100 = if (words > 0) fixes * 100f / words else 0f
+            @Composable fun line(label: String, v: String) = Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f)); Text(v, color = T.text, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                StatRing(overall, 120.dp, 12.dp) {
+                StatRing(kept ?: 0f, 120.dp, 12.dp) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${(overall * 100).toInt()}%", color = T.text, fontSize = 28.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                        Text(tr("learned", "öğrendi"), color = T.sub, fontSize = 12.sp)
+                        Text(if (kept == null) "–" else "${(kept * 100).toInt()}%", color = T.text, fontSize = 28.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(tr("corrections kept", "düzeltme kalıyor"), color = T.sub, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
-                Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    parts.chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { (label, f) ->
-                                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                    StatRing(f, 38.dp, 5.dp) { Text("${(f * 100).toInt()}", color = T.text, fontSize = 11.sp) }
-                                    Text(label, color = T.sub, fontSize = 12.sp, maxLines = 2, modifier = Modifier.padding(start = 6.dp))
-                                }
-                            }
-                        }
-                    }
+                Column(Modifier.weight(1f).padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    line(tr("Corrections per 100 words", "100 kelimede düzeltme"), "%.1f".format(java.util.Locale.US, per100))
+                    line(tr("Taken back", "Geri alınan"), "$reversed")
+                    line(tr("Words it knows", "Bildiği kelime"), "${st2["words"] ?: 0}")
+                    line(tr("Slips it fixes", "Düzelttiği hata"), "${st2["typos"] ?: 0}")
                 }
             }
+            if (kept == null) Text(tr("The percentage appears after 20 corrections.", "Yüzde 20 düzeltmeden sonra çıkar."), color = T.sub, fontSize = 11.sp)
             // the numbers as tiles
-            val tiles = listOf(tr("Words written", "Yazılan kelime") to words, tr("Corrections", "Düzeltme") to fixes, tr("Taken back", "Geri alınan") to undone,
+            val tiles = listOf(tr("Words written", "Yazılan kelime") to words, tr("Corrections", "Düzeltme") to fixes, tr("Taken back", "Geri alınan") to reversed,
                 tr("Letters", "Harf") to (st2["letters"] ?: 0), tr("Learned words", "Öğrenilen kelime") to (st2["words"] ?: 0), tr("Learned typos", "Öğrenilen hata") to (st2["typos"] ?: 0))
             tiles.chunked(3).forEach { line ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

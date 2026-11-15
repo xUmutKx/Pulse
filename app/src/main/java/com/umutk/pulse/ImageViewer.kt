@@ -57,6 +57,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
@@ -458,12 +459,27 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
         val stamp = cur?.file?.takeIf { gal }?.lastModified()?.let { Date(it) }
         ImgChrome(if (stamp != null) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(stamp) else cur?.name ?: "",
             if (stamp != null) SimpleDateFormat("HH:mm", Locale.getDefault()).format(stamp) + "  ·  " + count else count, bars, acts, items, pager.currentPage, { i -> scope.launch { runCatching { pager.scrollToPage(i) } } }) {
-            HorizontalPager(pager, Modifier.fillMaxSize(), pageSpacing = 8.dp, userScrollEnabled = !zoomed, key = { items.getOrNull(it)?.uri?.toString() ?: it }) { p ->
+            // a swipe up on a picture opens its details (the sheet slides up), a swipe down on it closes them; a zoomed picture is moved by the fingers instead
+            val zoomedNow by androidx.compose.runtime.rememberUpdatedState(zoomed)
+            val infoNow by androidx.compose.runtime.rememberUpdatedState(info)
+            HorizontalPager(pager, Modifier.fillMaxSize().pointerInput(Unit) {
+                var dy = 0f
+                detectVerticalDragGestures(onDragStart = { dy = 0f }, onDragEnd = {
+                    if (!zoomedNow && PhotosPrefs.swipeInfo) { if (dy < -110f && !infoNow) info = true else if (dy > 110f && infoNow) info = false }
+                }, onVerticalDrag = { _, d -> dy += d })
+            }, pageSpacing = 8.dp, userScrollEnabled = !zoomed, key = { items.getOrNull(it)?.uri?.toString() ?: it }) { p ->
                 val s = items.getOrNull(p)
                 if (s != null) ImgPage(s, rev, p == pager.currentPage, zoomTick, liveTick, { l -> if (p == pager.currentPage) hasLive = l }, { z -> if (p == pager.currentPage) zoomed = z }) { bars = !bars }
             }
         }
-        if (info) ImgInfoSheet(rows, { info = false }, Modifier.align(Alignment.BottomCenter))
+        // the details slide up from the bottom and slide away again
+        var lastRows by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+        if (rows.isNotEmpty()) lastRows = rows
+        androidx.compose.animation.AnimatedVisibility(info, Modifier.align(Alignment.BottomCenter),
+            enter = androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(320)) { it } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)),
+            exit = androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(240)) { it } + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180))) {
+            ImgInfoSheet(lastRows, { info = false })
+        }
         // the question before a delete: a small card low on the screen, over the buttons where the finger is (not a dialog in the middle of the picture)
         if (del && cur != null) {
             BackHandler { del = false }

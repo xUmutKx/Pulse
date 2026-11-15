@@ -100,6 +100,9 @@ internal object PhotosPrefs {
     var confirmDelete by mutableStateOf(true)
     var keepOn by mutableStateOf(false)
     var exifDefault by mutableStateOf(false)
+    var videoInPulse by mutableStateOf(true)   // a video of the grid plays in Pulse's own player (off: another app is asked)
+    var mergeAlbums by mutableStateOf(true)    // albums with the same name in different folders are one album (off: kept apart)
+    var swipeInfo by mutableStateOf(true)      // a swipe up on a picture opens its details
     private fun sp(c: Context) = ownPrefs(c, "photos_prefs") { it.startsWith("ph_") }
     fun load(c: Context) {
         val p = sp(c)
@@ -112,6 +115,7 @@ internal object PhotosPrefs {
         slideSec = p.getInt("ph_slide", 3); filmstrip = p.getBoolean("ph_film", true); loopVideos = p.getBoolean("ph_loop", false)
         liveAuto = p.getBoolean("ph_liveauto", false); zoomLevel = p.getFloat("ph_zoom", 2.5f); confirmDelete = p.getBoolean("ph_confirm", true)
         keepOn = p.getBoolean("ph_keepon", false); exifDefault = p.getBoolean("ph_exif", false)
+        videoInPulse = p.getBoolean("ph_videoin", true); mergeAlbums = p.getBoolean("ph_merge", true); swipeInfo = p.getBoolean("ph_swipeinfo", true)
     }
     fun save(c: Context) {
         sp(c).edit().putString("ph_look", look).putBoolean("ph_amoled", amoled).putString("ph_lang", lang).putBoolean("ph_dynamic", dynamic)
@@ -119,7 +123,7 @@ internal object PhotosPrefs {
             .putInt("ph_tab", startTab).putBoolean("ph_videos", showVideos).putBoolean("ph_hidden", showHidden).putStringSet("ph_hideAlbums", hiddenAlbums)
             .putString("ph_sort", sortBy).putBoolean("ph_asc", sortAsc).putString("ph_group", group).putInt("ph_slide", slideSec).putBoolean("ph_film", filmstrip)
             .putBoolean("ph_loop", loopVideos).putBoolean("ph_liveauto", liveAuto).putFloat("ph_zoom", zoomLevel).putBoolean("ph_confirm", confirmDelete)
-            .putBoolean("ph_keepon", keepOn).putBoolean("ph_exif", exifDefault).apply()
+            .putBoolean("ph_keepon", keepOn).putBoolean("ph_exif", exifDefault).putBoolean("ph_videoin", videoInPulse).putBoolean("ph_merge", mergeAlbums).putBoolean("ph_swipeinfo", swipeInfo).apply()
     }
     /** Pushes the choices into the app-wide look; called at start and after every change. */
     fun apply() {
@@ -223,7 +227,14 @@ internal fun queryPhotos(ctx: Context): List<Ph> {
 
 /** Applies hidden-folder / hidden-album filters and the chosen sort. */
 internal fun arrangePhotos(l: List<Ph>): List<Ph> {
-    val f = l.filter { (PhotosPrefs.showHidden || !it.album.startsWith(".")) && it.album !in PhotosPrefs.hiddenAlbums }
+    var f = l.filter { (PhotosPrefs.showHidden || !it.album.startsWith(".")) && it.album !in PhotosPrefs.hiddenAlbums }
+    if (!PhotosPrefs.mergeAlbums) {
+        // albums that share a name but lie in different folders stay apart: the name of the folder above tells them apart ("WhatsApp · Pictures")
+        val clash = f.groupBy { it.album }.filter { e -> e.value.mapNotNull { it.src.file?.parent }.toSet().size > 1 }.keys
+        if (clash.isNotEmpty()) f = f.map { p ->
+            if (p.album !in clash) p else Ph(p.src, p.date, p.album + " · " + (p.src.file?.parentFile?.parentFile?.name ?: "?"), p.fav, p.mod, p.video)
+        }
+    }
     val c: Comparator<Ph> = when (PhotosPrefs.sortBy) { "name" -> compareBy { it.src.name.lowercase() }; "modified" -> compareBy { it.mod }; else -> compareBy { it.date } }
     return f.sortedWith(if (PhotosPrefs.sortAsc) c else c.reversed())
 }
@@ -417,7 +428,7 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                                 // the live check reads the file head, so only tiles that are on screen pay for it
                                 val live by produceState(false, e) { value = !e.video && withContext(Dispatchers.IO) { imgLiveInfo(ctx, e.src) != null } }
                                 Box(Modifier.aspectRatio(1f).scale(k).clip(RoundedCornerShape(if (on) 12.dp else r))
-                                    .combinedClickable(onClick = { if (sel.isNotEmpty()) toggle(u) else if (e.video) playing = e.src else onOpen(srcs, index[u] ?: 0) }, onLongClick = { toggle(u) })) {
+                                    .combinedClickable(onClick = { if (sel.isNotEmpty()) toggle(u) else if (e.video) { if (PhotosPrefs.videoInPulse) playing = e.src else openVideo(ctx, e.src) } else onOpen(srcs, index[u] ?: 0) }, onLongClick = { toggle(u) })) {
                                     ImgThumb(e.src, Modifier.fillMaxSize(), if (cols <= 3) 420 else 240)
                                     if (e.video) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)), contentAlignment = Alignment.Center) {
                                         LIc(Icons.Outlined.PlayArrow, Color.White, 12.dp)
@@ -470,6 +481,14 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                 TextButton({ confirmDel = false; runDelete() }) { Text(tr("Delete", "Sil")) }
             },
             dismissButton = { TextButton({ confirmDel = false }) { Text(tr("Cancel", "İptal")) } })
+    }
+}
+
+/** A video handed to another app (when "Open in video player" is off). */
+private fun openVideo(ctx: Context, s: ImgSrc) {
+    runCatching {
+        val u = if (s.file != null) FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", s.file) else s.uri
+        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u, "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 
@@ -534,6 +553,7 @@ private fun PhotosSettings(onClose: () -> Unit) {
                 SetSwitchRow(ic(Icons.Outlined.Videocam), tr("Videos", "Videolar"), PhotosPrefs.showVideos) { v -> change { PhotosPrefs.showVideos = v } }
                 SetSwitchRow(ic(Icons.Outlined.VisibilityOff), tr("Hidden folders", "Gizli klasörler"), PhotosPrefs.showHidden) { v -> change { PhotosPrefs.showHidden = v } }
                 SetRow(ic(Icons.Outlined.Close), tr("Hidden albums", "Gizli albümler"), PhotosPrefs.hiddenAlbums.size.toString(), { dlg = "hidden" })
+                SetSwitchRow(ic(Icons.Outlined.Folder), tr("Merge albums", "Albümleri birleştir"), PhotosPrefs.mergeAlbums) { v -> change { PhotosPrefs.mergeAlbums = v } }
                 SetRow(ic(Icons.Outlined.Sort), tr("Sort by", "Sırala"), sorts.first { it.first == PhotosPrefs.sortBy }.second, { dlg = "sort" })
                 SetSwitchRow(ic(Icons.Outlined.Sort), tr("Oldest first", "Eskiden yeniye"), PhotosPrefs.sortAsc) { v -> change { PhotosPrefs.sortAsc = v } }
                 SetRow(ic(Icons.Outlined.ViewAgenda), tr("Group by", "Grupla"), groups.first { it.first == PhotosPrefs.group }.second, { dlg = "group" })
@@ -543,6 +563,8 @@ private fun PhotosSettings(onClose: () -> Unit) {
                 SetSwitchRow(ic(Icons.Outlined.Collections), tr("Film strip", "Film şeridi"), PhotosPrefs.filmstrip) { v -> change { PhotosPrefs.filmstrip = v } }
                 SetSwitchRow(ic(Icons.Outlined.Repeat), tr("Loop live video", "Canlı videoyu döngüle"), PhotosPrefs.loopVideos) { v -> change { PhotosPrefs.loopVideos = v } }
                 SetSwitchRow(ic(Icons.Outlined.SlowMotionVideo), tr("Live autoplay", "Canlı otomatik oynat"), PhotosPrefs.liveAuto) { v -> change { PhotosPrefs.liveAuto = v } }
+                SetSwitchRow(ic(Icons.Outlined.Videocam), tr("Open in video player", "Video oynatıcıda aç"), PhotosPrefs.videoInPulse) { v -> change { PhotosPrefs.videoInPulse = v } }
+                SetSwitchRow(ic(Icons.Outlined.Info), tr("Swipe up for details", "Ayrıntılar için yukarı kaydır"), PhotosPrefs.swipeInfo) { v -> change { PhotosPrefs.swipeInfo = v } }
                 SetRow(ic(Icons.Outlined.ZoomIn), tr("Double-tap zoom", "Çift dokunma yakınlaştırma"), "×" + PhotosPrefs.zoomLevel.toString().removeSuffix(".0"), { dlg = "zoom" })
                 SetSwitchRow(ic(Icons.Outlined.Delete), tr("Confirm delete", "Silmeyi onayla"), PhotosPrefs.confirmDelete) { v -> change { PhotosPrefs.confirmDelete = v } }
                 SetSwitchRow(ic(Icons.Outlined.Visibility), tr("Keep screen on", "Ekranı açık tut"), PhotosPrefs.keepOn) { v -> change { PhotosPrefs.keepOn = v } }
