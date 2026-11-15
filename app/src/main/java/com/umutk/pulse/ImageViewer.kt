@@ -7,30 +7,22 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.BitmapRegionDecoder
-import android.graphics.Rect
+import android.util.LruCache
+import android.graphics.PointF
 import android.media.ExifInterface
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.text.format.Formatter
-import android.util.LruCache
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animate
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculateCentroid
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -47,6 +39,8 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
+import com.davemorrissey.labs.subscaleview.ImageSource
+import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -54,18 +48,13 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,9 +65,6 @@ import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -89,7 +75,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /** Extensions the Pulse file manager hands to the photo viewer. */
 val IMG_EXTS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
@@ -204,44 +189,6 @@ private fun imgExifMatrix(ctx: Context, s: ImgSrc): android.graphics.Matrix? = r
     }
 }.getOrNull()
 
-/** How the picture is turned by its EXIF tag: 0, 90, 180 or 270 degrees; -1 when it is also mirrored (the sharp tiles are not used then). */
-private fun imgExifDegrees(ctx: Context, s: ImgSrc): Int = runCatching {
-    imgStream(ctx, s)?.use { ins ->
-        when (ExifInterface(ins).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-            ExifInterface.ORIENTATION_NORMAL, ExifInterface.ORIENTATION_UNDEFINED -> 0
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270
-            else -> -1
-        }
-    } ?: 0
-}.getOrDefault(0)
-
-/**
- * The sharp part of a zoomed picture: like the zoom view of the Fossify Gallery (SubsamplingScaleImageView) the whole picture is never held at full size;
- * only the part on the screen is read from the file, at the sharpness the zoom needs ([region]). The coordinates are those of the picture as it is shown (turned by its EXIF tag).
- */
-internal class ImgTiles(private val dec: BitmapRegionDecoder, private val rot: Int) {
-    private val sw = dec.width
-    private val sh = dec.height
-    val w = if (rot == 90 || rot == 270) sh else sw
-    val h = if (rot == 90 || rot == 270) sw else sh
-    fun region(l: Int, t: Int, r: Int, b: Int, sample: Int): Bitmap? {
-        val src = when (rot) { 0 -> Rect(l, t, r, b); 90 -> Rect(t, sh - r, b, sh - l); 180 -> Rect(sw - r, sh - b, sw - l, sh - t); else -> Rect(sw - b, l, sw - t, r) }
-        src.intersect(0, 0, sw, sh)
-        if (src.width() < 1 || src.height() < 1) return null
-        val o = BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 }
-        val bmp = synchronized(this) { if (dec.isRecycled) null else dec.decodeRegion(src, o) } ?: return null
-        if (rot == 0) return bmp
-        val m = android.graphics.Matrix().apply { postRotate(rot.toFloat()) }
-        return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true).also { if (it !== bmp) bmp.recycle() }
-    }
-    fun close() { synchronized(this) { runCatching { dec.recycle() } } }
-}
-
-/** A region of the picture, ready to draw: [l] [t] [r] [b] in the shown picture's pixels. */
-internal class ImgTile(val img: ImageBitmap, val l: Int, val t: Int, val r: Int, val b: Int)
-
 /** Decodes [s] sub-sampled so the long edge stays around [maxDim] pixels, with the EXIF rotation applied. Null when it cannot be read. */
 internal fun imgDecode(ctx: Context, s: ImgSrc, maxDim: Int): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -269,13 +216,6 @@ private fun videoThumb(ctx: Context, s: ImgSrc, px: Int): Bitmap? = runCatching 
     val sz = android.util.Size(px, px)
     if (s.file != null) android.media.ThumbnailUtils.createVideoThumbnail(s.file, sz, null) else ctx.contentResolver.loadThumbnail(s.uri, sz, null)
 }.getOrNull()
-
-/** The last few pictures opened full size: a page that is made again (turning back, zooming) shows its picture at once instead of a blank. */
-internal object ImgFull {
-    private val cache = object : LruCache<String, Bitmap>(2) {}
-    fun get(k: String): Bitmap? = cache.get(k)
-    fun put(k: String, b: Bitmap) { cache.put(k, b) }
-}
 
 /** Small thumbnails shared by the grid and the filmstrip. */
 internal object ImgThumbs {
@@ -520,8 +460,11 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
     }
 }
 
-/** One page of the pager: pinch zoom, pan, double tap zoom, single tap hides / shows the bars. */
-@OptIn(kotlinx.coroutines.FlowPreview::class)
+/**
+ * One page of the pager. The picture is shown by the Subsampling Scale Image View, the zoom view the Fossify Gallery uses: it reads the file itself, only the
+ * part on the screen at the sharpness the zoom needs, so a big photo never has to fit in memory whole (that was what turned the screen black).
+ * Pinch, pan and double tap are its own; a single tap hides or shows the bars; a LIVE picture plays from its chip.
+ */
 @Composable
 private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTick: Int, onLive: (Boolean) -> Unit, onZoomed: (Boolean) -> Unit, onTap: () -> Unit) {
     val ctx = LocalContext.current
@@ -529,6 +472,12 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
     val live by produceState<LiveInfo?>(null, s, rev) { value = withContext(Dispatchers.IO) { imgLiveInfo(ctx, s) } }
     var vid by remember { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
+    // null while the picture loads, true when it is shown, false when it cannot be read
+    var ready by remember(s, rev) { mutableStateOf<Boolean?>(null) }
+    val view = remember(s, rev) { arrayOfNulls<SubsamplingScaleImageView>(1) }
+    val activeNow by androidx.compose.runtime.rememberUpdatedState(active)
+    val zoomedNow by androidx.compose.runtime.rememberUpdatedState(onZoomed)
+    val tapNow by androidx.compose.runtime.rememberUpdatedState(onTap)
     LaunchedEffect(active) { if (!active) vid = null }
     fun playLive() {
         val li = live ?: return
@@ -537,123 +486,51 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
         busy = true
         scope.launch { vid = withContext(Dispatchers.IO) { imgLiveFile(ctx, s, li) }; busy = false }
     }
-    val activeNow by androidx.compose.runtime.rememberUpdatedState(active)
-    val zoomedNow by androidx.compose.runtime.rememberUpdatedState(onZoomed)
-    val fullKey = s.uri.toString() + "|" + rev
-    val ld by produceState<Pair<Boolean, Bitmap?>>(ImgFull.get(fullKey)?.let { true to it } ?: (false to null), s, rev) {
-        val hit = ImgFull.get(fullKey)
-        if (hit != null) { value = true to hit; return@produceState }
-        if (value.second != null) value = false to null
-        value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2048)?.also { ImgFull.put(fullKey, it) } }
-    }
-    var scale by remember { mutableFloatStateOf(1f) }
-    var ox by remember { mutableFloatStateOf(0f) }
-    var oy by remember { mutableFloatStateOf(0f) }
-    var box by remember { mutableStateOf(IntSize.Zero) }
-    val b = ld.second
-    // zoomed in: the file is opened for its sharp parts (only the part on the screen is read, at the sharpness the zoom needs), as the Fossify Gallery does
-    val tiles by produceState<ImgTiles?>(null, s, rev) {
-        value = null
-        snapshotFlow { scale > 1.15f }.first { it }
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                val rot = imgExifDegrees(ctx, s)
-                if (rot < 0) return@runCatching null
-                // a file is opened by its path (nothing is copied into memory); anything else is read through its stream
-                val dec = (if (s.file != null) BitmapRegionDecoder.newInstance(s.file.path, false)
-                    else (imgStream(ctx, s) ?: return@runCatching null).use { BitmapRegionDecoder.newInstance(it, false) }) ?: return@runCatching null
-                ImgTiles(dec, rot)
-            }.getOrNull()
-        }
-    }
-    DisposableEffect(tiles) { val t = tiles; onDispose { t?.close() } }
-    var tile by remember(s, rev) { mutableStateOf<ImgTile?>(null) }
-    LaunchedEffect(tiles, box, b) {
-        val tl = tiles ?: return@LaunchedEffect
-        snapshotFlow { Triple(scale, ox, oy) }.debounce(140).collectLatest { (sc, x, y) ->
-            val base = b
-            if (sc <= 1.15f || box.width == 0 || box.height == 0 || base == null) { tile = null; return@collectLatest }
-            val fit = min(box.width.toFloat() / tl.w, box.height.toFloat() / tl.h)
-            val need = fit * sc // screen pixels for one pixel of the picture
-            // the base picture already has this sharpness: no tile
-            if (need <= base.width.toFloat() / tl.w * 1.05f) { tile = null; return@collectLatest }
-            val cx = box.width / 2f; val cy = box.height / 2f
-            fun ix(q: Float) = ((q - cx - x) / sc + tl.w * fit / 2f) / fit
-            fun iy(q: Float) = ((q - cy - y) / sc + tl.h * fit / 2f) / fit
-            var l = ix(0f); var r = ix(box.width.toFloat()); var t = iy(0f); var bt = iy(box.height.toFloat())
-            val mw = (r - l) * .15f; val mh = (bt - t) * .15f
-            l = (l - mw).coerceIn(0f, tl.w.toFloat()); r = (r + mw).coerceIn(0f, tl.w.toFloat()); t = (t - mh).coerceIn(0f, tl.h.toFloat()); bt = (bt + mh).coerceIn(0f, tl.h.toFloat())
-            if (r - l < 2f || bt - t < 2f) { tile = null; return@collectLatest }
-            var sample = 1
-            while (sample * 2 <= 1f / need) sample *= 2
-            while ((r - l) * (bt - t) / (sample.toFloat() * sample) > 4_500_000f) sample *= 2
-            val li = l.toInt(); val ti = t.toInt(); val ri = kotlin.math.ceil(r).toInt(); val bi = kotlin.math.ceil(bt).toInt()
-            val bm = withContext(Dispatchers.IO) { runCatching { tl.region(li, ti, ri, bi, sample) }.getOrNull() }
-            tile = bm?.let { ImgTile(it.asImageBitmap(), li, ti, ri, bi) }
-        }
-    }
-
-    fun maxOff(sc: Float): Offset {
-        if (b == null || box.width == 0 || box.height == 0) return Offset.Zero
-        val fit = min(box.width.toFloat() / b.width, box.height.toFloat() / b.height)
-        return Offset(max(0f, (b.width * fit * sc - box.width) / 2f), max(0f, (b.height * fit * sc - box.height) / 2f))
-    }
-    fun toggle(p: Offset) {
-        var ns = 1f; var tx = 0f; var ty = 0f
-        if (scale <= 1.01f) {
-            ns = PhotosPrefs.zoomLevel; val mo = maxOff(ns)
-            val c = p - Offset(box.width / 2f, box.height / 2f)
-            tx = (c.x * (1 - ns)).coerceIn(-mo.x, mo.x); ty = (c.y * (1 - ns)).coerceIn(-mo.y, mo.y)
-        }
-        val s0 = scale; val x0 = ox; val y0 = oy
-        scope.launch { animate(0f, 1f) { v, _ -> scale = s0 + (ns - s0) * v; ox = x0 + (tx - x0) * v; oy = y0 + (ty - y0) * v } }
+    // zoom in at the point tapped (or the middle), or back to the whole picture
+    fun toggleZoom(at: PointF?) {
+        val v = view[0] ?: return
+        if (ready != true) return
+        val fit = v.minScale
+        if (v.scale > fit * 1.01f) v.animateScaleAndCenter(fit, v.center)?.withDuration(220)?.start()
+        else v.animateScaleAndCenter(min(v.maxScale, fit * 2.5f), at ?: v.center)?.withDuration(220)?.start()
     }
     var seenLive by remember { mutableIntStateOf(liveTick) }
     LaunchedEffect(live != null, active) { if (active) { onLive(live != null); if (live != null && PhotosPrefs.liveAuto) playLive() } }
     LaunchedEffect(liveTick) { if (liveTick != seenLive) { seenLive = liveTick; if (active) playLive() } }
     var seen by remember { mutableIntStateOf(zoomTick) }
-    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggle(Offset(box.width / 2f, box.height / 2f)) } }
-    LaunchedEffect(scale > 1.01f, active) { if (active) onZoomed(scale > 1.01f) }
+    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggleZoom(null) } }
+    // a page turned away from is shown whole again
+    LaunchedEffect(active) { if (!active) view[0]?.let { if (it.isReady) it.resetScaleAndCenter() } }
 
-    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.systemGestureExclusion() // (a pinch near the edge was taken for Android's back swipe and closed the picture)
-        .pointerInput(b, live) { detectTapGestures(onTap = { if (vid != null) vid = null else onTap() }, onDoubleTap = { p -> toggle(p) }, onLongPress = { if (live != null) playLive() }) }
-        .pointerInput(b) {
-            awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
-                do {
-                    val ev = awaitPointerEvent()
-                    val n = ev.changes.count { it.pressed }
-                    // two fingers: the pager stops turning pages at once (it took the pinch for a swipe and showed the black edge of the next page on release)
-                    if (n >= 2 && activeNow) zoomedNow(true)
-                    if (n >= 2 || scale > 1.01f) {
-                        val z = ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f; val pan = ev.calculatePan().let { if (it.x.isFinite() && it.y.isFinite()) it else Offset.Zero }
-                        val c = ev.calculateCentroid() - Offset(box.width / 2f, box.height / 2f)
-                        val ns = (scale * z).coerceIn(1f, 10f); val k = ns / scale
-                        val mo = maxOff(ns)
-                        ox = (ox * k + c.x * (1 - k) + pan.x).coerceIn(-mo.x, mo.x)
-                        oy = (oy * k + c.y * (1 - k) + pan.y).coerceIn(-mo.y, mo.y)
-                        scale = ns
-                        if (ns <= 1.001f) { ox = 0f; oy = 0f }
-                        ev.changes.forEach { if (it.positionChanged()) it.consume() }
-                    }
-                } while (ev.changes.any { it.pressed })
-                if (activeNow) zoomedNow(scale > 1.01f)
+    Box(Modifier.fillMaxSize().systemGestureExclusion(), contentAlignment = Alignment.Center) {
+        AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
+            SubsamplingScaleImageView(c).apply {
+                view[0] = this
+                setMaxScale(10f)
+                setDoubleTapZoomDuration(220)
+                setMinimumTileDpi(160)
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // a tap hides or shows the bars, and closes a playing LIVE picture first
+                setOnClickListener { if (vid != null) vid = null else tapNow() }
+                setOnStateChangedListener(object : SubsamplingScaleImageView.OnStateChangedListener {
+                    override fun onScaleChanged(newScale: Float, origin: Int) { if (activeNow) zoomedNow(newScale > minScale * 1.01f) }
+                    override fun onCenterChanged(newCenter: PointF?, origin: Int) {}
+                })
+                setOnImageEventListener(object : SubsamplingScaleImageView.OnImageEventListener {
+                    override fun onReady() { ready = true }
+                    override fun onImageLoaded() {}
+                    override fun onPreviewLoadError(e: Exception) {}
+                    override fun onImageLoadError(e: Exception) { ready = false }
+                    override fun onTileLoadError(e: Exception) {}
+                    override fun onPreviewReleased() {}
+                })
+                setImage(ImageSource.uri(s.uri))
             }
-        }, contentAlignment = Alignment.Center) {
-        when {
-            !ld.first -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
-            b == null -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
-            else -> Box(Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = ox; translationY = oy }) {
-                Image(remember(b) { b.asImageBitmap() }, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                // the sharp part of the zoomed picture lies over the base, in the same turn of the layer (it follows the fingers; a new one is read when they rest)
-                val tv = tile; val tl = tiles
-                if (tv != null && tl != null) Canvas(Modifier.fillMaxSize()) {
-                    val fit = min(size.width / tl.w, size.height / tl.h)
-                    val x0 = (size.width - tl.w * fit) / 2f; val y0 = (size.height - tl.h * fit) / 2f
-                    drawImage(tv.img, dstOffset = IntOffset((x0 + tv.l * fit).roundToInt(), (y0 + tv.t * fit).roundToInt()),
-                        dstSize = IntSize(((tv.r - tv.l) * fit).roundToInt().coerceAtLeast(1), ((tv.b - tv.t) * fit).roundToInt().coerceAtLeast(1)), filterQuality = FilterQuality.Medium)
-                }
-            }
+        }, update = { v -> v.isClickable = true })
+        when (ready) {
+            null -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
+            false -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
+            else -> {}
         }
         vid?.let { f -> ImgLivePlayer(f) { vid = null } }
         if (live != null && active && imgKind() != ImgKind.MATERIAL) Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 12.dp, top = 64.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f))
