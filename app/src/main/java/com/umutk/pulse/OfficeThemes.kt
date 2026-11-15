@@ -248,7 +248,7 @@ object OfficePrefs {
         recent = (listOf(e) + recent.filter { it.substringBefore('\u0001') != uri }).take(15)
         sp(c).edit().putString("recent", recent.joinToString("\n")).apply()
     }
-    fun forget(c: Context, uri: String) { recent = recent.filter { it.substringBefore('\u0001') != uri }; sp(c).edit().putString("recent", recent.joinToString("\n")).apply() }
+    fun forget(c: Context, uri: String) { if (uri.startsWith("file://")) Uri.parse(uri).path?.takeIf { it.contains("/office_recent/") }?.let { java.io.File(it).delete() }; recent = recent.filter { it.substringBefore('\u0001') != uri }; sp(c).edit().putString("recent", recent.joinToString("\n")).apply() }
     val folder: java.io.File get() = java.io.File(android.os.Environment.getExternalStorageDirectory(), dir)
 }
 
