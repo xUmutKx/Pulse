@@ -8,6 +8,11 @@ import java.io.IOException
 object TorrentEngine {
     val available: Boolean get() = false
     @Suppress("UNUSED_PARAMETER")
+    fun ready(ctx: Context): Boolean = false
+    val fetching = kotlinx.coroutines.flow.MutableStateFlow(false)
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun fetch(ctx: Context): Boolean = false
+    @Suppress("UNUSED_PARAMETER")
     suspend fun download(ctx: Context, magnet: String, torrent: ByteArray?, base: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? =
         throw IOException("this build has no torrent engine (it is in the free-software full build)")
     @Suppress("UNUSED_PARAMETER")

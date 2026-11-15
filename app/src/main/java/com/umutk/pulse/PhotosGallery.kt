@@ -382,6 +382,18 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
             val readDone by PhotoIndex.done.collectAsState(); val readAll by PhotoIndex.total.collectAsState()
             if ((results || searchOpen) && readAll > 0 && readDone < readAll)
                 Text(tr("Reading the pictures for search…  $readDone / $readAll", "Arama için resimler okunuyor…  $readDone / $readAll"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+            // smart search (what is in a picture, faces) needs a 5 MB recogniser: fetched only when asked for here or in the settings
+            val aiReady by PhotoIndex.modelReady.collectAsState(); val aiGetting by PhotoIndex.fetching.collectAsState(); val aiFailed by PhotoIndex.fetchFailed.collectAsState()
+            LaunchedEffect(Unit) { withContext(Dispatchers.IO) { PhotoIndex.hasModel(ctx) } }
+            if ((results || searchOpen) && aiReady == false)
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(when {
+                        aiGetting -> tr("Downloading smart search…", "Akıllı arama indiriliyor…")
+                        aiFailed -> tr("Smart search could not be downloaded", "Akıllı arama indirilemedi")
+                        else -> tr("Smart search: objects and faces (5 MB)", "Akıllı arama: nesneler ve yüzler (5 MB)")
+                    }, color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    if (!aiGetting) TextButton({ all?.let { PhotoIndex.fetch(ctx, it) } }) { Text(tr("Download", "İndir"), color = Look.accent, fontSize = 13.sp) }
+                }
             val l = all
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
@@ -570,6 +582,15 @@ private fun PhotosSettings(onClose: () -> Unit) {
                 SetRow(ic(Icons.Outlined.Sort), tr("Sort by", "Sırala"), sorts.first { it.first == PhotosPrefs.sortBy }.second, { dlg = "sort" })
                 SetSwitchRow(ic(Icons.Outlined.Sort), tr("Oldest first", "Eskiden yeniye"), PhotosPrefs.sortAsc) { v -> change { PhotosPrefs.sortAsc = v } }
                 SetRow(ic(Icons.Outlined.ViewAgenda), tr("Group by", "Grupla"), groups.first { it.first == PhotosPrefs.group }.second, { dlg = "group" })
+            }
+            GallerySection(tr("Smart search", "Akıllı arama"), ic(Icons.Outlined.Search)) {
+                val aiReady by PhotoIndex.modelReady.collectAsState(); val aiGetting by PhotoIndex.fetching.collectAsState()
+                LaunchedEffect(Unit) { withContext(Dispatchers.IO) { PhotoIndex.hasModel(ctx) } }
+                when {
+                    aiGetting -> SetRow(ic(Icons.Outlined.Download), tr("Downloading…", "İndiriliyor…"), "5 MB")
+                    aiReady == true -> SetRow(ic(Icons.Outlined.Delete), tr("Remove smart search", "Akıllı aramayı kaldır"), "5 MB", { PhotoIndex.remove(ctx) })
+                    else -> SetRow(ic(Icons.Outlined.Download), tr("Download smart search", "Akıllı aramayı indir"), "5 MB", { (PhotosCache.list ?: PhotosCache.load(ctx))?.let { PhotoIndex.fetch(ctx, it) } })
+                }
             }
             GallerySection(tr("Viewer", "Görüntüleyici"), ic(Icons.Outlined.Image)) {
                 SetRow(ic(Icons.Outlined.Slideshow), tr("Slideshow", "Slayt"), "${PhotosPrefs.slideSec} s", { dlg = "slide" })
