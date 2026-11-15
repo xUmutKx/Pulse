@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "star" to (tr("Game Hub: closing an open case no longer leaves a black screen (it closes at once), the 3D case runs about four times smoother, and browsing the shelf stutters less.",
+        "Game Hub: açık kutuyu kapatınca artık siyah ekran kalmaz (anında kapanır), 3D kutu yaklaşık dört kat daha akıcı, rafta gezinirken daha az takılır.")),
     "star" to (tr("Gallery: the photo viewer's zoom is written again from the start: two fingers to zoom and move, a double tap to zoom in and out, and a selected photo is drawn again instead of staying black.",
         "Galeri: fotoğraf görüntüleyicinin zoom'u baştan yazıldı: iki parmakla yakınlaştır ve kaydır, çift dokunuşla yaklaş ve uzaklaş; seçili fotoğraf siyah kalmak yerine yeniden çizilir.")),
     "star" to (tr("Gallery: zooming a picture no longer turns the screen black; the sharp part on the screen is read straight from the file, as in the Fossify Gallery (up to 10x). Game Hub: back from a game the open case is closed cleanly, with no black area. Keyboard: the first word of a message and words with a capital get suggestions again.",

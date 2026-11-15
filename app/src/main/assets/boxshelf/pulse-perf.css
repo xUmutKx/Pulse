@@ -1,0 +1,8 @@
+/* Pulse (a phone): the shelf at the Low level, the one Pulse runs on.
+   The hidden screens (the open case, the disc going in) were still kept by the graphics chip as whole-screen layers while
+   nothing was shown on them: about eleven screens of pictures at the phone's density, which made browsing stutter and,
+   with the 3D case on top, could leave the screen black. Once faded out they are no longer drawn at all. */
+body.perf-low .inspect:not(.on),body.perf-low .insert:not(.on){visibility:hidden;transition:opacity .3s,visibility 0s linear .35s}
+body.perf-low .inspect.on,body.perf-low .insert.on{visibility:visible;transition:opacity .3s,visibility 0s}
+/* the moving shine over every case: a layer of its own on each one, redrawn at every step of the shelf */
+body.perf-low .box .glare,body.perf-low .box .sheen{display:none}
