@@ -1062,11 +1062,14 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             // sliding along the space key moves the cursor, held first or not
                             key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && (abs(dx) > 18.dp.toPx() || abs(c.position.y - startY) > 18.dp.toPx()) -> { spaceDragged = true; st.cursorDrag = true; long = true; startX = c.position.x; startY = c.position.y; lastStep = 0; lastLine = 0; a.feedback() }
                             spaceDragged && key.kind == KeyKind.SPACE -> {
-                                // across: a letter per unit of slide, and the slide speeds up the longer it goes, so one swipe crosses a line of text
+                                // across: exactly a letter per unit of slide for the first six letters (it stops where the finger is, it never runs past a letter), and only after that the slide
+                                // speeds up, gently, so a long swipe still crosses a line of text; and the cursor never takes more than four letters in one step: it follows the finger
                                 val unit = 12.dp.toPx() * 100f / KeyboardPrefs.cursorSens
                                 val n = dx / unit
-                                val chars = (n + n * kotlin.math.abs(n) / 10f).toInt()
-                                if (chars != lastStep) { a.moveCursor(chars - lastStep); lastStep = chars }
+                                val an = kotlin.math.abs(n)
+                                val chars = (if (an <= 6f) n else kotlin.math.sign(n) * (6f + (an - 6f) * (1f + (an - 6f) / 24f))).toInt()
+                                val stepNow = (chars - lastStep).coerceIn(-4, 4)
+                                if (stepNow != 0) { a.moveCursor(stepNow); lastStep += stepNow }
                                 // up and down: the cursor goes to the line above or below, at the same column
                                 val lineUnit = 20.dp.toPx() * 100f / KeyboardPrefs.cursorSens
                                 val lines = ((c.position.y - startY) / lineUnit).toInt()
