@@ -77,13 +77,62 @@ object SeasonDl {
     fun maxMb(c: Context) = p(c).getFloat("maxMb", 800f)
     fun save(c: Context, addon: String, mb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxMb", mb).apply() }
 
+    /** The add-on's server has a certificate this phone does not trust (a self-made one, or an incomplete chain). Only the person can say to trust it. */
+    class CertProblem(val host: String, val sha: String) : java.io.IOException(
+        tr("This server's certificate is not trusted by the phone: ", "Bu sunucunun sertifikasına telefon güvenmiyor: ") + host)
+
+    private fun pins(c: Context) = p(c).getStringSet("certPins", emptySet()) ?: emptySet()
+
+    /** The person chose to trust this server's certificate: it is remembered by its SHA-256 and only that exact certificate is accepted for that host. */
+    fun trust(c: Context, cp: CertProblem) { p(c).edit().putStringSet("certPins", pins(c) + "${cp.host}|${cp.sha}").apply() }
+
+    private fun sha256(b: ByteArray) = java.security.MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
+
+    /** The normal check, and in addition a certificate the person approved for this host. */
+    private fun pinnedFactory(host: String, c: Context): javax.net.ssl.SSLSocketFactory? {
+        val ok = pins(c).filter { it.startsWith("$host|") }.map { it.substringAfter('|') }.toSet()
+        if (ok.isEmpty()) return null
+        val def = javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()).apply { init(null as java.security.KeyStore?) }
+            .trustManagers.filterIsInstance<javax.net.ssl.X509TrustManager>().first()
+        val tm = object : javax.net.ssl.X509TrustManager {
+            override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, type: String) = def.checkClientTrusted(chain, type)
+            override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, type: String) {
+                try { def.checkServerTrusted(chain, type) } catch (e: java.security.cert.CertificateException) {
+                    if (chain.isEmpty() || sha256(chain[0].encoded) !in ok) throw e
+                }
+            }
+            override fun getAcceptedIssuers() = def.acceptedIssuers
+        }
+        return javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, arrayOf(tm), null) }.socketFactory
+    }
+
+    /** The certificate the server shows (only its fingerprint is taken: the handshake is made and closed, nothing is sent), so the person can be asked about it. */
+    private fun probe(host: String, port: Int): String? = runCatching {
+        var found: String? = null
+        val tm = object : javax.net.ssl.X509TrustManager {
+            override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, type: String) {}
+            override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, type: String) { if (chain.isNotEmpty()) found = sha256(chain[0].encoded) }
+            override fun getAcceptedIssuers() = emptyArray<java.security.cert.X509Certificate>()
+        }
+        val f = javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, arrayOf(tm), null) }.socketFactory
+        (f.createSocket(host, port) as javax.net.ssl.SSLSocket).use { it.soTimeout = 8000; it.startHandshake() }
+        found
+    }.getOrNull()
+
     private fun get(u: String): JSONObject {
         val c = URL(u).openConnection() as HttpURLConnection
+        if (c is javax.net.ssl.HttpsURLConnection) Downloads.appContext()?.let { ctx -> pinnedFactory(c.url.host, ctx)?.let { c.sslSocketFactory = it } }
         c.connectTimeout = 10_000; c.readTimeout = 20_000
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36")
         c.setRequestProperty("Accept", "application/json")
         try {
-            val code = c.responseCode
+            val code = try { c.responseCode } catch (e: javax.net.ssl.SSLHandshakeException) {
+                // an untrusted certificate: the person is asked whether to trust this server's one (never done silently)
+                val untrusted = generateSequence<Throwable>(e) { it.cause }.any { it is java.security.cert.CertificateException }
+                val host = c.url.host
+                if (untrusted) probe(host, c.url.port.takeIf { it > 0 } ?: 443)?.let { throw CertProblem(host, it) }
+                throw e
+            }
             // a refusal (403 of a protection page, 404, a server error) is said as such: it was taken for "no stream" before, and nothing told why
             if (code !in 200..299) throw java.io.IOException("HTTP $code")
             val body = c.inputStream.bufferedReader().use { it.readText() }
@@ -249,6 +298,8 @@ object SeasonDl {
         var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
         // why the add-on gave nothing (its answer or the network's), shown under the list; and the episode whose streams are being chosen from
         var why by remember { mutableStateOf("") }
+        var cert by remember { mutableStateOf<SeasonDl.CertProblem?>(null) }
+        fun said(e: Throwable): String { (e as? SeasonDl.CertProblem)?.let { cert = it }; return tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }
         var choose by remember { mutableStateOf<Ep?>(null) }
         var options by remember { mutableStateOf<List<Pick>?>(null) }
         fun limit() = mb * 1_048_576L
@@ -368,7 +419,7 @@ object SeasonDl {
                                     list.forEachIndexed { i, ep ->
                                         note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
                                         // the stream already found for the list is used; else it is looked for now
-                                        val pick = if (found[ep.id] != null) found[ep.id] else runCatching { best(addon, ep, limit()) }.onFailure { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }.getOrNull()
+                                        val pick = if (found[ep.id] != null) found[ep.id] else runCatching { best(addon, ep, limit()) }.onFailure { e -> why = said(e) }.getOrNull()
                                         if (pick == null) skipped++ else { if (pick.over) over++; picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode)) }
                                     }
                                     note = tr("Starting…", "Başlıyor…")
@@ -386,7 +437,7 @@ object SeasonDl {
                                 if (todo.isEmpty() || addon.isBlank()) return
                                 val sem = kotlinx.coroutines.sync.Semaphore(3)
                                 scope.launch {
-                                    todo.map { ep -> scope.launch { sem.acquire(); try { val r = runCatching { best(addon, ep, limit()) }; r.exceptionOrNull()?.let { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }; found = found + (ep.id to r.getOrNull()) } finally { sem.release() } } }
+                                    todo.map { ep -> scope.launch { sem.acquire(); try { val r = runCatching { best(addon, ep, limit()) }; r.exceptionOrNull()?.let { e -> why = said(e) }; found = found + (ep.id to r.getOrNull()) } finally { sem.release() } } }
                                 }
                             }
                             // the sizes are looked up as soon as a season is open, and again when the size limit or the add-on changes
@@ -434,7 +485,7 @@ object SeasonDl {
                                             // the list of all its streams (several qualities and sizes): one is chosen to download
                                             androidx.compose.foundation.layout.Box(Modifier.clickable {
                                                 choose = ep; options = null
-                                                scope.launch { options = runCatching { streams(addon, ep) }.onFailure { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }.getOrDefault(emptyList()).sortedByDescending { it.size } }
+                                                scope.launch { options = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrDefault(emptyList()).sortedByDescending { it.size } }
                                             }.padding(6.dp)) { PIcon("more", T.text, 20.dp) }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
@@ -446,6 +497,11 @@ object SeasonDl {
                     }
                     if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
                     if (why.isNotEmpty() && why != note) Text(why, color = androidx.compose.ui.graphics.Color(0xFFE5A04D), fontSize = 12.sp)
+                    // the server's certificate is not one the phone knows: shown with its fingerprint, trusted only when the person says so (just that certificate, just this server)
+                    cert?.let { cp ->
+                        Text(tr("Fingerprint (SHA-256): ", "Parmak izi (SHA-256): ") + cp.sha.chunked(2).take(8).joinToString(":") + "…", color = T.sub, fontSize = 11.sp)
+                        PButton(tr("Trust this server", "Bu sunucuya güven")) { SeasonDl.trust(ctx, cp); cert = null; why = "" }
+                    }
                     // the streams of one episode to choose from: quality and size, a tap downloads that one
                     choose?.let { ep ->
                         com.umutk.pulse.WinAlert(onDismissRequest = { choose = null },
