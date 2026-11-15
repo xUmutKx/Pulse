@@ -49,6 +49,8 @@ val PEN_STYLES = listOf(
     PenStyle(1, "Fountain pen", "Dolma kalem", 3f, 0.7f),
     PenStyle(2, "Brush", "Fırça", 6f, 1f),
     PenStyle(3, "Pencil", "Kurşun kalem", 2f, 0.35f),
+    PenStyle(4, "Fineliner", "İnce uç", 1.3f, 0f),
+    PenStyle(5, "Felt pen", "Keçeli kalem", 4.2f, 0.2f),
 )
 
 /** The colours of the pen panels; 0 is "auto": the text colour of the paper. */
@@ -334,19 +336,62 @@ fun InkLayer(
 }
 
 /** One stroke: a see-through one (the marker) is multiplied onto what is under it, so the words stay readable; a pen's pressure changes its width piece by piece. */
+/** The pen's samples softened once (corner cutting): the stroke follows the hand, not the touch screen's steps. The ends stay where they were. */
+private fun smoothed(p: List<Offset>): List<Offset> {
+    if (p.size < 3) return p
+    val out = ArrayList<Offset>(p.size * 2)
+    out.add(p[0])
+    for (i in 0 until p.size - 1) {
+        val a = p[i]; val b = p[i + 1]
+        out.add(Offset(a.x * .75f + b.x * .25f, a.y * .75f + b.y * .25f))
+        out.add(Offset(a.x * .25f + b.x * .75f, a.y * .25f + b.y * .75f))
+    }
+    out.add(p.last())
+    return out
+}
+
 fun DrawScope.drawInkStroke(st: InkStroke, off: Offset) {
-    val pts = st.pts
-    if (pts.isEmpty()) return
+    val raw = st.pts
+    if (raw.isEmpty()) return
     val blend = if (st.kind == 1 || (st.color ushr 24) < 0xFF) BlendMode.Multiply else BlendMode.SrcOver
     val col = Color(st.color)
-    if (pts.size == 1) { drawCircle(col, st.width / 2, pts[0] + off, blendMode = blend); return }
-    if (st.kind == 0 && st.rel.size == pts.size) {
-        for (i in 1 until pts.size) {
-            val f = ((st.rel[i] + st.rel[i - 1]) / 2f).coerceIn(0.2f, 2.2f)
-            drawLine(col, pts[i - 1] + off, pts[i] + off, strokeWidth = st.width * f, cap = StrokeCap.Round, blendMode = blend)
+    if (raw.size == 1) { drawCircle(col, st.width / 2, raw[0] + off, blendMode = blend); return }
+    if (st.kind == 0 && st.rel.size == raw.size) {
+        // a pen whose width follows the pressure: drawn as one filled shape with smooth edges (its outline is the line pushed out by half the width on each
+        // side), not as short straight pieces of different widths, which showed as beads and steps
+        val n = raw.size
+        val w = FloatArray(n) { i ->
+            val a = st.rel[(i - 1).coerceAtLeast(0)]; val b = st.rel[i]; val c = st.rel[(i + 1).coerceAtMost(n - 1)]
+            st.width * ((a + 2 * b + c) / 4f).coerceIn(0.2f, 2.2f)
         }
+        val left = ArrayList<Offset>(n); val right = ArrayList<Offset>(n)
+        var nx = 0f; var ny = -1f
+        for (i in 0 until n) {
+            val a = raw[(i - 1).coerceAtLeast(0)]; val b = raw[(i + 1).coerceAtMost(n - 1)]
+            val dx = b.x - a.x; val dy = b.y - a.y
+            val len = kotlin.math.sqrt(dx * dx + dy * dy)
+            if (len > 0.01f) { nx = -dy / len; ny = dx / len }
+            val h = w[i] / 2f
+            left.add(Offset(raw[i].x + nx * h + off.x, raw[i].y + ny * h + off.y))
+            right.add(Offset(raw[i].x - nx * h + off.x, raw[i].y - ny * h + off.y))
+        }
+        val path = Path()
+        fun curve(pts: List<Offset>, first: Boolean) {
+            if (first) path.moveTo(pts[0].x, pts[0].y) else path.lineTo(pts[0].x, pts[0].y)
+            for (i in 1 until pts.size - 1) {
+                val m = Offset((pts[i].x + pts[i + 1].x) / 2f, (pts[i].y + pts[i + 1].y) / 2f)
+                path.quadraticBezierTo(pts[i].x, pts[i].y, m.x, m.y)
+            }
+            path.lineTo(pts.last().x, pts.last().y)
+        }
+        curve(left, true); curve(right.asReversed(), false); path.close()
+        drawPath(path, col, blendMode = blend)
+        // round ends, as a real pen leaves them
+        drawCircle(col, w[0] / 2f, raw[0] + off, blendMode = blend)
+        drawCircle(col, w[n - 1] / 2f, raw[n - 1] + off, blendMode = blend)
         return
     }
+    val pts = smoothed(raw)
     // the curve passes through the middle of each pair of points, with the points as its guides: no corners where the pen's samples are
     val path = Path().apply {
         moveTo(pts[0].x + off.x, pts[0].y + off.y)

@@ -187,6 +187,10 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 val w = ShelfJs.web ?: return@post
                 w.requestFocus()
                 val imm = c.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                // the window's own insets controller first (it brings the keyboard up over a full-screen page too), then the older ask
+                var cx: android.content.Context? = w.context
+                while (cx is android.content.ContextWrapper && cx !is android.app.Activity) cx = cx.baseContext
+                (cx as? android.app.Activity)?.window?.let { win -> runCatching { androidx.core.view.WindowCompat.getInsetsController(win, w).show(androidx.core.view.WindowInsetsCompat.Type.ime()) } }
                 imm.showSoftInput(w, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
                 // a page in a view often needs a second ask once the field really has the focus
                 w.postDelayed({ runCatching { w.requestFocus(); imm.showSoftInput(w, 0) } }, 250)

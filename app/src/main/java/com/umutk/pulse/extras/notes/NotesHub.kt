@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.notes
 
+import androidx.compose.animation.togetherWith
 import android.Manifest
 import android.os.Build
 import android.app.Activity
@@ -254,7 +255,13 @@ fun NotesHub(onBack: () -> Unit) {
     androidx.compose.runtime.DisposableEffect(Unit) { com.umutk.pulse.PageBg.transparent = NotesPrefs.transparent(ctx); onDispose { com.umutk.pulse.PageBg.transparent = false } }
     NotesBg.black = NotesPrefs.black(LocalContext.current)
     Box(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg)) {
-        when (val s = screen) {
+        // the screens slide and fade into each other (a note opens from the right, going back it slides away), as in Samsung Notes
+        androidx.compose.animation.AnimatedContent(screen, transitionSpec = {
+            val fwd = targetState is NScreen.Edit || targetState is NScreen.Sketch || (initialState == NScreen.Home && targetState != NScreen.Home)
+            if (fwd) (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 6 } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220))) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
+            else androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) togetherWith (androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(240)) { it / 6 } + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200)))
+        }, label = "notesScreen") { s ->
+        when (s) {
             is NScreen.Edit -> {
                 val n = notes.firstOrNull { it.id == s.id }
                 if (n == null) screen = NScreen.Home
@@ -272,6 +279,7 @@ fun NotesHub(onBack: () -> Unit) {
                     rev = settingsRev,
                 )
             }
+        }
             is NScreen.Sketch -> NSketch { name ->
                 if (name != null) edit(s.id) { it.copy(files = it.files + name) }
                 screen = NScreen.Edit(s.id)

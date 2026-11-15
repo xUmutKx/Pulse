@@ -475,7 +475,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
             Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(32.dp).clickable { gotoHit(curHit + 1) }.padding(4.dp), theme.pal.ink)
             Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(.4f, 4f) }) {
+        // behind the pages: pure black in the AMOLED look (as the other office apps) and with dark pages, the look's own canvas otherwise (it was see-through)
+        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf || theme.rid == "amoled") Color.Black else theme.pal.canvas).ofPinch { zoom = (zoom * it).coerceIn(.4f, 4f) }) {
             Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
                 Box(Modifier.width(maxOf(widthDp, widthDp * zoom)).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
                 LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -973,8 +973,19 @@ function iplCap(){return !window.bsPlatform||bsPlatform.has("dolphinIpl")}
 function rdGone(){return rdGone.s||(rdGone.s=new Set())}
 function openSearch(viaPad){searchIdx=null;if(edit)cancelEdit();grab=null;if(!results)preSearch={secI,rowI,sub,subRet,focus,studio,stack,sRet};studio=null;stack=[];sSig="";runSearch();focus="search";if(viaPad)openOsk("search");render()}
 /* Pulse on a phone: the search is typed in Android's own text dialog (the keyboard always comes up there), the matches fill the page when it is done */
+/* Pulse: on the phone the search is typed in a real text box laid over the search bar, so the phone's own keyboard comes up (Boxshelf's on-screen keyboard is for a game pad) */
+function phoneSearch(sb){let i=document.getElementById("bssPhoneIn");
+  if(!i){i=document.createElement("input");i.id="bssPhoneIn";i.type="text";i.autocomplete="off";i.setAttribute("enterkeyhint","search");i.setAttribute("autocapitalize","off");
+    i.style.cssText="position:fixed;z-index:99999;opacity:.01;border:0;outline:0;background:transparent;color:transparent;caret-color:transparent;font-size:16px;padding:0;margin:0";
+    i.addEventListener("input",()=>{query=i.value;runSearch();focus="search";render()});
+    ["keydown","keyup","keypress"].forEach(t=>i.addEventListener(t,e=>{e.stopPropagation();if(t==="keydown"&&e.key==="Enter"){e.preventDefault();i.blur();focus=results&&results.length?"page":"search";render()}}));
+    i.addEventListener("blur",()=>{setTimeout(()=>{if(document.activeElement!==i)i.style.display="none"},60)});
+    document.body.appendChild(i)}
+  const r=sb.getBoundingClientRect();Object.assign(i.style,{display:"block",left:r.left+"px",top:r.top+"px",width:r.width+"px",height:r.height+"px"});i.value=query;
+  i.focus();try{i.setSelectionRange(i.value.length,i.value.length)}catch{}
+  try{window.PulseHost&&PulseHost.showKeyboard&&PulseHost.showKeyboard()}catch{}}
 function nativeSearch(){window.__pulseTextDone=t=>{window.__pulseTextDone=null;if(t==null)return;query=String(t);runSearch();focus=results&&results.length?"page":"search";render()};try{PulseHost.editText("Search settings",query)}catch{window.__pulseTextDone=null}}
-function closeSearch(){searchIdx=null;secDrop();results=null;query="";closeOsk();if(preSearch){({secI,rowI,sub,subRet}=preSearch);if(preSearch.studio){studio=preSearch.studio;stack=preSearch.stack||[];sRet=preSearch.sRet||0;sSig=""}focus=preSearch.focus==="search"||preSearch.focus==="osk"?"side":preSearch.focus}else focus="side";preSearch=null;render()}
+function closeSearch(){{const pi=document.getElementById("bssPhoneIn");if(pi){pi.blur();pi.style.display="none"}}searchIdx=null;secDrop();results=null;query="";closeOsk();if(preSearch){({secI,rowI,sub,subRet}=preSearch);if(preSearch.studio){studio=preSearch.studio;stack=preSearch.stack||[];sRet=preSearch.sRet||0;sSig=""}focus=preSearch.focus==="search"||preSearch.focus==="osk"?"side":preSearch.focus}else focus="side";preSearch=null;render()}
 function typeChar(c){if(edit){edit.value+=c;paintEdit();return}query+=c;runSearch();if(focus!=="osk")focus="search";render()}
 function backspace(){if(edit){edit.value=edit.value.slice(0,-1);paintEdit();return}query=query.slice(0,-1);runSearch();render()}
 function goResult(r){const e=r.go;results=null;closeOsk();preSearch=null;query="";focus="page";
@@ -1017,10 +1028,7 @@ function oskMove(a){const K=keysNow(),pos=[];K.forEach((row,ri)=>row.forEach((k,
 /* (beta.13) On Android a finger opens Boxshelf's own keyboard too: Android's, over a fullscreen page, did not come up */
 const oskTouch=()=>false; /* Pulse: a finger types with Pulse's own keyboard into a real text box (the host brings it up); Boxshelf's on-screen keyboard is for a game pad only */
 function startEdit(r,first,val){edit={row:r,value:(val!=null?String(val):first!=null?String(r.get()||"")+first:String(r.get()||"")),idx:rowI}; /* val: text already typed (on-screen keyboard to a real one): the input is built with it */
-  if(device!=="pad"&&window.PulseHost&&PulseHost.editText){ /* Pulse: a real Android text dialog (the keyboard always comes up there) */
-    window.__pulseTextDone=t=>{window.__pulseTextDone=null;if(!edit)return;if(t==null)cancelEdit();else{edit.value=String(t);commitEdit()}};
-    try{PulseHost.editText(String(r.name||r.label||r.t||"Value"),String(edit.value))}catch{cancelEdit()}return}
-  if(device==="pad"||oskTouch()){openOsk("edit");render()}else{focus="edit";render();const inp=E.list.querySelector(".bss-edit");if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length)}catch{}}}}
+  if(device==="pad"||oskTouch()){openOsk("edit");render()}else{focus="edit";render();const inp=E.list.querySelector(".bss-edit");if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length)}catch{};try{window.PulseHost&&PulseHost.showKeyboard&&PulseHost.showKeyboard()}catch{}}}}
 function paintEdit(){const el=E.list.querySelector(".bss-editv");if(el){el.firstChild.textContent=edit.row.secret?"•".repeat(edit.value.length):edit.value}}
 function commitEdit(){if(!edit)return;const r=edit.row,v=edit.value.trim().replace(/^"(.*)"$/,"$1");edit=null;closeOsk();focus="page";
   if(!eq(v,r.get()||"")){r.set(v);changed(r);if(r.ra||r.fan)setTimeout(loadStatus,2500)}else{render()}}
@@ -2414,7 +2422,7 @@ function renderSearchBox(){const sb=E.side.querySelector(".bss-search");if(!sb)r
   const h=(query?`<span class="q">${esc(query)}</span>`:`<span class="ph">Search settings</span>`)+'<span class="caret"></span>'+(device==="pad"?`<span class="kb">${viewWord()}</span>`:'<span class="kb">type</span>');if(sb._h!==h){sb._h=h;sb.innerHTML=svg("search")+h}}
 function renderSide(){
   if(sideSig!==SECTIONS.map(s=>s.id).join()){sideSig=SECTIONS.map(s=>s.id).join();E.side.innerHTML='<div class="bss-brand">SETTINGS</div>';
-    const sb=document.createElement("div");sb.className="bss-search";sb.onclick=()=>{if(edit)commitEdit();const and=!!(window.bsPlatform&&bsPlatform.os==="android");if(and&&device!=="pad"&&window.PulseHost&&PulseHost.editText){openSearch(false);nativeSearch();return}openSearch(device==="pad"||and)};E.side.append(sb);
+    const sb=document.createElement("div");sb.className="bss-search";sb.onclick=()=>{if(edit)commitEdit();const and=!!(window.bsPlatform&&bsPlatform.os==="android");if(and&&device!=="pad"){openSearch(false);phoneSearch(sb);return}openSearch(device==="pad"||and)};E.side.append(sb);
     let g="";sideNavs=SECTIONS.map((s,i)=>{if(s.g!==g){g=s.g;E.side.insertAdjacentHTML("beforeend",`<div class="bss-grp">${esc(g)}</div>`)}
       const n=document.createElement("div");n.className="bss-nav";n.innerHTML=svg(s.ic)+`<span>${esc(s.name)}</span><span class="badge"></span>`;
       n.onclick=()=>{if(edit)commitEdit();if(results){results=null;query="";closeOsk();preSearch=null}goSec(i);focus="page";rowI=0;render()};E.side.append(n);return n});
