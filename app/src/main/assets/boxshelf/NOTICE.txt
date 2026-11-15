@@ -3,3 +3,4 @@ Pulse shows this screen in Game Hub. Changes made for Pulse: pulse-api.js (new: 
 index.html (the scripts and style of the Android build, plus a "Game settings" entry), app.js (a game that comes from Pulse is called a Game,
 and the screen remembers which game its details show). The PDF reader, the Wii U manual page, the image tools, the phone companion page and the 3D-model
 optimiser were left out. Third-party parts inside: three.js (MIT), Fontsource fonts (SIL OFL 1.1); see vendor/ and fonts/LICENSES.
+- pulse-perf.css (new) and a few lines in perf.js, inspect3d.js and app.js: on the Low level Pulse runs at, the hidden case and disc screens are no longer kept as whole-screen layers, the shine over each case is left out, the 3D case uses plain materials without multisampling or see-through glass, and in Pulse the open case closes at once instead of flying back to its box.

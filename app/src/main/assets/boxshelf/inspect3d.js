@@ -20,7 +20,7 @@ window.Inspect3D = (() => {
     const THREE = T(); if (!THREE) return false;
     try {
       canvas = document.createElement('canvas'); canvas.className = 'isp-gl';
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !(window.Perf && Perf.get().aa === false), powerPreference: 'high-performance' }); /* (Pulse: Low draws without multisampling) */
     } catch (e) { failed = true; setTimeout(() => { failed = false; }, 30000); return false; } /* (beta.12: tried again in 30 s, not off until a restart) */
     // Neutral tone mapping keeps the cover's colours as printed (ACES lifted and desaturated them into a milky wash);
     // only real highlights get compressed. Lights are balanced so a white sleeve facing you sits at ~1.0.
@@ -40,6 +40,15 @@ window.Inspect3D = (() => {
     return true;
   }
   let lost = false;
+  // (Pulse) on the Low level (a phone) the case's materials are the plain standard ones: the clear coat, iridescence and
+  // see-through glass each cost extra light passes on every pixel of the case, every frame
+  const PHYS_ONLY = ['clearcoat', 'clearcoatRoughness', 'clearcoatMap', 'reflectivity', 'iridescence', 'iridescenceIOR', 'iridescenceThicknessRange', 'transmission', 'thickness', 'ior', 'sheen', 'sheenColor', 'sheenRoughness', 'specularIntensity', 'specularColor', 'attenuationColor', 'attenuationDistance'];
+  function phys(o) {
+    const THREE = T();
+    if (!(window.Perf && Perf.get().level === 'low')) return new THREE.MeshPhysicalMaterial(o);
+    const p = Object.assign({}, o || {}); PHYS_ONLY.forEach(k => delete p[k]);
+    return new THREE.MeshStandardMaterial(p);
+  }
   function teardown() {
     try { cancelAnimationFrame(raf); raf = 0; if (renderer) { renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); } } catch {}
     try { canvas && canvas.remove(); } catch {}
@@ -234,10 +243,10 @@ window.Inspect3D = (() => {
     if (customMedia && customMedia.parent === mediaG) mediaG.remove(customMedia);
     disposeGroup(caseG); disposeGroup(mediaG); cur = o;
     const h = 1, w = o.ratio, lt = Math.max(.014, o.depth * .18), r = Math.min(.016, lt * .9);
-    const plastic = (color, extra) => new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: .42, metalness: .02, clearcoat: .35, clearcoatRoughness: .4 }, extra || {}));
+    const plastic = (color, extra) => phys(Object.assign({ color, roughness: .42, metalness: .02, clearcoat: .35, clearcoatRoughness: .4 }, extra || {}));
     // printed sleeve under clear plastic: the paper itself is matte (no broad haze over the art), the shine is a
     // tight clearcoat highlight that moves as you turn the case
-    const sleeve = map => new THREE.MeshPhysicalMaterial({ map, color: 0xffffff, roughness: .62, metalness: 0, clearcoat: .55, clearcoatRoughness: .22, reflectivity: .3, envMapIntensity: .6 });
+    const sleeve = map => phys({ map, color: 0xffffff, roughness: .62, metalness: 0, clearcoat: .55, clearcoatRoughness: .22, reflectivity: .3, envMapIntensity: .6 });
     const side = plastic(o.caseSide), inner = plastic(o.caseSide, { roughness: .55 });
     // Media first, so the tray is exactly deep enough for it (a cartridge needs more room than a disc)
     buildMedia(o, 0);
@@ -320,20 +329,20 @@ window.Inspect3D = (() => {
       // (beta.11) a 3.5" floppy disk (DOS): a 90 x 94 mm dark plastic shell 3.3 mm thick, a sliding metal shutter across the
       // top with its window, the game's label below it and a write-protect tab in the corner
       const fw = o.ratio * o.size * .9, fh = fw * 94 / 90, fd = fw * 3.3 / 90;
-      const shellM = new THREE.MeshPhysicalMaterial({ color: 0x1d1e22, roughness: .6, clearcoat: .15 });
+      const shellM = phys({ color: 0x1d1e22, roughness: .6, clearcoat: .15 });
       media = new THREE.Group();
       media.add(new THREE.Mesh(new RB(fw, fh, fd, 2, fw * .02), shellM));
       const metal = new THREE.MeshStandardMaterial({ color: 0xc4c8cf, metalness: .9, roughness: .28 });
       const sw = fw * .6, sh = fh * .34, sx = fw * .04;
       [1, -1].forEach(side => { const sh2 = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, .0012), metal); sh2.position.set(sx, fh / 2 - sh / 2, side * (fd / 2 + .0006)); media.add(sh2);
         const win = new THREE.Mesh(new THREE.PlaneGeometry(sw * .28, sh * .62), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: .9 })); win.position.set(sx + sw * .1, fh / 2 - sh / 2 - sh * .06, side * (fd / 2 + .0013)); if (side < 0) win.rotation.y = Math.PI; media.add(win); });
-      const lbl = new THREE.Mesh(new THREE.PlaneGeometry(fw * .82, fh * .56), new THREE.MeshPhysicalMaterial({ map: labelMap, roughness: .7 }));
+      const lbl = new THREE.Mesh(new THREE.PlaneGeometry(fw * .82, fh * .56), phys({ map: labelMap, roughness: .7 }));
       lbl.position.set(0, -fh / 2 + fh * .05 + fh * .28, fd / 2 + .0007); media.add(lbl);
       const tab = new THREE.Mesh(new THREE.BoxGeometry(fw * .07, fw * .07, .0012), new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: .8 })); tab.position.set(-fw / 2 + fw * .09, -fh / 2 + fw * .09, -fd / 2 - .0006); media.add(tab);
     } else if (o.kind === 'cart') {
       const cw = o.ratio * o.size * .9, ch = cw * 1.1, cd = .035;
-      const shell = new THREE.MeshPhysicalMaterial({ color: 0x24252b, roughness: .55, clearcoat: .2 });
-      const cart = new THREE.Mesh(new RB(cw, ch, cd, 3, .008), [shell, shell, shell, shell, new THREE.MeshPhysicalMaterial({ map: labelMap, roughness: .45, clearcoat: .3 }), shell]);
+      const shell = phys({ color: 0x24252b, roughness: .55, clearcoat: .2 });
+      const cart = new THREE.Mesh(new RB(cw, ch, cd, 3, .008), [shell, shell, shell, shell, phys({ map: labelMap, roughness: .45, clearcoat: .3 }), shell]);
       media = new THREE.Group(); media.add(cart);
       const pins = new THREE.Mesh(new THREE.BoxGeometry(cw * .7, ch * .12, cd + .002), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: .8, roughness: .35 })); pins.position.y = -ch / 2 + ch * .08; media.add(pins);
     } else {
@@ -346,16 +355,16 @@ window.Inspect3D = (() => {
           // (a Game Hub box front has the console's coloured sides: the disc takes only the middle of it, so no green or blue edge reaches the print)
           const sq = Math.min(iw, ih) * (o.cleanDisc ? .78 : 1); lm.image = base.image; lm.repeat.set(sq / iw, sq / ih); lm.offset.set((1 - sq / iw) / 2, (1 - sq / ih) / 2); lm.needsUpdate = true; });
       }
-      const label = new THREE.MeshPhysicalMaterial({ map: discMap, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 });
+      const label = phys({ map: discMap, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 });
       const fmt = o.sys === 'ps3' || o.sys === 'ps4' || o.sys === 'ps5' || o.sys === 'wiiu' ? 'bd' : o.sys === 'gc' ? 'gc' : 'dvd';
       let hcode = 0; for (const ch of (o.title || 'disc')) hcode = (hcode * 31 + ch.charCodeAt(0)) >>> 0;
       const code = `${(o.sys || 'DSC').toUpperCase()}-${(hcode % 9000 + 1000)}-${String.fromCharCode(65 + hcode % 26)}${String.fromCharCode(65 + (hcode >> 5) % 26)}  ${(hcode >> 9) % 90 + 10}`;
-      const data = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: discBackCached(fmt, code), metalness: .92, roughness: .1, iridescence: 1, iridescenceIOR: fmt === 'bd' ? 1.8 : 1.6, iridescenceThicknessRange: fmt === 'bd' ? [200, 560] : [120, 480], clearcoat: .6, clearcoatRoughness: .05 });
+      const data = phys({ color: 0xffffff, map: discBackCached(fmt, code), metalness: .92, roughness: .1, iridescence: 1, iridescenceIOR: fmt === 'bd' ? 1.8 : 1.6, iridescenceThicknessRange: fmt === 'bd' ? [200, 560] : [120, 480], clearcoat: .6, clearcoatRoughness: .05 });
       media = new THREE.Group();
       // glass: real transmission renders the whole scene once more each frame to see through it; the Handheld level (phones)
       // draws the clear plastic as plain see-through instead, which looks nearly the same on a small screen
       const glass = !window.Perf || Perf.get().glass !== false;
-      const TH = .0045, clear = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: glass ? .35 : .45, roughness: .05, transmission: glass ? .6 : 0, thickness: .01, clearcoat: 1 });
+      const TH = .0045, clear = phys({ color: 0xffffff, transparent: true, opacity: glass ? .35 : .45, roughness: .05, transmission: glass ? .6 : 0, thickness: .01, clearcoat: 1 });
       const top = new THREE.Mesh(new THREE.RingGeometry(R * .22, R, 128), label); top.position.z = TH / 2; media.add(top);
       // underside: planar UVs so the round texture lands on the ring as drawn; a clear outer rim beyond the data
       const bg = new THREE.RingGeometry(R * .2, R * .985, 128), bp = bg.attributes.position, bu = bg.attributes.uv; for (let i = 0; i < bp.count; i++) bu.setXY(i, .5 + bp.getX(i) / (2 * R), .5 + bp.getY(i) / (2 * R)); bu.needsUpdate = true;
@@ -366,7 +375,7 @@ window.Inspect3D = (() => {
       const edge = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TH, 128, 1, true), clear); edge.rotation.x = Math.PI / 2; media.add(edge);
       const hole = new THREE.Mesh(new THREE.CylinderGeometry(R * .14, R * .14, TH, 48, 1, true), clear); hole.rotation.x = Math.PI / 2; hole.material.side = THREE.BackSide; media.add(hole);
       if (o.kind === 'umd') {
-        const shell = new THREE.Mesh(new RB(R * 2.3, R * 2.5, .05, 3, .02), new THREE.MeshPhysicalMaterial({ color: 0xdfe6ff, transparent: true, opacity: glass ? .22 : .3, roughness: .1, transmission: glass ? .3 : 0, clearcoat: 1 }));
+        const shell = new THREE.Mesh(new RB(R * 2.3, R * 2.5, .05, 3, .02), phys({ color: 0xdfe6ff, transparent: true, opacity: glass ? .22 : .3, roughness: .1, transmission: glass ? .3 : 0, clearcoat: 1 }));
         shell.position.set(0, -R * .1, 0); media.add(shell);
       }
     }

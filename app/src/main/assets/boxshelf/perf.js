@@ -28,7 +28,7 @@ window.Perf = (() => {
     // reflection, lighter case layers), museum shadows and dust off, theme at 30 fps, Inspect at the screen's real resolution,
     // and the disc's clear plastic drawn as plain see-through (glass: real transmission costs a whole extra render pass per frame)
     handheld: { pr: 1,    aa: true,  shadows: false, shadowSize: 512,  aniso: 8, dust: false, themeFps: 30, blur: false, halo: false, inspectPr: 1.34, glass: false },
-    low:      { pr: .8,   aa: false, shadows: false, shadowSize: 512,  aniso: 8, dust: false, themeFps: 0,  blur: false, halo: false, inspectPr: 1 }
+    low:      { pr: .8,   aa: false, shadows: false, shadowSize: 512,  aniso: 8, dust: false, themeFps: 0,  blur: false, halo: false, inspectPr: 1, glass: false } // (Pulse: no glass on Low either; it was left on, a second render of the scene every frame)
   };
   let pref = 'auto', gpu = '', guess = null;
 

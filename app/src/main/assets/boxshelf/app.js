@@ -1492,7 +1492,7 @@ function relight(e){if(!e||!e.classList.contains("lift"))return;e.classList.add(
 function unhold(e,fade){if(!e)return;if(!e.classList.contains("held")){relight(e);return}if(fade){e.classList.add("unhold");clearTimeout(e._uh);e._uh=setTimeout(()=>e.classList.remove("unhold"),260)}e.classList.remove("held");relight(e)}
 function openInspect(){uiCrumb("Inspect");
   const g=curGame(),s=pickShelf();if(!g||(g.kind!=="rom"&&!g.pulse)||sysBusy()||(mode!=="browse"&&mode!=="details"))return;
-  detailsBack=mode==="details"?g:null;closeDetails(true);mode="inspect";clearTimeout(isp.wd);const tok=++isp.tok;
+  detailsBack=mode==="details"?g:null;closeDetails(true);mode="inspect";clearTimeout(isp.wd);clearTimeout(isp.gc);const tok=++isp.tok;
   const el=$("inspect"),style=STYLE[s.id]||STYLE.media,m=MEDIA[s.id]||MEDIA.wii;
   const PT=!!window.PulseHost&&innerWidth<innerHeight,ch=PT?Math.min(innerHeight*.5,innerWidth*.62/style.ratio):Math.min(innerHeight*.58,innerWidth*.34/style.ratio),cw=ch*style.ratio;
   el.style.setProperty("--ch",ch+"px");el.style.setProperty("--cw",cw+"px");el.style.setProperty("--t",(cw*Math.max(.06,style.depth*.7))+"px");el.style.setProperty("--disc",(cw*m.size*.8)+"px"); /* the disc is a fifth smaller: it filled the whole screen as it flew in */
@@ -1542,7 +1542,14 @@ function closeInspect(){
   const tgt=()=>slots===sl&&sel===at&&(mode==="browse"||mode==="details")&&!document.hidden?slotPose(hs):null;
   const done=fade=>{if(hs&&hs.el&&!(mode==="inspect"&&slots[sel]===hs))unhold(hs.el,fade)};
   if(mode==="inspect")mode="browse"; // before leave(): it can hand the box back straight away (reduce motion)
-  if(window.Inspect3D&&Inspect3D.isActive())Inspect3D.leave(tgt,done);else done(true);
+  if(window.PulseHost){
+    /* Pulse: the case does not fly back into its box (the flight needs the phone's graphics chip to draw every frame of it, and when it did not, the case stayed as a black
+       screen over the shelf): it closes at once and the box is shown again. Its 3D drawing is let go a few seconds later when it is not opened again, so the
+       graphics memory it holds is free for the shelf */
+    try{if(window.Inspect3D&&Inspect3D.forceClose)Inspect3D.forceClose()}catch{}
+    done(true);app.classList.remove("inspecting");
+    clearTimeout(isp.gc);isp.gc=setTimeout(()=>{if(mode!=="inspect"&&window.Inspect3D&&Inspect3D.reset)try{Inspect3D.reset()}catch{}},8000);
+  }else if(window.Inspect3D&&Inspect3D.isActive())Inspect3D.leave(tgt,done);else done(true);
   // safety net: nothing stays hidden if a flight can't finish (lost GPU, paused…); never while one is still running
   clearTimeout(isp.wd);const wd0=performance.now();const wd=()=>{if(mode==="inspect")return;if(window.Inspect3D&&Inspect3D.busy&&Inspect3D.busy()&&performance.now()-wd0<3500){isp.wd=setTimeout(wd,400);return} /* (a flight that has not landed after 3.5 s is stuck: the GPU drew nothing; the box is shown again whatever) */try{if(window.Inspect3D&&Inspect3D.forceClose)Inspect3D.forceClose()}catch{}app.classList.remove("inspecting");mounted().forEach(o=>unhold(o.el,true))};isp.wd=setTimeout(wd,1200);
   setTimeout(()=>{if(mode==="inspect")return;el.classList.remove("open","out")},320);
