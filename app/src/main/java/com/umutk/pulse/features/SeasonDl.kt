@@ -190,6 +190,49 @@ object SeasonDl {
         } finally { c.disconnect() }
     }
 
+    /** The person's own TMDB key (their free account, Download manager settings): the season pictures come from there. */
+    fun tmdbKey(c: Context) = p(c).getString("tmdbKey", "") ?: ""
+    fun saveTmdbKey(c: Context, k: String) { p(c).edit().putString("tmdbKey", k.trim()).apply() }
+
+    private val seasonPics = HashMap<String, Map<Int, String>>()
+
+    /** Season number to picture of a show (its IMDb id), from TMDB with the person's key; empty when there is no key or no answer. */
+    suspend fun seasonPosters(imdbId: String, key: String): Map<Int, String> = withContext(Dispatchers.IO) {
+        if (key.isBlank() || !imdbId.startsWith("tt")) return@withContext emptyMap()
+        val cacheKey = "$imdbId|$key"
+        seasonPics[cacheKey]?.let { return@withContext it }
+        val api = "https://api.themoviedb.org/3"
+        val id = JSONObject(fetch("$api/find/${Uri.encode(imdbId)}?external_source=imdb_id&api_key=${Uri.encode(key)}")).optJSONArray("tv_results")?.optJSONObject(0)?.optInt("id", 0) ?: 0
+        val out = HashMap<Int, String>()
+        if (id != 0) {
+            val seasons = JSONObject(fetch("$api/tv/$id?api_key=${Uri.encode(key)}")).optJSONArray("seasons") ?: org.json.JSONArray()
+            for (i in 0 until seasons.length()) {
+                val x = seasons.optJSONObject(i) ?: continue
+                val path = x.optString("poster_path")
+                if (path.startsWith("/")) out[x.optInt("season_number", -1)] = "https://image.tmdb.org/t/p/w342$path"
+            }
+        }
+        out.also { seasonPics[cacheKey] = it }
+    }
+
+    /** The Download manager's own settings: the key for the season pictures. */
+    @Composable
+    fun Settings() {
+        val ctx = LocalContext.current
+        var key by remember { mutableStateOf(tmdbKey(ctx)) }
+        var note by remember { mutableStateOf("") }
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tr("Season pictures", "Sezon resimleri"), color = T.text, fontSize = 15.sp)
+            Text(tr("Each season's picture comes from themoviedb.org. Make a free account there, copy your API key (v3) and paste it here. Without a key each season shows the series picture.",
+                "Her sezonun resmi themoviedb.org'dan gelir. Orada ücretsiz bir hesap aç, API anahtarını (v3) kopyala ve buraya yapıştır. Anahtar olmazsa her sezon dizinin resmini gösterir."), color = T.sub, fontSize = 12.sp)
+            PField(key, { key = it }, tr("API key", "API anahtarı"), Modifier.fillMaxWidth())
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                PButton(tr("Save", "Kaydet"), compact = true) { saveTmdbKey(ctx, key); note = tr("Saved", "Kaydedildi") }
+                if (note.isNotEmpty()) Text("  " + note, color = T.sub, fontSize = 12.sp)
+            }
+        }
+    }
+
     /** [kind] is "series" or "movie". The posters are the catalogue's own pictures, loaded as they are shown. */
     suspend fun search(q: String, kind: String): List<Show> = withContext(Dispatchers.IO) {
         val a = get("$META/catalog/$kind/top/search=${Uri.encode(q)}.json").optJSONArray("metas") ?: return@withContext emptyList()
@@ -603,6 +646,9 @@ object SeasonDl {
                             }
                             // the sizes are looked up as soon as a season is open, and again when the size limit or the add-on changes
                             androidx.compose.runtime.LaunchedEffect(season, mb, addon) { season?.let { lookUp(it) } }
+                            // each season's own picture from TMDB, when the person has given a key in Download manager settings
+                            var pics by remember(sel.id) { mutableStateOf(emptyMap<Int, String>()) }
+                            androidx.compose.runtime.LaunchedEffect(sel.id) { pics = runCatching { seasonPosters(sel.id, tmdbKey(ctx)) }.getOrDefault(emptyMap()) }
                             if (seasons.isNotEmpty()) {
                                 Caption(tr("Seasons", "Sezonlar"))
                                 androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -610,7 +656,7 @@ object SeasonDl {
                                         val n = eps.count { it.season == sn }
                                         Box(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }) {
                                             // Cinemeta has no picture of its own for a season: the series poster (upright) stands for each one, with the season over it
-                                            SeasonCover(sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
+                                            SeasonCover(pics[sn] ?: sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
                                         }
                                     }
                                 }
