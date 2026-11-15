@@ -1,3 +1,5 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M30,34 H78 Q80,34 80,36 V74 Q80,76 78,76 H30 Q28,76 28,74 V36 Q28,34 30,34 Z M32,36 H76 V72 H32 Z M34,70 L46,56 L54,64 L60,58 L74,70 Z M66,44 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+    <group android:scaleX="1.5" android:scaleY="1.5" android:pivotX="54" android:pivotY="55">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M34,70 L46,56 L54,64 L60,58 L74,70 Z M66,44 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" />
+    </group>
 </vector>

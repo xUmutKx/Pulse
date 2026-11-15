@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -95,28 +96,42 @@ private fun ImgBar(visible: Boolean, top: Boolean, overlay: Boolean, content: @C
     AnimatedVisibility(visible, enter = enter, exit = exit) { content() }
 }
 
-/** Strip with the other pictures of the viewer; the current one is bigger and ringed. */
+/**
+ * Strip with the other pictures of the viewer. The current picture is always in the middle of it (it stays there and the strip moves under it) and is bigger and ringed.
+ * Dragging the strip goes through the pictures: the one in the middle becomes the current one while the finger moves (the big picture changes with it), and the strip
+ * settles on a picture when it stops.
+ */
 @Composable
 private fun ImgFilmstrip(items: List<ImgSrc>, index: Int, onPick: (Int) -> Unit, corner: Dp, modifier: Modifier = Modifier) {
     if (items.size < 2 || !PhotosPrefs.filmstrip) return
     val ls = rememberLazyListState()
-    val dens = androidx.compose.ui.platform.LocalDensity.current
-    // the current picture goes to the middle of the strip (not to its left edge): the strip's width is known once it is laid out
-    LaunchedEffect(index, items.size) {
-        if (index !in items.indices) return@LaunchedEffect
-        runCatching {
-            val vw = androidx.compose.runtime.snapshotFlow { ls.layoutInfo.viewportSize.width }.first { it > 0 }
-            val itemPx = with(dens) { 52.dp.roundToPx() }
-            ls.animateScrollToItem(index, -(vw / 2 - itemPx / 2))
-        }
+    val item = 46.dp
+    val pick by androidx.compose.runtime.rememberUpdatedState(onPick)
+    // a finger on the strip: from its first drag until the strip (and its fling) has stopped
+    var scrubbing by remember { mutableStateOf(false) }
+    LaunchedEffect(ls) { ls.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) scrubbing = true } }
+    LaunchedEffect(ls) { androidx.compose.runtime.snapshotFlow { ls.isScrollInProgress }.collect { if (!it) scrubbing = false } }
+    // the picture in the middle of the strip
+    fun middle(): Int {
+        val li = ls.layoutInfo
+        val mid = (li.viewportStartOffset + li.viewportEndOffset) / 2
+        return li.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2 - mid) }?.index ?: -1
     }
+    LaunchedEffect(scrubbing) { if (scrubbing) androidx.compose.runtime.snapshotFlow { middle() }.collect { if (it >= 0) pick(it) } }
+    // the current picture (a swipe of the big picture, a tap, the strip coming to rest) goes to the middle, unless a finger is on the strip
+    LaunchedEffect(index, items.size, scrubbing) { if (!scrubbing && index in items.indices) runCatching { ls.animateScrollToItem(index) } }
     val sh = RoundedCornerShape(corner)
-    LazyRow(state = ls, modifier = modifier.fillMaxWidth().height(62.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        itemsIndexed(items) { i, s ->
-            val on = i == index
-            val sz by animateDpAsState(if (on) 52.dp else 42.dp, label = "film")
-            ImgThumb(s, Modifier.size(sz).clip(sh).border(if (on) 2.dp else 0.dp, if (on) Look.accent else Color.Transparent, sh).clickable { onPick(i) }, 120)
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().height(62.dp)) {
+        // the padding that lets the first and the last picture reach the middle
+        val pad = ((maxWidth - item) / 2).coerceAtLeast(0.dp)
+        LazyRow(state = ls, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = pad, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            itemsIndexed(items, key = { _, s -> s.uri.toString() }) { i, s ->
+                val on = i == index
+                // the current one is shown bigger by scaling it (no change of layout, so nothing moves under the finger)
+                val k by androidx.compose.animation.core.animateFloatAsState(if (on) 1.16f else .88f, label = "film")
+                ImgThumb(s, Modifier.size(item).graphicsLayer { scaleX = k; scaleY = k }.clip(sh).border(if (on) 2.dp else 0.dp, if (on) Look.accent else Color.Transparent, sh).clickable { pick(i) })
+            }
         }
     }
 }

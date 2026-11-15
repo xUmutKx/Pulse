@@ -15,7 +15,7 @@ on:
 permissions:
   contents: write
 jobs:
-  # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes both: the full one (Pulse AI inside) and the lite one (without it)
+  # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes the full one (Pulse AI inside), the lite one (without it) and the Google Play bundle
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -24,13 +24,15 @@ jobs:
       - id: p
         run: |
           V='["full"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","play"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
   build:
     needs: plan
     runs-on: ubuntu-latest
+    # the Google Play bundle never holds the release back: when it fails the two APKs are still published
+    continue-on-error: ${{ matrix.variant == 'play' }}
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +99,10 @@ jobs:
               # the same app without Pulse AI: no native code to build, so it is the quick one
               G assembleFossLiteRelease -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
               cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-lite.apk" ;;
+            play)
+              # the Google Play build (the bundle Play takes: no APK installer permission, the Play flavor): Pulse AI inside like the full one
+              G bundlePlayFullRelease -x lintVitalAnalyzePlayFullRelease -x lintVitalReportPlayFullRelease -x lintVitalPlayFullRelease
+              cp "$(find app/build/outputs/bundle -name '*.aab' | head -1)" "out/Pulse-$VER-play.aab" ;;
           esac
       - name: Compile errors as annotations
         if: failure()
@@ -136,4 +142,7 @@ jobs:
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
           # the full APK first (an older app's updater takes the first one it finds), then the lite one
-          gh release create "v$VER" "files/Pulse-$VER.apk" "files/Pulse-$VER-lite.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          ASSETS=("files/Pulse-$VER.apk" "files/Pulse-$VER-lite.apk")
+          # the Google Play bundle when it was built (it is only for the Play Console, not for installing)
+          [ -f "files/Pulse-$VER-play.aab" ] && ASSETS+=("files/Pulse-$VER-play.aab")
+          gh release create "v$VER" "${ASSETS[@]}" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md

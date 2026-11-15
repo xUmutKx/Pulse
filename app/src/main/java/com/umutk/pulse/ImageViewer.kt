@@ -22,6 +22,7 @@ import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.systemGestureExclusion
@@ -34,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BrokenImage
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -366,6 +368,32 @@ private fun imgInfoRows(ctx: Context, s: ImgSrc): List<Pair<String, String>> {
 
 // ---------------------------------------------------------------------------------------------------------------- screen
 
+/** The question before a picture is deleted: a small rounded card with the picture's name, Cancel and a red Delete. */
+@Composable
+private fun ImgDeleteCard(name: String, onCancel: () -> Unit, onDelete: () -> Unit, modifier: Modifier) {
+    val red = Color(0xFFE5484D)
+    val sh = RoundedCornerShape(22.dp)
+    Column(modifier.widthIn(max = 340.dp).clip(sh).background(T.panel.copy(alpha = .98f)).border(1.dp, T.line.copy(alpha = .6f), sh).padding(horizontal = 18.dp, vertical = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Delete, null, Modifier.size(22.dp), red)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr("Delete this picture?", "Bu resim silinsin mi?"), color = T.text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                Text(name, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(T.text.copy(alpha = .08f)).clickable(onClick = onCancel), contentAlignment = Alignment.Center) {
+                Text(tr("Cancel", "İptal"), color = T.text, fontSize = 14.sp)
+            }
+            Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(red).clickable(onClick = onDelete), contentAlignment = Alignment.Center) {
+                Text(tr("Delete", "Sil"), color = Color.White, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
 @Composable
 internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFinish: () -> Unit) {
     val ctx = LocalContext.current
@@ -389,6 +417,8 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
     val cur = items.getOrNull(pager.currentPage)
 
     LaunchedEffect(pager.currentPage) { zoomed = false }
+    // zoomed in the bars step aside; when the picture is brought back to the whole picture they come back
+    LaunchedEffect(zoomed) { bars = !zoomed }
     if (slide) LaunchedEffect(slide) {
         while (slide && items.size > 1) { delay(PhotosPrefs.slideSec * 1000L); runCatching { pager.animateScrollToPage((pager.currentPage + 1) % items.size) } }
     }
@@ -432,12 +462,12 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
             }
         }
         if (info) ImgInfoSheet(rows, { info = false }, Modifier.align(Alignment.BottomCenter))
+        // the question before a delete: a small card low on the screen, over the buttons where the finger is (not a dialog in the middle of the picture)
         if (del && cur != null) {
-            WinAlert(onDismissRequest = { del = false },
-                title = { Text(tr("Delete this picture?", "Bu resim silinsin mi?")) },
-                text = { Text(cur.name, color = T.sub, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                confirmButton = { TextButton({ del = false; doDelete(cur) }) { Text(tr("Delete", "Sil")) } },
-                dismissButton = { TextButton({ del = false }) { Text(tr("Cancel", "İptal")) } })
+            BackHandler { del = false }
+            Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { del = false } })
+            ImgDeleteCard(cur.name, { del = false }, { del = false; doDelete(cur) },
+                Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 86.dp))
         }
         val gridFolder = cur?.file?.parentFile
         if (grid && gridFolder != null) {
@@ -523,8 +553,11 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
     var vid by remember { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
     // the picture: false while it is read, then true with the picture (null when it cannot be read)
+    // the small picture of the grid (when there is one) shows at once; the big one is read after a moment, so running through the strip does not read every picture it passes
+    val thumb = remember(s) { ImgThumbs.get(s.uri.toString() + "|" + (s.file?.lastModified() ?: 0L)) }
     val pic by produceState<Pair<Boolean, Bitmap?>>(false to null, s, rev) {
         value = false to null
+        if (thumb != null) delay(140)
         value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2048) }
     }
     val bmp = pic.second
@@ -588,7 +621,8 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
             }
         }, contentAlignment = Alignment.Center) {
         when {
-            !pic.first -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
+            !pic.first -> if (thumb != null) Image(remember(thumb) { thumb.asImageBitmap() }, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                else CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
             img == null -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
             else -> Canvas(Modifier.fillMaxSize()) {
                 // the picture's place: its fitted size times the zoom, around the middle of the page, moved by tx / ty

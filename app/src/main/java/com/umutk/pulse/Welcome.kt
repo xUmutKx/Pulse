@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "star" to (tr("Gallery: the strip under a picture keeps the current one in the middle and changes the big picture as you drag it, and runs smoother; zooming hides the bars and they come back when the picture is whole again; delete asks with a small card low on the screen; videos show in the grid and play in Pulse's own player; the Photos icon lost its frame.",
+        "Galeri: resmin altındaki şerit açık resmi ortada tutar, sürüklerken üstteki büyük resmi de değiştirir ve daha akıcıdır; yakınlaştırınca çubuklar kaybolur, resim tamamen görününce geri gelir; silme sorusu ekranın altında küçük bir kartla sorulur; videolar ızgarada görünür ve Pulse'ın kendi oynatıcısında açılır; Fotoğraflar simgesinin çerçevesi kalktı.")),
     "star" to (tr("Game Hub: closing an open case no longer leaves a black screen (it closes at once), the 3D case runs about four times smoother, and browsing the shelf stutters less.",
         "Game Hub: açık kutuyu kapatınca artık siyah ekran kalmaz (anında kapanır), 3D kutu yaklaşık dört kat daha akıcı, rafta gezinirken daha az takılır.")),
     "star" to (tr("Gallery: the photo viewer's zoom is written again from the start: two fingers to zoom and move, a double tap to zoom in and out, and a selected photo is drawn again instead of staying black.",

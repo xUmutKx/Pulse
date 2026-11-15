@@ -106,7 +106,7 @@ internal object PhotosPrefs {
         look = p.getString("ph_look", "material") ?: "material"; amoled = p.getBoolean("ph_amoled", false); lang = p.getString("ph_lang", "en") ?: "en"
         dynamic = p.getBoolean("ph_dynamic", true); accent = p.getInt("ph_accent", -1); cols = p.getInt("ph_cols", 4).coerceIn(2, 7)
         favs = p.getStringSet("ph_favs", emptySet()) ?: emptySet()
-        startTab = p.getInt("ph_tab", 0).coerceIn(0, 2); showVideos = p.getBoolean("ph_videos", false); showHidden = p.getBoolean("ph_hidden", false)
+        startTab = p.getInt("ph_tab", 0).coerceIn(0, 2); showVideos = p.getBoolean("ph_videos", true); showHidden = p.getBoolean("ph_hidden", false)
         hiddenAlbums = p.getStringSet("ph_hideAlbums", emptySet()) ?: emptySet()
         sortBy = p.getString("ph_sort", "taken") ?: "taken"; sortAsc = p.getBoolean("ph_asc", false); group = p.getString("ph_group", "day") ?: "day"
         slideSec = p.getInt("ph_slide", 3); filmstrip = p.getBoolean("ph_film", true); loopVideos = p.getBoolean("ph_loop", false)
@@ -257,6 +257,8 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok = granted() }
     LaunchedEffect(Unit) { if (!ok) ask.launch(perm) }
     var all by remember { mutableStateOf<List<Ph>?>(PhotosCache.load(ctx)) }
+    // a video chosen in the grid plays in Pulse's own video player, over the gallery
+    var playing by remember { mutableStateOf<ImgSrc?>(null) }
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) PhotosPrefs.tick++ }
@@ -405,7 +407,7 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                                 // the live check reads the file head, so only tiles that are on screen pay for it
                                 val live by produceState(false, e) { value = !e.video && withContext(Dispatchers.IO) { imgLiveInfo(ctx, e.src) != null } }
                                 Box(Modifier.aspectRatio(1f).scale(k).clip(RoundedCornerShape(if (on) 12.dp else r))
-                                    .combinedClickable(onClick = { if (sel.isNotEmpty()) toggle(u) else if (e.video) openVideo(ctx, e.src) else onOpen(srcs, index[u] ?: 0) }, onLongClick = { toggle(u) })) {
+                                    .combinedClickable(onClick = { if (sel.isNotEmpty()) toggle(u) else if (e.video) playing = e.src else onOpen(srcs, index[u] ?: 0) }, onLongClick = { toggle(u) })) {
                                     ImgThumb(e.src, Modifier.fillMaxSize(), if (cols <= 3) 420 else 240)
                                     if (e.video) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)), contentAlignment = Alignment.Center) {
                                         LIc(Icons.Outlined.PlayArrow, Color.White, 12.dp)
@@ -448,19 +450,16 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
         }
         if (sel.isEmpty() && !results && !settings) PhotoSearchBar(searchOpen, q, { q = it }, { searchOpen = true }, { closeSearch() }, { if (q.isNotBlank()) results = true }, Modifier.align(Alignment.BottomCenter))
         if (settings) PhotosSettings { settings = false }
+        playing?.let { v ->
+            androidx.activity.compose.BackHandler { playing = null }
+            Box(Modifier.fillMaxSize().background(Color.Black)) { com.umutk.pulse.extras.video.VideoPlayerScreen(v.uri, { playing = null }) }
+        }
         if (confirmDel) WinAlert(onDismissRequest = { confirmDel = false },
             title = { Text(tr("Delete ${sel.size} pictures?", "${sel.size} resim silinsin mi?")) },
             confirmButton = {
                 TextButton({ confirmDel = false; runDelete() }) { Text(tr("Delete", "Sil")) }
             },
             dismissButton = { TextButton({ confirmDel = false }) { Text(tr("Cancel", "İptal")) } })
-    }
-}
-
-private fun openVideo(ctx: Context, s: ImgSrc) {
-    runCatching {
-        val u = if (s.file != null) FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", s.file) else s.uri
-        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(u, "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 
