@@ -579,6 +579,12 @@ object KeyboardDictionary {
     private val rejects = ConcurrentHashMap<String, Int>()
     fun isRejected(typed: String, corrected: String) = (rejects["$typed>$corrected"] ?: 0) > 0
 
+    /** The word was taken back from ANY correction once: it is never corrected again, to this word or to another (the pair alone let a second target, or a swap, bring it back). */
+    fun rejectedAny(typed: String): Boolean { val pre = typed.lowercase(Locale.ROOT) + ">"; return rejects.keys.any { it.startsWith(pre) } }
+
+    /** How many times, in all, a correction was taken back (by any way: the undo, a backspace into the word, a retyped word). */
+    fun rejectTotal(): Int = rejects.values.sum()
+
     /** Words the keyboard never corrects (the common ones the owner types as they are: ya, da, ben, falan ...). */
     private val kept: MutableSet<String> = ConcurrentHashMap.newKeySet()
     fun isKept(typed: String): Boolean = typed.lowercase(Locale.ROOT) in kept

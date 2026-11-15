@@ -9,6 +9,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -376,7 +378,10 @@ internal fun ImgInfoSheet(rows: List<Pair<String, String>>, onClose: () -> Unit,
     }
     val shape = if (k == ImgKind.MATERIAL) RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp) else RoundedCornerShape(28.dp)
     Column(modifier.fillMaxWidth().then(if (k == ImgKind.MATERIAL) Modifier else Modifier.padding(12.dp)).navigationBarsPadding()
-        .clip(shape).background(t.panel).clickable(onClick = {}).padding(horizontal = 22.dp, vertical = 14.dp)) {
+        .clip(shape).background(t.panel).clickable(onClick = {}).pointerInput(Unit) {
+            var dy = 0f
+            detectVerticalDragGestures(onDragStart = { dy = 0f }, onDragEnd = { if (dy > 90f) onClose() }, onVerticalDrag = { _, d -> dy += d })
+        }.padding(horizontal = 22.dp, vertical = 14.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { if (k == ImgKind.MATERIAL) Box(Modifier.align(Alignment.Center).width(32.dp).height(4.dp).clip(CircleShape).background(t.line)) }
             ImgIcBtn(onClose, 32.dp) { ImgIc("close", Icons.Outlined.Close, t.sub, 18.dp) }

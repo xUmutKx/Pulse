@@ -156,6 +156,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         lastClipSig = sig
         val item = clip.getItemAt(0)
         val uri = item.uri
+        // an e-mail address that was copied is remembered, so its first letters offer it in any field
+        runCatching {
+            val copied = item.text?.toString()?.trim().orEmpty()
+            if (copied.length in 6..80 && emailRe.matches(copied)) {
+                val low = copied.lowercase()
+                getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { sp -> sp.edit().putString("list", (listOf(low) + emailsSaved().filter { it != low }).take(8).joinToString("\n")).apply() }
+            }
+        }
         if (uri != null && clip.description.hasMimeType("image/*")) {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
         } else {
@@ -599,6 +607,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
     override fun onWindowShown() {
         super.onWindowShown(); backToKeys()
+        // shown again with the same field (back from a screenshot or another window): the bar is made again, it is not left empty
+        runCatching { updateSuggestions() }
+        kbRoot?.let { v -> v.postDelayed({ fillEmptyBar() }, 250) }
         // the floating keyboard's tall window must not swallow touches outside its keys: the app behind stays usable
         window.window?.let { w ->
             val f = android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
@@ -914,7 +925,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (!inAddr && sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && !KeyboardDictionary.rejectedAny(typed.lowercase(lang.locale))) out = t
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
             out = typed.replaceFirstChar { it.titlecase(lang.locale) }
@@ -965,6 +976,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         learnFromDelete(out)
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
+        if (!st.incognito && !st.plain && out.length >= 2 && out.all { it.isLetter() || it == '\'' }) { recentWords.remove(out); recentWords.addFirst(out); while (recentWords.size > 6) recentWords.removeLast() }
         word.clear(); target = null
         // typing fast left no time to mend the word: it is mended a moment later, in its place, when nothing new has been started behind it
         if (timedOut && out == typed) lateFix(typed, sep, tail, codeNow, locNow, pwNow, pw2Now, upNow, ctxNow, pending)
@@ -1013,7 +1025,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 runCatching { if (pending != null) pending.get(3, java.util.concurrent.TimeUnit.SECONDS) else KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
             } ?: return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
-            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.isRejected(lo, fl)) return@launch
+            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.rejectedAny(lo)) return@launch
             val key = typed + tail
             // the word is mended where it stands, at once: while the next word is being typed too (its letters, still open, are put back behind the mended word
             // as the open word), or when the next word is closed. Only when something else is going on (a selection, another edit) does it wait a moment.
@@ -2277,9 +2289,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         slotWords = w; st.slots = s
     }
 
-    /** The most common words of the language, for a bar that would stay empty (capital at the start when shift is on). */
+    /** The words written last (newest first), for a bar that would stay empty. */
+    private val recentWords = java.util.ArrayDeque<String>()
+
+    /** For a bar that would stay empty: the last words you wrote (a few of them), the most common words of the language filling what is missing (capital at the start when shift is on). */
     private fun commonNext(code: String, up: Boolean): List<String> {
-        val w = if (KeyboardLayouts.dict(code) == "tr") listOf("ve", "bir", "bu") else listOf("the", "to", "and")
+        val common = if (KeyboardLayouts.dict(code) == "tr") listOf("ve", "bir", "bu") else listOf("the", "to", "and")
+        val w = (recentWords.toList().take(3) + common).distinct().take(3)
         return if (up) w.map { it.replaceFirstChar { c -> c.uppercase() } } else w
     }
 
