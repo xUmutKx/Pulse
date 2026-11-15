@@ -406,7 +406,7 @@ private fun Transport(
                 ) {
                     Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x55FFFFFF)))
                     Box(Modifier.fillMaxWidth(vol.coerceAtLeast(0.001f)).height(3.dp).clip(RoundedCornerShape(2.dp)).background(acc()))
-                    BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 10.dp) * vol).size(10.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(Color.White, Color(0xFF9CB8CC))))) }
+                    BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 10.dp).coerceAtLeast(0.dp) * (if (vol.isNaN()) 0f else vol.coerceIn(0f, 1f))).size(10.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(Color.White, Color(0xFF9CB8CC))))) }
                 }
             }
             Text(mmss(dur), color = W_TEXT, fontSize = 11.sp, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
@@ -507,7 +507,7 @@ private fun FluentTransport(
             ) {
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x40FFFFFF)))
                 Box(Modifier.fillMaxWidth(frac.coerceAtLeast(0.001f)).height(3.dp).clip(RoundedCornerShape(2.dp)).background(blue))
-                BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 12.dp).coerceAtLeast(0.dp) * frac).size(12.dp).clip(CircleShape).background(Color.White)) }
+                BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 12.dp).coerceAtLeast(0.dp) * (if (frac.isNaN()) 0f else frac.coerceIn(0f, 1f))).size(12.dp).clip(CircleShape).background(Color.White)) }
             }
             Text(mmss(dur), color = W_SUB, fontSize = 11.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.End)
         }
