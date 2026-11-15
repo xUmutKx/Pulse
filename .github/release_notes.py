@@ -1,7 +1,7 @@
 import os
 import sys
 
-# The release notes are written in English, one short file per version (.github/notes/<version>.md).
+# The release notes are written in English, one short file per version (.github/notes/<version>.md); a release shows its own file only.
 # YAPILACAKLAR.md is the author's own work log (Turkish) and never goes into a release.
 cur_s, prev_s = sys.argv[1], sys.argv[2]
 cur = tuple(int(x) for x in cur_s.split('.'))
@@ -21,7 +21,8 @@ if os.path.isdir('.github/notes'):
             v = tuple(int(x) for x in name[:-3].split('.'))
         except ValueError:
             continue
-        if prev < v <= cur:
+        # only this version's own notes: older versions are not repeated in a release
+        if v == cur:
             text = open(os.path.join('.github/notes', name), encoding='utf-8').read().strip()
             entries.append(f'- {name[:-3]} {text}')
 print(f'## Pulse {cur_s}\n')
