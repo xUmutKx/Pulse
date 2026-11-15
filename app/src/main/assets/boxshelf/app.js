@@ -1544,7 +1544,7 @@ function closeInspect(){
   if(mode==="inspect")mode="browse"; // before leave(): it can hand the box back straight away (reduce motion)
   if(window.Inspect3D&&Inspect3D.isActive())Inspect3D.leave(tgt,done);else done(true);
   // safety net: nothing stays hidden if a flight can't finish (lost GPU, paused…); never while one is still running
-  clearTimeout(isp.wd);const wd=()=>{if(mode==="inspect")return;if(window.Inspect3D&&Inspect3D.busy&&Inspect3D.busy()){isp.wd=setTimeout(wd,400);return}try{if(window.Inspect3D&&Inspect3D.forceClose)Inspect3D.forceClose()}catch{}app.classList.remove("inspecting");mounted().forEach(o=>unhold(o.el,true))};isp.wd=setTimeout(wd,1200);
+  clearTimeout(isp.wd);const wd0=performance.now();const wd=()=>{if(mode==="inspect")return;if(window.Inspect3D&&Inspect3D.busy&&Inspect3D.busy()&&performance.now()-wd0<3500){isp.wd=setTimeout(wd,400);return} /* (a flight that has not landed after 3.5 s is stuck: the GPU drew nothing; the box is shown again whatever) */try{if(window.Inspect3D&&Inspect3D.forceClose)Inspect3D.forceClose()}catch{}app.classList.remove("inspecting");mounted().forEach(o=>unhold(o.el,true))};isp.wd=setTimeout(wd,1200);
   setTimeout(()=>{if(mode==="inspect")return;el.classList.remove("open","out")},320);
 }
 function ispLoop(t){
@@ -5116,6 +5116,14 @@ window.Shelf.bottomCmd=(c,arg)=>{if(c==="rd"||c==="find"||c==="det")return bsCtx
   if(c==="settings"){if(mode==="setup")return;if(mode==="inspect")closeInspect();play_("panel");Setup.open({});return}
   if(c==="menu"){window.Shelf.homeButton();return}};
 window.Shelf._musPlay=()=>{const c=window.Museum&&Museum.current();if(mode==="museum"&&c&&c.game)museumPlay(c.game)}; // test hook: play the case in view
+/* Pulse: back from another app the GPU's drawing of the open case is not trusted (it can stay black, or never land): it is thrown away, the case is closed with its box shown again,
+   and the next open builds a new one */
+window.Shelf.gpuReset=()=>{try{const was=mode==="inspect";
+  if(window.Inspect3D&&Inspect3D.reset)Inspect3D.reset();
+  if(was)closeInspect();
+  isp.held=null;app.classList.remove("inspecting");const ie=$("inspect");if(ie){ie.classList.remove("on","open","out");ie.setAttribute("aria-hidden","true")}
+  mounted().forEach(o=>unhold(o.el,false));
+}catch(e){try{api.log&&api.log("gpuReset: "+(e&&e.message))}catch{}}};
 window.Shelf.quickMenu=()=>qmOpen();window.Shelf._qs=()=>({g:(curGame()||{}).title,open:qm.open,r:qm.r,id:qm.rows[qm.r]&&qm.rows[qm.r].r.id,sub:qm.sub,sr:qm.sr,sc:qm.sc,ac:qm.ac,f:(()=>{const f=qsFocusEl();return f&&(f.dataset.v||f.dataset.k||f.className)})(),theme:themeId(),ov:themeOverride,bg:bgMode(),bgo:bgOverride,vol:curVol(),sort:sortBy,mode});window.Shelf._isp=()=>({rx:isp.rx,ry:isp.ry,tx:isp.tx,ty:isp.ty,tz:isp.tz,state:isp.state});window.Shelf._pickBuild=pickBuild; /* test hook: the Switch 2 build chooser */ // test hook: Inspect's pose (the device test checks the stick turn speed)
 window.Shelf._booklet=()=>makeBooklet(curGame());window.Shelf._rd=()=>({open:rd.open,making:rd.making,for:rd.bookletFor,state:isp.state,g:curGame()&&curGame().id});window.Shelf.customizeStep=d=>custStep(d);
 

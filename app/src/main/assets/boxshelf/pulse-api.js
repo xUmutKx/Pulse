@@ -152,6 +152,7 @@
   const onQuit = api.onRunQuitting;
   api.onRunQuitting = fn => { window.__bsQuit = fn; return onQuit ? onQuit(fn) : () => {}; };
   window.__pulseExited = () => {
+    try { window.Shelf && Shelf.gpuReset && Shelf.gpuReset(); } catch (e) {}
     try { window.__bsQuit && window.__bsQuit(); } catch (e) {}
     try { window.__bsExit && window.__bsExit({ code: 0 }); } catch (e) {}
   };
