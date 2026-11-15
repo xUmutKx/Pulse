@@ -141,6 +141,36 @@ object SeasonDl {
     }.getOrNull()
 
     private fun get(u: String): JSONObject {
+        val body = fetch(u)
+        if (!body.trimStart().startsWith("{")) throw java.io.IOException(tr("not a list of streams (a web page)", "yayın listesi değil (bir web sayfası)"))
+        return JSONObject(body)
+    }
+
+    /** A list of add-ons from a link the person gives (the Stremio add-on list format: entries with a "transportUrl" and a "manifest", or just links). Nothing is built in. */
+    class ListedAddon(val name: String, val about: String, val url: String)
+
+    fun catUrl(c: Context) = p(c).getString("catUrl", "") ?: ""
+    fun saveCatUrl(c: Context, u: String) { p(c).edit().putString("catUrl", u.trim()).apply() }
+
+    suspend fun addonList(listUrl: String): List<ListedAddon> = withContext(Dispatchers.IO) {
+        val body = fetch(listUrl.trim()).trim()
+        val arr = when {
+            body.startsWith("[") -> org.json.JSONArray(body)
+            body.startsWith("{") -> JSONObject(body).let { it.optJSONArray("addons") ?: it.optJSONArray("items") ?: org.json.JSONArray() }
+            else -> throw java.io.IOException(tr("not a list of add-ons (a web page)", "eklenti listesi değil (bir web sayfası)"))
+        }
+        (0 until arr.length()).mapNotNull { i ->
+            val x = arr.opt(i)
+            if (x is String) normalizeAddon(x)?.let { ListedAddon(runCatching { Uri.parse(it).host }.getOrNull() ?: it, "", it) }
+            else (x as? JSONObject)?.let { o ->
+                val m = o.optJSONObject("manifest")
+                val u = normalizeAddon(o.optString("transportUrl").ifBlank { o.optString("manifestUrl") }) ?: return@let null
+                ListedAddon((m?.optString("name") ?: o.optString("name")).ifBlank { runCatching { Uri.parse(u).host }.getOrNull() ?: u }, (m?.optString("description") ?: o.optString("description")).take(140), u)
+            }
+        }.distinctBy { it.url }.take(300)
+    }
+
+    private fun fetch(u: String): String {
         val c = URL(u).openConnection() as HttpURLConnection
         if (c is javax.net.ssl.HttpsURLConnection) Downloads.appContext()?.let { ctx -> pinnedFactory(c.url.host, ctx)?.let { c.sslSocketFactory = it } }
         c.connectTimeout = 10_000; c.readTimeout = 20_000
@@ -156,9 +186,7 @@ object SeasonDl {
             }
             // a refusal (403 of a protection page, 404, a server error) is said as such: it was taken for "no stream" before, and nothing told why
             if (code !in 200..299) throw java.io.IOException("HTTP $code")
-            val body = c.inputStream.bufferedReader().use { it.readText() }
-            if (!body.trimStart().startsWith("{")) throw java.io.IOException(tr("not a list of streams (a web page)", "yayın listesi değil (bir web sayfası)"))
-            return JSONObject(body)
+            return c.inputStream.bufferedReader().use { it.readText() }
         } finally { c.disconnect() }
     }
 
@@ -360,6 +388,10 @@ object SeasonDl {
         var addon by remember { mutableStateOf(addon(ctx)) }
         var editAddon by remember { mutableStateOf(addon(ctx).isBlank()) }
         var draft by remember { mutableStateOf("") }
+        var listOpen by remember { mutableStateOf(false) }
+        var listUrl by remember { mutableStateOf(catUrl(ctx)) }
+        var listNote by remember { mutableStateOf("") }
+        var listItems by remember { mutableStateOf(listOf<ListedAddon>()) }
         // what each add-on's manifest said (true = it answers and has streams, the text under its name), filled in as they are added or opened
         var states by remember { mutableStateOf(mapOf<String, Pair<Boolean, String>>()) }
         var mb by remember { mutableStateOf(maxMb(ctx).toInt()) }
@@ -429,7 +461,34 @@ object SeasonDl {
                             PChip(false, tr("Remove", "Kaldır")) { addon = addons(addon).filter { it != one }.joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = addon.isBlank() }
                         }
                     }
-                    if (addon.isNotBlank() && !editAddon) PChip(false, tr("Add another add-on", "Başka eklenti ekle")) { editAddon = true; draft = "" }
+                    if (addon.isNotBlank() && !editAddon) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PChip(false, tr("Add another add-on", "Başka eklenti ekle")) { editAddon = true; draft = "" }
+                        PChip(listOpen, tr("From a list", "Listeden")) { listOpen = !listOpen }
+                    }
+                    if (addon.isBlank() || editAddon) PChip(listOpen, tr("From a list", "Listeden")) { listOpen = !listOpen }
+                    // an add-on list from a link the person gives (Pulse ships no list and no add-on): each entry has an Add button
+                    if (listOpen) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            PField(listUrl, { listUrl = it }, tr("Link of an add-on list", "Eklenti listesinin bağlantısı"), Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            PButton(tr("Load", "Yükle"), compact = true) {
+                                if (listUrl.isBlank()) { listNote = tr("Put the link of a list first", "Önce bir liste bağlantısı yaz"); return@PButton }
+                                saveCatUrl(ctx, listUrl); listNote = tr("Loading…", "Yükleniyor…"); listItems = emptyList()
+                                scope.launch { runCatching { addonList(listUrl) }.onSuccess { listItems = it; listNote = if (it.isEmpty()) tr("The list is empty", "Liste boş") else "" }.onFailure { e -> said(e); listNote = e.message ?: e.javaClass.simpleName } }
+                            }
+                        }
+                        if (listNote.isNotEmpty()) Text(listNote, color = androidx.compose.ui.graphics.Color(0xFFE5A04D), fontSize = 12.sp)
+                        listItems.forEach { li ->
+                            val have = li.url in addons(addon)
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(li.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (li.about.isNotBlank()) Text(li.about, color = T.sub, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                                if (have) PIcon("check", T.accent, 20.dp) else PChip(false, tr("Add", "Ekle")) { addon = (addons(addon) + li.url).distinct().joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = false }
+                            }
+                        }
+                    }
                     else Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                         PField(draft, { draft = it }, "https://…/manifest.json", Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
