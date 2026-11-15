@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "download" to (tr("Download manager: its own settings, with a key for each season's picture from themoviedb.org. Downloads: season covers upright again, and the Trust button sits on the add-on whose certificate the phone does not trust.",
+        "İndirme yöneticisi: kendi ayarları, her sezonun resmi için themoviedb.org anahtarı. İndirmeler: sezon kapakları yine dik; sertifika uyarısı olan eklentinin satırında Bu sunucuya güven düğmesi.")),
     "download" to (tr("Office: Word, Excel, PowerPoint and PDF files opened from other apps are now listed under Recent, so you can open them again from there. Downloads: when an add-on's server has a certificate the phone does not trust, you now see its fingerprint and can choose \"Trust this server\" (only that certificate, only that server) instead of a bare error.",
         "Office: başka bir uygulamadan açtığın Word, Excel, PowerPoint ve PDF dosyaları artık Son kullanılanlar'da görünür, oradan tekrar açabilirsin. İndirmeler: bir eklentinin sunucusunun sertifikasına telefon güvenmiyorsa artık parmak izini görüp \"Bu sunucuya güven\" diyebilirsin (sadece o sertifika, sadece o sunucu); çıplak bir hata yerine.")),
     "download" to (tr("A smaller app: the torrent engine, the gallery's smart search and the ambient sounds are no longer inside it; each has a Download button and nothing is fetched unless you ask. Downloads: the add-on's refusal is shown instead of a silent \"—\", every episode lists all its streams to choose from, and each season has its own picture.",
