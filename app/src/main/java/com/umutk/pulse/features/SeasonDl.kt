@@ -74,6 +74,9 @@ object SeasonDl {
         }
         return s
     }
+    /** The add-ons in the saved text (several can be kept, one after the other; each is a link the person gave), as the addresses Pulse asks. */
+    fun addons(text: String): List<String> = text.split(Regex("[\\s,]+")).mapNotNull { normalizeAddon(it) }.distinct()
+
     fun maxMb(c: Context) = p(c).getFloat("maxMb", 800f)
     fun save(c: Context, addon: String, mb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxMb", mb).apply() }
 
@@ -186,9 +189,22 @@ object SeasonDl {
      */
     /** Every stream the add-on has for the episode (or the movie), each with its size when the add-on says it (0 when not) and its first line of text. */
     suspend fun streams(addonBase: String, ep: Ep, kind: String = "series"): List<Pick> = withContext(Dispatchers.IO) {
+        // every add-on the person gave is asked, one after the other: when one is down or refuses, the others still answer; only when none answers is the first error said
+        val all = addons(addonBase).ifEmpty { listOf(addonBase.trim()) }
+        val out = ArrayList<Pick>()
+        var firstError: Throwable? = null
+        var answered = false
+        for (one in all) {
+            try { out += streamsOf(one, ep, kind); answered = true } catch (e: Throwable) { if (firstError == null || e is CertProblem) firstError = e }
+        }
+        if (!answered && firstError != null) throw firstError
+        out.distinctBy { it.url }
+    }
+
+    private fun streamsOf(addonBase: String, ep: Ep, kind: String): List<Pick> {
         // a "|" in the add-on's settings part of the address is sent encoded
         val base = (normalizeAddon(addonBase) ?: addonBase.trim()).removeSuffix("/manifest.json").removeSuffix("/").replace("|", "%7C")
-        val a = get("$base/stream/$kind/${pathId(ep.id)}.json").optJSONArray("streams") ?: return@withContext emptyList()
+        val a = get("$base/stream/$kind/${pathId(ep.id)}.json").optJSONArray("streams") ?: return emptyList()
         val out = ArrayList<Pick>()
         for (i in 0 until a.length()) {
             val s = a.optJSONObject(i) ?: continue
@@ -199,7 +215,7 @@ object SeasonDl {
             val label = (s.optString("name").replace('\n', ' ') + "  " + s.optString("title").lineSequence().firstOrNull().orEmpty()).trim()
             out.add(Pick(url, size, label.ifBlank { text.trim().take(80) }))
         }
-        out
+        return out
     }
 
     /**
@@ -285,6 +301,7 @@ object SeasonDl {
         var movies by remember { mutableStateOf(false) }
         var addon by remember { mutableStateOf(addon(ctx)) }
         var editAddon by remember { mutableStateOf(addon(ctx).isBlank()) }
+        var draft by remember { mutableStateOf("") }
         var mb by remember { mutableStateOf(maxMb(ctx).toInt()) }
         var q by remember { mutableStateOf("") }
         var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
@@ -332,22 +349,28 @@ object SeasonDl {
                         PChip(movies, tr("Movies", "Filmler")) { movies = true; reset() }
                     }
                     // 1. where the streams come from
-                    Caption(tr("1  Add-on (paste its link once)", "1  Eklenti (bağlantısını bir kez yapıştır)"))
-                    if (addon.isNotBlank() && !editAddon) Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Text("✓  " + (runCatching { Uri.parse(addon.replaceFirst(Regex("^stremio://", RegexOption.IGNORE_CASE), "https://")).host }.getOrNull() ?: addon), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        PChip(false, tr("Change", "Değiştir")) { editAddon = true }
-                    } else Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        PField(addon, { addon = it }, "https://…/manifest.json", Modifier.weight(1f))
+                    Caption(tr("1  Add-ons (as many as you like)", "1  Eklentiler (istediğin kadar)"))
+                    // the add-ons given so far, each with a remove button; a new one is added with the field below (any number: when one does not answer, the next one does)
+                    addons(addon).forEach { one ->
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text("✓  " + (runCatching { Uri.parse(one).host }.getOrNull() ?: one), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            PChip(false, tr("Remove", "Kaldır")) { addon = addons(addon).filter { it != one }.joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = addon.isBlank() }
+                        }
+                    }
+                    if (addon.isNotBlank() && !editAddon) PChip(false, tr("Add another add-on", "Başka eklenti ekle")) { editAddon = true; draft = "" }
+                    else Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        PField(draft, { draft = it }, "https://…/manifest.json", Modifier.weight(1f))
                         Spacer(Modifier.width(8.dp))
                         // the link copied from the add-on's page goes in with one press
                         PButton(tr("Paste", "Yapıştır"), compact = true) {
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                             val s = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()?.trim().orEmpty()
                             val n = normalizeAddon(s)
-                            if (n != null) { addon = n; save(ctx, n, mb.toFloat()); editAddon = false; note = "" }
+                            if (n != null) { addon = (addons(addon) + n).distinct().joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = false; draft = ""; note = "" }
                             else note = tr("Copy the add-on link first", "Önce eklenti bağlantısını kopyala")
                         }
-                        if (addon.isNotBlank()) { Spacer(Modifier.width(6.dp)); PButton(tr("OK", "Tamam"), compact = true) { val n = normalizeAddon(addon); if (n != null) { addon = n; save(ctx, n, mb.toFloat()); editAddon = false } else note = tr("That is not a link", "Bu bir bağlantı değil") } }
+                        if (draft.isNotBlank()) { Spacer(Modifier.width(6.dp)); PButton(tr("OK", "Tamam"), compact = true) { val n = normalizeAddon(draft); if (n != null) { addon = (addons(addon) + n).distinct().joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = false; draft = "" } else note = tr("That is not a link", "Bu bir bağlantı değil") } }
+                        if (addon.isNotBlank()) { Spacer(Modifier.width(6.dp)); PChip(false, tr("Cancel", "Vazgeç")) { editAddon = false; draft = "" } }
                     }
                     if (addon.isBlank() || editAddon) Text(tr("Open the add-on's page in your browser, copy the link of its page or of its Install button, and come back: Pulse takes it from what you copied (or press Paste).", "Eklentinin sayfasını tarayıcıda aç, sayfanın ya da Yükle düğmesinin bağlantısını kopyala ve buraya dön: Pulse kopyaladığından kendisi alır (ya da Yapıştır'a bas)."), color = T.sub, fontSize = 12.sp)
                     // 2. the size limit: the largest stream still under it is taken
