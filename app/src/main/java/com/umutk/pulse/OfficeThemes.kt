@@ -277,7 +277,7 @@ fun ofKindOf(name: String, mime: String? = null): OfKind? {
  * they go again after 2 seconds. Returns (hidden now, the tap-watching modifier for the window). Switch in Office settings; on at first.
  */
 @Composable
-fun ofAutoHide(): Pair<Boolean, Modifier> {
+fun ofAutoHide(keep: Boolean = false): Pair<Boolean, Modifier> {
     val ctx = LocalContext.current
     val on = remember { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", true) }
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
@@ -286,7 +286,8 @@ fun ofAutoHide(): Pair<Boolean, Modifier> {
     val phone = cfg.smallestScreenWidthDp < 600
     var shown by remember { mutableStateOf(false) }
     var bump by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    LaunchedEffect(bump, shown) { if (shown) { kotlinx.coroutines.delay(2000); shown = false } }
+    // while a menu or the File panel is open the block stays (it used to go 2 seconds after the tap and take the open menu with it)
+    LaunchedEffect(bump, shown, keep) { if (shown && !keep) { kotlinx.coroutines.delay(2000); shown = false } }
     val mod = if (on && land && phone) Modifier.pointerInput(Unit) {
         // watches without taking the touch: a press and release that barely moved is a tap
         awaitEachGesture {
@@ -300,7 +301,7 @@ fun ofAutoHide(): Pair<Boolean, Modifier> {
             }
         }
     } else Modifier
-    return (on && land && phone && !shown) to mod
+    return (on && land && phone && !shown && !keep) to mod
 }
 
 /** Optional own ribbon body per tab name (modern looks only); the Word screen provides its stacked Home ribbon through it. */
@@ -362,12 +363,14 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     val groups = (listOfNotNull("File".takeIf { fileOps != null }) + acts.map { it.group }.filter { it != "Quick" }).distinct()
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var menu by remember { mutableStateOf("") }
-    val (autoHid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide(keep = menu.isNotEmpty() || fileOpen || info)
+    // sideways on a phone the block hides and shows by itself: then a tap is only the watcher's (a tap that also flipped the hand switch cancelled it)
+    val autoOn = tapWatch !== Modifier
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
     var manualHid by remember { mutableStateOf(false) }
     val hid = autoHid || manualHid
     // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
-    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { manualHid = !manualHid }) }) {
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { if (!autoOn) manualHid = !manualHid }) }) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
         if (!hid) if (t.classic) {
@@ -506,7 +509,8 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
     // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
     val ink = ofInkOn(below)
-    val (autoHid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide(keep = fileOpen || info)
+    val autoOn = tapWatch !== Modifier
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
     // the top block is a drop-down: pull the thin grip under it down from its middle to open it, push it up to close it
     var pull by remember { mutableStateOf(1f) }
@@ -516,7 +520,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val hid = openP < .5f
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
-    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { pull = if (pull > .5f) 0f else 1f }) }) {
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { if (!autoOn) pull = if (pull > .5f) 0f else 1f }) }) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
         // the top block shows only the part pulled out; its top edge stays fixed
         Box(Modifier.fillMaxWidth().height(with(LocalDensity.current) { (blockH * openP).toDp() }).clipToBounds()) {
