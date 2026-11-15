@@ -20,6 +20,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animate
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -46,10 +47,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -61,6 +64,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -80,6 +84,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /** Extensions the Pulse file manager hands to the photo viewer. */
 val IMG_EXTS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
@@ -466,8 +471,49 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
 }
 
 /**
- * One page of the pager: the picture, its own pinch zoom, pan and double tap (the zoom goes up to the zoom level set in the settings). The picture is read once
- * at a size that stays sharp when zoomed (the long edge 2048 px). A single tap hides or shows the bars; a LIVE picture plays by a long press or its chip.
+ * Where a picture lies in its page, and all the arithmetic of the zoom: [scale] 1 is the whole picture (fitted to the page), more is zoomed in; [tx] and [ty] are how far
+ * the picture is moved from the middle of the page, in pixels. The picture never leaves the page's edges (it can only be moved as far as its edges allow).
+ */
+@Stable
+private class ZoomState {
+    var scale by mutableFloatStateOf(1f)
+    var tx by mutableFloatStateOf(0f)
+    var ty by mutableFloatStateOf(0f)
+    var viewW = 0f
+    var viewH = 0f
+    var picW = 0
+    var picH = 0
+    val zoomed: Boolean get() = scale > 1.01f
+
+    /** The size of the picture when it is the whole picture in the page. */
+    fun fitScale(): Float = if (picW <= 0 || picH <= 0 || viewW <= 0f || viewH <= 0f) 0f else min(viewW / picW, viewH / picH)
+
+    private fun roomX(sc: Float) = max(0f, (picW * fitScale() * sc - viewW) / 2f)
+    private fun roomY(sc: Float) = max(0f, (picH * fitScale() * sc - viewH) / 2f)
+
+    /** Puts the picture at zoom [sc], moved by [x] [y]; the move is cut to what keeps the picture over the page. */
+    fun place(sc: Float, x: Float, y: Float) {
+        if (!sc.isFinite() || !x.isFinite() || !y.isFinite()) return
+        if (sc <= 1.001f) { reset(); return }
+        scale = sc
+        tx = x.coerceIn(-roomX(sc), roomX(sc))
+        ty = y.coerceIn(-roomY(sc), roomY(sc))
+    }
+
+    /** One step of a pinch or a drag: zoom by [factor] around [fx] [fy] (a point of the page, from its middle), then move by [px] [py]. */
+    fun step(fx: Float, fy: Float, factor: Float, px: Float, py: Float, maxZoom: Float) {
+        val ns = (scale * factor).coerceIn(1f, maxZoom)
+        val k = ns / scale
+        place(ns, tx * k + fx * (1 - k) + px, ty * k + fy * (1 - k) + py)
+    }
+
+    fun reset() { scale = 1f; tx = 0f; ty = 0f }
+}
+
+/**
+ * One page of the pager: the picture with its own zoom (two fingers to zoom, one finger to move it when zoomed, a double tap to zoom in on the point touched and back out).
+ * The picture is read once at a size that stays sharp when zoomed (the long edge 2048 px) and drawn straight onto a canvas at the place [ZoomState] gives it.
+ * A single tap hides or shows the bars; a LIVE picture plays by a long press or its chip.
  */
 @Composable
 private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTick: Int, onLive: (Boolean) -> Unit, onZoomed: (Boolean) -> Unit, onTap: () -> Unit) {
@@ -481,38 +527,22 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
         value = false to null
         value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2048) }
     }
-    val b = pic.second
-    var scale by remember(s, rev) { mutableFloatStateOf(1f) }
-    var ox by remember(s, rev) { mutableFloatStateOf(0f) }
-    var oy by remember(s, rev) { mutableFloatStateOf(0f) }
-    var box by remember { mutableStateOf(IntSize.Zero) }
+    val bmp = pic.second
+    val img = remember(bmp) { bmp?.takeIf { !it.isRecycled }?.asImageBitmap() }
+    val z = remember(s, rev) { ZoomState() }
+    z.picW = bmp?.width ?: 0; z.picH = bmp?.height ?: 0
     val activeNow by androidx.compose.runtime.rememberUpdatedState(active)
     val zoomedNow by androidx.compose.runtime.rememberUpdatedState(onZoomed)
     val tapNow by androidx.compose.runtime.rememberUpdatedState(onTap)
+    // how far the zoom may go: the zoom level of the settings, and always at least 4x
+    fun maxZoom() = PhotosPrefs.zoomLevel.coerceAtLeast(4f)
 
-    // how far the picture may be moved at the zoom sc (it stays over the screen's edges, never beside them)
-    fun maxOff(sc: Float): Offset {
-        if (b == null || box.width == 0 || box.height == 0) return Offset.Zero
-        val fit = min(box.width.toFloat() / b.width, box.height.toFloat() / b.height)
-        return Offset(max(0f, (b.width * fit * sc - box.width) / 2f), max(0f, (b.height * fit * sc - box.height) / 2f))
-    }
-    fun setZoom(ns: Float, nx: Float, ny: Float) {
-        scale = ns
-        if (ns <= 1.001f) { scale = 1f; ox = 0f; oy = 0f; return }
-        val mo = maxOff(ns)
-        ox = nx.coerceIn(-mo.x, mo.x); oy = ny.coerceIn(-mo.y, mo.y)
-    }
-    // zoomed out: back to the whole picture; zoomed in: to the zoom level, centred on the point touched
-    fun toggle(p: Offset) {
-        val s0 = scale; val x0 = ox; val y0 = oy
-        var ns = 1f; var tx = 0f; var ty = 0f
-        if (s0 <= 1.01f) {
-            ns = PhotosPrefs.zoomLevel
-            val c = p - Offset(box.width / 2f, box.height / 2f)
-            val mo = maxOff(ns)
-            tx = (c.x * (1 - ns)).coerceIn(-mo.x, mo.x); ty = (c.y * (1 - ns)).coerceIn(-mo.y, mo.y)
-        }
-        scope.launch { animate(0f, 1f) { v, _ -> setZoom(s0 + (ns - s0) * v, x0 + (tx - x0) * v, y0 + (ty - y0) * v) } }
+    // zoomed in: back to the whole picture; otherwise in to the zoom level of the settings, on the point [fx] [fy] (from the page's middle)
+    fun toggle(fx: Float, fy: Float) {
+        val s0 = z.scale; val x0 = z.tx; val y0 = z.ty
+        var ns = 1f; var x1 = 0f; var y1 = 0f
+        if (!z.zoomed) { ns = PhotosPrefs.zoomLevel.coerceIn(1.5f, maxZoom()); x1 = fx * (1 - ns); y1 = fy * (1 - ns) }
+        scope.launch { animate(0f, 1f, animationSpec = androidx.compose.animation.core.tween(220)) { v, _ -> z.place(s0 + (ns - s0) * v, x0 + (x1 - x0) * v, y0 + (y1 - y0) * v) } }
     }
     fun playLive() {
         val li = live ?: return
@@ -525,45 +555,48 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
     LaunchedEffect(live != null, active) { if (active) { onLive(live != null); if (live != null && PhotosPrefs.liveAuto) playLive() } }
     LaunchedEffect(liveTick) { if (liveTick != seenLive) { seenLive = liveTick; if (active) playLive() } }
     var seen by remember { mutableIntStateOf(zoomTick) }
-    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggle(Offset(box.width / 2f, box.height / 2f)) } }
-    LaunchedEffect(scale > 1.01f, active) { if (active) onZoomed(scale > 1.01f) }
-    // a page turned away from is shown whole again
-    LaunchedEffect(active) { if (!active) { scale = 1f; ox = 0f; oy = 0f } }
+    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggle(0f, 0f) } }
+    LaunchedEffect(z.zoomed, active) { if (active) onZoomed(z.zoomed) }
+    LaunchedEffect(active) { if (!active) { z.reset(); vid = null } }
 
-    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.systemGestureExclusion() // (a pinch near the edge was taken for Android's back swipe and closed the picture)
-        .pointerInput(b, live) {
+    Box(Modifier.fillMaxSize().onSizeChanged { z.viewW = it.width.toFloat(); z.viewH = it.height.toFloat() }
+        .systemGestureExclusion() // (a pinch near the edge was taken for Android's back swipe and closed the picture)
+        // taps: one hides or shows the bars (or stops a playing LIVE picture), two zoom in or out, a long press plays a LIVE picture
+        .pointerInput(img, live) {
             detectTapGestures(
                 onTap = { if (vid != null) vid = null else tapNow() },
-                onDoubleTap = { p -> toggle(p) },
+                onDoubleTap = { p -> toggle(p.x - size.width / 2f, p.y - size.height / 2f) },
                 onLongPress = { if (live != null) playLive() })
         }
-        .pointerInput(b) {
+        // the fingers: two zoom and move the picture; one moves it only while it is zoomed (at the whole picture the pager turns the page)
+        .pointerInput(img) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 do {
                     val ev = awaitPointerEvent()
-                    val n = ev.changes.count { it.pressed }
-                    // two fingers: the pager stops turning pages at once (it took the pinch for a swipe and showed the black edge of the next page on release)
-                    if (n >= 2 && activeNow) zoomedNow(true)
-                    // a single finger moves the picture only when it is zoomed; at the whole picture the pager turns the page
-                    if (n >= 2 || scale > 1.01f) {
-                        val z = ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f
+                    val down = ev.changes.count { it.pressed }
+                    if (down >= 2 && activeNow) zoomedNow(true) // the pager stops turning pages as the second finger lands
+                    if (down >= 2 || z.zoomed) {
+                        val factor = if (down >= 2) ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f else 1f
                         val pan = ev.calculatePan().let { if (it.x.isFinite() && it.y.isFinite()) it else Offset.Zero }
-                        val c = ev.calculateCentroid() - Offset(box.width / 2f, box.height / 2f)
-                        val ns = (scale * z).coerceIn(1f, PhotosPrefs.zoomLevel.coerceAtLeast(4f))
-                        val k = ns / scale
-                        setZoom(ns, ox * k + c.x * (1 - k) + pan.x, oy * k + c.y * (1 - k) + pan.y)
+                        val c = ev.calculateCentroid(useCurrent = true)
+                        if (c.isSpecified) z.step(c.x - size.width / 2f, c.y - size.height / 2f, factor, pan.x, pan.y, maxZoom())
                         ev.changes.forEach { if (it.positionChanged()) it.consume() }
                     }
                 } while (ev.changes.any { it.pressed })
-                if (activeNow) zoomedNow(scale > 1.01f)
+                if (activeNow) zoomedNow(z.zoomed)
             }
         }, contentAlignment = Alignment.Center) {
         when {
             !pic.first -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
-            b == null -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
-            else -> Image(remember(b) { b.asImageBitmap() }, null,
-                Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = ox; translationY = oy }, contentScale = ContentScale.Fit)
+            img == null -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
+            else -> Canvas(Modifier.fillMaxSize()) {
+                // the picture's place: its fitted size times the zoom, around the middle of the page, moved by tx / ty
+                val fit = min(size.width / img.width, size.height / img.height)
+                val w = img.width * fit * z.scale; val h = img.height * fit * z.scale
+                drawImage(img, dstOffset = IntOffset(((size.width - w) / 2f + z.tx).roundToInt(), ((size.height - h) / 2f + z.ty).roundToInt()),
+                    dstSize = IntSize(w.roundToInt().coerceAtLeast(1), h.roundToInt().coerceAtLeast(1)), filterQuality = FilterQuality.Medium)
+            }
         }
         vid?.let { f -> ImgLivePlayer(f) { vid = null } }
         if (live != null && active && imgKind() != ImgKind.MATERIAL) Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 12.dp, top = 64.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f))
