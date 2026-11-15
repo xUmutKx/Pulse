@@ -13,9 +13,9 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 823
-        versionName = "1.0.420"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        versionCode = 824
+        versionName = "1.0.421"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") } // (x86_64 left out: it is for emulators and Chromebooks, and was 4 MB of the APK)
         resourceConfigurations += listOf("en", "tr")
     }
     // release key: private, kept in GitHub Actions secrets (see ci/README.md); the workflow writes it to a file and passes its path
@@ -56,7 +56,7 @@ android {
     // (the "armv8.2_1" build of Pulse AI's maths is left out: every phone that can run it also runs the fuller "armv8.2_2" one, which is the one chosen;
     // older processors still have the "armv8.0" build)
     packaging { jniLibs { useLegacyPackaging = true; excludes += "**/libggml-cpu-android_armv8.2_1.so" } }
-    packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
+    packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class", "org/bouncycastle/pqc/crypto/picnic/**") } // (Picnic: a post-quantum signature never used here, 1 MB of tables) // the last two: BouncyCastle ships them in several jars
 }
 
 dependencies {
@@ -71,7 +71,7 @@ dependencies {
     // (the foss+full configuration is created by the Android plugin after this block, so it is filled in when it appears)
     configurations.matching { it.name == "fossFullImplementation" }.configureEach {
         project.dependencies.add(name, "org.libtorrent4j:libtorrent4j:2.1.0-38")
-        project.dependencies.add(name, "org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-38")
+        // (its native part, libtorrent4j-android-arm64, is not built in: the engine fetches it on first use, see TorrentEngine.ensureLib)
     }
     implementation("org.tensorflow:tensorflow-lite:2.16.1") // the gallery search names what is in a picture (EfficientNet-Lite0, assets/photoai), on the phone; Apache 2.0
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture

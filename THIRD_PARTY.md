@@ -45,5 +45,5 @@ CC0 1.0 (public domain); the rest of that project is GPL-3.0 and none of its cod
 ## Photo search (assets/photoai)
 
 The gallery search names what is in a picture on the phone itself. It uses [TensorFlow Lite](https://www.tensorflow.org/lite) (Apache 2.0) and the EfficientNet-Lite0 image classifier
-(Apache 2.0, from the [MediaPipe models](https://ai.google.dev/edge/mediapipe/solutions/vision/image_classifier), int8, 1000 ImageNet classes). The English names of the classes are the ImageNet class list
+(Apache 2.0, from the [MediaPipe models](https://ai.google.dev/edge/mediapipe/solutions/vision/image_classifier), int8, 1000 ImageNet classes), fetched by the app the first time it is needed (it is not inside the APK). The English names of the classes are the ImageNet class list
 (ILSVRC 2012); the Turkish words in `labels.tsv` were written for Pulse. Faces are found with Android's own `android.media.FaceDetector`. Nothing is sent anywhere.

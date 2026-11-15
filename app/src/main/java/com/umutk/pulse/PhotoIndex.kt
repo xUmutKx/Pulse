@@ -92,6 +92,8 @@ internal object PhotoIndex {
         if (todo.isEmpty()) return
         done.value = 0; total.value = todo.size
         job = scope.launch {
+            // without the recogniser (no network yet) nothing is read now: the pictures would be kept as read with no tags; it is tried again next time
+            if (!ensureModel(app)) { total.value = 0; return@launch }
             val tf = runCatching { Classifier(app) }.getOrNull()
             val out = StringBuilder()
             var n = 0
@@ -114,6 +116,27 @@ internal object PhotoIndex {
             } finally { flush(); tick.value++; tf?.close() }
         }
     }
+
+    // the recogniser (5 MB) is not inside the app: it is fetched once, the first time the pictures are read, from Google's MediaPipe models (checked by its SHA-256)
+    private const val MODEL_URL = "https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/1/efficientnet_lite0.tflite"
+    private const val MODEL_SHA = "bc2ffe19c1118de0c0c2a9088992da5589722656e0fba81421385300a4a34b16"
+    private fun modelFile(ctx: Context) = File(ctx.filesDir, "photoai/efficientnet_lite0_int8.tflite")
+    private fun sha256(f: File): String = java.security.MessageDigest.getInstance("SHA-256").let { md ->
+        f.inputStream().use { ins -> val b = ByteArray(65536); while (true) { val n = ins.read(b); if (n < 0) break; md.update(b, 0, n) } }
+        md.digest().joinToString("") { "%02x".format(it) }
+    }
+    /** The model on the phone, fetched now when it is not there yet; false when it cannot be had (no network): the reading waits for a next time. */
+    private fun ensureModel(ctx: Context): Boolean = runCatching {
+        val f = modelFile(ctx)
+        if (f.isFile && f.length() > 1_000_000) return@runCatching true
+        f.parentFile?.mkdirs()
+        val tmp = File(f.parentFile, "model.part")
+        val c = java.net.URL(MODEL_URL).openConnection() as java.net.HttpURLConnection
+        c.connectTimeout = 15_000; c.readTimeout = 30_000
+        try { if (c.responseCode !in 200..299) return@runCatching false; tmp.outputStream().use { o -> c.inputStream.use { it.copyTo(o) } } } finally { c.disconnect() }
+        if (sha256(tmp) != MODEL_SHA) { tmp.delete(); return@runCatching false }
+        tmp.renameTo(f)
+    }.getOrDefault(false)
 
     private fun analyze(ctx: Context, p: Ph, tf: Classifier?): Entry {
         val bmp = imgDecode(ctx, p.src, 480) ?: return Entry(p.mod, 0, false, emptyList())
@@ -188,7 +211,7 @@ internal object PhotoIndex {
         private val lut = IntArray(256)
 
         init {
-            val bytes = ctx.assets.open("photoai/efficientnet_lite0_int8.tflite").use { it.readBytes() }
+            val bytes = modelFile(ctx).readBytes()
             val model = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
             model.put(bytes); model.rewind()
             interp = Interpreter(model, Interpreter.Options().setNumThreads(2))

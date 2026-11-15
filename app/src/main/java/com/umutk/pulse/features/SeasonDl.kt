@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.Arrangement
@@ -78,8 +80,16 @@ object SeasonDl {
     private fun get(u: String): JSONObject {
         val c = URL(u).openConnection() as HttpURLConnection
         c.connectTimeout = 10_000; c.readTimeout = 20_000
-        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) Pulse")
-        try { return JSONObject(c.inputStream.bufferedReader().use { it.readText() }) } finally { c.disconnect() }
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36")
+        c.setRequestProperty("Accept", "application/json")
+        try {
+            val code = c.responseCode
+            // a refusal (403 of a protection page, 404, a server error) is said as such: it was taken for "no stream" before, and nothing told why
+            if (code !in 200..299) throw java.io.IOException("HTTP $code")
+            val body = c.inputStream.bufferedReader().use { it.readText() }
+            if (!body.trimStart().startsWith("{")) throw java.io.IOException(tr("not a list of streams (a web page)", "yayın listesi değil (bir web sayfası)"))
+            return JSONObject(body)
+        } finally { c.disconnect() }
     }
 
     /** [kind] is "series" or "movie". The posters are the catalogue's own pictures, loaded as they are shown. */
@@ -125,22 +135,36 @@ object SeasonDl {
      * The largest stream of the episode that is under [maxBytes]. When there is none under it, the smallest one there is (marked [Pick.over]), so an episode is not left out
      * just because everything is bigger. Null only when the add-on has no stream that says its size.
      */
-    suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? = withContext(Dispatchers.IO) {
+    /** Every stream the add-on has for the episode (or the movie), each with its size when the add-on says it (0 when not) and its first line of text. */
+    suspend fun streams(addonBase: String, ep: Ep, kind: String = "series"): List<Pick> = withContext(Dispatchers.IO) {
         // a "|" in the add-on's settings part of the address is sent encoded
         val base = (normalizeAddon(addonBase) ?: addonBase.trim()).removeSuffix("/manifest.json").removeSuffix("/").replace("|", "%7C")
-        val a = get("$base/stream/$kind/${pathId(ep.id)}.json").optJSONArray("streams") ?: return@withContext null
-        var best: Pick? = null; var smallest: Pick? = null
+        val a = get("$base/stream/$kind/${pathId(ep.id)}.json").optJSONArray("streams") ?: return@withContext emptyList()
+        val out = ArrayList<Pick>()
         for (i in 0 until a.length()) {
             val s = a.optJSONObject(i) ?: continue
             val text = s.optString("title") + " " + s.optString("name") + " " + s.optJSONObject("behaviorHints")?.optString("filename").orEmpty()
             val size = s.optJSONObject("behaviorHints")?.optLong("videoSize", 0L)?.takeIf { it > 0 } ?: sizeIn(text)
-            if (size <= 0) continue
             val url = streamUrl(s) ?: continue
-            val p = Pick(url, size, text.trim().lineSequence().firstOrNull().orEmpty())
-            if (smallest == null || size < smallest.size) smallest = p
-            if (size <= maxBytes && (best == null || size > best.size)) best = p
+            // the label: the quality and the name, on one line (the add-ons put them on several)
+            val label = (s.optString("name").replace('\n', ' ') + "  " + s.optString("title").lineSequence().firstOrNull().orEmpty()).trim()
+            out.add(Pick(url, size, label.ifBlank { text.trim().take(80) }))
         }
-        best ?: smallest?.let { Pick(it.url, it.size, it.label, over = true) }
+        out
+    }
+
+    /**
+     * The largest stream of the episode that is under [maxBytes]. When there is none under it, the smallest one there is (marked [Pick.over]); when no stream
+     * says its size, the first one the add-on lists. Null only when the add-on has no stream at all.
+     */
+    suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? {
+        val all = streams(addonBase, ep, kind)
+        val sized = all.filter { it.size > 0 }
+        val under = sized.filter { it.size <= maxBytes }.maxByOrNull { it.size }
+        if (under != null) return under
+        val smallest = sized.minByOrNull { it.size }
+        if (smallest != null) return Pick(smallest.url, smallest.size, smallest.label, over = true)
+        return all.firstOrNull()
     }
 
     private val posters = android.util.LruCache<String, android.graphics.Bitmap>(40)
@@ -195,7 +219,7 @@ object SeasonDl {
         false
     }
 
-    private fun sizeText(b: Long) = if (b >= 1_073_741_824L) "%.1f GB".format(b / 1_073_741_824.0) else "${b / 1_048_576} MB"
+    private fun sizeText(b: Long) = if (b <= 0L) "?" else if (b >= 1_073_741_824L) "%.1f GB".format(b / 1_073_741_824.0) else "${b / 1_048_576} MB"
 
     private val SIZES = listOf(500, 800, 1500, 3000, 6000)
 
@@ -223,6 +247,10 @@ object SeasonDl {
         // the stream chosen for each episode of the open season (null = looked at, none says its size); found in the background as soon as a season opens
         var found by remember { mutableStateOf<Map<String, Pick?>>(emptyMap()) }
         var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
+        // why the add-on gave nothing (its answer or the network's), shown under the list; and the episode whose streams are being chosen from
+        var why by remember { mutableStateOf("") }
+        var choose by remember { mutableStateOf<Ep?>(null) }
+        var options by remember { mutableStateOf<List<Pick>?>(null) }
         fun limit() = mb * 1_048_576L
         fun clean(s: String) = s.replace(Regex("[^\\p{L}\\p{N} ._()-]"), "").trim()
         fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = ""; season = null; picked = emptySet(); found = emptyMap() }
@@ -340,13 +368,14 @@ object SeasonDl {
                                     list.forEachIndexed { i, ep ->
                                         note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
                                         // the stream already found for the list is used; else it is looked for now
-                                        val pick = if (found.containsKey(ep.id)) found[ep.id] else runCatching { best(addon, ep, limit()) }.getOrNull()
+                                        val pick = if (found[ep.id] != null) found[ep.id] else runCatching { best(addon, ep, limit()) }.onFailure { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }.getOrNull()
                                         if (pick == null) skipped++ else { if (pick.over) over++; picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode)) }
                                     }
                                     note = tr("Starting…", "Başlıyor…")
                                     start(picks)
                                     busy = false
-                                    if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} started (up to $mb MB each)", "${picks.size} başladı (her biri en çok $mb MB)") +
+                                    if (note == tr("Starting…", "Başlıyor…") && picks.isEmpty() && why.isNotEmpty()) note = why
+                                    else if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} started (up to $mb MB each)", "${picks.size} başladı (her biri en çok $mb MB)") +
                                         (if (over > 0) tr(", $over over the limit (the smallest there was)", ", $over sınırın üstünde (bulunan en küçük)") else "") +
                                         (if (skipped > 0) tr(", $skipped without a stream", ", $skipped için yayın yok") else "")
                                 }
@@ -357,7 +386,7 @@ object SeasonDl {
                                 if (todo.isEmpty() || addon.isBlank()) return
                                 val sem = kotlinx.coroutines.sync.Semaphore(3)
                                 scope.launch {
-                                    todo.map { ep -> scope.launch { sem.acquire(); try { val p = runCatching { best(addon, ep, limit()) }.getOrNull(); found = found + (ep.id to p) } finally { sem.release() } } }
+                                    todo.map { ep -> scope.launch { sem.acquire(); try { val r = runCatching { best(addon, ep, limit()) }; r.exceptionOrNull()?.let { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }; found = found + (ep.id to r.getOrNull()) } finally { sem.release() } } }
                                 }
                             }
                             // the sizes are looked up as soon as a season is open, and again when the size limit or the add-on changes
@@ -369,7 +398,8 @@ object SeasonDl {
                                         val n = eps.count { it.season == sn }
                                         Column(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                                             // Cinemeta has no picture of its own for a season: the series poster stands for it, the number on it when it is not there
-                                            Poster(sel.poster, 64.dp, 92.dp, "S$sn")
+                                            // each season its own picture: the picture of its first episode that has one (the series poster when none has)
+                                            Poster(eps.firstOrNull { it.season == sn && it.thumb.isNotBlank() }?.thumb ?: sel.poster, 64.dp, 92.dp, "S$sn")
                                             Text(tr("Season $sn", "Sezon $sn"), color = if (season == sn) T.accent else T.text, fontSize = 13.sp)
                                             Text(tr("$n ep", "$n bölüm"), color = T.sub, fontSize = 11.sp)
                                         }
@@ -401,6 +431,11 @@ object SeasonDl {
                                             // the size of the stream that would be taken ("…" while it is being looked for, "—" when there is none)
                                             val f = found[ep.id]
                                             Text(if (!found.containsKey(ep.id)) "…" else if (f == null) "—" else (if (f.over) "↑ " else "") + sizeText(f.size), color = if (f?.over == true) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.sub, fontSize = 12.sp)
+                                            // the list of all its streams (several qualities and sizes): one is chosen to download
+                                            androidx.compose.foundation.layout.Box(Modifier.clickable {
+                                                choose = ep; options = null
+                                                scope.launch { options = runCatching { streams(addon, ep) }.onFailure { e -> why = tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }.getOrDefault(emptyList()).sortedByDescending { it.size } }
+                                            }.padding(6.dp)) { PIcon("more", T.text, 20.dp) }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
                                     }
@@ -410,6 +445,33 @@ object SeasonDl {
                         }
                     }
                     if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
+                    if (why.isNotEmpty() && why != note) Text(why, color = androidx.compose.ui.graphics.Color(0xFFE5A04D), fontSize = 12.sp)
+                    // the streams of one episode to choose from: quality and size, a tap downloads that one
+                    choose?.let { ep ->
+                        com.umutk.pulse.WinAlert(onDismissRequest = { choose = null },
+                            title = { Text("S%02dE%02d".format(ep.season, ep.episode) + (if (ep.title.isNotBlank()) "  ·  " + ep.title else ""), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            text = {
+                                val opts = options
+                                Column(Modifier.height(420.dp).verticalScroll(rememberScrollState())) {
+                                    when {
+                                        opts == null -> Text(tr("Looking for streams…", "Yayınlar aranıyor…"), color = T.sub, fontSize = 13.sp)
+                                        opts.isEmpty() -> Text(why.ifEmpty { tr("No stream for this episode", "Bu bölüm için yayın yok") }, color = T.sub, fontSize = 13.sp)
+                                        else -> opts.forEach { o ->
+                                            Row(Modifier.fillMaxWidth().clickable {
+                                                val name = clean(show?.name.orEmpty()) + " S%02dE%02d".format(ep.season, ep.episode)
+                                                choose = null
+                                                scope.launch { start(listOf(o.url to name)); note = tr("Started (${sizeText(o.size)})", "Başladı (${sizeText(o.size)})") }
+                                            }.padding(vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                                Text(o.label, color = T.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(sizeText(o.size), color = if (o.size in 1..limit()) T.accent else T.sub, fontSize = 13.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = { androidx.compose.material3.TextButton({ choose = null }) { Text(tr("Close", "Kapat")) } })
+                    }
                     Spacer(Modifier.height(2.dp))
                 }
             }

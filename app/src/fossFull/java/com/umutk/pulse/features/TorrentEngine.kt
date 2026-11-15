@@ -38,6 +38,40 @@ object TorrentEngine {
 
     private var session: SessionManager? = null
 
+    // the engine's native part (libtorrent, 16 MB on the phone) is not inside the app: it is fetched the first time a torrent is downloaded, from Maven Central
+    // (the same file the app was built with, checked by its SHA-256), and kept in the app's own folder
+    private const val LIB_URL = "https://repo1.maven.org/maven2/org/libtorrent4j/libtorrent4j-android-arm64/2.1.0-38/libtorrent4j-android-arm64-2.1.0-38.jar"
+    private const val LIB_ENTRY = "lib/arm64-v8a/libtorrent4j.so"
+    private const val LIB_SHA = "9141ae3d8e3af134eef6098bf83dc8d818e7bb45b4e1cb6b493503e7a83c3c63"
+
+    private fun sha256(f: File): String = java.security.MessageDigest.getInstance("SHA-256").let { md ->
+        f.inputStream().use { ins -> val b = ByteArray(65536); while (true) { val n = ins.read(b); if (n < 0) break; md.update(b, 0, n) } }
+        md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @Synchronized
+    private fun ensureLib(ctx: Context) {
+        val f = File(ctx.filesDir, "torrent/libtorrent4j.so")
+        if (!(f.isFile && f.length() > 1_000_000 && sha256(f) == LIB_SHA)) {
+            f.parentFile?.mkdirs()
+            val tmp = File(f.parentFile, "lib.part")
+            val c = java.net.URL(LIB_URL).openConnection() as java.net.HttpURLConnection
+            c.connectTimeout = 15_000; c.readTimeout = 30_000
+            try {
+                if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
+                java.util.zip.ZipInputStream(c.inputStream.buffered()).use { z ->
+                    var e = z.nextEntry
+                    while (e != null && e.name != LIB_ENTRY) e = z.nextEntry
+                    if (e == null) throw IOException("no library in the download")
+                    tmp.outputStream().use { o -> z.copyTo(o) }
+                }
+            } finally { c.disconnect() }
+            if (sha256(tmp) != LIB_SHA) { tmp.delete(); throw IOException("the downloaded library is not the expected one") }
+            f.delete(); if (!tmp.renameTo(f)) { tmp.copyTo(f, overwrite = true); tmp.delete() }
+        }
+        System.setProperty("libtorrent4j.jni.path", f.absolutePath)
+    }
+
     @Synchronized
     private fun sm(): SessionManager = session ?: SessionManager().also {
         val sp = SettingsPack()
@@ -82,6 +116,7 @@ object TorrentEngine {
      * [onProgress] the bytes of the wanted file so far, its size, and the peers.
      */
     suspend fun download(ctx: Context, magnet: String, torrent: ByteArray?, base: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? = withContext(Dispatchers.IO) {
+        try { ensureLib(ctx) } catch (e: Throwable) { throw IOException("the torrent engine could not be fetched (6 MB, once): ${e.message ?: e.javaClass.simpleName}") }
         val s = try { sm() } catch (e: Throwable) { throw IOException("the torrent engine could not start: ${e.message ?: e.javaClass.simpleName}") }
         val idx = magnetParam(magnet, "pulse_idx")?.toIntOrNull() ?: -1
         val tInfo = torrent?.let { runCatching { TorrentInfo(it) }.getOrElse { throw IOException("this .torrent file could not be read") } }
