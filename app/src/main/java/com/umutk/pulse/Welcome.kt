@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "star" to (tr("Gallery: a new zoom for the photo viewer: pinch, pan and double tap; a picture that stayed black is shown again.",
-        "Galeri: görüntüleyicide yeni zoom: iki parmakla büyüt, kaydır, çift dokun; siyah kalan fotoğraf yeniden gösterilir.")),
+    "star" to (tr("Gallery: the photo viewer's zoom is written again from the start: two fingers to zoom and move, a double tap to zoom in and out, and a selected photo is drawn again instead of staying black.",
+        "Galeri: fotoğraf görüntüleyicinin zoom'u baştan yazıldı: iki parmakla yakınlaştır ve kaydır, çift dokunuşla yaklaş ve uzaklaş; seçili fotoğraf siyah kalmak yerine yeniden çizilir.")),
     "star" to (tr("Gallery: zooming a picture no longer turns the screen black; the sharp part on the screen is read straight from the file, as in the Fossify Gallery (up to 10x). Game Hub: back from a game the open case is closed cleanly, with no black area. Keyboard: the first word of a message and words with a capital get suggestions again.",
         "Galeri: resmi yakınlaştırınca ekran artık kararmaz; ekrandaki keskin kısım, Fossify Galeri'deki gibi doğrudan dosyadan okunur (10 kata kadar). Game Hub: oyundan dönünce açık kutu temiz kapanır, siyah alan kalmaz. Klavye: mesajın ilk kelimesi ve büyük harfli kelimeler yine öneri alır.")),
     "download" to (tr("Torrent downloads work: the \"dereference null\" error is gone, the episodes of one season pack download together instead of staying at 0/0, the series card's magnet links now carry working trackers, and a row shows \"finding peers\" while it waits.",
