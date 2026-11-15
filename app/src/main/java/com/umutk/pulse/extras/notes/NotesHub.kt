@@ -279,7 +279,6 @@ fun NotesHub(onBack: () -> Unit) {
                     rev = settingsRev,
                 )
             }
-        }
             is NScreen.Sketch -> NSketch { name ->
                 if (name != null) edit(s.id) { it.copy(files = it.files + name) }
                 screen = NScreen.Edit(s.id)
@@ -314,6 +313,7 @@ fun NotesHub(onBack: () -> Unit) {
                     selected = emptySet()
                 },
             )
+        }
         }
     }
 
