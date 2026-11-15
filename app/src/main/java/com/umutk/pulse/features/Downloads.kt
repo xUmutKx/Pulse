@@ -1215,6 +1215,34 @@ private fun DownloadsContent() {
             Spacer(Modifier.weight(1f))
             Box(Modifier.clickable { openTool("downloads_settings") }) { PIcon("settings", T.text, 22.dp) }
         }
+        // the torrent engine (6 MB) is fetched from here when it is not on the phone yet: a torrent download waits for it, and it goes on by itself once it is here
+        if (TorrentEngine.available) {
+            val engineHere by androidx.compose.runtime.produceState(initialValue = true, ctx) { value = withContext(Dispatchers.IO) { TorrentEngine.ready(ctx) } }
+            val engineBusy by TorrentEngine.fetching.collectAsState()
+            var engineFailed by remember { mutableStateOf(false) }
+            var engineNow by remember { mutableStateOf<Boolean?>(null) }
+            val here = engineNow ?: engineHere
+            if (!here) PCard(Modifier.clickable(enabled = !engineBusy) {
+                findScope.launch {
+                    val ok = TorrentEngine.fetch(ctx)
+                    engineFailed = !ok
+                    if (ok) {
+                        engineNow = true
+                        Downloads.tasks.value.filter { it.state.value == DlState.FAILED && it.error.value == NEEDS_ENGINE }.forEach { Downloads.resume(it) }
+                    }
+                }
+            }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("download", com.umutk.pulse.Look.accent, 22.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(when {
+                        engineBusy -> tr("Downloading the torrent engine…", "Torrent motoru indiriliyor…")
+                        engineFailed -> tr("The torrent engine could not be downloaded. Try again", "Torrent motoru indirilemedi. Tekrar dene")
+                        else -> tr("Download the torrent engine (6 MB), for torrent downloads", "Torrent motorunu indir (6 MB), torrent indirmeleri için")
+                    }, color = T.text, fontSize = 13.sp)
+                }
+            }
+        }
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
