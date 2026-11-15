@@ -84,6 +84,13 @@ fun SubScreen(id: String, back: () -> Unit) {
                 com.umutk.pulse.features.CoverTool()
             }
         }
+        id == "downloads_settings" -> {
+            androidx.activity.compose.BackHandler { back() }
+            Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                PHead("Download manager")
+                com.umutk.pulse.features.SeasonDl.Settings()
+            }
+        }
         id == "installer_settings" -> {
             androidx.activity.compose.BackHandler { back() }
             Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {

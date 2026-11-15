@@ -1213,7 +1213,7 @@ private fun DownloadsContent() {
                 }
             }
             Spacer(Modifier.weight(1f))
-            Box(Modifier.clickable { openTool("installer_settings") }) { PIcon("settings", T.text, 22.dp) }
+            Box(Modifier.clickable { openTool("downloads_settings") }) { PIcon("settings", T.text, 22.dp) }
         }
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
