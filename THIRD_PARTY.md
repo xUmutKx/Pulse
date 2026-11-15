@@ -41,3 +41,9 @@ The Sonic look (extras/music/cassette/SonicPlayer.kt) follows the design of [Son
 The symbols on the corners of the letter keys (Settings > Keyboard > Corner swipes, `extras/keyboard/KeyboardCorners.kt`) are taken from the QWERTY (US) layout of
 [Unexpected Keyboard](https://github.com/Julow/Unexpected-Keyboard) by Julow (`srcs/layouts/latn_qwerty_us.xml`). Its layout definitions are released under
 CC0 1.0 (public domain); the rest of that project is GPL-3.0 and none of its code is used.
+
+## Photo search (assets/photoai)
+
+The gallery search names what is in a picture on the phone itself. It uses [TensorFlow Lite](https://www.tensorflow.org/lite) (Apache 2.0) and the EfficientNet-Lite0 image classifier
+(Apache 2.0, from the [MediaPipe models](https://ai.google.dev/edge/mediapipe/solutions/vision/image_classifier), int8, 1000 ImageNet classes). The English names of the classes are the ImageNet class list
+(ILSVRC 2012); the Turkish words in `labels.tsv` were written for Pulse. Faces are found with Android's own `android.media.FaceDetector`. Nothing is sent anywhere.

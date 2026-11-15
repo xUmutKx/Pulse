@@ -153,6 +153,8 @@ class ImageViewActivity : ComponentActivity() {
         setContent { LookHost(transparent = false, lookId = PhotosPrefs.look) { th ->
             if (PhotosPrefs.amoled && th.material) Look.resolved = PhotosPrefs.black(th)
             var viewing by remember { mutableStateOf(!gallery) }
+            // Back on a picture opened from the gallery closes only the picture: the gallery (its cover page) stays as it was, the app is not left
+            androidx.activity.compose.BackHandler(enabled = gallery && viewing) { viewing = false; items.clear() }
             // the gallery stays composed under the viewer: coming back leaves it where it was (nothing is read or drawn again), the viewer lies over it
             androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
                 if (gallery) androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(th.bg).navigationBarsPadding()) { PhotosGalleryScreen { l, i -> items.clear(); items.addAll(l); startIdx = i; viewing = true } }

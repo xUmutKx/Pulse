@@ -266,6 +266,7 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     }
     LaunchedEffect(ok, PhotosPrefs.tick, PhotosPrefs.showVideos) { if (ok) { val l = withContext(Dispatchers.IO) { queryPhotos(ctx).also { if (it.isNotEmpty()) { PhotosCache.list = it; PhotosCache.save(ctx, it) } } }; PhotosPrefs.sync(ctx, l); if (!PhotosCache.same(all, l)) all = l } }
 
+    LaunchedEffect(all) { all?.let { if (it.isNotEmpty()) PhotoIndex.start(ctx, it) } }
     var tab by rememberSaveable { mutableIntStateOf(PhotosPrefs.startTab) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
@@ -285,9 +286,15 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     val fmtAll = remember(loc) { SimpleDateFormat("d MMMM MMM yyyy EEEE", loc) }
     val toks = remember(q) { q.trim().lowercase(loc).split(' ').filter { it.isNotEmpty() } }
     fun hit(text: String) = toks.all { text.contains(it) }
-    val visible = remember(base, tab, album, toks, favs) {
+    // what the pictures show (an animal, a food, a stethoscope...) and how many faces they have, found on the phone in the background (PhotoIndex); it joins the name search
+    val idxTick by PhotoIndex.tick.collectAsState()
+    val visible = remember(base, tab, album, toks, favs, idxTick) {
         when {
-            toks.isNotEmpty() -> base.filter { hit((it.src.name + " " + it.album + " " + fmtAll.format(Date(it.date))).lowercase(loc)) }
+            toks.isNotEmpty() -> {
+                val byName = base.filter { hit((it.src.name + " " + it.album + " " + fmtAll.format(Date(it.date))).lowercase(loc)) }
+                val seen = byName.mapTo(HashSet()) { it.src.uri.toString() }
+                byName + PhotoIndex.search(q, base).filter { seen.add(it.src.uri.toString()) }
+            }
             tab == 2 -> base.filter { it.src.uri.toString() in favs }
             album != null -> base.filter { it.album == album }
             else -> base
@@ -298,7 +305,7 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     val pics = remember(visible) { visible.filter { !it.video } }
     val srcs = remember(pics) { pics.map { it.src } }
     val index = remember(pics) { pics.withIndex().associate { it.value.src.uri.toString() to it.index } }
-    val grp = if (PhotosPrefs.sortBy == "name") "none" else PhotosPrefs.group
+    val grp = if (PhotosPrefs.sortBy == "name" || toks.isNotEmpty()) "none" else PhotosPrefs.group
     val entries = remember(visible, loc, grp, albumHits) {
         val out = ArrayList<Any>(); var last = ""
         if (albumHits.isNotEmpty()) out.add(albumHits)
@@ -356,6 +363,9 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
                     }
                 }
             }
+            val readDone by PhotoIndex.done.collectAsState(); val readAll by PhotoIndex.total.collectAsState()
+            if ((results || searchOpen) && readAll > 0 && readDone < readAll)
+                Text(tr("Reading the pictures for search…  $readDone / $readAll", "Arama için resimler okunuyor…  $readDone / $readAll"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
             val l = all
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when {
