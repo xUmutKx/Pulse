@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
-import android.graphics.PointF
 import android.media.ExifInterface
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -39,8 +38,6 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
-import com.davemorrissey.labs.subscaleview.ImageSource
-import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -51,6 +48,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -461,9 +466,8 @@ internal fun ImgViewerScreen(items: SnapshotStateList<ImgSrc>, start: Int, onFin
 }
 
 /**
- * One page of the pager. The picture is shown by the Subsampling Scale Image View, the zoom view the Fossify Gallery uses: it reads the file itself, only the
- * part on the screen at the sharpness the zoom needs, so a big photo never has to fit in memory whole (that was what turned the screen black).
- * Pinch, pan and double tap are its own; a single tap hides or shows the bars; a LIVE picture plays from its chip.
+ * One page of the pager: the picture, its own pinch zoom, pan and double tap (the zoom goes up to the zoom level set in the settings). The picture is read once
+ * at a size that stays sharp when zoomed (the long edge 2048 px). A single tap hides or shows the bars; a LIVE picture plays by a long press or its chip.
  */
 @Composable
 private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTick: Int, onLive: (Boolean) -> Unit, onZoomed: (Boolean) -> Unit, onTap: () -> Unit) {
@@ -472,13 +476,44 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
     val live by produceState<LiveInfo?>(null, s, rev) { value = withContext(Dispatchers.IO) { imgLiveInfo(ctx, s) } }
     var vid by remember { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
-    // null while the picture loads, true when it is shown, false when it cannot be read
-    var ready by remember(s, rev) { mutableStateOf<Boolean?>(null) }
-    val view = remember(s, rev) { arrayOfNulls<SubsamplingScaleImageView>(1) }
+    // the picture: false while it is read, then true with the picture (null when it cannot be read)
+    val pic by produceState<Pair<Boolean, Bitmap?>>(false to null, s, rev) {
+        value = false to null
+        value = true to withContext(Dispatchers.IO) { imgDecode(ctx, s, 2048) }
+    }
+    val b = pic.second
+    var scale by remember(s, rev) { mutableFloatStateOf(1f) }
+    var ox by remember(s, rev) { mutableFloatStateOf(0f) }
+    var oy by remember(s, rev) { mutableFloatStateOf(0f) }
+    var box by remember { mutableStateOf(IntSize.Zero) }
     val activeNow by androidx.compose.runtime.rememberUpdatedState(active)
     val zoomedNow by androidx.compose.runtime.rememberUpdatedState(onZoomed)
     val tapNow by androidx.compose.runtime.rememberUpdatedState(onTap)
-    LaunchedEffect(active) { if (!active) vid = null }
+
+    // how far the picture may be moved at the zoom sc (it stays over the screen's edges, never beside them)
+    fun maxOff(sc: Float): Offset {
+        if (b == null || box.width == 0 || box.height == 0) return Offset.Zero
+        val fit = min(box.width.toFloat() / b.width, box.height.toFloat() / b.height)
+        return Offset(max(0f, (b.width * fit * sc - box.width) / 2f), max(0f, (b.height * fit * sc - box.height) / 2f))
+    }
+    fun setZoom(ns: Float, nx: Float, ny: Float) {
+        scale = ns
+        if (ns <= 1.001f) { scale = 1f; ox = 0f; oy = 0f; return }
+        val mo = maxOff(ns)
+        ox = nx.coerceIn(-mo.x, mo.x); oy = ny.coerceIn(-mo.y, mo.y)
+    }
+    // zoomed out: back to the whole picture; zoomed in: to the zoom level, centred on the point touched
+    fun toggle(p: Offset) {
+        val s0 = scale; val x0 = ox; val y0 = oy
+        var ns = 1f; var tx = 0f; var ty = 0f
+        if (s0 <= 1.01f) {
+            ns = PhotosPrefs.zoomLevel
+            val c = p - Offset(box.width / 2f, box.height / 2f)
+            val mo = maxOff(ns)
+            tx = (c.x * (1 - ns)).coerceIn(-mo.x, mo.x); ty = (c.y * (1 - ns)).coerceIn(-mo.y, mo.y)
+        }
+        scope.launch { animate(0f, 1f) { v, _ -> setZoom(s0 + (ns - s0) * v, x0 + (tx - x0) * v, y0 + (ty - y0) * v) } }
+    }
     fun playLive() {
         val li = live ?: return
         if (vid != null) { vid = null; return }
@@ -486,51 +521,49 @@ private fun ImgPage(s: ImgSrc, rev: Int, active: Boolean, zoomTick: Int, liveTic
         busy = true
         scope.launch { vid = withContext(Dispatchers.IO) { imgLiveFile(ctx, s, li) }; busy = false }
     }
-    // zoom in at the point tapped (or the middle), or back to the whole picture
-    fun toggleZoom(at: PointF?) {
-        val v = view[0] ?: return
-        if (ready != true) return
-        val fit = v.minScale
-        if (v.scale > fit * 1.01f) v.animateScaleAndCenter(fit, v.center)?.withDuration(220)?.start()
-        else v.animateScaleAndCenter(min(v.maxScale, fit * 2.5f), at ?: v.center)?.withDuration(220)?.start()
-    }
     var seenLive by remember { mutableIntStateOf(liveTick) }
     LaunchedEffect(live != null, active) { if (active) { onLive(live != null); if (live != null && PhotosPrefs.liveAuto) playLive() } }
     LaunchedEffect(liveTick) { if (liveTick != seenLive) { seenLive = liveTick; if (active) playLive() } }
     var seen by remember { mutableIntStateOf(zoomTick) }
-    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggleZoom(null) } }
+    LaunchedEffect(zoomTick) { if (zoomTick != seen) { seen = zoomTick; if (active) toggle(Offset(box.width / 2f, box.height / 2f)) } }
+    LaunchedEffect(scale > 1.01f, active) { if (active) onZoomed(scale > 1.01f) }
     // a page turned away from is shown whole again
-    LaunchedEffect(active) { if (!active) view[0]?.let { if (it.isReady) it.resetScaleAndCenter() } }
+    LaunchedEffect(active) { if (!active) { scale = 1f; ox = 0f; oy = 0f } }
 
-    Box(Modifier.fillMaxSize().systemGestureExclusion(), contentAlignment = Alignment.Center) {
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
-            SubsamplingScaleImageView(c).apply {
-                view[0] = this
-                setMaxScale(10f)
-                setDoubleTapZoomDuration(220)
-                setMinimumTileDpi(160)
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                // a tap hides or shows the bars, and closes a playing LIVE picture first
-                setOnClickListener { if (vid != null) vid = null else tapNow() }
-                setOnStateChangedListener(object : SubsamplingScaleImageView.OnStateChangedListener {
-                    override fun onScaleChanged(newScale: Float, origin: Int) { if (activeNow) zoomedNow(newScale > minScale * 1.01f) }
-                    override fun onCenterChanged(newCenter: PointF?, origin: Int) {}
-                })
-                setOnImageEventListener(object : SubsamplingScaleImageView.OnImageEventListener {
-                    override fun onReady() { ready = true }
-                    override fun onImageLoaded() {}
-                    override fun onPreviewLoadError(e: Exception) {}
-                    override fun onImageLoadError(e: Exception) { ready = false }
-                    override fun onTileLoadError(e: Exception) {}
-                    override fun onPreviewReleased() {}
-                })
-                setImage(ImageSource.uri(s.uri))
+    Box(Modifier.fillMaxSize().onSizeChanged { box = it }.systemGestureExclusion() // (a pinch near the edge was taken for Android's back swipe and closed the picture)
+        .pointerInput(b, live) {
+            detectTapGestures(
+                onTap = { if (vid != null) vid = null else tapNow() },
+                onDoubleTap = { p -> toggle(p) },
+                onLongPress = { if (live != null) playLive() })
+        }
+        .pointerInput(b) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                do {
+                    val ev = awaitPointerEvent()
+                    val n = ev.changes.count { it.pressed }
+                    // two fingers: the pager stops turning pages at once (it took the pinch for a swipe and showed the black edge of the next page on release)
+                    if (n >= 2 && activeNow) zoomedNow(true)
+                    // a single finger moves the picture only when it is zoomed; at the whole picture the pager turns the page
+                    if (n >= 2 || scale > 1.01f) {
+                        val z = ev.calculateZoom().takeIf { it.isFinite() && it > 0f } ?: 1f
+                        val pan = ev.calculatePan().let { if (it.x.isFinite() && it.y.isFinite()) it else Offset.Zero }
+                        val c = ev.calculateCentroid() - Offset(box.width / 2f, box.height / 2f)
+                        val ns = (scale * z).coerceIn(1f, PhotosPrefs.zoomLevel.coerceAtLeast(4f))
+                        val k = ns / scale
+                        setZoom(ns, ox * k + c.x * (1 - k) + pan.x, oy * k + c.y * (1 - k) + pan.y)
+                        ev.changes.forEach { if (it.positionChanged()) it.consume() }
+                    }
+                } while (ev.changes.any { it.pressed })
+                if (activeNow) zoomedNow(scale > 1.01f)
             }
-        }, update = { v -> v.isClickable = true })
-        when (ready) {
-            null -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
-            false -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
-            else -> {}
+        }, contentAlignment = Alignment.Center) {
+        when {
+            !pic.first -> CircularProgressIndicator(Modifier.size(28.dp), color = Look.accent, strokeWidth = 2.dp)
+            b == null -> Icon(Icons.Outlined.BrokenImage, null, Modifier.size(48.dp), T.sub)
+            else -> Image(remember(b) { b.asImageBitmap() }, null,
+                Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = ox; translationY = oy }, contentScale = ContentScale.Fit)
         }
         vid?.let { f -> ImgLivePlayer(f) { vid = null } }
         if (live != null && active && imgKind() != ImgKind.MATERIAL) Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 12.dp, top = 64.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f))

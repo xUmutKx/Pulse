@@ -73,7 +73,6 @@ dependencies {
         project.dependencies.add(name, "org.libtorrent4j:libtorrent4j:2.1.0-38")
         project.dependencies.add(name, "org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-38")
     }
-    implementation("com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0") // the zoom view of the photo viewer (Apache 2.0): the same one the Fossify Gallery uses, reads big pictures in parts
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
     add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
