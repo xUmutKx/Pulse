@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "download" to (tr("Download manager: its own settings, with a key for each season's picture from themoviedb.org. Downloads: season covers upright again, and the Trust button sits on the add-on whose certificate the phone does not trust.",
-        "İndirme yöneticisi: kendi ayarları, her sezonun resmi için themoviedb.org anahtarı. İndirmeler: sezon kapakları yine dik; sertifika uyarısı olan eklentinin satırında Bu sunucuya güven düğmesi.")),
+    "download" to (tr("Downloads: the torrent engine (6 MB) can be downloaded from the top of the Downloads page; a torrent download that waits for it goes on by itself.",
+        "İndirmeler: torrent motoru (6 MB) İndirmeler sayfasının üstünden indirilebilir; onu bekleyen torrent indirmesi kendiliğinden devam eder.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
