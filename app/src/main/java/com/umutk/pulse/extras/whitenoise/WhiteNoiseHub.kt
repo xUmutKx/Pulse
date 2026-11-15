@@ -44,6 +44,7 @@ import com.umutk.pulse.widgets.music.NoiseWidget
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -93,7 +94,24 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
     val look = NoiseThemes.byId(themeId)
     val fg = look?.cText ?: T.text
     val ac = look?.cAccent ?: T.accent
+    // the ambient loops are fetched only when asked for (they are not inside the app)
+    var missing by remember { mutableStateOf(false) }
+    var getting by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    val dlScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun getSounds() {
+        if (getting) return
+        getting = true; failed = false
+        dlScope.launch {
+            val ok = withContext(Dispatchers.IO) { fetchAmbient(ctx) }
+            val found = withContext(Dispatchers.IO) { AmbientMixer.scan(ctx) }
+            AmbientMixer.ensure(ctx, found)
+            missing = withContext(Dispatchers.IO) { ambientMissing(ctx) }
+            getting = false; failed = !ok
+        }
+    }
     LaunchedEffect(Unit) {
+        missing = withContext(Dispatchers.IO) { ambientMissing(ctx) }
         val found = withContext(Dispatchers.IO) { AmbientMixer.scan(ctx) }
         AmbientMixer.ensure(ctx, found)
         // First run: the calm preset is the pre-selected mix (levels only, nothing starts until play).
@@ -194,6 +212,19 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
             }
         }
         } else {
+            if (missing) item {
+                // the built-in loops are fetched only when asked for
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, fg.copy(alpha = .25f), RoundedCornerShape(14.dp))
+                    .clickable(enabled = !getting) { getSounds() }.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PIcon("download", ac, 22.dp)
+                    Text(when {
+                        getting -> tr("Downloading the sounds…", "Sesler indiriliyor…")
+                        failed -> tr("The sounds could not be downloaded", "Sesler indirilemedi")
+                        else -> tr("Download the sounds (8 MB)", "Sesleri indir (8 MB)")
+                    }, color = fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                }
+            }
             item {
                 // presets first, built-in then the user's; horizontal scroll keeps one row on a phone
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

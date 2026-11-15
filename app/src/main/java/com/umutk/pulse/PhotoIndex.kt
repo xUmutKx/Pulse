@@ -88,12 +88,13 @@ internal object PhotoIndex {
         val app = ctx.applicationContext
         ensureLoaded(app)
         if (job?.isActive == true) return
+        // the recogniser is fetched only when asked for ([fetch]); without it nothing is read
+        if (!hasModel(app)) return
         val todo = list.filter { !it.video && index[it.src.uri.toString()]?.mod != it.mod }.sortedByDescending { it.date }
         if (todo.isEmpty()) return
         done.value = 0; total.value = todo.size
         job = scope.launch {
-            // without the recogniser (no network yet) nothing is read now: the pictures would be kept as read with no tags; it is tried again next time
-            if (!ensureModel(app)) { total.value = 0; return@launch }
+            if (!hasModel(app)) { total.value = 0; return@launch }
             val tf = runCatching { Classifier(app) }.getOrNull()
             val out = StringBuilder()
             var n = 0
@@ -117,7 +118,37 @@ internal object PhotoIndex {
         }
     }
 
-    // the recogniser (5 MB) is not inside the app: it is fetched once, the first time the pictures are read, from Google's MediaPipe models (checked by its SHA-256)
+    /** The recogniser is on the phone (smart search can read the pictures). */
+    val modelReady = MutableStateFlow<Boolean?>(null)
+    /** The recogniser is being fetched; false again when it is here or could not be had. */
+    val fetching = MutableStateFlow(false)
+    /** The last fetch failed (no network, or a file that is not the expected one). */
+    val fetchFailed = MutableStateFlow(false)
+
+    fun hasModel(ctx: Context): Boolean = modelFile(ctx).let { it.isFile && it.length() > 1_000_000 }.also { modelReady.value = it }
+
+    /** Fetches the recogniser (only when the person asks for it), then reads the pictures of [list]. */
+    fun fetch(ctx: Context, list: List<Ph>) {
+        val app = ctx.applicationContext
+        if (fetching.value) return
+        fetching.value = true; fetchFailed.value = false
+        scope.launch {
+            val ok = ensureModel(app)
+            fetching.value = false; fetchFailed.value = !ok; modelReady.value = ok
+            if (ok) start(app, list)
+        }
+    }
+
+    /** Removes the recogniser and what it read (the person turned smart search off). */
+    fun remove(ctx: Context) {
+        job?.cancel()
+        scope.launch {
+            modelFile(ctx.applicationContext).delete(); fileOf(ctx.applicationContext).delete()
+            index.clear(); modelReady.value = false; done.value = 0; total.value = 0; tick.value++
+        }
+    }
+
+    // the recogniser (5 MB) is not inside the app: it is fetched once, when the person asks for smart search, from Google's MediaPipe models (checked by its SHA-256)
     private const val MODEL_URL = "https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/1/efficientnet_lite0.tflite"
     private const val MODEL_SHA = "bc2ffe19c1118de0c0c2a9088992da5589722656e0fba81421385300a4a34b16"
     private fun modelFile(ctx: Context) = File(ctx.filesDir, "photoai/efficientnet_lite0_int8.tflite")

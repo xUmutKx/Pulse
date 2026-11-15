@@ -49,25 +49,38 @@ fun installBundledPacks(context: Context): List<Pair<String, File>> {
                 }
                 mark.writeText(stamp)
             }
-            // the ambient loops themselves are not inside the app (8 MB, and they were kept twice: in the app and copied here): each is fetched once, from this
-            // project's own repository at a fixed commit, checked by its SHA-256, and kept here
-            // (offline: the first failure ends the round, the rest is tried the next time the sounds are listed)
-            var online = true
-            if (name == "ambient") for ((f, sha) in AMBIENT_FILES) {
-                val out = File(dir, f)
-                if (!online || (out.isFile && out.length() > 0)) continue
-                online = runCatching {
-                    val tmp = File(dir, "$f.part")
-                    val c = java.net.URL(AMBIENT_BASE + f).openConnection() as java.net.HttpURLConnection
-                    c.connectTimeout = 10_000; c.readTimeout = 20_000
-                    try { if (c.responseCode in 200..299) tmp.outputStream().use { o -> c.inputStream.use { it.copyTo(o) } } } finally { c.disconnect() }
-                    val got = java.security.MessageDigest.getInstance("SHA-256").digest(tmp.readBytes()).joinToString("") { "%02x".format(it) }
-                    if (got == sha) tmp.renameTo(out) else tmp.delete()
-                }.isSuccess
-            }
         }
         (name to dir).takeIf { File(dir, "pack.json").isFile }
     }
+}
+
+/** Some of the ambient loops are not on the phone yet (they are fetched only when asked for: [fetchAmbient]). */
+fun ambientMissing(context: Context): Boolean {
+    val dir = File(context.filesDir, "extras/bundled/ambient")
+    return AMBIENT_FILES.any { (f, _) -> File(dir, f).let { !it.isFile || it.length() == 0L } }
+}
+
+/**
+ * Fetches the ambient loops that are not on the phone (8 MB at most), when the person asks for them: they are not inside the app. Each comes from this
+ * project's own repository at a fixed commit and is kept only when its SHA-256 matches. Call on Dispatchers.IO. False when one could not be had.
+ */
+fun fetchAmbient(context: Context): Boolean {
+    installBundledPacks(context)
+    val dir = File(context.filesDir, "extras/bundled/ambient").apply { mkdirs() }
+    for ((f, sha) in AMBIENT_FILES) {
+        val out = File(dir, f)
+        if (out.isFile && out.length() > 0) continue
+        val ok = runCatching {
+            val tmp = File(dir, "$f.part")
+            val c = java.net.URL(AMBIENT_BASE + f).openConnection() as java.net.HttpURLConnection
+            c.connectTimeout = 10_000; c.readTimeout = 20_000
+            try { if (c.responseCode in 200..299) tmp.outputStream().use { o -> c.inputStream.use { it.copyTo(o) } } } finally { c.disconnect() }
+            val got = java.security.MessageDigest.getInstance("SHA-256").digest(tmp.readBytes()).joinToString("") { "%02x".format(it) }
+            if (got == sha) tmp.renameTo(out) else { tmp.delete(); false }
+        }.getOrDefault(false)
+        if (!ok) return false
+    }
+    return true
 }
 
 /** Where the ambient loops are fetched from: this project's repository at the commit they were last in the app (it never changes). */

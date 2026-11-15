@@ -612,6 +612,7 @@ internal fun magnetParam(url: String, key: String): String? =
 private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     if (!TorrentEngine.available) throw IOException("the torrent engine is in the full build, on 64-bit phones")
     val c = Downloads.appContext() ?: throw IOException("no context for the torrent engine")
+    if (!TorrentEngine.ready(c)) throw NeedsEngine()
     resumable = false
     // the torrent's own working folder sits next to the downloads (shared by the downloads of the same torrent: the episodes of a season pack)
     val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused },
@@ -739,6 +740,10 @@ private class NoRange(msg: String) : IOException(msg)
 /** The server now sends a different file than the saved bytes came from. */
 private class Changed : IOException("the file changed on the server")
 
+/** The torrent engine is not on the phone: it is fetched only when the person asks for it (the button on the row). */
+internal const val NEEDS_ENGINE = "the torrent engine is not downloaded yet"
+private class NeedsEngine : IOException(NEEDS_ENGINE)
+
 /** Opens [url] with a byte range, following redirects by hand (the built-in follow stops at http to https). */
 private fun open(url: String, range: String, ifRange: String? = null): HttpURLConnection {
     var u = URL(url)
@@ -783,6 +788,7 @@ private suspend fun DlTask.fetch() {
         } catch (e: Exception) {
             if (cancelled || paused) return
             if (e is Changed) { startOver(); continue }
+            if (e is NeedsEngine) { error.value = NEEDS_ENGINE; state.value = DlState.FAILED; Downloads.persist(); return }
             // no ranges from the server: the parts are dropped and the file starts again on one connection
             if (e is NoRange) partPos = null
             // a split download keeps its part positions, so only a single copy falls back to one connection
@@ -1331,6 +1337,23 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
                 text = { Text(t.file.name) },
                 confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { confirmDel = false; Downloads.remove(t) } },
                 dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { confirmDel = false } })
+        }
+        // a torrent waiting for the engine: it is fetched here, once (6 MB), then every download that waited for it goes on
+        if (st == DlState.FAILED && err == NEEDS_ENGINE) {
+            val getting by TorrentEngine.fetching.collectAsState()
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).background(T.text.copy(alpha = .08f))
+                .clickable(enabled = !getting) {
+                    scope.launch {
+                        val ok = TorrentEngine.fetch(ctx)
+                        if (ok) Downloads.tasks.value.filter { it.state.value == DlState.FAILED && it.error.value == NEEDS_ENGINE }.forEach { Downloads.resume(it) }
+                        else android.widget.Toast.makeText(ctx, tr("The torrent engine could not be downloaded", "Torrent motoru indirilemedi"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("download", com.umutk.pulse.Look.accent, 20.dp)
+                Text(if (getting) tr("Downloading the torrent engine…", "Torrent motoru indiriliyor…") else tr("Download the torrent engine (6 MB)", "Torrent motorunu indir (6 MB)"),
+                    color = T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
+            }
         }
         if (st == DlState.RUNNING || st == DlState.PAUSED) BarMeter(if (total > 0) done.toFloat() / total else 0f, T.text, Modifier.padding(top = 6.dp), h = 6.dp)
     }
