@@ -77,6 +77,8 @@ class KbState {
     var rootW by mutableStateOf(0f)
     /** The floating keyboard's place in its window (left, top, right, bottom): only this part takes touches, the rest of the window is the app's. */
     var floatRect: IntArray? = null
+    /** The floating keyboard's handle was tapped once: it shows as an X, and a second tap on it closes the keyboard (back to a line after a few seconds, or on every new opening). */
+    var floatArmed by mutableStateOf(false)
     var refreshInsets: (() -> Unit)? = null
     /** The field wants no suggestions or learning (password, email, URL). */
     var plain by mutableStateOf(false)

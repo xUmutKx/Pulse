@@ -429,6 +429,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onEvaluateFullscreenMode() = false
 
     private var kbRoot: View? = null
+    /** The floating keyboard's tall window was laid out (until a normal keyboard is shown again). */
+    private var floatWasUp = false
 
     /**
      * The floating keyboard: the window is tall (the keyboard sits at the bottom of it and moves up inside it), so only the keyboard's own part takes touches and
@@ -438,7 +440,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         super.onComputeInsets(outInsets)
         val r = st.floatRect
         val root = kbRoot
-        if (!KeyboardPrefs.floatNow) return
+        // the keyboard is going away (or gone) after the floating one was up: its tall window takes no touch at all while it leaves, so the app behind is usable at once
+        // (when the floating session ended first, the system's default made the whole tall window take touches for a moment)
+        if (!isInputViewShown && (KeyboardPrefs.floatNow || floatWasUp)) {
+            val h0 = window.window?.decorView?.height ?: 0
+            outInsets.contentTopInsets = h0; outInsets.visibleTopInsets = h0
+            outInsets.touchableInsets = android.inputmethodservice.InputMethodService.Insets.TOUCHABLE_INSETS_REGION
+            outInsets.touchableRegion.setEmpty()
+            return
+        }
+        if (!KeyboardPrefs.floatNow) { floatWasUp = false; return }
+        floatWasUp = true
         // until the keyboard has been measured, nothing in the tall window takes touches: otherwise the empty window would block the screen behind it
         if (r == null || root == null) {
             outInsets.contentTopInsets = window.window?.decorView?.height ?: 0
@@ -604,9 +616,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         heldMods.clear(); heldPrev.clear(); heldUsed.clear()
     }
     override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
-    override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
+    override fun onWindowHidden() {
+        super.onWindowHidden(); backToKeys(); st.floatArmed = false
+        // the touch area is asked again at once: a hidden keyboard takes no touches
+        runCatching { window.window?.decorView?.requestLayout() }
+    }
     override fun onWindowShown() {
         super.onWindowShown(); backToKeys()
+        st.floatArmed = false
         // shown again with the same field (back from a screenshot or another window): the bar is made again, it is not left empty
         runCatching { updateSuggestions() }
         kbRoot?.let { v -> v.postDelayed({ fillEmptyBar() }, 250) }
@@ -1674,7 +1691,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
-    override fun hide() { finishWord("", false); requestHideSelf(0) }
+    override fun hide() {
+        finishWord("", false); requestHideSelf(0)
+        // the tile's floating keyboard: its invisible window goes too, so nothing of it stays over the app
+        if (KeyboardPrefs.floatSession) runCatching { KeyboardFloatActivity.current?.finish() }
+    }
 
     private var recognizer: android.speech.SpeechRecognizer? = null
     private var voiceFallbackDone = false

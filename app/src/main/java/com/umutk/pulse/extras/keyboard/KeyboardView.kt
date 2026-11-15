@@ -172,6 +172,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -278,8 +279,10 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .08f).coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
             KeyboardPrefs.saveFloat()
-            // a tap on the handle (no drag) closes the keyboard
-            if (moved < 12.dp.toPx()) act.hide()
+            // a tap on the handle (no drag): the line turns into an X; a tap on the X closes the keyboard. A drag only moves it (and puts the X back to a line),
+            // so a touch on the handle never closes the keyboard by itself
+            if (moved < 12.dp.toPx()) { if (st.floatArmed) { st.floatArmed = false; act.hide() } else st.floatArmed = true }
+            else st.floatArmed = false
         }
     }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
@@ -314,9 +317,25 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 .padding(horizontal = if (th.samsung && !phoneLand) 6.dp else if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
-            if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
-                Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
-                Box(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", th.sub, 16.dp) }
+            // the handle: one line; tapped, its two halves turn into an X (an animation, no icon), which closes the keyboard on a second tap; after three seconds it is a line again
+            if (float) {
+                LaunchedEffect(st.floatArmed) { if (st.floatArmed) { kotlinx.coroutines.delay(3000); st.floatArmed = false } }
+                val x by animateFloatAsState(if (st.floatArmed) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .7f, stiffness = 500f), label = "floatX")
+                val lineCol = th.sub.copy(alpha = .8f)
+                val xCol = th.text
+                Box(Modifier.fillMaxWidth().height(30.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(width = 60.dp, height = 26.dp)) {
+                        val c = center
+                        val len = (56.dp.toPx() + (22.dp.toPx() - 56.dp.toPx()) * x)
+                        val col = androidx.compose.ui.graphics.lerp(lineCol, xCol, x)
+                        val w = 5.dp.toPx() + 1.dp.toPx() * x
+                        listOf(1f, -1f).forEach { sgn ->
+                            rotate(45f * sgn * x, c) {
+                                drawLine(col, androidx.compose.ui.geometry.Offset(c.x - len / 2, c.y), androidx.compose.ui.geometry.Offset(c.x + len / 2, c.y), w, StrokeCap.Round)
+                            }
+                        }
+                    }
+                }
             }
             // the number pad has no bar, except while the password manager has a saved login or password to offer for the field
             if (!st.numpad || st.emailBar || st.inline.isNotEmpty()) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
