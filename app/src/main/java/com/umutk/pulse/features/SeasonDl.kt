@@ -3,6 +3,8 @@ package com.umutk.pulse.features
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -76,6 +78,22 @@ object SeasonDl {
     }
     /** The add-ons in the saved text (several can be kept, one after the other; each is a link the person gave), as the addresses Pulse asks. */
     fun addons(text: String): List<String> = text.split(Regex("[\\s,]+")).mapNotNull { normalizeAddon(it) }.distinct()
+
+    /** What an add-on says about itself (its manifest): its name and whether it has streams at all. */
+    class AddonInfo(val name: String, val streams: Boolean)
+
+    /** Reads the add-on's manifest, so a link that is wrong, down, or not an add-on is told right when it is added (and not as an empty list later). */
+    suspend fun check(manifestUrl: String): AddonInfo = withContext(Dispatchers.IO) {
+        val j = get(manifestUrl.replace("|", "%7C"))
+        val r = j.optJSONArray("resources")
+        var streams = false
+        if (r != null) for (i in 0 until r.length()) {
+            val x = r.opt(i)
+            if (x == "stream" || (x is JSONObject && x.optString("name") == "stream")) streams = true
+        }
+        if (r == null && !j.has("name")) throw java.io.IOException(tr("this is not an add-on's manifest", "bu bir eklenti bildirimi değil"))
+        AddonInfo(j.optString("name"), streams)
+    }
 
     fun maxMb(c: Context) = p(c).getFloat("maxMb", 800f)
     fun save(c: Context, addon: String, mb: Float) { p(c).edit().putString("addon", addon.trim()).putFloat("maxMb", mb).apply() }
@@ -232,22 +250,62 @@ object SeasonDl {
         return all.firstOrNull()
     }
 
-    private val posters = android.util.LruCache<String, android.graphics.Bitmap>(40)
+    // 24 MB of pictures at most (a few big ones would fill a count-based cache)
+    private val posters = object : android.util.LruCache<String, android.graphics.Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: android.graphics.Bitmap) = value.byteCount
+    }
+
+    /** The catalogue's small posters ("/poster/small/") are 100 pixels wide: the same picture in its 500 pixel size is asked for (what the Stremio apps show). */
+    private fun sharp(url: String) = url.replace("/poster/small/", "/poster/medium/")
+
+    /** A picture of the catalogue at the size it is shown (2x the box, so it stays sharp), cached; null when it cannot be had. */
+    private fun loadPicture(url: String, wPx: Int): android.graphics.Bitmap? {
+        val key = "$url@$wPx"
+        posters.get(key)?.let { return it }
+        val raw = runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
+        val want = minOf(raw.width, wPx * 2)
+        val out = if (raw.width > want) android.graphics.Bitmap.createScaledBitmap(raw, want, (raw.height * want.toFloat() / raw.width).toInt().coerceAtLeast(1), true).also { raw.recycle() } else raw
+        posters.put(key, out)
+        return out
+    }
 
     /** A picture of the catalogue, loaded as it is shown; while it is not there (or there is none) the box shows [label], so a missing picture never leaves a hole. */
     @Composable
     private fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
-        val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get(url), url) {
+        val src = sharp(url)
+        val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
+        val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {
             // a new link starts from its own cached picture (or none): the picture of the link before must not stay (a list that changes kept the old posters)
-            value = posters.get(url)
-            if (value == null && url.startsWith("http")) value = withContext(Dispatchers.IO) {
-                runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }) } }.getOrNull()?.also { posters.put(url, it) }
-            }
+            value = posters.get("$src@$wPx")
+            if (value == null && src.startsWith("http")) value = withContext(Dispatchers.IO) { loadPicture(src, wPx) }
         }
         val b = bmp
-        androidx.compose.foundation.layout.Box(Modifier.width(w).height(h).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(T.line.copy(alpha = .35f)), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.width(w).height(h), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        androidx.compose.foundation.layout.Box(Modifier.width(w).height(h).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(T.line.copy(alpha = .35f)), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.width(w).height(h), contentScale = androidx.compose.ui.layout.ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
             else if (label.isNotEmpty()) Text(label, color = T.sub, fontSize = 13.sp)
+        }
+    }
+
+    /** A season's cover: its first episode's picture, wide and sharp, with the season and its episode count over a soft shade at the bottom; a ring when it is the open one. */
+    @Composable
+    private fun SeasonCover(url: String, title: String, sub: String, selected: Boolean) {
+        val src = sharp(url)
+        val w = 176.dp
+        val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
+        val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {
+            value = posters.get("$src@$wPx")
+            if (value == null && src.startsWith("http")) value = withContext(Dispatchers.IO) { loadPicture(src, wPx) }
+        }
+        val b = bmp
+        val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+        androidx.compose.foundation.layout.Box(Modifier.width(w).height(99.dp).clip(shape).background(T.line.copy(alpha = .35f))
+            .then(if (selected) Modifier.border(2.dp, T.accent, shape) else Modifier)) {
+            if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
+            Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color(0xCC000000)), startY = 120f)))
+            Column(Modifier.align(androidx.compose.ui.Alignment.BottomStart).padding(10.dp, 6.dp)) {
+                Text(title, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1)
+                Text(sub, color = androidx.compose.ui.graphics.Color(0xCCFFFFFF), fontSize = 11.sp, maxLines = 1)
+            }
         }
     }
 
@@ -302,6 +360,8 @@ object SeasonDl {
         var addon by remember { mutableStateOf(addon(ctx)) }
         var editAddon by remember { mutableStateOf(addon(ctx).isBlank()) }
         var draft by remember { mutableStateOf("") }
+        // what each add-on's manifest said (true = it answers and has streams, the text under its name), filled in as they are added or opened
+        var states by remember { mutableStateOf(mapOf<String, Pair<Boolean, String>>()) }
         var mb by remember { mutableStateOf(maxMb(ctx).toInt()) }
         var q by remember { mutableStateOf("") }
         var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
@@ -351,9 +411,21 @@ object SeasonDl {
                     // 1. where the streams come from
                     Caption(tr("1  Add-ons (as many as you like)", "1  Eklentiler (istediğin kadar)"))
                     // the add-ons given so far, each with a remove button; a new one is added with the field below (any number: when one does not answer, the next one does)
+                    androidx.compose.runtime.LaunchedEffect(addon) {
+                        for (one in addons(addon)) if (states[one] == null) {
+                            val r = runCatching { check(one) }
+                            states = states + (one to r.fold(
+                                { i -> (i.streams) to (i.name.ifBlank { runCatching { Uri.parse(one).host }.getOrNull() ?: one } + if (i.streams) "" else tr("  (no streams)", "  (yayın yok)")) },
+                                { e -> said(e); false to (e.message ?: e.javaClass.simpleName) }))
+                        }
+                    }
                     addons(addon).forEach { one ->
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Text("✓  " + (runCatching { Uri.parse(one).host }.getOrNull() ?: one), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            val st = states[one]
+                            Column(Modifier.weight(1f)) {
+                                Text((if (st == null) "…  " else if (st.first) "✓  " else "✗  ") + (st?.second ?: (runCatching { Uri.parse(one).host }.getOrNull() ?: one)), color = if (st != null && !st.first) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                if (st != null) Text(runCatching { Uri.parse(one).host }.getOrNull().orEmpty(), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                            }
                             PChip(false, tr("Remove", "Kaldır")) { addon = addons(addon).filter { it != one }.joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = addon.isBlank() }
                         }
                     }
@@ -400,8 +472,8 @@ object SeasonDl {
                                     scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
                                 } else note = ""
                             }.padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                Poster(s.poster)
-                                Spacer(Modifier.width(10.dp))
+                                Poster(s.poster, 54.dp, 80.dp)
+                                Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(s.name, color = T.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                     if (s.year.isNotBlank()) Text(s.year, color = T.sub, fontSize = 12.sp)
@@ -410,8 +482,8 @@ object SeasonDl {
                         } }
                     } else {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Poster(sel.poster)
-                            Spacer(Modifier.width(10.dp))
+                            Poster(sel.poster, 64.dp, 96.dp)
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(sel.name, color = T.accent, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 if (sel.year.isNotBlank()) Text(sel.year, color = T.sub, fontSize = 12.sp)
@@ -470,12 +542,9 @@ object SeasonDl {
                                 androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(seasons) { sn ->
                                         val n = eps.count { it.season == sn }
-                                        Column(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }, horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                                            // Cinemeta has no picture of its own for a season: the series poster stands for it, the number on it when it is not there
-                                            // each season its own picture: the picture of its first episode that has one (the series poster when none has)
-                                            Poster(eps.firstOrNull { it.season == sn && it.thumb.isNotBlank() }?.thumb ?: sel.poster, 64.dp, 92.dp, "S$sn")
-                                            Text(tr("Season $sn", "Sezon $sn"), color = if (season == sn) T.accent else T.text, fontSize = 13.sp)
-                                            Text(tr("$n ep", "$n bölüm"), color = T.sub, fontSize = 11.sp)
+                                        Box(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }) {
+                                            // Cinemeta has no picture of its own for a season: each one shows the picture of its first episode that has one (the series poster when none has)
+                                            SeasonCover(eps.firstOrNull { it.season == sn && it.thumb.isNotBlank() }?.thumb ?: sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
                                         }
                                     }
                                 }
@@ -496,7 +565,7 @@ object SeasonDl {
                                             androidx.compose.foundation.layout.Box(Modifier.width(22.dp).height(22.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { if (on) PIcon("check", T.accent, 20.dp) }
                                             Spacer(Modifier.width(8.dp))
                                             // the episode's own picture; without one the series poster, and without that the number
-                                            Poster(ep.thumb.ifBlank { sel.poster }, 96.dp, 54.dp, "E%02d".format(ep.episode))
+                                            Poster(ep.thumb.ifBlank { sel.poster }, 112.dp, 63.dp, "E%02d".format(ep.episode))
                                             Spacer(Modifier.width(10.dp))
                                             Column(Modifier.weight(1f)) {
                                                 Text("E%02d".format(ep.episode) + if (ep.title.isNotBlank()) "  ·  " + ep.title else "", color = if (on) T.text else T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -523,7 +592,7 @@ object SeasonDl {
                     // the server's certificate is not one the phone knows: shown with its fingerprint, trusted only when the person says so (just that certificate, just this server)
                     cert?.let { cp ->
                         Text(tr("Fingerprint (SHA-256): ", "Parmak izi (SHA-256): ") + cp.sha.chunked(2).take(8).joinToString(":") + "…", color = T.sub, fontSize = 11.sp)
-                        PButton(tr("Trust this server", "Bu sunucuya güven")) { SeasonDl.trust(ctx, cp); cert = null; why = "" }
+                        PButton(tr("Trust this server", "Bu sunucuya güven")) { SeasonDl.trust(ctx, cp); cert = null; why = ""; states = emptyMap() }
                     }
                     // the streams of one episode to choose from: quality and size, a tap downloads that one
                     choose?.let { ep ->
