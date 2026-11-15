@@ -318,7 +318,7 @@ object SeasonDl {
     @Composable
     private fun SeasonCover(url: String, title: String, sub: String, selected: Boolean) {
         val src = sharp(url)
-        val w = 176.dp
+        val w = 96.dp
         val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
         val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {
             value = posters.get("$src@$wPx")
@@ -326,7 +326,7 @@ object SeasonDl {
         }
         val b = bmp
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-        androidx.compose.foundation.layout.Box(Modifier.width(w).height(99.dp).clip(shape).background(T.line.copy(alpha = .35f))
+        androidx.compose.foundation.layout.Box(Modifier.width(w).height(144.dp).clip(shape).background(T.line.copy(alpha = .35f))
             .then(if (selected) Modifier.border(2.dp, T.accent, shape) else Modifier)) {
             if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
             Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color(0xCC000000)), startY = 120f)))
@@ -394,6 +394,9 @@ object SeasonDl {
         var listItems by remember { mutableStateOf(listOf<ListedAddon>()) }
         // what each add-on's manifest said (true = it answers and has streams, the text under its name), filled in as they are added or opened
         var states by remember { mutableStateOf(mapOf<String, Pair<Boolean, String>>()) }
+        // an add-on whose server certificate the phone does not trust: its problem, and the button that trusts that one certificate
+        var certs by remember { mutableStateOf(mapOf<String, SeasonDl.CertProblem>()) }
+        var checkTick by remember { mutableStateOf(0) }
         var mb by remember { mutableStateOf(maxMb(ctx).toInt()) }
         var q by remember { mutableStateOf("") }
         var shows by remember { mutableStateOf<List<Show>>(emptyList()) }
@@ -407,8 +410,7 @@ object SeasonDl {
         var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
         // why the add-on gave nothing (its answer or the network's), shown under the list; and the episode whose streams are being chosen from
         var why by remember { mutableStateOf("") }
-        var cert by remember { mutableStateOf<SeasonDl.CertProblem?>(null) }
-        fun said(e: Throwable): String { (e as? SeasonDl.CertProblem)?.let { cert = it }; return tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }
+        fun said(e: Throwable): String { return tr("The add-on did not answer: ", "Eklenti cevap vermedi: ") + (e.message ?: e.javaClass.simpleName) }
         var choose by remember { mutableStateOf<Ep?>(null) }
         var options by remember { mutableStateOf<List<Pick>?>(null) }
         fun limit() = mb * 1_048_576L
@@ -443,12 +445,12 @@ object SeasonDl {
                     // 1. where the streams come from
                     Caption(tr("1  Add-ons (as many as you like)", "1  Eklentiler (istediğin kadar)"))
                     // the add-ons given so far, each with a remove button; a new one is added with the field below (any number: when one does not answer, the next one does)
-                    androidx.compose.runtime.LaunchedEffect(addon) {
+                    androidx.compose.runtime.LaunchedEffect(addon, checkTick) {
                         for (one in addons(addon)) if (states[one] == null) {
                             val r = runCatching { check(one) }
                             states = states + (one to r.fold(
                                 { i -> (i.streams) to (i.name.ifBlank { runCatching { Uri.parse(one).host }.getOrNull() ?: one } + if (i.streams) "" else tr("  (no streams)", "  (yayın yok)")) },
-                                { e -> said(e); false to (e.message ?: e.javaClass.simpleName) }))
+                                { e -> (e as? SeasonDl.CertProblem)?.let { certs = certs + (one to it) }; false to (e.message ?: e.javaClass.simpleName) }))
                         }
                     }
                     addons(addon).forEach { one ->
@@ -457,6 +459,11 @@ object SeasonDl {
                             Column(Modifier.weight(1f)) {
                                 Text((if (st == null) "…  " else if (st.first) "✓  " else "✗  ") + (st?.second ?: (runCatching { Uri.parse(one).host }.getOrNull() ?: one)), color = if (st != null && !st.first) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 if (st != null) Text(runCatching { Uri.parse(one).host }.getOrNull().orEmpty(), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                                certs[one]?.let { cp -> Text(tr("Fingerprint: ", "Parmak izi: ") + cp.sha.take(16) + "…", color = T.sub, fontSize = 11.sp, maxLines = 1) }
+                            }
+                            certs[one]?.let { cp ->
+                                PChip(false, tr("Trust this server", "Bu sunucuya güven")) { SeasonDl.trust(ctx, cp); certs = certs - one; states = states - one; checkTick++ }
+                                Spacer(Modifier.width(6.dp))
                             }
                             PChip(false, tr("Remove", "Kaldır")) { addon = addons(addon).filter { it != one }.joinToString(" "); save(ctx, addon, mb.toFloat()); found = emptyMap(); editAddon = addon.isBlank() }
                         }
@@ -602,8 +609,8 @@ object SeasonDl {
                                     items(seasons) { sn ->
                                         val n = eps.count { it.season == sn }
                                         Box(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }) {
-                                            // Cinemeta has no picture of its own for a season: each one shows the picture of its first episode that has one (the series poster when none has)
-                                            SeasonCover(eps.firstOrNull { it.season == sn && it.thumb.isNotBlank() }?.thumb ?: sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
+                                            // Cinemeta has no picture of its own for a season: the series poster (upright) stands for each one, with the season over it
+                                            SeasonCover(sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
                                         }
                                     }
                                 }
@@ -649,10 +656,6 @@ object SeasonDl {
                     if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
                     if (why.isNotEmpty() && why != note) Text(why, color = androidx.compose.ui.graphics.Color(0xFFE5A04D), fontSize = 12.sp)
                     // the server's certificate is not one the phone knows: shown with its fingerprint, trusted only when the person says so (just that certificate, just this server)
-                    cert?.let { cp ->
-                        Text(tr("Fingerprint (SHA-256): ", "Parmak izi (SHA-256): ") + cp.sha.chunked(2).take(8).joinToString(":") + "…", color = T.sub, fontSize = 11.sp)
-                        PButton(tr("Trust this server", "Bu sunucuya güven")) { SeasonDl.trust(ctx, cp); cert = null; why = ""; states = emptyMap() }
-                    }
                     // the streams of one episode to choose from: quality and size, a tap downloads that one
                     choose?.let { ep ->
                         com.umutk.pulse.WinAlert(onDismissRequest = { choose = null },
