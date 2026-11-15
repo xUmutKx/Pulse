@@ -136,9 +136,30 @@ class OfficeViewActivity : ComponentActivity() {
                 { w, done -> if (convExt != null) pendingSave = w to done else persist(false, w, done) }, { w, done -> if (saveAsDest != null) persist(true, w, done) else copyAsk = w to done }, { requestClose() })
             runOnUiThread {
                 doc = d
-                if (intent.getBooleanExtra("recent", false)) OfficePrefs.addRecent(this, uri.toString(), name, k)
+                // every document opened here is listed under Recent, whether it came from Pulse's file manager or from another app
+                remember(uri, tmp, k)
             }
         } catch (e: Throwable) { runOnUiThread { err = e.message ?: e.javaClass.simpleName } }
+    }
+
+    /**
+     * Puts the document in the Recent list. A file path stays as it is. A document another app handed over ("content://", a grant that ends with this window)
+     * is kept as a link when the grant can be made lasting; otherwise a copy is kept in the app's own folder (up to 40 MB, the last 15 only), so it can be opened again.
+     */
+    private fun remember(uri: Uri, tmp: File, k: OfKind) {
+        var link = uri
+        if (uri.scheme == "content") {
+            val lasting = runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); true }.getOrDefault(false)
+            if (!lasting && tmp.length() <= 40L * 1024 * 1024) {
+                val dir = File(filesDir, "office_recent").also { it.mkdirs() }
+                val keep = File(dir, "${uri.toString().hashCode().toUInt()}_${name.replace('/', '_')}")
+                runCatching { if (!keep.isFile || keep.length() != tmp.length()) tmp.copyTo(keep, overwrite = true); link = Uri.fromFile(keep) }
+                // copies nobody lists any more go
+                val listed = OfficePrefs.recent.mapNotNull { it.substringBefore('\u0001').takeIf { u -> u.startsWith("file://") }?.let { u -> Uri.parse(u).path } }.toSet()
+                dir.listFiles()?.filter { it.absolutePath !in listed && it != keep && System.currentTimeMillis() - it.lastModified() > 60_000 }?.forEach { it.delete() }
+            }
+        }
+        OfficePrefs.addRecent(this, link.toString(), name, k)
     }
 
     private fun fileOps(d: OfDoc, k: OfKind) = OfFileOps(d.name, { d.dirty }, { share(d) }, { pickOther.launch(arrayOf("*/*")) },
