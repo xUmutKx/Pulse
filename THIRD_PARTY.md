@@ -41,7 +41,3 @@ The Sonic look (extras/music/cassette/SonicPlayer.kt) follows the design of [Son
 The symbols on the corners of the letter keys (Settings > Keyboard > Corner swipes, `extras/keyboard/KeyboardCorners.kt`) are taken from the QWERTY (US) layout of
 [Unexpected Keyboard](https://github.com/Julow/Unexpected-Keyboard) by Julow (`srcs/layouts/latn_qwerty_us.xml`). Its layout definitions are released under
 CC0 1.0 (public domain); the rest of that project is GPL-3.0 and none of its code is used.
-
-## Subsampling Scale Image View (photo viewer zoom)
-
-The zoom view of the photo viewer is [Subsampling Scale Image View](https://github.com/davemorrissey/subsampling-scale-image-view) by Dave Morrissey (Apache 2.0), the view the Fossify Gallery uses for its zoom. It is taken unchanged from Maven Central.
