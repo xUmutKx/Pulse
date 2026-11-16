@@ -233,11 +233,19 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         val cells = HashMap<String, Pair<Int, Int>>()
         // a kept cell outside a smaller grid is placed again
         items.forEach { a -> LauncherPrefs.iconPos[a.pkg]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 2 && it[0] < cols && it[1] < perColumn && (it[0] to it[1]) !in cells.values }?.let { cells[a.pkg] = it[0] to it[1] } }
-        var next = 0
+        // with gap filling off (the default) an icon without a place goes after the last cell in use, never into a hole an icon was moved out of
+        var next = if (LauncherPrefs.fillGaps || !snap) 0 else (cells.values.maxOfOrNull { it.first * perColumn + it.second } ?: -1) + 1
         items.forEach { a ->
             if (a.pkg !in cells) {
                 while (cells.values.contains((next / perColumn) to (next % perColumn))) next++
                 cells[a.pkg] = (next / perColumn) to (next % perColumn)
+            }
+        }
+        // the places given to the icons that had none are kept, so they stay where they were put when another icon moves away
+        androidx.compose.runtime.LaunchedEffect(items.map { it.pkg }, snap, LauncherPrefs.fillGaps, cols, perColumn) {
+            if (snap && !LauncherPrefs.fillGaps) {
+                val missing = items.filter { it.pkg !in LauncherPrefs.iconPos && cells[it.pkg] != null }
+                if (missing.isNotEmpty()) { LauncherPrefs.iconPos = LauncherPrefs.iconPos + missing.associate { it.pkg to "${cells.getValue(it.pkg).first},${cells.getValue(it.pkg).second}" }; LauncherPrefs.save(ctx) }
             }
         }
         // a slide on the empty desktop draws a see-through blue box and picks the icons it touches; a tap on the empty desktop clears the pick
@@ -280,7 +288,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                 Modifier.offset(x.dp, y.dp).width(boxW.dp).zIndex(if (drag != null) 2f else 0f).onGloballyPositioned { origin = it.positionInRoot() }
                     // a little smaller and a touch see-through while it is carried
                     .graphicsLayer { val k = if (drag != null) .9f else 1f; scaleX = k; scaleY = k; alpha = if (drag != null) .85f else 1f }
-                    .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg]) {
+                    .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg], col, row, cellW, cellH, inset) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
                             onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW + inset), free?.get(1) ?: (row * cellH)) },
                             onDrag = { c, dr -> c.consume(); movedPx += dr.getDistance(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
