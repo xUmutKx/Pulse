@@ -8,6 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -100,6 +103,24 @@ fun SettingsSection(title: String, startOpen: Boolean = false, content: @Composa
             PIcon("chevron", T.sub, 24.dp, Modifier.graphicsLayer { rotationZ = 180f * f })
         }
         AnimatedVisibility(open) { Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content) }
+    }
+}
+
+/** A folded group that shows its first row, half faded, so the person can see there is something under it; a tap opens it. */
+@Composable
+fun PeekSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    var open by rememberSaveable(title, SectionReset.epoch) { mutableStateOf(false) }
+    val f by animateFloatAsState(if (open) 1f else 0f, label = "peek")
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = T.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 24.dp, Modifier.graphicsLayer { rotationZ = 180f * f })
+        }
+        if (open) Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+        else Box(Modifier.fillMaxWidth().height(46.dp).clip(androidx.compose.ui.graphics.RectangleShape).clickable { open = true }) {
+            Column(Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+            Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, T.bg))))
+        }
     }
 }
 

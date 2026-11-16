@@ -257,6 +257,7 @@ fun NetworkPage() {
             PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
             PButton(tr("Speed test", "Hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
         }
+        PButton(tr("Network lab", "Ağ laboratuvarı"), Modifier.fillMaxWidth()) { openTool("netlab") }
         }
         NetworksSection()
     }) { Hw.network(it) }
