@@ -132,7 +132,7 @@ fun NeofetchCard(art: List<String>, right: List<List<NfSeg>>, fs: Float, shown: 
     val mono = androidx.compose.ui.text.font.FontFamily.Monospace
     val lh = (fs * 1.25f).sp
     androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
-        androidx.compose.material3.Text(art.take(shown).joinToString("\n"), color = NeofetchText.GREEN, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = art.size, softWrap = false)
+        androidx.compose.material3.Text(art.take(shown).joinToString("\n"), color = NeofetchText.GREEN, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = art.size.coerceAtLeast(1), softWrap = false)
         androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.width((fs * 1.6f).dp))
         val a = androidx.compose.ui.text.buildAnnotatedString {
             right.take(shown).forEachIndexed { i, line ->
