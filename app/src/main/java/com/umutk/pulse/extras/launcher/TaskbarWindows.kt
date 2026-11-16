@@ -106,7 +106,7 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
 internal fun taskbarIconKey(route: String): String =
     desktopItems().firstOrNull { it.pkg == "pulse:x:$route" }?.iconKey ?: when {
         route == "page:device" -> "phone"; route == "page:filestabs" || route.startsWith("view:") -> "folder"
-        route == "controlpanel" || route == "winsettings" -> "settings"; route == "page:processes" || route == "page:performance" -> "performance"
+        route == "controlpanel" || route == "winsettings" -> "settings"; route == "page:processes" || route == "page:performance" || route == "page:taskmgr" -> "performance"
         route == "paint" -> "palette"; route == "win:gallery" -> "image"; route.startsWith("win:fun:") -> "chat"
         else -> "gridView"
     }
