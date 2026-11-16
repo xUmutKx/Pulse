@@ -12,6 +12,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.hypot
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.dp
 import kotlin.math.exp
 import kotlin.math.sin
 
@@ -20,6 +27,92 @@ object KeyboardEffects {
     val keyNames = listOf("None" to "Yok", "Tint" to "Ton", "Blob" to "Leke", "Glass" to "Cam", "Glow" to "Işıltı")
     val boardNames = listOf("Off" to "Kapalı", "Dusk" to "Alacakaranlık", "Sea" to "Deniz", "Meadow" to "Çayır", "Sun" to "Güneş", "Slate" to "Kayrak", "Rose" to "Gül")
     val motionNames = listOf("Default" to "Varsayılan", "Pop" to "Yüksel", "Sink" to "Bas", "Bounce" to "Zıpla")
+    /** The key-press effects: none, five around the key, five across the keyboard, five dark styles. */
+    val pressNames = listOf(
+        "None" to "Yok", "Ring" to "Halka", "Sparks" to "Kıvılcım", "Ripple" to "Dalga", "Halo" to "Hale", "Stars" to "Yıldızlar",
+        "Wave" to "Büyük dalga", "Flash" to "Parlama", "Edge" to "Kenar ışığı", "Sweep" to "Süpürme", "Rings" to "Halkalar",
+        "Neon" to "Neon", "Ember" to "Kor", "Snow" to "Kar", "Matrix" to "Matrix", "Smoke" to "Duman",
+    )
+
+    /** How long one press effect lasts, in ms (the ones across the keyboard travel further). */
+    fun pressMs(kind: Int): Float = if (kind in 6..10) 650f else 520f
+
+    private fun DrawScope.star(x: Float, y: Float, r: Float, col: Color) {
+        val p = Path().apply {
+            moveTo(x, y - r); lineTo(x + r * .28f, y - r * .28f); lineTo(x + r, y); lineTo(x + r * .28f, y + r * .28f)
+            lineTo(x, y + r); lineTo(x - r * .28f, y + r * .28f); lineTo(x - r, y); lineTo(x - r * .28f, y - r * .28f); close()
+        }
+        drawPath(p, col)
+    }
+
+    /**
+     * One key-press effect at [p] (0 at the press, 1 when it is gone) for the key at [key]; [seed] keeps the particles of one press the same from frame to frame.
+     * 1-5 stay around the key, 6-10 run across the whole keyboard (the size of this drawing), 11-15 are styles made for dark keyboards.
+     */
+    fun DrawScope.drawPress(kind: Int, key: Rect, p: Float, accent: Color, seed: Int) {
+        val c = key.center; val kh = key.height; val kw = key.width
+        val fade = (1f - p).coerceIn(0f, 1f)
+        val rnd = java.util.Random(seed.toLong())
+        val far = hypot(maxOf(c.x, size.width - c.x), maxOf(c.y, size.height - c.y))
+        when (kind) {
+            1 -> drawCircle(accent.copy(alpha = fade), kh * (.4f + .8f * p), c, style = Stroke(2.dp.toPx() * fade + 1f))
+            2 -> repeat(10) { i ->
+                val a = i / 10f * 2f * PI.toFloat() + rnd.nextFloat() * .5f
+                val d = kh * (.3f + 1.1f * p) * (.7f + rnd.nextFloat() * .5f)
+                drawCircle(accent.copy(alpha = fade), kh * .05f * (1f - p * .6f) + 1f, Offset(c.x + cos(a) * d, c.y + sin(a) * d))
+            }
+            3 -> drawCircle(accent.copy(alpha = .35f * fade), kh * (.3f + .9f * p), c)
+            4 -> { val r = kh * (.9f + .3f * p); drawCircle(Brush.radialGradient(listOf(accent.copy(alpha = .55f * fade), Color.Transparent), c, r), r, c) }
+            5 -> repeat(6) {
+                val x = c.x + (rnd.nextFloat() - .5f) * kw * 1.4f
+                val y = c.y - kh * (.2f + 1.2f * p) * (.6f + rnd.nextFloat() * .6f)
+                star(x, y, kh * .1f * (1f - p * .5f), Color.White.copy(alpha = fade))
+            }
+            6 -> drawCircle(accent.copy(alpha = .8f * fade), far * p, c, style = Stroke(3.dp.toPx()))
+            7 -> drawRect(accent.copy(alpha = .2f * fade))
+            8 -> listOf(10.dp.toPx() to .12f, 5.dp.toPx() to .3f, 2.dp.toPx() to .9f).forEach { (w, a) ->
+                drawRoundRect(accent.copy(alpha = a * fade), Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(16.dp.toPx()), Stroke(w))
+            }
+            9 -> {
+                val x = -size.width * .3f + size.width * 1.6f * p
+                drawRect(Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .35f), Color.Transparent), x - size.width * .15f, x + size.width * .15f))
+            }
+            10 -> repeat(3) { j ->
+                val q = p * 1.4f - j * .2f
+                if (q in 0f..1f) drawCircle(accent.copy(alpha = .6f * (1f - q)), far * q, c, style = Stroke(2.dp.toPx()))
+            }
+            11 -> { val neon = Color(0xFF00E5FF)
+                listOf(9.dp.toPx() to .15f, 5.dp.toPx() to .3f, 2.dp.toPx() to .95f).forEach { (w, a) ->
+                    drawRoundRect(neon.copy(alpha = a * fade), key.topLeft, key.size, CornerRadius(kh * .2f), Stroke(w))
+                } }
+            12 -> repeat(9) { i ->
+                val sp = .6f + rnd.nextFloat() * .7f
+                val x = c.x + (rnd.nextFloat() - .5f) * kw + sin(p * 6f + i) * kh * .1f
+                val y = c.y - kh * 1.6f * p * sp
+                drawCircle(androidx.compose.ui.graphics.lerp(Color(0xFFFFC107), Color(0xFFFF5722), p).copy(alpha = fade), kh * .07f * (1f - p * .7f) + 1f, Offset(x, y))
+            }
+            13 -> repeat(9) { i ->
+                val sp = .6f + rnd.nextFloat() * .7f
+                val x = c.x + (rnd.nextFloat() - .5f) * kw * 1.3f + sin(p * 5f + i) * kh * .08f
+                val y = c.y + kh * 1.4f * p * sp
+                drawCircle(Color.White.copy(alpha = .9f * fade), kh * .05f + 1f, Offset(x, y))
+            }
+            14 -> repeat(5) { j ->
+                val x = key.left + kw * (j + .5f) / 5f
+                val off = rnd.nextFloat() * kh * .4f
+                repeat(4) { k ->
+                    val y = key.top - off + p * kh * 1.8f - k * kh * .2f
+                    drawRect(Color(0xFF00FF66).copy(alpha = fade * (1f - k * .22f)), Offset(x - kh * .03f, y), Size(kh * .06f, kh * .13f))
+                }
+            }
+            15 -> repeat(5) {
+                val x = c.x + (rnd.nextFloat() - .5f) * kw * .9f
+                val y = c.y - kh * .9f * p * (.6f + rnd.nextFloat() * .6f)
+                drawCircle(Color(0xFF9E9E9E).copy(alpha = .3f * fade), kh * (.25f + .6f * p) * (.7f + rnd.nextFloat() * .5f), Offset(x, y))
+            }
+        }
+    }
+
     val soundNames = listOf("System" to "Sistem", "Retro" to "Retro", "Calm" to "Sakin", "Fun" to "Eğlenceli", "Pink" to "Pembe", "Space" to "Uzay")
 
     private val boards = listOf(

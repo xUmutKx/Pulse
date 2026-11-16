@@ -273,6 +273,8 @@ private fun PermissionsCard() {
 private val WHATS_NEW = listOf(
     "download" to (tr("Downloads: a torrent nobody shares gives way to another stream of a close size; long press and slide to pick rows as in Files, with an All button; a setting keeps the file when a download is removed. The torrent engine can be downloaded from the top of the page.",
         "İndirmeler: kimsenin paylaşmadığı torrent yakın boyutta başka bir yayına geçer; Dosyalar'daki gibi basılı tutup kaydırarak seç, Tümü düğmesiyle; bir ayar silinen indirmenin dosyasını telefonda bırakır. Torrent motoru sayfanın üstünden indirilebilir.")),
+    "keyboard" to (tr("Keyboard: fifteen new key-press effects (around the key, across the keyboard, dark styles) with moving previews; a video you just downloaded waits in the bar with a small play mark, ready to paste.",
+        "Klavye: on beş yeni tuş basma efekti (tuşun çevresi, tüm klavye, karanlık stiller), hareketli önizlemelerle; yeni indirdiğin video küçük bir oynat işaretiyle çubukta bekler, yapıştırmaya hazır.")),
     "star" to (tr("Home screen icons: a new soft blue glass that matches the phone's theme icons; the icon chooser shows the real icons, and all of them can be changed at once or one by one.",
         "Ana ekran ikonları: telefonun tema ikonlarıyla uyumlu yeni yumuşak mavi cam; ikon seçici gerçek ikonları gösterir, hepsi birden ya da tek tek değiştirilebilir.")),
 )

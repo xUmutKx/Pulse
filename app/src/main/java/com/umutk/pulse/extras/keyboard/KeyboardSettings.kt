@@ -401,6 +401,28 @@ fun KeyboardSettings(back: () -> Unit) {
                     }
                 }
             }
+            // the key-press effects, in three rows: around the key (with None first), across the keyboard, the dark styles; each preview plays its effect over and over
+            @Composable fun pressPreview(kind: Int) {
+                val p = remember(kind) { androidx.compose.animation.core.Animatable(0f) }
+                LaunchedEffect(kind) {
+                    while (kind > 0) {
+                        p.snapTo(0f)
+                        p.animateTo(1f, androidx.compose.animation.core.tween(KeyboardEffects.pressMs(kind).toInt(), easing = androidx.compose.animation.core.LinearEasing))
+                        kotlinx.coroutines.delay(450)
+                    }
+                }
+                val accent = T.accent
+                androidx.compose.foundation.Canvas(Modifier.size(width = 84.dp, height = 50.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF15161B))) {
+                    val kw = size.width * .26f; val kh = size.height * .44f
+                    val key = androidx.compose.ui.geometry.Rect(androidx.compose.ui.geometry.Offset((size.width - kw) / 2f, (size.height - kh) / 2f), androidx.compose.ui.geometry.Size(kw, kh))
+                    drawRoundRect(keyFill, key.topLeft, key.size, androidx.compose.ui.geometry.CornerRadius(cornerPx * .6f))
+                    if (kind > 0) with(KeyboardEffects) { drawPress(kind, key, p.value, accent, 7) }
+                }
+            }
+            val pf = KeyboardPrefs.pressFx
+            chips(tr("Key press: around the key", "Tuşa basınca: tuşun çevresi"), KeyboardEffects.pressNames.subList(0, 6), if (pf in 0..5) pf else -1, { KeyboardPrefs.pressFx = it }) { i -> pressPreview(i) }
+            chips(tr("Key press: across the keyboard", "Tuşa basınca: tüm klavye"), KeyboardEffects.pressNames.subList(6, 11), if (pf in 6..10) pf - 6 else -1, { KeyboardPrefs.pressFx = it + 6 }) { i -> pressPreview(i + 6) }
+            chips(tr("Key press: dark styles", "Tuşa basınca: karanlık stiller"), KeyboardEffects.pressNames.subList(11, 16), if (pf in 11..15) pf - 11 else -1, { KeyboardPrefs.pressFx = it + 11 }) { i -> pressPreview(i + 11) }
             chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind, { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }) { _ ->
                 Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(keyFill), contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
             }

@@ -172,7 +172,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 ?: uri?.let { u -> runCatching { contentResolver.openInputStream(u)?.use { ins -> String(ins.readBytes().let { b -> if (b.size > 2_000_000) b.copyOf(2_000_000) else b }) } }.getOrNull() })?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
-            if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -188,6 +188,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
     /** The pin of the bar's right slot: the item shown there is pinned in the clipboard and stays in the bar until a newer copy comes. */
     override fun quickPin() {
+        if (shotVideo != null) { shotPinned = true; st.quickPinned = true; return }
         val s = shotItem
         if (s != null) { shotPinned = true; st.clipItems = ClipStore.togglePin(this, s.id); st.quickPinned = true; return }
         val q = quickClip ?: return
@@ -329,18 +330,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.addPrimaryClipChangedListener(clipListener)
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
+        runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
     }
 
     // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
     private var shotItem: ClipItem? = null
     // a photo or screenshot waits 30 seconds in the bar, then it goes (the bar is refreshed then too)
     private val shotExpiry = android.os.Handler(android.os.Looper.getMainLooper())
-    private val shotExpire = Runnable { if (shotItem != null && !shotPinned) { shotItem = null; st.shotThumb = null; updateSuggestions() } }
+    private val shotExpire = Runnable { if ((shotItem != null || shotVideo != null) && !shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null; updateSuggestions() } }
+    /** a video just downloaded, waiting in the same slot (its picture with a play mark): it is not kept in the clipboard, it is pasted from where it is */
+    private var shotVideo: java.io.File? = null
+    private var shotVideoMime = "video/mp4"
+    private val videosTaken = LinkedHashSet<Long>()
     private var shotPinned = false
     private var shotAt = 0L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
         // looked at three times: a screenshot is listed only when its file is finished, which takes a moment (longer for a long or an edited one)
-        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot(); delay(2500); checkShot(); delay(6000); checkShot() } }
+        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot(); checkVideo(); delay(2500); checkShot(); checkVideo(); delay(6000); checkShot(); checkVideo() } }
     }
     /** The pictures already taken in (their numbers in the phone's picture list), so none is taken twice and none is skipped when two come close together. */
     private val shotsTaken = LinkedHashSet<Long>()
@@ -405,7 +411,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (!fresh) return
         val item = list.filter { it.image != null }.maxByOrNull { it.time } ?: return
         // the newest copy wins the slot: a screenshot takes it from a copied text
-        quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        quickClip = null; shotItem = item; shotVideo = null; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
         st.shotThumb = withContext(Dispatchers.IO) { runCatching {
             val bmp = android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
             // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
@@ -414,6 +420,67 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }.getOrNull() }
         shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
         updateSuggestions()
+    }
+
+    /** A video that has just landed in the Download folder (finished in the last minute) goes to the right slot of the bar, as a picture with a play mark. */
+    private suspend fun checkVideo() {
+        if (st.incognito) return
+        val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_VIDEO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+        if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        val V = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        val hit = withContext(Dispatchers.IO) {
+            runCatching {
+                val cols = arrayOf(android.provider.MediaStore.Video.Media._ID, android.provider.MediaStore.Video.Media.DATA, android.provider.MediaStore.Video.Media.DATE_MODIFIED, android.provider.MediaStore.Video.Media.MIME_TYPE)
+                val q = android.os.Bundle().apply {
+                    putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Video.Media.DATE_MODIFIED))
+                    putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+                    putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 4)
+                }
+                var out: Triple<Long, String, String>? = null
+                (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(V, cols, q, null)
+                else contentResolver.query(V, cols, null, null, android.provider.MediaStore.Video.Media.DATE_MODIFIED + " DESC LIMIT 4"))?.use { c ->
+                    while (c.moveToNext() && out == null) {
+                        val id = c.getLong(0); val path = c.getString(1).orEmpty()
+                        // finished in the last minute (a download is written for a long time: its last change is when it was done), in a Download folder, not offered before
+                        val age = System.currentTimeMillis() / 1000 - c.getLong(2)
+                        if (id !in videosTaken && age in 0..60 && path.contains("/download", true) && java.io.File(path).length() > 0) out = Triple(id, path, c.getString(3) ?: "video/mp4")
+                    }
+                }
+                out
+            }.getOrNull()
+        } ?: return
+        val (id, path, mime) = hit
+        videosTaken += id
+        while (videosTaken.size > 20) videosTaken.remove(videosTaken.first())
+        val thumb = withContext(Dispatchers.IO) { runCatching {
+            val uri = android.content.ContentUris.withAppendedId(V, id)
+            @Suppress("DEPRECATION")
+            val b = if (android.os.Build.VERSION.SDK_INT >= 29) contentResolver.loadThumbnail(uri, android.util.Size(240, 240), null)
+                else android.media.ThumbnailUtils.createVideoThumbnail(path, android.provider.MediaStore.Images.Thumbnails.MINI_KIND)
+            b?.asImageBitmap()
+        }.getOrNull() }
+        quickClip = null; shotItem = null; shotVideo = java.io.File(path); shotVideoMime = mime
+        shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        st.shotThumb = thumb; st.shotVideo = true
+        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
+        updateSuggestions()
+    }
+
+    /** Pastes the video [f] into the field when the field takes videos (a chat that sends them), straight from where it is, through Pulse's file provider. */
+    private fun pasteVideo(f: java.io.File, mime: String) {
+        val c = currentInputConnection ?: return
+        finishWord("", false)
+        val info = currentInputEditorInfo
+        val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
+        if (types.none { it.startsWith("video/") || it == "*/*" }) {
+            android.widget.Toast.makeText(this, com.umutk.pulse.tr("This field takes no videos", "Bu alan video kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return
+        }
+        runCatching {
+            val u = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f)
+            val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription("video", arrayOf(mime)), null)
+            androidx.core.view.inputmethod.InputConnectionCompat.commitContent(c, info!!, content, androidx.core.view.inputmethod.InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
+            st.panel = "keys"
+        }
     }
 
     override fun onDestroy() {
@@ -1363,8 +1430,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val qc = quickClip
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
-            shotItem?.let { pasteClip(it) }
-            if (!shotPinned) { shotItem = null; st.shotThumb = null }; updateSuggestions(); return
+            val v = shotVideo
+            if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
+            if (!shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null }; updateSuggestions(); return
         }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
@@ -2099,8 +2167,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
         // a screenshot that was just taken takes the right slot for two minutes
-        if (shotItem != null && !shotPinned && SystemClock.uptimeMillis() - shotAt > 30_000L) { shotItem = null; st.shotThumb = null }
-        if (shotItem != null && word.isEmpty() && !emailField && !st.plain) {
+        if ((shotItem != null || shotVideo != null) && !shotPinned && SystemClock.uptimeMillis() - shotAt > 30_000L) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null }
+        if ((shotItem != null || shotVideo != null) && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
             return
