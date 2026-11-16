@@ -136,22 +136,21 @@ class SyncedRenderersFactory(context: Context) : DefaultRenderersFactory(context
         out: ArrayList<Renderer>,
     ) {
 
-        out += SyncedVideoRenderer(
-            MediaCodecVideoRenderer.Builder(context)
-                .setCodecAdapterFactory(codecAdapterFactory)
-                .setMediaCodecSelector(mediaCodecSelector)
-                .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
-                .setEnableDecoderFallback(enableDecoderFallback)
-                .setEventHandler(eventHandler)
-                .setEventListener(eventListener)
-                .setMaxDroppedFramesToNotify(50),
-        )
+        out += SyncedVideoRenderer(context, codecAdapterFactory, mediaCodecSelector, allowedVideoJoiningTimeMs, enableDecoderFallback, eventHandler, eventListener)
     }
 }
 
 
 @OptIn(UnstableApi::class)
-private class SyncedVideoRenderer(builder: Builder) : MediaCodecVideoRenderer(builder) {
+private class SyncedVideoRenderer(
+    context: Context,
+    codecAdapterFactory: androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Factory,
+    mediaCodecSelector: MediaCodecSelector,
+    allowedJoiningTimeMs: Long,
+    enableDecoderFallback: Boolean,
+    eventHandler: Handler,
+    eventListener: VideoRendererEventListener,
+) : MediaCodecVideoRenderer(context, codecAdapterFactory, mediaCodecSelector, allowedJoiningTimeMs, enableDecoderFallback, eventHandler, eventListener, 50) {
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) =
         super.render(positionUs + AvSync.offsetUs, elapsedRealtimeUs)
 }

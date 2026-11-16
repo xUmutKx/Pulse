@@ -120,10 +120,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import androidx.media3.exoplayer.source.preload.DefaultPreloadManager
-import androidx.media3.exoplayer.source.preload.PreloadException
-import androidx.media3.exoplayer.source.preload.PreloadManagerListener
-import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import coil.compose.AsyncImage
 import com.umutk.pulse.extras.ytx.glass.Backdrop
@@ -1328,128 +1324,36 @@ private class ShortsPreloader(context: Context) {
     @Volatile
     private var currentIndex = 0
 
-    private val builder = DefaultPreloadManager.Builder(
-        context,
-        TargetPreloadStatusControl<Int, DefaultPreloadManager.PreloadStatus> { rank ->
-            // Rank is the absolute feed position; the manager orders by distance
-            // from the current page. The immediate next Short gets the deepest
-            // head start, the ones after it progressively less.
-            val distance = (rank - currentIndex).coerceAtLeast(1)
-            val targetMs = when (distance) {
-                1 -> 5_000L
-                2 -> 3_000L
-                else -> 1_500L
-            }
-            DefaultPreloadManager.PreloadStatus.specifiedRangeLoaded(targetMs)
-        },
-    )
+    // Pulse: media3 1.4 has no DefaultPreloadManager (it came in 1.5), so the Shorts player loads each Short when it is shown;
+    // the same calls stay, [take] hands back nothing and the page builds the source itself
+    val player: ExoPlayer = ExoPlayer.Builder(context)
         .setLoadControl(loadControl)
         .setBandwidthMeter(PlaybackBandwidth.get())
-        .setDataSourceFactory(MediaCache.dataSourceFactory(context))
+        .build().apply {
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+            repeatMode = Player.REPEAT_MODE_ONE
+            playWhenReady = true
+        }
 
-    private val manager = builder.build()
-
-    val player: ExoPlayer = builder.buildExoPlayer(
-        ExoPlayer.Builder(context).setBandwidthMeter(PlaybackBandwidth.get()),
-    ).apply {
-        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-        repeatMode = Player.REPEAT_MODE_ONE
-        playWhenReady = true
-    }
-
-    private val owned = HashMap<String, MediaSource>()
-    private val wrapped = HashMap<String, MediaSource>()
-    private var adoptedId: String? = null
-    private var adoptedWrapped: MediaSource? = null
     private var released = false
 
-    init {
-        manager.addListener(object : PreloadManagerListener {
-            override fun onError(error: PreloadException) {
-                val id = error.mediaItem.mediaId
-                if (id.isBlank() || id == adoptedId) return
-                removeInternal(id)
-            }
-        })
-    }
+    @Suppress("UNUSED_PARAMETER") fun has(id: String): Boolean = false
 
-    /**
-     * The preload manager keys its holders by the wrapped [PreloadMediaSource], not by
-     * the source handed to [DefaultPreloadManager.add], so always remove the wrapper.
-     */
-    private fun removeInternal(id: String) {
-        val prepared = wrapped.remove(id)
-        val raw = owned.remove(id)
-        when {
-            prepared != null -> runCatching { manager.remove(prepared) }
-            raw != null -> runCatching { manager.remove(raw.mediaItem) }
-        }
-    }
+    @Suppress("UNUSED_PARAMETER") fun prepare(id: String, source: MediaSource, rank: Int) {}
 
-    fun has(id: String): Boolean = owned.containsKey(id) || wrapped.containsKey(id)
+    @Suppress("UNUSED_PARAMETER") fun take(id: String): MediaSource? = null
 
-    fun prepare(id: String, source: MediaSource, rank: Int) {
-        if (released || has(id)) return
-        runCatching {
-            manager.add(source, rank)
-            owned[id] = source
-            wrapped[id] = manager.getMediaSource(source.mediaItem)
-                ?: throw IllegalStateException("No preload source")
-            manager.invalidate()
-        }.onFailure {
-            removeInternal(id)
-        }
-    }
+    @Suppress("UNUSED_PARAMETER") fun releaseAdoptedIfCurrent(mediaId: String?) {}
 
-    /** Returns the prepared wrapper for [id], or null when it was never offered. */
-    fun take(id: String): MediaSource? {
-        if (released) return null
-        releaseAdopted()
-        val source = wrapped.remove(id) ?: run {
-            owned.remove(id)
-            return null
-        }
-        owned.remove(id)
-        adoptedId = id
-        adoptedWrapped = source
-        return source
-    }
+    fun releaseAdopted() {}
 
-    /** Called once the foreground player owns the period and its tracks are selected. */
-    fun releaseAdoptedIfCurrent(mediaId: String?) {
-        if (mediaId != null && mediaId == adoptedId) releaseAdopted()
-    }
+    @Suppress("UNUSED_PARAMETER") fun keepOnly(ids: Set<String>) {}
 
-    fun releaseAdopted() {
-        if (adoptedId == null) return
-        adoptedId = null
-        val source = adoptedWrapped
-        adoptedWrapped = null
-        if (source != null) runCatching { manager.remove(source) }
-    }
-
-    /** Drops preloads for pages that are no longer close to the current one. */
-    fun keepOnly(ids: Set<String>) {
-        if (released) return
-        (owned.keys + wrapped.keys).toSet()
-            .filter { it !in ids && it != adoptedId }
-            .forEach(::removeInternal)
-    }
-
-    fun setCurrentPlayingIndex(index: Int) {
-        if (released) return
-        currentIndex = index
-        manager.setCurrentPlayingIndex(index)
-    }
+    fun setCurrentPlayingIndex(index: Int) { currentIndex = index }
 
     fun release() {
         if (released) return
         released = true
-        adoptedId = null
-        adoptedWrapped = null
-        owned.clear()
-        wrapped.clear()
-        runCatching { manager.release() }
     }
 }
 

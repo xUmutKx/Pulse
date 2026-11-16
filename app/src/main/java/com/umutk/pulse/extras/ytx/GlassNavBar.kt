@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +61,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.umutk.pulse.extras.ytx.glass.Backdrop
@@ -70,9 +68,6 @@ import com.umutk.pulse.extras.ytx.glass.layerBackdrop
 import com.umutk.pulse.extras.ytx.glass.rememberCombinedBackdrop
 import com.umutk.pulse.extras.ytx.glass.rememberLayerBackdrop
 import com.umutk.pulse.extras.ytx.glass.drawBackdrop
-import com.umutk.pulse.extras.ytx.glass.blur
-import com.umutk.pulse.extras.ytx.glass.lens
-import com.umutk.pulse.extras.ytx.glass.vibrancy
 import com.umutk.pulse.extras.ytx.glass.Highlight
 import com.umutk.pulse.extras.ytx.glass.InnerShadow
 import com.umutk.pulse.extras.ytx.glass.Shadow
@@ -463,11 +458,7 @@ fun RowScope.LiquidNavTab(
             ),
             maxLines = 1,
             softWrap = false,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 8.sp,
-                maxFontSize = 11.sp,
-                stepSize = 0.5.sp,
-            ),
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }
