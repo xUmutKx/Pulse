@@ -2497,3 +2497,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Widget seçici: gruplar (saat, müzik, not, takvim, sistem, foto), kartlar widget oranında, geniş widget tam satır. derlenmedi
 - Torrent: çalışma klasörü Download yerine uygulamanın özel alanında (görünmez), toplayıcı artık klasörleri siler (açılışta, kaldırınca, bitince), eskileri taşır/siler; magnet yer tutucu .mkv. derlenmedi
 - Torrent paketi: bölümler torrentin kendi klasörüne (Download/<paket klasörü>/) birlikte iner. derlenmedi
+- Klavye: ekran görüntüsü/kamera/indirilen resimler panoya girmiyor, sağ slotta bekleyip yerinden yapıştırılıyor (video gibi).
+- Files: öğe menüsü: kes/kopyala/yapıştır/yeniden adlandır/sil/arşiv tek satır ikon, arşiv ikonu kendi menüsünü açar, diğerleri gruplu. derlenmedi

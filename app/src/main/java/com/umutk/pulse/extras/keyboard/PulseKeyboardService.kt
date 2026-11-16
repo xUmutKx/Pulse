@@ -379,16 +379,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val shotLock = kotlinx.coroutines.sync.Mutex()
 
     /**
-     * Takes the new screenshots, camera photos and downloaded pictures into the clipboard: only those made in the last moments, each of them once (two made
-     * close together are both taken). The newest goes to the bar.
+     * The new screenshots, camera photos and downloaded pictures: only those made in the last moments, each of them once. The newest waits in the right slot of the bar and is
+     * pasted from where it is, like a video: nothing of it goes into the clipboard (its history stays for what the person copied).
      */
     private suspend fun checkShot() {
         if (st.incognito) return
         val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_IMAGES else android.Manifest.permission.READ_EXTERNAL_STORAGE
         if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
         if (!shotLock.tryLock()) return
-        var items: List<ClipItem>? = null
-        var fresh = false
+        var newest: Triple<Long, Long, String>? = null
         try {
             val sp = getSharedPreferences("pulse_kb_shots", MODE_PRIVATE)
             if (shotsTaken.isEmpty()) sp.getString("ids", "").orEmpty().split(',').mapNotNull { it.toLongOrNull() }.forEach { shotsTaken += it }
@@ -401,7 +400,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                         putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
                         putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 8)
                     }
-                    val out = ArrayList<Pair<Long, Long>>()
+                    val out = ArrayList<Triple<Long, Long, String>>()
                     (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
                     else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 8"))?.use { c ->
                         while (c.moveToNext()) {
@@ -415,33 +414,33 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                             // a picture just downloaded (the Download folder) is offered the same way
                             val down = path.contains("/download", true)
                             // only what is new: a picture made in the last moments, never the older ones of the gallery
-                            if (shot && age <= 45 || cam && age <= 30 || down && age <= 45) out += c.getLong(0) to age
+                            if (shot && age <= 45 || cam && age <= 30 || down && age <= 45) out += Triple(c.getLong(0), age, path)
                         }
                     }
                     out
                 }.getOrNull()
             }.orEmpty().filter { it.first !in shotsTaken }
             if (found.isEmpty()) return
-            // the oldest first, so the newest ends up the newest of the clipboard
-            for ((id, age) in found.reversed()) {
-                val uri = android.net.Uri.withAppendedPath(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
-                val got = withContext(Dispatchers.IO) { val n0 = ClipStore.load(this@PulseKeyboardService).count { it.image != null }; val l = ClipStore.addImage(this@PulseKeyboardService, uri); if (l.count { it.image != null } > n0) l else null }
-                // a file that could not be read yet (still being written) is not marked: the next look takes it
-                if (got != null) { items = got; shotsTaken += id; if (age <= 40) fresh = true }
+            // each is marked as seen; a file that cannot be read yet (still being written) is not, so the next look takes it
+            for (t in found) {
+                val f = java.io.File(t.third)
+                if (!f.isFile || f.length() <= 0) continue
+                shotsTaken += t.first
+                if (newest == null || t.second < newest!!.second) newest = t
             }
             while (shotsTaken.size > 40) shotsTaken.remove(shotsTaken.first())
             sp.edit().putString("ids", shotsTaken.joinToString(",")).apply()
         } finally { shotLock.unlock() }
-        val list = items ?: return
-        st.clipItems = list
-        if (!fresh) return
-        val item = list.filter { it.image != null }.maxByOrNull { it.time } ?: return
+        val hit = newest ?: return
+        if (hit.second > 40) return
+        val file = java.io.File(hit.third)
+        val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
         // the newest copy wins the slot: a screenshot takes it from a copied text
-        quickClip = null; shotItem = item; shotVideo = null; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        quickClip = null; shotItem = null; shotVideo = file; shotVideoMime = mime; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
         st.shotThumb = withContext(Dispatchers.IO) { runCatching {
-            val bmp = android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
+            val bmp = android.graphics.BitmapFactory.decodeFile(file.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
             // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
-            val deg = when (android.media.ExifInterface(item.image!!).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+            val deg = when (android.media.ExifInterface(file.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
             (if (deg == 0f) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true)).asImageBitmap()
         }.getOrNull() }
         shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
@@ -492,18 +491,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         updateSuggestions()
     }
 
-    /** Pastes the video [f] into the field when the field takes videos (a chat that sends them), straight from where it is, through Pulse's file provider. */
+    /** Pastes the video or picture [f] into the field when the field takes that kind (a chat that sends them), straight from where it is, through Pulse's file provider. */
     private fun pasteVideo(f: java.io.File, mime: String) {
         val c = currentInputConnection ?: return
         finishWord("", false)
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
-        if (types.none { it.startsWith("video/") || it == "*/*" }) {
-            android.widget.Toast.makeText(this, com.umutk.pulse.tr("This field takes no videos", "Bu alan video kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return
+        val kind = mime.substringBefore('/')
+        if (types.none { it.startsWith("$kind/") || it == "*/*" }) {
+            android.widget.Toast.makeText(this, if (kind == "image") com.umutk.pulse.tr("This field takes no pictures", "Bu alan resim kabul etmiyor") else com.umutk.pulse.tr("This field takes no videos", "Bu alan video kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return
         }
         runCatching {
             val u = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f)
-            val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription("video", arrayOf(mime)), null)
+            val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription(kind, arrayOf(mime)), null)
             androidx.core.view.inputmethod.InputConnectionCompat.commitContent(c, info!!, content, androidx.core.view.inputmethod.InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
             st.panel = "keys"
         }
