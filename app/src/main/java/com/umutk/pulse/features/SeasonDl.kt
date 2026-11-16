@@ -327,8 +327,14 @@ object SeasonDl {
     /** The choice of [best] out of a list already read: a stream someone shares (or that does not say) comes before one with no one sharing it. */
     fun bestOf(all: List<Pick>, maxBytes: Long): Pick? {
         fun alive(l: List<Pick>) = l.filter { it.seeds != 0 }.ifEmpty { l }
+        // under the limit, the stream most people share wins (a torrent with few sharing it crawls), and among close ones the one of a middle size (60 % of the limit)
+        fun score(p: Pick): Double {
+            val target = maxBytes * .6
+            val seedPart = if (p.seeds < 0) 1.0 else kotlin.math.ln(p.seeds + 1.0) * 2.0
+            return seedPart - kotlin.math.abs(p.size - target) / target
+        }
         val sized = all.filter { it.size > 0 }
-        val under = alive(sized.filter { it.size <= maxBytes }).maxByOrNull { it.size }
+        val under = alive(sized.filter { it.size <= maxBytes }).maxByOrNull { score(it) }
         if (under != null) return under
         val smallest = alive(sized).minByOrNull { it.size }
         if (smallest != null) return Pick(smallest.url, smallest.size, smallest.label, over = true, seeds = smallest.seeds)
@@ -338,7 +344,7 @@ object SeasonDl {
     /** The streams to fall back on when [pick] finds no one to download from: the others under the limit, closest in size first, the ones with no one sharing them last (five at most). */
     fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> =
         all.filter { it.url != pick.url && (pick.over || it.size == 0L || it.size <= maxBytes) }
-            .sortedWith(compareBy<Pick>({ if (it.seeds == 0) 1 else 0 }, { if (it.size > 0 && pick.size > 0) kotlin.math.abs(it.size - pick.size) else Long.MAX_VALUE / 2 }, { -it.seeds }))
+            .sortedWith(compareBy<Pick>({ if (it.seeds == 0) 1 else 0 }, { -maxOf(it.seeds, 0) }, { if (it.size > 0 && pick.size > 0) kotlin.math.abs(it.size - pick.size) else Long.MAX_VALUE / 2 }))
             .take(5).map { it.url }
 
     // 24 MB of pictures at most (a few big ones would fill a count-based cache)
