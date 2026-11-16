@@ -60,9 +60,8 @@ fun MoonPhase(nowMs: Long, fg: Color, sub: Color) {
             val flip = age >= syn / 2
             withTransform({ if (flip) scale(-1f, 1f, center) }) {
                 clipPath(lit) {
-                    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color(0xFFFFFBEA), Color(0xFFE9E3CC), Color(0xFFC9C3AD)), Offset(center.x - r * .3f, center.y - r * .3f), r * 1.5f), r, center)
-                    listOf(Triple(-.28f, -.2f, .3f), Triple(.12f, -.35f, .22f), Triple(.25f, .08f, .26f), Triple(-.1f, .3f, .2f)).forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .35f), r * k, Offset(center.x + r * x, center.y + r * y)) }
-                    listOf(Triple(.4f, -.45f, .09f), Triple(-.5f, .15f, .08f), Triple(.05f, .55f, .07f), Triple(.55f, .42f, .06f)).forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .45f), r * k, Offset(center.x + r * x, center.y + r * y), style = Stroke(r * .03f)) }
+                    // the face is drawn the right way round for the waning moon too (the cut is flipped, the seas are not)
+                    withTransform({ if (flip) scale(-1f, 1f, center) }) { moonSurface(center.x, center.y, r) }
                 }
             }
             drawCircle(sub.copy(alpha = .35f), r, center, style = Stroke(1.dp.toPx()))
