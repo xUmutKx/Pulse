@@ -65,7 +65,15 @@ import kotlin.math.sin
  * [lines] a black screen with the tiles drawn as white outlines only, for an AMOLED screen.
  */
 @Composable
-internal fun DashFace(ctx: Context, ink: Color, tick: Long, lines: Boolean) {
+internal fun DashFace(ctx: Context, ink: Color, tick: Long, lines: Boolean, plain: Boolean = false) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalDashPlain provides plain) { DashFaceBody(ctx, ink, tick, lines || plain) }
+}
+
+/** True: the dashboard draws its four blocks with no frame and no fill, only their content on black. */
+private val LocalDashPlain = androidx.compose.runtime.compositionLocalOf { false }
+
+@Composable
+private fun DashFaceBody(ctx: Context, ink: Color, tick: Long, lines: Boolean) {
     val land = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val gap = 12.dp
     val h24 = StandByPrefs.h24(ctx)
@@ -161,8 +169,9 @@ internal fun DashFace(ctx: Context, ink: Color, tick: Long, lines: Boolean) {
 private fun DashTile(modifier: Modifier, fill: Color, lines: Boolean, ink: Color, content: @Composable ColumnScope.(Color) -> Unit) {
     val shape = RoundedCornerShape(26.dp)
     val fg = if (lines) ink else Color.White
+    val plain = LocalDashPlain.current
     Column(
-        modifier.clip(shape).then(if (lines) Modifier.border(1.5.dp, ink, shape) else Modifier.background(fill, shape)).padding(16.dp),
+        modifier.clip(shape).then(if (plain) Modifier else if (lines) Modifier.border(1.5.dp, ink, shape) else Modifier.background(fill, shape)).padding(16.dp),
         verticalArrangement = Arrangement.Center,
     ) { content(fg) }
 }

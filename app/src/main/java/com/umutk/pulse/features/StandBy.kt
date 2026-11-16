@@ -109,9 +109,18 @@ val STANDBY_PAGES = listOf(
     "clocks" to ("Clock Of Clocks" to "Saatlerden saat"), "world" to ("World Clock" to "Dünya saati"), "dementia" to ("Dementia Clock" to "Büyük yazılı saat"), "sereno" to ("Sereno" to "Sereno"),
     "tick_digital" to ("Ticks Digital" to "Çizgili dijital saat"), "tick_analog" to ("Ticks Analog" to "Çizgili analog saat"),
     "bat_dots" to ("Battery Dots" to "Pil noktaları"), "bat_wave" to ("Battery Liquid Wave" to "Pil dalgası"), "charging" to ("Charging" to "Şarj"),
-    "dash" to ("Dashboard" to "Pano"), "dash_line" to ("Dashboard (AMOLED lines)" to "Pano (AMOLED çizgili)"), "aod" to ("Small clock + notifications" to "Küçük saat + bildirimler"),
+    "dash" to ("Dashboard" to "Pano"), "dash_line" to ("Dashboard (AMOLED lines)" to "Pano (AMOLED çizgili)"), "dash_plain" to ("Dashboard (AMOLED, no frame)" to "Pano (AMOLED, çerçevesiz)"), "aod" to ("Small clock + notifications" to "Küçük saat + bildirimler"),
     "stopwatch" to ("Stopwatch" to "Kronometre"), "timer" to ("Timer" to "Zamanlayıcı"), "pomodoro" to ("Pomodoro" to "Pomodoro"), "quotes" to ("Quotes" to "Sözler"), "cal_striking" to ("Striking Calendar" to "Büyük günlü takvim"),
 )
+
+/** The kind of a page in the picker: 1 clocks, 2 info (calendar, battery), 3 media, 4 panels, 5 tools. */
+internal fun pageKind(id: String): Int = when (id) {
+    "calendar", "cal_striking", "battery", "bat_dots", "bat_wave", "charging" -> 2
+    "music", "duo_music_clock" -> 3
+    "dash", "dash_line", "dash_plain", "aod", "neofetch", "blank" -> 4
+    "stopwatch", "timer", "pomodoro", "quotes", "world" -> 5
+    else -> 1
+}
 
 /** Settings of the advanced screen cover ("StandBy" mode). Own prefs file "standby"; the basic cover keeps its own (CoverStore). */
 object StandByPrefs {
@@ -355,8 +364,9 @@ internal fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id
     "bat_dots" -> BatteryDotsFace(ctx, ink, tick)
     "bat_wave" -> BatteryWaveFace(ctx, ink, tick)
     "charging" -> ChargingFace(ctx, ink, tick)
-    "dash" -> DashFace(ctx, ink, tick, lines = false)
+    "dash" -> when (StandByPrefs.style(ctx, "dash")) { 1 -> DashFace(ctx, ink, tick, lines = true); 2 -> DashFace(ctx, ink, tick, lines = false, plain = true); else -> DashFace(ctx, ink, tick, lines = false) }
     "dash_line" -> DashFace(ctx, ink, tick, lines = true)
+    "dash_plain" -> DashFace(ctx, ink, tick, lines = false, plain = true)
     "aod" -> AodFace(ctx, ink, tick)
     "stopwatch" -> StopwatchFace(ink)
     "timer" -> TimerFace(ctx, ink)
@@ -565,6 +575,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     // the editor: the page being edited is shown big, exactly as the cover draws it, and everything below changes it at once
     var editing by remember { mutableStateOf(pages.firstOrNull() ?: "blank") }
     var tab by remember { mutableIntStateOf(0) }
+    var pageCat by remember { mutableIntStateOf(0) }
     var rev by remember { mutableIntStateOf(0) }
     var outline by remember { mutableStateOf(StandByPrefs.outline(ctx)) }
     var custom by remember { mutableIntStateOf(StandByPrefs.custom(ctx)) }
@@ -608,8 +619,13 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }
     }
     when (tab) {
-        0 -> Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            STANDBY_PAGES.forEach { (id, nm) ->
+        0 -> Column {
+        // the pages by kind: pick a kind, then the page; the looks of one page (the dashboard) are picked inside it, on the Style tab
+        Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(tr("All", "Tümü"), tr("Clocks", "Saatler"), tr("Info", "Bilgi"), tr("Media", "Medya"), tr("Panels", "Paneller"), tr("Tools", "Araçlar")).forEachIndexed { i, label -> PChip(pageCat == i, label) { pageCat = i } }
+        }
+        Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            STANDBY_PAGES.filter { (id, _) -> id != "dash_line" && id != "dash_plain" && (pageCat == 0 || pageKind(id) == pageCat) }.forEach { (id, nm) ->
                 val on = id in pages
                 Column(Modifier.width(140.dp).clickable { editing = id; rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
                     Box {
@@ -620,8 +636,13 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
                     Text(tr(nm.first, nm.second), color = if (id == editing) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
                 }
             }
-        }
+        } }
         1 -> Column {
+            if (editing == "dash" || editing == "dash_line" || editing == "dash_plain") {
+                // the three looks of the dashboard: colour blocks, white outlines (AMOLED), or no frame at all (AMOLED)
+                val cur = when (editing) { "dash_line" -> 1; "dash_plain" -> 2; else -> StandByPrefs.style(ctx, "dash") }
+                PaletteRow(3, cur, { StandByPrefs.setStyle(ctx, "dash", it); if (editing != "dash") { val at = pages.indexOf(editing); if (at >= 0) { pages = pages.toMutableList().also { l -> l[at] = "dash" }; StandByPrefs.setPages(ctx, pages) }; editing = "dash" }; rev++ }) { i, sel -> Column(horizontalAlignment = Alignment.CenterHorizontally) { MiniScreen(110.dp, sel) { when (i) { 1 -> DashFace(ctx, ink, tick, lines = true); 2 -> DashFace(ctx, ink, tick, lines = false, plain = true); else -> DashFace(ctx, ink, tick, lines = false) } }; Text(listOf(tr("Colour", "Renkli"), tr("Outline", "Çerçeveli"), tr("No frame", "Çerçevesiz"))[i], color = if (sel) T.text else T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) } }
+            }
             if (editing == "crop") PaletteRow(CROP_STYLES.size, StandByPrefs.style(ctx, "crop"), { StandByPrefs.setStyle(ctx, "crop", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { BigCropFace(ctx, tick, i) } }
             if (editing == "flip") PaletteRow(FLIP_STYLES.size, StandByPrefs.style(ctx, "flip"), { StandByPrefs.setStyle(ctx, "flip", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { RetroFlipFace(ctx, tick, i) } }
             if (editing == "solar") PaletteRow(SOLAR_STYLES.size, StandByPrefs.style(ctx, "solar"), { StandByPrefs.setStyle(ctx, "solar", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { SolarFace(ctx, tick, i) } }
