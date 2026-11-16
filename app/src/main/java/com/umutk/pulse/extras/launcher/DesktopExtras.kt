@@ -90,7 +90,7 @@ fun LauncherStoreWindow() {
     if (pickWall) com.umutk.pulse.features.WallPickDialog(LauncherPrefs.look, LauncherPrefs.wallIndex(LauncherPrefs.look), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(LauncherPrefs.look, i); LauncherPrefs.save(ctx); pickWall = false
     }
-    if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
+    if (pickWidget) WidgetPickDialog(onPick = { adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
 }
 
 /** File Explorer with tabs: each tab keeps its own folder, only the open one is shown. */
