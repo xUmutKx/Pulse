@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -73,8 +74,9 @@ fun Win7Explorer() {
     val ctx = LocalContext.current
     val root = remember { Environment.getExternalStorageDirectory() }
     var dir by remember { mutableStateOf(root) }
-    val back = remember { mutableStateListOf<File>() }
-    val fwd = remember { mutableStateListOf<File>() }
+    // the places already seen, Computer included (null): Back from a folder opened out of Computer goes back to Computer, not to the storage root
+    val back = remember { mutableStateListOf<File?>() }
+    val fwd = remember { mutableStateListOf<File?>() }
     var sel by remember { mutableStateOf<String?>(null) }
     var hidden by remember { mutableStateOf(false) }
     var rev by remember { mutableIntStateOf(0) }
@@ -84,17 +86,24 @@ fun Win7Explorer() {
     val fr = remember { androidx.compose.ui.focus.FocusRequester() }
     // the page opens on Computer, the drives and partitions; a folder chosen leaves it
     var computer by remember { mutableStateOf(true) }
-    fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" }; computer = false }
+    fun here(): File? = if (computer) null else dir
+    fun go(d: File) { if (computer || d.path != dir.path) { back.add(here()); fwd.clear(); dir = d; computer = false; sel = null; query = "" } }
+    fun goComputer() { if (!computer) { back.add(here()); fwd.clear(); computer = true; sel = null; query = "" } }
+    fun stepBack() { if (back.isNotEmpty()) { val p = back.removeAt(back.lastIndex); fwd.add(here()); if (p == null) computer = true else { dir = p; computer = false }; sel = null; query = "" } }
+    fun stepFwd() { if (fwd.isNotEmpty()) { val n = fwd.removeAt(fwd.lastIndex); back.add(here()); if (n == null) computer = true else { dir = n; computer = false }; sel = null; query = "" } }
     // a picture or a text file opens in a window of the desktop; the other kinds go to another app
     fun open(f: File) {
         if (f.isDirectory) go(f)
         else if (opensInWindow(f)) DesktopWindows.open("view:" + f.path, f.name)
         else com.umutk.pulse.features.exHandOver(ctx, f, false)
     }
+    var refused by remember { mutableStateOf(false) }
     val files by produceState(emptyList<File>(), dir, hidden, rev) {
         value = withContext(Dispatchers.IO) {
             runCatching {
-                (dir.listFiles()?.toList() ?: emptyList()).filter { hidden || !it.name.startsWith(".") }
+                val raw = dir.listFiles()
+                refused = raw == null
+                (raw?.toList() ?: emptyList()).filter { hidden || !it.name.startsWith(".") }
                     .map { it to it.isDirectory }.sortedWith(compareBy({ !it.second }, { it.first.name.lowercase() })).map { it.first }
             }.getOrDefault(emptyList())
         }
@@ -108,7 +117,7 @@ fun Win7Explorer() {
         delete = { selFile()?.let { menuFor = it } },
         rename = { selFile()?.let { menuFor = it } },
         open = { selFile()?.let { open(it) } },
-        back = { if (back.isNotEmpty()) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" } },
+        back = { stepBack() },
     )
     androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     FileMenu(menuFor, dir, { menuFor = null }, { open(it) }) { rev++; if (it != null) sel = it }
@@ -118,9 +127,9 @@ fun Win7Explorer() {
     Column(Modifier.fillMaxSize().then(keys)) {
         // the back and forward buttons, the address bar and the search box
         Row(Modifier.fillMaxWidth().background(W7_GLASS).padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            W7Round(back.isNotEmpty(), false) { val p = back.removeAt(back.lastIndex); fwd.add(dir); dir = p; sel = null; query = "" }
-            Spacer(Modifier.width(4.dp))
-            W7Round(fwd.isNotEmpty(), true) { val n = fwd.removeAt(fwd.lastIndex); back.add(dir); dir = n; sel = null; query = "" }
+            W7Round(back.isNotEmpty(), false) { stepBack() }
+            Spacer(Modifier.width(2.dp))
+            W7Round(fwd.isNotEmpty(), true) { stepFwd() }
             Spacer(Modifier.width(6.dp))
             val crumbs = remember(dir) {
                 val l = ArrayList<File>(); var d: File? = dir
@@ -180,7 +189,7 @@ fun Win7Explorer() {
                         Triple(tr("Pictures", "Resimler"), Environment.DIRECTORY_PICTURES, "fd_pictures"), Triple(tr("Videos", "Videolar"), Environment.DIRECTORY_MOVIES, "fd_videos"),
                     ).forEach { (l, n, ic) -> val f = File(root, n); if (f.exists()) W7Nav(l, !computer && dir.path == f.path, ic) { go(f) } }
                     W7NavTitle(tr("Computer", "Bilgisayar"))
-                    W7Nav(tr("This PC", "Bu bilgisayar"), computer, "l_pc") { computer = true }
+                    W7Nav(tr("This PC", "Bu bilgisayar"), computer, "l_pc") { goComputer() }
                     W7Nav(tr("Internal storage", "Dahili depolama"), !computer && dir.path == root.path, "dv_internal") { go(root) }
                 }
                 if (wide) Box(Modifier.width(1.dp).fillMaxHeight().background(W7_EDGE))
@@ -194,17 +203,22 @@ fun Win7Explorer() {
                         if (cols) Text(tr("Size", "Boyut"), color = Color(0xFF4C607A), fontSize = 12.sp, modifier = Modifier.width(70.dp))
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD5DDE8)))
+                    // an empty folder says so; one Android keeps from the apps (Android/data and others) says that, instead of looking empty by mistake
+                    if (shown.isEmpty() && query.isBlank()) Text(if (refused) tr("Android does not let apps list this folder", "Android bu klasörün içeriğini uygulamalara göstermez") else tr("This folder is empty.", "Bu klasör boş."), color = Color(0xFF6B7B93), fontSize = 13.sp, modifier = Modifier.padding(16.dp))
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(shown, key = { it.path }) { f ->
                             val isDir = f.isDirectory
                             val on = f.path == sel
                             Row(
                                 Modifier.fillMaxWidth().then(if (on) Modifier.background(W7_SEL).border(1.dp, Color(0xFF7DA2CE)) else Modifier)
-                                    .fileRow({ fr.requestFocus(); if (on) open(f) else sel = f.path }, { sel = f.path; menuFor = f }).padding(horizontal = 8.dp, vertical = 7.dp),
+                                    .fileRow({ fr.requestFocus(); sel = f.path }, { sel = f.path; menuFor = f }, onDouble = { open(f) }).padding(horizontal = 8.dp, vertical = 7.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                    W7Pic(if (isDir) w7FolderKey(f, root) else w7FileKey(f), 20.dp, if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f))
+                                    // a picture, a video or a song shows its own picture (the preview), the other files the picture of their kind
+                                    val thumb = if (isDir) null else (com.umutk.pulse.features.exThumb(f) ?: com.umutk.pulse.features.exPreview(f))
+                                    if (thumb != null) androidx.compose.foundation.Image(thumb, null, Modifier.size(26.dp).clip(RoundedCornerShape(3.dp)).border(1.dp, Color(0x33000000), RoundedCornerShape(3.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                    else W7Pic(if (isDir) w7FolderKey(f, root) else w7FileKey(f), 22.dp, if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f))
                                     Text(f.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
                                 }
                                 Text(com.umutk.pulse.features.exDate(f.lastModified(), com.umutk.pulse.features.FilesPrefs.dateFmt), color = Color(0xFF555555), fontSize = 12.sp, maxLines = 1, modifier = Modifier.width(118.dp))
@@ -219,15 +233,18 @@ fun Win7Explorer() {
     }
 }
 
-/** The round back and forward button: glassy blue when it can be used, grey when it cannot. */
+/** The round back and forward button: the blue orb of the Windows 7 pack at full size, the pressed one while it is held, faded when it cannot be used. */
 @Composable
 private fun W7Round(enabled: Boolean, forward: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier.size(30.dp).clip(CircleShape)
-            .background(if (enabled) Brush.verticalGradient(listOf(Color(0xFFC9DDF2), Color(0xFF86AEDA))) else Brush.verticalGradient(listOf(Color(0xFFE9EDF2), Color(0xFFD3DAE4))))
-            .border(1.dp, if (enabled) Color(0xFF5F86B6) else Color(0xFFB4BFCF), CircleShape).clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Box(Modifier.graphicsLayer { rotationZ = if (forward) 180f else 0f }) { PIcon("back", if (enabled) Color.White else Color(0xFF9AA7B8), 16.dp) } }
+    val ctx = LocalContext.current
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val down by src.collectIsPressedAsState()
+    val base = if (forward) "forward" else "back"
+    val pic = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", base)
+    Box(Modifier.size(38.dp).clip(CircleShape).clickable(interactionSource = src, indication = null, enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
+        if (pic != null) androidx.compose.foundation.Image(pic, null, Modifier.fillMaxSize().padding(if (down) 3.dp else 1.dp).graphicsLayer { alpha = if (enabled) 1f else .38f })
+        else PIcon("back", Color(0xFF5F86B6), 22.dp)
+    }
 }
 
 @Composable
@@ -299,19 +316,21 @@ private fun W7Computer(root: File, modifier: Modifier, open: (File) -> Unit) {
         hd to rm
     }
     Column(modifier.background(Color.White).verticalScroll(rememberScrollState()).padding(8.dp)) {
-        W7DriveGroup(tr("Hard Disk Drives (${disks.size})", "Sabit Disk Sürücüleri (${disks.size})"), disks, open)
-        if (removable.isNotEmpty()) W7DriveGroup(tr("Devices with Removable Storage (${removable.size})", "Çıkarılabilir Depolama Aygıtları (${removable.size})"), removable, open)
+        val picked = remember { mutableStateOf<String?>(null) }
+        W7DriveGroup(tr("Hard Disk Drives (${disks.size})", "Sabit Disk Sürücüleri (${disks.size})"), disks, picked, open)
+        if (removable.isNotEmpty()) W7DriveGroup(tr("Devices with Removable Storage (${removable.size})", "Çıkarılabilir Depolama Aygıtları (${removable.size})"), removable, picked, open)
     }
 }
 
 @Composable
-private fun W7DriveGroup(title: String, drives: List<W7Drive>, open: (File) -> Unit) {
+private fun W7DriveGroup(title: String, drives: List<W7Drive>, picked: androidx.compose.runtime.MutableState<String?>, open: (File) -> Unit) {
     Text(title, color = W7_INK, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD5DDE8)))
     drives.forEach { d ->
         val (total, free) = remember(d.dir.path) { runCatching { val st = android.os.StatFs(d.dir.path); st.blockCountLong * st.blockSizeLong to st.availableBlocksLong * st.blockSizeLong }.getOrDefault(0L to 0L) }
         val used = if (total > 0) 1f - free.toFloat() / total else 0f
-        Row(Modifier.fillMaxWidth().clickable { open(d.dir) }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().then(if (picked.value == d.dir.path) Modifier.background(W7_SEL).border(1.dp, Color(0xFF7DA2CE)) else Modifier)
+            .fileRow({ picked.value = d.dir.path }, { picked.value = d.dir.path }, onDouble = { open(d.dir) }).padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             W7Pic(d.icon, 44.dp)
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(d.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

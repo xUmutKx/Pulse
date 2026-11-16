@@ -59,11 +59,14 @@ fun pasteInto(dir: File): String? {
     return last
 }
 
-/** Long press on a row (position kept for the menu) and tap. */
-fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit): Modifier = composed {
+/** Long press on a row (position kept for the menu), a tap, and (when [onDouble] is given) a double tap, as a file window of Windows: one tap picks, two open. */
+fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit, onDouble: (() -> Unit)? = null): Modifier = composed {
     var origin by remember { mutableStateOf(Offset.Zero) }
-    onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(Unit) {
-        detectTapGestures(onTap = { onTap() }, onLongPress = { LauncherSession.pressAt = origin + it; onLong() })
+    val tap by androidx.compose.runtime.rememberUpdatedState(onTap)
+    val long by androidx.compose.runtime.rememberUpdatedState(onLong)
+    val dbl by androidx.compose.runtime.rememberUpdatedState(onDouble)
+    onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(onDouble != null) {
+        detectTapGestures(onTap = { tap() }, onDoubleTap = if (onDouble != null) ({ _ -> dbl?.invoke() }) else null, onLongPress = { LauncherSession.pressAt = origin + it; long() })
     }
 }
 

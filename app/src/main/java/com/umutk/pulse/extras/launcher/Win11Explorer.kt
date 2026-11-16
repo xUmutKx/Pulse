@@ -216,10 +216,13 @@ fun Win11Explorer() {
                         val on = f.path == sel
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).then(if (on) Modifier.background(T.accent.copy(alpha = .22f)) else Modifier)
-                                .fileRow({ fr.requestFocus(); if (on) open(f) else sel = f.path }, { sel = f.path; menuFor = f }).padding(horizontal = 8.dp, vertical = 8.dp),
+                                .fileRow({ fr.requestFocus(); sel = f.path }, { sel = f.path; menuFor = f }, onDouble = { open(f) }).padding(horizontal = 8.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            PIcon(if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f), if (isDir) W11_FOLDER else T.accent, 18.dp)
+                            // a picture, a video or a song shows its own picture
+                            val thumb = if (isDir) null else (com.umutk.pulse.features.exThumb(f) ?: com.umutk.pulse.features.exPreview(f))
+                            if (thumb != null) androidx.compose.foundation.Image(thumb, null, Modifier.size(26.dp).clip(RoundedCornerShape(4.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                            else PIcon(if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f), if (isDir) W11_FOLDER else T.accent, 18.dp)
                             Text(f.name, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 8.dp))
                             Text(com.umutk.pulse.features.exDate(f.lastModified(), com.umutk.pulse.features.FilesPrefs.dateFmt), color = T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                         }

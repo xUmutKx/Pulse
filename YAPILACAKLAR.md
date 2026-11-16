@@ -2513,3 +2513,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Görev Yöneticisi: sıralama ve performans seçimi hatırlanır.
 - Win11 launcher: kendi vurgu rengi (ayarlarda, varsayılan sistemin mavisi); logo, açık pencere çubukları, saat açılırı ve seçimler ona uyar.
 - Game Hub: Mega Games sayfasının tüm mini oyunları rafta (126), resmi olmayanlara üretilmiş kapak.
+
+## Sonrası (derlenmedi)
+- Win7 Gezgin: büyük mavi geri/ileri topları, çift tıkla aç, geri Bilgisayar sayfasına döner, resim/video/müzik önizlemesi, listelenemeyen klasörde mesaj; pencere başlığına çift dokunma/basılı tutma ile tam ekran-pencere.
+- Tepsi: tek bayrak, ok kutusunda yalnızca gerçekten süren şeyler (müzik, indirme, VPN, Bluetooth, depolama), Denetim Masası > Bildirim Alanı Simgeleri.

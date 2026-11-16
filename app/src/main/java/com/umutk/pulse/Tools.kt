@@ -106,6 +106,7 @@ fun SubScreen(id: String, back: () -> Unit) {
             }
         }
         id == "ram" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.RamPage() }
+        id == "trayicons" -> com.umutk.pulse.extras.launcher.TrayIconsPage()
         id == "fonts" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.FontChangerScreen() }
         id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
