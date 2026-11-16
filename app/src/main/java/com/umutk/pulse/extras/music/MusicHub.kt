@@ -121,6 +121,14 @@ object MusicNav {
     var request by androidx.compose.runtime.mutableStateOf<String?>(null)
     /** An artist whose page the library opens (the player's artist line asks for it). The library takes it and clears it. */
     var artist by androidx.compose.runtime.mutableStateOf<String?>(null)
+    /** An album whose page the library opens (the search page asks for it). */
+    var album by androidx.compose.runtime.mutableStateOf<String?>(null)
+    /** The search text, kept while the search page is left for an artist or album page. */
+    var searchQuery by androidx.compose.runtime.mutableStateOf("")
+    /** True while the artist or album page was opened from the search: Back returns to the search. */
+    var fromSearch = false
+    /** The library asks the music screen to show the search page again. */
+    var returnSearch by androidx.compose.runtime.mutableStateOf(false)
 }
 
 @Composable
