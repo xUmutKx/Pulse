@@ -32,6 +32,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -209,6 +215,8 @@ object Downloads {
     var dirPath by mutableStateOf(defaultDir())
     /** false: ask which app each time; true: open with the app that handles the file */
     var directOpen by mutableStateOf(false)
+    /** Removing a finished download only takes it off the list: the file stays on the phone. Off at first. */
+    var keepFiles by mutableStateOf(false)
     /** index into [SPEED_KBS]: caps downloads and installer copies; kept between runs */
     var speed by mutableStateOf(0)
     /** false while there is no working network; transfers wait for it instead of failing */
@@ -227,6 +235,7 @@ object Downloads {
         val p = ctx.getSharedPreferences("p", Context.MODE_PRIVATE)
         dirPath = p.getString("dlDir", null) ?: defaultDir()
         directOpen = p.getBoolean("openDirect", false)
+        keepFiles = p.getBoolean("dlKeepFiles", false)
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
         // the activity, the service and the boot receiver all call this; the list is read once per process
         if (loaded) return
@@ -278,6 +287,11 @@ object Downloads {
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
         val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+    }
+
+    fun setKeepFiles(ctx: Context, v: Boolean) {
+        keepFiles = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlKeepFiles", v).apply()
     }
 
     fun setDirectOpen(ctx: Context, v: Boolean) {
@@ -353,14 +367,16 @@ object Downloads {
         }
     }
 
-    /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
+    /** Stops a download (its partial file goes too) or removes a finished one together with its file (only from the list when [keepFiles] is on). */
     fun remove(t: DlTask) {
+        val keep = keepFiles && t.state.value == DlState.DONE
         t.cancelled = true
         tasks.update { it - t }
         persist()
         app?.getSystemService(NotificationManager::class.java)?.cancel(t.nid)
         // after the writer has stopped, so it cannot bring the file back
         val running = t.job
+        if (keep) return
         scope.launch {
             runCatching { running?.join() }
             if (!eraseFile(t.file)) {
@@ -1200,10 +1216,11 @@ private fun DownloadsContent() {
         else -> compareBy<DlTask> { it.file.name.lowercase() }
     }
     Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val listScroll = rememberScrollState()
+    Column(Modifier.fillMaxSize().verticalScroll(listScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PHead("Downloads")
         if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
-            title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
+            title = { Text(if (Downloads.keepFiles) tr("Remove ${chosen.size} from the list (finished files stay)", "${chosen.size} indirmeyi listeden kaldır (biten dosyalar kalır)") else tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
             text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
             confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { runCatching { Downloads.remove(it) } }
                 findScope.launch { kotlinx.coroutines.delay(1500); val left = n.count { it.file.exists() }; if (left > 0) android.widget.Toast.makeText(ctx, tr("$left files could not be deleted", "$left dosya silinemedi"), android.widget.Toast.LENGTH_LONG).show() } } },
@@ -1331,20 +1348,71 @@ private fun DownloadsContent() {
                 confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { found = foundQueue.removeFirstOrNull() } })
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
-        list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { t -> DownloadRow(t, t in chosen, chosen.isNotEmpty()) { chosen = if (t in chosen) chosen - t else chosen + t } }
+        // long press a row, then slide the finger over the others: every row it passes is picked (as in Files); a tap picks or lets go one row once some are picked
+        val shownRows = list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order)
+        val hits = remember { HashMap<DlTask, androidx.compose.ui.layout.LayoutCoordinates>() }
+        var listBox by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+        val dm = ctx.resources.displayMetrics
+        Column(Modifier.fillMaxWidth().onGloballyPositioned { listBox = it }.pointerInput(shownRows) {
+            var anchor = -1
+            var base: Set<DlTask> = emptySet()
+            fun hitAt(p: androidx.compose.ui.geometry.Offset): Int {
+                val root = listBox?.takeIf { it.isAttached }?.localToRoot(p) ?: return -1
+                for ((t, c) in hits) if (c.isAttached && c.boundsInRoot().contains(root)) return shownRows.indexOf(t)
+                return -1
+            }
+            detectDragGesturesAfterLongPress(
+                onDragStart = { p ->
+                    anchor = hitAt(p)
+                    if (anchor >= 0) { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); base = chosen; chosen = base + shownRows[anchor] }
+                },
+                onDragEnd = { anchor = -1 }, onDragCancel = { anchor = -1 },
+                onDrag = { change, _ ->
+                    change.consume()
+                    val i = hitAt(change.position)
+                    if (i >= 0 && anchor >= 0) chosen = base + (minOf(anchor, i)..maxOf(anchor, i)).map { shownRows[it] }
+                    // the list follows the finger at the top and bottom edges
+                    val y = listBox?.takeIf { it.isAttached }?.localToRoot(change.position)?.y ?: 0f
+                    if (y < 140 * dm.density) findScope.launch { listScroll.scrollBy(-24f) }
+                    else if (y > dm.heightPixels - 180 * dm.density) findScope.launch { listScroll.scrollBy(24f) }
+                },
+            )
+        }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            shownRows.forEach { t ->
+                androidx.compose.runtime.key(t) {
+                    androidx.compose.runtime.DisposableEffect(t) { onDispose { hits.remove(t) } }
+                    Box(Modifier.onGloballyPositioned { hits[t] = it }) {
+                        DownloadRow(t, t in chosen, chosen.isNotEmpty()) { chosen = if (t in chosen) chosen - t else chosen + t }
+                    }
+                }
+            }
+        }
         // room under the last row for the floating bar
         Spacer(Modifier.height(72.dp))
     }
     // the bar of the chosen rows floats at the bottom: it stays in reach while the list scrolls, to delete them one after the other
-    if (chosen.isNotEmpty()) Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()) {
+    androidx.compose.animation.AnimatedVisibility(chosen.isNotEmpty(), Modifier.align(Alignment.BottomCenter),
+        enter = androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(220)) { it } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)),
+        exit = androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(180)) { it } + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180))) {
+    Box(Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()) {
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("${chosen.size}", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Box(Modifier.clickable { chosen = list.filter { cat == "All" || category(it.file) == cat }.toSet() }) { PIcon("check", T.text, 22.dp) }
+                // all the rows shown, or none of them again when they are all picked already
+                val every = list.filter { cat == "All" || category(it.file) == cat }.toSet()
+                val allOn = every.isNotEmpty() && chosen.containsAll(every)
+                Row(Modifier.clip(RoundedCornerShape(50)).background(if (allOn) com.umutk.pulse.Look.accent.copy(alpha = .18f) else Color.Transparent)
+                    .clickable { chosen = if (allOn) emptySet() else every }.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("check", if (allOn) com.umutk.pulse.Look.accent else T.text, 20.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(tr("All", "Tümü"), color = if (allOn) com.umutk.pulse.Look.accent else T.text, fontSize = 14.sp)
+                }
                 Box(Modifier.clickable { bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
                 Box(Modifier.clickable { chosen = emptySet() }) { PIcon("close", T.sub, 22.dp) }
             }
         }
+    }
     }
     }
 }
@@ -1365,8 +1433,10 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
         DlState.DONE -> "Done · ${Guard.gb(done)}"
         DlState.FAILED -> "Failed: $err"
     }
-    PCard(Modifier.fillMaxWidth().then(if (picked) Modifier.border(2.dp, com.umutk.pulse.Look.accent, RoundedCornerShape(8.dp)) else Modifier)
-        .combinedClickable(onLongClick = toggle) { if (selecting) toggle() else if (st == DlState.DONE) Downloads.openFile(ctx, t.file) }) {
+    val ring by androidx.compose.animation.animateColorAsState(if (picked) com.umutk.pulse.Look.accent else Color.Transparent, androidx.compose.animation.core.tween(200), label = "pick")
+    val lift by androidx.compose.animation.core.animateFloatAsState(if (picked) .97f else 1f, androidx.compose.animation.core.tween(200), label = "lift")
+    PCard(Modifier.fillMaxWidth().graphicsLayer { scaleX = lift; scaleY = lift }.border(2.dp, ring, RoundedCornerShape(8.dp))
+        .clickable { if (selecting) toggle() else if (st == DlState.DONE) Downloads.openFile(ctx, t.file) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(t.file.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1382,7 +1452,7 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
             var confirmDel by remember { mutableStateOf(false) }
             Box(Modifier.clickable { confirmDel = true }) { PIcon("delete", T.sub, 22.dp) }
             if (confirmDel) WinAlert(onDismissRequest = { confirmDel = false }, warn = true,
-                title = { Text(tr("Delete download", "İndirmeyi sil")) },
+                title = { Text(if (Downloads.keepFiles && st == DlState.DONE) tr("Remove from the list (the file stays)", "Listeden kaldır (dosya kalır)") else tr("Delete download", "İndirmeyi sil")) },
                 text = { Text(t.file.name) },
                 confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { confirmDel = false; Downloads.remove(t) } },
                 dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { confirmDel = false } })
