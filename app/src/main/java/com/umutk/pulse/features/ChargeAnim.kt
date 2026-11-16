@@ -128,7 +128,7 @@ private fun ChargeUi(ctx: Context, style: Int) {
 
 /** The colour a look is drawn in (the party looks use their own). */
 internal fun chargeColor(style: Int): Color = when (style) { 1 -> Color(0xFF30D158); 2 -> Color(0xFF4FC3F7); 3 -> Color(0xFFFFD60A); 4 -> Color(0xFFB388FF); 7 -> Color(0xFFFF5C7A); 8 -> Color(0xFF7CFC00); 9 -> Color(0xFF40C4FF); 10 -> Color(0xFF30D158)
-    11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); 22 -> Color(0xFF69F0AE); 24 -> Color(0xFF00E5FF); 25 -> Color(0xFFFFFFFF); 26 -> Color(0xFFCFD8DC); 27 -> Color(0xFFFFE082); 28 -> Color(0xFF9FA8FF); else -> Color(0xFF69F0AE) }
+    11 -> Color(0xFF64FFDA); 12 -> Color(0xFFFFAB40); 13 -> Color(0xFF00E676); 14 -> Color(0xFFFF80AB); 15 -> Color(0xFF82B1FF); 16 -> Color(0xFF18FFFF); 22 -> Color(0xFF69F0AE); 24 -> Color(0xFF00E5FF); 25 -> Color(0xFFFFFFFF); 26 -> Color(0xFFCFD8DC); 27 -> Color(0xFFFFE082); 28 -> Color(0xFF9FA8FF); 29 -> Color(0xFF29B6F6); 30 -> Color(0xFF7C4DFF); else -> Color(0xFF69F0AE) }
 
 /** The picture of one look at [t] (0..1, repeating) and [fill] (0..1): drawn the same for the full screen and for the small previews in the settings; [scale] shrinks the texts. */
 @Composable
@@ -162,6 +162,8 @@ private fun ChargeBody(style: Int, t: Float, fill: Float, col: Color, scale: Flo
                 21 -> heartsStyle(t)
                 26 -> birdsStyle(t, fill, col)
                 28 -> warpStyle(t, col)
+                29 -> tideStyle(t, fill, col)
+                30 -> surgeStyle(t, col)
                 else -> barStyle(t, fill, col)
             }
         }
@@ -221,7 +223,7 @@ private fun NeofetchCharge(t: Float, fill: Float, col: Color, scale: Float) {
     val shown = (t * 1.7f * total).toInt().coerceIn(0, total)
     val pct = (fill * 100).toInt(); val bar = 24; val on = (fill * bar).toInt().coerceIn(0, bar)
     val fs = (if (scale >= 1f) 7.4f else 3.6f * scale * 2f).coerceAtLeast(3f)
-    Column(Modifier.fillMaxSize().background(Color.Black).padding((10 * scale).dp), verticalArrangement = Arrangement.Center) {
+    Column(Modifier.fillMaxSize().background(Color.Black).padding((10 * scale).dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         com.umutk.pulse.features.NeofetchCard(card.first, card.second, fs, shown)
         if (shown >= total) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "] $pct%", color = col, fontFamily = FontFamily.Monospace, fontSize = fs.sp, modifier = Modifier.padding(top = (4 * scale).dp))
     }
@@ -295,6 +297,40 @@ private fun DrawScope.liquidStyle(t: Float, fill: Float, col: Color) {
         }
     }
     drawCircle(Color.White.copy(alpha = .22f), r, c, style = Stroke(m * .008f))
+}
+
+/** 29: the whole screen is the water: waves rise from the bottom and the level is the charge. */
+private fun DrawScope.tideStyle(t: Float, fill: Float, col: Color) {
+    val level = size.height * (1f - fill.coerceIn(.04f, 1f))
+    for (layer in 0..2) {
+        val phase = t * TAU * (if (layer % 2 == 0) 1f else -1f) + layer * 1.7f
+        val amp = size.width * (.035f - layer * .009f)
+        val off = layer * size.height * .018f
+        val p = Path().apply {
+            moveTo(0f, size.height); lineTo(0f, level + off)
+            var x = 0f
+            while (x <= size.width + 6f) { lineTo(x, level + off + sin(x / size.width * TAU * 1.3f + phase) * amp); x += 6f }
+            lineTo(size.width, size.height); close()
+        }
+        drawPath(p, Brush.verticalGradient(listOf(col.copy(alpha = .75f - layer * .2f), col.copy(alpha = .25f)), startY = level, endY = size.height))
+    }
+}
+
+/** 30: waves come up from the bottom edge one after the other, over the whole screen, and fade out at the top. */
+private fun DrawScope.surgeStyle(t: Float, col: Color) {
+    for (i in 0..3) {
+        val q = (t + i / 4f) % 1f
+        val y = size.height * (1f - q)
+        val phase = (t + i * .25f) * TAU * 2f
+        val amp = size.width * .03f
+        val p = Path().apply {
+            moveTo(0f, size.height); lineTo(0f, y)
+            var x = 0f
+            while (x <= size.width + 6f) { lineTo(x, y + sin(x / size.width * TAU * 1.5f + phase) * amp); x += 6f }
+            lineTo(size.width, size.height); close()
+        }
+        drawPath(p, Brush.verticalGradient(listOf(col.copy(alpha = .30f * (1f - q)), Color.Transparent), startY = y, endY = size.height))
+    }
 }
 
 /** 3: a lightning bolt in a gradient that breathes in a soft glow. */
