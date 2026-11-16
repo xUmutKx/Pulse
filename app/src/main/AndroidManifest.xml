@@ -930,6 +930,21 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+        <!-- Pulse as an autofill service (Settings > Passwords and autofill): the vault's logins and cards in other apps and browsers, and the offer to save a new login; Android 8+ only. Only active when the person picks it there -->
+        <service
+            android:name=".features.PulseAutofillService"
+            android:exported="true"
+            android:label="Pulse"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/autofill_service" />
+        </service>
+        <!-- the screen-lock question before an autofill suggestion shows its secret (cards always, logins when the vault is behind the lock) -->
+        <activity android:name=".features.AutofillAuthActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <service android:name="com.umutk.pulse.extras.keyboard.KeyboardTile" android:exported="true" android:label="Keyboard" android:icon="@drawable/ic_qs_keys"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
