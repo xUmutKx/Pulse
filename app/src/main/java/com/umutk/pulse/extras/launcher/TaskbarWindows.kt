@@ -96,7 +96,7 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
                 Text(w.title, color = if (kind == "95") Color.Black else ink, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     fontWeight = if (kind == "95" && active) androidx.compose.ui.text.font.FontWeight.Bold else null)
                 // the underline of Windows 10 / 11: the open window, longer when it is in front
-                if (kind == "10" || kind == "11") Box(Modifier.align(Alignment.BottomCenter).width(if (active) 40.dp else 14.dp).height(2.dp).background(Color(0xFF4CC2FF)))
+                if (kind == "10" || kind == "11") Box(Modifier.align(Alignment.BottomCenter).width(if (active) 40.dp else 14.dp).height(2.dp).background(if (kind == "11") launcherAccent() else Color(0xFF4CC2FF)))
             }
         }
     }

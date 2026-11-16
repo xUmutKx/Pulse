@@ -2511,3 +2511,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Müzik: arama (çal/karıştır, albüm, sanatçı, sözlerde küçük çal), sanatçı/albüm sayfası araması, yumuşak kapak, yüzen çal/karıştır, sanatçı resmi ayrı çekilir (Deezer).
 - Hava: gerçekçi ay çizimi.
 - Görev Yöneticisi: sıralama ve performans seçimi hatırlanır.
+- Win11 launcher: kendi vurgu rengi (ayarlarda, varsayılan sistemin mavisi); logo, açık pencere çubukları, saat açılırı ve seçimler ona uyar.
+- Game Hub: Mega Games sayfasının tüm mini oyunları rafta (126), resmi olmayanlara üretilmiş kapak.

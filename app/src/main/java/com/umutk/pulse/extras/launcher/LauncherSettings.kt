@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -245,6 +246,18 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("squircle" to tr("Squircle", "Yumuşak kare"), "circle" to tr("Circle", "Daire"), "rounded" to tr("Rounded", "Yuvarlak köşe"), "square" to tr("Square", "Kare")).forEach { (k, n) ->
                     com.umutk.pulse.PChip(LauncherPrefs.iconShape == k, n) { LauncherPrefs.iconShape = k; save() }
+                }
+            }
+            // the accent of the Windows 11 launcher (the logo, the open-window bars, the selections): the system's own, or one of the Windows colours
+            if (cur.id == "win11") {
+                Text(tr("Accent colour", "Vurgu rengi"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // the first swatch is the look's own accent
+                    Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(com.umutk.pulse.Look.accent).then(if (!LauncherPrefs.accentOn) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable { LauncherPrefs.accentOn = false; save() })
+                    com.umutk.pulse.accentsFor(false).forEach { c ->
+                        val on = LauncherPrefs.accentOn && LauncherPrefs.accentArgb == c.toArgb()
+                        Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c).then(if (on) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable { LauncherPrefs.accentArgb = c.toArgb(); LauncherPrefs.accentOn = true; save() })
+                    }
                 }
             }
             // wallpaper
