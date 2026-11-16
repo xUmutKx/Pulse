@@ -379,6 +379,7 @@ private fun builtinRows(): List<BuiltinRow> {
     val ctx = LocalContext.current
     val openTool = LocalOpenTool.current
     return listOf(        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "music") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
+        BuiltinRow("YTXTube", tr("YouTube and YouTube Music without ads: Shorts, downloads, background play", "Reklamsız YouTube ve YouTube Music: Shorts, indirme, arka planda oynatma"), "play", "app:YtxLauncher", cls = "com.umutk.pulse.extras.ytx.YtxActivity") { launchExtra(ctx, "com.umutk.pulse.extras.ytx.YtxActivity") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher", cls = "com.umutk.pulse.ExtraToolActivity", route = "video") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher", cls = "com.umutk.pulse.FilesActivity") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
         BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher", cls = "com.umutk.pulse.ImageViewActivity") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
