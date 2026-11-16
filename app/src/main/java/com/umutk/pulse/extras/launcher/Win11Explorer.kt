@@ -159,16 +159,16 @@ fun Win11Explorer() {
             }
             Box {
                 W11Cmd(tr("Sort", "Sırala") + " ▾") { sortMenu = true }
-                DropdownMenu(sortMenu, { sortMenu = false }) {
-                    DropdownMenuItem({ Text(tr("Name", "Ad")) }, { sort = 0; sortMenu = false })
-                    DropdownMenuItem({ Text(tr("Date modified", "Değiştirme tarihi")) }, { sort = 1; sortMenu = false })
-                    DropdownMenuItem({ Text(tr("Size", "Boyut")) }, { sort = 2; sortMenu = false })
+                DropdownMenu(sortMenu, { sortMenu = false }, containerColor = (if (T.dark) Color(0xFF2C2C2C) else Color(0xFFF3F3F3)).copy(alpha = .78f), shape = RoundedCornerShape(8.dp)) {
+                    DropdownMenuItem({ Text(color = T.text, text = tr("Name", "Ad")) }, { sort = 0; sortMenu = false })
+                    DropdownMenuItem({ Text(color = T.text, text = tr("Date modified", "Değiştirme tarihi")) }, { sort = 1; sortMenu = false })
+                    DropdownMenuItem({ Text(color = T.text, text = tr("Size", "Boyut")) }, { sort = 2; sortMenu = false })
                 }
             }
             Box {
                 W11Cmd(tr("View", "Görünüm") + " ▾") { viewMenu = true }
-                DropdownMenu(viewMenu, { viewMenu = false }) {
-                    DropdownMenuItem({ Text(if (hidden) tr("Hide hidden files", "Gizli dosyaları gizle") else tr("Show hidden files", "Gizli dosyaları göster")) }, { hidden = !hidden; viewMenu = false })
+                DropdownMenu(viewMenu, { viewMenu = false }, containerColor = (if (T.dark) Color(0xFF2C2C2C) else Color(0xFFF3F3F3)).copy(alpha = .78f), shape = RoundedCornerShape(8.dp)) {
+                    DropdownMenuItem({ Text(color = T.text, text = if (hidden) tr("Hide hidden files", "Gizli dosyaları gizle") else tr("Show hidden files", "Gizli dosyaları göster")) }, { hidden = !hidden; viewMenu = false })
                 }
             }
             W11Cmd(tr("Open", "Aç"), enabled = sel != null) { files.firstOrNull { it.path == sel }?.let { open(it) } }
