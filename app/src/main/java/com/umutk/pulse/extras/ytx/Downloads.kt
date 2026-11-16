@@ -864,7 +864,7 @@ object Downloads {
 
         runCatching {
             val existing = tasks.mapTo(HashSet()) { it.fileName }
-            (dir.listFiles().orEmpty() + musicDir().listFiles().orEmpty()).forEach { f ->
+            ((dir.listFiles()?.toList() ?: emptyList<File>()) + (musicDir().listFiles()?.toList() ?: emptyList<File>())).forEach { f: File ->
                 if (!f.isFile || f.length() <= 0L) return@forEach
                 val name = f.name
                 if (name.endsWith(".part") || name.startsWith(".")) return@forEach
