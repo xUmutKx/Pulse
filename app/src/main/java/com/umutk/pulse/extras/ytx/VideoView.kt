@@ -926,12 +926,31 @@ fun Modifier.aspectFit(aspect: Float, cover: Boolean = false) = layout { measura
 
 @Composable
 fun FullscreenPlayer(state: PlayerState, onExit: () -> Unit) {
+    val exitNow by rememberUpdatedState(onExit)
+    // a swipe down that starts in the middle of the screen leaves full screen (the sides keep their brightness and volume swipes);
+    // the touches are only watched, never taken, so taps and the player's own gestures work as before
+    val exitSwipe = Modifier.pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val w = size.width.toFloat()
+            if (down.position.x < w / 3f || down.position.x > w * 2f / 3f) return@awaitEachGesture
+            val need = 110.dp.toPx()
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                if (!ch.pressed) break
+                val dy = ch.position.y - down.position.y
+                val dx = kotlin.math.abs(ch.position.x - down.position.x)
+                if (dy > need && dx < dy * 0.6f) { exitNow(); break }
+            }
+        }
+    }
     VideoContent(
         state = state,
         fullscreen = true,
         onCollapse = onExit,
         onToggleFullscreen = onExit,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().then(exitSwipe),
     )
 }
 
