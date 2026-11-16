@@ -90,7 +90,7 @@ object Device {
 /** Where the models live: Download/PulseAI (shared, they survive a reinstall and other apps can use them). */
 object Store {
     private fun sp(c: Context) = c.getSharedPreferences("models", Context.MODE_PRIVATE)
-    val dir: File get() = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "PulseAI")
+    val dir: File get() = com.umutk.pulse.PulseDirs.ai()
     fun fileOf(m: AiModel) = File(dir, m.file)
 
     /**

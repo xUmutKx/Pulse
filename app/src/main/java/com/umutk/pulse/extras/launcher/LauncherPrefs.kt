@@ -308,12 +308,14 @@ object LauncherPrefs {
     /** Copies the launcher's settings file to Download/PulseLauncher.properties (the other way: [importSettings]). */
     fun exportSettings(c: Context): Boolean = runCatching {
         save(c)
-        val out = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "PulseLauncher.properties")
+        val out = File(com.umutk.pulse.PulseDirs.sub("Backup"), "PulseLauncher.properties").also { it.parentFile?.mkdirs() }
         file(c).copyTo(out, overwrite = true); true
     }.getOrDefault(false)
 
     fun importSettings(c: Context): Boolean = runCatching {
-        val src = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "PulseLauncher.properties")
+        // the new place first, the old one (straight in Downloads) as a second
+        val src = File(com.umutk.pulse.PulseDirs.sub("Backup"), "PulseLauncher.properties").takeIf { it.isFile }
+            ?: File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "PulseLauncher.properties")
         if (!src.isFile) return false
         src.copyTo(file(c), overwrite = true); load(c); true
     }.getOrDefault(false)

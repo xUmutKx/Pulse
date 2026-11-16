@@ -18,7 +18,7 @@ import java.util.Locale
  */
 object AutoBackup {
     private const val KEEP = 4
-    private const val FOLDER = "Pulse backup"
+    private const val FOLDER = "Pulse/Backup"
     // once a week, on by default
     private const val WEEK = 6L * 24 * 3600_000L
 

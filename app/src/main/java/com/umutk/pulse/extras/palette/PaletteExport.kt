@@ -38,7 +38,7 @@ object PaletteExport {
             val s = c.contentResolver.openOutputStream(uri) ?: error("no stream")
             return s to { c.contentResolver.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null); Unit }
         }
-        val f = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse-Palette.zip")
+        val f = File(com.umutk.pulse.PulseDirs.sub("Palette").also { it.mkdirs() }, "Pulse-Palette.zip")
         return f.outputStream() to { }
     }
 }
