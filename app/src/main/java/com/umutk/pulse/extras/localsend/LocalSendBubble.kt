@@ -1,10 +1,7 @@
 package com.umutk.pulse.extras.localsend
 
 import android.content.Context
-import android.graphics.PixelFormat
-import android.provider.Settings
-import android.view.Gravity
-import android.view.WindowManager
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,78 +44,67 @@ import com.umutk.pulse.features.CoverAccessibilityService
 import com.umutk.pulse.features.StandByOwner
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * A small round bubble over every app while LocalSend sends or receives: a ring shows the progress, it can be dragged anywhere, and a tap opens a card
- * with the file, the progress bar and pause / cancel. It goes away a moment after the transfer ends. Drawn over the apps through the accessibility
- * layer or the "display over other apps" permission (no prompt here: without either the bubble is simply not shown).
+ * A transfer of LocalSend (sending or receiving) is shown as a notification, not as something floating over the apps: the name of the other device, a progress
+ * bar, and Pause / Cancel in it. It is looked at twice a second and goes a moment after the transfer ends.
  */
 object LocalSendBubble {
-    private var view: ComposeView? = null
-    private var owner: StandByOwner? = null
-    private var host: Context? = null
-    val showing get() = view != null
+    private var job: kotlinx.coroutines.Job? = null
+    val showing get() = job != null
+    private const val CHANNEL = "localsend_transfer"
+    private const val ID = 7421
 
-    /** Shows the bubble; false when nothing can draw over the apps. */
+    /** Starts the notification of the transfer; it is always possible (the name stays from the old bubble: callers ask whether something could be shown). */
     fun show(ctx: Context): Boolean {
-        if (view != null) return true
-        val acc = CoverAccessibilityService.instance
+        if (job != null) return true
         val app = ctx.applicationContext
-        if (acc == null && !com.umutk.pulse.Compat.canOverlay(app)) return false
-        val base: Context = acc ?: app
-        val wm = base.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START; x = 24; y = 360 }
-        val o = StandByOwner().also { it.start() }
-        val v = ComposeView(base)
-        v.setViewTreeLifecycleOwner(o); v.setViewTreeSavedStateRegistryOwner(o)
-        v.setContent {
-            BubbleUi(onMove = { dx, dy -> lp.x += dx.toInt(); lp.y += dy.toInt(); runCatching { wm.updateViewLayout(v, lp) } }, onHide = { hide() })
+        val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        if (android.os.Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null)
+            nm.createNotificationChannel(android.app.NotificationChannel(CHANNEL, tr("File transfer", "Dosya aktarımı"), android.app.NotificationManager.IMPORTANCE_LOW))
+        job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            var quiet = 0
+            while (true) {
+                val busy = LocalSendEngine.busy
+                if (busy.isEmpty()) { quiet++; if (quiet > 3) break; delay(500); continue }
+                quiet = 0
+                runCatching { nm.notify(ID, build(app, busy, LocalSendEngine.progress, LocalSendEngine.paused)) }
+                delay(500)
+            }
+            runCatching { nm.cancel(ID) }
+            job = null
         }
-        view = v; owner = o; host = base
-        runCatching { wm.addView(v, lp) }.onFailure { view = null; o.stop(); owner = null; host = null; return false }
         return true
     }
 
     fun hide() {
-        val v = view ?: return
-        runCatching { ((host ?: v.context).getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(v) }
-        owner?.stop(); owner = null; view = null; host = null
+        job?.cancel(); job = null
+        runCatching { (host() ?: return).cancel(ID) }
+    }
+    private var nmRef: android.app.NotificationManager? = null
+    private fun host() = nmRef
+
+    private fun build(app: Context, busy: String, p: Float, paused: Boolean): android.app.Notification {
+        nmRef = app.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        fun act(a: String) = android.app.PendingIntent.getBroadcast(app, a.hashCode(), Intent(app, LocalSendActionReceiver::class.java).setAction(a),
+            android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        val b = if (android.os.Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(app, CHANNEL) else @Suppress("DEPRECATION") android.app.Notification.Builder(app)
+        val incoming = busy.startsWith("←")
+        return b.setSmallIcon(if (incoming) android.R.drawable.stat_sys_download else android.R.drawable.stat_sys_upload)
+            .setContentTitle(busy)
+            .setContentText("${(p * 100).toInt()}%" + if (paused) " · " + tr("paused", "duraklatıldı") else "")
+            .setProgress(100, (p * 100).toInt(), false)
+            .setOngoing(true).setOnlyAlertOnce(true)
+            .addAction(android.app.Notification.Action.Builder(null, if (paused) tr("Resume", "Sürdür") else tr("Pause", "Duraklat"), act("ls_pause")).build())
+            .addAction(android.app.Notification.Action.Builder(null, tr("Cancel", "İptal"), act("ls_cancel")).build())
+            .build()
     }
 }
 
-@Composable
-private fun BubbleUi(onMove: (Float, Float) -> Unit, onHide: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val busy = LocalSendEngine.busy
-    val p = LocalSendEngine.progress
-    // a few seconds after the transfer ended the bubble goes
-    LaunchedEffect(busy) { if (busy.isEmpty()) { delay(3000); if (LocalSendEngine.busy.isEmpty()) onHide() } }
-    val ink = Color(0xFF0A84FF); val panel = Color(0xF2202124)
-    Box(Modifier.pointerInput(Unit) { detectDragGestures { c, d -> c.consume(); onMove(d.x, d.y) } }) {
-        if (!open) Box(Modifier.size(58.dp).clip(CircleShape).background(panel).clickable { open = true }, contentAlignment = Alignment.Center) {
-            Canvas(Modifier.size(50.dp)) {
-                val w = 5.dp.toPx()
-                drawArc(Color.White.copy(alpha = .18f), 0f, 360f, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w))
-                drawArc(ink, -90f, 360f * p, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w, cap = StrokeCap.Round))
-            }
-            Text(if (busy.startsWith("←")) "↓" else "↑", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        } else Column(Modifier.width(230.dp).clip(RoundedCornerShape(16.dp)).background(panel).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(busy.ifEmpty { tr("Done", "Bitti") }, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth(), color = ink, trackColor = Color.White.copy(alpha = .18f))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${(p * 100).toInt()}%", color = Color.White.copy(alpha = .8f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                if (busy.isNotEmpty()) {
-                    Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f)).clickable { LocalSendEngine.paused = !LocalSendEngine.paused }, contentAlignment = Alignment.Center) {
-                        Text(if (LocalSendEngine.paused) "▶" else "❚❚", color = Color.White, fontSize = 13.sp)
-                    }
-                    Box(Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFB3261E)).clickable { LocalSendEngine.cancel() }, contentAlignment = Alignment.Center) { Text("✕", color = Color.White, fontSize = 15.sp) }
-                }
-                Box(Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f)).clickable { open = false }, contentAlignment = Alignment.Center) { Text("▾", color = Color.White, fontSize = 15.sp) }
-            }
-        }
+/** Pause and Cancel in the notification of a transfer. */
+class LocalSendActionReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        when (i.action) { "ls_pause" -> LocalSendEngine.paused = !LocalSendEngine.paused; "ls_cancel" -> LocalSendEngine.cancel() }
     }
 }

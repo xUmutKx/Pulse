@@ -250,6 +250,7 @@ object LocalSendEngine {
         }
         if (list.isEmpty()) return "Nothing to send"
         busy = "→ ${peer.alias}"; progress = 0f; cancelled = false; paused = false
+        LocalSendBubble.show(ctx)
         try {
             val files = JSONObject(); list.forEach { f -> files.put(f.id, JSONObject().put("id", f.id).put("fileName", f.name).put("size", f.size).put("fileType", f.mime)) }
             val (code, text) = post(peer, "prepare-upload", JSONObject().put("info", me()).put("files", files).toString().toByteArray(), timeoutMs = 120_000)
@@ -387,6 +388,7 @@ object LocalSendEngine {
         var out = File(s.dir, clean); var n = 1
         while (out.exists()) { out = File(s.dir, clean.substringBeforeLast('.', clean) + " ($n)" + (clean.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" })); n++ }
         busy = "← ${f.name}"; progress = 0f; cancelled = false; paused = false
+        LocalSendBubble.show(app)
         try {
             var got = 0L; val total = f.size.coerceAtLeast(1L)
             out.outputStream().use { o -> val buf = ByteArray(64 * 1024); while (true) { gate(); val k = r.body.read(buf); if (k < 0) break; o.write(buf, 0, k); got += k; progress = (got.toFloat() / total).coerceIn(0f, 1f) } }
