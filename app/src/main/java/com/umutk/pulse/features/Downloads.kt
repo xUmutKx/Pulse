@@ -47,6 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1264,7 +1266,7 @@ fun DownloadsPage() {
             androidx.compose.ui.window.Dialog(onDismissRequest = { SeasonDl.pageOpen = false },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
                 Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
-                    Column(Modifier.fillMaxSize().padding(top = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding()).padding(bottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()).verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+                    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
                 }
             }
         } else Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }
