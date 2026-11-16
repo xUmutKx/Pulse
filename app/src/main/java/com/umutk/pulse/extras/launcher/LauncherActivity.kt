@@ -217,12 +217,22 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
     val ctx = LocalContext.current
     val d = LocalDensity.current.density
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
-        val cellW = 92f * LauncherPrefs.iconSpace / 100f; val cellH = (iconDp + 48).toFloat() * LauncherPrefs.iconSpace / 100f
-        val perColumn = (maxHeight.value / cellH).toInt().coerceAtLeast(1)
-        val cols = (maxWidth.value / cellW).toInt().coerceAtLeast(1)
+        // on the grid (the default) the screen is cut into the columns and rows set for this way of holding the phone; free placement keeps the spaced cells
+        val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val snap = LauncherPrefs.snapIcons
+        val gridCols = if (land) LauncherPrefs.deskColsLand else LauncherPrefs.deskColsPort
+        val gridRows = if (land) LauncherPrefs.deskRowsLand else LauncherPrefs.deskRowsPort
+        val cellW = if (snap) maxWidth.value / gridCols else 92f * LauncherPrefs.iconSpace / 100f
+        val cellH = if (snap) maxHeight.value / gridRows else (iconDp + 48).toFloat() * LauncherPrefs.iconSpace / 100f
+        val perColumn = if (snap) gridRows else (maxHeight.value / cellH).toInt().coerceAtLeast(1)
+        val cols = if (snap) gridCols else (maxWidth.value / cellW).toInt().coerceAtLeast(1)
+        // the icon's box is centred in its cell
+        val boxW = minOf(88f, cellW)
+        val inset = if (snap) (cellW - boxW) / 2f else 0f
         // the cell (column, row) of each shortcut: the one it was put down on, else the next free place down the left edge
         val cells = HashMap<String, Pair<Int, Int>>()
-        items.forEach { a -> LauncherPrefs.iconPos[a.pkg]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 2 }?.let { cells[a.pkg] = it[0] to it[1] } }
+        // a kept cell outside a smaller grid is placed again
+        items.forEach { a -> LauncherPrefs.iconPos[a.pkg]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 2 && it[0] < cols && it[1] < perColumn && (it[0] to it[1]) !in cells.values }?.let { cells[a.pkg] = it[0] to it[1] } }
         var next = 0
         items.forEach { a ->
             if (a.pkg !in cells) {
@@ -236,8 +246,8 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         fun boundsOf(app: LaunchApp): androidx.compose.ui.geometry.Rect {
             val (c, r) = cells.getValue(app.pkg)
             val free = if (!LauncherPrefs.snapIcons) LauncherPrefs.iconFree[app.pkg]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 } else null
-            val x = (free?.get(0) ?: (c * cellW)) * d; val y = (free?.get(1) ?: (r * cellH)) * d
-            return androidx.compose.ui.geometry.Rect(x, y, x + 88f * d, y + cellH * d)
+            val x = (free?.get(0) ?: (c * cellW + inset)) * d; val y = (free?.get(1) ?: (r * cellH)) * d
+            return androidx.compose.ui.geometry.Rect(x, y, x + boxW * d, y + cellH * d)
         }
         Box(Modifier.fillMaxSize().pointerInput(items.size) {
             var start = androidx.compose.ui.geometry.Offset.Zero
@@ -265,14 +275,14 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
             var movedPx by remember(app.pkg) { mutableStateOf(0f) }
             // free placement (snap off): the place is the exact spot it was put down at; else the cell of the grid
             val free = if (!LauncherPrefs.snapIcons) LauncherPrefs.iconFree[app.pkg]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 } else null
-            val x = drag?.x ?: (free?.get(0) ?: (col * cellW)); val y = drag?.y ?: (free?.get(1) ?: (row * cellH))
+            val x = drag?.x ?: (free?.get(0) ?: (col * cellW + inset)); val y = drag?.y ?: (free?.get(1) ?: (row * cellH))
             Box(
-                Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f).onGloballyPositioned { origin = it.positionInRoot() }
+                Modifier.offset(x.dp, y.dp).width(boxW.dp).zIndex(if (drag != null) 2f else 0f).onGloballyPositioned { origin = it.positionInRoot() }
                     // a little smaller and a touch see-through while it is carried
                     .graphicsLayer { val k = if (drag != null) .9f else 1f; scaleX = k; scaleY = k; alpha = if (drag != null) .85f else 1f }
                     .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg]) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
-                            onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW), free?.get(1) ?: (row * cellH)) },
+                            onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW + inset), free?.get(1) ?: (row * cellH)) },
                             onDrag = { c, dr -> c.consume(); movedPx += dr.getDistance(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
                             onDragEnd = {
                                 val p = drag; drag = null
@@ -280,7 +290,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                                 else if (p != null && !LauncherPrefs.snapIcons) {
                                     LauncherPrefs.iconFree = LauncherPrefs.iconFree + (app.pkg to "${p.x.coerceAtLeast(0f)},${p.y.coerceAtLeast(0f)}"); LauncherPrefs.save(ctx)
                                 } else if (p != null) {
-                                    var nc = Math.round(p.x / cellW).coerceIn(0, cols - 1); var nr = Math.round(p.y / cellH).coerceIn(0, perColumn - 1)
+                                    var nc = Math.round((p.x - inset) / cellW).coerceIn(0, cols - 1); var nr = Math.round(p.y / cellH).coerceIn(0, perColumn - 1)
                                     // a taken cell: the nearest free one down that column, then the next columns
                                     val taken = cells.filterKeys { it != app.pkg }.values.toSet()
                                     var guard = 0

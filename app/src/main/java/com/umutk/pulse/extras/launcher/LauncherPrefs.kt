@@ -142,8 +142,13 @@ object LauncherPrefs {
     var tileMode by mutableStateOf("auto")
     /** Where each desktop shortcut sits on the Windows desktops: "x,y" in dp, by shortcut id. */
     var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
-    /** true: desktop icons snap to the grid where they are dropped; false (the default): they stay exactly where they are put down. */
-    var snapIcons by mutableStateOf(false)
+    /** true (the default): desktop icons sit on a grid of [deskCols] x [deskRows] cells; false: they stay exactly where they are put down. */
+    var snapIcons by mutableStateOf(true)
+    /** The desktop grid: columns and rows upright (4 x 8 by default) and turned (8 x 4). */
+    var deskColsPort by mutableStateOf(4)
+    var deskRowsPort by mutableStateOf(8)
+    var deskColsLand by mutableStateOf(8)
+    var deskRowsLand by mutableStateOf(4)
     /** The names the user gave to apps (package -> name), shown in every list of the launcher. */
     var names by mutableStateOf<Map<String, String>>(emptyMap())
     /** The room between the desktop icons, as a percent of the grid cell (smaller packs them closer). */
@@ -196,7 +201,9 @@ object LauncherPrefs {
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
-        snapIcons = p.getProperty("snapIcons2") == "true"
+        snapIcons = p.getProperty("snapIcons3") != "false"
+        deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 10) ?: 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 14) ?: 8
+        deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 14) ?: 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 10) ?: 4
         blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
         bootEvery = p.getProperty("bootEvery") == "true"
         taskbarAutoHide = p.getProperty("taskbarAutoHide") == "true"
@@ -253,7 +260,8 @@ object LauncherPrefs {
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
-        p.setProperty("snapIcons2", snapIcons.toString())
+        p.setProperty("snapIcons3", snapIcons.toString())
+        p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
         p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
         p.setProperty("bootEvery", bootEvery.toString())
         p.setProperty("taskbarAutoHide", taskbarAutoHide.toString())
