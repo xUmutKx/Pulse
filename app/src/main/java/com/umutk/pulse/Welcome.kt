@@ -271,12 +271,12 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "palette" to (tr("Windows 7 desktop: the real Start orb with its glow and press animation, the Control Panel icon, and a tray with the hidden-icons arrow (MSN stays in it once opened). Cut, copy and paste in the desktop menus, a \"Fill empty spaces\" switch for the icon grid (off), and a dragging bug fixed. Windows 11 launcher: its own accent colour.",
-        "Windows 7 masaüstü: parlayan ve basınca animasyonlu gerçek Başlat topu, Denetim Masası ikonu, ve gizli simgeler okuyla açılan bir tepsi (MSN bir kez açılınca orada kalır). Masaüstü menülerinde kes, kopyala, yapıştır, simge ızgarası için \"Boşlukları doldur\" anahtarı (kapalı) ve sürükleme hatası düzeldi. Windows 11 launcher: kendi vurgu rengi.")),
-    "music" to (tr("Music: search with play and shuffle, albums and artists with their own picture, a search inside artist and album pages, a seamless Blended cover that slides when you swipe the song, lyrics in the Windows Media Player look, and its forward key is back. Weather: a realistic moon. Task Manager remembers its sort column.",
-        "Müzik: çal ve karıştır düğmeli arama, kendi resmiyle albümler ve sanatçılar, sanatçı ve albüm sayfalarında arama, şarkıyı kaydırınca birlikte kayan kesintisiz Blended kapak, Windows Media Player görünümünde sözler ve geri gelen ileri tuşu. Hava: gerçekçi ay. Görev Yöneticisi sıralama sütununu hatırlar.")),
-    "gridView" to (tr("Game Hub: the shelf shows all 126 games of Mega Games, the game page is laid out like the store pages with the game's own text, and the in-game menu handle is a thin line that fades after 10 seconds.",
-        "Game Hub: raf Mega Games'in 126 oyununun hepsini gösterir, oyun sayfası mağaza sayfaları gibi ve oyunun kendi yazısıyla düzenlendi, oyun içi menü tutamacı 10 saniye sonra kaybolan ince bir çizgi.")),
+    "video" to (tr("YTXTube: YouTube and YouTube Music without ads as an extra app, with SponsorBlock, downloads and background play. AMOLED and light by default, a headphones button on the mini player, songs saved to Music with their cover and tags.",
+        "YTXTube: reklamsız YouTube ve YouTube Music ekstra uygulama olarak, SponsorBlock, indirme ve arka planda oynatmayla. Varsayılan AMOLED ve hafif, mini oynatıcıda kulaklık düğmesi, şarkılar kapağı ve etiketleriyle Müzik'e kaydedilir.")),
+    "music" to (tr("Music: search with icons for songs, albums, artists and lyrics, artists in a round row on top, album and artist pages that return to the search. The Blended cover is on by default behind every page.",
+        "Müzik: şarkı, albüm, sanatçı ve sözler için ikonlu arama, üstte yuvarlak sanatçı sırası, aramaya geri dönen albüm ve sanatçı sayfaları. Blended kapak varsayılan açık ve her sayfanın arkasında.")),
+    "palette" to (tr("Screen cover: a frameless AMOLED dashboard, pages grouped by kind, two full-screen wave charging animations and the real neofetch logo. Files, Game Hub search and the launcher settings colours are fixed and polished.",
+        "Ekran kapağı: çerçevesiz AMOLED pano, türe göre gruplanmış sayfalar, iki tam ekran dalga şarj animasyonu ve gerçek neofetch logosu. Files, Game Hub araması ve launcher ayar renkleri düzeltildi.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
