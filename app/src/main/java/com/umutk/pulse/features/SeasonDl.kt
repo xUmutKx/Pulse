@@ -374,7 +374,14 @@ object SeasonDl {
     private fun loadPicture(url: String, wPx: Int, hPx: Int = 0): android.graphics.Bitmap? {
         val key = "$url@$wPx@$hPx"
         posters.get(key)?.let { return it }
-        val raw = runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
+        // timeouts and a browser agent (a bare openStream hung or got refused by the picture hosts); the 500 px link falls back to the original size, and one retry
+        fun fetch(u: String) = runCatching {
+            val c = URL(u).openConnection() as HttpURLConnection
+            c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+            c.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+        }.getOrNull()
+        val raw = fetch(url) ?: (if (url.contains("/poster/medium/")) fetch(url.replace("/poster/medium/", "/poster/small/")) else null) ?: fetch(url) ?: return null
         // a wide picture shown upright (cropped to a portrait box) needs enough height, not only enough width: twice the box's height, at most what the picture has
         val want = minOf(raw.width, if (hPx > 0) maxOf(wPx * 2, (hPx * 2f * raw.width / raw.height).toInt()) else wPx * 2)
         val out = if (raw.width > want) android.graphics.Bitmap.createScaledBitmap(raw, want, (raw.height * want.toFloat() / raw.width).toInt().coerceAtLeast(1), true).also { raw.recycle() } else raw
