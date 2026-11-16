@@ -24,9 +24,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.extras.ytx.glass.Backdrop
 import com.umutk.pulse.extras.ytx.glass.drawBackdrop
-import com.umutk.pulse.extras.ytx.glass.blur
-import com.umutk.pulse.extras.ytx.glass.lens
-import com.umutk.pulse.extras.ytx.glass.vibrancy
 import com.umutk.pulse.extras.ytx.glass.Highlight
 import com.umutk.pulse.extras.ytx.glass.isRuntimeShaderSupported
 import com.umutk.pulse.extras.ytx.glass.InnerShadow

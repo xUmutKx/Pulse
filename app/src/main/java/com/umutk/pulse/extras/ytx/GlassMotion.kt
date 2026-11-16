@@ -28,7 +28,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastFirstOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter

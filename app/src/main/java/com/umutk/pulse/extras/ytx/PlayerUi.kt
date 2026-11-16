@@ -13,9 +13,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.draw.blur
 import com.umutk.pulse.extras.ytx.glass.Backdrop
 import com.umutk.pulse.extras.ytx.glass.drawBackdrop
-import com.umutk.pulse.extras.ytx.glass.blur
-import com.umutk.pulse.extras.ytx.glass.lens
-import com.umutk.pulse.extras.ytx.glass.vibrancy
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
