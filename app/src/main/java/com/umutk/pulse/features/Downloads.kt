@@ -690,8 +690,13 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
-                val ext = name.substringAfterLast('.', "")
-                rename(if (keepName) file.nameWithoutExtension + (if (ext.isNotEmpty()) ".$ext" else "") else name)
+                val rel = name.replace('\\', '/')
+                val leaf = rel.substringAfterLast('/')
+                val ext = leaf.substringAfterLast('.', "")
+                val wanted = if (keepName) file.nameWithoutExtension + (if (ext.isNotEmpty()) ".$ext" else "") else leaf
+                // the episodes of a season pack go together into the pack's own folder (the one the torrent has), so there is one folder to open, not a file loose for each
+                val folder = if (rel.contains('/')) Downloads.cleanName(rel.substringBefore('/')) else null
+                if (folder != null) moveInto(folder, wanted) else rename(wanted)
             }
         },
         { d, t, p ->
@@ -939,6 +944,19 @@ private fun DlTask.rename(raw: String?) {
     val name = Downloads.cleanName(raw) ?: return
     if (name == file.name) return
     val next = runCatching { reserve(file.parentFile ?: return, name) }.getOrNull() ?: return
+    file.delete()
+    file = next
+    Downloads.persist()
+}
+
+/** Moves the reserved file into [folder] of the download folder (made when needed), named [raw]. */
+private fun DlTask.moveInto(folder: String, raw: String) {
+    val name = Downloads.cleanName(raw) ?: return
+    val cur = file.parentFile ?: return
+    val root = if (cur.name == folder) cur.parentFile ?: return else cur
+    val dir = File(root, folder).also { it.mkdirs() }
+    if (cur == dir && name == file.name) return
+    val next = runCatching { reserve(dir, name) }.getOrNull() ?: return
     file.delete()
     file = next
     Downloads.persist()
