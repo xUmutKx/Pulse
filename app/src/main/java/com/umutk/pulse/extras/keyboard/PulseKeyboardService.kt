@@ -1315,6 +1315,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     private fun schedulePauseFix(typed: String, fix: String?, code: String, loc: Locale) {
         pauseHandler.removeCallbacksAndMessages(null)
+        // a word is mended only when the space key ends it: a pause in the typing (or anything else) never changes what was written
+        if (true) return
         if (fix == null || !KeyboardPrefs.pauseFix || !KeyboardPrefs.autocorrect || typed.length < 4 || st.plain || urlNow() || emailField || KeyboardPrefs.practicing) return
         if (KeyboardDictionary.complete(dictCodes(code).first(), typed.lowercase(loc), 1).isNotEmpty()) return
         pauseHandler.postDelayed({
@@ -1365,7 +1367,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.trans) { transOp("apply"); return }
         captureEmail(c); commitNumber()
         runCatching { trackLogin() }
-        finishWord("\n", true)
+        // Enter (send) ends the word as it stands: only the space key mends a word
+        finishWord("\n", false)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
             c.performEditorAction(info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_DONE)
@@ -1565,10 +1568,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         // the word the typing was just corrected from stands quoted at the left: a tap puts it back
         val lcb = lastCorrection
-        if (i == 0 && word.isEmpty() && lcb != null && st.slots.getOrNull(0)?.startsWith("\"") == true) {
-            val n = lcb.corrected.length + lcb.sep.length
+        if (word.isEmpty() && lcb != null && st.slots.getOrNull(i)?.startsWith("\"") == true) {
+            // (the quoted word can stand in any of the three places of the bar; what stands before the cursor is looked at with a little room, so a space more or less does not stop the tap)
+            val tb = c.getTextBeforeCursor(lcb.corrected.length + lcb.sep.length + 3, 0)?.toString().orEmpty()
+            val n = when {
+                tb.endsWith(lcb.corrected + lcb.sep) -> lcb.corrected.length + lcb.sep.length
+                tb.endsWith(lcb.corrected) -> lcb.corrected.length
+                tb.trimEnd().endsWith(lcb.corrected) -> lcb.corrected.length + (tb.length - tb.trimEnd().length)
+                else -> -1
+            }
             lastCorrection = null
-            if (c.getTextBeforeCursor(n, 0)?.toString() == lcb.corrected + lcb.sep) {
+            if (n > 0) {
                 if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lcb.original, lcb.corrected)
                 if (!st.incognito) KbStats.add(this, "undone")
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lcb.original, 1); c.endBatchEdit()
