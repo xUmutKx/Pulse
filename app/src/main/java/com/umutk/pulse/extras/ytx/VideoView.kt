@@ -717,12 +717,15 @@ fun VideoContent(
                 animationSpec = if (reduced) tween(0) else tween(200, easing = Motion.Emphasized),
                 label = "captionLift",
             )
+            // in the small picture-in-picture window the subtitles stay on: smaller letters, close to the edges, nothing else lifts them
+            val inPip = pip?.active == true
             CaptionOverlay(
                 text = captionText,
+                small = inPip,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = captionLift),
+                    .padding(horizontal = if (inPip) 4.dp else 24.dp)
+                    .padding(bottom = if (inPip) 4.dp else captionLift),
             )
         }
 
@@ -1373,7 +1376,7 @@ private const val SeekStepMs = 10_000L
 
 /** YouTube-style caption plate: black rounded box, white centred text, no chrome. */
 @Composable
-private fun CaptionOverlay(text: String, modifier: Modifier = Modifier) {
+private fun CaptionOverlay(text: String, modifier: Modifier = Modifier, small: Boolean = false) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(7.dp))
@@ -1384,8 +1387,8 @@ private fun CaptionOverlay(text: String, modifier: Modifier = Modifier) {
         Text(
             text = text,
             color = Color.White,
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
+            fontSize = if (small) 10.sp else 15.sp,
+            lineHeight = if (small) 13.sp else 20.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
