@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Fixed a crash in the Neofetch card (the ASCII logo).",
+        "Neofetch kartındaki (ASCII logo) çökme düzeltildi.")),
     "palette" to (tr("Keyboard: suggestions work again in Game Hub's search and in YTXTube's sign-in, without the freezes.",
         "Klavye: Game Hub aramasında ve YTXTube girişinde öneriler yine çalışıyor, donma olmadan.")),
     "music" to (tr("Long song, artist and album names scroll once and stand still, instead of ending in dots. Lyrics are smaller: lines with times 4 sizes, without times 8.",
