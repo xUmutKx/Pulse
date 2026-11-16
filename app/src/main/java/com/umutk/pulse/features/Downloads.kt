@@ -130,7 +130,11 @@ private const val ACT_CANCEL = "cancel"
 enum class DlState { RUNNING, PAUSED, DONE, FAILED }
 
 /** One download: where it goes, how far it has got, its speed, and how it ended. */
-class DlTask(val url: String, file: File) {
+class DlTask(url: String, file: File) {
+    /** the link: a torrent with no peers gives way to the next of [alts] */
+    @Volatile var url: String = url
+    /** other streams of the same episode or movie, closest in size first: tried in turn when a torrent finds no one to download from */
+    val alts: MutableList<String> = java.util.Collections.synchronizedList(ArrayList())
     /** can change once, before the first byte, when the server names the file */
     @Volatile var file: File = file
     val done = MutableStateFlow(0L)
@@ -241,6 +245,7 @@ object Downloads {
                 t.total.value = cols.getOrNull(6)?.toLongOrNull() ?: -1L
                 t.etag = cols.getOrNull(7)?.ifEmpty { null }
                 t.lastMod = cols.getOrNull(8)?.ifEmpty { null }
+                cols.getOrNull(9)?.split(' ')?.filter { it.isNotBlank() }?.let { t.alts.addAll(it) }
                 if (cols[1] == DlState.DONE.name && f.isFile) { t.state.value = DlState.DONE; t.done.value = f.length(); t.total.value = f.length() }
                 else {
                     t.state.value = if (cols[1] == DlState.PAUSED.name) DlState.PAUSED else DlState.FAILED
@@ -271,7 +276,7 @@ object Downloads {
     internal fun persist() {
         val c = app ?: return
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
-        val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod)) }.toSet()
+        val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
     }
 
@@ -295,7 +300,7 @@ object Downloads {
         ?.replace(Regex("[:*?\"<>|\\x00-\\x1f]"), "_")?.trim()?.trimStart('.')?.take(120)?.takeIf { it.isNotBlank() }
 
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
-    fun add(ctx: Context, url: String, fixedName: String? = null) {
+    fun add(ctx: Context, url: String, fixedName: String? = null, alts: List<String> = emptyList()) {
         val c = ctx.applicationContext
         app = c
         scope.launch {
@@ -309,6 +314,7 @@ object Downloads {
             // a torrent stream gives its first pieces in order: eight connections asking for eight places made it fetch pieces all over the file and start slowly
             if (isStreamLink(url)) t.noSplit = true
             if (fixedName != null) t.keepName = true
+            t.alts.addAll(alts.filter { it != url })
             tasks.update { it + t }
             persist()
             if (t.state.value != DlState.RUNNING) return@launch
@@ -615,7 +621,10 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     if (!TorrentEngine.ready(c)) throw NeedsEngine()
     resumable = false
     // the torrent's own working folder sits next to the downloads (shared by the downloads of the same torrent: the episodes of a season pack)
-    val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused },
+    // a torrent nobody sends anything of within a minute and a half gives way to the next stream of the same episode, when there is one
+    val began = System.currentTimeMillis()
+    var switchNow = false
+    val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused || switchNow },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
@@ -628,8 +637,9 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             if (t > 0) total.value = t
             done.value = d
             error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
+            if (d == 0L && alts.isNotEmpty() && System.currentTimeMillis() - began > 90_000) switchNow = true
         },
-    ) ?: return false
+    ) ?: run { if (switchNow && !cancelled && !paused) throw SwitchStream(); return false }
     file.delete()
     if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }
     TorrentEngine.done(got)
@@ -743,6 +753,8 @@ private class Changed : IOException("the file changed on the server")
 /** The torrent engine is not on the phone: it is fetched only when the person asks for it (the button on the row). */
 internal const val NEEDS_ENGINE = "the torrent engine is not downloaded yet"
 private class NeedsEngine : IOException(NEEDS_ENGINE)
+/** A torrent that found no one to download from in time, while another stream of the same episode is there to try. */
+private class SwitchStream : IOException("no peers: trying another stream")
 
 /** Opens [url] with a byte range, following redirects by hand (the built-in follow stops at http to https). */
 private fun open(url: String, range: String, ifRange: String? = null): HttpURLConnection {
@@ -788,6 +800,15 @@ private suspend fun DlTask.fetch() {
         } catch (e: Exception) {
             if (cancelled || paused) return
             if (e is Changed) { startOver(); continue }
+            if (e is SwitchStream) {
+                val next = synchronized(alts) { if (alts.isEmpty()) null else alts.removeAt(0) }
+                if (next != null) {
+                    url = next; done.value = 0L; total.value = -1L; resumable = false; partPos = null; tries = 0
+                    error.value = "trying another stream"
+                    Downloads.persist()
+                    continue
+                }
+            }
             if (e is NeedsEngine) { error.value = NEEDS_ENGINE; state.value = DlState.FAILED; Downloads.persist(); return }
             // no ranges from the server: the parts are dropped and the file starts again on one connection
             if (e is NoRange) partPos = null
