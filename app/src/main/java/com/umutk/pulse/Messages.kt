@@ -273,13 +273,13 @@ fun sendMms(c: Context, to: String, text: String, threadId: Long, uri: Uri): Boo
     true
 }.getOrDefault(false)
 
-private fun timeOf(ms: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))
-private fun dayKey(ms: Long) = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(ms))
-private fun sameDay(a: Long, b: Long) = dayKey(a) == dayKey(b)
-private fun dayLabel(ms: Long) = if (DateUtils.isToday(ms)) tr("Today", "Bugün") else dayKey(ms)
-private fun shortStamp(ms: Long) = if (DateUtils.isToday(ms)) timeOf(ms) else dayKey(ms)
+internal fun timeOf(ms: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))
+internal fun dayKey(ms: Long) = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(ms))
+internal fun sameDay(a: Long, b: Long) = dayKey(a) == dayKey(b)
+internal fun dayLabel(ms: Long) = if (DateUtils.isToday(ms)) tr("Today", "Bugün") else dayKey(ms)
+internal fun shortStamp(ms: Long) = if (DateUtils.isToday(ms)) timeOf(ms) else dayKey(ms)
 
-private fun copyText(ctx: Context, text: String) {
+internal fun copyText(ctx: Context, text: String) {
     ctx.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("sms", text))
     Toast.makeText(ctx, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
 }
@@ -395,8 +395,11 @@ fun MessagesScreen(back: () -> Unit) {
         else -> tr("Messages", "Mesajlar")
     }
 
-    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    // the old Windows looks (95, XP, 7) draw Messages as MSN Messenger
+    val msn = msnLook()
+    Column(Modifier.fillMaxSize().background(if (msn) msnPage() else com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        if (msn && t == null && !settings && !newMode && granted) MsnTop(threads.orEmpty().sumOf { it.unread }, { goBack() }, { newMode = true; newTo = "" }, { settings = true })
+        else Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             // the arrow leads out of a thread, New message or Settings; the list has none (the system back still leaves)
             if (t != null || newMode || settings) MessagesIcon("back") { goBack() }
             // a long press on the contact or number in a thread copies the number
@@ -498,6 +501,11 @@ fun MessagesScreen(back: () -> Unit) {
                         else if (askSuspect) askSuspect = false
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
+                        else if (msn) MsnContactList(shown, picked, pins, Modifier.weight(1f),
+                            onOpen = { th -> if (picked.isEmpty()) open = th else picked = if (th.address in picked) picked - th.address else picked + th.address },
+                            onPick = { th -> picked = if (th.address in picked) picked - th.address else picked + th.address },
+                            onNew = { newMode = true; newTo = "" }, onTools = { settings = true },
+                            onDial = { runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL)) } }, onAttach = { newMode = true; newTo = "" })
                         else Box(Modifier.weight(1f).fillMaxWidth()) { LazyColumn(Modifier.fillMaxSize()) {
                             items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, muted, { if (picked.isEmpty()) open = th else picked = if (th.address in picked) picked - th.address else picked + th.address },
                                 selected = th.address in picked, onPick = { picked = if (th.address in picked) picked - th.address else picked + th.address },
@@ -538,7 +546,7 @@ fun MessagesScreen(back: () -> Unit) {
                 if (msgs != null && list.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No messages", "Mesaj yok"))
                 else LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = listState,
                     reverseLayout = true, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(list.indices.reversed().toList()) { k -> MessagesItem(list, k, ctx) }
+                    items(list.indices.reversed().toList()) { k -> if (msn) MsnMessageItem(list, k, ctx, openName ?: addr) else MessagesItem(list, k, ctx) }
                 }
                 val draft = drafts[addr].orEmpty()
                 val parts = runCatching { smsManager(ctx).divideMessage(draft).size }.getOrDefault(1)
@@ -742,7 +750,7 @@ private fun MessagesSettingRow(icon: String, title: String, on: Boolean, onChang
 
 /** The menu of a phone number: open its contact (or add one), call, copy. */
 @Composable
-private fun MsgNumberMenu(open: Boolean, onDismiss: () -> Unit, number: String, ctx: Context) {
+internal fun MsgNumberMenu(open: Boolean, onDismiss: () -> Unit, number: String, ctx: Context) {
     ThemedMenu(open, onDismiss) {
         val known = remember(number) { contactName(ctx, number) != null }
         ThemedMenuItem(if (known) tr("Open contact", "Kişiyi aç") else tr("Add contact", "Kişi ekle"), {
@@ -761,7 +769,7 @@ private fun MsgNumberMenu(open: Boolean, onDismiss: () -> Unit, number: String, 
 
 /** Message text whose phone numbers open the number menu and whose links open in the browser. */
 @Composable
-private fun MsgLinkedText(body: String, color: androidx.compose.ui.graphics.Color, link: androidx.compose.ui.graphics.Color, onLong: () -> Unit, onNumber: (String) -> Unit) {
+internal fun MsgLinkedText(body: String, color: androidx.compose.ui.graphics.Color, link: androidx.compose.ui.graphics.Color, onLong: () -> Unit, onNumber: (String) -> Unit) {
     val ctx = LocalContext.current
     val links = remember(body) { MsgCore.links(body) }
     val text = remember(body, color, link) {
@@ -789,7 +797,7 @@ private fun Modifier.androidx_pointer(links: List<Triple<Int, Int, String>>, bod
 
 /** A picture of an MMS, decoded small; tapping opens it in a viewer. */
 @Composable
-private fun MsgPicture(uri: Uri, ctx: Context) {
+internal fun MsgPicture(uri: Uri, ctx: Context) {
     val bmp by produceState<android.graphics.Bitmap?>(null, uri) {
         value = withContext(Dispatchers.IO) {
             runCatching {

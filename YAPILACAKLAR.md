@@ -2499,3 +2499,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Torrent paketi: bölümler torrentin kendi klasörüne (Download/<paket klasörü>/) birlikte iner. derlenmedi
 - Klavye: ekran görüntüsü/kamera/indirilen resimler panoya girmiyor, sağ slotta bekleyip yerinden yapıştırılıyor (video gibi).
 - Files: öğe menüsü: kes/kopyala/yapıştır/yeniden adlandır/sil/arşiv tek satır ikon, arşiv ikonu kendi menüsünü açar, diğerleri gruplu. derlenmedi
+- Win7: 130 yeni ikon (Windows 7 + Vista paketlerinden, 64 px), tam setler icon-sources/ altında.
+- Görev Yöneticisi penceresi: gerçek sayfalar (İşlemler, Performans grafikleri, Uygulama geçmişi, Başlangıç, Ayrıntılar, Hizmetler), Win11 ikon rayı / diğerlerinde üst sekmeler.
+- Mesajlar 95/XP/7 görünümlerinde MSN Messenger: menü çubuğu, afiş, Çevrimiçi/Çevrimdışı gruplar, "Şunu yapmak istiyorum" paneli, "X diyor ki:" konuşma. derlenmedi
