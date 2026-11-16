@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -149,7 +150,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         Row(
             Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> 0f; "7" -> .34f; else -> 1f }).padding(start = 8.dp)
                 // a double tap or a long press on the title bar switches between the window and the full screen, as on Windows
-                .pointerInput(w.id) { androidx.compose.foundation.gestures.detectTapGestures(onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
+                .pointerInput(w.id) { detectTapGestures(onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
                 .pointerInput(w.id, areaW, areaH) {
                     detectDragGestures { c, drag ->
                         c.consume()
