@@ -1,0 +1,41 @@
+name: Kotlin check
+# a compile check without a release: the Kotlin of the lite app (no native code), with the errors as annotations
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install SDK packages
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0" > /dev/null
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: 8.9
+          cache-read-only: false
+      - name: Compile
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p localai/vendor/llama.cpp aistt/vendor/whisper.cpp
+          gradle :app:compileFossLiteReleaseKotlin -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g --no-daemon --continue 2>&1 | tee build.log
+      - name: Errors
+        if: always()
+        run: |
+          grep -E '^e: ' build.log | sed 's|file:///home/runner/work/[^/]*/[^/]*/||' > errors.txt || true
+          wc -l errors.txt
+          grep -E 'What went wrong|Could not|FAILED' -A4 build.log | head -40 || true
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: errors
+          path: errors.txt
