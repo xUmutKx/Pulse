@@ -425,10 +425,23 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             val pf = KeyboardPrefs.pressFx
-            chips(tr("Key press: around the key", "Tuşa basınca: tuşun çevresi"), KeyboardEffects.pressNames.subList(0, 6), if (pf in 0..5) pf else -1, { KeyboardPrefs.pressFx = it }) { i -> pressPreview(i) }
-            chips(tr("Key press: across the keyboard", "Tuşa basınca: tüm klavye"), KeyboardEffects.pressNames.subList(6, 11), if (pf in 6..10) pf - 6 else -1, { KeyboardPrefs.pressFx = it + 6 }) { i -> pressPreview(i + 6) }
-            chips(tr("Key press: dark styles", "Tuşa basınca: karanlık stiller"), KeyboardEffects.pressNames.subList(11, 16), if (pf in 11..15) pf - 11 else -1, { KeyboardPrefs.pressFx = it + 11 }) { i -> pressPreview(i + 11) }
-            chips(tr("Key press: RGB", "Tuşa basınca: RGB"), KeyboardEffects.pressNames.subList(16, 20), if (pf in 16..19) pf - 16 else -1, { KeyboardPrefs.pressFx = it + 16 }) { i -> pressPreview(i + 16) }
+            // every key-press effect in two rows that scroll together with one swipe
+            Text(tr("Key press effect", "Tuşa basınca efekt"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            Column(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 until 10, 10 until 20).forEach { range ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        range.forEach { i ->
+                            val on = KeyboardPrefs.pressFx == i
+                            val sh = RoundedCornerShape(14.dp)
+                            Column(Modifier.clip(sh).background(if (on) T.accent.copy(alpha = .18f) else T.text.copy(alpha = .05f)).border(if (on) 2.dp else 1.dp, if (on) T.accent else T.text.copy(alpha = .12f), sh)
+                                .clickable { KeyboardPrefs.pressFx = i; save() }.padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                pressPreview(i)
+                                Text(tr(KeyboardEffects.pressNames[i].first, KeyboardEffects.pressNames[i].second), color = if (on) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
+                    }
+                }
+            }
             // the colour of the effects (neon, or RGB: a new hue with every press) and how long they last
             chips(tr("Effect colour", "Efekt rengi"), KeyboardEffects.colorNames, KeyboardPrefs.fxColor, { KeyboardPrefs.fxColor = it; save() }) { i ->
                 Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(if (i == 4) Color(0xFF15161B) else KeyboardEffects.fxTint(i, T.accent, 0)), contentAlignment = Alignment.Center) {

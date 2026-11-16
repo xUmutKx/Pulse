@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Keyboard: no more freezes in web pages (YTXTube sign-in, Game Hub search), hold 3 on the number pad for passwords, four RGB press effects with colour and length, lighter effects. The floating keyboard's edge keys are whole again.",
+        "Klavye: web sayfalarında (YTXTube girişi, Game Hub araması) donma yok, rakam tuşlarında 3'e basılı tut: şifreler, dört RGB tuş efekti, renk ve süre ayarı, daha hafif efektler. Yüzen klavyenin kenar tuşları yine tam.")),
+    "video" to (tr("YTXTube opens again. Downloads: Series and movies has its own page. Windows 11 launcher: choose the taskbar glass. Music: the library shows as the player is pulled down.",
+        "YTXTube yine açılıyor. İndirmeler: Diziler ve filmler kendi sayfasında. Windows 11 başlatıcı: görev çubuğu camını seç. Müzik: oynatıcı çekilirken kütüphane görünür.")),
     "video" to (tr("YTXTube: YouTube and YouTube Music without ads as an extra app, with SponsorBlock, downloads and background play. AMOLED and light by default, a headphones button on the mini player, songs saved to Music with their cover and tags.",
         "YTXTube: reklamsız YouTube ve YouTube Music ekstra uygulama olarak, SponsorBlock, indirme ve arka planda oynatmayla. Varsayılan AMOLED ve hafif, mini oynatıcıda kulaklık düğmesi, şarkılar kapağı ve etiketleriyle Müzik'e kaydedilir.")),
     "music" to (tr("Music: search with icons for songs, albums, artists and lyrics, artists in a round row on top, album and artist pages that return to the search. The Blended cover is on by default behind every page.",
