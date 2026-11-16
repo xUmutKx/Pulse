@@ -46,6 +46,7 @@ internal val CONTROL_PANEL = listOf(
         CpItem("apps", "Programs and Features", "Programlar ve Özellikler", "Uninstall or change an app", "Bir uygulamayı kaldır ya da değiştir", "page:apps"),
         CpItem("processes", "Task Manager", "Görev Yöneticisi", "Running apps and what they use", "Çalışan uygulamalar ve kullandıkları", "page:taskmgr"),
         CpItem("performance", "Performance Monitor", "Performans İzleyicisi", "CPU, memory, storage and network graphs", "İşlemci, bellek, depolama ve ağ grafikleri", "page:performance"),
+        CpItem("notifications", "Notification Area Icons", "Bildirim Alanı Simgeleri", "Which icons show on the taskbar", "Görev çubuğunda hangi simgeler görünsün", "trayicons"),
     )),
     CpGroup("Storage", "Depolama", listOf(
         CpItem("folder", "Folder sizes", "Klasör boyutları", "Which folders take the room", "Hangi klasörler yer kaplıyor", "folders"),

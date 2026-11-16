@@ -28,6 +28,8 @@ object LauncherPrefs {
     /** "name" (A-Z), "installed" (newest first) or "opened" (last opened first; the only mode that records launches). */
     var sort by mutableStateOf("name")
     var hidden by mutableStateOf<Set<String>>(emptySet())
+    /** The icons of the Windows 7 notification area the person switched off (Control Panel > Notification Area Icons). */
+    var trayHidden by mutableStateOf<Set<String>>(emptySet())
     var clock by mutableStateOf(false)
     /** The clock widget on the Windows desktops (on at first; the cross on it turns it off). */
     var desktopClock by mutableStateOf(true)
@@ -192,7 +194,7 @@ object LauncherPrefs {
         dockShown = p.getProperty("dockShown") != "false"
         drawerColumns = p.getProperty("drawerColumns")?.toIntOrNull() ?: 5
         sort = p.getProperty("sort") ?: "name"
-        hidden = list(p.getProperty("hidden")).toSet()
+        hidden = list(p.getProperty("hidden")).toSet(); trayHidden = list(p.getProperty("trayHidden")).toSet()
         topChips = p.getProperty("topChips") == "true"
         // "phoneTilesOn": the tiles are on unless switched off; an old "phoneTiles=false" (written while the tiles were off by default) does not count
         phoneTiles = p.getProperty("phoneTilesOn") != "false"
@@ -257,7 +259,7 @@ object LauncherPrefs {
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString())
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
-        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())

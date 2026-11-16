@@ -339,49 +339,40 @@ class Win7LauncherLook : LauncherLook {
     }
 
     /**
-     * The notification area: the arrow that opens the hidden icons, the Action Center flag, MSN when it was opened (it stays here, as if it ran in the background), the network and the volume.
-     * The arrow's flyout holds the rest: the firewall, updates, Bluetooth and the phone's removable storage.
+     * The notification area: the arrow that opens the flyout of the icons that are hidden until what they stand for is really going on (music playing, a download running, a
+     * VPN, Bluetooth, removable storage), and in the bar the Action Center flag, MSN once it was opened, the network and the volume. Control Panel > Notification Area Icons
+     * says which of them show.
      */
     @Composable
     private fun W7Tray() {
         val ctx = androidx.compose.ui.platform.LocalContext.current
         val d = androidx.compose.ui.platform.LocalDensity.current
+        // read again every few seconds: what is going on changes without the launcher knowing
+        var tick by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(4000); tick = System.currentTimeMillis() } }
+        val shown = androidx.compose.runtime.remember(tick, LauncherPrefs.trayHidden, LauncherSession.msnTray) { TRAY_ITEMS.filter { it.key !in LauncherPrefs.trayHidden && it.active(ctx) } }
+        val inBar = shown.filter { it.always }
+        val inFlyout = shown.filter { !it.always }
         Row(Modifier.fillMaxHeight().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            Box {
+            if (inFlyout.isNotEmpty()) Box {
                 Box(Modifier.size(width = 22.dp, height = 40.dp).clickable { LauncherSession.trayOpen = !LauncherSession.trayOpen }, contentAlignment = Alignment.Center) {
                     Canvas(Modifier.size(9.dp, 6.dp)) {
                         val tri = androidx.compose.ui.graphics.Path().apply { moveTo(0f, size.height); lineTo(size.width / 2f, 0f); lineTo(size.width, size.height); close() }
                         drawPath(tri, Color.White)
                     }
                 }
-                if (LauncherSession.trayOpen) androidx.compose.ui.window.Popup(alignment = Alignment.TopEnd, offset = androidx.compose.ui.unit.IntOffset(0, with(d) { -(100.dp).roundToPx() }), onDismissRequest = { LauncherSession.trayOpen = false }) {
+                if (LauncherSession.trayOpen) androidx.compose.ui.window.Popup(alignment = Alignment.TopEnd, offset = androidx.compose.ui.unit.IntOffset(0, with(d) { -(((inFlyout.size + 2) / 3) * 40 + 20).dp.roundToPx() }), onDismissRequest = { LauncherSession.trayOpen = false }) {
                     Column(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xEE1D2C42)).border(1.dp, Color(0x88FFFFFF), RoundedCornerShape(6.dp)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(
-                            listOf("tray_fw" to { openDesktopItem(ctx, "pulse:settings", "win7") }, "tray_flag" to { openDesktopItem(ctx, "pulse:x:notifhist", "win7") }, "tray_update" to { openDesktopItem(ctx, "pulse:store", "win7") }),
-                            listOf("tray_bt" to { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } },
-                                "tray_usb" to { openDesktopItem(ctx, "pulse:files", "win7") }, "tray_msn" to { openDesktopItem(ctx, "pulse:x:messages", "win7") }),
-                        ).forEach { row ->
+                        inFlyout.chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                row.forEach { (key, act) ->
-                                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(4.dp)).clickable { LauncherSession.trayOpen = false; act() }, contentAlignment = Alignment.Center) { W7TrayPic(key, 24.dp) }
-                                }
+                                row.forEach { t -> Box(Modifier.size(36.dp).clip(RoundedCornerShape(4.dp)).clickable { LauncherSession.trayOpen = false; t.act(ctx) }, contentAlignment = Alignment.Center) { TrayPic(t.pic, 24.dp) } }
                             }
                         }
                     }
                 }
             }
-            Box(Modifier.size(24.dp).clickable { openDesktopItem(ctx, "pulse:x:notifhist", "win7") }, contentAlignment = Alignment.Center) { W7TrayPic("tray_flag", 18.dp) }
-            if (LauncherSession.msnTray) Box(Modifier.size(24.dp).clickable { openDesktopItem(ctx, "pulse:x:messages", "win7") }, contentAlignment = Alignment.Center) { W7TrayPic("tray_msn", 18.dp) }
-            Box(Modifier.size(24.dp).clickable { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) { W7TrayPic("tray_net", 18.dp) }
-            Box(Modifier.size(24.dp).clickable { runCatching { ctx.startActivity(android.content.Intent("android.settings.panel.action.VOLUME").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) { W7TrayPic("tray_vol", 18.dp) }
+            inBar.forEach { t -> Box(Modifier.size(24.dp).clickable { t.act(ctx) }, contentAlignment = Alignment.Center) { TrayPic(t.pic, 18.dp) } }
         }
-    }
-
-    @Composable
-    private fun W7TrayPic(key: String, size: Dp) {
-        val ctx = androidx.compose.ui.platform.LocalContext.current
-        val b = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", key)
-        if (b != null) androidx.compose.foundation.Image(b, null, Modifier.size(size))
     }
 
     /**
