@@ -819,7 +819,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         if (inSelection) { selStart = newSelStart; selEnd = newSelEnd; return }
         inSelection = true
-        try { handleSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd) } finally { inSelection = false }
+        try { runCatching { handleSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd) } } finally { inSelection = false }
     }
 
     private fun handleSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
