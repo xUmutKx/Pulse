@@ -21,7 +21,7 @@ object LauncherGlass {
 
     val TONES = listOf(
         Tone("blue", "", 0xFF3F7BFF.toInt()), Tone("purple", "Purple", 0xFFB388FF.toInt()), Tone("pink", "Pink", 0xFFFF80AB.toInt()),
-        Tone("cyan", "Cyan", 0xFF80D8FF.toInt()), Tone("green", "Green", 0xFFB9F6CA.toInt()), Tone("amber", "Amber", 0xFFFFD180.toInt()),
+        Tone("cyan", "Cyan", 0xFF9DBBED.toInt()), Tone("green", "Green", 0xFFB9F6CA.toInt()), Tone("amber", "Amber", 0xFFFFD180.toInt()),
     )
 
     /** The extra apps' launcher aliases that have glass twins. */
@@ -107,6 +107,27 @@ object LauncherGlass {
             if (alias == MAIN) MAIN_OTHERS.forEach { set(c, it, false) }
         }.start()
     }
+
+    /** The real launcher picture of one of an app's home-screen icons (its line icon or a glass colour), as the manifest gives it (switched on or not). */
+    fun variantIcon(c: Context, alias: String, look: String): android.graphics.drawable.Drawable? = runCatching {
+        @Suppress("DEPRECATION")
+        val flags = if (android.os.Build.VERSION.SDK_INT >= 24) PackageManager.MATCH_DISABLED_COMPONENTS else PackageManager.GET_DISABLED_COMPONENTS
+        c.packageManager.getActivityInfo(cn(c, nameFor(alias, look)), flags).loadIcon(c.packageManager)
+    }.getOrNull()
+
+    /** Every app at once: Pulse's own icon and every extra app's home-screen icon take [look]; apps with no icon on the home screen keep none (they get the look when shown). */
+    fun applyEveryone(c: Context, look: String) {
+        val e = sp(c).edit()
+        (ALIASES + MAIN).forEach { e.putString("look_$it", look) }
+        e.apply()
+        Thread {
+            ALIASES.forEach { if (shown(c, it)) only(c, it, nameFor(it, look)) }
+            if (variants(MAIN).any { enabled(c, it) }) only(c, MAIN, nameFor(MAIN, look))
+        }.start()
+    }
+
+    /** The look all of them share, or null when they differ. */
+    fun commonLook(c: Context): String? = (ALIASES + MAIN).map { lookOf(c, it) }.distinct().singleOrNull()
 
     /** At the start of the app, once: a tablet's icons become blue glass (a phone keeps its line icons). */
     fun startOnce(c: Context) {
