@@ -2210,7 +2210,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             '@' in tok -> {
                 val local = tok.substringBefore('@')
                 val domainPart = tok.substringAfterLast('@')
-                val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
+                // (no whole saved address once an "@" is typed: only the domains, short, so more of them fit on the bar)
+                val mine = emptyList<String>()
                 // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
                 val dom = rankedDomains().filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
                 // an address you saved that fits what is typed comes first (a tap writes it whole), then the domains, the ones used most first: four show, four more are a swipe away
