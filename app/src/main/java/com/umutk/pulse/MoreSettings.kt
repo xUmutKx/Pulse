@@ -672,18 +672,19 @@ private fun ExtraAppsCard() {
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
         Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
         Triple("HealthLauncher", R.drawable.ic_ad_health_fg, tr("Health", "Sağlık")),
+        Triple("YtxLauncher", R.drawable.ytx_ic_brand, "YTXTube"),
     // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
     ).filter { it.first != "ArtCraftLauncher" || BuildConfig.APK_INSTALL }
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
-        (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
+        (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher", "YtxLauncher"),
         (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "HealthLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
     )
     val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "ebook", "PaintLauncher" to "paint",
         "CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "GameHubLauncher" to "gamehub", "IslandLauncher" to "island", "HealthLauncher" to "health")
-    val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
+    val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity", "YtxLauncher" to "extras.ytx.YtxActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
         if (android.os.Build.VERSION.SDK_INT < 26) return
@@ -706,7 +707,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health", "GameHubLauncher" to "extraGameHub", "YtxLauncher" to "extraVideo")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
     fun shown(a: String) = com.umutk.pulse.extras.store.LauncherGlass.shown(ctx, a)
@@ -721,16 +722,22 @@ private fun ExtraAppsCard() {
     }
     // the groups fold; each shows how many of its apps have a home-screen icon
     val closed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var query by remember { mutableStateOf("") }
+    val q = query.trim()
+    fun hit(label: String) = q.isEmpty() || label.contains(q, ignoreCase = true)
     PCard {
         Text(tr("Apps", "Uygulamalar"), color = T.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(top = 8.dp))
         catalog.forEach { (heading, members) ->
         val group = apps.filter { it.first in members }
+        val shownGroup = group.filter { hit(it.third) }
+        if (q.isNotEmpty() && shownGroup.isEmpty()) return@forEach
         Row(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(10.dp)).clickable { if (heading in closed) closed.remove(heading) else closed.add(heading) }.padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(heading, color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text("${group.count { state[it.first] == true }}/${group.size}", color = T.sub, fontSize = 12.sp)
             PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 8.dp).graphicsLayer { rotationZ = if (heading in closed) 0f else 180f })
         }
-        (if (heading in closed) emptyList() else group).forEach { (alias, icon, label) ->
+        (if (heading in closed && q.isEmpty()) emptyList() else shownGroup).forEach { (alias, icon, label) ->
             // every row of this card has the same height and the same 48 dp icon slot
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
@@ -766,7 +773,7 @@ private fun ExtraAppsCard() {
         }
         // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
         // Clock is listed once, as its app row above; its tool row here would be the second clock
-        ToolPlace.all.filter { it.id != "clock" }.forEach { t ->
+        ToolPlace.all.filter { it.id != "clock" && hit(tr(it.en, it.trName)) }.forEach { t ->
             var open by remember(t.id) { mutableStateOf(false) }
             val cur = ToolPlace.where(ctx, t)
             val shownHere = cur == "extra"
@@ -806,7 +813,7 @@ private fun ExtraAppsCard() {
         }
         // the app's own pages: shown in the left menu or hidden
         // (the pages of Health, Office and Downloads are the left-menu place of their tool rows above, not a second row)
-        Pages.filter { it.id !in SecurityOnly && ToolPlace.all.none { t -> ToolPlace.hasPage(t) && t.target == it.id } }.forEach { p ->
+        Pages.filter { it.id !in SecurityOnly && hit(it.label) && ToolPlace.all.none { t -> ToolPlace.hasPage(t) && t.target == it.id } }.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
