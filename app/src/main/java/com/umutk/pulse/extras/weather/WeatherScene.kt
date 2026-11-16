@@ -57,17 +57,58 @@ private fun DrawScope.cloud(cx: Float, cy: Float, w: Float, c: Color) {
     drawRoundRect(c, Offset(cx - w * .36f, cy - h * .02f), Size(w * .78f, h * .5f), androidx.compose.ui.geometry.CornerRadius(h * .25f))
 }
 
-/** A moon with a face: lit disc, grey seas and craters, a crescent cut from it. */
+/**
+ * The face of the moon, drawn (not a photograph) after the real one: bright highlands, a little darker towards the edge; the dark seas where they really are (Procellarum on the
+ * left, Imbrium and Serenitatis above, Tranquillitatis, Fecunditatis and Crisium on the right, Nubium and Humorum below); Tycho with its rays at the foot, Copernicus and Aristarchus
+ * as bright spots; small craters with a light rim. Drawn inside a disc of radius [r]; the caller clips it to what is lit.
+ */
+internal fun DrawScope.moonSurface(cx: Float, cy: Float, r: Float) {
+    val c = Offset(cx, cy)
+    drawCircle(Brush.radialGradient(listOf(Color(0xFFF6F2DE), Color(0xFFE7E1C9), Color(0xFFBEB8A1)), Offset(cx - r * .25f, cy - r * .3f), r * 1.45f), r, c)
+    // a dark sea: a soft oval, strongest in the middle
+    fun sea(x: Float, y: Float, rx: Float, ry: Float, a: Float, rot: Float = 0f) {
+        val o = Offset(cx + r * x, cy + r * y)
+        rotate(rot, o) {
+            drawOval(Brush.radialGradient(listOf(Color(0xFF62605A).copy(alpha = a), Color(0xFF75726A).copy(alpha = a * .85f), Color.Transparent), o, r * maxOf(rx, ry)), Offset(o.x - r * rx, o.y - r * ry), Size(2 * r * rx, 2 * r * ry))
+        }
+    }
+    sea(-.52f, -.12f, .34f, .40f, .72f); sea(-.62f, .10f, .20f, .26f, .62f)     // Oceanus Procellarum
+    sea(-.14f, -.52f, .27f, .22f, .80f, -10f)                                  // Mare Imbrium
+    sea(.17f, -.40f, .16f, .15f, .80f); sea(.02f, -.36f, .10f, .10f, .62f)      // Serenitatis, Vaporum
+    sea(.38f, -.14f, .22f, .17f, .75f, 15f)                                    // Tranquillitatis
+    sea(.62f, .14f, .10f, .15f, .60f, -25f)                                    // Fecunditatis
+    sea(.70f, -.34f, .10f, .08f, .80f)                                         // Crisium
+    sea(-.28f, .32f, .17f, .13f, .60f); sea(-.66f, .34f, .09f, .09f, .65f)      // Nubium, Humorum
+    sea(.05f, -.84f, .30f, .06f, .45f)                                         // Frigoris
+    // craters: a darker floor and a light rim
+    fun crater(x: Float, y: Float, k: Float, a: Float = .4f) {
+        val o = Offset(cx + r * x, cy + r * y)
+        drawCircle(Color(0xFF6E6A5C).copy(alpha = a * .6f), r * k, o)
+        drawCircle(Color.White.copy(alpha = a), r * k, Offset(o.x - r * k * .12f, o.y - r * k * .12f), style = Stroke(r * .012f))
+    }
+    listOf(Triple(-.36f, -.58f, .05f), Triple(.30f, .40f, .06f), Triple(.52f, .50f, .045f), Triple(-.05f, .12f, .04f), Triple(.14f, .22f, .035f), Triple(-.78f, -.05f, .04f),
+        Triple(.80f, .12f, .035f), Triple(-.12f, .62f, .04f), Triple(.40f, -.62f, .035f), Triple(-.45f, .55f, .035f), Triple(.2f, .72f, .03f), Triple(.68f, -.55f, .03f)).forEach { (x, y, k) -> crater(x, y, k) }
+    // Tycho with its rays, Copernicus and Aristarchus
+    val tycho = Offset(cx + r * -.27f, cy + r * .60f)
+    for (i in 0 until 16) {
+        val a = i * (2 * PI.toFloat() / 16f) + .2f
+        val len = r * (.30f + .22f * ((i * 37) % 7) / 7f)
+        drawLine(Color.White.copy(alpha = .26f), tycho, Offset(tycho.x + cos(a) * len, tycho.y + sin(a) * len), r * .014f, StrokeCap.Round)
+    }
+    drawCircle(Color.White.copy(alpha = .95f), r * .035f, tycho)
+    val cop = Offset(cx + r * -.22f, cy + r * -.28f)
+    for (i in 0 until 8) { val a = i * (PI.toFloat() / 4f); drawLine(Color.White.copy(alpha = .22f), cop, Offset(cop.x + cos(a) * r * .1f, cop.y + sin(a) * r * .1f), r * .01f, StrokeCap.Round) }
+    drawCircle(Color.White.copy(alpha = .9f), r * .028f, cop)
+    drawCircle(Color.White.copy(alpha = .85f), r * .02f, Offset(cx + r * -.56f, cy + r * -.32f))
+    // the edge is a little darker, so the disc reads as a ball
+    drawCircle(Brush.radialGradient(0f to Color.Transparent, .70f to Color.Transparent, 1f to Color(0x4A000000), center = c, radius = r), r, c)
+}
+
+/** A moon with a face (see [moonSurface]); [crescent] cuts a sky-coloured disc over its left side. */
 internal fun DrawScope.moonDisc(cx: Float, cy: Float, r: Float, crescent: Boolean = false) {
     val lit = Path().apply { addOval(androidx.compose.ui.geometry.Rect(Offset(cx - r, cy - r), Size(2 * r, 2 * r))) }
     clipPath(lit) {
-        drawCircle(Brush.radialGradient(listOf(Color(0xFFFFFBEA), Color(0xFFE9E3CC), Color(0xFFC9C3AD)), Offset(cx - r * .3f, cy - r * .3f), r * 1.5f), r, Offset(cx, cy))
-        // the seas and craters
-        val maria = listOf(Triple(-.28f, -.2f, .3f), Triple(.12f, -.35f, .22f), Triple(.25f, .08f, .26f), Triple(-.1f, .3f, .2f))
-        maria.forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .35f), r * k, Offset(cx + r * x, cy + r * y)) }
-        listOf(Triple(.4f, -.45f, .09f), Triple(-.5f, .15f, .08f), Triple(.05f, .55f, .07f), Triple(.55f, .42f, .06f)).forEach { (x, y, k) ->
-            drawCircle(Color(0xFF8C8672).copy(alpha = .45f), r * k, Offset(cx + r * x, cy + r * y), style = Stroke(r * .03f))
-        }
+        moonSurface(cx, cy, r)
         // a crescent: a disc of sky colour cut over the left side
         if (crescent) drawCircle(Color(0xFF14213D).copy(alpha = .93f), r * .92f, Offset(cx - r * .55f, cy - r * .12f))
     }
