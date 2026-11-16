@@ -106,6 +106,10 @@ fun PowerampApp(
     var pullShown by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     // the page's pull in either direction (pullShown only counts a pull down): the Blended cover follows it
     var pullOffset by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    // the blended cover's slide while the cover is swiped to change the track (reported by the carousel), and the cover in front
+    var blendSlide by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var blendW by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var blendShown by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var tagEdit by remember { mutableStateOf(false) }
     var artOpen by remember { mutableStateOf(false) }
     var coverRev by remember { mutableIntStateOf(0) }
@@ -173,19 +177,22 @@ fun PowerampApp(
             // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
             // while the page is slid down it is a sheet: rounded at the top, with a small pill bar over its edge (neither shows when it is at rest)
             val sheet = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-            Image(cv, null, Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.blur(PowerampPrefs.blendBlur(ctx).dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }.background(Color.Black.copy(alpha = .28f)))
+            // the covers (the one in front and the neighbour being swiped toward) slide with the finger, backdrop and all: each is a whole blended page
+            Box(Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }) {
+                val page: @Composable (ImageBitmap, Int) -> Unit = { art, i ->
+                    Box(Modifier.fillMaxSize().graphicsLayer {
+                        translationX = blendSlide + i * blendW * 1.04f
+                        val k = if (blendW > 0f) (1f - kotlin.math.abs(translationX) / blendW * .06f).coerceIn(.9f, 1f) else 1f
+                        scaleX = k; scaleY = k
+                    }) { BlendedCover(art, PowerampPrefs.blendBlur(ctx)) }
+                }
+                if (blendW > 0f && blendSlide > .5f) artPrev?.let { page(it, -1) }
+                if (blendW > 0f && blendSlide < -.5f) artNext?.let { page(it, 1) }
+                page(blendShown ?: cv, 0)
+            }
             Box(Modifier.fillMaxWidth().graphicsLayer { translationY = pullOffset + 8.dp.toPx(); alpha = (pullOffset / 60f).coerceIn(0f, 1f) }, contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(width = 44.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = .65f)))
             }
-            Image(cv, null,
-                Modifier.fillMaxWidth().aspectRatio(1f)
-                    .graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f; compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black, .55f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
-                    },
-                contentScale = ContentScale.Crop)
         } else if (artBg && PowerampPrefs.artPage(ctx, pageKey)) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop) }
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Box(Modifier.weight(1f)) {
@@ -203,6 +210,7 @@ fun PowerampApp(
                             art = cover,
                             artPrev = artPrev,
                             artNext = artNext,
+                            onCoverSlide = { sl, w, a -> blendSlide = sl; blendW = w; blendShown = a },
                             hasPrev = prevIdx >= 0,
                             hasNext = nextIdx >= 0,
                             playing = st.isPlaying,
@@ -302,5 +310,30 @@ private fun SearchGated(library: List<Track>, current: Track?, style: PowerampSt
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             com.umutk.pulse.PButton(tr("Watch an ad to search", "Aramak için reklam izle"), onClick = { gate { unlocked = true } })
         }
+    }
+}
+
+
+/**
+ * The blended page of one cover: the cover edge to edge at the top and, under it, its own mirror image, both blurred together as one picture, so the bottom edge of the cover goes
+ * on as the same colours (no seam, no second picture to match). The sharp cover fades out over that; the foot gets darker slowly, so the text lies on it, with no step at the cover's edge.
+ */
+@Composable
+private fun BlendedCover(cv: androidx.compose.ui.graphics.ImageBitmap, blurDp: Int) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val coverBottom = (maxWidth / maxHeight).coerceIn(0.05f, 1f)
+        Column(Modifier.fillMaxWidth().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }.blur(blurDp.dp)) {
+            Image(cv, null, Modifier.fillMaxWidth().aspectRatio(1f), contentScale = ContentScale.Crop)
+            Image(cv, null, Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleY = -1f }, contentScale = ContentScale.Crop)
+        }
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+            0f to Color.Transparent, coverBottom to Color.Transparent, (coverBottom + .30f).coerceAtMost(.98f) to Color.Black.copy(alpha = .38f), 1f to Color.Black.copy(alpha = .55f))))
+        Image(cv, null,
+            Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black, .5f to Color.Black, .72f to Color.Black.copy(alpha = .62f), .88f to Color.Black.copy(alpha = .22f), 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                },
+            contentScale = ContentScale.Crop)
     }
 }

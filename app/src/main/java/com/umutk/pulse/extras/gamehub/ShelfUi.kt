@@ -42,6 +42,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -135,8 +139,8 @@ private fun BoxArt(g: GameRow, pal: Pal, hidden: Boolean, modifier: Modifier = M
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 GameCover(g.pkg, pal, wide = false, title = g.name)
                 Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .14f), Color.Transparent, Color.Transparent))))
-                if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .85f), fontSize = 10.sp,
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).background(Color.Black.copy(alpha = .55f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp))
+                // hidden from the phone (its home screen and app list): a small mark in the corner, the picture stays clear
+                if (hidden) Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(18.dp).clip(CircleShape).background(Color.Black.copy(alpha = .6f)), contentAlignment = Alignment.Center) { FluentIcon("eyeOff", Color.White, 11.dp) }
             }
         }
     }
@@ -441,23 +445,45 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
     var tab by remember(g.pkg) { mutableStateOf(0) }
     var more by remember(g.pkg) { mutableStateOf(false) }
     var fav by remember(g.pkg) { mutableStateOf(g.pkg in favSet(ctx)) }
-    Column(Modifier.fillMaxSize().background(pal.bg).statusBarsPadding()) {
-        Box(Modifier.padding(8.dp).size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp)) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                BoxArt(g, pal, hidden, Modifier.width(104.dp).aspectRatio(2f / 3f))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(tr("GAME", "OYUN"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp)
-                    Text(g.name, color = pal.text, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    Text(tr("Game", "Oyun"), color = pal.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(pal.card).padding(horizontal = 12.dp, vertical = 5.dp))
+    // what the game is: its own text (Steam, Wikipedia or the Play Store, fetched once and kept), not a line about opening it
+    val guide by produceState(GameGuide.cached(ctx, g.pkg), g.pkg) {
+        if (value.isBlank()) {
+            GameGuide.fetchAsync(ctx, g.pkg, g.name)
+            repeat(40) { kotlinx.coroutines.delay(500); val t = GameGuide.cached(ctx, g.pkg); if (t.isNotBlank()) { value = t; return@produceState } }
+        }
+    }
+    Column(Modifier.fillMaxSize().background(pal.bg).verticalScroll(rememberScrollState())) {
+        // the head: the cover blurred and darkened behind, the case, what kind of thing it is, the name and its marks
+        Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = .55f }.blur(40.dp)) { GameCover(g.pkg, pal, wide = false, title = g.name) }
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .35f), pal.bg.copy(alpha = .75f), pal.bg))))
+            Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+                Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).size(44.dp).clip(CircleShape).clickable(onClick = onBack), contentAlignment = Alignment.Center) { FluentIcon("close", pal.text.copy(alpha = .7f), 22.dp) }
+                Row(Modifier.padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    BoxArt(g, pal, false, Modifier.width(112.dp).aspectRatio(2f / 3f).shadow(14.dp, RoundedCornerShape(6.dp)))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(tr("GAMES", "OYUNLAR"), color = pal.sub, fontSize = 12.sp, letterSpacing = 3.sp)
+                        Text(g.name, color = pal.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(tr("Game", "Oyun"), color = pal.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clip(CircleShape).background(pal.card.copy(alpha = .85f)).border(1.dp, pal.sub.copy(alpha = .25f), CircleShape).padding(horizontal = 12.dp, vertical = 5.dp))
+                            // hidden means hidden from the phone (its home screen and the app list, pm hide), not from this shelf
+                            if (hidden) Row(Modifier.clip(CircleShape).background(pal.card.copy(alpha = .85f)).border(1.dp, pal.sub.copy(alpha = .25f), CircleShape).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                FluentIcon("eyeOff", pal.sub, 13.dp); Spacer(Modifier.width(5.dp))
+                                Text(tr("Hidden on the phone", "Telefonda gizli"), color = pal.sub, fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
             }
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(pal.sub.copy(alpha = .15f)))
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(pal.text).clickable(onClick = onPlay).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
-                    Text(tr("Open", "Aç"), color = pal.bg, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Box(Modifier.weight(1f).clip(CircleShape).background(pal.text).clickable(onClick = onPlay).padding(vertical = 15.dp), contentAlignment = Alignment.Center) {
+                    Text(tr("Open", "Aç"), color = pal.bg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Box(Modifier.clip(RoundedCornerShape(14.dp)).background(pal.card).clickable { more = !more }.padding(horizontal = 20.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.clip(CircleShape).border(1.dp, pal.sub.copy(alpha = .35f), CircleShape).clickable { more = !more }.padding(horizontal = 22.dp, vertical = 15.dp), contentAlignment = Alignment.Center) {
                     Text("··· " + tr("More", "Daha fazla"), color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -491,14 +517,19 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
                     Text(tr("Delete game", "Oyunu sil"), color = Color(0xFFFF5A5F), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
-            Row(Modifier.padding(top = 18.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(tr("Overview", "Genel"), tr("Settings", "Ayarlar")).forEachIndexed { i, label ->
-                    Text(label, color = if (tab == i) pal.text else pal.sub, fontSize = 15.sp, fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (tab == i) pal.card else Color.Transparent).clickable { tab = i }.padding(horizontal = 14.dp, vertical = 7.dp))
+            Column(Modifier.padding(top = 18.dp, bottom = 12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    listOf(tr("Overview", "Genel bakış"), tr("Settings", "Ayarlar")).forEachIndexed { i, label ->
+                        Column(Modifier.width(IntrinsicSize.Max).clickable { tab = i }) {
+                            Text(label, color = if (tab == i) pal.text else pal.sub, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 8.dp))
+                            Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(if (tab == i) pal.accent else Color.Transparent))
+                        }
+                    }
                 }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(pal.sub.copy(alpha = .15f)))
             }
             if (tab == 0) {
-                Text(tr("Opens ${g.name}. Close it to come back to the shelf.", "${g.name} açılır. Kapatınca rafa dönersin."), color = pal.text, fontSize = 15.sp)
+                Text(guide.ifBlank { tr("Opens ${g.name}. Close it to come back to the shelf.", "${g.name} açılır. Kapatınca rafa dönersin.") }, color = pal.text, fontSize = 15.sp, lineHeight = 22.sp)
                 Text(tr("GAME INFO", "OYUN BİLGİSİ"), color = pal.sub, fontSize = 11.sp, letterSpacing = 3.sp, modifier = Modifier.padding(top = 18.dp, bottom = 4.dp))
                 InfoRow(pal, tr("Type", "Tür"), tr("Game", "Oyun"))
                 InfoRow(pal, tr("Program", "Program"), g.pkg)
@@ -506,7 +537,7 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
                 InfoRow(pal, tr("Total played", "Toplam oynama"), if (total > 0) hm(total) else "-")
                 InfoRow(pal, tr("Last played", "Son oynama"), if (lastUsed > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(lastUsed)) else "-")
                 InfoRow(pal, tr("Size", "Boyut"), if (size > 0) "%.1f MB".format(size / 1_048_576.0) else "-")
-                InfoRow(pal, tr("On the shelf", "Rafta"), if (hidden) tr("Hidden", "Gizli") else tr("Shown", "Görünür"))
+                InfoRow(pal, tr("On the phone", "Telefonda"), if (hidden) tr("Hidden from the home screen and app list", "Ana ekrandan ve uygulama listesinden gizli") else tr("Shown", "Görünür"))
             } else settings()
             Spacer(Modifier.height(28.dp))
         }

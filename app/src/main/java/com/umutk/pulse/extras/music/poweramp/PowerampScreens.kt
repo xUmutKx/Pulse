@@ -247,6 +247,7 @@ fun NowPlayingScreen(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    onCoverSlide: ((Float, Float, ImageBitmap?) -> Unit)? = null,
     shuffle: Boolean = false,
     repeatMode: Int = Player.REPEAT_MODE_OFF,
     onShuffle: () -> Unit = {},
@@ -355,6 +356,7 @@ fun NowPlayingScreen(
                 // swipe left or right to change track: the neighbour cover slides in from the side of the drag
                 CoverCarousel(
                     art, artPrev, artNext, hasPrev, hasNext, onPrev, onNext, Modifier.fillMaxSize(),
+                    onShown = if (PowerampPrefs.blended(ctx)) onCoverSlide else null,
                     onPageDrag = { dy ->
                         if (dy < 0f) upAcc += -dy else upAcc = (upAcc - dy).coerceAtLeast(0f)
                         pageY = (pageY + dy).coerceAtLeast(0f)

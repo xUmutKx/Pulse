@@ -1522,7 +1522,7 @@ private fun daysPlayed(c: Context, pkg: String, days: Int): Int = runCatching {
  */
 class GameMenuService : android.app.Service() {
     companion object {
-        fun enabled(c: Context) = prefs(c).getBoolean("menu", false)
+        fun enabled(c: Context) = prefs(c).getBoolean("menu", true)
         fun start(c: Context) { runCatching { val i = android.content.Intent(c, GameMenuService::class.java); if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i) else c.startService(i) } }
         fun stop(c: Context) { c.stopService(android.content.Intent(c, GameMenuService::class.java)) }
     }
@@ -1648,23 +1648,34 @@ class GameMenuService : android.app.Service() {
         hide()
         shown = pkg
         val d = resources.displayMetrics.density
-        val v = android.widget.TextView(this).apply {
-            text = if (onRight()) "\u2039" else "\u203A"; textSize = 22f; setTextColor(0xFFFFFFFF.toInt()); gravity = android.view.Gravity.CENTER
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadii = if (onRight()) floatArrayOf(14 * d, 14 * d, 0f, 0f, 0f, 0f, 14 * d, 14 * d) else floatArrayOf(0f, 0f, 14 * d, 14 * d, 14 * d, 14 * d, 0f, 0f) }
+        // the handle: a thin line on the edge (a wider strip around it takes the touch); it fades out after 10 seconds untouched and a touch brings it back
+        val line = android.view.View(this).apply {
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xCCFFFFFF.toInt()); cornerRadius = 3 * d; setStroke((1 * d).toInt(), 0x55000000) }
         }
+        val v = android.widget.FrameLayout(this).apply {
+            addView(line, android.widget.FrameLayout.LayoutParams((4 * d).toInt(), (46 * d).toInt(), (if (onRight()) android.view.Gravity.END else android.view.Gravity.START) or android.view.Gravity.CENTER_VERTICAL).apply { marginEnd = (3 * d).toInt(); marginStart = (3 * d).toInt() })
+        }
+        fun scheduleFade() { h.removeCallbacks(fadeOut); h.postDelayed(fadeOut, 10_000L) }
+        fadeOut = Runnable { if (panel == null) v.animate().alpha(0f).setDuration(450).start() }
+        scheduleFade()
         // a tap opens the menu; a drag moves the handle anywhere along the screen's sides and it settles on the nearer side
         var downX = 0f; var downY = 0f; var startY = 0; var moved = false
         v.setOnTouchListener { view, ev ->
             val l = view.layoutParams as android.view.WindowManager.LayoutParams
             when (ev.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { downX = ev.rawX; downY = ev.rawY; startY = l.y; moved = false; true }
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = ev.rawX; downY = ev.rawY; startY = l.y; moved = false
+                    // a faded handle: the touch only shows it again
+                    revealOnly = view.alpha < .5f
+                    view.animate().alpha(1f).setDuration(150).start(); scheduleFade(); true
+                }
                 android.view.MotionEvent.ACTION_MOVE -> {
                     if (Math.abs(ev.rawX - downX) > 12 * d || Math.abs(ev.rawY - downY) > 12 * d) moved = true
                     if (moved) { closePanel(); l.y = startY + (ev.rawY - downY).toInt(); runCatching { wm.updateViewLayout(view, l) } }
                     true
                 }
                 android.view.MotionEvent.ACTION_UP -> {
-                    if (!moved) togglePanel(pkg)
+                    if (!moved && !revealOnly) togglePanel(pkg)
                     else {
                         val w = resources.displayMetrics.widthPixels
                         val right = ev.rawX > w / 2f
@@ -1677,7 +1688,7 @@ class GameMenuService : android.app.Service() {
                 else -> false
             }
         }
-        if (runCatching { wm.addView(v, lp((26 * d).toInt(), (64 * d).toInt(), 0, handleY())) }.isSuccess) handle = v
+        if (runCatching { wm.addView(v, lp((14 * d).toInt(), (64 * d).toInt(), 0, handleY())) }.isSuccess) handle = v
         if (prefs(this).getBoolean("menuFps", false)) showFps()
     }
 
@@ -1687,7 +1698,10 @@ class GameMenuService : android.app.Service() {
         handle = null; shown = null
     }
 
-    private fun closePanel() { panel?.let { v -> runCatching { wm.removeView(v) } }; panel = null }
+    private fun closePanel() { panel?.let { v -> runCatching { wm.removeView(v) } }; panel = null; h.removeCallbacks(fadeOut); h.postDelayed(fadeOut, 10_000L) }
+    /** Fades the handle out (set in show for the handle of the moment). */
+    private var fadeOut: Runnable = Runnable {}
+    private var revealOnly = false
 
     private fun togglePanel(pkg: String) { if (panel != null) closePanel() else openPanel(pkg) }
 
