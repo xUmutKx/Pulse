@@ -117,6 +117,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "relay" -> com.umutk.pulse.extras.share.ShareHub(back)
         id == "recap" -> com.umutk.pulse.extras.music.stats.RecapScreen(back)
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
+        id == "netlab" -> com.umutk.pulse.extras.netlab.NetLabScreen(back)
         id == "chargewatts" -> com.umutk.pulse.extras.charging.ChargingWattsScreen(back)
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
         id == "duplicates" -> com.umutk.pulse.features.DuplicatesScreen(back)

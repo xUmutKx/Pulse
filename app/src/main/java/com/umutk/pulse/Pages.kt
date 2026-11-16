@@ -453,7 +453,7 @@ fun SettingsPage() {
             }
             "look" -> {
                 if (T.material) MaterialSection(ctx) else {
-                com.umutk.pulse.extras.ui.SettingsSection(tr("Mode", "Mod")) {
+                com.umutk.pulse.extras.ui.FlatSection(tr("Mode", "Mod")) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
                         PChip(Look.mode == id, n) { Cfg.setMode(ctx, id) }
@@ -462,14 +462,14 @@ fun SettingsPage() {
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
                 }
                 if (T.id == "win11") {
-                    com.umutk.pulse.extras.ui.SettingsSection(tr("Background", "Arka plan")) {
+                    com.umutk.pulse.extras.ui.FlatSection(tr("Background", "Arka plan")) {
                         // previews instead of words: the background as it is drawn, the material as a panel over a picture
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             BackgroundPreview(tr("Black (AMOLED)", "Siyah (AMOLED)"), Color.Black, Opt.amoledBg) { Opt.amoledBg = true; Opt.save(ctx) }
                             BackgroundPreview(tr("Dark grey", "Koyu gri"), Color(0xFF202020), !Opt.amoledBg) { Opt.amoledBg = false; Opt.save(ctx) }
                         }
                     }
-                    com.umutk.pulse.extras.ui.SettingsSection(tr("Window material", "Pencere malzemesi")) {
+                    com.umutk.pulse.extras.ui.FlatSection(tr("Window material", "Pencere malzemesi")) {
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Effects.list.forEach { (id, n) -> MaterialPreview(id, n, Look.effect == id) { Cfg.setEffect(ctx, id) } }
                         }
@@ -482,7 +482,7 @@ fun SettingsPage() {
                         Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is the most see-through.", color = T.sub, fontSize = 11.sp)
                     }
                     // every icon group shows its styles at once: one tap picks a style
-                    com.umutk.pulse.extras.ui.SettingsSection(tr("Icons (Windows 11)", "İkonlar (Windows 11)")) {
+                    com.umutk.pulse.extras.ui.PeekSection(tr("Icons (Windows 11)", "İkonlar (Windows 11)")) {
                         IconCat.entries.forEach { cat ->
                             val cur = IconStyle.of(cat)
                             Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
@@ -493,7 +493,7 @@ fun SettingsPage() {
                     }
                 }
                 }
-                com.umutk.pulse.extras.ui.SettingsSection(tr("Theme", "Tema")) {
+                com.umutk.pulse.extras.ui.FlatSection(tr("Theme", "Tema")) {
                 // theme locks: a look other than the one in use is locked until one ad opens them all for 2 minutes
                 val themeGate = com.umutk.pulse.ads.rememberAdGate(tr("Unlock themes", "Temaları aç"), tr("Watch a short ad to pick any theme for 2 minutes.", "2 dakika boyunca istediğin temayı seçmek için kısa bir reklam izle."), key = com.umutk.pulse.ads.ThemeLock.KEY, minutes = com.umutk.pulse.ads.ThemeLock.MINUTES, pass = false)
                 // the lock state is read again every few seconds, so the padlocks close when the 2 minutes run out
@@ -534,7 +534,7 @@ fun SettingsPage() {
                 ThemeWallpaperRow(T.id)
                 }
                 if (T.material || !T.tabs || T.id == "win10" || T.id == "win11") {
-                    com.umutk.pulse.extras.ui.SettingsSection(tr("Accent colour", "Vurgu rengi")) {
+                    com.umutk.pulse.extras.ui.FlatSection(tr("Accent colour", "Vurgu rengi")) {
                     // one accent row for every look; with Material You on, the wallpaper picks the colour and the row is greyed out
                     val lockedByYou = T.material && Look.dynamic && android.os.Build.VERSION.SDK_INT >= 31
                     Row(Modifier.alpha(if (lockedByYou) .38f else 1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -546,7 +546,7 @@ fun SettingsPage() {
                     }
                 }
                 // the picture behind the Windows 11 windows: phone wallpaper, the bundled A-D packs, or your own
-                if (T.id == "win11") com.umutk.pulse.extras.ui.SettingsSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
+                if (T.id == "win11") com.umutk.pulse.extras.ui.FlatSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
             }
             "general" -> GeneralSettings()
             "functions" -> FunctionsSettings()
