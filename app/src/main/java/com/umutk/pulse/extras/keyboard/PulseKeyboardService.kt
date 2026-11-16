@@ -306,10 +306,36 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         ctxLang = if (top != null && top.value >= 2 && top.value >= 2 * second) top.key else null
     }
 
+    companion object {
+        /** The keyboard running now, for the quick settings tile (null while none is). */
+        @Volatile var live: PulseKeyboardService? = null
+    }
+
+    /** The floating look was switched on or off from outside (the tile): the window takes the new flags and touch area, the keyboard is drawn again. */
+    fun floatChanged() {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            applyFloatWindow()
+            if (!KeyboardPrefs.floatNow) floatWasUp = isInputViewShown
+            st.refreshInsets?.invoke()
+            kbRoot?.requestLayout()
+        }
+    }
+
+    /** The floating keyboard's tall window must not swallow touches outside its keys: the app behind stays usable. */
+    private fun applyFloatWindow() {
+        window.window?.let { w ->
+            val f = android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            if (KeyboardPrefs.floatNow) w.addFlags(f) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        live = this
         runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).registerInputDeviceListener(deviceListener, null) }
         KeyboardPrefs.load(this)
+        // the tile's floating keyboard lasts across restarts of the keyboard until the tile is tapped again
+        KeyboardPrefs.floatSession = floatTileOn(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
         scope.launch(Dispatchers.IO) { runCatching { EmojiData.index(this@PulseKeyboardService) } }
@@ -490,6 +516,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyboardDictionary.saveUser(this)
         runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).unregisterInputDeviceListener(deviceListener) }
         owner?.stop(); scope.cancel()
+        if (live === this) live = null
         super.onDestroy()
     }
 
@@ -697,11 +724,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // shown again with the same field (back from a screenshot or another window): the bar is made again, it is not left empty
         runCatching { updateSuggestions() }
         kbRoot?.let { v -> v.postDelayed({ fillEmptyBar() }, 250) }
-        // the floating keyboard's tall window must not swallow touches outside its keys: the app behind stays usable
-        window.window?.let { w ->
-            val f = android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            if (KeyboardPrefs.floatNow) w.addFlags(f) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
-        }
+        applyFloatWindow()
         st.refreshInsets?.invoke()
     }
 
@@ -1764,8 +1787,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun hide() {
         finishWord("", false); requestHideSelf(0)
-        // the tile's floating keyboard: its invisible window goes too, so nothing of it stays over the app
-        if (KeyboardPrefs.floatSession) runCatching { KeyboardFloatActivity.current?.finish() }
+        // an old floating window of the tile (from before the tile stopped opening one) goes too
+        runCatching { KeyboardFloatActivity.current?.finish() }
     }
 
     private var recognizer: android.speech.SpeechRecognizer? = null
