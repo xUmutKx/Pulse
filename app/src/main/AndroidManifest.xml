@@ -637,8 +637,8 @@
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
-        <!-- YTXTube (extras/ytx, GPL-3.0, Koustubh12345/YTXTube): YouTube and YouTube Music client, its own task -->
-        <activity android:name="com.umutk.pulse.extras.ytx.YtxActivity" android:exported="true" android:launchMode="singleTask" android:taskAffinity="com.umutk.pulse.ytx"
+        <!-- YTXTube (extras/ytx, GPL-3.0, Koustubh12345/YTXTube): YouTube and YouTube Music client, its own task and its own process (so video, the keyboard and the music player do not share one main thread) -->
+        <activity android:name="com.umutk.pulse.extras.ytx.YtxActivity" android:process=":ytx" android:exported="true" android:launchMode="singleTask" android:taskAffinity="com.umutk.pulse.ytx"
             android:supportsPictureInPicture="true" android:resizeableActivity="true" android:label="YTXTube" android:icon="@drawable/ytx_ic_brand" android:roundIcon="@drawable/ytx_ic_brand"
             android:theme="@style/Theme.Ytx"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
@@ -683,7 +683,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <service android:name="com.umutk.pulse.extras.ytx.PlaybackService" android:exported="true" android:foregroundServiceType="mediaPlayback">
+        <service android:name="com.umutk.pulse.extras.ytx.PlaybackService" android:process=":ytx" android:exported="true" android:foregroundServiceType="mediaPlayback">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>

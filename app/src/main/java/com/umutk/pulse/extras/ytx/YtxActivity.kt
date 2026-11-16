@@ -134,6 +134,7 @@ class YtxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         YTXTubeApplication.init(this)
+        YtxPerf.load(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setHighestRefreshRate()
