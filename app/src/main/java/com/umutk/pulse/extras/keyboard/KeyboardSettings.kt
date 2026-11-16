@@ -7,6 +7,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -447,6 +448,24 @@ fun KeyboardSettings(back: () -> Unit) {
                 Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(if (i == 4) Color(0xFF15161B) else KeyboardEffects.fxTint(i, T.accent, 0)), contentAlignment = Alignment.Center) {
                     if (i == 4) Box(Modifier.size(width = 40.dp, height = 8.dp).clip(RoundedCornerShape(4.dp)).background(androidx.compose.ui.graphics.Brush.horizontalGradient(List(7) { Color.hsv(it * 55f, .85f, 1f) })))
                 }
+            }
+            // a picture behind the keys: the phone's picker gives a copy (its first frame for a GIF), darkened by the slider
+            val ctxPic = LocalContext.current
+            val picPick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
+                if (uri != null) runCatching {
+                    val f = java.io.File(ctxPic.filesDir, "kb_picture.img")
+                    ctxPic.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+                    KeyboardPrefs.bgPath = f.absolutePath; save()
+                }
+            }
+            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Keyboard picture", "Klavye resmi"), color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(tr("Choose", "Seç"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { picPick.launch("image/*") }.padding(8.dp))
+                if (KeyboardPrefs.bgPath.isNotEmpty()) Text(tr("Remove", "Kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { KeyboardPrefs.bgPath = ""; save() }.padding(8.dp))
+            }
+            if (KeyboardPrefs.bgPath.isNotEmpty()) {
+                Text("${tr("Picture darkness", "Resim karartma")}: ${KeyboardPrefs.bgDim}%", color = T.sub, fontSize = 12.sp)
+                PSlider(KeyboardPrefs.bgDim / 100f, { KeyboardPrefs.bgDim = (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             }
             Text("${tr("Effect length", "Efekt süresi")}: ${KeyboardPrefs.fxSpeed}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.fxSpeed - 40) / 260f, { KeyboardPrefs.fxSpeed = 40 + (it * 260).roundToInt() }, 0f..1f, onDone = { save() })

@@ -1260,8 +1260,12 @@ fun DownloadsPage() {
         // Series and movies is a page of its own: back goes to the downloads
         if (SeasonDl.pageOpen) {
             androidx.activity.compose.BackHandler { SeasonDl.pageOpen = false }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+            // full screen, in a window of its own: the page is not squeezed above the keyboard (the gap it left) and back closes it
+            androidx.compose.ui.window.Dialog(onDismissRequest = { SeasonDl.pageOpen = false },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
+                    Column(Modifier.fillMaxSize().padding(top = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding()).padding(bottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()).verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+                }
             }
         } else Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }
     }

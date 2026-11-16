@@ -303,6 +303,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             }
         }
     }) {
+        // the picture behind the keys (Settings > Effects), under a black layer of the chosen strength
+        KbPicture(KeyboardPrefs.bgPath, KeyboardPrefs.bgDim)
         Column(
             (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
                 .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
@@ -1195,6 +1197,17 @@ private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape:
         drawRect(lo, Offset(0f, h - s), Size(w, s)); drawRect(lo, Offset(w - s, 0f), Size(s, h))
         drawRect(Color.Black, Offset(0f, h - 1.dp.toPx()), Size(w, 1.dp.toPx())); drawRect(Color.Black, Offset(w - 1.dp.toPx(), 0f), Size(1.dp.toPx(), h))
     } else this.clip(shape).background(c, shape).then(if (th.border != Color.Transparent) Modifier.border(1.dp, th.border, shape) else Modifier)
+}
+
+/** The keyboard's picture behind the keys, darkened by [dim] percent (static: the first frame of a GIF). */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.KbPicture(path: String, dim: Int) {
+    if (path.isEmpty()) return
+    val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull() }
+    }
+    img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+    if (img != null) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = dim.coerceIn(0, 100) / 100f)))
 }
 
 // ---- the pop-up over a pressed key -----------------------------------------------------------------------------------------------------------------
