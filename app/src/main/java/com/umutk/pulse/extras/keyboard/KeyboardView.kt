@@ -305,6 +305,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     }) {
         // the picture behind the keys (Settings > Effects), under a black layer of the chosen strength
         KbPicture(KeyboardPrefs.bgPath, KeyboardPrefs.bgDim)
+        if (KeyboardPrefs.boardFx == 7) RgbWash()
         Column(
             (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
                 .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
@@ -1197,6 +1198,16 @@ private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape:
         drawRect(lo, Offset(0f, h - s), Size(w, s)); drawRect(lo, Offset(w - s, 0f), Size(s, h))
         drawRect(Color.Black, Offset(0f, h - 1.dp.toPx()), Size(w, 1.dp.toPx())); drawRect(Color.Black, Offset(w - 1.dp.toPx(), 0f), Size(1.dp.toPx(), h))
     } else this.clip(shape).background(c, shape).then(if (th.border != Color.Transparent) Modifier.border(1.dp, th.border, shape) else Modifier)
+}
+
+/** The RGB colour effect of the whole keyboard: a soft rainbow that turns slowly behind the keys. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.RgbWash() {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "rgbWash")
+    val h by t.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(9000, easing = androidx.compose.animation.core.LinearEasing)), label = "hue")
+    Box(Modifier.matchParentSize().drawBehind {
+        drawRect(androidx.compose.ui.graphics.Brush.linearGradient(List(5) { Color.hsv(((h + it * 72f) % 360f + 360f) % 360f, .8f, 1f).copy(alpha = .35f) }))
+    })
 }
 
 /** The keyboard's picture behind the keys, darkened by [dim] percent (static: the first frame of a GIF). */
