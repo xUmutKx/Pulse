@@ -7,6 +7,9 @@ import android.os.Environment
 import android.os.StatFs
 import android.os.SystemClock
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.io.File
 
 /** One run of a neofetch line: its text and its colour (null: the screen's own text colour). */
@@ -23,24 +26,9 @@ object NeofetchText {
     private val PALETTE = listOf(0xFF000000, 0xFFCD3131, 0xFF0DBC79, 0xFFE5E510, 0xFF2472C8, 0xFFBC3FBC, 0xFF11A8CD, 0xFFE5E5E5,
         0xFF666666, 0xFFF14C4C, 0xFF23D18B, 0xFFF5F543, 0xFF3B8EEA, 0xFFD670D6, 0xFF29B8DB, 0xFFFFFFFF).map { Color(it) }
 
-    /** The Android robot, one drawing for each generation of Android: the old square head, the classic robot with its antennae, the round modern one. */
-    private fun logo(api: Int): List<String> = when {
-        api >= 31 -> listOf(
-            "        .-----.        ",
-            "     ,-'       '-.     ",
-            "    /   o     o   \\    ",
-            "   |  ,___________,  |  ",
-            "    \\  '---------'  /   ",
-            "   ,-'-----------'-.   ",
-            "  /                 \\  ",
-            " |   |           |   | ",
-            " |   |           |   | ",
-            "  \\_/|           |\\_/  ",
-            "     |_____ _____|     ",
-            "     |  |     |  |     ",
-            "     |__|     |__|     ",
-        )
-        api >= 28 -> listOf(
+    /** The Android robot, the drawing of the real neofetch (its Android logo), for every Android version. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun logo(api: Int): List<String> = listOf(
             "         -o          o-         ",
             "          +hydNNNNdyh+          ",
             "        +mMMMMMMMMMMMMm+        ",
@@ -59,19 +47,7 @@ object NeofetchText {
             "          MMMMo  oMMMM          ",
             "          MMMMo  oMMMM          ",
             "          oNMm-  -mMNs          ",
-        )
-        else -> listOf(
-            "     .-.-.     ",
-            "    ( o   o )  ",
-            "  .-'-------'-.",
-            " |  _________  |",
-            " | |         | |",
-            " | |         | |",
-            " | |_________| |",
-            " |_____________|",
-            "   |_|     |_|  ",
-        )
-    }
+    )
 
     private fun uptime(): String {
         val m = SystemClock.elapsedRealtime() / 60000
@@ -121,8 +97,19 @@ object NeofetchText {
      * card shows the first lines only).
      */
     fun lines(ctx: Context, rows: Int = 99): List<List<NfSeg>> {
-        val art = logo(Build.VERSION.SDK_INT)
+        val (art0, right) = columns(ctx, rows)
+        val art = art0
         val width = art.maxOf { it.length } + 3
+        val n = maxOf(art.size, right.size)
+        return List(n) { i ->
+            val left = art.getOrNull(i).orEmpty()
+            listOf(NfSeg(left.padEnd(width), GREEN)) + right.getOrElse(i) { emptyList() }
+        }
+    }
+
+    /** The card in two columns: the logo lines, and the lines at its right (user@host, the phone's lines, the colour blocks). A screen that draws the columns side by side keeps the lines level whatever the font. */
+    fun columns(ctx: Context, rows: Int = 99): Pair<List<String>, List<List<NfSeg>>> {
+        val art = logo(Build.VERSION.SDK_INT)
         val info = info(ctx)
         val host = (Build.MODEL.ifBlank { "phone" }).lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
         val right = ArrayList<List<NfSeg>>()
@@ -132,10 +119,29 @@ object NeofetchText {
         right.add(emptyList())
         right.add(PALETTE.take(8).map { NfSeg("   ", null).let { _ -> NfSeg("\u2588\u2588\u2588", it) } })
         right.add(PALETTE.drop(8).map { NfSeg("\u2588\u2588\u2588", it) })
-        val n = maxOf(art.size, right.size)
-        return List(n) { i ->
-            val left = art.getOrNull(i).orEmpty()
-            listOf(NfSeg(left.padEnd(width), GREEN)) + right.getOrElse(i) { emptyList() }
+        return art to right
+    }
+}
+
+/**
+ * The card drawn in two columns, side by side: the logo, then the lines of the phone. Each column is one text with the same line height, so the lines of the phone start in one
+ * column and stay level with the logo in any font. [shown] limits how many lines appear (the charging animation types them in).
+ */
+@androidx.compose.runtime.Composable
+fun NeofetchCard(art: List<String>, right: List<List<NfSeg>>, fs: Float, shown: Int = Int.MAX_VALUE) {
+    val mono = androidx.compose.ui.text.font.FontFamily.Monospace
+    val lh = (fs * 1.25f).sp
+    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
+        androidx.compose.material3.Text(art.take(shown).joinToString("\n"), color = NeofetchText.GREEN, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = art.size, softWrap = false)
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.width((fs * 1.6f).dp))
+        val a = androidx.compose.ui.text.buildAnnotatedString {
+            right.take(shown).forEachIndexed { i, line ->
+                if (i > 0) append("\n")
+                line.forEach { seg ->
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = seg.color ?: Color(0xFFE6E6E6), fontWeight = if (seg.bold) androidx.compose.ui.text.font.FontWeight.Bold else null)); append(seg.text); pop()
+                }
+            }
         }
+        androidx.compose.material3.Text(a, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = right.size.coerceAtLeast(1), softWrap = false)
     }
 }
