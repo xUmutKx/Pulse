@@ -98,7 +98,7 @@ class Win11LauncherLook : LauncherLook {
     override fun Taskbar(state: LauncherState, modifier: Modifier) {
         val fg = fg()
         val tileC = tile()
-        val accent = Look.accent.copy(alpha = 1f)
+        val accent = launcherAccent()
         val open = LauncherSession.startOpen
         val edge = LocalLauncherEdge.current
         val shape = RoundedCornerShape(8.dp)
@@ -136,7 +136,7 @@ class Win11LauncherLook : LauncherLook {
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
         val fg = fg()
         val tileC = tile()
-        val accent = Look.accent.copy(alpha = 1f)
+        val accent = launcherAccent()
         val edge = LocalLauncherEdge.current
         val shape = RoundedCornerShape(8.dp)
         var query by remember { mutableStateOf("") }
@@ -295,11 +295,12 @@ private fun Indicator(color: Color, modifier: Modifier) {
 /** Start button: four plain squares in a 2x2 Path (no Microsoft mark). */
 @Composable
 private fun StartGlyph(@Suppress("UNUSED_PARAMETER") color: Color) {
-    // the Windows 11 logo: four panes in the blue of the system, light at the top and deeper at the bottom
+    // the Windows 11 logo: four panes in the accent of the launcher (the blue of the system at first), light at the top and deeper at the bottom
     Canvas(Modifier.size(22.dp)) {
         val gap = size.minDimension * .09f
         val q = (size.minDimension - gap) / 2f
-        val brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF7CD0FF), Color(0xFF1E8CF0), Color(0xFF0A5FCC)), startY = 0f, endY = size.height)
+        val acc = launcherAccent()
+        val brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(acc, Color.White, .45f), acc, androidx.compose.ui.graphics.lerp(acc, Color.Black, .3f)), startY = 0f, endY = size.height)
         for (x in listOf(0f, q + gap)) for (y in listOf(0f, q + gap)) drawRoundRect(brush, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Size(q, q), androidx.compose.ui.geometry.CornerRadius(q * .12f))
     }
 }

@@ -60,7 +60,7 @@ private fun flyLook(id: String) = when (id) {
     "xp" -> FlyLook(Color(0xFFECE9D8), Color.Black, Color(0xFF404040), Color(0xFF0831D9), Color(0xFF316AC5), 3.dp, false)
     "win95" -> FlyLook(Color(0xFFC0C0C0), Color.Black, Color(0xFF404040), Color(0xFF808080), Color(0xFF000080), 0.dp, false)
     "win10", "win10black" -> FlyLook(Color(0xFF1F1F1F), Color.White, Color(0xFFB0B0B0), Color(0xFF3A3A3A), Color(0xFF0078D7), 0.dp, true)
-    else -> FlyLook(Color(0xF22B2B2B), Color.White, Color(0xFFC8C8C8), Color(0xFF454545), Color(0xFF4CC2FF), 10.dp, true)
+    else -> FlyLook(Color(0xF22B2B2B), Color.White, Color(0xFFC8C8C8), Color(0xFF454545), launcherAccent(), 10.dp, true)
 }
 
 /**
