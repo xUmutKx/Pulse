@@ -387,7 +387,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var shotItem: ClipItem? = null
     // a photo or screenshot waits 30 seconds in the bar, then it goes (the bar is refreshed then too)
     private val shotExpiry = android.os.Handler(android.os.Looper.getMainLooper())
-    private val shotExpire = Runnable { if ((shotItem != null || shotVideo != null) && !shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null; updateSuggestions() } }
+    /** When the keyboard was last shown: a picture waiting in the bar is shown for 15 seconds from then (for a minute from the shot while the keyboard is closed). */
+    private var kbOpenAt = 0L
+    private fun shotLeftMs(): Long {
+        val now = SystemClock.uptimeMillis()
+        return if (isInputViewShown) 15_000L - (now - maxOf(shotAt, kbOpenAt)) else 60_000L - (now - shotAt)
+    }
+    private val shotExpire: Runnable = Runnable {
+        if ((shotItem != null || shotVideo != null) && !shotPinned) {
+            val left = shotLeftMs()
+            if (left > 500L) shotExpiry.postDelayed(shotExpire, left)
+            else { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null; updateSuggestions() }
+        }
+    }
     /** a video just downloaded, waiting in the same slot (its picture with a play mark): it is not kept in the clipboard, it is pasted from where it is */
     private var shotVideo: java.io.File? = null
     private var shotVideoMime = "video/mp4"
@@ -461,13 +473,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
         // the newest copy wins the slot: a screenshot takes it from a copied text
         quickClip = null; shotItem = null; shotVideo = file; shotVideoMime = mime; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+        // the screenshot is kept in the clipboard history too, so it is there after the bar's picture is gone
+        if (!st.incognito) scope.launch(Dispatchers.IO) { runCatching { val l = ClipStore.addImage(this@PulseKeyboardService, android.net.Uri.fromFile(file)); withContext(Dispatchers.Main) { st.clipItems = l } } }
         st.shotThumb = withContext(Dispatchers.IO) { runCatching {
             val bmp = android.graphics.BitmapFactory.decodeFile(file.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
             // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
             val deg = when (android.media.ExifInterface(file.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
             (if (deg == 0f) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true)).asImageBitmap()
         }.getOrNull() }
-        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
+        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L)
         updateSuggestions()
     }
 
@@ -511,7 +525,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         quickClip = null; shotItem = null; shotVideo = java.io.File(path); shotVideoMime = mime
         shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
         st.shotThumb = thumb; st.shotVideo = true
-        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 30_000L)
+        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L)
         updateSuggestions()
     }
 
@@ -789,6 +803,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { window.window?.decorView?.requestLayout() }
     }
     override fun onWindowShown() {
+        kbOpenAt = SystemClock.uptimeMillis()
+        // a picture still waiting is looked at again from the moment the keyboard is up
+        if ((shotItem != null || shotVideo != null) && !shotPinned) { shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L) }
         super.onWindowShown(); backToKeys()
         st.floatArmed = false
         // shown again with the same field (back from a screenshot or another window): the bar is made again, it is not left empty
@@ -2277,7 +2294,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
         // a screenshot that was just taken takes the right slot for two minutes
-        if ((shotItem != null || shotVideo != null) && !shotPinned && SystemClock.uptimeMillis() - shotAt > 30_000L) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null }
+        if ((shotItem != null || shotVideo != null) && !shotPinned && shotLeftMs() <= 0L) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotThumb = null }
         if ((shotItem != null || shotVideo != null) && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
