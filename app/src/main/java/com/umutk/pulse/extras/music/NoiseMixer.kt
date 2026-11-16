@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +41,12 @@ fun NoiseMixerDialog(onClose: () -> Unit) {
     val running by AmbientMixer.running.collectAsState()
     val master by AmbientMixer.master.collectAsState()
     LaunchedEffect(Unit) { if (AmbientMixer.sounds.value.isEmpty()) AmbientMixer.load(ctx) {} }
+    // the nature and white noise loops are fetched only when asked for: the same Download row as in White noise
+    var missing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var getting by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var failed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val dl = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(Unit) { missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.whitenoise.ambientMissing(ctx) } }
     val turkish = tr("en", "tr") == "tr"
     WinAlert(
         onDismissRequest = onClose,
@@ -52,6 +60,23 @@ fun NoiseMixerDialog(onClose: () -> Unit) {
         text = {
             Column(Modifier.heightIn(max = 440.dp)) {
                 PSlider(master.toFloat(), { AmbientMixer.setMaster(it.toInt()) }, 0f..100f, onDone = {})
+                if (missing) Row(Modifier.fillMaxWidth().clickable(enabled = !getting) {
+                    getting = true; failed = false
+                    dl.launch {
+                        val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.whitenoise.fetchAmbient(ctx) }
+                        val found = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { AmbientMixer.scan(ctx) }
+                        AmbientMixer.ensure(ctx, found)
+                        missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.whitenoise.ambientMissing(ctx) }
+                        getting = false; failed = !ok
+                    }
+                }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("download", com.umutk.pulse.Look.accent, 22.dp)
+                    Text(when {
+                        getting -> tr("Downloading the sounds…", "Sesler indiriliyor…")
+                        failed -> tr("The sounds could not be downloaded", "Sesler indirilemedi")
+                        else -> tr("Download the nature and noise sounds (8 MB)", "Doğa ve gürültü seslerini indir (8 MB)")
+                    }, color = T.text, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
+                }
                 LazyColumn(Modifier.fillMaxWidth()) {
                     items(sounds, key = { it.id }) { s ->
                         val on = s.id in running
