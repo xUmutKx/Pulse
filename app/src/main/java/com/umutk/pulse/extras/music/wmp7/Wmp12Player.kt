@@ -110,6 +110,8 @@ fun Wmp12Player(
 ) {
     var lib by remember { mutableStateOf(false) }
     var showList by remember { mutableStateOf(false) }
+    // the lyrics of the song (the tags, an .lrc file, or online), in the middle in place of the cover; the same pane every player shows
+    var showLyrics by remember { mutableStateOf(false) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val sp = remember { ctx.getSharedPreferences("music_wmp12", android.content.Context.MODE_PRIVATE) }
     var themeId by remember { mutableStateOf(sp.getString("theme", "ocean") ?: "ocean") }
@@ -127,7 +129,8 @@ fun Wmp12Player(
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 if (lib) WmpLibrary(library, queue, current, albumCover, onPlayTracks, playlists, loadPlaylist, roomy, onBack = { lib = false })
-                else NowPlaying(title, artist, album, cover, queue, current, onPick, side, showList, { showList = !showList }, fluent)
+                else NowPlaying(title, artist, album, cover, queue, current, onPick, side, showList, { showList = !showList }, fluent,
+                    showLyrics, { showLyrics = !showLyrics; if (showLyrics) showList = false }, queue.getOrNull(current), pos, onSeek)
             }
             if (fluent) FluentTransport(pos, dur, playing, onPrev, onPlayPause, onNext, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty())
             else Transport(pos, dur, playing, onPrev, onPlayPause, onNext, onStop, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty(), { picking = !picking })
@@ -176,6 +179,7 @@ private fun WmpBackdrop(th: WTheme, cover: ImageBitmap?) {
 private fun NowPlaying(
     title: String, artist: String, album: String?, cover: ImageBitmap?, queue: List<Track>, current: Int, onPick: (Int) -> Unit,
     side: Boolean, showList: Boolean, toggleList: () -> Unit, fluent: Boolean = false,
+    showLyrics: Boolean = false, toggleLyrics: () -> Unit = {}, track: Track? = null, pos: Int = 0, onSeek: (Int) -> Unit = {},
 ) {
     Row(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 18.dp, end = if (side) 10.dp else 18.dp, top = 14.dp, bottom = 6.dp)) {
@@ -185,15 +189,22 @@ private fun NowPlaying(
                     val sub = listOfNotNull(artist.takeIf { it.isNotBlank() }, album?.takeIf { it.isNotBlank() }).joinToString(" - ")
                     if (sub.isNotEmpty()) Text(sub, color = W_TEXT, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                 }
-                // "Show list" with its little list mark, as at the top right of the real window
-                if (queue.isNotEmpty() && !side) Row(Modifier.padding(start = 10.dp, top = 4.dp).clickable { toggleList() }, verticalAlignment = Alignment.CenterVertically) {
-                    ListMark()
-                    Text(if (showList) tr("Hide list", "Listeyi gizle") else tr("Show list", "Listeyi göster"), color = W_TEXT, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp))
+                // "Show list" with its little list mark, as at the top right of the real window, and the lyrics beside it
+                Column(Modifier.padding(start = 10.dp, top = 4.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (queue.isNotEmpty() && !side) Row(Modifier.clickable { toggleList() }, verticalAlignment = Alignment.CenterVertically) {
+                        ListMark()
+                        Text(if (showList) tr("Hide list", "Listeyi gizle") else tr("Show list", "Listeyi göster"), color = W_TEXT, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp))
+                    }
+                    if (track != null) Row(Modifier.clickable { toggleLyrics() }, verticalAlignment = Alignment.CenterVertically) {
+                        com.umutk.pulse.PIcon("document", if (showLyrics) acc() else W_TEXT, 14.dp)
+                        Text(tr("Lyrics", "Sözler"), color = if (showLyrics) acc() else W_TEXT, fontSize = 12.sp, fontWeight = if (showLyrics) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.padding(start = 5.dp))
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                if (showList && !side) QueueList(queue, current, onPick, Modifier.fillMaxSize())
+                if (showLyrics && track != null) com.umutk.pulse.extras.music.MusicLyricsPane(track, pos, onSeek, Modifier.fillMaxSize())
+                else if (showList && !side) QueueList(queue, current, onPick, Modifier.fillMaxSize())
                 else {
                     // the cover is as large as the room allows, square, in a thin frame
                     val s = minOf(maxWidth, maxHeight).coerceAtLeast(60.dp)
@@ -379,11 +390,18 @@ private fun Transport(
             Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x44FFFFFF)))
             Box(Modifier.fillMaxWidth(frac.coerceAtLeast(0.001f)).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Brush.horizontalGradient(listOf(acc().copy(alpha = .75f), Color.White.copy(alpha = .9f)))))
         }
+        // the times under the ends of the line (they took the room the pill needs)
+        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+            Text(mmss(pos), color = W_TEXT, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            Text(mmss(dur), color = W_TEXT, fontSize = 11.sp, textAlign = TextAlign.End)
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(mmss(pos), color = W_TEXT, fontSize = 11.sp, modifier = Modifier.width(36.dp))
             // the pill: dark glass with a bright lip on top and a shade below, as the Aero control bar
+            BoxWithConstraints(Modifier.weight(1f)) {
+            // the volume (the icon and its slider) needs 66 dp more: it is left out of a narrow pill, so the forward key is never squeezed out
+            val roomy = maxWidth >= 300.dp
             Row(
-                Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(28.dp))
+                Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp))
                     .background(Brush.verticalGradient(listOf(Color(0xFF55616E), Color(0xFF232C36), Color(0xFF0A0F15), Color(0xFF1B232C))))
                     .border(1.dp, Brush.verticalGradient(listOf(Color(0xCCFFFFFF), Color(0x33FFFFFF), Color(0x88000000))), RoundedCornerShape(28.dp)).padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
@@ -397,9 +415,9 @@ private fun Transport(
                 PackKey("prev", onPrev) { Icon(Icons.Rounded.SkipPrevious, null, tint = Color(0xFFBFE0F8), modifier = Modifier.size(24.dp)) }
                 PlayOrb(playing, onPlayPause)
                 PackKey("next", onNext) { Icon(Icons.Rounded.SkipNext, null, tint = Color(0xFFBFE0F8), modifier = Modifier.size(24.dp)) }
-                Icon(Icons.Rounded.VolumeUp, null, tint = Color(0xFF8CC9F2), modifier = Modifier.size(18.dp))
+                if (roomy) Icon(Icons.Rounded.VolumeUp, null, tint = Color(0xFF8CC9F2), modifier = Modifier.size(18.dp))
                 // the volume: a thin slider with a round thumb, a tap or a slide sets the phone's media volume
-                Box(
+                if (roomy) Box(
                     Modifier.width(48.dp).height(24.dp)
                         .pointerInput(Unit) { detectTapGestures { o -> vol = (o.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } }
                         .pointerInput(Unit) { detectHorizontalDragGestures { c, _ -> vol = (c.position.x / size.width).coerceIn(0f, 1f); am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (vol * vmax).toInt(), 0) } },
@@ -410,7 +428,7 @@ private fun Transport(
                     BoxWithConstraints(Modifier.fillMaxWidth()) { Box(Modifier.padding(start = (maxWidth - 10.dp).coerceAtLeast(0.dp) * (if (vol.isNaN()) 0f else vol.coerceIn(0f, 1f))).size(10.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(Color.White, Color(0xFF9CB8CC))))) }
                 }
             }
-            Text(mmss(dur), color = W_TEXT, fontSize = 11.sp, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
+            }
             // the looks and the switch between the two pages, at the right of the pill
             Box(Modifier.padding(start = 4.dp).size(24.dp).clip(CircleShape).background(Brush.radialGradient(listOf(acc(), Color(0xFF0A1220)))).border(1.dp, Color(0x99FFFFFF), CircleShape).clickable { pickTheme() })
             if (hasLib) Box(Modifier.padding(start = 6.dp).size(26.dp).clip(RoundedCornerShape(4.dp)).background(Color(0x33FFFFFF)).border(1.dp, Color(0x44FFFFFF), RoundedCornerShape(4.dp)).clickable { toggleLib() }, contentAlignment = Alignment.Center) {
