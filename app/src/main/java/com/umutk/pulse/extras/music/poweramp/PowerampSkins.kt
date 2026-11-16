@@ -37,7 +37,7 @@ object PowerampPrefs {
     fun artPage(c: Context, key: String): Boolean = sp(c).getBoolean("artPage_$key", key == "now")
     fun setArtPage(c: Context, key: String, on: Boolean) = sp(c).edit().putBoolean("artPage_$key", on).apply()
     /** The "Blended" cover of the now-playing page: the cover edge to edge at the top, fading into its own blurred copy that fills the screen. Off by default. */
-    fun blended(c: Context): Boolean = sp(c).getBoolean("blended", false)
+    fun blended(c: Context): Boolean = sp(c).getBoolean("blended", true)
     fun setBlended(c: Context, on: Boolean) = sp(c).edit().putBoolean("blended", on).apply()
     /** How strongly the Blended cover and the lyrics lying on it are blurred (dp). The lyrics follow the same value, so the two never differ. */
     fun blendBlur(c: Context): Int = sp(c).getInt("blendBlur", 36).coerceIn(10, 90)
