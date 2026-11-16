@@ -2,6 +2,8 @@ name: Kotlin check
 # a compile check without a release: the Kotlin of the lite app (no native code), with the errors as annotations
 on:
   workflow_dispatch:
+  push:
+    branches: [ytx]
 permissions:
   contents: read
 jobs:
