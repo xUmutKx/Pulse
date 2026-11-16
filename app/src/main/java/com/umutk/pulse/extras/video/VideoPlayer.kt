@@ -366,8 +366,48 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     LaunchedEffect(player) { loadSaved(items.getOrNull(cur)) }
 
+    // ---- a damaged spot in the file (a torrent or a download with a broken piece): the player goes past it by itself, losing as little as it can ----
+    // the jump starts small (half a second) and doubles while the same place keeps failing (up to 30 s); the seek lands on the next whole picture AFTER the damage
+    // (the usual nearest-picture seek could land before it and fail again for ever)
+    val mend = remember { longArrayOf(500L, -1L, 0L) } // [next jump, where the last one was, jumps for this video]
+    val onPhone: (Int) -> Boolean = { i -> items.getOrNull(i)?.uri?.scheme.let { it != "http" && it != "https" } }
+    fun jumpPast(after: Boolean) {
+        val at = player.currentPosition
+        if (mend[1] >= 0 && abs(at - mend[1]) < 20_000) mend[0] = (mend[0] * 2).coerceAtMost(30_000L) else mend[0] = 500L
+        mend[1] = at; mend[2]++
+        val dur = player.duration
+        if (mend[2] > 40 || (dur > 0 && at + mend[0] >= dur - 500)) { if (player.hasNextMediaItem()) player.seekToNextMediaItem(); return }
+        player.setSeekParameters(SeekParameters.NEXT_SYNC)
+        if (after) player.prepare()
+        player.seekTo(at + mend[0])
+        player.playWhenReady = true
+        android.widget.Toast.makeText(ctx, tr("Skipped a damaged part", "Bozuk bir kısım atlandı"), android.widget.Toast.LENGTH_SHORT).show()
+        // the usual seek comes back once it is past
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ runCatching { player.setSeekParameters(if (prefs.fastSeek) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT) } }, 2500)
+    }
+    // a picture that stops while the sound goes on, or a time that stands still while it should play: both are a damaged spot too
+    LaunchedEffect(player) {
+        var lastPos = -1L; var still = 0L; var lastFrames = -1; var framesStill = 0L
+        while (true) {
+            delay(500)
+            if (!onPhone(player.currentMediaItemIndex) || !player.playWhenReady || seeking) { still = 0; framesStill = 0; lastPos = -1; lastFrames = -1; continue }
+            val st = player.playbackState
+            val p = player.currentPosition
+            still = if ((st == Player.STATE_READY || st == Player.STATE_BUFFERING) && p == lastPos) still + 500 else 0
+            val c = runCatching { player.videoDecoderCounters?.also { it.ensureUpdated() }?.renderedOutputBufferCount }.getOrNull() ?: -1
+            framesStill = if (c >= 0 && c == lastFrames && st == Player.STATE_READY && p > lastPos && lastPos >= 0 && vsize.width > 0) framesStill + 500 else 0
+            lastPos = p; lastFrames = c
+            if (still >= 3000 || framesStill >= 2500) { still = 0; framesStill = 0; jumpPast(false) }
+        }
+    }
     DisposableEffect(player) {
         val l = object : Player.Listener {
+            // a file that cannot be read or decoded at one place: past that place, not the end of the video
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                val code = error.errorCode
+                val damaged = code in 3000..3999 || code in 4000..4999 || (onPhone(player.currentMediaItemIndex) && code in 2000..2999 && code != androidx.media3.common.PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
+                if (damaged) jumpPast(true)
+            }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
                 // a video takes over: the music player must not keep playing underneath it
@@ -406,6 +446,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             override fun onVideoSizeChanged(v: VideoSize) { vsize = v }
             override fun onAudioSessionIdChanged(audioSessionId: Int) { applyBoost(audioSessionId); applyEq(audioSessionId) }
             override fun onMediaItemTransition(m: MediaItem?, reason: Int) {
+                mend[0] = 500L; mend[1] = -1L; mend[2] = 0L
                 cur = player.currentMediaItemIndex
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
                 ext = null; extCues = null; subDelay = 0L
