@@ -339,7 +339,7 @@ internal fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     }
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
-            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
+            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:taskmgr" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:winsettings" -> "winsettings" to tr("Settings", "Ayarlar"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")
