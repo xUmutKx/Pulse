@@ -117,7 +117,7 @@ object KeyboardEffects {
                 drawCircle(Brush.sweepGradient(List(7) { Color.hsv(((it * 60 + p * 240f + seed * 5) % 360f + 360f) % 360f, .85f, 1f).copy(alpha = fade) }, c), r, c, style = Stroke(3.dp.toPx())) }
             17 -> { val w = 3.dp.toPx(); val sh = ((p * 360f * 1.5f + seed) % 360f)
                 drawRoundRect(Brush.sweepGradient(List(7) { Color.hsv((sh + it * 60f) % 360f, .85f, 1f).copy(alpha = .9f * fade) }, Offset(size.width / 2, size.height / 2)),
-                    Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(16.dp.toPx()), Stroke(w)) }
+                    Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(16.dp.toPx()), style = Stroke(w)) }
             18 -> { val x = -size.width * .3f + size.width * 1.6f * p
                 drawRect(Brush.horizontalGradient(List(7) { Color.hsv(it * 55f, .8f, 1f).copy(alpha = .35f * fade) }, x - size.width * .25f, x + size.width * .25f)) }
             19 -> { val r = kh * (.6f + .9f * (1f - fade * fade)); drawCircle(accent.copy(alpha = .5f * fade), r, c); drawCircle(accent.copy(alpha = fade), r, c, style = Stroke(1.5.dp.toPx())) }
