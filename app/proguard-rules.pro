@@ -58,3 +58,17 @@
 # TensorFlow Lite (the gallery search): its optional GPU delegate is not used
 -dontwarn org.tensorflow.lite.gpu.GpuDelegateFactory$Options
 -dontwarn org.tensorflow.lite.gpu.**
+
+# YTXTube (extras/ytx): NewPipeExtractor runs YouTube's player JavaScript in Rhino, and reads its JSON by reflection
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.mozilla.classfile.ClassFileWriter
+-dontwarn org.mozilla.javascript.tools.**
+-dontwarn javax.script.**
+-dontwarn java.beans.**
+-dontwarn org.ietf.jgss.**
+-dontwarn javax.annotation.**
+-dontwarn jdk.dynalink.**
+-keep class org.schabi.newpipe.extractor.** { *; }
+-keep class com.grack.nanojson.** { *; }
+-keep class org.jsoup.** { *; }
+-dontwarn org.jsoup.**

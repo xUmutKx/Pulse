@@ -60,7 +60,7 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // java.time, Iterable.forEach ... on Android 5 to 7
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.4") // java.time, Iterable.forEach ... on Android 5 to 7
     implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
@@ -104,6 +104,14 @@ dependencies {
     implementation("androidx.media3:media3-transformer:1.4.1") // Media tools: shrinking and converting video and music
     implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1") // PlayerView in extras/video
+    // YTXTube (extras/ytx, GPL-3.0): YouTube streams (NewPipeExtractor, GPL-3.0), DASH/HLS, an OkHttp data source, the download cache, Coil for the thumbnails
+    implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+    implementation("androidx.media3:media3-database:1.4.1")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     compileOnly(files("libs/xposed-stub.jar")) // BlackOut (extras/blackout): the Xposed API classes come from LSPosed / Vector at run time
     implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose
