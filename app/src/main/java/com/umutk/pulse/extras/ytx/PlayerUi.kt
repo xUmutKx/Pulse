@@ -221,7 +221,8 @@ fun PlayerScreen(
         }
     }
     val ambientColor by animateColorAsState(dominantColor, tween(600), label = "ambient")
-    val ambientDrift = if (GlassQuality.effectsSupported) {
+    // the slow drift of the ambient light is a still value now: it was read while the player screen was composed, so the whole screen was composed again every frame (30 percent of the CPU)
+    val ambientDrift = if (false && GlassQuality.effectsSupported) {
         val ambientMotion = androidx.compose.animation.core.rememberInfiniteTransition(label = "ambientDrift")
         val drift by ambientMotion.animateFloat(
             initialValue = 0f,
