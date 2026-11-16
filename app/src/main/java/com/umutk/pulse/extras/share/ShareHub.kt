@@ -129,11 +129,11 @@ fun ShareHub(back: () -> Unit) {
         payload = null
     }
 
-    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
+    val pickFiles = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) { val t = target; target = null; if (t != null) sendTo(t, Payload(uris, null)) else payload = Payload(uris, null) }
         else target = null
     }
-    val pickMedia = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+    val pickMedia = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) { val t = target; target = null; if (t != null) sendTo(t, Payload(uris, null)) else payload = Payload(uris, null) }
         else target = null
     }
@@ -222,7 +222,7 @@ fun ShareHub(back: () -> Unit) {
         // what to send
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
-                Triple("folder", tr("Files", "Dosya"), { pickFiles.launch("*/*") }),
+                Triple("folder", tr("Files", "Dosya"), { pickFiles.launch(arrayOf("*/*")) }),
                 Triple("image", tr("Photos", "Fotoğraf"), { pickMedia.launch(arrayOf("image/*", "video/*")) }),
                 Triple("document", tr("Text", "Metin"), { textDlg = true }),
                 Triple("clipboard", tr("Clipboard", "Pano"), {
@@ -250,6 +250,8 @@ fun ShareHub(back: () -> Unit) {
         }
         if (status.isNotEmpty()) Text(status, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
 
+        ReceivedFiles()
+
         // the devices, both kinds
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Nearby devices", "Yakındaki cihazlar"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -263,7 +265,7 @@ fun ShareHub(back: () -> Unit) {
                 when {
                     !d.ready -> { val r = d.rl; if (r != null && node != null) scope.launch { runCatching { node.pair(r.id) } } }
                     p != null -> sendTo(d, p)
-                    else -> { target = d; pickFiles.launch("*/*") }
+                    else -> { target = d; pickFiles.launch(arrayOf("*/*")) }
                 }
             }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -297,7 +299,7 @@ fun ShareHub(back: () -> Unit) {
                 PButton(tr("Receive", "Al"), compact = true) { if (!QuickShare.openReceive(ctx)) Toast.makeText(ctx, tr("Quick Share was not found on this phone", "Bu telefonda Quick Share bulunamadı"), Toast.LENGTH_LONG).show() }
                 PButton(tr("Send", "Gönder"), compact = true) {
                     val p = payload
-                    if (p == null) pickFiles.launch("*/*").also { target = null; status = tr("Pick files, then tap Send again", "Dosyaları seç, sonra yeniden Gönder'e dokun") }
+                    if (p == null) pickFiles.launch(arrayOf("*/*")).also { target = null; status = tr("Pick files, then tap Send again", "Dosyaları seç, sonra yeniden Gönder'e dokun") }
                     else { QuickShare.send(ctx, p.uris, p.text); payload = null }
                 }
             }
@@ -437,6 +439,59 @@ internal object ShareSend {
             else {
                 val files = RelayHost.filesOf(ctx, p.uris)
                 if (files.isEmpty()) report(tr("Could not read the files", "Dosyalar okunamadı")) else { node.sendFiles(d.rl.id, files); report(tr("Sending to ${d.name}", "${d.name} cihazına gönderiliyor")) }
+            }
+        }
+    }
+}
+
+
+/** What other devices sent (Download/Pulse/Share): a small picture of each, a tap opens it; newest first, or by name or size. */
+@Composable
+private fun ReceivedFiles() {
+    val ctx = LocalContext.current
+    var sort by remember { mutableStateOf(0) }
+    var tick by remember { mutableStateOf(0) }
+    var open by remember { mutableStateOf(true) }
+    val files = remember(sort, tick) {
+        val l = runCatching { com.umutk.pulse.PulseDirs.share().listFiles()?.filter { it.isFile }.orEmpty() }.getOrDefault(emptyList())
+        when (sort) { 1 -> l.sortedBy { it.name.lowercase() }; 2 -> l.sortedByDescending { it.length() }; else -> l.sortedByDescending { it.lastModified() } }
+    }
+    // a file that has just come in is listed within a moment
+    LaunchedEffect(Unit) { while (true) { delay(3000); tick++ } }
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp).clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Received files", "Alınan dosyalar") + " · ${files.size}", color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Text(listOf(tr("Newest", "Yeni"), tr("Name", "Ad"), tr("Size", "Boyut"))[sort], color = T.sub, fontSize = 12.sp,
+            modifier = Modifier.clickable { sort = (sort + 1) % 3 }.padding(8.dp))
+    }
+    if (open) {
+        if (files.isEmpty()) PCard { Text(tr("Nothing received yet. Files other devices send land here.", "Henüz bir şey alınmadı. Diğer cihazların gönderdikleri burada görünür."), color = T.sub, fontSize = 13.sp) }
+        files.take(30).forEach { f ->
+            val bmp by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, f.path, f.lastModified()) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        if (f.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "gif", "heic"))
+                            android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() else null
+                    }.getOrNull()
+                }
+            }
+            PCard(Modifier.clickable {
+                runCatching {
+                    val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+                    val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: "*/*"
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Look.accent.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        val b = bmp
+                        if (b != null) androidx.compose.foundation.Image(b, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        else PIcon("document", Look.accent, 24.dp)
+                    }
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(android.text.format.Formatter.formatShortFileSize(ctx, f.length()), color = T.sub, fontSize = 12.sp)
+                    }
+                }
             }
         }
     }

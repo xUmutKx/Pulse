@@ -81,7 +81,7 @@ fun LocalSendHub(back: () -> Unit) {
     var ip by remember { mutableStateOf("") }
     var nameEdit by remember { mutableStateOf(LocalSendEngine.alias) }
     LaunchedEffect(LocalSendEngine.alias) { if (nameEdit.isEmpty()) nameEdit = LocalSendEngine.alias }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris: List<Uri> ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris: List<Uri> ->
         val p = target ?: return@rememberLauncherForActivityResult
         if (uris.isNotEmpty()) scope.launch { result = withContext(Dispatchers.IO) { LocalSendEngine.send(ctx, p, uris) } }
     }
@@ -119,7 +119,7 @@ fun LocalSendHub(back: () -> Unit) {
         val list = LocalSendEngine.peers.values.sortedBy { it.alias.lowercase() }
         if (list.isEmpty()) Text(tr("Nobody found yet. Both devices need to be on the same Wi-Fi.", "Henüz kimse bulunamadı. İki cihaz da aynı Wi-Fi'da olmalı."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
         list.forEach { p ->
-            PCard(Modifier.clickable { target = p; pick.launch("*/*") }) {
+            PCard(Modifier.clickable { target = p; pick.launch(arrayOf("*/*")) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PIcon(if (p.type == "desktop" || p.type == "server") "phone" else "phone", T.text, 26.dp)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
