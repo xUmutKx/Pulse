@@ -151,7 +151,7 @@ fun PowerampApp(
     val tabBody: @Composable (PowerampTab) -> Unit = { t ->
         when (t) {
             PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it); tab = null }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i); tab = null })
-            PowerampTab.SEARCH -> SearchGated(library, track, style, onPlay = { engine.playQueue(library, it); tab = null })
+            PowerampTab.SEARCH -> SearchGated(library, track, style, onPlay = { engine.playQueue(library, it); tab = null }, onPlayList = { l, i -> engine.playQueue(l, i); tab = null })
             PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
             PowerampTab.QUEUE -> QueueScreen(
                 tracks = st.queue,
@@ -291,13 +291,13 @@ fun PowerampApp(
 
 /** Search is an ad-gated feature in the play build: one short ad opens it for 30 minutes. The foss build and Premium open it at once. */
 @Composable
-private fun SearchGated(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit) {
+private fun SearchGated(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayList: (List<Track>, Int) -> Unit) {
     val ctx = LocalContext.current
     val free = !com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)
     var unlocked by remember { mutableStateOf(free || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, "search")) }
     val gate = com.umutk.pulse.ads.rememberAdGate(tr("Search", "Arama"), tr("Watch a short ad to search your music.", "Müziğinde arama yapmak için kısa bir reklam izle."), key = "search", minutes = 30)
     if (unlocked) {
-        SearchScreen(library, current, style, onPlay = onPlay)
+        SearchScreen(library, current, style, onPlay = onPlay, onPlayList = onPlayList)
     } else {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             com.umutk.pulse.PButton(tr("Watch an ad to search", "Aramak için reklam izle"), onClick = { gate { unlocked = true } })
