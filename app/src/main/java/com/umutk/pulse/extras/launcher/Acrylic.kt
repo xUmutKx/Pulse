@@ -52,13 +52,22 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     val rootV = screen ?: view.rootView
     val rootW = with(dens) { rootV.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { rootV.height.coerceAtLeast(1).toDp() }
     val at = pos + (origin ?: Offset.Zero)
-    val amount = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
+    val amount0 = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
+    // the glass style (Settings > Launcher): darker, less blurred or clearer than Pulse's own
+    val style = LauncherPrefs.glassStyle
+    val amount = when (style) { "soft" -> amount0 * .35f; "clear" -> amount0 * .5f; else -> amount0 }
+    val blurUse = when (style) { "soft" -> blur * .35f; "clear" -> blur * .5f; else -> blur }
+    val tintUse = when (style) {
+        "dark" -> androidx.compose.ui.graphics.lerp(tint, Color.Black, .55f).copy(alpha = (tint.alpha + .22f).coerceAtMost(.93f))
+        "clear" -> tint.copy(alpha = tint.alpha * .55f)
+        else -> tint
+    }
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
         // the picture and the tint only fill the box: they never make it bigger (the screen-sized picture made every panel as tall as the screen)
         if (wall != null) Box(Modifier.matchParentSize().clipToBounds()) {
-            Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-at.x.toInt(), -at.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
+            Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-at.x.toInt(), -at.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blurUse), contentScale = ContentScale.Crop)
         }
-        Box(Modifier.matchParentSize().background(tint))
+        Box(Modifier.matchParentSize().background(tintUse))
         content()
     }
 }

@@ -191,6 +191,12 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 SliderRow("${tr("Desktop grid, turned", "Masaüstü ızgarası, yatay")}: ${LauncherPrefs.deskColsLand} x ${LauncherPrefs.deskRowsLand}  ·  ${tr("columns", "sütun")}", LauncherPrefs.deskColsLand.toFloat(), 4f..12f) { LauncherPrefs.deskColsLand = it.roundToInt(); save() }
                 SliderRow("${tr("Desktop grid, turned", "Masaüstü ızgarası, yatay")}: ${LauncherPrefs.deskColsLand} x ${LauncherPrefs.deskRowsLand}  ·  ${tr("rows", "satır")}", LauncherPrefs.deskRowsLand.toFloat(), 2f..8f) { LauncherPrefs.deskRowsLand = it.roundToInt(); save() }
             }
+            Text(tr("Glass of the taskbar and menus", "Görev çubuğu ve menü camı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("pulse" to "Pulse", "dark" to tr("Darker", "Daha koyu"), "soft" to tr("Less blur", "Az bulanık"), "clear" to tr("Clear", "Şeffaf")).forEach { (k, n) ->
+                    com.umutk.pulse.PChip(LauncherPrefs.glassStyle == k, n) { LauncherPrefs.glassStyle = k; save() }
+                }
+            }
             SwitchLine("window", tr("Extra blur: flyouts and the taskbar show the desktop picture blurred behind them, in every Windows look", "Ekstra bulanıklık: açılır paneller ve görev çubuğu, masaüstü resmini bulanık gösterir (her Windows görünümünde)"), LauncherPrefs.blurAll) { LauncherPrefs.blurAll = it; save() }
             if (LauncherPrefs.blurAll) SliderRow("${tr("Blur", "Bulanıklık")}: ${LauncherPrefs.blurAmt}", LauncherPrefs.blurAmt.toFloat(), 6f..60f) { LauncherPrefs.blurAmt = it.roundToInt(); save() }
             SliderRow("${tr("Space between icons", "Simgeler arası boşluk")}: ${LauncherPrefs.iconSpace}%", LauncherPrefs.iconSpace.toFloat(), 60f..160f) { LauncherPrefs.iconSpace = it.roundToInt(); save() }

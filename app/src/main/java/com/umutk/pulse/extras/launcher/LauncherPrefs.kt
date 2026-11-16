@@ -162,6 +162,8 @@ object LauncherPrefs {
     var iconSpace by mutableStateOf(110)
     /** Extra blur: the flyouts and the Windows 11 taskbar show the desktop picture blurred behind a tint in every Windows look; [blurAmt] is the blur in dp. */
     var blurAll by mutableStateOf(false)
+    /** The glass of the Windows 11 taskbar, flyouts and menus: "pulse" (the blurred picture, as it was), "dark", "soft" (a little blur) or "clear". */
+    var glassStyle by mutableStateOf("pulse")
     var blurAmt by mutableStateOf(30)
     /** On Windows desktops Pulse's own apps open in windows of the desktop (the default); off: each opens as an app of its own, full screen. */
     var windowedApps by mutableStateOf(true)
@@ -212,7 +214,7 @@ object LauncherPrefs {
         accentOn = p.getProperty("accentOn") == "true"; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
         deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 10) ?: 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 14) ?: 8
         deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 14) ?: 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 10) ?: 4
-        blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
+        glassStyle = p.getProperty("glassStyle")?.takeIf { it in setOf("pulse", "dark", "soft", "clear") } ?: "pulse"; blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
         bootEvery = p.getProperty("bootEvery") == "true"
         taskbarAutoHide = p.getProperty("taskbarAutoHide") == "true"
         iconSpace = p.getProperty("iconSpace2")?.toIntOrNull()?.coerceIn(60, 160) ?: 110
@@ -271,7 +273,7 @@ object LauncherPrefs {
         p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("fillGaps", fillGaps.toString())
         p.setProperty("accentOn", accentOn.toString()); p.setProperty("accentArgb", accentArgb.toString())
         p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
-        p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
+        p.setProperty("glassStyle", glassStyle); p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
         p.setProperty("bootEvery", bootEvery.toString())
         p.setProperty("taskbarAutoHide", taskbarAutoHide.toString())
         p.setProperty("iconSpace2", iconSpace.toString())
