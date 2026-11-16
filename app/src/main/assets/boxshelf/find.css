@@ -157,3 +157,19 @@ body.find-slim #hints{visibility:hidden}
 #libBtn{gap:6px;align-items:center}#libBtn[hidden]{display:none}#libBtn span{font-size:12px;letter-spacing:.04em}
 
 .hud-buttons .find-btn,.hud-buttons .menu-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+
+/* the phone (no controller): not a page of its own, only a search bar over the shelf; the matches drop under it and the shelf behind goes to the one picked */
+.fg.slim{bottom:auto;background:linear-gradient(180deg,rgba(6,7,12,.78),rgba(6,7,12,.55) calc(100% - 24px),rgba(6,7,12,0))}
+.fg.slim .fg-box,.platform-android .fg.slim .fg-box{position:relative;inset:auto;width:100%;max-width:640px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;
+  grid-template-areas:"field x" "res res";align-items:center;column-gap:8px;row-gap:8px;padding:max(10px,env(safe-area-inset-top,0px)) 14px 22px;transform:none}
+.fg.slim .fg-head,.fg.slim .fg-main,.fg.slim .fg-side,.fg.slim .fg-res{display:contents}
+.fg.slim .fg-title,.fg.slim .fg-count,.fg.slim .fg-cap,.fg.slim .fg-hints,.fg.slim .fg-keys{display:none!important}
+.fg.slim .fg-field{grid-area:field;height:52px}
+.fg.slim .fg-in{font-size:20px}
+.platform-android .fg.slim .fg-x,.fg.slim .fg-x{grid-area:x;width:48px;height:48px;margin:0}
+.fg.slim .fg-list,.fg.slim .fg-empty{grid-area:res;min-width:0}
+.fg.slim .fg-list{max-height:min(46vh,340px);border-radius:14px;background:rgba(14,16,26,.94);padding:4px}
+.fg.slim .fg-row{min-height:56px;padding:4px 10px}
+.fg.slim .fg-th{width:44px;height:44px}
+.fg.slim .fg-t{font-size:19px}.fg.slim .fg-s{font-size:16px}
+.fg.slim .fg-empty{padding:2px 6px;font-size:16px}
