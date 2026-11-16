@@ -46,6 +46,9 @@ val MENU_ACTS = listOf(
     MenuAct("pin", "Pin to dock", "Dock'a sabitle", "pin", quick = true),
     MenuAct("rename", "Rename", "Yeniden adlandır", "rename", quick = true),
     MenuAct("share", "Share", "Paylaş", "share", quick = true),
+    MenuAct("cut", "Cut", "Kes", "cut"),
+    MenuAct("copy", "Copy", "Kopyala", "copy"),
+    MenuAct("paste", "Paste", "Yapıştır", "paste"),
     MenuAct("uninstall", "Uninstall", "Kaldır", "trash", quick = true, danger = true),
     MenuAct("info", "App info", "Uygulama bilgisi", "info"),
     MenuAct("hide", "Hide from launcher", "Ana ekranda gizle", "eyeOff"),
@@ -85,6 +88,10 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
         "copypkg" -> { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("package", pkg)); android.widget.Toast.makeText(ctx, pkg, android.widget.Toast.LENGTH_SHORT).show() }
         "store" -> open(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg")))
         "stop" -> Thread { com.umutk.pulse.extras.blackout.Privilege.run("am force-stop $pkg") }.start()
+        // a file or a folder of the desktop: cut and copy fill the clipboard the file windows share, paste (on a folder) puts it in
+        "cut" -> { FileClip.files = listOf(java.io.File(pkg.removePrefix("file:"))); FileClip.cut = true }
+        "copy" -> { FileClip.files = listOf(java.io.File(pkg.removePrefix("file:"))); FileClip.cut = false }
+        "paste" -> { val d = java.io.File(pkg.removePrefix("file:")); pasteInto(d); android.widget.Toast.makeText(ctx, d.name, android.widget.Toast.LENGTH_SHORT).show() }
         "extract" -> Thread { val r = com.umutk.pulse.features.extractApp(ctx, pkg); android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(ctx, r, android.widget.Toast.LENGTH_LONG).show() } }.start()
     }
     dismiss()
@@ -108,6 +115,8 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
             "uninstall" -> real && !app.system
             "info", "store", "stop", "extract", "copypkg", "share" -> real
             "open" -> real
+            "cut", "copy" -> app.pkg.startsWith("file:")
+            "paste" -> app.pkg.startsWith("file:") && FileClip.files.isNotEmpty() && java.io.File(app.pkg.removePrefix("file:")).isDirectory
             else -> true
         }
     }
@@ -153,11 +162,7 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
             }
             if (inFolder) ActionRow("close", tr("Remove from folder", "Klasörden çıkar"), w.text) { LauncherFolders.remove(ctx, app.pkg); onDismiss() }
         }
-        // the menu is the user's to arrange: the way into its settings
-        Box(Modifier.fillMaxWidth().padding(vertical = 3.dp).height(1.dp).background((sk?.text ?: w.text).copy(alpha = .12f)))
-        ActionRow("settings", tr("Customize this menu", "Bu menüyü düzenle"), sk?.text ?: w.text) {
-            onDismiss(); runCatching { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).putExtra("cat", "menu")) }
-        }
+        // (arranging the menu is in the launcher settings, Context menu: no row for it here)
     }
 }
 

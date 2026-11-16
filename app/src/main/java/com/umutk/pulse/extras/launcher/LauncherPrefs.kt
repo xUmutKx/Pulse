@@ -144,6 +144,8 @@ object LauncherPrefs {
     var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
     /** true (the default): desktop icons sit on a grid of [deskCols] x [deskRows] cells; false: they stay exactly where they are put down. */
     var snapIcons by mutableStateOf(true)
+    /** Grid: an icon with no place of its own fills the first free cell (true) or goes after the last one used (false, the default), and a place once given is kept, so nothing moves up into a gap. */
+    var fillGaps by mutableStateOf(false)
     /** The desktop grid: columns and rows upright (4 x 8 by default) and turned (8 x 4). */
     var deskColsPort by mutableStateOf(4)
     var deskRowsPort by mutableStateOf(8)
@@ -201,7 +203,7 @@ object LauncherPrefs {
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
-        snapIcons = p.getProperty("snapIcons3") != "false"
+        snapIcons = p.getProperty("snapIcons3") != "false"; fillGaps = p.getProperty("fillGaps") == "true"
         deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 10) ?: 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 14) ?: 8
         deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 14) ?: 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 10) ?: 4
         blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
@@ -260,7 +262,7 @@ object LauncherPrefs {
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
-        p.setProperty("snapIcons3", snapIcons.toString())
+        p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("fillGaps", fillGaps.toString())
         p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
         p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
         p.setProperty("bootEvery", bootEvery.toString())
