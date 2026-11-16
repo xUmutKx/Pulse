@@ -377,13 +377,7 @@ internal fun IconChooser(name: String, glyph: String, current: String?, onDismis
                     var hl by remember { mutableStateOf(LauncherGlass.lookOf(ctx, homeAlias)) }
                     fun put(l: String) { hl = l; LauncherGlass.apply(ctx, homeAlias, l) }
                     Text(tr("Home screen icon", "Ana ekran ikonu"), color = T.text, fontSize = 14.sp)
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PChip(hl == LauncherGlass.LINE, tr("Line", "Çizgi")) { put(LauncherGlass.LINE) }
-                        PChip(hl != LauncherGlass.LINE, tr("Glass", "Cam")) { if (hl == LauncherGlass.LINE) put(LauncherGlass.TONES.first().id) }
-                        if (hl != LauncherGlass.LINE) LauncherGlass.TONES.forEach { t ->
-                            Box(Modifier.size(30.dp).clip(CircleShape).background(Color(t.argb)).border(if (hl == t.id) 3.dp else 1.dp, if (hl == t.id) Look.accent else T.sub.copy(alpha = .5f), CircleShape).clickable { put(t.id) })
-                        }
-                    }
+                    HomeIconLooks(homeAlias, hl) { put(it) }
                 }
                 // the icon the app has inside Pulse (the lists and tiles) is a second matter: it stays folded away until it is asked for
                 var more by remember { mutableStateOf(homeAlias == null || current != null) }
@@ -562,6 +556,29 @@ internal fun ColourPicker(colour: Int, onChange: (Int) -> Unit) {
     }
 }
 
+/**
+ * The home-screen icons an app can have, drawn as they are (the line icon and each glass colour, the real launcher pictures), over a dark blue like a wallpaper
+ * so the glass shows; the one in use has a ring. [alias] picks whose pictures are shown.
+ */
+@Composable
+internal fun HomeIconLooks(alias: String, current: String?, onPick: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val looks = remember { listOf(LauncherGlass.LINE) + LauncherGlass.TONES.map { it.id } }
+    val pics by produceState<Map<String, androidx.compose.ui.graphics.ImageBitmap?>>(emptyMap(), alias) {
+        value = withContext(Dispatchers.Default) { looks.associateWith { l -> LauncherGlass.variantIcon(ctx, alias, l)?.toBitmap(144, 144)?.asImageBitmap() } }
+    }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        looks.forEach { l ->
+            val on = l == current
+            Box(Modifier.size(60.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0E2034))
+                .border(if (on) 3.dp else 1.dp, if (on) Look.accent else T.sub.copy(alpha = .4f), RoundedCornerShape(16.dp))
+                .clickable { onPick(l) }, contentAlignment = Alignment.Center) {
+                pics[l]?.let { Image(it, null, Modifier.size(50.dp)) }
+            }
+        }
+    }
+}
+
 /** One row of the icon page: an app, the look's icon key for it, and what starts it (for the home-screen shortcut). */
 internal class IconRow(val key: String, val name: String, val glyph: String, val intent: Intent)
 
@@ -574,6 +591,13 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
         StoreHeader(tr("App icons", "Uygulama ikonları"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(6.dp))
+            // every home-screen icon at once (Pulse and the extra apps); each app below can still be given its own
+            var all by remember { mutableStateOf(LauncherGlass.commonLook(ctx)) }
+            Text(tr("All home screen icons", "Tüm ana ekran ikonları"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(6.dp))
+            HomeIconLooks(LauncherGlass.MAIN, all) { l -> all = l; LauncherGlass.applyEveryone(ctx, l) }
+            Spacer(Modifier.height(14.dp))
+            Text(tr("One by one", "Tek tek"), color = T.sub, fontSize = 13.sp)
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ExtraIcon(r.key, 44.dp, r.glyph) {

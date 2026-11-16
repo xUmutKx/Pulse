@@ -271,8 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "download" to (tr("Downloads: the torrent engine (6 MB) can be downloaded from the top of the Downloads page; a torrent download that waits for it goes on by itself.",
-        "İndirmeler: torrent motoru (6 MB) İndirmeler sayfasının üstünden indirilebilir; onu bekleyen torrent indirmesi kendiliğinden devam eder.")),
+    "download" to (tr("Downloads: a torrent nobody shares gives way to another stream of a close size; long press and slide to pick rows as in Files, with an All button; a setting keeps the file when a download is removed. The torrent engine can be downloaded from the top of the page.",
+        "İndirmeler: kimsenin paylaşmadığı torrent yakın boyutta başka bir yayına geçer; Dosyalar'daki gibi basılı tutup kaydırarak seç, Tümü düğmesiyle; bir ayar silinen indirmenin dosyasını telefonda bırakır. Torrent motoru sayfanın üstünden indirilebilir.")),
+    "star" to (tr("Home screen icons: a new soft blue glass that matches the phone's theme icons; the icon chooser shows the real icons, and all of them can be changed at once or one by one.",
+        "Ana ekran ikonları: telefonun tema ikonlarıyla uyumlu yeni yumuşak mavi cam; ikon seçici gerçek ikonları gösterir, hepsi birden ya da tek tek değiştirilebilir.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
