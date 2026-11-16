@@ -93,7 +93,11 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val pkg = MegaGames.PREFIX + id
                 val st = CaseCover.styleOf(c, pkg)
                 val cased = if (st == "plain") null else runCatching { val cf = CaseCover.file(c, pkg, st); if (!cf.isFile) CaseCover.make(c, pkg, st); cf.takeIf { it.isFile } }.getOrNull()
-                if (cased != null) WebResourceResponse("image/jpeg", null, FileInputStream(cased)) else WebResourceResponse("image/webp", null, c.assets.open("megacovers/$id.webp"))
+                if (cased != null) WebResourceResponse("image/jpeg", null, FileInputStream(cased)) else {
+                    val own = runCatching { c.assets.open("megacovers/$id.webp") }.getOrNull()
+                    if (own != null) WebResourceResponse("image/webp", null, own)
+                    else { val b = MegaGames.cover(c, id) ?: return null; val bos = java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bos); WebResourceResponse("image/png", null, java.io.ByteArrayInputStream(bos.toByteArray())) }
+                }
             }
             "logo" -> {
                 val pkg = parts.getOrNull(1) ?: return null
