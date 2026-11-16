@@ -314,7 +314,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 }
                 .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = if (th.samsung && !phoneLand) 6.dp else if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (float) 12.dp else if (th.samsung && !phoneLand) 6.dp else if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             // the handle: one line; tapped, its two halves turn into an X (an animation, no icon), which closes the keyboard on a second tap; after three seconds it is a line again
