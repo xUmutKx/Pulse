@@ -677,7 +677,7 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".YtxLauncher" android:enabled="false" android:targetActivity="com.umutk.pulse.extras.ytx.YtxActivity" android:exported="true" android:icon="@drawable/ytx_ic_brand" android:roundIcon="@drawable/ytx_ic_brand" android:label="YTXTube">
+        <activity-alias android:name=".YtxLauncher" android:enabled="false" android:targetActivity="com.umutk.pulse.extras.ytx.YtxActivity" android:exported="true" android:icon="@drawable/ytx_ic_glass" android:roundIcon="@drawable/ytx_ic_glass" android:label="YTXTube">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

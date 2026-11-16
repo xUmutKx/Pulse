@@ -672,7 +672,7 @@ private fun ExtraAppsCard() {
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
         Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
         Triple("HealthLauncher", R.drawable.ic_ad_health_fg, tr("Health", "Sağlık")),
-        Triple("YtxLauncher", R.drawable.ytx_ic_brand, "YTXTube"),
+        Triple("YtxLauncher", R.drawable.ytx_ic_glass, "YTXTube"),
     // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
     ).filter { it.first != "ArtCraftLauncher" || BuildConfig.APK_INSTALL }
     // the apps in catalogs: a heading before each group
@@ -707,7 +707,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health", "GameHubLauncher" to "extraGameHub", "YtxLauncher" to "extraVideo")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health", "GameHubLauncher" to "extraGameHub")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
     fun shown(a: String) = com.umutk.pulse.extras.store.LauncherGlass.shown(ctx, a)
