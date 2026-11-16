@@ -431,11 +431,12 @@ object KeyboardDictionary {
             }
         }
         user.forEach { (w, _) -> if (w.startsWith(prefix) && out.none { it.word == w }) out += Cand(w, score(lang, w) - 0.35f * (w.length - prefix.length), 0f) }
-        return out.sortedByDescending { it.score }.take(n)
+        // a blocked word is gone from every list, not only from the ones that remembered to ask
+        return out.filter { !isBanned(it.word) }.sortedByDescending { it.score }.take(n)
     }
 
     /** Words close to [typed] (lowercase): the typed word itself when it is one, and the ones a typo or a missing accent away. */
-    fun correct(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> = correctAll(code, typed, maxCost, tc)
+    fun correct(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> = correctAll(code, typed, maxCost, tc).filter { !isBanned(it.word) }
 
     /** Every word within [maxCost] of [typed], the likeliest first (one pass over the list: a caller that needs a near and a wider reach reads both from it). */
     fun correctAll(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> {
@@ -685,7 +686,7 @@ object KeyboardDictionary {
         if (!prev.isNullOrEmpty() && out.size < n) basePairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
         val seed = if (lang == "tr") listOf("bir", "bu", "ben", "ve", "ne", "çok") else listOf("I", "the", "you", "it", "to", "a")
         seed.forEach { if (out.size < n && it !in out) out += it }
-        return out
+        return out.filter { !isBanned(it) }
     }
 
     // ---- the typo cost -------------------------------------------------------------------------------------------------------------------------------
