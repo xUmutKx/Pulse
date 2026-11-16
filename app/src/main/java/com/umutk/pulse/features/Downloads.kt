@@ -217,6 +217,8 @@ object Downloads {
     var directOpen by mutableStateOf(false)
     /** Removing a finished download only takes it off the list: the file stays on the phone. Off at first. */
     var keepFiles by mutableStateOf(false)
+    /** A torrent that finds nobody to download from within 15 seconds gives way to another stream of the episode (a bigger one is fine, never under 200 MB). On at first. */
+    var autoSwitch by mutableStateOf(true)
     /** index into [SPEED_KBS]: caps downloads and installer copies; kept between runs */
     var speed by mutableStateOf(0)
     /** false while there is no working network; transfers wait for it instead of failing */
@@ -236,6 +238,7 @@ object Downloads {
         dirPath = p.getString("dlDir", null) ?: defaultDir()
         directOpen = p.getBoolean("openDirect", false)
         keepFiles = p.getBoolean("dlKeepFiles", false)
+        autoSwitch = p.getBoolean("dlAutoSwitch", true)
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
         // the activity, the service and the boot receiver all call this; the list is read once per process
         if (loaded) return
@@ -287,6 +290,11 @@ object Downloads {
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
         val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+    }
+
+    fun setAutoSwitch(ctx: Context, v: Boolean) {
+        autoSwitch = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlAutoSwitch", v).apply()
     }
 
     fun setKeepFiles(ctx: Context, v: Boolean) {
@@ -656,7 +664,9 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             done.value = d
             error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
             val nowT = System.currentTimeMillis()
-            if (d == 0L && alts.isNotEmpty() && nowT - began > 90_000) switchNow = true
+            // nobody to download from for 15 seconds (30 when peers are connected and the file list is here): the next stream of the episode is tried
+            val patience = if (t > 0 && p > 0) 30_000L else 15_000L
+            if (Downloads.autoSwitch && d == 0L && alts.isNotEmpty() && nowT - began > patience) switchNow = true
             if (t > 0) {
                 if (winT == 0L) { winT = nowT; winD = d }
                 else if (nowT - winT >= 60_000) {
