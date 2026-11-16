@@ -223,7 +223,9 @@ private fun FilesPageInner() {
     var toolFrom by rememberSaveable { mutableStateOf("") }
     val back: () -> Unit = { tab = toolFrom.ifEmpty { "files" }; toolFrom = "" }
     // Back from any other tab of the standalone app goes to the home page first
-    androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { tab = "home" }
+    androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { if (tab in setOf("tree", "types", "cache", "apps") && toolFrom.isNotEmpty()) back() else tab = "home" }
+    // a tool page (Folder sizes, File types, Clean cache, Apps) always steps back to the page it was opened from, never out of the app
+    androidx.activity.compose.BackHandler(enabled = !standalone && tab in setOf("tree", "types", "cache", "apps")) { back() }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
@@ -281,7 +283,7 @@ private fun FilesPageInner() {
                     "more" -> com.umutk.pulse.files.home.FilesMorePage(onTab = { if (it != "files") toolFrom = "more"; tab = it })
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
-                    "cache" -> CacheCleanerScreen(back)
+                    "cache" -> { androidx.activity.compose.BackHandler { back() }; CacheCleanerScreen(back) }
                     "apps" -> InstalledAppsScreen(back)
                     "share" -> com.umutk.pulse.files.home.FilesSharePage(onBack = { tab = "files" })
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
