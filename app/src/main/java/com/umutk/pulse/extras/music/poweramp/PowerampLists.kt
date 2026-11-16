@@ -428,8 +428,7 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SongList(itemsIn: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null,
-                     searchable: Boolean = false, hidePlay: Boolean = false) {
+private fun SongList(itemsIn: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, searchable: Boolean = false, hidePlay: Boolean = false, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null) {
     // a page opened on its own (an artist, an album ...) has a search of its own over its songs
     var q by remember { mutableStateOf("") }
     val items = remember(itemsIn, q) { if (q.isBlank()) itemsIn else itemsIn.filter { (_, t) -> t.displayName().foldHas(q) || t.artist.foldHas(q) || t.album.foldHas(q) } }
