@@ -142,7 +142,7 @@ fun HomeSheet() {
         dismissButton = { com.umutk.pulse.PButton(tr("Cancel", "Vazgeç")) { HomeSheetState.newFolder = false } },
     )
     if (HomeSheetState.widgets) WidgetPickDialog(
-        onPick = { HomeSheetState.widgets = false; adGate { addWidget(it) } },
+        onPick = { adGate { addWidget(it) } },
         onDismiss = { HomeSheetState.widgets = false })
 }
 
