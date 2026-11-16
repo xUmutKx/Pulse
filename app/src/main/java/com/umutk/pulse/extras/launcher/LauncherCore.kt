@@ -140,11 +140,14 @@ object LauncherLooks {
 /** App picture from the launcher icon, or a letter tile when the icon could not be read. Clipped to a squircle. */
 @Composable
 fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modifier: Modifier = Modifier) {
+    // the Windows 7 look draws the desktop's own items (This PC, Recycle Bin, Explorer, Paint, the players ...) with the pictures of the Windows 7 pack
+    val w7pic = if (app.icon == null && com.umutk.pulse.T.id == "win7") LAUNCH7[app.pkg]?.let { com.umutk.pulse.features.ThemeIcons.bitmap(androidx.compose.ui.platform.LocalContext.current, "win7", it) } else null
     val shape = when (LauncherPrefs.iconShape) { "circle" -> androidx.compose.foundation.shape.CircleShape; "square" -> RoundedCornerShape(size * .06f); "rounded" -> RoundedCornerShape(size * .16f); else -> RoundedCornerShape(size * .28f) }
     val bmp = app.icon
     val n = if (LauncherPrefs.badges) LauncherBadges.counts[app.pkg] ?: 0 else 0
     Box(modifier.size(size)) {
         if (bmp != null) Image(bmp, null, Modifier.size(size).clip(shape))
+        else if (w7pic != null) Image(w7pic, null, Modifier.size(size))
         else if (app.iconKey != null && tile.alpha == 0f) com.umutk.pulse.PIcon(app.iconKey, letter, size * .95f)   // no tile behind the icon (the old Windows desktops)
         else if (app.iconKey != null) Box(Modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
             com.umutk.pulse.PIcon(app.iconKey, letter, size * .7f)
@@ -162,3 +165,15 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
         }
     }
 }
+
+
+/** The picture of the Windows 7 pack (assets/icons/win7/<key>.webp) of each built-in item of the desktop. */
+private val LAUNCH7 = mapOf(
+    "pulse:pc" to "l_pc", "pulse:recycle" to "l_recycle", "pulse:files" to "l_files", "pulse:paint" to "l_paint", "pulse:cmd" to "l_cmd", "pulse:taskmgr" to "l_taskmgr",
+    "pulse:settings" to "l_cp", "pulse:winsettings" to "l_settings", "pulse:store" to "l_store", "pulse:control" to "l_control", "pulse:perf" to "l_perf",
+    "pulse:games" to "l_games", "pulse:mines" to "l_mines", "pulse:solitaire" to "l_solitaire", "pulse:freecell" to "l_freecell",
+    "pulse:x:music" to "l_music", "pulse:x:video" to "l_video", "pulse:x:notes" to "l_notes", "pulse:x:weather" to "l_weather", "pulse:x:calculator" to "l_calc",
+    "pulse:x:voice" to "l_voice", "pulse:x:whitenoise" to "l_whitenoise", "pulse:x:screenrec" to "l_screenrec", "pulse:x:notifhist" to "l_notifhist",
+    "pulse:x:messages" to "l_messages", "pulse:x:toolkit" to "l_toolkit", "pulse:x:win:notepad" to "l_notepad", "pulse:x:win:snake" to "l_snake",
+    "pulse:x:win:2048" to "l_snake", "pulse:x:win:tictactoe" to "l_snake",
+)

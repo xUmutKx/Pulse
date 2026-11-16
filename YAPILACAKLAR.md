@@ -2502,3 +2502,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Win7: 130 yeni ikon (Windows 7 + Vista paketlerinden, 64 px), tam setler icon-sources/ altında.
 - Görev Yöneticisi penceresi: gerçek sayfalar (İşlemler, Performans grafikleri, Uygulama geçmişi, Başlangıç, Ayrıntılar, Hizmetler), Win11 ikon rayı / diğerlerinde üst sekmeler.
 - Mesajlar 95/XP/7 görünümlerinde MSN Messenger: menü çubuğu, afiş, Çevrimiçi/Çevrimdışı gruplar, "Şunu yapmak istiyorum" paneli, "X diyor ki:" konuşma. derlenmedi
+- Pano: 300 sınırı kalktı, ayar: öğe sayısını sınırla (varsayılan kapalı, açılınca 3000).
+- Win7: gerçek WMP ikonları müzik/video için; launcher öğeleri Win7 paketinden; Dosya Gezgini: Bilgisayar sayfası (diskler/bölümler, doluluk çubuğu), klasör ve dosya türü ikonları. derlenmedi

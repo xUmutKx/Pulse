@@ -82,7 +82,9 @@ fun Win7Explorer() {
     var query by remember { mutableStateOf("") }
     var menuFor by remember { mutableStateOf<File?>(null) }
     val fr = remember { androidx.compose.ui.focus.FocusRequester() }
-    fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" } }
+    // the page opens on Computer, the drives and partitions; a folder chosen leaves it
+    var computer by remember { mutableStateOf(true) }
+    fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" }; computer = false }
     // a picture or a text file opens in a window of the desktop; the other kinds go to another app
     fun open(f: File) {
         if (f.isDirectory) go(f)
@@ -130,8 +132,9 @@ fun Win7Explorer() {
                     .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                PIcon("folder", W7_FOLDER, 16.dp)
-                crumbs.forEachIndexed { i, d ->
+                W7Pic(if (computer) "l_pc" else "dv_internal", 16.dp)
+                if (computer) Text(" " + tr("Computer", "Bilgisayar"), color = W7_INK, fontSize = 12.sp, maxLines = 1)
+                if (!computer) crumbs.forEachIndexed { i, d ->
                     Text(" › ", color = Color(0xFF7A8AA3), fontSize = 12.sp)
                     Text(if (i == 0) tr("Internal storage", "Dahili depolama") else d.name, color = W7_INK, fontSize = 12.sp, maxLines = 1, modifier = Modifier.clickable { go(d) })
                 }
@@ -168,20 +171,22 @@ fun Win7Explorer() {
                 // the navigation pane
                 if (wide) Column(Modifier.width(112.dp).fillMaxHeight().background(Color(0xFFF3F6FB)).verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
                     W7NavTitle(tr("Favorites", "Sık kullanılanlar"))
-                    listOf(tr("Downloads", "İndirilenler") to Environment.DIRECTORY_DOWNLOADS, "DCIM" to Environment.DIRECTORY_DCIM).forEach { (l, n) ->
-                        val f = File(root, n); if (f.exists()) W7Nav(l, dir.path == f.path) { go(f) }
+                    listOf(Triple(tr("Downloads", "İndirilenler"), Environment.DIRECTORY_DOWNLOADS, "fd_downloads"), Triple("DCIM", Environment.DIRECTORY_DCIM, "fd_camera")).forEach { (l, n, ic) ->
+                        val f = File(root, n); if (f.exists()) W7Nav(l, !computer && dir.path == f.path, ic) { go(f) }
                     }
                     W7NavTitle(tr("Libraries", "Kütüphaneler"))
                     listOf(
-                        tr("Documents", "Belgeler") to Environment.DIRECTORY_DOCUMENTS, tr("Music", "Müzik") to Environment.DIRECTORY_MUSIC,
-                        tr("Pictures", "Resimler") to Environment.DIRECTORY_PICTURES, tr("Videos", "Videolar") to Environment.DIRECTORY_MOVIES,
-                    ).forEach { (l, n) -> val f = File(root, n); if (f.exists()) W7Nav(l, dir.path == f.path) { go(f) } }
+                        Triple(tr("Documents", "Belgeler"), Environment.DIRECTORY_DOCUMENTS, "fd_docs"), Triple(tr("Music", "Müzik"), Environment.DIRECTORY_MUSIC, "fd_music"),
+                        Triple(tr("Pictures", "Resimler"), Environment.DIRECTORY_PICTURES, "fd_pictures"), Triple(tr("Videos", "Videolar"), Environment.DIRECTORY_MOVIES, "fd_videos"),
+                    ).forEach { (l, n, ic) -> val f = File(root, n); if (f.exists()) W7Nav(l, !computer && dir.path == f.path, ic) { go(f) } }
                     W7NavTitle(tr("Computer", "Bilgisayar"))
-                    W7Nav(tr("Internal storage", "Dahili depolama"), dir.path == root.path) { go(root) }
+                    W7Nav(tr("This PC", "Bu bilgisayar"), computer, "l_pc") { computer = true }
+                    W7Nav(tr("Internal storage", "Dahili depolama"), !computer && dir.path == root.path, "dv_internal") { go(root) }
                 }
                 if (wide) Box(Modifier.width(1.dp).fillMaxHeight().background(W7_EDGE))
+                if (computer) W7Computer(root, Modifier.weight(1f).fillMaxHeight()) { go(it) }
                 // the details list
-                Column(Modifier.weight(1f).fillMaxHeight()) {
+                else Column(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxWidth().background(W7_HEAD).padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr("Name", "Ad"), color = Color(0xFF4C607A), fontSize = 12.sp, modifier = Modifier.weight(1f))
                         Text(tr("Date modified", "Değiştirme tarihi"), color = Color(0xFF4C607A), fontSize = 12.sp, modifier = Modifier.width(118.dp))
@@ -199,7 +204,7 @@ fun Win7Explorer() {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                    PIcon(if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f), if (isDir) W7_FOLDER else Color(0xFF5B7BA8), 18.dp)
+                                    W7Pic(if (isDir) w7FolderKey(f, root) else w7FileKey(f), 20.dp, if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f))
                                     Text(f.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
                                 }
                                 Text(com.umutk.pulse.features.exDate(f.lastModified(), com.umutk.pulse.features.FilesPrefs.dateFmt), color = Color(0xFF555555), fontSize = 12.sp, maxLines = 1, modifier = Modifier.width(118.dp))
@@ -237,12 +242,85 @@ private fun W7NavTitle(label: String) {
 }
 
 @Composable
-private fun W7Nav(label: String, on: Boolean, onClick: () -> Unit) {
+private fun W7Nav(label: String, on: Boolean, icon: String = "folder", onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().then(if (on) Modifier.background(W7_SEL) else Modifier).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PIcon("folder", W7_FOLDER, 15.dp)
+        W7Pic(icon, 18.dp)
         Text(label, color = Color(0xFF1A1A1A), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+
+/** A Windows 7 picture of the icon pack by its key (the plain folder when the key has none). */
+@Composable
+private fun W7Pic(key: String, size: androidx.compose.ui.unit.Dp, fallback: String = "folder") {
+    val ctx = LocalContext.current
+    val b = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", key)
+    if (b != null) androidx.compose.foundation.Image(b, null, Modifier.size(size)) else PIcon(fallback, W7_FOLDER, size)
+}
+
+/** The folders of the phone's main places have the picture of their library; the others are plain folders. */
+private fun w7FolderKey(f: File, root: File): String = if (f.parentFile?.path != root.path) "folder" else when (f.name) {
+    "Download", "Downloads" -> "fd_downloads"; "Documents" -> "fd_docs"; "Music" -> "fd_music"; "Pictures" -> "fd_pictures"
+    "Movies", "Videos" -> "fd_videos"; "DCIM" -> "fd_camera"; else -> "folder"
+}
+
+private fun w7FileKey(f: File): String = when (f.extension.lowercase()) {
+    "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "avif" -> "ft_image"
+    "mp4", "mkv", "avi", "mov", "webm", "3gp", "m4v", "ts" -> "ft_video"
+    "mp3", "m4a", "flac", "wav", "ogg", "opus", "aac", "wma" -> "ft_audio"
+    "zip", "rar", "7z", "tar", "gz", "bz2", "xz" -> "ft_archive"
+    "xls", "xlsx", "ods", "csv" -> "ft_table"
+    "apk", "xapk", "apks" -> "ft_apk"
+    "txt", "log", "md", "json", "xml" -> "ft_text"
+    else -> "ft_doc"
+}
+
+/** One drive or partition of Computer. */
+private class W7Drive(val name: String, val dir: File, val icon: String)
+
+/** The Computer page: the hard disk drives (the shared storage, the data and the system partitions) and the removable storage, each with its bar of used space. */
+@Composable
+private fun W7Computer(root: File, modifier: Modifier, open: (File) -> Unit) {
+    val ctx = LocalContext.current
+    val (disks, removable) = remember {
+        val hd = listOf(W7Drive(tr("Internal storage", "Dahili depolama"), root, "dv_internal"),
+            W7Drive(tr("Data (apps)", "Veri (uygulamalar)"), Environment.getDataDirectory(), "dv_data"),
+            W7Drive(tr("System", "Sistem"), Environment.getRootDirectory(), "dv_system"))
+        val rm = runCatching {
+            val sm = ctx.getSystemService(android.os.storage.StorageManager::class.java)
+            sm.storageVolumes.filter { it.isRemovable && it.state == android.os.Environment.MEDIA_MOUNTED }.mapNotNull { v ->
+                val d = if (android.os.Build.VERSION.SDK_INT >= 30) v.directory else null
+                d?.let { W7Drive(v.getDescription(ctx) ?: tr("SD card", "SD kart"), it, if (v.getDescription(ctx)?.contains("USB", true) == true) "dv_usb" else "dv_sd") }
+            }
+        }.getOrDefault(emptyList())
+        hd to rm
+    }
+    Column(modifier.background(Color.White).verticalScroll(rememberScrollState()).padding(8.dp)) {
+        W7DriveGroup(tr("Hard Disk Drives (${disks.size})", "Sabit Disk Sürücüleri (${disks.size})"), disks, open)
+        if (removable.isNotEmpty()) W7DriveGroup(tr("Devices with Removable Storage (${removable.size})", "Çıkarılabilir Depolama Aygıtları (${removable.size})"), removable, open)
+    }
+}
+
+@Composable
+private fun W7DriveGroup(title: String, drives: List<W7Drive>, open: (File) -> Unit) {
+    Text(title, color = W7_INK, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD5DDE8)))
+    drives.forEach { d ->
+        val (total, free) = remember(d.dir.path) { runCatching { val st = android.os.StatFs(d.dir.path); st.blockCountLong * st.blockSizeLong to st.availableBlocksLong * st.blockSizeLong }.getOrDefault(0L to 0L) }
+        val used = if (total > 0) 1f - free.toFloat() / total else 0f
+        Row(Modifier.fillMaxWidth().clickable { open(d.dir) }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            W7Pic(d.icon, 44.dp)
+            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                Text(d.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box(Modifier.padding(top = 4.dp, bottom = 3.dp).fillMaxWidth().height(13.dp).background(Color(0xFFE6E6E6), RoundedCornerShape(2.dp)).border(1.dp, Color(0xFFBCBCBC), RoundedCornerShape(2.dp))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(used.coerceIn(0f, 1f)).background(
+                        Brush.verticalGradient(if (used > .9f) listOf(Color(0xFFE8786F), Color(0xFFC13A30)) else listOf(Color(0xFF6FB4F2), Color(0xFF2A78D6))), RoundedCornerShape(2.dp)))
+                }
+                if (total > 0) Text(tr("${com.umutk.pulse.features.exSize(free)} free of ${com.umutk.pulse.features.exSize(total)}", "${com.umutk.pulse.features.exSize(total)} içinden ${com.umutk.pulse.features.exSize(free)} boş"), color = Color(0xFF6B7B93), fontSize = 11.sp)
+            }
+        }
     }
 }
