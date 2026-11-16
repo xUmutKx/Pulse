@@ -78,7 +78,9 @@ fun ProcessesPage() {
     var loaded by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(-1) }
     var q by remember { mutableStateOf("") }
-    var sort by remember { mutableStateOf("mem") }
+    // the column the list is sorted by is kept: it is the one chosen last time, not "Memory" again on every visit
+    var sort by remember { mutableStateOf(ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("tmSort", "mem") ?: "mem") }
+    LaunchedEffect(sort) { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("tmSort", sort).apply() }
     var ask by remember { mutableStateOf<PRow?>(null) }
     var expanded by remember { mutableStateOf(setOf<String>()) }
     var collapsed by remember { mutableStateOf(setOf<String>()) }
@@ -102,7 +104,7 @@ fun ProcessesPage() {
             usage = withContext(Dispatchers.IO) { Extra.usageGranted(ctx) }
             fg = if (own && usage) withContext(Dispatchers.IO) { todayOnScreen(ctx) } else emptyMap()
             // no memory figures without root: the apps are ordered by the time they were used today (or by their size without usage access)
-            if (own && sort == "mem") sort = if (usage) "use" else "disk"
+            if (own && (sort == "mem" || sort == "cpu")) sort = if (usage) "use" else "disk"
             net = withContext(Dispatchers.IO) { ProcStats.netRates(ctx) }
             sizes = withContext(Dispatchers.IO) { rows.map { it.uid }.distinct().mapNotNull { u -> ProcStats.size(ctx, u)?.let { u to it } }.toMap() }
             delay(3000)
@@ -354,7 +356,9 @@ fun PerformancePage() {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
-    var sel by rememberSaveable { mutableStateOf("cpu") }
+    // the graph chosen on the left is kept for the next visit
+    var sel by rememberSaveable { mutableStateOf(ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("tmPerf", "cpu") ?: "cpu") }
+    LaunchedEffect(sel) { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("tmPerf", sel).apply() }
     var secs by remember { mutableStateOf<List<Section>>(emptyList()) }
     val cpuName = remember { Extra.cpuName() }
     LaunchedEffect(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
