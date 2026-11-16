@@ -326,6 +326,11 @@ fun KeyboardSettings(back: () -> Unit) {
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Look.accent else T.panel).clickable { KeyboardPrefs.clipHours = h; save() }.padding(vertical = 8.dp, horizontal = 2.dp))
                 }
             }
+            Switch(tr("Limit the number of clipboard items", "Pano öğe sayısını sınırla"), tr("Off: nothing is dropped for being too many. On: only this many unpinned items stay, the oldest go first", "Kapalı: çok diye hiçbir şey silinmez. Açık: sabitlenmemiş öğelerden yalnızca bu kadarı kalır, en eskiler gider"), KeyboardPrefs.clipLimitOn) { KeyboardPrefs.clipLimitOn = it; save() }
+            if (KeyboardPrefs.clipLimitOn) {
+                Text("${tr("Items kept", "Saklanan öğe")}: ${KeyboardPrefs.clipLimit}", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                PSlider(((KeyboardPrefs.clipLimit - 100) / 19900f).coerceIn(0f, 1f), { KeyboardPrefs.clipLimit = (100 + (it * 199).roundToInt() * 100).coerceIn(100, 20000) }, 0f..1f, onDone = { save() })
+            }
             Switch(tr("Password manager in the bar", "Parola yöneticisi çubukta"), tr("The system autofill suggestions show in the bar; off, they come as the system's own pop-up", "Sistem otomatik doldurma önerileri çubukta görünür; kapalıysa sistemin kendi açılır penceresi çıkar"), KeyboardPrefs.inlineAutofill) { KeyboardPrefs.inlineAutofill = it; save() }
             Switch(tr("Pin button in the bar", "Çubukta sabitleme tuşu"), tr("The copied item or photo in the bar gets a pin: pinned ones stay in the clipboard and in the bar", "Çubuktaki kopyalanan öğe ya da fotoğrafta sabitleme tuşu olur: sabitlenenler panoda ve çubukta kalır"), KeyboardPrefs.quickPinBtn) { KeyboardPrefs.quickPinBtn = it; save() }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }

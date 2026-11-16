@@ -14,7 +14,6 @@ class ClipItem(val id: Long, val text: String, val image: String?, val time: Lon
  * dropped after the time set in the keyboard settings (an hour to a week, or never: the default).
  */
 object ClipStore {
-    private const val MAX = 300
     private fun file(c: Context) = File(c.filesDir, "kbd_clips.json")
     private fun dir(c: Context) = File(c.filesDir, "clips")
     private var items = listOf<ClipItem>()
@@ -100,7 +99,9 @@ object ClipStore {
 
     private fun trim(c: Context) {
         val un = items.filter { !it.pinned }.sortedByDescending { it.time }
-        if (un.size > MAX) { val gone = un.drop(MAX); drop(c, gone); items = items - gone.toSet() }
+        // no limit unless the person set one in the keyboard settings (then that many unpinned items stay, the oldest go first)
+        val max = if (KeyboardPrefs.clipLimitOn) KeyboardPrefs.clipLimit.coerceAtLeast(10) else Int.MAX_VALUE
+        if (un.size > max) { val gone = un.drop(max); drop(c, gone); items = items - gone.toSet() }
     }
 
     fun togglePin(c: Context, id: Long): List<ClipItem> {
