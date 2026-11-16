@@ -481,7 +481,7 @@ private fun ReceivedFiles() {
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching {
                         if (f.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "gif", "heic"))
-                            android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.let { androidx.compose.ui.graphics.asImageBitmap(it) } else null
+                            android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() else null
                     }.getOrNull()
                 }
             }
