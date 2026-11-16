@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- the YTXTube tile in the glass style of the other extra apps: a dark square with a red play mark -->
+    <!-- the video player's own mark (ic_video: a circle with a play triangle), on the dark glass tile of the other extra apps, in YouTube red -->
     <path android:fillColor="#FF14181F" android:pathData="M18,18h72v72h-72z" />
-    <path android:fillColor="#FFFF3B3B"
-        android:pathData="M42,38 L72,54 L42,70 Z" />
+    <group android:scaleX="2.5" android:scaleY="2.5" android:translateX="24" android:translateY="24">
+        <path android:fillColor="#FFFF3B3B"
+            android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM10,16.5v-9l6,4.5 -6,4.5z" />
+    </group>
 </vector>
