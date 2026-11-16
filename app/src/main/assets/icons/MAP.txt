@@ -343,3 +343,13 @@ win7	stop_down	479.png	windows-7-icons.zip (user-supplied)
 win7	play_hot	473.png	windows-7-icons.zip (user-supplied)
 win7	play_down	474.png	windows-7-icons.zip (user-supplied)
 win7	play_off	476.png	windows-7-icons.zip (user-supplied)
+win7	start_0 / start_1 / start_2	Windows 7 start orb sprite (normal, hover, pressed)	user-supplied
+win7	l_cp	Windows 7 Control Panel icon (logos.fandom.com Control_Panel)	user-supplied
+win7	tray_flag	026.png	windows-7-icons.zip (user-supplied)
+win7	tray_fw	068.png	windows-7-icons.zip (user-supplied)
+win7	tray_net	293.png	windows-7-icons.zip (user-supplied)
+win7	tray_vol	273.png	windows-7-icons.zip (user-supplied)
+win7	tray_bt	389.png	windows-7-icons.zip (user-supplied)
+win7	tray_update	062.png	windows-7-icons.zip (user-supplied)
+win7	tray_msn	397.png	windows-7-icons.zip (user-supplied)
+win7	tray_usb	459.png	windows-7-icons.zip (user-supplied)

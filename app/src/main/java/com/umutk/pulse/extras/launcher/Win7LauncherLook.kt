@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -24,6 +25,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -98,8 +102,10 @@ class Win7LauncherLook : LauncherLook {
             // the edge padding keeps the orb and the clock out of the rounded screen corners
             Row(Modifier.weight(1f).fillMaxWidth().padding(start = (edge - 16.dp).coerceAtLeast(0.dp), end = edge), verticalAlignment = Alignment.CenterVertically) {
                 // (the start button sits a little to the left, so the buttons of the open windows have room)
-                Box(Modifier.width(46.dp).fillMaxHeight().clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
-                    StartOrb()
+                val orbTouch = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                val orbHeld by orbTouch.collectIsPressedAsState()
+                Box(Modifier.width(46.dp).fillMaxHeight().clickable(interactionSource = orbTouch, indication = null) { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+                    StartOrbSprite(orbHeld, LauncherSession.startOpen)
                 }
                 state.dock.forEach { app ->
                     Box(Modifier.width(44.dp).fillMaxHeight().appTap(state, app) { state.open(app) }, contentAlignment = Alignment.Center) {
@@ -112,6 +118,7 @@ class Win7LauncherLook : LauncherLook {
                 TaskbarWindows("7", Color.White, 32.dp)
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.width(1.dp).fillMaxHeight(.6f).background(W7_TRAY_LINE))
+                W7Tray()
                 TaskbarClock(Color.White, Modifier.padding(horizontal = 8.dp))
                 // the show-desktop strip at the far right end, as on Windows 7
                 Box(Modifier.width(1.dp).fillMaxHeight().background(W7_TRAY_LINE))
@@ -328,6 +335,73 @@ class Win7LauncherLook : LauncherLook {
         Column(modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             LaunchAppPicture(app, iconDp.dp, Color.Transparent, Color.White)
             Text(app.label, style = W7_LABEL, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
+
+    /**
+     * The notification area: the arrow that opens the hidden icons, the Action Center flag, MSN when it was opened (it stays here, as if it ran in the background), the network and the volume.
+     * The arrow's flyout holds the rest: the firewall, updates, Bluetooth and the phone's removable storage.
+     */
+    @Composable
+    private fun W7Tray() {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val d = androidx.compose.ui.platform.LocalDensity.current
+        Row(Modifier.fillMaxHeight().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Box {
+                Box(Modifier.size(width = 22.dp, height = 40.dp).clickable { LauncherSession.trayOpen = !LauncherSession.trayOpen }, contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(9.dp, 6.dp)) {
+                        val tri = androidx.compose.ui.graphics.Path().apply { moveTo(0f, size.height); lineTo(size.width / 2f, 0f); lineTo(size.width, size.height); close() }
+                        drawPath(tri, Color.White)
+                    }
+                }
+                if (LauncherSession.trayOpen) androidx.compose.ui.window.Popup(alignment = Alignment.TopEnd, offset = androidx.compose.ui.unit.IntOffset(0, with(d) { -(100.dp).roundToPx() }), onDismissRequest = { LauncherSession.trayOpen = false }) {
+                    Column(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xEE1D2C42)).border(1.dp, Color(0x88FFFFFF), RoundedCornerShape(6.dp)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            listOf("tray_fw" to { openDesktopItem(ctx, "pulse:settings", "win7") }, "tray_flag" to { openDesktopItem(ctx, "pulse:x:notifhist", "win7") }, "tray_update" to { openDesktopItem(ctx, "pulse:store", "win7") }),
+                            listOf("tray_bt" to { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+                                "tray_usb" to { openDesktopItem(ctx, "pulse:files", "win7") }, "tray_msn" to { openDesktopItem(ctx, "pulse:x:messages", "win7") }),
+                        ).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                row.forEach { (key, act) ->
+                                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(4.dp)).clickable { LauncherSession.trayOpen = false; act() }, contentAlignment = Alignment.Center) { W7TrayPic(key, 24.dp) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Box(Modifier.size(24.dp).clickable { openDesktopItem(ctx, "pulse:x:notifhist", "win7") }, contentAlignment = Alignment.Center) { W7TrayPic("tray_flag", 18.dp) }
+            if (LauncherSession.msnTray) Box(Modifier.size(24.dp).clickable { openDesktopItem(ctx, "pulse:x:messages", "win7") }, contentAlignment = Alignment.Center) { W7TrayPic("tray_msn", 18.dp) }
+            Box(Modifier.size(24.dp).clickable { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) { W7TrayPic("tray_net", 18.dp) }
+            Box(Modifier.size(24.dp).clickable { runCatching { ctx.startActivity(android.content.Intent("android.settings.panel.action.VOLUME").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) { W7TrayPic("tray_vol", 18.dp) }
+        }
+    }
+
+    @Composable
+    private fun W7TrayPic(key: String, size: Dp) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val b = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", key)
+        if (b != null) androidx.compose.foundation.Image(b, null, Modifier.size(size))
+    }
+
+    /**
+     * The real Windows 7 orb in its three states (assets/icons/win7/start_0..2): normal; lit while the Start menu is open (fades in); pressed while the finger holds it (fades in fast),
+     * the way the glow comes and goes on Windows 7. The drawn orb below stays when the pictures are missing.
+     */
+    @Composable
+    private fun StartOrbSprite(held: Boolean, open: Boolean) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val f0 = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", "start_0")
+        if (f0 == null) { StartOrb(); return }
+        val f1 = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", "start_1")
+        val f2 = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", "start_2")
+        val lit by androidx.compose.animation.core.animateFloatAsState(if (open && !held) 1f else 0f, androidx.compose.animation.core.tween(180), label = "orbLit")
+        val down by androidx.compose.animation.core.animateFloatAsState(if (held) 1f else 0f, androidx.compose.animation.core.tween(90), label = "orbDown")
+        // the orb is 66 of the 106 picture pixels: the picture is drawn bigger than the button so the orb is 38 dp and the glow has room
+        Box(Modifier.requiredSize(61.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Image(f0, null, Modifier.fillMaxSize())
+            if (f1 != null) androidx.compose.foundation.Image(f1, null, Modifier.fillMaxSize().graphicsLayer { alpha = lit })
+            if (f2 != null) androidx.compose.foundation.Image(f2, null, Modifier.fillMaxSize().graphicsLayer { alpha = down })
         }
     }
 
