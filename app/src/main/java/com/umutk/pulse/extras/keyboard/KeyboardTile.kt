@@ -12,8 +12,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 
 /**
- * Quick settings tile: opens the Pulse keyboard as the floating keyboard, straight away. A keyboard only shows for a text field, so the
- * tile starts [KeyboardFloatActivity], a transparent window with a focused field; that field brings the floating keyboard up.
+ * Quick settings tile: the floating keyboard on or off. It opens no window of its own any more: a hidden window over the app took the app's place in front
+ * (the app stood still behind it and what was typed went into the hidden window). Now the tile only switches the floating look; the keyboard floats over the
+ * app's own text box, the app keeps running and takes the typing, and everything outside the keys is the app's. The keyboard follows at once when it is up.
  */
 @androidx.annotation.RequiresApi(24)
 class KeyboardTile : TileService() {
@@ -23,26 +24,17 @@ class KeyboardTile : TileService() {
 
     override fun onClick() {
         KeyboardPrefs.load(this)
-        // a second tap puts the keyboard away
-        if (tileActive(this)) {
-            KeyboardFloatActivity.current?.finish() ?: tileOff(this)
-            qsTile?.apply { state = Tile.STATE_INACTIVE; updateTile() }
-            return
-        }
-        // one step: the tile opens the floating keyboard at once (no button on the screen's side first). It lasts while its window is open and is never saved
-        // as the keyboard's mode, so the normal keyboard stays the normal keyboard
-        KeyboardPrefs.floatSession = true
-        tilePrefs(this).edit().putBoolean("active", true).apply()
-        qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
-        val i = com.umutk.pulse.ads.TileAds.wrap(this, Intent(this, KeyboardFloatActivity::class.java)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (android.os.Build.VERSION.SDK_INT >= 34) {
-            startActivityAndCollapse(android.app.PendingIntent.getActivity(this, 0, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
-        } else {
-            @Suppress("DEPRECATION")
-            startActivityAndCollapse(i)
-        }
+        val on = !tileActive(this)
+        tilePrefs(this).edit().putBoolean("active", on).apply()
+        KeyboardPrefs.floatSession = on
+        qsTile?.apply { state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; updateTile() }
+        // a keyboard that is up changes its look now
+        PulseKeyboardService.live?.floatChanged()
     }
 }
+
+/** The tile's floating keyboard is on (kept until the tile is tapped again). */
+internal fun floatTileOn(c: Context) = tileActive(c)
 
 private fun tilePrefs(c: Context) = c.getSharedPreferences("pulse_kb_tile", Context.MODE_PRIVATE)
 private fun tileActive(c: Context) = tilePrefs(c).getBoolean("active", false)
