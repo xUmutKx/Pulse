@@ -158,7 +158,7 @@ object StandByPrefs {
     fun autoCharge(c: Context) = p(c).getBoolean("autoCharge3", false)
     fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge3", v).apply()
     /** The animation that plays when the charger is plugged in: 0 none, 1 to 5 the looks of [ChargeAnim]. */
-    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(1, 16)
+    fun chargeAnim(c: Context) = p(c).getInt("chargeAnim", 1).coerceIn(1, 40)
     /** The charging animation is off until this switch is on. */
     fun chargeAnimOn(c: Context) = p(c).getBoolean("chargeAnimOn", false)
     fun setChargeAnimOn(c: Context, v: Boolean) = p(c).edit().putBoolean("chargeAnimOn", v).apply()
