@@ -223,6 +223,15 @@ object SeasonDl {
         var key by remember { mutableStateOf(tmdbKey(ctx)) }
         var note by remember { mutableStateOf("") }
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // removing a finished download from the list leaves its file on the phone (off: the file goes too)
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setKeepFiles(ctx, !Downloads.keepFiles) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Keep the file when removed", "Silince dosya kalsın"), color = T.text, fontSize = 15.sp)
+                    Text(tr("A finished download leaves only the list; the file stays on the phone", "Biten indirme yalnızca listeden çıkar, dosya telefonda kalır"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.keepFiles, { Downloads.setKeepFiles(ctx, it) })
+            }
+            Spacer(Modifier.height(8.dp))
             Text(tr("Season pictures", "Sezon resimleri"), color = T.text, fontSize = 15.sp)
             Text(tr("Each season's picture comes from themoviedb.org. Make a free account there, copy your API key (v3) and paste it here. Without a key each season shows the series picture.",
                 "Her sezonun resmi themoviedb.org'dan gelir. Orada ücretsiz bir hesap aç, API anahtarını (v3) kopyala ve buraya yapıştır. Anahtar olmazsa her sezon dizinin resmini gösterir."), color = T.sub, fontSize = 12.sp)
