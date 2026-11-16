@@ -224,8 +224,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Quick auth: the fingerprint first when the setting asks for it, then the codes of the accounts (computed now). */
-    private fun openAuth() {
-        if (!KeyboardPrefs.authLock || android.os.Build.VERSION.SDK_INT < 28) { showAuth(); return }
+    private fun openAuth(then: () -> Unit = { showAuth() }) {
+        if (!KeyboardPrefs.authLock || android.os.Build.VERSION.SDK_INT < 28) { then(); return }
         val cancel = android.os.CancellationSignal()
         val prompt = android.hardware.biometrics.BiometricPrompt.Builder(this)
             .setTitle(com.umutk.pulse.tr("Quick auth", "Hızlı kimlik doğrulama"))
@@ -233,7 +233,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             .setNegativeButton(com.umutk.pulse.tr("Cancel", "İptal"), mainExecutor) { _, _ -> cancel.cancel() }
             .build()
         prompt.authenticate(cancel, mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { showAuth() }
+            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { then() }
         })
     }
 
@@ -251,6 +251,30 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             name to runCatching { com.umutk.pulse.features.Totp.code(com.umutk.pulse.features.Totp.base32Decode(a.secret), now, a.digits, a.period, a.algo) }.getOrDefault("------")
         }
         st.authPeriods = accounts.map { it.period }
+    }
+
+    private var vaultShown: List<com.umutk.pulse.features.VItem> = emptyList()
+    private fun showVault() {
+        st.vaultQuery = ""
+        refreshVault()
+        st.panel = "vault"
+    }
+    /** The logins of the vault that fit the search; the ones that fit the app in front come first. */
+    private fun refreshVault() {
+        val pkg = currentInputEditorInfo?.packageName
+        val fit = runCatching { com.umutk.pulse.features.VaultStore.matches(this, pkg, null).map { it.id }.toSet() }.getOrDefault(emptySet())
+        val q = st.vaultQuery.trim().lowercase()
+        vaultShown = runCatching { com.umutk.pulse.features.VaultStore.all(this) }.getOrDefault(emptyList())
+            .filter { it.type == 1 && (q.isEmpty() || it.name.lowercase().contains(q) || it.user.lowercase().contains(q) || it.uris.any { u -> u.lowercase().contains(q) }) }
+            .sortedWith(compareBy({ it.id !in fit }, { it.name.lowercase() })).take(40)
+        st.vaultRows = vaultShown.map { Triple(it.name.ifBlank { it.user }, it.user, it.id in fit) }
+    }
+    override fun vaultPick(i: Int, other: Boolean) {
+        val item = vaultShown.getOrNull(i) ?: return
+        val text = if (passwordField != other) item.pass else item.user
+        currentInputConnection?.commitText(text, 1)
+        st.panel = "keys"; st.vaultQuery = ""
+        afterText()
     }
 
     override fun authTick() { if (st.panel == "auth") refreshAuth() }
@@ -950,6 +974,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the emoji search is open: the keys type into its box
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
         st.clipName?.let { if (st.panel == "clip") { if (s.all { ch -> ch.isLetterOrDigit() }) st.clipName = it + s; return } }
+        if (st.panel == "vault") { if (s.all { ch -> ch.isLetterOrDigit() || ch in "@.-_ " }) { st.vaultQuery += s; refreshVault() }; return }
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (st.artOn) { st.artIn += s; return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
@@ -1275,6 +1300,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         captureEmail(c); commitNumber()
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
+        if (st.panel == "vault") return
         if (st.trans) { if (st.transIn.isNotEmpty() && !st.transIn.endsWith(" ")) st.transIn += " "; return }
         if (st.artOn) { st.artIn += " "; return }
         val now = SystemClock.uptimeMillis()
@@ -1305,6 +1331,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         endFlash()
         val c = currentInputConnection ?: return
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
+        if (st.panel == "vault") return
         if (st.trans) { transOp("apply"); return }
         captureEmail(c); commitNumber()
         runCatching { trackLogin() }
@@ -1322,6 +1349,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
+        if (st.panel == "vault") { st.vaultQuery = st.vaultQuery.dropLast(1); refreshVault(); return }
         if (st.trans && st.transIn.isNotEmpty()) { st.transIn = st.transIn.dropLast(1); scheduleTrans(); return }
         if (st.artOn) { if (st.artIn.isNotEmpty()) st.artIn = st.artIn.dropLast(1); return }
         lastWasSpace = false
@@ -1696,6 +1724,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "auth" -> if (st.panel == "auth") st.panel = "keys" else openAuth()
+            "vault" -> if (st.panel == "vault") st.panel = "keys" else openAuth { showVault() }
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched

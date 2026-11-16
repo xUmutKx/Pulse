@@ -416,7 +416,7 @@ fun KeyboardSettings(back: () -> Unit) {
                         kotlinx.coroutines.delay(450)
                     }
                 }
-                val accent = T.accent
+                val accent = KeyboardEffects.fxTint(KeyboardPrefs.fxColor, T.accent, (System.nanoTime() / 1_000_000).toInt())
                 androidx.compose.foundation.Canvas(Modifier.size(width = 84.dp, height = 50.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF15161B))) {
                     val kw = size.width * .26f; val kh = size.height * .44f
                     val key = androidx.compose.ui.geometry.Rect(androidx.compose.ui.geometry.Offset((size.width - kw) / 2f, (size.height - kh) / 2f), androidx.compose.ui.geometry.Size(kw, kh))
@@ -428,6 +428,15 @@ fun KeyboardSettings(back: () -> Unit) {
             chips(tr("Key press: around the key", "Tuşa basınca: tuşun çevresi"), KeyboardEffects.pressNames.subList(0, 6), if (pf in 0..5) pf else -1, { KeyboardPrefs.pressFx = it }) { i -> pressPreview(i) }
             chips(tr("Key press: across the keyboard", "Tuşa basınca: tüm klavye"), KeyboardEffects.pressNames.subList(6, 11), if (pf in 6..10) pf - 6 else -1, { KeyboardPrefs.pressFx = it + 6 }) { i -> pressPreview(i + 6) }
             chips(tr("Key press: dark styles", "Tuşa basınca: karanlık stiller"), KeyboardEffects.pressNames.subList(11, 16), if (pf in 11..15) pf - 11 else -1, { KeyboardPrefs.pressFx = it + 11 }) { i -> pressPreview(i + 11) }
+            chips(tr("Key press: RGB", "Tuşa basınca: RGB"), KeyboardEffects.pressNames.subList(16, 20), if (pf in 16..19) pf - 16 else -1, { KeyboardPrefs.pressFx = it + 16 }) { i -> pressPreview(i + 16) }
+            // the colour of the effects (neon, or RGB: a new hue with every press) and how long they last
+            chips(tr("Effect colour", "Efekt rengi"), KeyboardEffects.colorNames, KeyboardPrefs.fxColor, { KeyboardPrefs.fxColor = it; save() }) { i ->
+                Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(if (i == 4) Color(0xFF15161B) else KeyboardEffects.fxTint(i, T.accent, 0)), contentAlignment = Alignment.Center) {
+                    if (i == 4) Box(Modifier.size(width = 40.dp, height = 8.dp).clip(RoundedCornerShape(4.dp)).background(androidx.compose.ui.graphics.Brush.horizontalGradient(List(7) { Color.hsv(it * 55f, .85f, 1f) })))
+                }
+            }
+            Text("${tr("Effect length", "Efekt süresi")}: ${KeyboardPrefs.fxSpeed}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.fxSpeed - 40) / 260f, { KeyboardPrefs.fxSpeed = 40 + (it * 260).roundToInt() }, 0f..1f, onDone = { save() })
             chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind, { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }) { _ ->
                 Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(keyFill), contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
             }
