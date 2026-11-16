@@ -356,11 +356,12 @@ object SeasonDl {
     private fun sharp(url: String) = url.replace("/poster/small/", "/poster/medium/")
 
     /** A picture of the catalogue at the size it is shown (2x the box, so it stays sharp), cached; null when it cannot be had. */
-    private fun loadPicture(url: String, wPx: Int): android.graphics.Bitmap? {
-        val key = "$url@$wPx"
+    private fun loadPicture(url: String, wPx: Int, hPx: Int = 0): android.graphics.Bitmap? {
+        val key = "$url@$wPx@$hPx"
         posters.get(key)?.let { return it }
         val raw = runCatching { URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
-        val want = minOf(raw.width, wPx * 2)
+        // a wide picture shown upright (cropped to a portrait box) needs enough height, not only enough width: twice the box's height, at most what the picture has
+        val want = minOf(raw.width, if (hPx > 0) maxOf(wPx * 2, (hPx * 2f * raw.width / raw.height).toInt()) else wPx * 2)
         val out = if (raw.width > want) android.graphics.Bitmap.createScaledBitmap(raw, want, (raw.height * want.toFloat() / raw.width).toInt().coerceAtLeast(1), true).also { raw.recycle() } else raw
         posters.put(key, out)
         return out
@@ -389,9 +390,10 @@ object SeasonDl {
         val src = sharp(url)
         val w = 96.dp
         val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
-        val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {
-            value = posters.get("$src@$wPx")
-            if (value == null && src.startsWith("http")) value = withContext(Dispatchers.IO) { loadPicture(src, wPx) }
+        val hPx = with(androidx.compose.ui.platform.LocalDensity.current) { 144.dp.roundToPx() }
+        val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx@$hPx"), src, wPx) {
+            value = posters.get("$src@$wPx@$hPx")
+            if (value == null && src.startsWith("http")) value = withContext(Dispatchers.IO) { loadPicture(src, wPx, hPx) }
         }
         val b = bmp
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
@@ -685,7 +687,7 @@ object SeasonDl {
                                         val n = eps.count { it.season == sn }
                                         Box(Modifier.clickable { season = sn; picked = eps.filter { it.season == sn }.map { it.id }.toSet() }) {
                                             // Cinemeta has no picture of its own for a season: the series poster (upright) stands for each one, with the season over it
-                                            SeasonCover(pics[sn] ?: sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
+                                            SeasonCover(pics[sn] ?: eps.firstOrNull { it.season == sn && it.thumb.isNotBlank() }?.thumb ?: sel.poster, if (sn == 0) tr("Specials", "Özel bölümler") else tr("Season $sn", "Sezon $sn"), tr("$n ep", "$n bölüm"), season == sn)
                                         }
                                     }
                                 }

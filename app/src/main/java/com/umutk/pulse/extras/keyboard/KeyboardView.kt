@@ -477,11 +477,11 @@ private fun GamePad(th: KbTheme, act: KbActions, keyH: androidx.compose.ui.unit.
 
 /** The path of a swipe over the letters. */
 @Composable
-private fun Trail(th: KbTheme, st: KbState) {
+private fun androidx.compose.foundation.layout.BoxScope.Trail(th: KbTheme, st: KbState) {
     // the swipe-typing path is no longer drawn (the blue line); the keys it passes still spell the word
     val t = st.trail
     if (true || t.size < 2) return
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(Modifier.matchParentSize()) {
         val path = Path().apply { moveTo(t[0].x, t[0].y); for (i in 1 until t.size) lineTo(t[i].x, t[i].y) }
         drawPath(path, th.accent.copy(alpha = .75f), style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round))
     }
@@ -1193,7 +1193,7 @@ private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape:
 // ---- the pop-up over a pressed key -----------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun PressFx(th: KbTheme, st: KbState) {
+private fun androidx.compose.foundation.layout.BoxScope.PressFx(th: KbTheme, st: KbState) {
     val kind = KeyboardPrefs.pressFx
     if (kind <= 0 || st.bursts.isEmpty()) return
     var now by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime() / 1_000_000) }
@@ -1205,7 +1205,7 @@ private fun PressFx(th: KbTheme, st: KbState) {
             st.bursts.removeAll { now - it.t0 > dur }
         }
     }
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(Modifier.matchParentSize()) {
         with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, b.rect, ((now - b.t0) / dur).coerceIn(0f, 1f), th.accent, b.t0.toInt()) } }
     }
 }

@@ -271,16 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "video" to (tr("Video player: a damaged spot in a downloaded file is skipped by itself, losing as little as possible, instead of the video freezing there.",
-        "Video oynatıcı: indirilen dosyadaki bozuk bir yer, video orada donmak yerine en az kayıpla kendiliğinden atlanır.")),
-    "star" to (tr("Torrents download much faster: every episode at once, more peers, the best-shared stream first. Game Hub no longer freezes when the keyboard is swiped down. The floating keyboard tile no longer freezes the app behind it. New: Crash and freeze log in Settings > Functions > Report.",
-        "Torrentler çok daha hızlı iner: her bölüm aynı anda, daha çok eş, en çok paylaşılan yayın önce. Game Hub klavye aşağı kaydırılınca artık donmuyor. Yüzen klavye kutucuğu arkadaki uygulamayı artık dondurmuyor. Yeni: Ayarlar > İşlevler > Rapor'da Çökme ve donma kaydı.")),
-    "download" to (tr("Downloads: a torrent nobody shares gives way to another stream of a close size; long press and slide to pick rows as in Files, with an All button; a setting keeps the file when a download is removed. The torrent engine can be downloaded from the top of the page.",
-        "İndirmeler: kimsenin paylaşmadığı torrent yakın boyutta başka bir yayına geçer; Dosyalar'daki gibi basılı tutup kaydırarak seç, Tümü düğmesiyle; bir ayar silinen indirmenin dosyasını telefonda bırakır. Torrent motoru sayfanın üstünden indirilebilir.")),
-    "keyboard" to (tr("Keyboard: fifteen new key-press effects (around the key, across the keyboard, dark styles) with moving previews; a video you just downloaded waits in the bar with a small play mark, ready to paste.",
-        "Klavye: on beş yeni tuş basma efekti (tuşun çevresi, tüm klavye, karanlık stiller), hareketli önizlemelerle; yeni indirdiğin video küçük bir oynat işaretiyle çubukta bekler, yapıştırmaya hazır.")),
-    "star" to (tr("Home screen icons: a new soft blue glass that matches the phone's theme icons; the icon chooser shows the real icons, and all of them can be changed at once or one by one.",
-        "Ana ekran ikonları: telefonun tema ikonlarıyla uyumlu yeni yumuşak mavi cam; ikon seçici gerçek ikonları gösterir, hepsi birden ya da tek tek değiştirilebilir.")),
+    "keyboard" to (tr("Keyboard: the empty strip that appeared between the page and the keys while typing is gone. Downloads: every season shows its own picture (its first episode), also without a TMDB key.",
+        "Klavye: yazarken sayfa ile tuşlar arasında beliren boş şerit gitti. İndirmeler: her sezon, TMDB anahtarı olmadan da, kendi resmini (ilk bölümünün görüntüsü) gösterir.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
