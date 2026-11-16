@@ -165,7 +165,7 @@
   }
   function act() { if (S.zone === 'list') choose(S.sel); else type(keyAt(S.kr, S.kc)); }
   function setPad(on, zone) {
-    S.pad = !!on; el.classList.toggle('pad', S.pad);
+    S.pad = !!on; S.slim = !S.pad && !S.bottomKb; el.classList.toggle('pad', S.pad); el.classList.toggle('slim', S.slim);
     if (S.pad) { S.zone = zone || 'keys'; if (S.zone === 'list' && !S.res.length) S.zone = 'keys'; if (document.activeElement === E.in) E.in.blur(); } else focusIn();
     paintKeys(); paintSel(); hints();
   }
@@ -184,9 +184,9 @@
   // A moment after the highlight settles, and never while the shelf is still sliding, the shelf steps to that game when it's
   // on the shelf already in view: one ordinary slide. A match on another console's shelf leaves the shelf where it is
   // (going there rebuilds the shelf, its music and its art: that waits for A). Closed without choosing, the shelf goes back.
-  function followSoon() { if (!S.open || !S.bottomKb) return; clearTimeout(S.folT); S.folT = setTimeout(follow, 300); }
+  function followSoon() { if (!S.open || !(S.bottomKb || S.slim)) return; clearTimeout(S.folT); S.folT = setTimeout(follow, 300); }
   function follow() {
-    S.folT = 0; if (!S.open || !S.bottomKb) return;
+    S.folT = 0; if (!S.open || !(S.bottomKb || S.slim)) return;
     if (window.BS_SLIDING && BS_SLIDING()) { S.folT = setTimeout(follow, 120); return; }
     const g = S.res[S.sel]; if (!g) return;
     // (the shelf in view, read once per open: its games, and its name as the matches give it; Home has none, so it never follows there)
@@ -214,12 +214,13 @@
     // (Pulse: the letter grid only with a real controller attached; a phone types with its own keyboard and never gets both)
     const realPad = !window.padReal || window.padReal();
     const pad = realPad && !bottomKb && (how === 'pad' || deckTouch || (how !== 'kbd' && !ptr && !!b.pad()));
+    S.slim = !pad && !bottomKb;
     Shelf.setMode('find');
     clearTimeout(S.folT);
     Object.assign(S, { open: true, pad, zone: 'keys', kr: 0, kc: 0, sel: 0, q: '', list: null, res: [], total: 0, prev: null, rep: {}, gen: S.gen + 1, folT: 0, here: null, from: null, moved: false, padSeen: false });
     S.rows.clear(); E.in.value = ''; E.count.textContent = '';
-    el.classList.toggle('pad', pad); el.classList.toggle('bottomkb', bottomKb); el.classList.add('on'); el.setAttribute('aria-hidden', 'false');
-    if (bottomKb) document.body.classList.add('find-slim'); // (the shelf's own hint bar steps aside under the slim bar: its keys go to Find meanwhile)
+    el.classList.toggle('pad', pad); el.classList.toggle('bottomkb', bottomKb); el.classList.toggle('slim', S.slim); el.classList.add('on'); el.setAttribute('aria-hidden', 'false');
+    if (bottomKb || S.slim) document.body.classList.add('find-slim'); // (the shelf's own hint bar steps aside under the slim bar: its keys go to Find meanwhile)
     E.in.placeholder = bottomKb ? 'Type on the bottom screen' : 'Type a title';
     render(); paintKeys(); hints();
     if (!pad && !bottomKb) focusIn();
