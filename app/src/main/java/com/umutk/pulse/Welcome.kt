@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "share" to (tr("One Pulse folder in Downloads for everything. Share lists what you received, with pictures, and a transfer is a notification with progress, Pause and Cancel.",
+        "İndirilenler'de her şey için tek Pulse klasörü. Share, alınanları resimleriyle listeliyor, aktarım ilerleme çubuğu, Duraklat ve İptal'li bir bildirim.")),
+    "palette" to (tr("Glass icons in the colours of Glass Material You, a screenshot stays in the bar for a minute, blocked words are gone for good.",
+        "Cam simgeler Glass Material You renklerinde, ekran görüntüsü bar'da bir dakika kalıyor, engellenen kelimeler tamamen gidiyor.")),
     "video" to (tr("YTXTube is much lighter: its own process, video straight to the screen, hardware codecs only. It stops when the music player starts, so the media controls show the music.",
         "YTXTube çok daha hafif: kendi süreci, video doğrudan ekrana, yalnızca donanım kodekleri. Müzik çalar başlayınca duruyor, medya kontrolleri müziği gösteriyor.")),
     "palette" to (tr("Keyboard: correct place when the screen is upside down, free RGB effect colour, an RGB effect behind the whole keyboard.",
