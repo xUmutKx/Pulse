@@ -25,7 +25,7 @@ import kotlin.math.sin
 /** The looks of the keyboard that go beyond the theme: a colour wash over the keyboard, a colour effect on each key, how a key moves when pressed, and the touch sounds. */
 object KeyboardEffects {
     val keyNames = listOf("None" to "Yok", "Tint" to "Ton", "Blob" to "Leke", "Glass" to "Cam", "Glow" to "Işıltı")
-    val boardNames = listOf("Off" to "Kapalı", "Dusk" to "Alacakaranlık", "Sea" to "Deniz", "Meadow" to "Çayır", "Sun" to "Güneş", "Slate" to "Kayrak", "Rose" to "Gül")
+    val boardNames = listOf("Off" to "Kapalı", "Dusk" to "Alacakaranlık", "Sea" to "Deniz", "Meadow" to "Çayır", "Sun" to "Güneş", "Slate" to "Kayrak", "Rose" to "Gül", "RGB" to "RGB")
     val motionNames = listOf("Default" to "Varsayılan", "Pop" to "Yüksel", "Sink" to "Bas", "Bounce" to "Zıpla")
     /** The key-press effects: none, five around the key, five across the keyboard, five dark styles. */
     val pressNames = listOf(
