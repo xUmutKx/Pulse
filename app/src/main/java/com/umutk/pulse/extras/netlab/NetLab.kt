@@ -109,6 +109,43 @@ object NetLab {
             .getOrElse { listOf(tr("No answer for ${host.trim()}", "${host.trim()} için cevap yok")) }
     }
 
+    /** Who signed the certificate of [host] (port 443), whom it is for and how long it still holds. */
+    suspend fun certificate(host: String): List<String> = withContext(Dispatchers.IO) {
+        val h = host.trim().removePrefix("https://").substringBefore('/')
+        runCatching {
+            val f = javax.net.ssl.SSLSocketFactory.getDefault()
+            val sock = f.createSocket() as javax.net.ssl.SSLSocket
+            sock.use {
+                it.connect(InetSocketAddress(h, 443), 4000); it.soTimeout = 4000; it.startHandshake()
+                val c = it.session.peerCertificates[0] as java.security.cert.X509Certificate
+                fun cn(n: String) = n.split(',').firstOrNull { p -> p.trim().startsWith("CN=") }?.substringAfter("CN=")?.trim() ?: n
+                val days = (c.notAfter.time - System.currentTimeMillis()) / 86_400_000L
+                listOf(
+                    tr("Made for", "Kimin için") + "  ·  " + cn(c.subjectX500Principal.name),
+                    tr("Signed by", "İmzalayan") + "  ·  " + cn(c.issuerX500Principal.name),
+                    tr("Holds until", "Geçerli") + "  ·  " + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(c.notAfter) +
+                        if (days < 0) "  (" + tr("expired", "süresi doldu") + ")" else "  (" + tr("$days days left", "$days gün kaldı") + ")",
+                    tr("Protocol", "Protokol") + "  ·  " + it.session.protocol,
+                )
+            }
+        }.getOrElse { listOf(tr("No secure page answered at $h: ${it.message}", "$h adresinde güvenli sayfa cevap vermedi: ${it.message}")) }
+    }
+
+    /** What the router shows to the Wi-Fi: its admin page, whether Telnet is open (it should not be), and the ports UPnP uses. */
+    suspend fun router(gateway: String): List<String> = withContext(Dispatchers.IO) {
+        if (gateway.isBlank()) return@withContext listOf(tr("The router address is not known: join a Wi-Fi network first", "Yönlendirici adresi bilinmiyor: önce bir Wi-Fi ağına bağlan"))
+        suspend fun open(p: Int) = runCatching { Socket().use { it.connect(InetSocketAddress(gateway, p), 700); true } }.getOrDefault(false)
+        val out = ArrayList<String>()
+        out += tr("Router", "Yönlendirici") + "  ·  " + gateway
+        out += tr("Admin page (80)", "Yönetim sayfası (80)") + "  ·  " + if (open(80)) tr("answers", "cevap veriyor") else tr("no answer", "cevap yok")
+        out += tr("Admin page, secure (443)", "Yönetim sayfası, güvenli (443)") + "  ·  " + if (open(443)) tr("answers", "cevap veriyor") else tr("no answer", "cevap yok")
+        out += if (open(23)) tr("Telnet (23) is OPEN: an old, unprotected way into the router. Turn it off in the router's settings.", "Telnet (23) AÇIK: yönlendiriciye eski ve korumasız bir yol. Yönlendirici ayarlarından kapat.")
+               else tr("Telnet (23) is closed: good", "Telnet (23) kapalı: iyi")
+        out += if (open(5000) || open(49152)) tr("UPnP ports answer: apps on this network can open ports on the router by themselves", "UPnP portları cevap veriyor: bu ağdaki uygulamalar yönlendiricide kendiliğinden port açabilir")
+               else tr("UPnP ports are quiet", "UPnP portları sessiz")
+        out
+    }
+
     /** The magic packet that switches on a computer whose network card listens for it (aa:bb:cc:dd:ee:ff). */
     suspend fun wake(mac: String): String = withContext(Dispatchers.IO) {
         val b = mac.trim().split(':', '-').mapNotNull { it.toIntOrNull(16)?.toByte() }
@@ -138,6 +175,9 @@ fun NetLabScreen(back: () -> Unit) {
             "dns" -> HostPage(tr("DNS lookup", "DNS sorgusu"), tr("Name, like example.com", "Ad, örneğin example.com"), "dns") { NetLab.dns(it) }
             "wake" -> WakePage()
             "signal" -> SignalPage()
+            "cert" -> HostPage(tr("Certificate check", "Sertifika kontrolü"), tr("Site, like example.com", "Site, örneğin example.com"), "cert") { NetLab.certificate(it) }
+            "router" -> RouterPage()
+            "channels" -> ChannelsPage()
             "public" -> PublicPage()
             else -> Home { page = it }
         }
@@ -162,6 +202,9 @@ private fun Home(open: (String) -> Unit) {
         Triple("ports", tr("Port check", "Port kontrolü"), tr("Open ports of one device", "Bir cihazın açık portları")) to "search",
         Triple("dns", tr("DNS lookup", "DNS sorgusu"), tr("Every address of a name", "Bir adın tüm adresleri")) to "globe",
         Triple("wake", tr("Wake on LAN", "Ağdan uyandır"), tr("Turn on a computer", "Bir bilgisayarı aç")) to "power",
+        Triple("cert", tr("Certificate check", "Sertifika kontrolü"), tr("Who signed a secure page, how long it holds", "Güvenli sayfayı kim imzaladı, ne kadar geçerli")) to "lock",
+        Triple("router", tr("Router check", "Yönlendirici kontrolü"), tr("Admin page, Telnet, UPnP", "Yönetim sayfası, Telnet, UPnP")) to "tune",
+        Triple("channels", tr("Wi-Fi channels", "Wi-Fi kanalları"), tr("Crowded or clear", "Kalabalık mı, boş mu")) to "sensors",
     )
     tiles.chunked(2).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -293,3 +336,54 @@ private fun PublicPage() {
 
 private fun Modifier.androidClip(): Modifier = this.then(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(5.dp)))
 private fun Modifier.androidBg(c: androidx.compose.ui.graphics.Color): Modifier = this.then(Modifier.background(c))
+
+
+@Composable
+private fun RouterPage() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var out by remember { mutableStateOf<List<String>>(emptyList()) }
+    var busy by remember { mutableStateOf(false) }
+    PCard {
+        Text(tr("Router check", "Yönlendirici kontrolü"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Asks the router of this Wi-Fi what it shows to everyone on the network.", "Bu Wi-Fi'ın yönlendiricisine, ağdaki herkese ne gösterdiğini sorar."), color = T.sub, fontSize = 12.sp)
+        PButton(if (busy) tr("Checking…", "Kontrol ediliyor…") else tr("Check the router", "Yönlendiriciyi kontrol et"), Modifier.padding(top = 8.dp)) {
+            if (!busy) { busy = true; scope.launch { out = NetLab.router(NetLab.info(ctx).gateway); busy = false } }
+        }
+    }
+    if (out.isNotEmpty()) PCard { out.forEach { Text(it, color = T.text, fontSize = 13.sp, modifier = Modifier.padding(vertical = 3.dp)) } }
+}
+
+@Composable
+private fun ChannelsPage() {
+    val ctx = LocalContext.current
+    var granted by remember { mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted = it }
+    var nets by remember { mutableStateOf<List<android.net.wifi.ScanResult>>(emptyList()) }
+    LaunchedEffect(granted) {
+        if (granted) while (true) {
+            nets = withContext(Dispatchers.IO) { @Suppress("DEPRECATION") runCatching { (ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).scanResults.sortedByDescending { it.level } }.getOrDefault(emptyList()) }
+            delay(4000)
+        }
+    }
+    if (!granted) {
+        PCard {
+            Text(tr("Android lets an app see the Wi-Fi networks around only with the location permission. Pulse does not use your place for anything else.", "Android, çevredeki Wi-Fi ağlarını yalnızca konum izniyle gösterir. Pulse konumunu başka bir şey için kullanmaz."), color = T.sub, fontSize = 13.sp)
+            PButton(tr("Allow", "İzin ver"), Modifier.padding(top = 8.dp)) { ask.launch(android.Manifest.permission.ACCESS_FINE_LOCATION) }
+        }
+        return
+    }
+    // a channel's crowd: how many networks sit on it (the 2.4 GHz band has 13 channels, they overlap)
+    fun channel(mhz: Int) = if (mhz in 2412..2484) (mhz - 2407) / 5 else if (mhz >= 5000) (mhz - 5000) / 5 else 0
+    val byCh = nets.groupBy { (if (it.frequency < 4000) "2.4 GHz  " else "5 GHz  ") + channel(it.frequency) }
+    PCard {
+        Text(tr("${nets.size} networks around", "Çevrede ${nets.size} ağ"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Pick the channel with the fewest networks for your router.", "Yönlendiriciniz için en az ağın olduğu kanalı seçin."), color = T.sub, fontSize = 12.sp)
+    }
+    byCh.entries.sortedBy { it.key }.forEach { (k, l) ->
+        PCard { Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(k, color = T.text, fontSize = 14.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f))
+            Text(tr("${l.size} networks", "${l.size} ağ") + "  ·  " + l.maxOf { it.level } + " dBm", color = if (l.size > 3) Look.accent else T.sub, fontSize = 13.sp)
+        } }
+    }
+}
