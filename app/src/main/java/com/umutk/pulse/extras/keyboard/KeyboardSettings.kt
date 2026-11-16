@@ -467,6 +467,15 @@ fun KeyboardSettings(back: () -> Unit) {
                 Text("${tr("Picture darkness", "Resim karartma")}: ${KeyboardPrefs.bgDim}%", color = T.sub, fontSize = 12.sp)
                 PSlider(KeyboardPrefs.bgDim / 100f, { KeyboardPrefs.bgDim = (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             }
+            // the free colour: any red, green and blue
+            if (KeyboardPrefs.fxColor == 5) {
+                val cc = KeyboardPrefs.fxCustom
+                listOf(Triple(tr("Red", "Kırmızı"), 16, Color(0xFFFF5252)), Triple(tr("Green", "Yeşil"), 8, Color(0xFF52FF7A)), Triple(tr("Blue", "Mavi"), 0, Color(0xFF5290FF))).forEach { (name, shift, tint) ->
+                    val v = (cc shr shift) and 0xFF
+                    Text("$name: $v", color = tint, fontSize = 12.sp)
+                    PSlider(v / 255f, { x -> KeyboardPrefs.fxCustom = (cc and (0xFF shl shift).inv()) or ((x * 255).roundToInt() shl shift) or (0xFF shl 24) }, 0f..1f, onDone = { save() })
+                }
+            }
             Text("${tr("Effect length", "Efekt süresi")}: ${KeyboardPrefs.fxSpeed}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.fxSpeed - 40) / 260f, { KeyboardPrefs.fxSpeed = 40 + (it * 260).roundToInt() }, 0f..1f, onDone = { save() })
             chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind, { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }) { _ ->

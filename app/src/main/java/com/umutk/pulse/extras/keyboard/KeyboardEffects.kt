@@ -34,10 +34,10 @@ object KeyboardEffects {
         "Neon" to "Neon", "Ember" to "Kor", "Snow" to "Kar", "Matrix" to "Matrix", "Smoke" to "Duman",
         "RGB halo" to "RGB hale", "RGB edge" to "RGB şerit", "Rainbow" to "Gökkuşağı", "Pulse" to "Nabız",
     )
-    val colorNames = listOf("Theme" to "Tema", "Cyan" to "Camgöbeği", "Pink" to "Pembe", "Green" to "Yeşil", "RGB" to "RGB")
+    val colorNames = listOf("Theme" to "Tema", "Cyan" to "Camgöbeği", "Pink" to "Pembe", "Green" to "Yeşil", "RGB" to "RGB", "Custom" to "Özel")
     /** The colour of one press: the chosen neon, or (RGB) a hue that moves with the time of the press. */
     fun fxTint(mode: Int, accent: Color, seed: Int): Color = when (mode) {
-        1 -> Color(0xFF00E5FF); 2 -> Color(0xFFFF2DAA); 3 -> Color(0xFF39FF14)
+        1 -> Color(0xFF00E5FF); 2 -> Color(0xFFFF2DAA); 3 -> Color(0xFF39FF14); 5 -> Color(KeyboardPrefs.fxCustom)
         4 -> Color.hsv((seed * 7 % 360).toFloat().let { if (it < 0) it + 360f else it }, .85f, 1f)
         else -> accent
     }
