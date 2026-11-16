@@ -24,6 +24,20 @@ object CrashSaver {
         if (processName(app) == app.packageName) Thread { runCatching { recordExits(app) } }.apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
 
+    /** Reads the newest ends of the Pulse processes now (a freeze a moment ago shows at once), then the whole log. */
+    fun readNow(app: Context): String {
+        if (processName(app) == app.packageName) runCatching { recordExits(app) }
+        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash-log.txt")
+        val own = File(app.filesDir, "crash-log.txt")
+        return listOf(pub, own).filter { runCatching { it.isFile }.getOrDefault(false) }.joinToString("\n") { runCatching { it.readText() }.getOrDefault("") }
+    }
+
+    /** Empties the log (both places it can be). */
+    fun clear(app: Context) {
+        runCatching { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash-log.txt").writeText("") }
+        runCatching { File(app.filesDir, "crash-log.txt").writeText("") }
+    }
+
     private fun processName(app: Context): String =
         if (android.os.Build.VERSION.SDK_INT >= 28) android.app.Application.getProcessName() ?: app.packageName else app.packageName
 

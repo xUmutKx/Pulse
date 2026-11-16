@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "star" to (tr("Torrents download much faster: every episode at once, more peers, the best-shared stream first. Game Hub no longer freezes when the keyboard is swiped down. The floating keyboard tile no longer freezes the app behind it. New: Crash and freeze log in Settings > Functions > Report.",
+        "Torrentler çok daha hızlı iner: her bölüm aynı anda, daha çok eş, en çok paylaşılan yayın önce. Game Hub klavye aşağı kaydırılınca artık donmuyor. Yüzen klavye kutucuğu arkadaki uygulamayı artık dondurmuyor. Yeni: Ayarlar > İşlevler > Rapor'da Çökme ve donma kaydı.")),
     "download" to (tr("Downloads: a torrent nobody shares gives way to another stream of a close size; long press and slide to pick rows as in Files, with an All button; a setting keeps the file when a download is removed. The torrent engine can be downloaded from the top of the page.",
         "İndirmeler: kimsenin paylaşmadığı torrent yakın boyutta başka bir yayına geçer; Dosyalar'daki gibi basılı tutup kaydırarak seç, Tümü düğmesiyle; bir ayar silinen indirmenin dosyasını telefonda bırakır. Torrent motoru sayfanın üstünden indirilebilir.")),
     "keyboard" to (tr("Keyboard: fifteen new key-press effects (around the key, across the keyboard, dark styles) with moving previews; a video you just downloaded waits in the bar with a small play mark, ready to paste.",

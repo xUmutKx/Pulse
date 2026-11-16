@@ -300,6 +300,15 @@ fun ReportSettings() {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    val openTool = LocalOpenTool.current
+    // the crashes and freezes of Pulse, read again when opened (a freeze a moment ago is there)
+    PCard(Modifier.fillMaxWidth().clickable { openTool("crashlog") }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PIcon("bug", T.text, 22.dp)
+            Text(tr("Crash and freeze log", "Çökme ve donma kaydı"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+            PIcon("chevron", T.sub, 18.dp)
+        }
+    }
     PCard {
         Text("Share everything (system, battery, memory, storage, display, network, thermal, camera, codecs) as one text.", color = T.text, fontSize = 14.sp)
         PButton(if (busy) "Preparing…" else "Share report") {
