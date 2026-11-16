@@ -2485,3 +2485,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Kayıt listesinde basılı tutunca seçim modu: onay kutusu, sil ve tümünü seç.
 - Üst bardaki ekstra palet ikonu kaldırıldı (görünüm ayarlarda).
 - derlenmedi
+
+## Launcher / ayarlar (sonraki derleme)
+- Widget ekleme çökmesi düzeltildi (One UI logo shape drawable).
+- Win11 sağ tık menüleri akrilik, Explorer başlık çubuğu şeffaf, Sırala/Görünüm menüleri şeffaf.
+- Explorer sağ tık: Özellikler (Genel/Güvenlik/Ayrıntılar).
+- Widget seçici: uygulama ızgarası, 2 sütun kart, arama, birden fazla ekleme.
+- Masaüstü ızgara: varsayılan açık, dikey 4x8, yatay 8x4, ayarlanabilir.
+- Ayarlar > Görünüm grupları açılır/kapanır (kapalı başlar).
+- derlenmedi

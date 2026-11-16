@@ -453,43 +453,47 @@ fun SettingsPage() {
             }
             "look" -> {
                 if (T.material) MaterialSection(ctx) else {
-                Text("Appearance mode", color = T.sub, fontSize = 12.sp)
+                com.umutk.pulse.extras.ui.SettingsSection(tr("Mode", "Mod")) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
                         PChip(Look.mode == id, n) { Cfg.setMode(ctx, id) }
                     }
                 }
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
+                }
                 if (T.id == "win11") {
-                    Text(tr("Background", "Arka plan"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    // previews instead of words: the background as it is drawn, the material as a panel over a picture
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BackgroundPreview(tr("Black (AMOLED)", "Siyah (AMOLED)"), Color.Black, Opt.amoledBg) { Opt.amoledBg = true; Opt.save(ctx) }
-                        BackgroundPreview(tr("Dark grey", "Koyu gri"), Color(0xFF202020), !Opt.amoledBg) { Opt.amoledBg = false; Opt.save(ctx) }
-                    }
-                    Text("Window material (Windows 11 only)", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Effects.list.forEach { (id, n) -> MaterialPreview(id, n, Look.effect == id) { Cfg.setEffect(ctx, id) } }
-                    }
-                    // every icon group shows its styles at once: one tap picks a style
-                    Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    IconCat.entries.forEach { cat ->
-                        val cur = IconStyle.of(cat)
-                        Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconStyle.choices(cat).forEach { (id, _, _) -> IconStyleTile(cat, id, cur == id) { Cfg.setIconStyle(ctx, cat, id) } }
+                    com.umutk.pulse.extras.ui.SettingsSection(tr("Background", "Arka plan")) {
+                        // previews instead of words: the background as it is drawn, the material as a panel over a picture
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            BackgroundPreview(tr("Black (AMOLED)", "Siyah (AMOLED)"), Color.Black, Opt.amoledBg) { Opt.amoledBg = true; Opt.save(ctx) }
+                            BackgroundPreview(tr("Dark grey", "Koyu gri"), Color(0xFF202020), !Opt.amoledBg) { Opt.amoledBg = false; Opt.save(ctx) }
                         }
                     }
-                    if (Look.effect == "blur") {
-                        Text(tr("Blur amount", "Bulanıklık"), color = T.sub, fontSize = 12.sp)
-                        PSlider(Look.blurDp / 30f, { Look.blurDp = it * 30f }, 0f..1f) { Cfg.setBlur(ctx) }
-                        Text(tr("Tint (darkness)", "Koyuluk"), color = T.sub, fontSize = 12.sp)
-                        PSlider(Look.blurTint, { Look.blurTint = it }, 0f..1f) { Cfg.setBlur(ctx) }
+                    com.umutk.pulse.extras.ui.SettingsSection(tr("Window material", "Pencere malzemesi")) {
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Effects.list.forEach { (id, n) -> MaterialPreview(id, n, Look.effect == id) { Cfg.setEffect(ctx, id) } }
+                        }
+                        if (Look.effect == "blur") {
+                            Text(tr("Blur amount", "Bulanıklık"), color = T.sub, fontSize = 12.sp)
+                            PSlider(Look.blurDp / 30f, { Look.blurDp = it * 30f }, 0f..1f) { Cfg.setBlur(ctx) }
+                            Text(tr("Tint (darkness)", "Koyuluk"), color = T.sub, fontSize = 12.sp)
+                            PSlider(Look.blurTint, { Look.blurTint = it }, 0f..1f) { Cfg.setBlur(ctx) }
+                        }
+                        Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is the most see-through.", color = T.sub, fontSize = 11.sp)
                     }
-                    Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is the most see-through.", color = T.sub, fontSize = 11.sp)
+                    // every icon group shows its styles at once: one tap picks a style
+                    com.umutk.pulse.extras.ui.SettingsSection(tr("Icons (Windows 11)", "İkonlar (Windows 11)")) {
+                        IconCat.entries.forEach { cat ->
+                            val cur = IconStyle.of(cat)
+                            Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                            Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                IconStyle.choices(cat).forEach { (id, _, _) -> IconStyleTile(cat, id, cur == id) { Cfg.setIconStyle(ctx, cat, id) } }
+                            }
+                        }
+                    }
                 }
                 }
-                Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                com.umutk.pulse.extras.ui.SettingsSection(tr("Theme", "Tema")) {
                 // theme locks: a look other than the one in use is locked until one ad opens them all for 2 minutes
                 val themeGate = com.umutk.pulse.ads.rememberAdGate(tr("Unlock themes", "Temaları aç"), tr("Watch a short ad to pick any theme for 2 minutes.", "2 dakika boyunca istediğin temayı seçmek için kısa bir reklam izle."), key = com.umutk.pulse.ads.ThemeLock.KEY, minutes = com.umutk.pulse.ads.ThemeLock.MINUTES, pass = false)
                 // the lock state is read again every few seconds, so the padlocks close when the 2 minutes run out
@@ -528,8 +532,9 @@ fun SettingsPage() {
                 if (editWall) { if (wallLook) com.umutk.pulse.features.ThemeWallEditor(T.id) { editWall = false } else com.umutk.pulse.features.BackdropEditor { editWall = false } }
                 // one picker for the selected look only, not under every card
                 ThemeWallpaperRow(T.id)
+                }
                 if (T.material || !T.tabs || T.id == "win10" || T.id == "win11") {
-                    Text("Accent colour", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    com.umutk.pulse.extras.ui.SettingsSection(tr("Accent colour", "Vurgu rengi")) {
                     // one accent row for every look; with Material You on, the wallpaper picks the colour and the row is greyed out
                     val lockedByYou = T.material && Look.dynamic && android.os.Build.VERSION.SDK_INT >= 31
                     Row(Modifier.alpha(if (lockedByYou) .38f else 1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -538,9 +543,10 @@ fun SettingsPage() {
                             Box(Modifier.size(34.dp).background(c, androidx.compose.foundation.shape.CircleShape).then(if (Look.accentIdx == i) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable(enabled = !lockedByYou) { Cfg.setAccent(ctx, i) })
                         }
                     }
+                    }
                 }
                 // the picture behind the Windows 11 windows: phone wallpaper, the bundled A-D packs, or your own
-                if (T.id == "win11") BackdropSettings()
+                if (T.id == "win11") com.umutk.pulse.extras.ui.SettingsSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
             }
             "general" -> GeneralSettings()
             "functions" -> FunctionsSettings()
@@ -556,7 +562,6 @@ fun SettingsPage() {
 private fun MaterialSection(ctx: android.content.Context) {
     val canDynamic = android.os.Build.VERSION.SDK_INT >= 31
     val dynamicOn = T.id == "material" && Look.dynamic && canDynamic
-    Text("Material", color = Look.accent, fontSize = 15.sp)
     if (T.id == "material") Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("Material You", color = T.text, fontSize = 15.sp)
@@ -564,16 +569,18 @@ private fun MaterialSection(ctx: android.content.Context) {
         }
         PSwitch(Look.dynamic && canDynamic, { Cfg.setDynamic(ctx, it) }, enabled = canDynamic)
     }
-    Text("Mode", color = T.sub, fontSize = 12.sp)
+    com.umutk.pulse.extras.ui.SettingsSection(tr("Mode", "Mod")) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
             val mid = if (T.id == "oneui" || T.id == "coloros") T.id else "material"
             PChip(T.id == mid && Look.mode == id, n) { Cfg.setTheme(ctx, mid); Cfg.setMode(ctx, id) }
         }
     }
-    Text("Corner size", color = T.sub, fontSize = 12.sp)
+    }
+    com.umutk.pulse.extras.ui.SettingsSection(tr("Corner size", "Köşe boyutu")) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("small" to "Small", "medium" to "Medium", "large" to "Large").forEach { (id, n) -> PChip(Look.corner == id, n) { Cfg.setCorner(ctx, id) } }
+    }
     }
 }
 
