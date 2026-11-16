@@ -182,6 +182,14 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         }
     }
 
+    /** Details > Hide from shelf for a game of the phone: it is hidden from the phone's own launcher (pm hide, needs root or Shizuku; the shelf keeps it, marked hidden). True when it worked. */
+    @JavascriptInterface fun hideOnPhone(pkg: String): Boolean {
+        if (MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)) return false
+        val ok = runCatching { setGameHidden(c, pkg, true) }.getOrDefault(false)
+        if (ok) ShelfSync.bump()
+        return ok
+    }
+
     @JavascriptInterface fun guideFetch(pkg: String) { if (MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)) return; GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
     /** A text box of the page got the focus: the view takes the focus and the keyboard is asked for (a page in a view does not always bring it up by itself). */

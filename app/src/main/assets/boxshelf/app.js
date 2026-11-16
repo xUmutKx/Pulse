@@ -4698,6 +4698,8 @@ async function setHidden(id,on){if(!cfgInfo||id==null)return false;id=String(id)
   if(lastLib){if(mode==="browse"||mode==="details")await refresh(true,lastLib);else pendingLib=lastLib}
   return true}
 function hideGame(g){if(!g||!isGame(g))return;const id=String(g.id),title=g.title;closeDetails(true);play_("back");rumble(0,.25,60);
+  /* Pulse: a game of the phone is hidden from the phone's own launcher (Game Hub's hiding: pm hide, root or Shizuku; it stays on this shelf, marked); without root or Shizuku it is only hidden from the shelf, as before */
+  if(g.pulse&&g.appId&&!/^(mega|html):/.test(String(g.appId))&&window.PulseHost&&window.PulseHost.hideOnPhone){let ok=false;try{ok=!!window.PulseHost.hideOnPhone(String(g.appId))}catch(e){}if(ok){toast(`${title} is hidden from the phone's launcher`);return}}
   setHidden(id,true).then(()=>{const fn=()=>{if(undoHide!==fn)return;toastEnd();setHidden(id,false).then(()=>{toast(`${title} is back on the shelf`);play_("toast")})};
     // (beta.10) through the toast queue: it waits for nothing (your own action), and a toast from the background waits for it
     const pad=showPad(),el=$("toast");toastShow({msg:`Hidden: ${title}  `,kind:"undo"});undoHide=fn;const b=document.createElement("button");b.type="button";b.className="t-undo";b.innerHTML=pad?`${glyph("sq")}<span>Undo</span>`:`<span class="g">U</span><span>Undo</span>`;b.addEventListener("click",e=>{e.stopPropagation();fn()});el.append(b);
