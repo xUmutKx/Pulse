@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "video" to (tr("YTXTube's icon is a white line mark on AMOLED black.",
+        "YTXTube simgesi AMOLED siyah üstüne beyaz çizgi.")),
     "palette" to (tr("Windows XP start menu as XP drew it, the desktop games removed, YTXTube's own icon.",
         "Windows XP başlat menüsü XP'deki gibi, masaüstündeki oyunlar kaldırıldı, YTXTube'un kendi simgesi.")),
     "palette" to (tr("Downloads: Series and movies opens full screen. Keyboard: a picture behind the keys, darkened by a slider in Effects.",
