@@ -181,24 +181,25 @@ fun PowerampApp(
         // each page can keep or drop the blurred cover (Settings > Art background); a page left out is plain black
         val pageKey = tab?.name?.lowercase() ?: "now"
         // "Blended" (Settings > Look): the cover edge to edge at the top, fading into its own blurred copy that fills the screen (the now-playing page only)
-        if (tab == null && PowerampPrefs.blended(ctx)) cover?.let { cv ->
+        if (PowerampPrefs.blended(ctx)) cover?.let { cv ->
+            val now = tab == null
             // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
             // while the page is slid down it is a sheet: rounded at the top, with a small pill bar over its edge (neither shows when it is at rest)
             val sheet = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             // the covers (the one in front and the neighbour being swiped toward) slide with the finger, backdrop and all: each is a whole blended page
-            Box(Modifier.fillMaxSize().graphicsLayer { translationY = pullOffset; shape = sheet; clip = pullOffset > 1f }) {
+            Box(Modifier.fillMaxSize().graphicsLayer { translationY = if (now) pullOffset else 0f; shape = sheet; clip = now && pullOffset > 1f }) {
                 val page: @Composable (ImageBitmap, Int) -> Unit = { art, i ->
                     Box(Modifier.fillMaxSize().graphicsLayer {
                         translationX = blendSlide + i * blendW * 1.04f
                         val k = if (blendW > 0f) (1f - kotlin.math.abs(translationX) / blendW * .06f).coerceIn(.9f, 1f) else 1f
                         scaleX = k; scaleY = k
-                    }) { BlendedCover(art, PowerampPrefs.blendBlur(ctx)) }
+                    }) { BlendedCover(art, PowerampPrefs.blendBlur(ctx), sharp = now) }
                 }
-                if (blendW > 0f && blendSlide > .5f) artPrev?.let { page(it, -1) }
-                if (blendW > 0f && blendSlide < -.5f) artNext?.let { page(it, 1) }
-                page(blendShown ?: cv, 0)
+                if (now && blendW > 0f && blendSlide > .5f) artPrev?.let { page(it, -1) }
+                if (now && blendW > 0f && blendSlide < -.5f) artNext?.let { page(it, 1) }
+                page(if (now) blendShown ?: cv else cv, 0)
             }
-            Box(Modifier.fillMaxWidth().graphicsLayer { translationY = pullOffset + 8.dp.toPx(); alpha = (pullOffset / 60f).coerceIn(0f, 1f) }, contentAlignment = Alignment.TopCenter) {
+            if (now) Box(Modifier.fillMaxWidth().graphicsLayer { translationY = pullOffset + 8.dp.toPx(); alpha = (pullOffset / 60f).coerceIn(0f, 1f) }, contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.size(width = 44.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = .65f)))
             }
         } else if (artBg && PowerampPrefs.artPage(ctx, pageKey)) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop) }
@@ -327,7 +328,7 @@ private fun SearchGated(library: List<Track>, current: Track?, style: PowerampSt
  * on as the same colours (no seam, no second picture to match). The sharp cover fades out over that; the foot gets darker slowly, so the text lies on it, with no step at the cover's edge.
  */
 @Composable
-private fun BlendedCover(cv: androidx.compose.ui.graphics.ImageBitmap, blurDp: Int) {
+private fun BlendedCover(cv: androidx.compose.ui.graphics.ImageBitmap, blurDp: Int, sharp: Boolean = true) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val coverBottom = (maxWidth / maxHeight).coerceIn(0.05f, 1f)
         // the mirror takes the rest of the screen (a tall phone is taller than two covers: no black strip under it)
@@ -336,8 +337,10 @@ private fun BlendedCover(cv: androidx.compose.ui.graphics.ImageBitmap, blurDp: I
             Image(cv, null, Modifier.fillMaxWidth().weight(1f).graphicsLayer { scaleY = -1f }, contentScale = ContentScale.Crop)
         }
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
-            0f to Color.Transparent, coverBottom to Color.Transparent, (coverBottom + .30f).coerceAtMost(.98f) to Color.Black.copy(alpha = .38f), 1f to Color.Black.copy(alpha = .55f))))
-        Image(cv, null,
+            0f to Color.Transparent, coverBottom to Color.Transparent, (coverBottom + .22f).coerceAtMost(.98f) to Color.Black.copy(alpha = if (sharp) .60f else .72f), 1f to Color.Black.copy(alpha = if (sharp) .82f else .86f))))
+        // the lists have no sharp cover on top: the blurred picture alone, dark all over, so the rows read well
+        if (!sharp) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)))
+        if (sharp) Image(cv, null,
             Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()
