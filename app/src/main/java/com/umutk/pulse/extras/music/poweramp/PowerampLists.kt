@@ -202,6 +202,9 @@ fun LibraryScreen(
     LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
         com.umutk.pulse.extras.music.MusicNav.artist?.let { node = Lib.Group(1, it); com.umutk.pulse.extras.music.MusicNav.artist = null }
     }
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.album) {
+        com.umutk.pulse.extras.music.MusicNav.album?.let { node = Lib.Group(0, it); com.umutk.pulse.extras.music.MusicNav.album = null }
+    }
     val fg = style.onBackdrop
     // the tree starts at the longest directory shared by every file
     val root = remember(tracks) {
@@ -215,7 +218,16 @@ fun LibraryScreen(
         if (!mounted || stepBack) { mounted = true; stepBack = false; enter.snapTo(1f) }
         else { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
     }
-    fun goBack(to: Lib) { stepBack = true; node = to }
+    fun goBack(to: Lib) {
+        // an artist or album page opened from the search goes back to the search
+        if (node is Lib.Group && com.umutk.pulse.extras.music.MusicNav.fromSearch) {
+            com.umutk.pulse.extras.music.MusicNav.fromSearch = false
+            com.umutk.pulse.extras.music.MusicNav.returnSearch = true
+            stepBack = true; node = Lib.Root
+            return
+        }
+        stepBack = true; node = to
+    }
     BackHandler(enabled = node != Lib.Root) {
         goBack(when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
@@ -607,7 +619,14 @@ private fun CatRow(icon: ImageVector, color: Color, label: String, style: Powera
  */
 @Composable
 fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, modifier: Modifier = Modifier, onPlayList: (List<Track>, Int) -> Unit = { _, _ -> }) {
-    var query by remember { mutableStateOf("") }
+    // the text lives in MusicNav: an artist or album page opened from here returns to the same search
+    var query by remember { mutableStateOf(com.umutk.pulse.extras.music.MusicNav.searchQuery) }
+    LaunchedEffect(query) { com.umutk.pulse.extras.music.MusicNav.searchQuery = query }
+    fun openFromSearch(album: String?, artist: String?) {
+        com.umutk.pulse.extras.music.MusicNav.fromSearch = true
+        if (album != null) com.umutk.pulse.extras.music.MusicNav.album = album
+        if (artist != null) com.umutk.pulse.extras.music.MusicNav.artist = artist
+    }
     var lyricHits by remember { mutableStateOf<List<LyricHit>>(emptyList()) }
     var lyricsBusy by remember { mutableStateOf(false) }
     var lyricsOpen by remember { mutableStateOf<LyricsResult?>(null) }
@@ -673,6 +692,26 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         Spacer(Modifier.height(8.dp))
         // play and shuffle for everything found, then the songs, the albums and the artists (each with its own play and shuffle), and last the lyrics that contain the text
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // the artists on top: one row of round pictures that scrolls sideways
+            if (artistGroups.isNotEmpty()) item {
+                androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    itemsIndexed(artistGroups) { _, (name, list) ->
+                        val ctxA = androidx.compose.ui.platform.LocalContext.current
+                        val photo by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
+                            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, name)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) else null
+                            }
+                        }
+                        val art = photo ?: rememberTrackArt(list.firstOrNull())
+                        Column(Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable { openFromSearch(null, name) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(72.dp).clip(CircleShape).background(style.chip), contentAlignment = Alignment.Center) {
+                                if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Person, null, tint = style.textDim, modifier = Modifier.size(32.dp))
+                            }
+                            Text(name, color = fg, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+            }
             if (allFound.isNotEmpty()) item {
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.clip(CircleShape).background(style.accent).clickable { onPlayList(allFound, 0) }.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -692,36 +731,13 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 item { SearchHeader(tr("Albums", "Albümler"), style, { onPlayList(albumGroups.flatMap { it.second }, 0) }, { onPlayList(albumGroups.flatMap { it.second }.shuffled(), 0) }) }
                 itemsIndexed(albumGroups) { _, (name, list) ->
                     val art = rememberTrackArt(list.firstOrNull())
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPlayList(list, 0) }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { openFromSearch(name, null) }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(style.chip), contentAlignment = Alignment.Center) {
                             if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Album, null, tint = style.textDim, modifier = Modifier.size(24.dp))
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
                             Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(list.firstOrNull()?.artist.orEmpty().takeIf { it.isNotBlank() && !it.equals("<unknown>", true) }?.let { "$it · ${list.size}" } ?: "${list.size}", color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlayList(list, 0) }
-                    }
-                }
-            }
-            if (artistGroups.isNotEmpty()) {
-                item { SearchHeader(tr("Artists", "Sanatçılar"), style, { onPlayList(artistGroups.flatMap { it.second }, 0) }, { onPlayList(artistGroups.flatMap { it.second }.shuffled(), 0) }) }
-                itemsIndexed(artistGroups) { _, (name, list) ->
-                    val ctxA = androidx.compose.ui.platform.LocalContext.current
-                    // the artist's own picture, fetched by name; the cover of one of their songs meanwhile
-                    val photo by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
-                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, name)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) else null
-                        }
-                    }
-                    val art = photo ?: rememberTrackArt(list.firstOrNull())
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { com.umutk.pulse.extras.music.MusicNav.artist = name }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(48.dp).clip(CircleShape).background(style.chip), contentAlignment = Alignment.Center) {
-                            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Person, null, tint = style.textDim, modifier = Modifier.size(24.dp))
-                        }
-                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${list.size}", color = style.textDim, fontSize = 12.sp)
                         }
                         SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlayList(list, 0) }
                     }

@@ -93,6 +93,14 @@ fun PowerampApp(
     LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
         if (com.umutk.pulse.extras.music.MusicNav.artist != null) tab = PowerampTab.LIBRARY
     }
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.album) {
+        if (com.umutk.pulse.extras.music.MusicNav.album != null) tab = PowerampTab.LIBRARY
+    }
+    LaunchedEffect(tab) { if (tab != PowerampTab.LIBRARY) com.umutk.pulse.extras.music.MusicNav.fromSearch = false }
+    // Back from an artist or album page opened from the search returns to the search, with its text
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.returnSearch) {
+        if (com.umutk.pulse.extras.music.MusicNav.returnSearch) { com.umutk.pulse.extras.music.MusicNav.returnSearch = false; tab = PowerampTab.SEARCH }
+    }
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
