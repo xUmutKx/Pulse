@@ -69,6 +69,9 @@ class KbState {
     var clipItems by mutableStateOf(listOf<ClipItem>())
     /** Quick auth: the accounts and their codes right now (name, code). */
     var authCodes by mutableStateOf(listOf<Pair<String, String>>())
+    /** The password manager panel: what is searched for, and the logins shown (name, user name, true when it fits the app in front). */
+    var vaultQuery by mutableStateOf("")
+    var vaultRows by mutableStateOf(listOf<Triple<String, String, Boolean>>())
     /** The period (seconds) of each code above, in the same order. */
     var authPeriods by mutableStateOf(listOf<Int>())
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
@@ -125,6 +128,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 interface KbActions {
     /** Quick auth: a code is typed into the field. */
     fun authPick(code: String) {}
+    /** The password manager: a tap fills what the field in front asks for (the password in a password box, the user name elsewhere), [other] the one it does not. */
+    fun vaultPick(i: Int, other: Boolean) {}
     /** Quick auth: called every second while the panel shows, so the codes roll over with their periods. */
     fun authTick() {}
     /** The translation bar: open, close, swap, from, to, apply. */

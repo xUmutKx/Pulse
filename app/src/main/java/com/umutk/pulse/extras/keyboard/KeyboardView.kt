@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.AttachMoney
 import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.KeyboardTab
 import androidx.compose.material.icons.rounded.KeyboardCapslock
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -381,6 +382,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "clip" -> { if (st.numpad) NumPanelClose(th, st); ClipPanel(th, st, act, keyH) }
             "gamepad" -> GamepadPanel(th, act)
             "auth" -> { if (st.numpad) NumPanelClose(th, st); AuthPanel(th, st, act, keyH) }
+            "vault" -> VaultPanel(th, st, act, keyH)
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -986,7 +988,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
                     down = true
                     // the key-press effect starts where this key is
-                    if (KeyboardPrefs.pressFx > 0) { if (st.bursts.size > 12) st.bursts.removeAt(0); st.bursts.add(KbBurst(rect, System.nanoTime() / 1_000_000)) }
+                    if (KeyboardPrefs.pressFx > 0) { if (st.bursts.size > 4) st.bursts.removeAt(0); st.bursts.add(KbBurst(rect, System.nanoTime() / 1_000_000)) }
                     // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
                     try {
                     val key = kNow; val a = actNow
@@ -1036,9 +1038,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     due = Long.MAX_VALUE / 2
                                 }
                                 // the number pad's digits have no pop-up characters, so the hold is read here: 1 opens the clipboard, 2 the authenticator (it runs at once, the release then does nothing)
-                                else -> if (key.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (key.label == "1" || key.label == "2")) {
+                                else -> if (key.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (key.label == "1" || key.label == "2" || key.label == "3")) {
                                     long = true; held = true; st.preview = null; a.feedback(); due = Long.MAX_VALUE / 2
-                                    a.menu(if (key.label == "1") "clip" else "auth")
+                                    a.menu(when (key.label) { "1" -> "clip"; "2" -> "auth"; else -> "vault" })
                                 } else if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
@@ -1163,6 +1165,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     if (!KeyboardPrefs.corners && !special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
+                    // the number pad's 1, 2 and 3: a tiny icon in the lower left says what holding the key opens (clipboard, authenticator, passwords)
+                    if (k.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (k.label == "1" || k.label == "2" || k.label == "3")) {
+                        val hint = when (k.label) { "1" -> kbIcon(th, "ContentPaste"); "2" -> Icons.Rounded.Lock; else -> Icons.Rounded.Key }
+                        Icon(hint, null, tint = th.text.copy(alpha = .45f), modifier = Modifier.align(Alignment.BottomStart).padding(start = 7.dp, bottom = 5.dp).size(13.dp))
+                    }
                     // a small icon above the comma or the period says what its long press does
                     if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
                     Text(k.label, color = fg, fontSize = if (small) (if (th.samsung) 24.sp else (fs.value * .82f).sp) else fs, maxLines = 1)
@@ -1206,7 +1213,7 @@ private fun androidx.compose.foundation.layout.BoxScope.PressFx(th: KbTheme, st:
         }
     }
     Canvas(Modifier.matchParentSize()) {
-        with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, b.rect, ((now - b.t0) / dur).coerceIn(0f, 1f), th.accent, b.t0.toInt()) } }
+        with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, b.rect, ((now - b.t0) / dur).coerceIn(0f, 1f), KeyboardEffects.fxTint(KeyboardPrefs.fxColor, th.accent, b.t0.toInt()), b.t0.toInt()) } }
     }
 }
 
@@ -1724,6 +1731,39 @@ private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 }
             }
         }
+    }
+}
+
+/** The password manager: a search box (the keys type into it) over the logins of the vault; a tap fills the field in front, a hold fills the other part (user name or password). */
+@Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun VaultPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    Column(Modifier.fillMaxWidth().background(th.menu)) {
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Key, null, tint = th.accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(tr("Passwords", "Şifreler") + " · ${st.vaultRows.size}", color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(tr("Close", "Kapat"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { st.panel = "keys" }.padding(8.dp))
+        }
+        Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (st.vaultQuery.isEmpty()) "\u258F" + tr("Search", "Ara") else st.vaultQuery + "\u258F", color = if (st.vaultQuery.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
+        }
+        if (st.vaultRows.isEmpty()) Box(Modifier.fillMaxWidth().height(keyH * 1.2f), contentAlignment = Alignment.Center) {
+            Text(tr("No login found: add them in the Pulse vault", "Giriş bulunamadı: Pulse kasasına ekle"), color = th.sub, fontSize = 13.sp)
+        } else LazyColumn(Modifier.fillMaxWidth().height(keyH * 1.5f)) {
+            itemsIndexed(st.vaultRows) { i, (name, user, fits) ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp).clip(RoundedCornerShape(12.dp)).background(th.key)
+                    .combinedClickable(onClick = { act.vaultPick(i, false) }, onLongClick = { act.longFeedback(); act.vaultPick(i, true) }).padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(name, color = th.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (user.isNotEmpty()) Text(user, color = th.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (fits) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent))
+                }
+            }
+        }
+        KeysPanel(th, st, act, keyH)
     }
 }
 

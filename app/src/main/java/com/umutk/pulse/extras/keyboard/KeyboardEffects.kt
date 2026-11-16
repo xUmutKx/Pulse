@@ -32,10 +32,18 @@ object KeyboardEffects {
         "None" to "Yok", "Ring" to "Halka", "Sparks" to "Kıvılcım", "Ripple" to "Dalga", "Halo" to "Hale", "Stars" to "Yıldızlar",
         "Wave" to "Büyük dalga", "Flash" to "Parlama", "Edge" to "Kenar ışığı", "Sweep" to "Süpürme", "Rings" to "Halkalar",
         "Neon" to "Neon", "Ember" to "Kor", "Snow" to "Kar", "Matrix" to "Matrix", "Smoke" to "Duman",
+        "RGB halo" to "RGB hale", "RGB edge" to "RGB şerit", "Rainbow" to "Gökkuşağı", "Pulse" to "Nabız",
     )
+    val colorNames = listOf("Theme" to "Tema", "Cyan" to "Camgöbeği", "Pink" to "Pembe", "Green" to "Yeşil", "RGB" to "RGB")
+    /** The colour of one press: the chosen neon, or (RGB) a hue that moves with the time of the press. */
+    fun fxTint(mode: Int, accent: Color, seed: Int): Color = when (mode) {
+        1 -> Color(0xFF00E5FF); 2 -> Color(0xFFFF2DAA); 3 -> Color(0xFF39FF14)
+        4 -> Color.hsv((seed * 7 % 360).toFloat().let { if (it < 0) it + 360f else it }, .85f, 1f)
+        else -> accent
+    }
 
     /** How long one press effect lasts, in ms (the ones across the keyboard travel further). */
-    fun pressMs(kind: Int): Float = if (kind in 6..10) 650f else 520f
+    fun pressMs(kind: Int): Float = (if (kind in 6..10 || kind in 17..18) 650f else 520f) * (KeyboardPrefs.fxSpeed / 100f).coerceIn(.4f, 3f)
 
     private fun DrawScope.star(x: Float, y: Float, r: Float, col: Color) {
         val p = Path().apply {
@@ -97,14 +105,22 @@ object KeyboardEffects {
                 val y = c.y + kh * 1.4f * p * sp
                 drawCircle(Color.White.copy(alpha = .9f * fade), kh * .05f + 1f, Offset(x, y))
             }
-            14 -> repeat(5) { j ->
-                val x = key.left + kw * (j + .5f) / 5f
+            14 -> repeat(4) { j ->
+                val x = key.left + kw * (j + .5f) / 4f
                 val off = rnd.nextFloat() * kh * .4f
-                repeat(4) { k ->
+                repeat(3) { k ->
                     val y = key.top - off + p * kh * 1.8f - k * kh * .2f
                     drawRect(Color(0xFF00FF66).copy(alpha = fade * (1f - k * .22f)), Offset(x - kh * .03f, y), Size(kh * .06f, kh * .13f))
                 }
             }
+            16 -> { val r = kh * (.8f + .5f * p)
+                drawCircle(Brush.sweepGradient(List(7) { Color.hsv(((it * 60 + p * 240f + seed * 5) % 360f + 360f) % 360f, .85f, 1f).copy(alpha = fade) }, c), r, c, style = Stroke(3.dp.toPx())) }
+            17 -> { val w = 3.dp.toPx(); val sh = ((p * 360f * 1.5f + seed) % 360f)
+                drawRoundRect(Brush.sweepGradient(List(7) { Color.hsv((sh + it * 60f) % 360f, .85f, 1f).copy(alpha = .9f * fade) }, Offset(size.width / 2, size.height / 2)),
+                    Offset(w / 2, w / 2), Size(size.width - w, size.height - w), CornerRadius(16.dp.toPx()), Stroke(w)) }
+            18 -> { val x = -size.width * .3f + size.width * 1.6f * p
+                drawRect(Brush.horizontalGradient(List(7) { Color.hsv(it * 55f, .8f, 1f).copy(alpha = .35f * fade) }, x - size.width * .25f, x + size.width * .25f)) }
+            19 -> { val r = kh * (.6f + .9f * (1f - fade * fade)); drawCircle(accent.copy(alpha = .5f * fade), r, c); drawCircle(accent.copy(alpha = fade), r, c, style = Stroke(1.5.dp.toPx())) }
             15 -> repeat(5) {
                 val x = c.x + (rnd.nextFloat() - .5f) * kw * .9f
                 val y = c.y - kh * .9f * p * (.6f + rnd.nextFloat() * .6f)
