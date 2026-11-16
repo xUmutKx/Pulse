@@ -230,7 +230,9 @@ open class ExtraToolActivity : ComponentActivity() {
                         if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }, if (route != start) back else null) {
                             Box(Modifier.fillMaxSize().background(th.bg)) { SubScreen(route, back) }
                         }
-                        else Box(Modifier.fillMaxSize().background(if (glass && shown == "win11") th.bg.copy(alpha = th.glassA) else th.bg).statusBarsPadding().navigationBarsPadding().imePadding()) { SubScreen(route, back) }
+                        else Box(Modifier.fillMaxSize().background(if (glass && shown == "win11") th.bg.copy(alpha = th.glassA) else th.bg).statusBarsPadding().navigationBarsPadding()
+                            // Game Hub's page is not squeezed by the keyboard: it was resized on every frame of the keyboard's slide (its 3D shelf froze), and its search sits at the top anyway
+                            .then(if (route.substringBefore(':') == "gamehub" || com.umutk.pulse.ImeFree.on) Modifier else Modifier.imePadding())) { SubScreen(route, back) }
                     }
                 }
             }

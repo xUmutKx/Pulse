@@ -181,6 +181,18 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
     @JavascriptInterface fun guideFetch(pkg: String) { if (MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)) return; GameGuide.fetchAsync(c, pkg, loadGames(c).firstOrNull { it.pkg == pkg }?.name ?: pkg) }
     /** Pure black screen (the AMOLED setting; by default on when Pulse's own look is AMOLED). */
     /** A text box of the page got the focus: the view takes the focus and the keyboard is asked for (a page in a view does not always bring it up by itself). */
+    /**
+     * Whether a real game controller is attached (a pad or joystick that has an A button and is not a virtual device): only then does the shelf show its own
+     * letter grid and controller prompts; a phone without one types with its own keyboard (a stray gamepad event had brought both keyboards up at once).
+     */
+    @JavascriptInterface fun hasController(): Boolean = runCatching {
+        android.view.InputDevice.getDeviceIds().any { id ->
+            val d = android.view.InputDevice.getDevice(id) ?: return@any false
+            val s = d.sources
+            val pad = (s and android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD || (s and android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
+            pad && !d.isVirtual && d.hasKeys(android.view.KeyEvent.KEYCODE_BUTTON_A).firstOrNull() == true
+        }
+    }.getOrDefault(true)
     @JavascriptInterface fun showKeyboard() {
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             runCatching {
@@ -341,6 +353,16 @@ internal fun BoxshelfWeb(modifier: Modifier = Modifier, onLaunch: (String) -> Un
     val ctx = LocalContext.current
     // each time the shelf opens, its opening animation comes first: the + waits for the page to say it ended (or a few seconds)
     androidx.compose.runtime.DisposableEffect(Unit) { ShelfIntro.done.value = false; onDispose { ShelfIntro.done.value = false } }
+    // the keyboard lays over the shelf instead of resizing it (a resize on every frame of the keyboard's slide froze the 3D page); the old way comes back when it closes
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        var cx: android.content.Context? = ctx
+        while (cx is android.content.ContextWrapper && cx !is android.app.Activity) cx = cx.baseContext
+        val win = (cx as? android.app.Activity)?.window
+        val before = win?.attributes?.softInputMode
+        win?.setSoftInputMode(((before ?: 0) and android.view.WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST.inv()) or android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        com.umutk.pulse.ImeFree.on = true
+        onDispose { com.umutk.pulse.ImeFree.on = false; if (before != null) win.setSoftInputMode(before) }
+    }
     androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(4000); ShelfIntro.done.value = true }
     // the pictures of the games (the wide picture, the logo, the four screenshots, the rating) are looked for when the shelf opens, without a button
     androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { ArtFetch.start(ctx, loadGames(ctx)) } }
