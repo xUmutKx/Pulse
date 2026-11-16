@@ -374,20 +374,20 @@ private val SORTS = listOf("name", "installed", "opened")
 private class LCat(val key: String, val color: Long, val icon: String, val en: String, val trName: String, val enSub: String, val trSub: String)
 
 private val LAUNCHER_CATS = listOf(
-    LCat("look", 0xFF7E57C2, "palette", "Look", "Görünüm", "Look, wallpaper", "Görünüm, duvar kağıdı"),
-    LCat("home", 0xFF43A047, "apps", "Home screen", "Ana ekran", "Grid, icons, pages, windows, orientation", "Izgara, simgeler, sayfalar, pencereler, yön"),
-    LCat("dock", 0xFFEF6C00, "pin", "Dock", "Dok", "Pinned apps", "Sabitli uygulamalar"),
-    LCat("apps", 0xFF3949AB, "sort", "App drawer", "Uygulama çekmecesi", "Sort, columns, hidden apps, icon pack", "Sıralama, sütunlar, gizli uygulamalar, simge paketi"),
-    LCat("folders", 0xFFF9A825, "folder", "Folders", "Klasörler", "How a folder looks", "Klasörün görünümü"),
-    LCat("widgets", 0xFF1E88E5, "gridView", "Widgets", "Widget'lar", "Add and remove widgets", "Widget ekle ve kaldır"),
-    LCat("desktop", 0xFF26A69A, "folder", "Desktop icons", "Masaüstü simgeleri", "Which shortcuts sit on the Windows desktops", "Windows masaüstlerindeki kısayollar"),
-    LCat("feel", 0xFF8E24AA, "palette", "Look and feel", "Görünüm ve his", "Icon shape, wallpaper effects, sounds, boot screens", "Simge şekli, duvar kağıdı efektleri, sesler, açılış ekranları"),
-    LCat("gestures", 0xFFD81B60, "sensors", "Gestures and inputs", "Hareketler ve girişler", "Double tap, swipes, vibration", "Çift dokunuş, kaydırmalar, titreşim"),
-    LCat("menu", 0xFF5C6BC0, "menu", "Context menu", "Sağ tık menüsü", "Which actions an app's menu has and their order", "Uygulama menüsündeki eylemler ve sırası"),
-    LCat("badges", 0xFFE53935, "bell", "Notification badges", "Bildirim rozetleri", "Numbers or dots on the apps", "Uygulamalarda sayı ya da nokta"),
-    LCat("screen", 0xFF00897B, "clock", "Clock and screen", "Saat ve ekran", "Clock formats, screen on, layout lock", "Saat biçimi, ekran açık kalsın, düzen kilidi"),
-    LCat("backup", 0xFF546E7A, "save", "Backup and reset", "Yedek ve sıfırlama", "Export, import, reset", "Dışa aktar, içe aktar, sıfırla"),
-    LCat("system", 0xFF6D4C41, "settings", "System", "Sistem", "Default home app", "Varsayılan ana ekran"),
+    LCat("look", 0xFFEA9788, "palette", "Look", "Görünüm", "Look, wallpaper", "Görünüm, duvar kağıdı"),
+    LCat("home", 0xFFDAA038, "apps", "Home screen", "Ana ekran", "Grid, icons, pages, windows, orientation", "Izgara, simgeler, sayfalar, pencereler, yön"),
+    LCat("dock", 0xFFB9AE20, "pin", "Dock", "Dok", "Pinned apps", "Sabitli uygulamalar"),
+    LCat("apps", 0xFF47C223, "sort", "App drawer", "Uygulama çekmecesi", "Sort, columns, hidden apps, icon pack", "Sıralama, sütunlar, gizli uygulamalar, simge paketi"),
+    LCat("folders", 0xFF22BFB5, "folder", "Folders", "Klasörler", "How a folder looks", "Klasörün görünümü"),
+    LCat("widgets", 0xFF7BAFE9, "gridView", "Widgets", "Widget'lar", "Add and remove widgets", "Widget ekle ve kaldır"),
+    LCat("desktop", 0xFFC998EE, "folder", "Desktop icons", "Masaüstü simgeleri", "Which shortcuts sit on the Windows desktops", "Windows masaüstlerindeki kısayollar"),
+    LCat("feel", 0xFFEC8CC8, "palette", "Look and feel", "Görünüm ve his", "Icon shape, wallpaper effects, sounds, boot screens", "Simge şekli, duvar kağıdı efektleri, sesler, açılış ekranları"),
+    LCat("gestures", 0xFFEA9788, "sensors", "Gestures and inputs", "Hareketler ve girişler", "Double tap, swipes, vibration", "Çift dokunuş, kaydırmalar, titreşim"),
+    LCat("menu", 0xFFDAA038, "menu", "Context menu", "Sağ tık menüsü", "Which actions an app's menu has and their order", "Uygulama menüsündeki eylemler ve sırası"),
+    LCat("badges", 0xFFB9AE20, "bell", "Notification badges", "Bildirim rozetleri", "Numbers or dots on the apps", "Uygulamalarda sayı ya da nokta"),
+    LCat("screen", 0xFF47C223, "clock", "Clock and screen", "Saat ve ekran", "Clock formats, screen on, layout lock", "Saat biçimi, ekran açık kalsın, düzen kilidi"),
+    LCat("backup", 0xFF22BFB5, "save", "Backup and reset", "Yedek ve sıfırlama", "Export, import, reset", "Dışa aktar, içe aktar, sıfırla"),
+    LCat("system", 0xFF7BAFE9, "settings", "System", "Sistem", "Default home app", "Varsayılan ana ekran"),
 )
 
 private fun sortLabel(s: String): String = when (s) {
