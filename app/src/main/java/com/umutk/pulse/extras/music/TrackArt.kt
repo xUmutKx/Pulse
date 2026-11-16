@@ -203,8 +203,10 @@ fun CoverCarousel(
     val reach = with(LocalDensity.current) { 72.dp.toPx() }
     val ctx = LocalContext.current
     val shownNow by rememberUpdatedState(onShown)
+    // the art is a plain parameter: read through a state, so a track changed from outside (a search result) reaches the backdrop too
+    val artNow by rememberUpdatedState(art)
     if (onShown != null) LaunchedEffect(Unit) {
-        androidx.compose.runtime.snapshotFlow { Triple(slide, width, if (carrying) carried else art) }.collect { (s, w, a) -> shownNow?.invoke(s, w, a) }
+        androidx.compose.runtime.snapshotFlow { Triple(slide, width, if (carrying) carried else artNow) }.collect { (s, w, a) -> shownNow?.invoke(s, w, a) }
     }
     Box(
         // clipped at the two sides only: the neighbour covers stay out of sight, but a cover pulled up or down may leave the frame and cross the page

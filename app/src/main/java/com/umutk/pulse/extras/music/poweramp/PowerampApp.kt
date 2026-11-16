@@ -330,9 +330,10 @@ private fun SearchGated(library: List<Track>, current: Track?, style: PowerampSt
 private fun BlendedCover(cv: androidx.compose.ui.graphics.ImageBitmap, blurDp: Int) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val coverBottom = (maxWidth / maxHeight).coerceIn(0.05f, 1f)
-        Column(Modifier.fillMaxWidth().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }.blur(blurDp.dp)) {
+        // the mirror takes the rest of the screen (a tall phone is taller than two covers: no black strip under it)
+        Column(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }.blur(blurDp.dp)) {
             Image(cv, null, Modifier.fillMaxWidth().aspectRatio(1f), contentScale = ContentScale.Crop)
-            Image(cv, null, Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleY = -1f }, contentScale = ContentScale.Crop)
+            Image(cv, null, Modifier.fillMaxWidth().weight(1f).graphicsLayer { scaleY = -1f }, contentScale = ContentScale.Crop)
         }
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
             0f to Color.Transparent, coverBottom to Color.Transparent, (coverBottom + .30f).coerceAtMost(.98f) to Color.Black.copy(alpha = .38f), 1f to Color.Black.copy(alpha = .55f))))
