@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Windows XP start menu as XP drew it, the desktop games removed, YTXTube's own icon.",
+        "Windows XP başlat menüsü XP'deki gibi, masaüstündeki oyunlar kaldırıldı, YTXTube'un kendi simgesi.")),
     "palette" to (tr("Downloads: Series and movies opens full screen. Keyboard: a picture behind the keys, darkened by a slider in Effects.",
         "İndirmeler: Diziler ve filmler tam ekran açılıyor. Klavye: Efektler'de karartma kaydırıcısıyla tuşların arkasında resim.")),
     "palette" to (tr("Keyboard: no more freezes in web pages (YTXTube sign-in, Game Hub search), hold 3 on the number pad for passwords, four RGB press effects with colour and length, lighter effects. The floating keyboard's edge keys are whole again.",
