@@ -404,7 +404,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(cur.name(), color = TXT, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = com.umutk.pulse.nameMarquee())
                 }
                 // shuffle and repeat with their state (a lit icon, "1" for repeat one), previous, a round play button on the cover colour, next
                 ShuffleButton(engine, shuffle, dyn, SUB, 34.dp, 7.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }

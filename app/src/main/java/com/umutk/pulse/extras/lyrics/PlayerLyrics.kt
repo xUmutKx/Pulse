@@ -167,8 +167,8 @@ fun PlayerLyrics(
                             }
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp, end = 40.dp)) {
-                            Text(title, color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            Text(artist, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(title, color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Clip, modifier = com.umutk.pulse.nameMarquee())
+                            Text(artist, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Clip, modifier = com.umutk.pulse.nameMarquee())
                         }
                     }
                     LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true)
