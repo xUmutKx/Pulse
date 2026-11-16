@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "music" to (tr("Long song, artist and album names scroll once and stand still, instead of ending in dots. Lyrics are smaller: lines with times 4 sizes, without times 8.",
+        "Uzun şarkı, sanatçı ve albüm adları noktalarla bitmek yerine bir kez kayıp duruyor. Sözler daha küçük: zamanlı satırlar 4, zamansızlar 8 boy.")),
     "video" to (tr("YTXTube's icon is a white line mark on AMOLED black.",
         "YTXTube simgesi AMOLED siyah üstüne beyaz çizgi.")),
     "palette" to (tr("Windows XP start menu as XP drew it, the desktop games removed, YTXTube's own icon.",

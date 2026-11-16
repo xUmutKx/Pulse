@@ -413,9 +413,9 @@ fun NowPlayingScreen(
                         // darker than the panel so the text reads on any backdrop; each chip wraps its own text
                         val chipFill = Color.Black.copy(alpha = .6f)
                         Text(
-                            track.displayName(), color = fg, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            track.displayName(), color = fg, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
                             modifier = (if (onEditTags != null) Modifier.clickable(onClick = onEditTags) else Modifier)
-                                .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp),
+                                .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp).then(com.umutk.pulse.nameMarquee()),
                         )
                         // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
                         val artistLine = track.shownArtist()
@@ -436,13 +436,13 @@ fun NowPlayingScreen(
                             // the artist opens that artist's page in the library; the album is only shown
                             if (artistLine.isNotEmpty()) Text(
                                 artistLine,
-                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false).clickable { com.umutk.pulse.extras.music.MusicNav.artist = artistLine },
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+                                modifier = Modifier.weight(1f, fill = false).clickable { com.umutk.pulse.extras.music.MusicNav.artist = artistLine }.then(com.umutk.pulse.nameMarquee()),
                             )
                             if (albumLine != null) Text(
                                 if (artistLine.isNotEmpty()) " - $albumLine" else albumLine,
-                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+                                modifier = Modifier.weight(1f, fill = false).then(com.umutk.pulse.nameMarquee()),
                             )
                         }
                     }
@@ -867,8 +867,8 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, tr
             // a few lines under the bands: the song, and the bass level (the first bands of the spectrum)
             val bass = (MusicLevels.snapshot().take(6).average() * 100).toInt().coerceIn(0, 100)
             Spacer(Modifier.height(18.dp))
-            Text(track?.title ?: "", color = style.onBackdrop, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(track?.artist, track?.album).joinToString(" · "), color = style.textDim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track?.title ?: "", color = style.onBackdrop, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = com.umutk.pulse.nameMarquee())
+            Text(listOfNotNull(track?.artist, track?.album).joinToString(" · "), color = style.textDim, fontSize = 14.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = com.umutk.pulse.nameMarquee())
             Text(tr("Bass $bass%", "Bas %$bass"), color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
             Text(if (bpmNow > 0) "BPM ≈ $bpmNow" else "BPM —", color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
           }
