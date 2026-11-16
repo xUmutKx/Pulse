@@ -43,7 +43,8 @@ object StyleCatalog {
         IconStyle("apple_glyph", "Apple Glyph", TileShape.SQUIRCLE, 0.32f, Finish.GLOSSY,
             gradient = 0.6f, glyphScale = 0.50f, bgTone = 0.40f, fgTone = 1f),
         IconStyle("material_glass", "Material glass", TileShape.SQUIRCLE, 0.36f, Finish.GLASS,
-            gradient = 0.3f, shadow = 0.22f, stroke = 0.45f, glyphScale = 0.50f, bgTone = 0.5f, fgTone = 1f),
+            // the colours of the Glass Material You pack: a deep tile, a soft light glyph of the same hue (no longer the mid tone with a white glyph)
+            gradient = 0.3f, shadow = 0.22f, stroke = 0.45f, glyphScale = 0.50f, bgTone = 0.22f, fgTone = 0.80f),
         // the Windows looks of Pulse as icons: flat tiles, aero gloss, Luna blue, grey bevel
         IconStyle("win11", "Windows 11", TileShape.SQUIRCLE, 0.22f, Finish.MATTE,
             gradient = 0.18f, shadow = 0.22f, stroke = 0.2f, glyphScale = 0.52f, bgTone = 0.3f, fgTone = 0.98f),
