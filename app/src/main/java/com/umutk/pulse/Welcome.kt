@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Downloads: Series and movies opens full screen. Keyboard: a picture behind the keys, darkened by a slider in Effects.",
+        "İndirmeler: Diziler ve filmler tam ekran açılıyor. Klavye: Efektler'de karartma kaydırıcısıyla tuşların arkasında resim.")),
     "palette" to (tr("Keyboard: no more freezes in web pages (YTXTube sign-in, Game Hub search), hold 3 on the number pad for passwords, four RGB press effects with colour and length, lighter effects. The floating keyboard's edge keys are whole again.",
         "Klavye: web sayfalarında (YTXTube girişi, Game Hub araması) donma yok, rakam tuşlarında 3'e basılı tut: şifreler, dört RGB tuş efekti, renk ve süre ayarı, daha hafif efektler. Yüzen klavyenin kenar tuşları yine tam.")),
     "video" to (tr("YTXTube opens again. Downloads: Series and movies has its own page. Windows 11 launcher: choose the taskbar glass. Music: the library shows as the player is pulled down.",
