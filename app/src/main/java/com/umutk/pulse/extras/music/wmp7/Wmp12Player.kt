@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -389,13 +390,13 @@ private fun Transport(
             ) {
                 RoundMark(Icons.Rounded.Shuffle, shuffleOn, onShuffle)
                 RoundMark(if (repeat == 2) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, repeat != 0, onRepeat)
-                // stop: the small blue square of the real player
-                Box(Modifier.size(width = 28.dp, height = 30.dp).clickable { onStop() }, contentAlignment = Alignment.Center) {
+                // stop, back and forward: the pictures of the Windows 7 pack, the pressed one while the finger holds the key
+                PackKey("stop", onStop) {
                     Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(Brush.verticalGradient(listOf(Color(0xFF9AD0FF), Color(0xFF2A78D8)))).border(1.dp, Color(0x88FFFFFF), RoundedCornerShape(2.dp)))
                 }
-                WmpFlat(Icons.Rounded.SkipPrevious, onPrev)
+                PackKey("prev", onPrev) { Icon(Icons.Rounded.SkipPrevious, null, tint = Color(0xFFBFE0F8), modifier = Modifier.size(24.dp)) }
                 PlayOrb(playing, onPlayPause)
-                WmpFlat(Icons.Rounded.SkipNext, onNext)
+                PackKey("next", onNext) { Icon(Icons.Rounded.SkipNext, null, tint = Color(0xFFBFE0F8), modifier = Modifier.size(24.dp)) }
                 Icon(Icons.Rounded.VolumeUp, null, tint = Color(0xFF8CC9F2), modifier = Modifier.size(18.dp))
                 // the volume: a thin slider with a round thumb, a tap or a slide sets the phone's media volume
                 Box(
@@ -456,6 +457,21 @@ private fun RoundMark(icon: androidx.compose.ui.graphics.vector.ImageVector, on:
 private fun WmpFlat(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Box(Modifier.size(width = 34.dp, height = 34.dp).clickable { onClick() }, contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = Color(0xFFBFE0F8), modifier = Modifier.size(24.dp))
+    }
+}
+
+/**
+ * A transport key drawn with the picture of the Windows 7 pack under [key] (assets/icons/win7), and the one of [key]_down while it is held; [fallback] draws it when the pack has none.
+ */
+@Composable
+private fun PackKey(key: String, onClick: () -> Unit, fallback: @Composable () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val down by src.collectIsPressedAsState()
+    val normal = com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", key)
+    val pic = (if (down) com.umutk.pulse.features.ThemeIcons.bitmap(ctx, "win7", key + "_down") else null) ?: normal
+    Box(Modifier.size(width = 34.dp, height = 34.dp).clickable(interactionSource = src, indication = null) { onClick() }, contentAlignment = Alignment.Center) {
+        if (pic != null) androidx.compose.foundation.Image(pic, null, Modifier.size(30.dp)) else fallback()
     }
 }
 
