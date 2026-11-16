@@ -617,6 +617,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.terminal = nTerm
         val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
         noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
+        passwordField = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
         return changed
     }
 
@@ -763,6 +765,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onFinishInput() {
+        runCatching { commitNumber() }
         runCatching { trackLogin() }
         super.onFinishInput()
         st.inline = emptyList()
@@ -1233,7 +1236,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun space() {
         endFlash()
         val c = currentInputConnection ?: return
-        captureEmail(c)
+        captureEmail(c); commitNumber()
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
         if (st.trans) { if (st.transIn.isNotEmpty() && !st.transIn.endsWith(" ")) st.transIn += " "; return }
@@ -1267,7 +1270,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
-        captureEmail(c)
+        captureEmail(c); commitNumber()
         runCatching { trackLogin() }
         finishWord("\n", true)
         if (st.enter != "newline") {
@@ -1286,6 +1289,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.trans && st.transIn.isNotEmpty()) { st.transIn = st.transIn.dropLast(1); scheduleTrans(); return }
         if (st.artOn) { if (st.artIn.isNotEmpty()) st.artIn = st.artIn.dropLast(1); return }
         lastWasSpace = false
+        numPending = null
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
             lastGlide = null
@@ -1480,6 +1484,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
+        if (numOffered.isNotEmpty() && w in numOffered) {
+            val d = digitsBefore(c)
+            if (d.isNotEmpty() && w.startsWith(d)) { c.deleteSurroundingText(d.length, 0); c.commitText(w, 1); numPending = w; numOffered = emptyList(); st.emailBar = false; afterText(); return }
+        }
         if (emailField || atTokenNow()) {
             val before = c.getTextBeforeCursor(100, 0)?.toString().orEmpty()
             val tok = before.takeLastWhile { !it.isWhitespace() }
@@ -2302,6 +2310,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(hit.getOrElse(0) { "" }, hit.getOrElse(1) { "" }, hit.getOrElse(2) { "" }); st.slots = slotWords.toList(); return
             }
         }
+        // numbers typed before: from the first two digits the bar offers them whole (a tap writes the rest); works in number fields too
+        noteNumber()
+        numOffered = numberOffers()
+        if (numOffered.isNotEmpty()) {
+            slotWords = (numOffered + listOf("", "", "")).take(maxOf(3, numOffered.size)).toTypedArray(); st.slots = slotWords.toList(); st.emailBar = true; return
+        } else if (st.emailBar && !emailField && !atTokenNow()) st.emailBar = false
         if (!KeyboardPrefs.suggestions || (st.plain && !st.terminal) || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
@@ -2406,6 +2420,59 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** The words written last (newest first), for a bar that would stay empty. */
     private val recentWords = java.util.ArrayDeque<String>()
+
+    // ---- numbers typed again and again (a phone number, an ID number): they are counted here, on the phone only, and offered from their first digits ----
+    private var passwordField = false
+    private var numPending: String? = null
+    private var numOffered: List<String> = emptyList()
+    private fun numPrefs() = getSharedPreferences("pulse_kb_numbers", MODE_PRIVATE)
+
+    /** A payment card number (13-19 digits that pass the Luhn check) is never kept. */
+    private fun cardLike(d: String): Boolean {
+        if (d.length !in 13..19) return false
+        var sum = 0; var alt = false
+        for (i in d.indices.reversed()) { var n = d[i] - '0'; if (alt) { n *= 2; if (n > 9) n -= 9 }; sum += n; alt = !alt }
+        return sum % 10 == 0
+    }
+    private fun numbersKept(): Map<String, Int> = numPrefs().all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }.toMap()
+
+    /** The run of digits just before the cursor, when it stands alone (not part of a word or of a longer text). */
+    private fun digitsBefore(c: android.view.inputmethod.InputConnection): String {
+        val b = c.getTextBeforeCursor(24, 0)?.toString().orEmpty()
+        val run = b.takeLastWhile { it.isDigit() }
+        if (run.isEmpty()) return ""
+        val prev = b.getOrNull(b.length - run.length - 1)
+        return if (prev == null || !prev.isLetterOrDigit()) run else ""
+    }
+
+    /** What the digits before the cursor are worth remembering: a number of 7 to 19 digits, from a field that is not a password, not a card number. */
+    private fun noteNumber() {
+        if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField) { numPending = null; return }
+        val d = digitsBefore(currentInputConnection ?: return)
+        numPending = if (d.length in 7..19 && !cardLike(d)) d else null
+    }
+
+    /** The number typed last counts once more (when the field is left, or Enter or space follows it). */
+    private fun commitNumber() {
+        val n = numPending ?: return
+        numPending = null
+        if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || cardLike(n) || KeyboardDictionary.isBanned(n)) return
+        val sp = numPrefs()
+        val all = numbersKept().toMutableMap()
+        all[n] = (all[n] ?: 0) + 1
+        // 20 numbers at most: the least used go
+        val keep = all.entries.sortedByDescending { it.value }.take(20)
+        sp.edit().clear().also { e -> keep.forEach { e.putInt(it.key, it.value) } }.apply()
+    }
+
+    /** The saved numbers that continue the digits typed: typed twice at least (or added by hand in the settings), the most used first. */
+    private fun numberOffers(): List<String> {
+        if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || emailField) return emptyList()
+        val d = digitsBefore(currentInputConnection ?: return emptyList())
+        if (d.length < 2) return emptyList()
+        return numbersKept().filter { it.value >= 2 && it.key.startsWith(d) && it.key.length > d.length && !KeyboardDictionary.isBanned(it.key) }
+            .entries.sortedByDescending { it.value }.take(3).map { it.key }
+    }
 
     /** For a bar that would stay empty: the last words you wrote (a few of them), the most common words of the language filling what is missing (capital at the start when shift is on). */
     private fun commonNext(code: String, up: Boolean): List<String> {
