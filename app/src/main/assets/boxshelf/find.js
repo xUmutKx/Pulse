@@ -211,7 +211,9 @@
     // the letter grid nor Android's keyboard; the controller moves through the matches)
     let bottomKb = false; try { const bs = ANDROID() && window.boxshelf && boxshelf.bottomScreen; const st = bs && bs.status(); bottomKb = !!(st && st.available && st.enabled); } catch {}
     S.bottomKb = bottomKb;
-    const pad = !bottomKb && (how === 'pad' || deckTouch || (how !== 'kbd' && !ptr && !!b.pad()));
+    // (Pulse: the letter grid only with a real controller attached; a phone types with its own keyboard and never gets both)
+    const realPad = !window.padReal || window.padReal();
+    const pad = realPad && !bottomKb && (how === 'pad' || deckTouch || (how !== 'kbd' && !ptr && !!b.pad()));
     Shelf.setMode('find');
     clearTimeout(S.folT);
     Object.assign(S, { open: true, pad, zone: 'keys', kr: 0, kc: 0, sel: 0, q: '', list: null, res: [], total: 0, prev: null, rep: {}, gen: S.gen + 1, folT: 0, here: null, from: null, moved: false, padSeen: false });
@@ -262,6 +264,7 @@
       if (back) listMove(-1); else if (fwd) listMove(1); if (edge('a')) choose(S.sel); if (rep('x')) type('back'); return; }
     // the first press after the keyboard or a finger: the letter grid comes back (on the results when something is typed)
     // (that press only brings the grid: it doesn't also type a letter; on the results it acts as usual)
+    if (!S.pad && window.padReal && !window.padReal()) return;
     if (!S.pad) { let any = false; for (const k in now) if (edge(k)) any = true; if (!any) return; setPad(true, S.q && S.res.length ? 'list' : 'keys'); if (S.zone === 'keys') return; }
     if (rep('u')) move(0, -1); else if (rep('d')) move(0, 1); else if (rep('l')) move(-1, 0); else if (rep('r')) move(1, 0);
     if (edge('a')) { act(); if (!S.open) return; }

@@ -249,6 +249,9 @@ async function toggleFav(){
 /* ---------- sound ---------- */
 const play_=(n,...a)=>{if(soundOn&&!attract&&window.Sound)Sound.play(n,...a)};
 // controller rumble (Xbox pads through Chromium's dual-rumble effect); quiet no-op elsewhere
+/* Pulse: is a real game controller attached? (asked of the app; anywhere else, or when the app cannot tell, yes) */
+function padReal(){try{return !(window.PulseHost&&PulseHost.hasController)||!!PulseHost.hasController()}catch{return true}}
+window.padReal=padReal;
 function rumble(strong,weak,ms){try{if(attract||(cfgInfo&&cfgInfo.config.ui.rumble===false))return;for(const gp of navigator.getGamepads()||[]){if(gp&&gp.connected&&gp.vibrationActuator&&gp.vibrationActuator.playEffect){gp.vibrationActuator.playEffect("dual-rumble",{duration:ms,strongMagnitude:strong,weakMagnitude:weak});break}}}catch{}}
 // menu music (1.75, in place of the ambient bed) follows the shelf; off while a game runs, in the museum, and while the
 // window is hidden. ui.music: "calm" (default) / "lounge" / "chime" / "off"; ui.musicLevel 0-1. mmTrack / mmLevel: a
@@ -3807,7 +3810,7 @@ function renderHints(){pvGuard();bsCtxSoon();
 let lastInputAt=0,yAt=0;
 addEventListener("pointerdown",()=>{wake()},true);addEventListener("wheel",()=>{lastInputAt=performance.now()},{capture:true,passive:true});
 let uiBusySent=0;
-function setInput(m){if(m==="kbd"&&touchBack)m=inputMode; /* a touch Back (sent as Esc) keeps the controller / touch prompts */const was=showPad();{const t=performance.now();if(t-uiBusySent>500&&api.uiBusy){uiBusySent=t;try{api.uiBusy()}catch{}}} // background downloads hold off while you're pressing buttons
+function setInput(m){if(m==="kbd"&&touchBack)m=inputMode;if(m==="pad"&&!padReal())return; /* Pulse: a phone with no real controller never turns to the controller look (a stray gamepad event brought the letter grid up over the phone keyboard) */ /* a touch Back (sent as Esc) keeps the controller / touch prompts */const was=showPad();{const t=performance.now();if(t-uiBusySent>500&&api.uiBusy){uiBusySent=t;try{api.uiBusy()}catch{}}} // background downloads hold off while you're pressing buttons
   if(m==="kbd")kbdEver=true;if(attract)wake();lastInputAt=performance.now();if(m!==inputMode){inputMode=m;renderHints();document.body.classList.toggle("pad-input",m==="pad");if(m==="pad"&&mode==="details")dGlide($("details").querySelector(".pad-focus"))}else if(showPad()!==was)renderHints()
   if(showPad()!==was&&(mode==="browse"||mode==="details")){const g=rawItem();if(!g||g.kind==="random")updateInfo()}} // the Shuffle tile's "R / LS rolls again" and the empty-filter note name a key: follow the switch
 // the pointer comes back the moment the mouse moves
