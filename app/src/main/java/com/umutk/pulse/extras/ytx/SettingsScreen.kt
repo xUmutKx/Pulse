@@ -778,6 +778,14 @@ private fun AppearanceThemeContent(context: Context) {
             onCheckedChange = { GlassSettings.updateEnabled(it) },
         )
 
+        val navCtx = androidx.compose.ui.platform.LocalContext.current
+        SettingsSwitchRow(
+            title = I18n.t("nav_shorts", "Shorts in the bottom bar"),
+            subtitle = I18n.t("nav_shorts_sub", "A tab of its own for Shorts"),
+            checked = NavSettings.showShorts,
+            onCheckedChange = { NavSettings.updateShowShorts(navCtx, it) },
+        )
+
         HorizontalDivider(color = c.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
 
         Column(

@@ -181,7 +181,27 @@ object Downloads {
         prefs.edit().remove(KEY_CUSTOM_DIR).apply()
     }
 
-    fun fileFor(name: String): File = File(dir, name)
+    /** Songs (audio only) go to Music/YTXTube, so the phone's music players (Pulse's own too) list them as music; videos stay in the download folder. */
+    fun musicDir(): File = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "YTXTube")
+
+    fun fileFor(name: String): File = if (name.endsWith(".m4a")) File(musicDir().apply { runCatching { mkdirs() } }, name) else File(dir, name)
+
+    /** Puts a finished song into the media library with its real title and artist (the file name carries the video id, which the library would show). */
+    private fun publishSong(task: DownloadTask) {
+        val ctx = runCatching { YTXTubeApplication.appContext }.getOrNull() ?: return
+        android.media.MediaScannerConnection.scanFile(ctx, arrayOf(task.file.absolutePath), arrayOf("audio/mp4")) { _, uri ->
+            if (uri == null) return@scanFile
+            runCatching {
+                val v = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Audio.Media.TITLE, task.title)
+                    if (task.channel.isNotBlank()) put(android.provider.MediaStore.Audio.Media.ARTIST, task.channel.removeSuffix(" - Topic"))
+                    put(android.provider.MediaStore.Audio.Media.ALBUM, "YTXTube")
+                    put(android.provider.MediaStore.Audio.Media.IS_MUSIC, 1)
+                }
+                ctx.contentResolver.update(uri, v, null, null)
+            }
+        }
+    }
 
 
     suspend fun options(id: String): List<DownloadOption> = withContext(Dispatchers.IO) {
@@ -465,6 +485,7 @@ object Downloads {
             task.total = target.length()
             task.downloaded = task.total
             task.status = DownloadStatus.Complete
+            publishSong(task)
             return
         }
 
@@ -840,7 +861,7 @@ object Downloads {
 
         runCatching {
             val existing = tasks.mapTo(HashSet()) { it.fileName }
-            dir.listFiles()?.forEach { f ->
+            (dir.listFiles().orEmpty() + musicDir().listFiles().orEmpty()).forEach { f ->
                 if (!f.isFile || f.length() <= 0L) return@forEach
                 val name = f.name
                 if (name.endsWith(".part") || name.startsWith(".")) return@forEach

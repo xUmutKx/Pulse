@@ -29,8 +29,8 @@ android {
     flavorDimensions += listOf("store", "ai")
     productFlavors {
         // APK_INSTALL: the app may install APK files itself (REQUEST_INSTALL_PACKAGES). Off in the play build: Play declares that permission separately
-        create("foss") { dimension = "store"; buildConfigField("boolean", "APK_INSTALL", "true") }
-        create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
+        create("foss") { dimension = "store"; buildConfigField("boolean", "APK_INSTALL", "true"); buildConfigField("boolean", "YT_SIGNIN", "true") }
+        create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false"); buildConfigField("boolean", "YT_SIGNIN", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
         // ai: "full" has Pulse AI inside (llama.cpp chat, whisper.cpp speech to text: native code, about 8 MB more, a longer build); "lite" has neither (the same app, the AI pages say it is not in this build; src/lite has the empty stand-ins)
         create("full") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "true") }
         create("lite") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false") }
