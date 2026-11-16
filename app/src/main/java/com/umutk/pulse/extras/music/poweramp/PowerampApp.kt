@@ -207,7 +207,7 @@ fun PowerampApp(
             Box(Modifier.weight(1f)) {
                 // while the now playing page is pulled down, the screen it came from shows underneath
                 // it fades in as the page is pulled (no pop), and the hand-over after the pull needs no second fade of the same screen
-                if (tab == null && pullShown > 0f) Box(Modifier.graphicsLayer { alpha = (pullShown / 260f).coerceIn(0f, 1f) }) {
+                if (tab == null && pullShown > 0f) Box(Modifier.graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }) {
                     tabBody(lastTab ?: PowerampTab.LIBRARY)
                 }
                 Crossfade(tab, animationSpec = androidx.compose.animation.core.tween(if (pullShown > 0f) 0 else 300), label = "poweramp-tab") { t ->

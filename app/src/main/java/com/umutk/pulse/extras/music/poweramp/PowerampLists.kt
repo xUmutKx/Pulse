@@ -284,6 +284,8 @@ fun LibraryScreen(
             }
         }
         // the chip row (Albums, Artists, Genres ...) is gone: the same entries are rows of the list below
+        // every page of the library sits on a soft see-through plate, so the list does not float on a bare backdrop
+        Box(Modifier.weight(1f).fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 6.dp).clip(RoundedCornerShape(24.dp)).background(style.chip.copy(alpha = .30f))) {
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val cats = listOf(
@@ -419,6 +421,7 @@ fun LibraryScreen(
                     itemsIndexed(here) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
                 }
             }
+        }
         }
     }
 }
