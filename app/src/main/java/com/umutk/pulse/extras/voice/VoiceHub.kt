@@ -55,6 +55,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.umutk.pulse.ExtraLookRow
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.PButton
+import com.umutk.pulse.PCheck
+import com.umutk.pulse.Look
+import androidx.compose.foundation.combinedClickable
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PField
@@ -146,9 +149,11 @@ fun VoiceHub(onBack: () -> Unit) {
     var countdown by remember { mutableStateOf(VoicePrefs.countdown(ctx)) }
     var accent by remember { mutableIntStateOf(VoicePrefs.accent(ctx)) }
     var favs by remember { mutableStateOf(VoicePrefs.favs(ctx)) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var bulkDel by remember { mutableStateOf(false) }
     var dlg by remember { mutableStateOf("") }
     var autoDone by rememberSaveable { mutableStateOf(false) }
-    val acc = ACCENTS[accent.coerceIn(0, ACCENTS.lastIndex)]
+    val acc = if (accent < 0) Look.accent else ACCENTS[accent.coerceAtMost(ACCENTS.lastIndex)]
 
     fun elapsed(): Long = banked + if (rec == Rec.RUN) SystemClock.elapsedRealtime() - startedAt else 0L
     fun reload() { list = VoiceStore.list(ctx) }
@@ -212,6 +217,7 @@ fun VoiceHub(onBack: () -> Unit) {
 
     fun share(r: Recording) { runCatching { ctx.startActivity(VoiceStore.shareIntent(r).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     fun toggleFav(r: Recording) { VoicePrefs.toggleFav(ctx, r.uri.toString()); favs = VoicePrefs.favs(ctx) }
+    fun toggleSel(r: Recording) { val k = r.uri.toString(); selected = if (k in selected) selected - k else selected + k }
     fun duplicate(r: Recording) {
         message = if (VoiceStore.duplicate(ctx, r)) tr("Copy saved.", "Kopya kaydedildi.") else tr("Could not copy.", "Kopyalanamadı.")
         reload()
@@ -221,7 +227,7 @@ fun VoiceHub(onBack: () -> Unit) {
     }
 
     fun leave() { if (rec != Rec.IDLE) finishRecording(); stopPlayer(); onBack() }
-    BackHandler { leave() }
+    BackHandler { if (selected.isNotEmpty()) selected = emptySet() else leave() }
 
     LaunchedEffect(Unit) { reload() }
     // widget tap: start at once, once per opened page (saved so a restored page does not record again)
@@ -286,10 +292,16 @@ fun VoiceHub(onBack: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                PIcon("back", fg, 22.dp, Modifier.clickable { leave() })
-                Text(tr("Voice recorder", "Ses kaydedici"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                PIcon("settings", fg, 22.dp, Modifier.clickable { dlg = "settings" })
-                com.umutk.pulse.ExtraLookIcon(fg)
+                if (selected.isNotEmpty()) {
+                    PIcon("close", fg, 22.dp, Modifier.clickable { selected = emptySet() })
+                    Text("${selected.size}", color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    PIcon("selectAll", fg, 22.dp, Modifier.clickable { selected = list.map { it.uri.toString() }.toSet() })
+                    PIcon("delete", fg, 22.dp, Modifier.clickable { bulkDel = true })
+                } else {
+                    PIcon("back", fg, 22.dp, Modifier.clickable { leave() })
+                    Text(tr("Voice recorder", "Ses kaydedici"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    PIcon("settings", fg, 22.dp, Modifier.clickable { dlg = "settings" })
+                }
             }
         }
         item {
@@ -411,17 +423,24 @@ fun VoiceHub(onBack: () -> Unit) {
                 is Recording -> {
                     val on = playing == row.uri
                     val fav = favs.contains(row.uri.toString())
+                    val sel = selected.contains(row.uri.toString())
                     Column(Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f).clickable { playTake(row) }) {
+                        Row(Modifier.fillMaxWidth().background(if (sel) T.panel else Color.Transparent).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (selected.isNotEmpty()) { PCheck(sel, { toggleSel(row) }); Spacer(Modifier.width(8.dp)) }
+                            Column(Modifier.weight(1f).combinedClickable(
+                                onClick = { if (selected.isNotEmpty()) toggleSel(row) else playTake(row) },
+                                onLongClick = { toggleSel(row) },
+                            )) {
                                 Text(row.name, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
                                     "${clockText(row.millis)}  ·  ${sizeText(row.bytes)}  ·  ${SimpleDateFormat("d MMM yyyy HH:mm", Locale.getDefault()).format(Date(row.added * 1000))}",
                                     color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            Box(Modifier.size(40.dp).clickable { toggleFav(row) }, contentAlignment = Alignment.Center) { PIcon("bookmark", if (fav) acc else fg, 20.dp) }
-                            Box(Modifier.size(40.dp).clickable { playTake(row) }, contentAlignment = Alignment.Center) { PIcon(if (on && isPlaying) "pause" else "play", acc, 22.dp) }
+                            if (selected.isEmpty()) {
+                                Box(Modifier.size(40.dp).clickable { toggleFav(row) }, contentAlignment = Alignment.Center) { PIcon("bookmark", if (fav) acc else fg, 20.dp) }
+                                Box(Modifier.size(40.dp).clickable { playTake(row) }, contentAlignment = Alignment.Center) { PIcon(if (on && isPlaying) "pause" else "play", acc, 22.dp) }
+                            }
                         }
                         Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
                     }
@@ -438,6 +457,16 @@ fun VoiceHub(onBack: () -> Unit) {
             if (playing == r.uri) stopPlayer()
             VoiceStore.delete(ctx, r.uri); deleting = null; reload()
         }, { deleting = null })
+    }
+
+    if (bulkDel) {
+        val n = selected.size
+        PDialog(tr("Delete recordings?", "Kayıtlar silinsin mi?"), tr("$n selected", "$n seçili"), tr("Delete", "Sil"), {
+            val pl = playing
+            if (pl != null && selected.contains(pl.toString())) stopPlayer()
+            list.filter { selected.contains(it.uri.toString()) }.forEach { VoiceStore.delete(ctx, it.uri) }
+            selected = emptySet(); bulkDel = false; reload()
+        }, { bulkDel = false })
     }
 
     when (dlg) {
@@ -486,6 +515,9 @@ private fun SettingsDialog(
                         PSwitch(countdown, onCountdown)
                     }
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.size(26.dp).clip(CircleShape).background(Look.accent).clickable { onAccent(-1) }, contentAlignment = Alignment.Center) {
+                            if (accent < 0) Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))
+                        }
                         ACCENTS.forEachIndexed { i, c ->
                             Box(Modifier.size(26.dp).clip(CircleShape).background(c).clickable { onAccent(i) }, contentAlignment = Alignment.Center) {
                                 if (i == accent) Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))

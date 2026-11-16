@@ -29,7 +29,7 @@ object VoicePrefs {
     fun setAutoStopMin(c: Context, v: Int) { p(c).edit().putInt("autostop", v).apply() }
     fun countdown(c: Context): Boolean = p(c).getBoolean("countdown", false)
     fun setCountdown(c: Context, v: Boolean) { p(c).edit().putBoolean("countdown", v).apply() }
-    fun accent(c: Context): Int = p(c).getInt("accent", 0)
+    fun accent(c: Context): Int = p(c).getInt("accent", -1)
     fun setAccent(c: Context, v: Int) { p(c).edit().putInt("accent", v).apply() }
     /** Where playback of a take stopped, in ms; 0 clears it. */
     fun savePos(c: Context, uri: String, ms: Long) { p(c).edit().putLong("pos_$uri", ms).apply() }
