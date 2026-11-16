@@ -76,8 +76,10 @@ object NotifLog {
         _entries.value = emptyList()
     }
 
+    /** The access is on when the system lists this app, or its listener is connected (some phones list the access late or under another spelling). */
     fun isGranted(ctx: Context): Boolean =
-        NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
+        live != null || NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName) ||
+            runCatching { android.provider.Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners").orEmpty().contains(ctx.packageName + "/") }.getOrDefault(false)
 
     @Volatile private var live: Listener? = null
 
