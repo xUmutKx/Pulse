@@ -650,10 +650,11 @@ internal fun ThemeLogo(theme: String, size: Dp) {
     val res = when (theme) {
         "win95" -> R.drawable.logo_win95; "xp" -> R.drawable.logo_xp; "win7" -> R.drawable.logo_win7
         "win10" -> R.drawable.logo_win10; "win11" -> R.drawable.logo_win11; "material" -> R.drawable.ic_logo_android
-        "oneui" -> R.drawable.widget_oneui
         else -> 0
     }
     if (res != 0) Image(painterResource(res), null, Modifier.size(size), contentScale = ContentScale.Fit)
+    // One UI: its soft white card, drawn here (its widget background is a shape drawable, which an Image cannot load)
+    else if (theme == "oneui") Box(Modifier.size(size).padding(size / 8).background(Color.White, RoundedCornerShape(size / 4)).border(1.dp, Color(0xFFD0D0D6), RoundedCornerShape(size / 4)))
     else if (theme == "ios") Box(Modifier.size(size).padding(size / 8).background(Color(0xFF1C1C1E), RoundedCornerShape(size / 4)).border(1.dp, Color.Gray, RoundedCornerShape(size / 4)))
     else if (theme == "all") Column(Modifier.size(size).padding(size / 6), verticalArrangement = Arrangement.spacedBy(size / 12)) {
         repeat(2) { Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(size / 12)) { repeat(2) { Box(Modifier.weight(1f).fillMaxSize().background(Color.Gray, RoundedCornerShape(size / 12))) } } }
