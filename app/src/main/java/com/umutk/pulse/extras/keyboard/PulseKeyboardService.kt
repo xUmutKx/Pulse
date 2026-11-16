@@ -2425,7 +2425,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var passwordField = false
     private var numPending: String? = null
     private var numOffered: List<String> = emptyList()
-    private fun numPrefs() = getSharedPreferences("pulse_kb_numbers", MODE_PRIVATE)
 
     /** A payment card number (13-19 digits that pass the Luhn check) is never kept. */
     private fun cardLike(d: String): Boolean {
@@ -2434,7 +2433,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         for (i in d.indices.reversed()) { var n = d[i] - '0'; if (alt) { n *= 2; if (n > 9) n -= 9 }; sum += n; alt = !alt }
         return sum % 10 == 0
     }
-    private fun numbersKept(): Map<String, Int> = numPrefs().all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }.toMap()
+    private fun numbersKept(): Map<String, Int> = KbNumbers.all(this)
 
     /** The run of digits just before the cursor, when it stands alone (not part of a word or of a longer text). */
     private fun digitsBefore(c: android.view.inputmethod.InputConnection): String {
@@ -2457,12 +2456,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val n = numPending ?: return
         numPending = null
         if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || cardLike(n) || KeyboardDictionary.isBanned(n)) return
-        val sp = numPrefs()
         val all = numbersKept().toMutableMap()
         all[n] = (all[n] ?: 0) + 1
         // 20 numbers at most: the least used go
-        val keep = all.entries.sortedByDescending { it.value }.take(20)
-        sp.edit().clear().also { e -> keep.forEach { e.putInt(it.key, it.value) } }.apply()
+        KbNumbers.save(this, all.entries.sortedByDescending { it.value }.take(20).associate { it.key to it.value })
     }
 
     /** The saved numbers that continue the digits typed: typed twice at least (or added by hand in the settings), the most used first. */

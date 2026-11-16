@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PButton
+import com.umutk.pulse.PSwitch
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
@@ -98,6 +99,10 @@ fun VaultScreen(back: () -> Unit) {
     var msg by remember { mutableStateOf("") }
     var rev by remember { mutableStateOf(0) }
     LaunchedEffect(rev) { entries = withContext(Dispatchers.IO) { VaultStore.all(ctx) } }
+    val autofillOn = remember(rev) {
+        Build.VERSION.SDK_INT >= 26 && runCatching { ctx.getSystemService(android.view.autofill.AutofillManager::class.java)?.hasEnabledAutofillServices() == true }.getOrDefault(false)
+    }
+    var saveCards by remember { mutableStateOf(AutofillPrefs.saveCards(ctx)) }
     val pick = rememberLauncherForActivityResult(PulsePick.OpenDocument()) { u ->
         if (u != null) scope.launch {
             msg = tr("Importing…", "İçe aktarılıyor…")
@@ -119,15 +124,26 @@ fun VaultScreen(back: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("shieldOk", T.accent, 22.dp, Modifier.padding(end = 10.dp))
-                    Text(tr("Pulse keyboard", "Pulse klavyesi"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                }
+                Row(verticalAlignment = Alignment.CenterVertically) { PIcon("shieldOk", T.accent, 22.dp, Modifier.padding(end = 10.dp)); Text(tr("Autofill", "Otomatik doldurma"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
                 Text(
-                    tr("In a user name or password box of an app, the Pulse keyboard shows the logins saved here for that app on its bar. Nothing goes through the system autofill service.",
-                        "Bir uygulamanın kullanıcı adı ya da şifre kutusunda Pulse klavyesi, o uygulama için burada kayıtlı girişleri çubuğunda gösterir. Sistemin otomatik doldurma servisi kullanılmaz."),
-                    color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+                    if (Build.VERSION.SDK_INT < 26) tr("Autofill needs Android 8 or newer.", "Otomatik doldurma Android 8 ve üstünü ister.")
+                    else if (autofillOn) tr("An autofill service is on. If it is not Pulse, pick Pulse in the settings: only one can be on at a time.", "Bir otomatik doldurma servisi açık. Pulse değilse ayarlardan Pulse'u seç: aynı anda yalnızca biri açık olabilir.")
+                    else tr("Pulse offers your logins and cards in other apps and in browsers, and offers to save new logins. Everything is sealed with a key of this phone; a card (and a login when the vault is behind the screen lock) shows only after the phone's lock is answered.",
+                        "Pulse girişlerini ve kartlarını diğer uygulamalarda ve tarayıcılarda önerir, yeni girişleri kaydetmeyi sorar. Her şey bu telefonun anahtarıyla şifrelenir; kart (ve kasa ekran kilidinin arkasındaysa giriş) yalnızca telefonun kilidi açılınca görünür."),
+                    color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp),
                 )
+                if (Build.VERSION.SDK_INT >= 26) PButton(tr("Use Pulse for autofill", "Pulse ile otomatik doldur")) {
+                    val i = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE, Uri.parse("package:${ctx.packageName}"))
+                    runCatching { ctx.startActivity(i) }.onFailure { runCatching { ctx.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+                }
+                // a card typed in a payment form is offered to the vault only when the person turns this on
+                Row(Modifier.fillMaxWidth().clickable { saveCards = !saveCards; AutofillPrefs.setSaveCards(ctx, saveCards) }.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Offer to save card numbers", "Kart numaralarını kaydetmeyi sor"), color = T.text, fontSize = 15.sp)
+                        Text(tr("Off at first. A card is saved only when you say so after a payment form is sent, into this vault.", "Başta kapalı. Kart, ödeme formu gönderilince sen onaylarsan bu kasaya kaydedilir."), color = T.sub, fontSize = 12.sp)
+                    }
+                    PSwitch(saveCards, { saveCards = it; AutofillPrefs.setSaveCards(ctx, it) })
+                }
             }
         }
         item {

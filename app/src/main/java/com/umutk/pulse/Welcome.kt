@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "keyboard" to (tr("Keyboard: it remembers numbers you type often (phone, ID) and offers them from the first two digits; the empty strip that appeared between the page and the keys while typing is gone. Downloads: every season shows its own picture (its first episode), also without a TMDB key; the search shows its results as you type, no Find button.",
-        "Klavye: sık yazdığın sayıları (telefon, kimlik no) hatırlar ve ilk iki hanesinden önerir; yazarken beliren boş şerit gitti. İndirmeler: her sezon, TMDB anahtarı olmadan da, kendi resmini (ilk bölümünün görüntüsü) gösterir; arama sonuçları yazarken gelir, Bul düğmesi yok.")),
+    "keyboard" to (tr("Password vault: Pulse is an autofill service again (optional, you pick it); cards too, filled once the phone's lock is answered. Everything in the vault and the numbers the keyboard remembers are sealed with the phone's key. Keyboard: it remembers numbers you type often (phone, ID) and offers them from the first two digits; the empty strip that appeared between the page and the keys while typing is gone. Downloads: every season shows its own picture (its first episode), also without a TMDB key; the search shows its results as you type, no Find button.",
+        "Şifre kasası: Pulse yeniden otomatik doldurma servisi (isteğe bağlı, sen seçersin); kartlar da, telefonun kilidi açılınca doldurulur. Kasadaki her şey ve klavyenin hatırladığı sayılar telefonun anahtarıyla şifrelenir. Klavye: sık yazdığın sayıları (telefon, kimlik no) hatırlar ve ilk iki hanesinden önerir; yazarken beliren boş şerit gitti. İndirmeler: her sezon, TMDB anahtarı olmadan da, kendi resmini (ilk bölümünün görüntüsü) gösterir; arama sonuçları yazarken gelir, Bul düğmesi yok.")),
 )
 
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
