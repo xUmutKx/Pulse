@@ -640,6 +640,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     // a torrent nobody sends anything of within a minute and a half gives way to the next stream of the same episode, when there is one
     val began = System.currentTimeMillis()
     var switchNow = false
+    // a torrent that crawls (under 40 KB/s for a whole minute) while little of it is here also gives way to the next stream
+    var winT = 0L; var winD = 0L
     val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused || switchNow },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
@@ -653,7 +655,16 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             if (t > 0) total.value = t
             done.value = d
             error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
-            if (d == 0L && alts.isNotEmpty() && System.currentTimeMillis() - began > 90_000) switchNow = true
+            val nowT = System.currentTimeMillis()
+            if (d == 0L && alts.isNotEmpty() && nowT - began > 90_000) switchNow = true
+            if (t > 0) {
+                if (winT == 0L) { winT = nowT; winD = d }
+                else if (nowT - winT >= 60_000) {
+                    val rate = (d - winD) * 1000 / (nowT - winT)
+                    if (rate < 40_000 && d < t / 4 && alts.isNotEmpty()) switchNow = true
+                    winT = nowT; winD = d
+                }
+            }
         },
     ) ?: run { if (switchNow && !cancelled && !paused) throw SwitchStream(); return false }
     file.delete()
