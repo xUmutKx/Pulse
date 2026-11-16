@@ -55,7 +55,8 @@ import java.net.URL
 object SeasonDl {
     class Show(val id: String, val name: String, val year: String, val poster: String = "")
     class Ep(val id: String, val season: Int, val episode: Int, val title: String, val thumb: String = "", val overview: String = "")
-    class Pick(val url: String, val size: Long, val label: String, val over: Boolean = false)
+    /** [seeds] is the number of people sharing it when the add-on says it ("👤 12"), -1 when it does not. */
+    class Pick(val url: String, val size: Long, val label: String, val over: Boolean = false, val seeds: Int = -1)
 
     private const val META = "https://v3-cinemeta.strem.io"
     private fun p(c: Context) = c.getSharedPreferences("season_dl", Context.MODE_PRIVATE)
@@ -302,7 +303,8 @@ object SeasonDl {
             val url = streamUrl(s) ?: continue
             // the label: the quality and the name, on one line (the add-ons put them on several)
             val label = (s.optString("name").replace('\n', ' ') + "  " + s.optString("title").lineSequence().firstOrNull().orEmpty()).trim()
-            out.add(Pick(url, size, label.ifBlank { text.trim().take(80) }))
+            val seeds = Regex("(?:👤|seeders?:?)\\s*(\\d+)", RegexOption.IGNORE_CASE).find(s.optString("title") + " " + s.optString("description"))?.groupValues?.get(1)?.toIntOrNull() ?: -1
+            out.add(Pick(url, size, label.ifBlank { text.trim().take(80) }, seeds = seeds))
         }
         return out
     }
@@ -311,15 +313,24 @@ object SeasonDl {
      * The largest stream of the episode that is under [maxBytes]. When there is none under it, the smallest one there is (marked [Pick.over]); when no stream
      * says its size, the first one the add-on lists. Null only when the add-on has no stream at all.
      */
-    suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? {
-        val all = streams(addonBase, ep, kind)
+    suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? = bestOf(streams(addonBase, ep, kind), maxBytes)
+
+    /** The choice of [best] out of a list already read: a stream someone shares (or that does not say) comes before one with no one sharing it. */
+    fun bestOf(all: List<Pick>, maxBytes: Long): Pick? {
+        fun alive(l: List<Pick>) = l.filter { it.seeds != 0 }.ifEmpty { l }
         val sized = all.filter { it.size > 0 }
-        val under = sized.filter { it.size <= maxBytes }.maxByOrNull { it.size }
+        val under = alive(sized.filter { it.size <= maxBytes }).maxByOrNull { it.size }
         if (under != null) return under
-        val smallest = sized.minByOrNull { it.size }
-        if (smallest != null) return Pick(smallest.url, smallest.size, smallest.label, over = true)
-        return all.firstOrNull()
+        val smallest = alive(sized).minByOrNull { it.size }
+        if (smallest != null) return Pick(smallest.url, smallest.size, smallest.label, over = true, seeds = smallest.seeds)
+        return alive(all).firstOrNull()
     }
+
+    /** The streams to fall back on when [pick] finds no one to download from: the others under the limit, closest in size first, the ones with no one sharing them last (five at most). */
+    fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> =
+        all.filter { it.url != pick.url && (pick.over || it.size == 0L || it.size <= maxBytes) }
+            .sortedWith(compareBy<Pick>({ if (it.seeds == 0) 1 else 0 }, { if (it.size > 0 && pick.size > 0) kotlin.math.abs(it.size - pick.size) else Long.MAX_VALUE / 2 }, { -it.seeds }))
+            .take(5).map { it.url }
 
     // 24 MB of pictures at most (a few big ones would fill a count-based cache)
     private val posters = object : android.util.LruCache<String, android.graphics.Bitmap>(24 * 1024 * 1024) {
@@ -460,9 +471,9 @@ object SeasonDl {
         fun clean(s: String) = s.replace(Regex("[^\\p{L}\\p{N} ._()-]"), "").trim()
         fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = ""; season = null; picked = emptySet(); found = emptyMap() }
         /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
-        suspend fun start(picks: List<Pair<String, String>>) {
+        suspend fun start(picks: List<Triple<String, String, List<String>>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
-            picks.forEach { (u, n) -> Downloads.add(ctx, u, n) }
+            picks.forEach { (u, n, alts) -> Downloads.add(ctx, u, n, alts) }
         }
         PCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -604,9 +615,10 @@ object SeasonDl {
                             if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
                             busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
                             scope.launch {
-                                val pick = runCatching { best(addon, Ep(sel.id, 0, 0, ""), limit(), "movie") }.getOrNull()
+                                val all = runCatching { streams(addon, Ep(sel.id, 0, 0, ""), "movie") }.getOrDefault(emptyList())
+                                val pick = bestOf(all, limit())
                                 if (pick == null) note = tr("Nothing under $mb MB", "$mb MB altında yayın yok")
-                                else { start(listOf(pick.url to clean(sel.name + if (sel.year.isNotBlank()) " (" + sel.year.take(4) + ")" else ""))); if (note.startsWith(tr("Finding", "Yayın"))) note = tr("Started (${sizeText(pick.size)})", "Başladı (${sizeText(pick.size)})") }
+                                else { start(listOf(Triple(pick.url, clean(sel.name + if (sel.year.isNotBlank()) " (" + sel.year.take(4) + ")" else ""), alternatives(all, pick, limit())))); if (note.startsWith(tr("Finding", "Yayın"))) note = tr("Started (${sizeText(pick.size)})", "Başladı (${sizeText(pick.size)})") }
                                 busy = false
                             }
                         } else {
@@ -618,13 +630,15 @@ object SeasonDl {
                                 save(ctx, addon, mb.toFloat()); busy = true
                                 scope.launch {
                                     var skipped = 0; var over = 0
-                                    val picks = ArrayList<Pair<String, String>>()
+                                    val picks = ArrayList<Triple<String, String, List<String>>>()
                                     val name = clean(sel.name)
                                     list.forEachIndexed { i, ep ->
                                         note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
                                         // the stream already found for the list is used; else it is looked for now
-                                        val pick = if (found[ep.id] != null) found[ep.id] else runCatching { best(addon, ep, limit()) }.onFailure { e -> why = said(e) }.getOrNull()
-                                        if (pick == null) skipped++ else { if (pick.over) over++; picks.add(pick.url to "%s S%02dE%02d".format(name, ep.season, ep.episode)) }
+                                        // the whole list is read, so the streams to fall back on go along with the one taken
+                                        val all = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()
+                                        val pick = found[ep.id] ?: bestOf(all, limit())
+                                        if (pick == null) skipped++ else { if (pick.over) over++; picks.add(Triple(pick.url, "%s S%02dE%02d".format(name, ep.season, ep.episode), alternatives(all, pick, limit()))) }
                                     }
                                     note = tr("Starting…", "Başlıyor…")
                                     start(picks)
@@ -716,7 +730,7 @@ object SeasonDl {
                                             Row(Modifier.fillMaxWidth().clickable {
                                                 val name = clean(show?.name.orEmpty()) + " S%02dE%02d".format(ep.season, ep.episode)
                                                 choose = null
-                                                scope.launch { start(listOf(o.url to name)); note = tr("Started (${sizeText(o.size)})", "Başladı (${sizeText(o.size)})") }
+                                                scope.launch { start(listOf(Triple(o.url, name, alternatives(opts, o, Long.MAX_VALUE)))); note = tr("Started (${sizeText(o.size)})", "Başladı (${sizeText(o.size)})") }
                                             }.padding(vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                                 Text(o.label, color = T.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                                 Spacer(Modifier.width(8.dp))
