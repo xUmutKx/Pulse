@@ -122,15 +122,12 @@ object TileRenderer {
             Finish.FROSTED -> {
                 EffectPainter.noise(c, path, r, 0.5f, seed)
                 EffectPainter.stroke(c, path, 0xFFFFFFFF.toInt(), size * 0.012f, 0.35f)
-                EffectPainter.sheen(c, path, r, 0.25f)
             }
             Finish.LIQUID_GLASS -> {
                 EffectPainter.liquidRim(c, path, r, color, 1f)
-                EffectPainter.sheen(c, path, r, 0.5f, warp = 0.8f)
                 EffectPainter.innerShadow(c, path, r, 0.25f, size)
             }
             else -> {
-                EffectPainter.sheen(c, path, r, 0.42f, warp = 0.25f)
                 EffectPainter.stroke(c, path, 0xFFFFFFFF.toInt(), size * 0.010f, 0.45f)
             }
         }
