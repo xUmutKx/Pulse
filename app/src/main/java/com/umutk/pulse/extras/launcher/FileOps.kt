@@ -89,8 +89,9 @@ fun FileMenu(target: File?, dir: File, onClose: () -> Unit, open: (File) -> Unit
     val ctx = LocalContext.current
     var rename by remember { mutableStateOf<File?>(null) }
     var ask by remember { mutableStateOf<File?>(null) }
+    var props by remember { mutableStateOf<File?>(null) }
     var text by remember { mutableStateOf("") }
-    if (target != null) ContextPopup(220.dp, 330.dp, onClose) {
+    if (target != null) ContextPopup(220.dp, 370.dp, onClose) {
         val ink = LocalMenuSkin.current?.text ?: Color(0xFF1E1E1E)
         ActionRow("open", tr("Open", "Aç"), ink) { onClose(); open(target) }
         ActionRow("copy", tr("Copy", "Kopyala"), ink) { FileClip.files = listOf(target); FileClip.cut = false; onClose() }
@@ -105,7 +106,9 @@ fun FileMenu(target: File?, dir: File, onClose: () -> Unit, open: (File) -> Unit
         }
         ActionRow("edit", tr("Rename", "Yeniden adlandır"), ink) { text = target.name; rename = target; onClose() }
         ActionRow("delete", tr("Delete", "Sil"), ink) { ask = target; onClose() }
+        ActionRow("info", tr("Properties", "Özellikler"), ink) { props = target; onClose() }
     }
+    props?.let { f -> FilePropertiesDialog(f, { props = null }) { changed(it) } }
     rename?.let { f ->
         AlertDialog(onDismissRequest = { rename = null }, title = { Text(tr("Rename", "Yeniden adlandır")) },
             text = { BasicTextField(text, { text = it }, singleLine = true) },
