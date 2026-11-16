@@ -260,7 +260,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // turned sideways: the keyboard's own height and rows there, with both keyboards drawn as they will look
-        KbSection("height", tr("Landscape", "Yatay")) {
+        KbSection("rotate", tr("Landscape", "Yatay")) {
             OrientPreview(false, dark)
             Spacer(Modifier.height(8.dp))
             OrientPreview(true, dark)
@@ -271,7 +271,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // size
-        KbSection("height", tr("Size", "Boyut")) {
+        KbSection("sizes", tr("Size", "Boyut")) {
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.heightPct - 70) / 180f, { KeyboardPrefs.heightPct = 70 + (it * 180).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
@@ -544,7 +544,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // the learned words: look at them, forget one, add one by hand (a word added is never "corrected"), copy the list out and read one in
-        KbSection("edit", tr("Learned words", "Öğrenilen kelimeler")) {
+        KbSection("book", tr("Learned words", "Öğrenilen kelimeler")) {
             remember { KeyboardDictionary.ensureUser(ctx) }
             var addW by remember { mutableStateOf("") }
             var q by remember { mutableStateOf("") }
@@ -581,7 +581,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // the e-mail addresses the bar offers from their first letters in any field: the ones typed or copied are kept by themselves, and one can be added by hand here
-        KbSection("edit", tr("Your e-mail addresses", "E-posta adreslerin")) {
+        KbSection("mail", tr("Your e-mail addresses", "E-posta adreslerin")) {
             val sp = remember { ctx.getSharedPreferences("pulse_kb_emails", android.content.Context.MODE_PRIVATE) }
             var mails by remember { mutableStateOf(sp.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }) }
             var addM by remember { mutableStateOf("") }
@@ -603,7 +603,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // numbers typed again and again (a phone number, an ID number): kept on the phone only and offered from their first digits (typed twice before, or added here)
-        KbSection("edit", tr("Numbers I type often", "Sık yazdığım sayılar")) {
+        KbSection("calc", tr("Numbers I type often", "Sık yazdığım sayılar")) {
             var nums by remember { mutableStateOf(KbNumbers.all(ctx).map { it.key to it.value }.sortedByDescending { it.second }) }
             var addN by remember { mutableStateOf("") }
             var on by remember { mutableStateOf(KeyboardPrefs.rememberNumbers) }
