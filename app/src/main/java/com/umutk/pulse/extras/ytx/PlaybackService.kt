@@ -135,7 +135,7 @@ class PlaybackService : MediaSessionService() {
         player.addListener(StreamRecoverer(player, sources, resolver))
         resumeSaver = ResumeSaver(player).also(player::addListener)
         watchTime = WatchTimeReporter(player).also(player::addListener)
-        session = MediaSession.Builder(this, player)
+        session = MediaSession.Builder(this, player).setId("ytx_playback")
             .setSessionActivity(openApp)
             .setCallback(SessionCallback())
             .build()
