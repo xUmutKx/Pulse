@@ -142,7 +142,74 @@ class XpLauncherLook : LauncherLook {
 
     @Composable
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
-        LauncherWindow(XP_WINDOW, state, onClose, taskbarHeight, modifier)
+        XpStartMenu(state, onClose, modifier)
+    }
+
+    /**
+     * The Windows XP start menu as XP drew it: a blue head with the user's picture and name, a white column of the programs
+     * the person uses (only these, not every app on the phone: the rest are in the app drawer), a light blue column of links,
+     * and the foot with Log Off and Turn Off Computer.
+     */
+    @Composable
+    private fun XpStartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
+        val ctx = LocalContext.current
+        val left = listOf("pulse:x:notes", "pulse:x:calculator", "pulse:x:messages", "pulse:x:music", "pulse:x:video", "pulse:x:weather", "pulse:x:voice", "pulse:x:win:notepad")
+            .mapNotNull { p -> state.apps.firstOrNull { it.pkg == p } }
+        val links = listOf("pulse:x:toolkit", "pulse:x:notifhist", "pulse:x:screenrec")
+            .mapNotNull { p -> state.apps.firstOrNull { it.pkg == p } }
+        val rightWhite = Color(0xFFD6E4F8)
+        Column(
+            modifier.widthIn(max = 420.dp).fillMaxWidth(.94f).clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).border(2.dp, Color(0xFF0831D9), RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
+        ) {
+            // the head: the blue band with the user's picture and name
+            Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF3A93FF), Color(0xFF0058EE)))).padding(horizontal = 10.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(46.dp).border(2.dp, Color.White).background(Color(0xFF2A4F9E)), contentAlignment = Alignment.Center) {
+                    XpFlag(Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(userName, style = TextStyle(color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, shadow = Shadow(Color(0x66000000), Offset(1f, 1f), 2f)))
+            }
+            Row(Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                // the programs the person uses, in white
+                Column(Modifier.weight(1f).background(Color.White).padding(vertical = 6.dp, horizontal = 4.dp)) {
+                    left.forEach { app ->
+                        Row(
+                            Modifier.fillMaxWidth().appTap(state, app) { state.open(app); onClose() }.padding(horizontal = 6.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            LaunchAppPicture(app, 30.dp, Color.Transparent, linkBlue)
+                            Spacer(Modifier.width(10.dp))
+                            Text(app.label, style = TextStyle(color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                // the links, in light blue
+                Column(Modifier.weight(1f).background(rightWhite).padding(vertical = 6.dp, horizontal = 8.dp)) {
+                    links.forEach { app ->
+                        Row(Modifier.fillMaxWidth().appTap(state, app) { state.open(app); onClose() }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            LaunchAppPicture(app, 22.dp, Color.Transparent, linkBlue)
+                            Spacer(Modifier.width(8.dp))
+                            Text(app.label, style = TextStyle(color = linkBlue, fontSize = 13.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    XpSeparator()
+                    Row(Modifier.fillMaxWidth().clickable { runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }; onClose() }.padding(vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        XpGear(Modifier.size(22.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(tr("Settings", "Ayarlar"), style = TextStyle(color = linkBlue, fontSize = 13.sp))
+                    }
+                }
+            }
+            // the foot: the grey-blue band with Log Off and Turn Off Computer
+            Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF4A8DEA), Color(0xFF2357D1)))).padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Log Off", "Oturumu kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp), modifier = Modifier.clickable { onClose() }.padding(6.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(tr("Turn Off Computer", "Bilgisayarı kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp), modifier = Modifier.clickable { onClose() }.padding(6.dp))
+            }
+        }
     }
 
     @Composable
