@@ -101,6 +101,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -908,12 +909,14 @@ fun YtxTubeApp() {
             }
         }
 
+        // a settings panel over the player: the video behind it is softly blurred (Android 12 and newer), like the launcher's panels
+        val sheetBlur = if (player.sheet == PlayerSheet.Settings || player.sheet == PlayerSheet.Speed || player.sheet == PlayerSheet.Audio) Modifier.blur(10.dp) else Modifier
         if (showFullscreen) {
-            Box(Modifier.fillMaxSize().layerBackdrop(playerBackdrop)) {
+            Box(Modifier.fillMaxSize().layerBackdrop(playerBackdrop).then(sheetBlur)) {
                 FullscreenPlayer(player, onExit = { exitFullscreen() })
             }
         } else if (showPlayer) {
-            Box(Modifier.fillMaxSize().layerBackdrop(playerBackdrop)) {
+            Box(Modifier.fillMaxSize().layerBackdrop(playerBackdrop).then(sheetBlur)) {
                 PlayerScreen(
                     player, morph,
                     onOpen = player::open,

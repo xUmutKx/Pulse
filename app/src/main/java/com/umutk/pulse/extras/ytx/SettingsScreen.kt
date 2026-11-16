@@ -227,7 +227,7 @@ fun SettingsScreen(
                     SettingsRow(
                         icon = Icons.Rounded.Info,
                         title = I18n.t("version", "Version"),
-                        subtitle = "YTXTube ${YTX_VERSION}",
+                        subtitle = "YTXTube ${YTX_VERSION} · GPL-3.0",
                         trailing = {
                             Box(
                                 modifier = Modifier
@@ -254,49 +254,7 @@ fun SettingsScreen(
                             }
                         }
                     )
-                    SettingsRow(
-                        icon = Icons.Rounded.FileDownload,
-                        title = I18n.t("check_updates", "Check for updates"),
-                        subtitle = I18n.t("check_updates_sub", "New GitHub releases install from inside the app"),
-                        onClick = {
-                            if (checkingUpdate) return@SettingsRow
-                            checkingUpdate = true
-                            updateFeedback = null
-                            scope.launch {
-                                val start = System.currentTimeMillis()
-                                onCheckUpdate()
-                                val elapsed = System.currentTimeMillis() - start
-                                if (elapsed < 1200) delay(1200 - elapsed)
-                                checkingUpdate = false
-                                updateFeedback = "You're on the latest version (${YTX_VERSION})"
-                            }
-                        },
-                    )
-                    val openRepo: (String) -> Unit = { url ->
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        }
-                    }
-                    val ytxRepo = "https://github.com/Koustubh12345/YTXTube"
-                    SettingsRow(
-                        icon = Icons.Rounded.Code,
-                        title = I18n.t("open_source", "Open Source"),
-                        subtitle = I18n.t("open_source_sub", "View source code on GitHub"),
-                        onClick = { openRepo(ytxRepo) },
-                    )
-                    val telegram = "https://t.me/getthefckoutofheree"
-                    val openTelegram: () -> Unit = {
-                        val app = Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=getthefckoutofheree"))
-                        val web = Intent(Intent.ACTION_VIEW, Uri.parse(telegram))
-                        runCatching { context.startActivity(app) }
-                            .onFailure { runCatching { context.startActivity(web) } }
-                    }
-                    SettingsRow(
-                        icon = Icons.Rounded.Person,
-                        title = I18n.t("developer", "Developer"),
-                        subtitle = "@getthefckoutofheree",
-                        onClick = openTelegram,
-                    )
+                    // the source and its licence (GPL-3.0) are named in Pulse's licences page (THIRD_PARTY.md); the app is updated with Pulse
                 }
             }
         }
@@ -1277,18 +1235,11 @@ private fun GeneralModificationContent(context: Context) {
     var showShortsQualityDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
 
+    // Pulse's own folder picker (the phone's storage in Pulse's look), not Android's
     val folderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            val docId = DocumentsContract.getTreeDocumentId(uri)
-            val path = if (docId.startsWith("primary:")) {
-                File(Environment.getExternalStorageDirectory(), docId.removePrefix("primary:"))
-            } else {
-                File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "YTXTube Downloads")
-            }
-            Downloads.setCustomDownloadDir(path)
-        }
+        contract = com.umutk.pulse.PulsePick.PickFolder()
+    ) { path: String? ->
+        if (!path.isNullOrBlank()) Downloads.setCustomDownloadDir(File(path))
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1486,12 +1437,7 @@ private fun GeneralModificationContent(context: Context) {
                 showFolderDialog = false
             },
             onCustomPick = {
-                runCatching {
-                    val initialUri = Uri.fromFile(Downloads.currentDownloadDir)
-                    folderPicker.launch(initialUri)
-                }.onFailure {
-                    folderPicker.launch(null)
-                }
+                runCatching { folderPicker.launch(Unit) }
                 showFolderDialog = false
             },
             onDismiss = { showFolderDialog = false }

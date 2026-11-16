@@ -189,6 +189,9 @@ object Downloads {
     /** Puts a finished song into the media library with its real title and artist (the file name carries the video id, which the library would show). */
     private fun publishSong(task: DownloadTask) {
         val ctx = runCatching { YTXTubeApplication.appContext }.getOrNull() ?: return
+        // the file itself carries the title, the singer, the album and the cover (every music player reads them)
+        val artist = task.channel.removeSuffix(" - Topic").trim()
+        Mp4Tags.write(task.file, task.title, artist, "YTXTube", Mp4Tags.squareCover(task.videoId))
         android.media.MediaScannerConnection.scanFile(ctx, arrayOf(task.file.absolutePath), arrayOf("audio/mp4")) { _, uri ->
             if (uri == null) return@scanFile
             runCatching {

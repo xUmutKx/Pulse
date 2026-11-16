@@ -47,3 +47,10 @@ CC0 1.0 (public domain); the rest of that project is GPL-3.0 and none of its cod
 The gallery search names what is in a picture on the phone itself. It uses [TensorFlow Lite](https://www.tensorflow.org/lite) (Apache 2.0) and the EfficientNet-Lite0 image classifier
 (Apache 2.0, from the [MediaPipe models](https://ai.google.dev/edge/mediapipe/solutions/vision/image_classifier), int8, 1000 ImageNet classes), fetched by the app the first time it is needed (it is not inside the APK). The English names of the classes are the ImageNet class list
 (ILSVRC 2012); the Turkish words in `labels.tsv` were written for Pulse. Faces are found with Android's own `android.media.FaceDetector`. Nothing is sent anywhere.
+
+## YTXTube (extras/ytx)
+
+The YouTube extra app is [YTXTube](https://github.com/Koustubh12345/YTXTube) 2.2.0 by Koustubh12345, GPL-3.0, changed for Pulse (Pulse's own looks, AMOLED by default,
+a light glass stand-in instead of the Kyant backdrop shaders, songs saved to Music with their tags and cover, no self-updater). It uses
+[NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPL-3.0), [SponsorBlock](https://sponsor.ajay.app) data (CC BY-NC-SA 4.0),
+[OkHttp](https://square.github.io/okhttp/) and [Coil](https://coil-kt.github.io/coil/) (Apache 2.0).
