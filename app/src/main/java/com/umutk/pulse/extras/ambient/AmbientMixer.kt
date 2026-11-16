@@ -80,7 +80,10 @@ object AmbientMixer {
     fun ensure(ctx: Context, found: List<Snd>) {
         appCtx = ctx.applicationContext
         val e = engine
-        if (e == null || (!isPlaying() && sounds.value.map { it.id } != found.map { it.id })) {
+        // a new list of sounds (the loops just downloaded) is taken even while something plays: what played goes on with the new list
+        // (it was only taken while nothing played, so the downloaded sounds did not show until the app was opened again)
+        if (e == null || sounds.value.map { it.id } != found.map { it.id }) {
+            val playingMix = if (e != null && isPlaying()) mix() else null
             job?.cancel(); e?.release()
             val ne = AmbientEngine(ctx.applicationContext, found.map { AmbientTrack(it.id, it.path) })
             engine = ne
@@ -98,6 +101,7 @@ object AmbientMixer {
                     }
                 }
             }
+            if (playingMix != null) startFaded(playingMix, 0)
         }
     }
 
