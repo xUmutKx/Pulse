@@ -600,12 +600,43 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         kbRoot?.requestLayout()
     }
 
+    /**
+     * A web page's box (a WebView of Pulse itself: the sign-in of YTXTube, Game Hub) lives in THIS process: its answers to "what is before the cursor" are
+     * worked out on the main thread, which is the one asking, so every question waited out its timeout and the screen froze. Such a box only gets typed into
+     * (commit / delete are not waited for); every question is answered at once with "nothing".
+     */
+    private var blindWeb = false
+    private fun webBox(info: EditorInfo?): Boolean {
+        if (info == null || info.packageName != packageName) return false
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        return cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+    }
+    private var blindIc: android.view.inputmethod.InputConnection? = null
+    private var blindOf: android.view.inputmethod.InputConnection? = null
+    override fun getCurrentInputConnection(): android.view.inputmethod.InputConnection? {
+        val ic = super.getCurrentInputConnection() ?: return null
+        if (!blindWeb) return ic
+        if (blindOf !== ic) {
+            blindOf = ic
+            blindIc = object : android.view.inputmethod.InputConnectionWrapper(ic, true) {
+                override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence = ""
+                override fun getTextAfterCursor(n: Int, flags: Int): CharSequence = ""
+                override fun getSelectedText(flags: Int): CharSequence? = null
+                override fun getCursorCapsMode(reqModes: Int): Int = 0
+                override fun getExtractedText(request: android.view.inputmethod.ExtractedTextRequest?, flags: Int): android.view.inputmethod.ExtractedText? = null
+            }
+        }
+        return blindIc
+    }
+
     /** Takes the kind of the field from [info] (plain keys, address, web address, name, no automatic correction); true when any of them changed. */
     private fun applyKind(info: EditorInfo): Boolean {
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         val nAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
-        val nPlain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
+        blindWeb = webBox(info)
+        val nPlain = blindWeb || info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
         val nEmail = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)

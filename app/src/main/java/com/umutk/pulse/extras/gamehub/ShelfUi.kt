@@ -460,7 +460,7 @@ internal fun ShelfDetails(g: GameRow, pal: Pal, total: Long, lastUsed: Long, siz
             Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                 Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).size(44.dp).clip(CircleShape).clickable(onClick = onBack), contentAlignment = Alignment.Center) { FluentIcon("close", pal.text.copy(alpha = .7f), 22.dp) }
                 Row(Modifier.padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    BoxArt(g, pal, false, Modifier.width(112.dp).aspectRatio(2f / 3f).shadow(14.dp, RoundedCornerShape(6.dp)))
+                    Box(Modifier.width(136.dp).aspectRatio(2f / 3f).shadow(16.dp, RoundedCornerShape(8.dp)).clip(RoundedCornerShape(8.dp))) { GameCover(g.pkg, pal, wide = false, title = g.name) }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(tr("GAMES", "OYUNLAR"), color = pal.sub, fontSize = 12.sp, letterSpacing = 3.sp)
                         Text(g.name, color = pal.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
