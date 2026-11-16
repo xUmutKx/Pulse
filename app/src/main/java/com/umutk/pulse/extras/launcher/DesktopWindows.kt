@@ -146,7 +146,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         Modifier.fillMaxSize().background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .4f; "7" -> .34f; else -> 1f }).padding(start = 8.dp)
+            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> 0f; "7" -> .34f; else -> 1f }).padding(start = 8.dp)
                 .pointerInput(w.id, areaW, areaH) {
                     detectDragGestures { c, drag ->
                         c.consume()

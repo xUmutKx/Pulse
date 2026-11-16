@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
  * the desktop show through the taskbar, the flyouts and the menus. [tint] sets how much of the picture shows (the less opaque, the more).
  */
 @Composable
-fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape: Shape = androidx.compose.ui.graphics.RectangleShape, blur: Dp = 26.dp, content: @Composable BoxScope.() -> Unit) {
+fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape: Shape = androidx.compose.ui.graphics.RectangleShape, blur: Dp = 26.dp, origin: Offset? = null, content: @Composable BoxScope.() -> Unit) {
     val ctx = LocalContext.current
     val cfg = LocalConfiguration.current
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -47,12 +47,16 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     // the picture is as big as the window really is (the launcher may scale the screen, so the screen size of the configuration is not the window's)
     val view = androidx.compose.ui.platform.LocalView.current
     val dens = androidx.compose.ui.platform.LocalDensity.current
-    val rootW = with(dens) { view.rootView.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { view.rootView.height.coerceAtLeast(1).toDp() }
+    // inside a popup (a menu) the root is the popup's own small window: the screen's size and the popup's place on it are used instead
+    val screen = if (origin != null) generateSequence(ctx) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull()?.window?.decorView else null
+    val rootV = screen ?: view.rootView
+    val rootW = with(dens) { rootV.width.coerceAtLeast(1).toDp() }; val rootH = with(dens) { rootV.height.coerceAtLeast(1).toDp() }
+    val at = pos + (origin ?: Offset.Zero)
     val amount = (LauncherPrefs.blurAmt.dp).coerceAtLeast(4.dp)
     Box(modifier.clip(shape).onGloballyPositioned { pos = it.positionInRoot() }) {
         // the picture and the tint only fill the box: they never make it bigger (the screen-sized picture made every panel as tall as the screen)
         if (wall != null) Box(Modifier.matchParentSize().clipToBounds()) {
-            Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-pos.x.toInt(), -pos.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
+            Image(wall, null, Modifier.wrapContentSize(androidx.compose.ui.Alignment.TopStart, unbounded = true).requiredSize(rootW, rootH).offset { IntOffset(-at.x.toInt(), -at.y.toInt()) }.blur(if (LauncherPrefs.blurAll) amount else blur), contentScale = ContentScale.Crop)
         }
         Box(Modifier.matchParentSize().background(tint))
         content()

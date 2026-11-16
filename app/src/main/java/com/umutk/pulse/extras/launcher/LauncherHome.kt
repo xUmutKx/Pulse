@@ -176,8 +176,14 @@ fun ContextPopup(menuW: androidx.compose.ui.unit.Dp, menuH: androidx.compose.ui.
         val sk = menuSkin(w.id, w.dark)
         if (sk == null) Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp), content = content)
         else androidx.compose.runtime.CompositionLocalProvider(LocalMenuSkin provides sk) {
+            // Windows 11: the menu is acrylic, the blurred desktop shows through it (as the taskbar and the flyouts)
+            if (w.id == "win11") AcrylicBox("win11", (if (w.dark) androidx.compose.ui.graphics.Color(0xFF2C2C2C) else androidx.compose.ui.graphics.Color(0xFFF3F3F3)).copy(alpha = (.72f - LauncherPrefs.glass / 200f).coerceIn(.35f, .9f)),
+                Modifier.width(menuW).shadow(sk.shadow, RoundedCornerShape(sk.radius)).border(sk.borderW, sk.border, RoundedCornerShape(sk.radius)), RoundedCornerShape(sk.radius), 30.dp,
+                origin = androidx.compose.ui.geometry.Offset(x, y)) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = sk.padH, vertical = sk.padV), content = content)
+            }
             // each Windows look draws its own context menu: Windows 11 rounded and soft, 10 flat, 7 Aero with a gutter, XP and 95 the classic bar
-            Column(Modifier.width(menuW).shadow(sk.shadow, RoundedCornerShape(sk.radius)).clip(RoundedCornerShape(sk.radius)).background(sk.bg).border(sk.borderW, sk.border, RoundedCornerShape(sk.radius)).padding(horizontal = sk.padH, vertical = sk.padV), content = content)
+            else Column(Modifier.width(menuW).shadow(sk.shadow, RoundedCornerShape(sk.radius)).clip(RoundedCornerShape(sk.radius)).background(sk.bg).border(sk.borderW, sk.border, RoundedCornerShape(sk.radius)).padding(horizontal = sk.padH, vertical = sk.padV), content = content)
         }
     }
 }
