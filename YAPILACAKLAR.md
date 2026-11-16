@@ -2504,3 +2504,10 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Mesajlar 95/XP/7 görünümlerinde MSN Messenger: menü çubuğu, afiş, Çevrimiçi/Çevrimdışı gruplar, "Şunu yapmak istiyorum" paneli, "X diyor ki:" konuşma. derlenmedi
 - Pano: 300 sınırı kalktı, ayar: öğe sayısını sınırla (varsayılan kapalı, açılınca 3000).
 - Win7: gerçek WMP ikonları müzik/video için; launcher öğeleri Win7 paketinden; Dosya Gezgini: Bilgisayar sayfası (diskler/bölümler, doluluk çubuğu), klasör ve dosya türü ikonları. derlenmedi
+
+## 1.0.427 için (derlenmedi)
+- Win7: gerçek başlat topu 3 durum + animasyon, Denetim Masası ikonu, tepsi (yukarı ok, Eylem Merkezi, güvenlik duvarı, MSN arka planda), bağlam menüsünde Kes/Kopyala/Yapıştır (menüyü düzenle ayarlarda), ızgara boşluk doldurma ayarı (varsayılan kapalı), sürükleme hatası (eski konumdan başlıyordu) düzeltildi.
+- WMP12: ileri tuşu sıkışması, Sözler düğmesi.
+- Müzik: arama (çal/karıştır, albüm, sanatçı, sözlerde küçük çal), sanatçı/albüm sayfası araması, yumuşak kapak, yüzen çal/karıştır, sanatçı resmi ayrı çekilir (Deezer).
+- Hava: gerçekçi ay çizimi.
+- Görev Yöneticisi: sıralama ve performans seçimi hatırlanır.
