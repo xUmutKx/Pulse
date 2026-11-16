@@ -94,6 +94,10 @@ object LauncherSession {
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
+    /** MSN (Messages) was opened: it keeps a little icon in the Windows 7 tray, as if it ran in the background. */
+    var msnTray by mutableStateOf(false)
+    /** The hidden-icons flyout of the Windows 7 tray (the arrow pointing up) is open. */
+    var trayOpen by mutableStateOf(false)
     /** The Windows Phone glance page (behind the Windows button) is open. */
     /** The boot and sign-in screens were passed in this launcher process. */
     var booted by mutableStateOf(false)

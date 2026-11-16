@@ -86,6 +86,7 @@ object DesktopWindows {
     private var top = 0
 
     fun open(route: String, title: String) {
+        if (route == "messages") LauncherSession.msnTray = true
         list.firstOrNull { it.start == route }?.let { it.min = false; front(it); return }
         val n = list.size % 6
         list += DWin(++seq, title, route, 14f + n * 22f, 20f + n * 26f, ++top)
