@@ -1092,31 +1092,60 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val more: @Composable () -> Unit = {
                 Box {
                     Box(Modifier.size(36.dp).clickable { menuOf = f }, contentAlignment = Alignment.Center) { MoreIcon(T.sub, 20.dp) }
-                    val actions = buildList<Triple<String, String, () -> Unit>> {
-                        add(Triple("Open", "view", { if (f.isDirectory) go(f.path) else openFile(f) }))
-                        if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
+                    var archiveOpen by remember(f.path) { mutableStateOf(false) }
+                    // the quick actions are icons on one line; the archive icon opens a menu of its own with every archive job
+                    val quick = buildList<Triple<String, String, () -> Unit>> {
                         add(Triple("Cut", "move", { clip = Clip(listOf(f), true) }))
                         add(Triple("Copy", "copy", { clip = Clip(listOf(f), false) }))
                         if (canPaste) add(Triple("Paste", "paste", { doPaste() }))
-                        add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
-                        add(Triple("Compress", "zip", { zipAsk = listOf(f) }))
-                        add(Triple("Share", "share", { shareSheet = listOf(f) }))
-                        if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
-                        add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
-                        if (f.isDirectory) {
-                            add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
-                            add(Triple("Create shortcut", "link", { mark(f.path) }))
-                        }
-                        if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) -> add(Triple(l, k, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) })) }
-                        if (isFirstPart(f)) add(Triple(tr("Join parts", "Parçaları birleştir"), "zip", { scope.launch { note = withContext(Dispatchers.IO) { joinParts(f) }; refresh++ } }))
-                        add(Triple("Properties", "info", { propsOf = f }))
+                        add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
+                        add(Triple("Archive", "zip", { archiveOpen = true }))
                     }
+                    // the rest, in groups: open, send, folder, details
+                    val groups = listOf(
+                        buildList<Triple<String, String, () -> Unit>> {
+                            add(Triple("Open", "view", { if (f.isDirectory) go(f.path) else openFile(f) }))
+                            if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
+                        },
+                        buildList<Triple<String, String, () -> Unit>> {
+                            add(Triple("Share", "share", { shareSheet = listOf(f) }))
+                            if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
+                            add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
+                        },
+                        buildList<Triple<String, String, () -> Unit>> {
+                            if (f.isDirectory) {
+                                add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
+                                add(Triple("Create shortcut", "link", { mark(f.path) }))
+                            }
+                        },
+                        listOf(Triple("Properties", "info", { propsOf = f })),
+                    ).filter { it.isNotEmpty() }
                     val w = LocalWindowLook.current
                     ThemedMenu(menuOf == f, { menuOf = null }) {
-                        actions.forEach { (label, key, act) ->
-                            ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) })
+                        val st = com.umutk.pulse.LocalMenuStyle.current
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                            quick.forEach { (label, key, act) ->
+                                Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { menuOf = null; act() }, contentAlignment = Alignment.Center) {
+                                    ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
+                                }
+                            }
                         }
+                        groups.forEach { g ->
+                            Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
+                            g.forEach { (label, key, act) ->
+                                ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, st.sub, 18.dp) })
+                            }
+                        }
+                    }
+                    // every archive job in one place: compress, and for an archive open / extract / add / info, for a split file join the parts
+                    ThemedMenu(archiveOpen, { archiveOpen = false }) {
+                        val st = com.umutk.pulse.LocalMenuStyle.current
+                        ThemedMenuItem("Compress", { archiveOpen = false; zipAsk = listOf(f) }, leading = { ExIcon("zip", st.sub, 18.dp) })
+                        if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) ->
+                            ThemedMenuItem(l, { archiveOpen = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) }, leading = { ExIcon(k, st.sub, 18.dp) })
+                        }
+                        if (isFirstPart(f)) ThemedMenuItem(tr("Join parts", "Parçaları birleştir"), { archiveOpen = false; scope.launch { note = withContext(Dispatchers.IO) { joinParts(f) }; refresh++ } }, leading = { ExIcon("zip", st.sub, 18.dp) })
                     }
                 }
                 }
