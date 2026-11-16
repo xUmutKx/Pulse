@@ -2517,3 +2517,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 ## Sonrası (derlenmedi)
 - Win7 Gezgin: büyük mavi geri/ileri topları, çift tıkla aç, geri Bilgisayar sayfasına döner, resim/video/müzik önizlemesi, listelenemeyen klasörde mesaj; pencere başlığına çift dokunma/basılı tutma ile tam ekran-pencere.
 - Tepsi: tek bayrak, ok kutusunda yalnızca gerçekten süren şeyler (müzik, indirme, VPN, Bluetooth, depolama), Denetim Masası > Bildirim Alanı Simgeleri.
+- Gezgin: çift tıklama hatası (eski kapanış nedeniyle klasör hiç açılmıyordu) düzeltildi; arama tüm alt klasörlerde; masaüstü menüsünden Yapışkan not kaldırıldı. derlenmedi

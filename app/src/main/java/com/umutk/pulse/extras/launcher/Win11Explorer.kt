@@ -95,7 +95,8 @@ fun Win11Explorer() {
             }.getOrDefault(emptyList())
         }
     }
-    val shown = if (query.isBlank()) files else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    val found by rememberTreeSearch(dir, query, hidden)
+    val shown = if (query.isBlank()) files else (found ?: files.filter { it.name.contains(query.trim(), ignoreCase = true) })
     fun selFile() = files.firstOrNull { it.path == sel }
     val keys = Modifier.focusRequester(fr).focusable().fileKeys(
         copy = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = false } },
