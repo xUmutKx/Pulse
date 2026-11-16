@@ -567,7 +567,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             outInsets.touchableRegion.setEmpty()
             return
         }
-        if (!KeyboardPrefs.floatNow) { floatWasUp = false; return }
+        if (!KeyboardPrefs.floatNow) {
+            floatWasUp = false
+            // the app is told where the visible keyboard really starts (the top of what is drawn), not where the window starts: with the screen turned the other way round
+            // the camera's cut-out and the system bars shift the keyboard, and the bar then lay over the text box
+            if (root != null && root.isShown) { val l = IntArray(2); root.getLocationInWindow(l); outInsets.contentTopInsets = l[1]; outInsets.visibleTopInsets = l[1] }
+            return
+        }
         floatWasUp = true
         // until the keyboard has been measured, nothing in the tall window takes touches: otherwise the empty window would block the screen behind it
         if (r == null || root == null) {
@@ -593,6 +599,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             kbRoot = this
             // the floating keyboard moved: the system is asked again which part of the window takes touches
             st.refreshInsets = { post { this@PulseKeyboardService.window.window?.decorView?.requestLayout() } }
+            // the camera's cut-out (at the bottom when the screen is turned upside down) and the sides: the keys keep clear of it, so they are not hidden under it
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+                val c = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout())
+                v.setPadding(c.left, 0, c.right, c.bottom)
+                insets
+            }
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
             setContent { KeyboardView(st, this@PulseKeyboardService) }
             // the bottom keys sit where the system's home swipe starts: the whole keyboard keeps its touches (Android 10+)
