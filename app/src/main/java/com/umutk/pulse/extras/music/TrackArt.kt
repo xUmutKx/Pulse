@@ -173,6 +173,8 @@ fun CoverCarousel(
     // when set, a vertical drag moves the whole page instead (dy per move, then the release): the cover itself stays put
     onPageDrag: ((Float) -> Unit)? = null,
     onPageRelease: (() -> Unit)? = null,
+    // the slide of the covers (px, - toward the next track), the width they slide over, and the cover in front: for a backdrop that has to move with them
+    onShown: ((Float, Float, ImageBitmap?) -> Unit)? = null,
     slot: @Composable (ImageBitmap?) -> Unit,
 ) {
     // one plain value follows the finger; the settle is a single eased tween (a spring overshoots and rocks back and forth)
@@ -200,6 +202,10 @@ fun CoverCarousel(
     val slop = with(LocalDensity.current) { 12.dp.toPx() }
     val reach = with(LocalDensity.current) { 72.dp.toPx() }
     val ctx = LocalContext.current
+    val shownNow by rememberUpdatedState(onShown)
+    if (onShown != null) LaunchedEffect(Unit) {
+        androidx.compose.runtime.snapshotFlow { Triple(slide, width, if (carrying) carried else art) }.collect { (s, w, a) -> shownNow?.invoke(s, w, a) }
+    }
     Box(
         // clipped at the two sides only: the neighbour covers stay out of sight, but a cover pulled up or down may leave the frame and cross the page
         modifier.drawWithContent { clipRect(0f, -size.height * 8f, size.width, size.height * 9f) { this@drawWithContent.drawContent() } }
