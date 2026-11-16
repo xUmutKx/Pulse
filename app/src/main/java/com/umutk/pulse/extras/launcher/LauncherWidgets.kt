@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
@@ -132,7 +134,8 @@ fun WidgetPreview(info: AppWidgetProviderInfo, id: Int, modifier: Modifier = Mod
     BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val w = info.minWidth.coerceAtLeast(40)
         val h = info.minHeight.coerceAtLeast(40)
-        val scale = min(1f, maxWidth.value / w)
+        val byH = if (constraints.hasBoundedHeight) maxHeight.value / h else 1f
+        val scale = min(1f, min(maxWidth.value / w, byH))
         Box(Modifier.size((w * scale).dp, (h * scale).dp), contentAlignment = Alignment.Center) {
             if (id >= 0) AndroidView(
                 factory = { c -> host.createView(c, id, info).also { it.updateAppWidgetSize(null, w, h, w, h) } },
@@ -147,9 +150,32 @@ fun WidgetPreview(info: AppWidgetProviderInfo, id: Int, modifier: Modifier = Mod
 /** About how many home cells a widget takes (the platform's own sum: 70 dp a cell, less 30 dp of margins). */
 private fun cells(dp: Int): Int = ((dp + 30) / 70).coerceAtLeast(1)
 
+/** The group of a widget, from its name: the board shows the widgets under these headings. */
+private fun groupOf(name: String, cls: String): String {
+    val n = "$name $cls".lowercase()
+    fun has(vararg k: String) = k.any { n.contains(it) }
+    return when {
+        has("clock", "saat", "alarm", "flip", "timer", "zaman") -> "clock"
+        has("music", "müzik", "player", "winamp", "poweramp", "media", "visual", "song", "radio", "ses", "voice", "record") -> "music"
+        has("note", "not ", "sticky", "todo", "task", "list", "yapışkan") -> "notes"
+        has("weather", "hava", "calendar", "takvim", "event", "agenda", "date") -> "calendar"
+        has("battery", "pil", "storage", "depolama", "ram", "cpu", "network", "ağ", "system", "sistem", "monitor", "speed", "gauge", "temp", "disk", "device", "performance", "charging", "şarj") -> "system"
+        has("photo", "gallery", "galeri", "picture", "image", "foto", "resim") -> "photos"
+        else -> "other"
+    }
+}
+
+private fun groupName(g: String): String = when (g) {
+    "clock" -> tr("Clocks", "Saatler"); "music" -> tr("Music and sound", "Müzik ve ses"); "notes" -> tr("Notes and tasks", "Notlar ve görevler")
+    "calendar" -> tr("Calendar and weather", "Takvim ve hava"); "system" -> tr("System", "Sistem"); "photos" -> tr("Photos", "Fotoğraflar"); else -> tr("More", "Diğer")
+}
+
+private val GROUP_ORDER = listOf("clock", "music", "notes", "calendar", "system", "photos", "other")
+
 /**
- * The widget picker, as the Windows 11 "Add widgets" board: the apps that have widgets in a grid (Pulse first), and an app's widgets as cards in two columns with their size.
- * A search box finds a widget by its name or its app. The board stays open after a widget is added (it gets a check mark), so several can be added in one go.
+ * The widget board, as the Windows 11 "Add widgets" pane: Pulse's own widgets sorted into groups (clocks, music, notes, calendar, system, photos) with one chip per group,
+ * and the other apps' widgets under their app. A card is as wide and as high as its widget really is (wide widgets take the whole row), so nothing is cropped or
+ * stretched. A search finds a widget by its name or app. The board stays open after an add (the card gets a check), so several can be added in one go.
  */
 @Composable
 fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> Unit) {
@@ -161,30 +187,62 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
     fun nameOf(i: AppWidgetProviderInfo): String = label.getOrPut(i.provider.flattenToString()) { runCatching { i.loadLabel(pm) }.getOrNull() ?: i.provider.className.substringAfterLast('.') }
     val appName = remember { HashMap<String, String>() }
     fun appOf(pkg: String): String = appName.getOrPut(pkg) { runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg) }
-    // the apps with widgets: Pulse first, then by name
-    val apps = remember { all.groupBy { it.provider.packageName }.toList().sortedWith(compareBy<Pair<String, List<AppWidgetProviderInfo>>> { it.first != ctx.packageName }.thenBy { appOf(it.first).lowercase() }) }
+    val (own, others) = remember { all.partition { it.provider.packageName == ctx.packageName } }
+    val ownBy = remember { own.groupBy { groupOf(nameOf(it), it.provider.className) } }
+    val apps = remember { others.groupBy { it.provider.packageName }.toList().sortedBy { appOf(it.first).lowercase() } }
+    var tab by remember { mutableStateOf(0) }          // 0 Pulse, 1 other apps
+    var group by remember { mutableStateOf("") }       // "" every group
     var app by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var added by remember { mutableStateOf(emptySet<String>()) }
     val q = query.trim()
-    val shown: List<AppWidgetProviderInfo>? = when {
+    // what the grid shows: a flat list of widgets (search, one app) or the Pulse groups under headings
+    val flat: List<AppWidgetProviderInfo>? = when {
         q.isNotEmpty() -> all.filter { nameOf(it).contains(q, true) || appOf(it.provider.packageName).contains(q, true) }
-        app != null -> apps.firstOrNull { it.first == app }?.second
+        tab == 1 && app != null -> apps.firstOrNull { it.first == app }?.second
         else -> null
     }
     WinAlert(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (app != null && q.isEmpty()) Box(Modifier.size(32.dp).clickable { app = null }, contentAlignment = Alignment.Center) { PIcon("back", w.text, 18.dp) }
-                Text(if (app != null && q.isEmpty()) appOf(app!!) else tr("Add widgets", "Widget ekle"), color = w.text, maxLines = 1)
+                if (tab == 1 && app != null && q.isEmpty()) Box(Modifier.size(32.dp).clickable { app = null }, contentAlignment = Alignment.Center) { PIcon("back", w.text, 18.dp) }
+                Text(if (tab == 1 && app != null && q.isEmpty()) appOf(app!!) else tr("Add widgets", "Widget ekle"), color = w.text, maxLines = 1)
             }
         },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 com.umutk.pulse.PField(query, { query = it }, tr("Search widgets", "Widget ara"), Modifier.fillMaxWidth())
+                if (q.isEmpty()) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        com.umutk.pulse.PChip(tab == 0, "Pulse") { tab = 0; app = null }
+                        com.umutk.pulse.PChip(tab == 1, tr("Other apps", "Diğer uygulamalar")) { tab = 1 }
+                    }
+                    if (tab == 0 && ownBy.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        com.umutk.pulse.PChip(group == "", tr("All", "Tümü")) { group = "" }
+                        GROUP_ORDER.filter { it in ownBy }.forEach { g -> com.umutk.pulse.PChip(group == g, groupName(g)) { group = g } }
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
-                if (shown == null) LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxWidth().heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                @Composable fun Card(info: AppWidgetProviderInfo, span2: Boolean) {
+                    val k = info.provider.flattenToString()
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(w.panel).clickable { added = added + k; onPick(info) }.padding(8.dp)) {
+                        // the picture is as high as the widget is, for the width of the card
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            val wd = info.minWidth.coerceAtLeast(40); val hd = info.minHeight.coerceAtLeast(40)
+                            val ph = (maxWidth.value * hd / wd).coerceIn(44f, if (span2) 170f else 150f).dp
+                            Box(Modifier.fillMaxWidth().height(ph), contentAlignment = Alignment.Center) {
+                                WidgetCardPicture(info) { added = added + k; onPick(info) }
+                                if (k in added) Box(Modifier.align(Alignment.TopEnd).size(22.dp).clip(CircleShape).background(Look.accent), contentAlignment = Alignment.Center) { PIcon("check", Color.White, 14.dp) }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(nameOf(info), color = w.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("${cells(info.minWidth)} x ${cells(info.minHeight)}" + if (q.isNotEmpty()) "  ·  " + appOf(info.provider.packageName) else "", color = w.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                fun wide(i: AppWidgetProviderInfo) = cells(i.minWidth) >= 3 || i.minWidth >= 2.2f * i.minHeight
+                if (flat == null && tab == 1 && app == null) LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     gridItems(apps, key = { it.first }) { (pkg, list) ->
                         val icon = remember(pkg) { runCatching { pm.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(w.panel).clickable { app = pkg }.padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -195,19 +253,12 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
                         }
                     }
                 }
-                else if (shown.isEmpty()) Text(tr("No widgets", "Widget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
-                else LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 460.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    gridItems(shown, key = { it.provider.flattenToString() }) { info ->
-                        val k = info.provider.flattenToString()
-                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(w.panel).clickable { added = added + k; onPick(info) }.padding(8.dp)) {
-                            Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
-                                WidgetCardPicture(info) { added = added + k; onPick(info) }
-                                if (k in added) Box(Modifier.align(Alignment.TopEnd).size(22.dp).clip(CircleShape).background(Look.accent), contentAlignment = Alignment.Center) { PIcon("check", Color.White, 14.dp) }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(nameOf(info), color = w.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text("${cells(info.minWidth)} x ${cells(info.minHeight)}" + if (q.isNotEmpty()) "  ·  " + appOf(info.provider.packageName) else "", color = w.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                else if (flat != null && flat.isEmpty()) Text(tr("No widgets", "Widget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
+                else LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (flat != null) gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
+                    else GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
+                        if (group == "") item(key = "h_$g", span = { GridItemSpan(maxLineSpan) }) { Text(groupName(g), color = w.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
+                        gridItems(ownBy.getValue(g), key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
                     }
                 }
             }

@@ -2494,3 +2494,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Masaüstü ızgara: varsayılan açık, dikey 4x8, yatay 8x4, ayarlanabilir.
 - Ayarlar > Görünüm grupları açılır/kapanır (kapalı başlar).
 - derlenmedi
+- Widget seçici: gruplar (saat, müzik, not, takvim, sistem, foto), kartlar widget oranında, geniş widget tam satır. derlenmedi
