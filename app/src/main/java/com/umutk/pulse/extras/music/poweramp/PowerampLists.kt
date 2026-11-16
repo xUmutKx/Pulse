@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.rounded.SortByAlpha
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Star
@@ -308,7 +309,9 @@ fun LibraryScreen(
             }
             is Lib.Group -> {
                 val items = tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }
-                SongList(items, current, style, onPlay, onPlayTracks, top = { items.firstOrNull()?.value?.let { BigCover(it, style) } })
+                val groupSongs = items.map { it.value }
+                SongList(items, current, style, onPlay, onPlayTracks, searchable = true, hidePlay = true,
+                    top = { items.firstOrNull()?.value?.let { BigCover(it, style, artist = if (n.kind == 1) n.key else null, onPlay = { onPlayTracks(groupSongs, 0) }, onShuffle = { onPlayTracks(groupSongs.shuffled(), 0) }) } })
             }
             Lib.Songs -> {
                 val stars = remember(tracks) { com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx) }
@@ -425,12 +428,16 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null) {
+private fun SongList(itemsIn: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null,
+                     searchable: Boolean = false, hidePlay: Boolean = false) {
+    // a page opened on its own (an artist, an album ...) has a search of its own over its songs
+    var q by remember { mutableStateOf("") }
+    val items = remember(itemsIn, q) { if (q.isBlank()) itemsIn else itemsIn.filter { (_, t) -> t.displayName().foldHas(q) || t.artist.foldHas(q) || t.album.foldHas(q) } }
     val songs = remember(items) { items.map { it.value } }
     val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val starMap = stars ?: remember { com.umutk.pulse.extras.music.stats.MusicStats.ratings(appCtx) }
     // an empty page says so instead of staying blank
-    if (items.isEmpty()) {
+    if (itemsIn.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("No songs here", "Burada şarkı yok"), color = style.textDim, fontSize = 15.sp) }
         return
     }
@@ -483,17 +490,31 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = songs.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SelectAll, tr("Select all", "Tümünü seç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
-        } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        } else Column {
+        if (searchable) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(CircleShape).background(style.chip).padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Search, null, tint = style.textDim, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.weight(1f)) {
+                if (q.isEmpty()) Text(tr("Search", "Ara"), color = style.textDim, fontSize = 15.sp)
+                androidx.compose.foundation.text.BasicTextField(q, { q = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = style.onBackdrop, fontSize = 15.sp), cursorBrush = androidx.compose.ui.graphics.SolidColor(style.accent), modifier = Modifier.fillMaxWidth())
+            }
+            if (q.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = style.textDim, modifier = Modifier.size(20.dp).clickable { q = "" })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             // the buttons on the left, the number of songs at the right end
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
                 // the picture says the layout: a list for one column, 2 x 2 or 3 x 3 squares for the grids (no number)
                 ViewModeGlyph(cols, style.accent, Modifier.size(22.dp))
             }
-            ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
-            ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            // (a page with its play and shuffle floating over the cover has no pair here)
+            if (!hidePlay) {
+                ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
+                ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            }
             Spacer(Modifier.weight(1f))
             Text("${items.size}", color = style.textDim, fontSize = 13.sp)
+        }
         }
     }
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
@@ -523,13 +544,31 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     }
 }
 
-/** The cover of an artist or album page: a square as wide as the screen, at the top. */
+/**
+ * The cover of an artist or album page: a square as wide as the screen with soft corners, at the top. An artist's page shows the artist's own picture (fetched by name, the
+ * album cover meanwhile). Play and shuffle float over its foot, round, on a soft shade, so they sit on the picture and not between it and the black.
+ */
 @Composable
-private fun BigCover(t: Track, style: PowerampStyle) {
-    val art = rememberTrackArt(t)
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).background(style.chip), contentAlignment = Alignment.Center) {
+private fun BigCover(t: Track, style: PowerampStyle, artist: String? = null, onPlay: (() -> Unit)? = null, onShuffle: (() -> Unit)? = null) {
+    val trackArt = rememberTrackArt(t)
+    val ctxA = androidx.compose.ui.platform.LocalContext.current
+    val photo by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artist) {
+        value = artist?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, n)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) else null
+        } }
+    }
+    val art = photo ?: trackArt
+    val soft = RoundedCornerShape(28.dp)
+    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).aspectRatio(1f).clip(soft).background(style.chip), contentAlignment = Alignment.Center) {
         if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(64.dp))
+        if (onPlay != null || onShuffle != null) {
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(110.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .55f)))))
+            Row(Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (onPlay != null) Box(Modifier.size(54.dp).clip(CircleShape).background(Color.White).clickable { onPlay() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.PlayArrow, tr("Play", "Çal"), tint = Color.Black, modifier = Modifier.size(30.dp)) }
+                if (onShuffle != null) Box(Modifier.size(54.dp).clip(CircleShape).background(Color.White).clickable { onShuffle() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), tint = Color.Black, modifier = Modifier.size(26.dp)) }
+            }
+        }
     }
 }
 
@@ -548,7 +587,9 @@ private fun CatRow(icon: ImageVector, color: Color, label: String, style: Powera
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val ctxA = androidx.compose.ui.platform.LocalContext.current
-        val pic by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artist) { value = artist?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) } } }
+        val pic by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artist) { value = artist?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, n)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) else null
+        } } }
         val cover = pic ?: rememberTrackArt(art)
         Box(Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = .45f)), contentAlignment = Alignment.Center) {
             if (cover != null) Image(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -566,7 +607,7 @@ private fun CatRow(icon: ImageVector, color: Color, label: String, style: Powera
  * The lyrics chip switches the results to an online lyrics search of the same text (the lyrics search screen's rule).
  */
 @Composable
-fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, modifier: Modifier = Modifier, onPlayList: (List<Track>, Int) -> Unit = { _, _ -> }) {
     var query by remember { mutableStateOf("") }
     var lyricHits by remember { mutableStateOf<List<LyricHit>>(emptyList()) }
     var lyricsBusy by remember { mutableStateOf(false) }
@@ -580,11 +621,15 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 t.album.foldHas(query) || t.path.foldHas(query)
         }
     }
-    // albums whose name matches: one row each, playing starts at the album's first track
-    val albumHits = remember(query, library) {
-        if (query.isBlank()) emptyList() else library.withIndex().filter { (_, t) -> t.album.orEmpty().contains(query, true) && t.album.orEmpty().isNotBlank() }
-            .groupBy { it.value.album.orEmpty() }.map { (name, ts) -> Triple(name, ts.first().index, ts.size) }
+    // the songs of the results, the albums and the artists that match: play and shuffle play these (never the lyrics hits, they have no file)
+    val songHits = remember(hits, query) { if (query.isBlank()) emptyList() else hits.map { it.value } }
+    val albumGroups = remember(query, library) {
+        if (query.isBlank()) emptyList() else library.filter { it.album.orEmpty().isNotBlank() && it.album.foldHas(query) }.groupBy { it.album.orEmpty() }.toList()
     }
+    val artistGroups = remember(query, library) {
+        if (query.isBlank()) emptyList() else library.filter { it.artist.orEmpty().isNotBlank() && !it.artist.orEmpty().equals("<unknown>", true) && it.artist.foldHas(query) }.groupBy { it.artist.orEmpty() }.toList()
+    }
+    val allFound = remember(songHits, albumGroups, artistGroups) { (songHits + albumGroups.flatMap { it.second } + artistGroups.flatMap { it.second }).distinctBy { it.path } }
     // the lyrics are searched while the text is typed: no extra switch
     LaunchedEffect(query) {
         lyricHits = emptyList()
@@ -627,16 +672,59 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
             }
         }
         Spacer(Modifier.height(8.dp))
-        // songs, then albums, then the lyrics that contain the text (the line above and the line below the match come with each hit)
+        // play and shuffle for everything found, then the songs, the albums and the artists (each with its own play and shuffle), and last the lyrics that contain the text
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (query.isNotBlank() && hits.isNotEmpty()) item { SearchHeader(tr("Songs", "Şarkılar"), style) }
-            itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
-            if (albumHits.isNotEmpty()) {
-                item { SearchHeader(tr("Albums", "Albümler"), style) }
-                itemsIndexed(albumHits) { _, (name, first, n) ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPlay(first) }.padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(name, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text("$n", color = style.textDim, fontSize = 13.sp)
+            if (allFound.isNotEmpty()) item {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.clip(CircleShape).background(style.accent).clickable { onPlayList(allFound, 0) }.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.PlayArrow, null, tint = style.onAccent, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(6.dp))
+                        Text(tr("Play", "Çal"), color = style.onAccent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(Modifier.clip(CircleShape).background(style.chip).clickable { onPlayList(allFound.shuffled(), 0) }.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Shuffle, null, tint = style.accent, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp))
+                        Text(tr("Shuffle", "Karıştır"), color = style.onBackdrop, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            if (songHits.isNotEmpty()) item { SearchHeader(tr("Songs", "Şarkılar"), style, { onPlayList(songHits, 0) }, { onPlayList(songHits.shuffled(), 0) }) }
+            if (query.isNotBlank()) itemsIndexed(songHits) { pos, t -> TrackRow(t, t == current, style, onClick = { onPlayList(songHits, pos) }) }
+            else itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
+            if (albumGroups.isNotEmpty()) {
+                item { SearchHeader(tr("Albums", "Albümler"), style, { onPlayList(albumGroups.flatMap { it.second }, 0) }, { onPlayList(albumGroups.flatMap { it.second }.shuffled(), 0) }) }
+                itemsIndexed(albumGroups) { _, (name, list) ->
+                    val art = rememberTrackArt(list.firstOrNull())
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPlayList(list, 0) }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(style.chip), contentAlignment = Alignment.Center) {
+                            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Album, null, tint = style.textDim, modifier = Modifier.size(24.dp))
+                        }
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(list.firstOrNull()?.artist.orEmpty().takeIf { it.isNotBlank() && !it.equals("<unknown>", true) }?.let { "$it · ${list.size}" } ?: "${list.size}", color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlayList(list, 0) }
+                    }
+                }
+            }
+            if (artistGroups.isNotEmpty()) {
+                item { SearchHeader(tr("Artists", "Sanatçılar"), style, { onPlayList(artistGroups.flatMap { it.second }, 0) }, { onPlayList(artistGroups.flatMap { it.second }.shuffled(), 0) }) }
+                itemsIndexed(artistGroups) { _, (name, list) ->
+                    val ctxA = androidx.compose.ui.platform.LocalContext.current
+                    // the artist's own picture, fetched by name; the cover of one of their songs meanwhile
+                    val photo by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, name)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) else null
+                        }
+                    }
+                    val art = photo ?: rememberTrackArt(list.firstOrNull())
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { com.umutk.pulse.extras.music.MusicNav.artist = name }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(CircleShape).background(style.chip), contentAlignment = Alignment.Center) {
+                            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Person, null, tint = style.textDim, modifier = Modifier.size(24.dp))
+                        }
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${list.size}", color = style.textDim, fontSize = 12.sp)
+                        }
+                        SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlayList(list, 0) }
                     }
                 }
             }
@@ -657,6 +745,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 ) {
                 if (hitArt != null) Image(hitArt, null, Modifier.padding(end = 10.dp).size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 else Box(Modifier.padding(end = 10.dp).size(48.dp).clip(RoundedCornerShape(8.dp)).background(style.panel), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(22.dp)) }
+                // a hit that is a song of the phone has a small play button: it plays that song at once (an online hit has no file)
+                if (hitTrack != null) SearchRoundBtn(Icons.Rounded.PlayArrow, style, Modifier.padding(end = 8.dp)) { onPlayList(listOf(hitTrack), 0) }
                 Column(Modifier.weight(1f)) {
                     Text(listOf(h.artist, h.title).filter { it.isNotBlank() }.joinToString(" - "), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     h.before?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -679,8 +769,19 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
 }
 
 @Composable
-private fun SearchHeader(text: String, style: PowerampStyle) {
-    Text(text.uppercase(), color = style.accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp))
+private fun SearchHeader(text: String, style: PowerampStyle, onPlay: (() -> Unit)? = null, onShuffle: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text.uppercase(), color = style.accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
+        // play and shuffle of this group, small, at the right end of its heading
+        if (onPlay != null) SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlay() }
+        if (onShuffle != null) SearchRoundBtn(Icons.Rounded.Shuffle, style, Modifier.padding(start = 6.dp)) { onShuffle() }
+    }
+}
+
+/** A small round button of the search results. */
+@Composable
+private fun SearchRoundBtn(icon: ImageVector, style: PowerampStyle, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(modifier.size(34.dp).clip(CircleShape).background(style.chip).clickable(onClick = onClick), contentAlignment = Alignment.Center) { Icon(icon, null, tint = style.accent, modifier = Modifier.size(20.dp)) }
 }
 
 private val rowHeight = 64.dp

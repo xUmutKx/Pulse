@@ -59,6 +59,43 @@ object ArtistArt {
         }
     }
 
+    private val tried = HashSet<String>()
+
+    /**
+     * The picture of the artist itself (not a cover of one of their albums), looked up once by name (Deezer's public search, no key) and kept here with the others. A name that
+     * has no picture is not asked again for a week. Never on the main thread, only with the online covers switch on and the phone online; true when the picture is here.
+     */
+    fun fetchOnline(c: Context, name: String): Boolean {
+        val k = key(name)
+        if (k.isEmpty() || android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return false
+        if (file(c, name).isFile) return true
+        if (!MusicSettings.onlineCovers(c)) return false
+        val cm = c.getSystemService(android.net.ConnectivityManager::class.java) ?: return false
+        if (cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) != true) return false
+        val sp = c.getSharedPreferences("artist_art_miss", Context.MODE_PRIVATE)
+        if (System.currentTimeMillis() - sp.getLong(k, 0L) < 7L * 24 * 3600 * 1000) return false
+        synchronized(tried) { if (!tried.add(k)) return false }
+        val ok = runCatching {
+            fun get(u: String): ByteArray {
+                val con = java.net.URL(u).openConnection() as java.net.HttpURLConnection
+                con.connectTimeout = 6000; con.readTimeout = 8000; con.setRequestProperty("User-Agent", "Pulse")
+                try { if (con.responseCode !in 200..299) error("HTTP ${con.responseCode}"); return con.inputStream.use { it.readBytes() } } finally { con.disconnect() }
+            }
+            val j = org.json.JSONObject(String(get("https://api.deezer.com/search/artist?limit=3&q=" + java.net.URLEncoder.encode(name, "UTF-8"))))
+            val arr = j.optJSONArray("data") ?: return@runCatching false
+            // the answer whose name is the artist's name (the first one is not always it)
+            var pic: String? = null
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                if (key(o.optString("name")) == k) { pic = o.optString("picture_big").ifBlank { o.optString("picture_medium") }; break }
+            }
+            if (pic.isNullOrBlank() || pic.contains("/images/artist//")) return@runCatching false
+            save(c, name, get(pic)); true
+        }.getOrDefault(false)
+        if (!ok) sp.edit().putLong(k, System.currentTimeMillis()).apply()
+        return ok
+    }
+
     /** The picture of [name], decoded small enough for a list row, or null. */
     fun load(c: Context, name: String): ImageBitmap? {
         val k = key(name).ifEmpty { "x" }
