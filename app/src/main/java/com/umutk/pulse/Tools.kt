@@ -146,6 +146,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "island" -> com.umutk.pulse.extras.island.IslandHub(back)
         id == "keyboard" -> com.umutk.pulse.extras.keyboard.KeyboardSettings(back)
         id == "notifhist" -> com.umutk.pulse.extras.notifhist.NotifHistoryScreen(back)
+        id == "crashlog" -> CrashLogScreen(back)
         id == "screenrec" -> com.umutk.pulse.extras.screenrec.ScreenRecHub(back)
         id == "launcher" -> com.umutk.pulse.extras.launcher.LauncherSettings(back)
         id == "messages" -> MessagesScreen(back)
