@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "video" to (tr("YTXTube is much lighter: its own process, video straight to the screen, hardware codecs only. It stops when the music player starts, so the media controls show the music.",
+        "YTXTube çok daha hafif: kendi süreci, video doğrudan ekrana, yalnızca donanım kodekleri. Müzik çalar başlayınca duruyor, medya kontrolleri müziği gösteriyor.")),
+    "palette" to (tr("Keyboard: correct place when the screen is upside down, free RGB effect colour, an RGB effect behind the whole keyboard.",
+        "Klavye: ekran ters çevrilince doğru yerde, serbest RGB efekt rengi, tüm klavyenin arkasında RGB efekti.")),
     "palette" to (tr("Fixed a crash in the Neofetch card (the ASCII logo).",
         "Neofetch kartındaki (ASCII logo) çökme düzeltildi.")),
     "palette" to (tr("Keyboard: suggestions work again in Game Hub's search and in YTXTube's sign-in, without the freezes.",
