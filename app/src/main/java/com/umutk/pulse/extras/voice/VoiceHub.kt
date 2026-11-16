@@ -116,6 +116,7 @@ private fun sortLabel(k: String): String = when (k) {
 }
 
 /** Voice recorder: record, pause, stop; playback with seek, speed and skip; the list of takes with search, sort and actions. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun VoiceHub(onBack: () -> Unit) {
     val ctx = LocalContext.current

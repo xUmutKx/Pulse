@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.umutk.pulse.extras.messages.MsgCore
 
 /**
  * Messages in the old Windows looks (95, XP, 7) is MSN Messenger: the menu bar, the banner with the status, the contact list in groups (Online, Not Online) with
