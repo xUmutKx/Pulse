@@ -108,7 +108,10 @@ fun Win7Explorer() {
             }.getOrDefault(emptyList())
         }
     }
-    val shown = if (query.isBlank()) files else files.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    // a search looks in every folder under this one (under the storage when Computer is open), not only in the folder on show
+    val found by rememberTreeSearch(if (computer) root else dir, query, hidden)
+    val shown = if (query.isBlank()) files else (found ?: files.filter { it.name.contains(query.trim(), ignoreCase = true) })
+    val searching = query.isNotBlank()
     fun selFile() = files.firstOrNull { it.path == sel }
     val keys = Modifier.focusRequester(fr).focusable().fileKeys(
         copy = { selFile()?.let { FileClip.files = listOf(it); FileClip.cut = false } },
@@ -193,7 +196,7 @@ fun Win7Explorer() {
                     W7Nav(tr("Internal storage", "Dahili depolama"), !computer && dir.path == root.path, "dv_internal") { go(root) }
                 }
                 if (wide) Box(Modifier.width(1.dp).fillMaxHeight().background(W7_EDGE))
-                if (computer) W7Computer(root, Modifier.weight(1f).fillMaxHeight()) { go(it) }
+                if (computer && !searching) W7Computer(root, Modifier.weight(1f).fillMaxHeight()) { go(it) }
                 // the details list
                 else Column(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxWidth().background(W7_HEAD).padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -219,7 +222,11 @@ fun Win7Explorer() {
                                     val thumb = if (isDir) null else (com.umutk.pulse.features.exThumb(f) ?: com.umutk.pulse.features.exPreview(f))
                                     if (thumb != null) androidx.compose.foundation.Image(thumb, null, Modifier.size(26.dp).clip(RoundedCornerShape(3.dp)).border(1.dp, Color(0x33000000), RoundedCornerShape(3.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                                     else W7Pic(if (isDir) w7FolderKey(f, root) else w7FileKey(f), 22.dp, if (isDir) "folder" else com.umutk.pulse.features.fileTypeKey(f))
-                                    Text(f.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                                    Column(Modifier.weight(1f).padding(start = 6.dp)) {
+                                        Text(f.name, color = Color(0xFF1A1A1A), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        // a hit says which folder it is in
+                                        if (searching && found != null) Text(f.parent.orEmpty().removePrefix(root.path).ifEmpty { "/" }, color = Color(0xFF7A8AA3), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                                 Text(com.umutk.pulse.features.exDate(f.lastModified(), com.umutk.pulse.features.FilesPrefs.dateFmt), color = Color(0xFF555555), fontSize = 12.sp, maxLines = 1, modifier = Modifier.width(118.dp))
                                 if (cols) Text(if (isDir) tr("File folder", "Dosya klasörü") else (f.extension.uppercase().ifEmpty { "File" } + " " + tr("File", "Dosyası")), color = Color(0xFF555555), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(110.dp))

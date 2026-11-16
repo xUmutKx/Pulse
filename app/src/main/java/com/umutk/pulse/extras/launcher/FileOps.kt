@@ -7,6 +7,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -125,5 +126,37 @@ fun FileMenu(target: File?, dir: File, onClose: () -> Unit, open: (File) -> Unit
         AlertDialog(onDismissRequest = { ask = null }, title = { Text(tr("Delete", "Sil")) }, text = { Text(f.name) },
             confirmButton = { TextButton({ ask = null; f.deleteRecursively(); changed(null) }) { Text(tr("Delete", "Sil")) } },
             dismissButton = { TextButton({ ask = null }) { Text(tr("Cancel", "İptal")) } })
+    }
+}
+
+
+/**
+ * Search of a file window: every file and folder under [top], at any depth, whose name has [q] in it (breadth first, so the near ones come first; it stops at [limit] hits or after
+ * looking into 20 000 folders). Folders first, then by name. Not on the main thread.
+ */
+fun searchTree(top: File, q: String, hidden: Boolean, limit: Int = 400): List<File> {
+    val out = ArrayList<File>()
+    val todo = ArrayDeque<File>().apply { add(top) }
+    var looked = 0
+    while (todo.isNotEmpty() && out.size < limit && looked < 20_000) {
+        val d = todo.removeFirst(); looked++
+        d.listFiles()?.forEach { f ->
+            if (!hidden && f.name.startsWith(".")) return@forEach
+            if (f.name.contains(q, ignoreCase = true)) out += f
+            if (f.isDirectory) todo.addLast(f)
+        }
+    }
+    return out.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+}
+
+/** The search of a window: null while it is still looking (or when nothing is asked), else what it found. The query is waited on a moment, so typing does not start a search for every letter. */
+@Composable
+fun rememberTreeSearch(top: File, query: String, hidden: Boolean): State<List<File>?> {
+    val q = query.trim()
+    return androidx.compose.runtime.produceState<List<File>?>(null, top.path, q, hidden) {
+        value = null
+        if (q.length < 2) return@produceState
+        kotlinx.coroutines.delay(350)
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { searchTree(top, q, hidden) }.getOrDefault(emptyList()) }
     }
 }
