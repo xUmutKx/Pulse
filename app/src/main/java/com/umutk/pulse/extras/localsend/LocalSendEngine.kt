@@ -88,7 +88,7 @@ object LocalSendEngine {
     private fun prefs(c: Context) = c.getSharedPreferences("localsend", Context.MODE_PRIVATE)
 
     fun saveDir(c: Context): File {
-        val d = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LocalSend")
+        val d = com.umutk.pulse.PulseDirs.share()
         return if (d.isDirectory || d.mkdirs()) d else File(c.getExternalFilesDir(null) ?: c.filesDir, "LocalSend").apply { mkdirs() }
     }
 

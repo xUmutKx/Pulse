@@ -27,14 +27,14 @@ object CrashSaver {
     /** Reads the newest ends of the Pulse processes now (a freeze a moment ago shows at once), then the whole log. */
     fun readNow(app: Context): String {
         if (processName(app) == app.packageName) runCatching { recordExits(app) }
-        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash-log.txt")
+        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash-log.txt")
         val own = File(app.filesDir, "crash-log.txt")
         return listOf(pub, own).filter { runCatching { it.isFile }.getOrDefault(false) }.joinToString("\n") { runCatching { it.readText() }.getOrDefault("") }
     }
 
     /** Empties the log (both places it can be). */
     fun clear(app: Context) {
-        runCatching { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash-log.txt").writeText("") }
+        runCatching { File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash-log.txt").writeText("") }
         runCatching { File(app.filesDir, "crash-log.txt").writeText("") }
     }
 
@@ -43,7 +43,7 @@ object CrashSaver {
 
     /** Download/Pulse/crash-log.txt: every crash and every unusual end of a Pulse process, one after the other (crash.txt keeps only the last crash). */
     private fun logFile(app: Context): File {
-        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash-log.txt")
+        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash-log.txt")
         val ok = runCatching { pub.parentFile?.mkdirs(); pub.appendText(""); true }.getOrDefault(false)
         return if (ok) pub else File(app.filesDir, "crash-log.txt")
     }
@@ -105,7 +105,7 @@ object CrashSaver {
             )
         }
         runCatching { appendLog(app, "===== " + SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "  JAVA CRASH  " + processName(app) + "  thread " + t.name + "\n" + sw.toString().lines().take(40).joinToString("\n") + "\n\n") }
-        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/crash.txt")
+        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash.txt")
         val ok = runCatching { pub.parentFile?.mkdirs(); pub.writeText(text); true }.getOrDefault(false)
         if (!ok) File(app.filesDir, "crash.txt").writeText(text)
     }

@@ -61,7 +61,7 @@ object RelayHost {
 
     /** Where received files land: Download/Pulse/Relay when the app may write there, else the app's own folder. */
     fun inbox(c: Context): File {
-        val pub = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Pulse/Relay")
+        val pub = com.umutk.pulse.PulseDirs.share()
         val allowed = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
         if (allowed && (pub.isDirectory || pub.mkdirs()) && pub.canWrite()) return pub
         return File(c.getExternalFilesDir(null) ?: c.filesDir, "Relay").apply { mkdirs() }
