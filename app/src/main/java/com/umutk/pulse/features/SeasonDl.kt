@@ -589,15 +589,16 @@ object SeasonDl {
                     }
                     // 3. what to download
                     Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.weight(1f), onDone = null)
-                        Spacer(Modifier.width(8.dp))
-                        PButton(tr("Find", "Bul"), compact = true) {
-                            if (q.isBlank()) return@PButton
-                            reset(); note = tr("Looking…", "Aranıyor…")
-                            scope.launch { shows = runCatching { search(q.trim(), if (movies) "movie" else "series") }.getOrDefault(emptyList()); note = if (shows.isEmpty()) tr("Nothing found", "Bulunamadı") else "" }
-                        }
+                    // the results come by themselves as the name is typed (a moment after the last letter); no button to press
+                    androidx.compose.runtime.LaunchedEffect(q, movies) {
+                        val name = q.trim()
+                        if (name.length < 2) { if (name.isEmpty() && (shows.isNotEmpty() || show != null)) reset(); return@LaunchedEffect }
+                        kotlinx.coroutines.delay(450)
+                        reset(); note = tr("Looking…", "Aranıyor…")
+                        shows = runCatching { search(name, if (movies) "movie" else "series") }.getOrDefault(emptyList())
+                        note = if (shows.isEmpty()) tr("Nothing found", "Bulunamadı") else ""
                     }
+                    PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.fillMaxWidth(), onDone = null)
                     val sel = show
                     if (sel == null) {
                         // the results: a tap chooses one, and the list gives way to it (its seasons or its download button come right under it)
