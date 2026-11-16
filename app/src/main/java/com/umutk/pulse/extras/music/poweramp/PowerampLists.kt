@@ -37,6 +37,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.AccountTree
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.History
@@ -104,6 +106,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -622,6 +626,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
     // the text lives in MusicNav: an artist or album page opened from here returns to the same search
     var query by remember { mutableStateOf(com.umutk.pulse.extras.music.MusicNav.searchQuery) }
     LaunchedEffect(query) { com.umutk.pulse.extras.music.MusicNav.searchQuery = query }
+    // what the page shows: 0 everything, 1 songs, 2 albums, 3 artists, 4 lyrics (icons only, no words)
+    var kind by remember { mutableIntStateOf(0) }
     fun openFromSearch(album: String?, artist: String?) {
         com.umutk.pulse.extras.music.MusicNav.fromSearch = true
         if (album != null) com.umutk.pulse.extras.music.MusicNav.album = album
@@ -690,10 +696,23 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
             }
         }
         Spacer(Modifier.height(8.dp))
+        // the kinds as round icons: list = all, note = songs, disc = albums, person = artists, mic = lyrics
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf(Icons.Rounded.Menu to tr("All", "Tümü"), Icons.Rounded.MusicNote to tr("Songs", "Şarkılar"), Icons.Rounded.Album to tr("Albums", "Albümler"), Icons.Rounded.Person to tr("Artists", "Sanatçılar"), Icons.Rounded.Mic to tr("Lyrics", "Sözler")).forEachIndexed { i, (ic, name) ->
+                val on = kind == i
+                Box(
+                    Modifier.weight(1f).height(44.dp).clip(CircleShape).background(if (on) style.accent else style.chip)
+                        .semantics { contentDescription = name; role = Role.Tab; selected = on }
+                        .clickable { kind = i },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(ic, null, tint = if (on) style.onAccent else style.textDim, modifier = Modifier.size(24.dp)) }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         // play and shuffle for everything found, then the songs, the albums and the artists (each with its own play and shuffle), and last the lyrics that contain the text
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             // the artists on top: one row of round pictures that scrolls sideways
-            if (artistGroups.isNotEmpty()) item {
+            if (artistGroups.isNotEmpty() && kind == 0) item {
                 androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     itemsIndexed(artistGroups) { _, (name, list) ->
                         val ctxA = androidx.compose.ui.platform.LocalContext.current
@@ -712,22 +731,43 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                     }
                 }
             }
-            if (allFound.isNotEmpty()) item {
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.clip(CircleShape).background(style.accent).clickable { onPlayList(allFound, 0) }.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.PlayArrow, null, tint = style.onAccent, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(6.dp))
-                        Text(tr("Play", "Çal"), color = style.onAccent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            // the artists kind: a list of the artists, round picture and name
+            if (kind == 3) itemsIndexed(artistGroups) { _, (name, list) ->
+                val ctxA = androidx.compose.ui.platform.LocalContext.current
+                val photo by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
+                    value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) ?: if (com.umutk.pulse.extras.music.ArtistArt.fetchOnline(ctxA, name)) com.umutk.pulse.extras.music.ArtistArt.load(ctxA, name) else null
                     }
-                    Row(Modifier.clip(CircleShape).background(style.chip).clickable { onPlayList(allFound.shuffled(), 0) }.padding(horizontal = 18.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Shuffle, null, tint = style.accent, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp))
-                        Text(tr("Shuffle", "Karıştır"), color = style.onBackdrop, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+                val art = photo ?: rememberTrackArt(list.firstOrNull())
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { openFromSearch(null, name) }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(style.chip), contentAlignment = Alignment.Center) {
+                        if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) else Icon(Icons.Rounded.Person, null, tint = style.textDim, modifier = Modifier.size(24.dp))
+                    }
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${list.size}", color = style.textDim, fontSize = 12.sp)
+                    }
+                    SearchRoundBtn(Icons.Rounded.PlayArrow, style) { onPlayList(list, 0) }
+                }
+            }
+            // shuffle and play of what the kind shows: round outlined icon buttons
+            val playSet = when (kind) { 1 -> songHits; 2 -> albumGroups.flatMap { it.second }; 3 -> artistGroups.flatMap { it.second }; 4 -> emptyList(); else -> allFound }
+            if (playSet.isNotEmpty()) item {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf(Icons.Rounded.Shuffle to true, Icons.Rounded.PlayArrow to false).forEach { (ic, shuf) ->
+                        Box(Modifier.size(width = 64.dp, height = 44.dp).clip(CircleShape).border(1.dp, style.textDim.copy(alpha = .45f), CircleShape)
+                            .semantics { contentDescription = if (shuf) tr("Shuffle", "Karıştır") else tr("Play", "Çal"); role = Role.Button }
+                            .clickable { onPlayList(if (shuf) playSet.shuffled() else playSet, 0) }, contentAlignment = Alignment.Center) {
+                            Icon(ic, null, tint = style.onBackdrop, modifier = Modifier.size(26.dp))
+                        }
                     }
                 }
             }
-            if (songHits.isNotEmpty()) item { SearchHeader(tr("Songs", "Şarkılar"), style, { onPlayList(songHits, 0) }, { onPlayList(songHits.shuffled(), 0) }) }
-            if (query.isNotBlank()) itemsIndexed(songHits) { pos, t -> TrackRow(t, t == current, style, onClick = { onPlayList(songHits, pos) }) }
-            else itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
-            if (albumGroups.isNotEmpty()) {
+            if (songHits.isNotEmpty() && (kind == 0 || kind == 1)) item { SearchHeader(tr("Songs", "Şarkılar"), style, { onPlayList(songHits, 0) }, { onPlayList(songHits.shuffled(), 0) }) }
+            if (kind == 0 || kind == 1) { if (query.isNotBlank()) itemsIndexed(songHits) { pos, t -> TrackRow(t, t == current, style, onClick = { onPlayList(songHits, pos) }) }
+            else itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) } }
+            if (albumGroups.isNotEmpty() && (kind == 0 || kind == 2)) {
                 item { SearchHeader(tr("Albums", "Albümler"), style, { onPlayList(albumGroups.flatMap { it.second }, 0) }, { onPlayList(albumGroups.flatMap { it.second }.shuffled(), 0) }) }
                 itemsIndexed(albumGroups) { _, (name, list) ->
                     val art = rememberTrackArt(list.firstOrNull())
@@ -743,13 +783,13 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                     }
                 }
             }
-            if (lyricHits.isNotEmpty() || lyricsBusy) item {
+            if ((lyricHits.isNotEmpty() || lyricsBusy) && (kind == 0 || kind == 4)) item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SearchHeader(tr("Lyrics", "Sözler"), style)
                     if (lyricsBusy) CircularProgressIndicator(Modifier.padding(start = 12.dp, top = 8.dp).size(16.dp), color = style.accent, strokeWidth = 2.dp)
                 }
             }
-            itemsIndexed(lyricHits) { _, h ->
+            itemsIndexed(if (kind == 0 || kind == 4) lyricHits else emptyList()) { _, h ->
                 // the song's cover beside the hit (device songs; online hits have no file)
                 val hitTrack = remember(h.id) { h.id.takeIf { it.startsWith("file:") }?.removePrefix("file:")?.let { p -> library.firstOrNull { it.path == p } } }
                 val hitArt = rememberTrackArt(hitTrack)
