@@ -115,7 +115,7 @@ internal object CaseCover {
         val cover = source(c, pkg)
         // the built-in games and the games of your own have a picture of their own: it goes into the case too
         val own: Bitmap? = when {
-            MegaGames.isMega(pkg) -> runCatching { c.assets.open("megacovers/" + pkg.removePrefix(MegaGames.PREFIX) + ".webp").use { BitmapFactory.decodeStream(it) } }.getOrNull()
+            MegaGames.isMega(pkg) -> runCatching { MegaGames.cover(c, pkg.removePrefix(MegaGames.PREFIX)) }.getOrNull()
             HtmlGames.isHtml(pkg) -> HtmlGames.coverFile(c, HtmlGames.idOf(pkg)).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
             else -> null
         }
