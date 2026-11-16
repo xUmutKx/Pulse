@@ -2495,3 +2495,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Ayarlar > Görünüm grupları açılır/kapanır (kapalı başlar).
 - derlenmedi
 - Widget seçici: gruplar (saat, müzik, not, takvim, sistem, foto), kartlar widget oranında, geniş widget tam satır. derlenmedi
+- Torrent: çalışma klasörü Download yerine uygulamanın özel alanında (görünmez), toplayıcı artık klasörleri siler (açılışta, kaldırınca, bitince), eskileri taşır/siler; magnet yer tutucu .mkv. derlenmedi

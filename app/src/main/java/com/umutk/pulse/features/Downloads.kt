@@ -244,6 +244,7 @@ object Downloads {
         if (loaded) return
         loaded = true
         watchNetwork(ctx.applicationContext)
+        scope.launch { delay(5000); sweepTorrents() }
         // every download kept from earlier runs: finished ones stay finished, paused ones paused, running ones carry on
         val saved = p.getStringSet("dl_list", emptySet()).orEmpty().sorted()
         val carryOn = ArrayList<DlTask>()
@@ -321,6 +322,37 @@ object Downloads {
     internal fun cleanName(raw: String?): String? = raw?.substringAfterLast('/')?.substringAfterLast('\\')
         ?.replace(Regex("[:*?\"<>|\\x00-\\x1f]"), "_")?.trim()?.trimStart('.')?.take(120)?.takeIf { it.isNotBlank() }
 
+    /** Where the torrent engine keeps its working folders: the app's own storage on the big volume, never the Downloads folder (nothing is left lying there). */
+    internal fun torrentWork(c: Context): File = File(c.getExternalFilesDir(null) ?: c.filesDir, "torrent-work").also { it.mkdirs() }
+
+    /**
+     * The collector: working folders of torrents (".torrent-<hash>") that no download wants any more are deleted, in the app's own storage and in the Downloads folder (where older
+     * versions left them). A folder of a download still waiting (paused, failed) stays, and one found in Downloads is moved to the private place. It does nothing when a download's
+     * torrent cannot be told from its link (a .torrent file), so it never takes away what is still wanted.
+     */
+    fun sweepTorrents() {
+        val c = app ?: return
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                val keep = HashSet<String>()
+                for (t in tasks.value) {
+                    if (t.state.value == DlState.DONE) continue
+                    val u = t.url
+                    if (!u.startsWith("magnet:", ignoreCase = true)) { if (isTorrentFileUrl(u)) return@runCatching else continue }
+                    keep += Regex("xt=urn:btih:([0-9a-fA-F]{40})", RegexOption.IGNORE_CASE).find(u)?.groupValues?.get(1)?.lowercase() ?: return@runCatching
+                }
+                val work = torrentWork(c)
+                for (root in listOf(work, File(dirPath), File(defaultDir())).distinct()) {
+                    root.listFiles { f -> f.isDirectory && f.name.startsWith(".torrent-") }?.forEach { d ->
+                        if (d.name.removePrefix(".torrent-").lowercase() in keep) {
+                            if (root != work) { val to = File(work, d.name); if (!to.exists()) d.renameTo(to) }
+                        } else d.deleteRecursively()
+                    }
+                }
+            }
+        }
+    }
+
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
     fun add(ctx: Context, url: String, fixedName: String? = null, alts: List<String> = emptyList()) {
         val c = ctx.applicationContext
@@ -387,6 +419,7 @@ object Downloads {
         if (keep) return
         scope.launch {
             runCatching { running?.join() }
+            sweepTorrents()
             if (!eraseFile(t.file)) {
                 // the file is still there (the phone refused the delete): the row goes, so the file is said to stay
                 val c = app ?: return@launch
@@ -626,7 +659,10 @@ private fun dispositionName(h: String?): String? {
 /** The name a magnet link gives itself ("dn"), as a file name; null when it has none (or it is not a magnet link). */
 private fun magnetName(url: String): String? =
     if (!url.startsWith("magnet:", ignoreCase = true)) null
-    else Downloads.cleanName(magnetParam(url, "dn")) ?: "torrent"
+    else (Downloads.cleanName(magnetParam(url, "dn")) ?: "torrent").let { n ->
+        // nearly every torrent of a film or an episode is a Matroska file: the reserved file says so from the start (the real name replaces it once the file list is known)
+        if (Regex("\\.(mkv|mp4|avi|webm|mov|m4v|mp3|flac|zip|rar|iso)$", RegexOption.IGNORE_CASE).containsMatchIn(n)) n else "$n.mkv"
+    }
 
 /** A parameter of a magnet link. (Uri.getQueryParameter throws on it: "This isn't a hierarchical URI".) */
 internal fun magnetParam(url: String, key: String): String? =
@@ -644,13 +680,13 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     val c = Downloads.appContext() ?: throw IOException("no context for the torrent engine")
     if (!TorrentEngine.ready(c)) throw NeedsEngine()
     resumable = false
-    // the torrent's own working folder sits next to the downloads (shared by the downloads of the same torrent: the episodes of a season pack)
+    // the torrent's own working folder sits in the app's own storage, out of sight (shared by the downloads of the same torrent: the episodes of a season pack)
     // a torrent nobody sends anything of within a minute and a half gives way to the next stream of the same episode, when there is one
     val began = System.currentTimeMillis()
     var switchNow = false
     // a torrent that crawls (under 40 KB/s for a whole minute) while little of it is here also gives way to the next stream
     var winT = 0L; var winD = 0L
-    val got = TorrentEngine.download(c, url, torrent, file.parentFile ?: throw IOException("no folder for this download"), { cancelled || paused || switchNow },
+    val got = TorrentEngine.download(c, url, torrent, Downloads.torrentWork(c), { cancelled || paused || switchNow },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
@@ -680,6 +716,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     file.delete()
     if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }
     TorrentEngine.done(got)
+    // a stream this download gave up for another one leaves its pieces behind: they go now
+    Downloads.sweepTorrents()
     total.value = file.length(); done.value = file.length()
     Downloads.persist()
     return true
