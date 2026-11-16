@@ -280,12 +280,12 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                 Spacer(Modifier.height(14.dp))
                 val legend = s.parts.filter { it.bytes > 0 }.map { Triple(it.color, tr(it.en, it.tr), exSize(it.bytes)) } + Triple(Color(0xFF8B8D98), tr("Other", "Diğer"), exSize(s.other)) + Triple(if (mat) Color(0xFF2A2A2A) else T.line, tr("Free", "Boş"), exSize(s.free))
                 // each kind opens its own list; Other opens the files that are in no kind; Free opens nothing
-                val keys = s.parts.filter { it.bytes > 0 }.map { if (it.key == "apps") "" else it.key } + listOf("other", "")
+                val keys = s.parts.filter { it.bytes > 0 }.map { it.key } + listOf("other", "")
                 legend.mapIndexed { i, x -> i to x }.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         row.forEach { (i, x) ->
                             val (c, n, v) = x
-                            Row(Modifier.weight(1f).clickable(enabled = keys[i].isNotEmpty()) { FilesHomeNav.kind = keys[i]; onTab("types") }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.weight(1f).clickable(enabled = keys[i].isNotEmpty()) { if (keys[i] == "apps") onTab("apps") else { FilesHomeNav.kind = keys[i]; onTab("types") } }, verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(c))
                                 Text(" $n", color = fg, fontSize = 14.sp, maxLines = 1)
                                 Text(" $v", color = sub, fontSize = 12.sp, fontFamily = mono, maxLines = 1)
