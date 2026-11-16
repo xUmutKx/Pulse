@@ -207,7 +207,8 @@ object TorrentEngine {
             val n = ti.numFiles()
             pick = pickFile(ti, early)
             val want = fs.fileSize(pick)
-            onName(File(fs.filePath(pick)).name)
+            // a pack of several files gives the path inside the torrent (its own folder first), a single file only its name
+            onName(if ((0 until n).count { !fs.padFileAt(it) } > 1) fs.filePath(pick) else File(fs.filePath(pick)).name)
             synchronized(lock) { use.wanted.add(pick); use.apply(n) }
             h.resume()
             // a torrent that had nothing left to fetch (another file of it just finished) let its peers go: ask the trackers and the DHT again
