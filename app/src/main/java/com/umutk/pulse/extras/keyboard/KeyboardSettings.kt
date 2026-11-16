@@ -547,6 +547,35 @@ fun KeyboardSettings(back: () -> Unit) {
             if (mails.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
         }
 
+        // numbers typed again and again (a phone number, an ID number): kept on the phone only and offered from their first digits (typed twice before, or added here)
+        KbSection("edit", tr("Numbers I type often", "Sık yazdığım sayılar")) {
+            val sp = remember { ctx.getSharedPreferences("pulse_kb_numbers", android.content.Context.MODE_PRIVATE) }
+            var nums by remember { mutableStateOf(sp.all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }.sortedByDescending { it.second }) }
+            var addN by remember { mutableStateOf("") }
+            var on by remember { mutableStateOf(KeyboardPrefs.rememberNumbers) }
+            fun reload() { nums = sp.all.mapNotNull { (k, v) -> (v as? Int)?.let { k to it } }.sortedByDescending { it.second } }
+            Row(Modifier.fillMaxWidth().clickable { on = !on; KeyboardPrefs.rememberNumbers = on; save() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Remember numbers", "Sayıları hatırla"), color = T.text, fontSize = 15.sp)
+                    Text(tr("A number of 7 or more digits typed twice is offered from its first two digits. Kept on the phone only; never from password fields, never card numbers.",
+                        "7 ve üzeri haneli bir sayı iki kez yazılınca ilk iki hanesinden önerilir. Yalnızca telefonda tutulur; şifre alanlarından ve kart numaralarından asla."), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(on, { on = it; KeyboardPrefs.rememberNumbers = it; save() })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PField(addN, { addN = it.filter { c -> c.isDigit() }.take(19) }, tr("Add a number", "Sayı ekle"), Modifier.weight(1f))
+                PButton(tr("Add", "Ekle"), compact = true) { if (addN.length in 7..19) { sp.edit().putInt(addN, 99).apply(); addN = ""; reload() } }
+            }
+            nums.forEach { (n, count) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(n, color = T.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(32.dp).clickable { sp.edit().remove(n).apply(); reload() }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+                }
+            }
+            if (nums.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
+            else PButton(tr("Forget all", "Hepsini unut"), danger = true) { sp.edit().clear().apply(); reload() }
+        }
+
         // the suggestions blocked from the bar (a word, a name or an e-mail address held and blocked): a tap brings one back
         KbSection("eyeOff", tr("Blocked suggestions", "Engellenen öneriler")) {
             var blocked by remember { mutableStateOf(KeyboardDictionary.bannedList(ctx)) }
