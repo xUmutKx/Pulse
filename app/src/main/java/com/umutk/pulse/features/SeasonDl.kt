@@ -223,6 +223,14 @@ object SeasonDl {
         var key by remember { mutableStateOf(tmdbKey(ctx)) }
         var note by remember { mutableStateOf("") }
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // a torrent nobody shares gives way to another stream of the episode after 15 seconds (bigger ones too, never under 200 MB)
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setAutoSwitch(ctx, !Downloads.autoSwitch) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Try another stream when nobody shares", "Kimse paylaşmıyorsa başka yayını dene"), color = T.text, fontSize = 15.sp)
+                    Text(tr("After 15 seconds without anyone to download from, the next stream of the episode starts: the most shared first, up to twice the size, never under 200 MB", "Kimseden indirilemeden 15 saniye geçerse bölümün sıradaki yayını başlar: en çok paylaşılan önce, en çok iki katı boyuta kadar, 200 MB altına asla inmeden"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
+            }
             // removing a finished download from the list leaves its file on the phone (off: the file goes too)
             Row(Modifier.fillMaxWidth().clickable { Downloads.setKeepFiles(ctx, !Downloads.keepFiles) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -333,7 +341,8 @@ object SeasonDl {
             val seedPart = if (p.seeds < 0) 1.0 else kotlin.math.ln(p.seeds + 1.0) * 2.0
             return seedPart - kotlin.math.abs(p.size - target) / target
         }
-        val sized = all.filter { it.size > 0 }
+        // streams under 200 MB are left out while any of 200 MB or more is there
+        val sized = all.filter { it.size > 0 }.let { l -> l.filter { it.size >= MIN_BYTES }.ifEmpty { l } }
         val under = alive(sized.filter { it.size <= maxBytes }).maxByOrNull { score(it) }
         if (under != null) return under
         val smallest = alive(sized).minByOrNull { it.size }
@@ -342,10 +351,16 @@ object SeasonDl {
     }
 
     /** The streams to fall back on when [pick] finds no one to download from: the others under the limit, closest in size first, the ones with no one sharing them last (five at most). */
-    fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> =
-        all.filter { it.url != pick.url && (pick.over || it.size == 0L || it.size <= maxBytes) }
+    fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> {
+        // any size is fine up to twice the size looked for (a bigger one too), never under 200 MB; the streams most people share come first, then the closest in size
+        val top = maxOf(maxBytes, pick.size) * 2
+        return all.filter { it.url != pick.url && (it.size == 0L || (it.size >= MIN_BYTES && it.size <= top)) }
             .sortedWith(compareBy<Pick>({ if (it.seeds == 0) 1 else 0 }, { -maxOf(it.seeds, 0) }, { if (it.size > 0 && pick.size > 0) kotlin.math.abs(it.size - pick.size) else Long.MAX_VALUE / 2 }))
-            .take(5).map { it.url }
+            .take(8).map { it.url }
+    }
+
+    /** Under 200 MB a stream is too poor to be taken, unless nothing else is there. */
+    private const val MIN_BYTES = 200L * 1_048_576L
 
     // 24 MB of pictures at most (a few big ones would fill a count-based cache)
     private val posters = object : android.util.LruCache<String, android.graphics.Bitmap>(24 * 1024 * 1024) {

@@ -981,6 +981,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             lastCorrection = null
             if (st.shift == 1) { st.shift = 0; shiftDropAt = SystemClock.uptimeMillis() }
             updateSuggestions()
+            // the words just before this one are looked at again as soon as its second letter is typed (not only when it ends): one left wrong is mended while the typing goes on
+            if (word.length == 2 && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions) sweepBack()
         } else {
             // a second comma right behind a comma (or the comma and its space) is dropped: one comma stays
             if (ch == ',' && word.isEmpty() && c.getTextBeforeCursor(2, 0)?.toString()?.let { it.endsWith(",") || it == ", " } == true) return
@@ -1098,7 +1100,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return true
     }
 
-    private val swept = LinkedHashSet<String>()
+    private val swept = LinkedHashMap<String, Int>()
 
     /**
      * Looks at the words just before the one that was ended (the last three): a word that is no word of the list, nothing like a name or a code, and has a clear correction is mended in
@@ -1110,19 +1112,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val before = c.getTextBeforeCursor(140, 0)?.toString() ?: return
         val ms = Regex("\\p{L}+").findAll(before.dropLast(1)).toList()
         // the word just ended is the last one; the three before it are the candidates
-        val cands = ms.dropLast(1).takeLast(3)
+        val cands = ms.dropLast(1).takeLast(4)
         val codeNow = st.lang; val locNow = lang.locale
         for (m in cands) {
             val w = m.value
             val lw = w.lowercase(locNow)
-            if (w.length < 4 || w.any { it.isUpperCase() } || KeyboardDictionary.isKept(w)) continue
+            if (w.length < 3 || w.any { it.isUpperCase() } || KeyboardDictionary.isKept(w)) continue
             val end = m.range.last + 1
             // a word followed by a single space, which is what lateFix looks for
             if (before.getOrNull(end) != ' ') continue
             if (dictCodes(codeNow).any { KeyboardDictionary.isWord(it, lw) || KeyboardDictionary.inLexicon(it, lw) } || KeyboardDictionary.userCount(lw) > 0) continue
             val key = lw + "|" + before.substring(maxOf(0, m.range.first - 10), m.range.first)
-            if (!swept.add(key)) continue
-            if (swept.size > 300) swept.remove(swept.first())
+            // a word is looked at up to three times: while the next word starts, when it ends, and a few words later (more of the sentence to go on)
+            val seen = swept[key] ?: 0
+            if (seen >= 3) continue
+            swept[key] = seen + 1
+            if (swept.size > 300) swept.remove(swept.keys.first())
             val ctx = before.substring(0, m.range.first)
             val words = Regex("\\p{L}+").findAll(ctx).map { it.value }.toList()
             lateFix(w, " ", " ", codeNow, locNow, words.lastOrNull(), words.getOrNull(words.size - 2), false, ctx)
