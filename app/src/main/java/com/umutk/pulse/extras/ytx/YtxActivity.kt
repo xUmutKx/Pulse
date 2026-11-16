@@ -234,6 +234,18 @@ class YtxActivity : ComponentActivity() {
     }
 }
 
+/** Whether Shorts has its own tab in the bottom bar. Off by default in Pulse (Shorts stays reachable from Home); Settings switches it on. */
+object NavSettings {
+    private const val PREFS = "appearance"
+    var showShorts by androidx.compose.runtime.mutableStateOf(false)
+        private set
+    fun init(context: android.content.Context) { showShorts = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean("nav_shorts", false) }
+    fun updateShowShorts(context: android.content.Context, on: Boolean) { showShorts = on; context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean("nav_shorts", on).apply() }
+}
+
+/** The tabs of the bottom bar. */
+fun navTabs(): List<Tab> = Tab.entries.filter { it != Tab.Shorts || NavSettings.showShorts }
+
 enum class Tab(val defaultLabel: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     Home("Home", Icons.Outlined.Home, Icons.Rounded.Home),
     Music("Music", Icons.Outlined.MusicNote, Icons.Rounded.MusicNote),
@@ -282,6 +294,11 @@ fun YtxTubeApp() {
     var channelState by remember { mutableStateOf<ChannelState?>(null) }
     val playlistFeed = remember(openPlaylist?.id) { openPlaylist?.let { lib.playlistFeed(it.id) } }
     val updateState = remember { UpdateState(scope) }
+    // Google sign-in (YouTube account) is in the full build only: the Google Play build has no sign-in
+    val requestSignIn: () -> Unit = {
+        if (com.umutk.pulse.BuildConfig.YT_SIGNIN) signingIn = true
+        else android.widget.Toast.makeText(YTXTubeApplication.appContext, "Sign-in is not in this build", android.widget.Toast.LENGTH_SHORT).show()
+    }
     val appFlipRotation = remember { androidx.compose.animation.core.Animatable(0f) }
     val appContext = LocalContext.current
 
@@ -604,7 +621,7 @@ fun YtxTubeApp() {
             when (t) {
                 Tab.Home -> HomeScreen(
                     lib, contentPadding, onOpen = player::open, onSearch = { openSearch = true },
-                    onSignIn = { signingIn = true }, onAccount = { openSettings = true },
+                    onSignIn = { requestSignIn() }, onAccount = { openSettings = true },
                     scrollToTop = scrollToTop[Tab.Home] ?: 0,
                 )
                 Tab.Music -> MusicScreen(
@@ -616,7 +633,7 @@ fun YtxTubeApp() {
                 )
                 Tab.Shorts -> ShortsScreen(
                     onBack = { tab = Tab.Home },
-                    onSignIn = { signingIn = true },
+                    onSignIn = { requestSignIn() },
                     onSearch = { openSearch = true },
                     bottomInset = navTop + 12.dp,
                     active = openChannel == null && !openSearch && !openSettings,
@@ -636,7 +653,7 @@ fun YtxTubeApp() {
                     },
                     onOpenAllSubscriptions = { openAllSubscriptions = true },
                     onSearch = { openSearch = true },
-                    onSignIn = { signingIn = true }, onAccount = { openSettings = true },
+                    onSignIn = { requestSignIn() }, onAccount = { openSettings = true },
                     scrollToTop = scrollToTop[Tab.Library] ?: 0,
                 )
                 Tab.Downloads -> DownloadsScreen(
@@ -728,7 +745,7 @@ fun YtxTubeApp() {
         ) {
             SettingsScreen(
                 onBack = { openSettings = false },
-                onSignIn = { signingIn = true },
+                onSignIn = { requestSignIn() },
                 onSignedOut = { lib.reset(); lib.home.refresh(); player.refreshAccountState() },
                 onAccountSwitched = {
                     scope.launch {
@@ -857,13 +874,14 @@ fun YtxTubeApp() {
                 .fillMaxWidth(),
         ) {
             LiquidBottomBar(
-                selectedTabIndex = { Tab.entries.indexOf(tab) },
-                onTabSelected = { index -> Tab.entries.getOrNull(index)?.let(selectTab) },
+                selectedTabIndex = { navTabs().indexOf(tab).coerceAtLeast(0) },
+                onTabSelected = { index -> navTabs().getOrNull(index)?.let(selectTab) },
+                tabsCount = navTabs().size,
                 backdrop = pageBackdrop,
                 isDarkSurface = tab == Tab.Shorts,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Tab.entries.forEach { t ->
+                navTabs().forEach { t ->
                     LiquidNavTab(t, t == tab, isDarkSurface = tab == Tab.Shorts) { selectTab(t) }
                 }
             }
@@ -875,7 +893,7 @@ fun YtxTubeApp() {
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 ShortsScreen(
                     onBack = { shortsEntry = null },
-                    onSignIn = { signingIn = true },
+                    onSignIn = { requestSignIn() },
                     onSearch = { openSearch = true },
                     bottomInset = 12.dp,
                     startItem = entry,
@@ -901,7 +919,7 @@ fun YtxTubeApp() {
                     onOpen = player::open,
                     onCollapse = { player.expanded = false },
                     onFullscreen = { toggleFullscreen() },
-                    onSignIn = { signingIn = true },
+                    onSignIn = { requestSignIn() },
                 )
             }
         }
@@ -1079,7 +1097,7 @@ private fun NavPill(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier =
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tab.entries.forEach { t ->
+            navTabs().forEach { t ->
                 val active = t == selected
                 val contentColor by animateColorAsState(
                     if (active) c.onSurface else c.onSurfaceVariant,

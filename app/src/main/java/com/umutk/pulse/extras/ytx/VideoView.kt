@@ -1122,11 +1122,13 @@ fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () ->
         refractionAmount = 24.dp,
     )
 
+    // landscape (full screen): the settings are a panel over the right half, the video stays in sight at the left under a light shade
+    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.46f))
+                .background(Color.Black.copy(alpha = if (land) 0.22f else 0.46f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -1135,10 +1137,10 @@ fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () ->
         )
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .heightIn(max = 620.dp)
-                .liquidGlass(backdrop, spec)
+                .align(if (land) Alignment.CenterEnd else Alignment.BottomCenter)
+                .then(if (land) Modifier.fillMaxHeight().fillMaxWidth(0.5f).padding(vertical = 8.dp, horizontal = 8.dp) else Modifier.fillMaxWidth().heightIn(max = 620.dp))
+                // in landscape a see-through dark panel (the video shows faintly through it), in portrait the sheet of the look
+                .then(if (land) Modifier.clip(RoundedCornerShape(24.dp)).background(Color(0xFF0A0A0A).copy(alpha = 0.80f)) else Modifier.liquidGlass(backdrop, spec))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

@@ -45,6 +45,7 @@ object YTXTubeApplication {
         YoutubeStreamExtractor.setFetchIosClient(true)
         HdrItags.install()
         ThemeSettings.init(self)
+        NavSettings.init(self)
         HdrSupport.init(self)
         QualityPreference.init(self)
         PlaybackSpeed.init(self)

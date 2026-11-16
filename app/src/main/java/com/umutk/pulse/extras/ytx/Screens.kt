@@ -245,7 +245,7 @@ fun HomeScreen(
                 header = {
                     if (!signedIn) {
                         item(key = "anon_banner") {
-                            AnonHomeBanner(onSignIn = onSignIn, onSearch = onSearch)
+                            if (com.umutk.pulse.BuildConfig.YT_SIGNIN) AnonHomeBanner(onSignIn = onSignIn, onSearch = onSearch)
                         }
                     }
                 },

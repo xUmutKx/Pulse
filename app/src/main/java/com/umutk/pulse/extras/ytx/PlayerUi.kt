@@ -80,6 +80,7 @@ import androidx.compose.material.icons.outlined.WatchLater
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -1041,6 +1042,22 @@ private fun RowScope.MiniDetails(state: PlayerState, interactive: Boolean) {
                 )
             }
             Spacer(Modifier.width(2.dp))
+
+            // headphones: listen only (no video), so the sound goes on with the screen off or in another app; lit while on
+            Box(
+                Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .pressable(enabled = interactive, onClick = { state.setAudioOnly(!AudioOnly.enabled) }),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Headphones,
+                    contentDescription = "Listen only",
+                    tint = if (AudioOnly.enabled) c.primary else c.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
 
             Box(
                 Modifier

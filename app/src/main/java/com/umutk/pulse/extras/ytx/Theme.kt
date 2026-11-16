@@ -447,7 +447,8 @@ object ThemeSettings {
     var seed by mutableStateOf<String?>(null)
         private set
 
-    var mode by mutableStateOf("system")
+    // Pulse: AMOLED black is the default look (the other modes stay in Settings > Appearance)
+    var mode by mutableStateOf("amoled")
         private set
     var useSystemFont by mutableStateOf(false)
         private set
@@ -455,7 +456,7 @@ object ThemeSettings {
     fun init(context: Context) {
         val p = context.getSharedPreferences("appearance", Context.MODE_PRIVATE).also { prefs = it }
         seed = p.getString("seed", null) ?: SEED_YOUTUBE
-        mode = p.getString("mode", "system") ?: "system"
+        mode = p.getString("mode", "amoled") ?: "amoled"
         useSystemFont = p.getBoolean("use_system_font", false)
     }
 
