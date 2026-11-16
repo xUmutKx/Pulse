@@ -349,6 +349,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         // the brightness: a black veil over the keys (the pop-up above stays bright)
         if (!float && KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
+        PressFx(th, st)
         Preview(th, st)
         // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
         // private typing: a big faint hat behind the keys, only on the keys page; it shows for a moment after every key and fades out
@@ -581,7 +582,25 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
-                            st.shotThumb?.let { Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit) }
+                            st.shotThumb?.let { Box(contentAlignment = Alignment.Center) {
+                                Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit)
+                                // a video: a small black disc with a white play mark in the middle, seen on a white picture too
+                                if (st.shotVideo) Canvas(Modifier.size(16.dp)) {
+                                    drawCircle(Color.Black.copy(alpha = .78f))
+                                    val r = size.minDimension / 2f
+                                    drawPath(androidx.compose.ui.graphics.Path().apply {
+                                        moveTo(center.x - r * .32f, center.y - r * .45f); lineTo(center.x + r * .5f, center.y); lineTo(center.x - r * .32f, center.y + r * .45f); close()
+                                    }, Color.White)
+                                }
+                            } }
+                            // a video with no picture of its own: the play mark alone, a little bigger
+                            if (st.shotThumb == null && st.shotVideo) Canvas(Modifier.size(26.dp)) {
+                                drawCircle(Color.Black.copy(alpha = .78f))
+                                val r = size.minDimension / 2f
+                                drawPath(androidx.compose.ui.graphics.Path().apply {
+                                    moveTo(center.x - r * .32f, center.y - r * .45f); lineTo(center.x + r * .5f, center.y); lineTo(center.x - r * .32f, center.y + r * .45f); close()
+                                }, Color.White)
+                            }
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
@@ -966,6 +985,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
                     down = true
+                    // the key-press effect starts where this key is
+                    if (KeyboardPrefs.pressFx > 0) { if (st.bursts.size > 12) st.bursts.removeAt(0); st.bursts.add(KbBurst(rect, System.nanoTime() / 1_000_000)) }
                     // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
                     try {
                     val key = kNow; val a = actNow
@@ -1170,6 +1191,24 @@ private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape:
 }
 
 // ---- the pop-up over a pressed key -----------------------------------------------------------------------------------------------------------------
+
+@Composable
+private fun PressFx(th: KbTheme, st: KbState) {
+    val kind = KeyboardPrefs.pressFx
+    if (kind <= 0 || st.bursts.isEmpty()) return
+    var now by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime() / 1_000_000) }
+    val dur = KeyboardEffects.pressMs(kind)
+    // one frame after another while an effect is under way; the finished ones leave the list
+    LaunchedEffect(Unit) {
+        while (st.bursts.isNotEmpty()) {
+            androidx.compose.runtime.withFrameNanos { now = it / 1_000_000 }
+            st.bursts.removeAll { now - it.t0 > dur }
+        }
+    }
+    Canvas(Modifier.fillMaxSize()) {
+        with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, b.rect, ((now - b.t0) / dur).coerceIn(0f, 1f), th.accent, b.t0.toInt()) } }
+    }
+}
 
 @Composable
 private fun Preview(th: KbTheme, st: KbState) {

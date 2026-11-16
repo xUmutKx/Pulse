@@ -9,6 +9,8 @@ import androidx.compose.ui.geometry.Rect
 
 /** What the keyboard window shows: the keys, the bar above them and the pop-ups. The service fills it, the view draws it. */
 class KbState {
+    /** the key-press effects being drawn (KeyboardPrefs.pressFx) */
+    val bursts = androidx.compose.runtime.mutableStateListOf<KbBurst>()
     /** Speech typing is listening right now (the comma key shows it). */
     var listening by mutableStateOf(false)
     /** 0 off, 1 the next letter, 2 caps lock. */
@@ -72,6 +74,8 @@ class KbState {
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
     var quickPinned by mutableStateOf(false)
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    /** the picture in the right slot is a video's (a small play mark is drawn on it) */
+    var shotVideo by mutableStateOf(false)
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
     var rootW by mutableStateOf(0f)
@@ -112,6 +116,9 @@ class KbState {
 }
 
 /** The pop-up over a pressed key: its big label, or the row of long-press characters with the chosen one. */
+/** A key-press effect under way: the key's place and when it was pressed (ms, on the System.nanoTime clock the frames use). */
+class KbBurst(val rect: Rect, val t0: Long)
+
 class KbPreview(val rect: Rect, val label: String, val alts: List<String> = emptyList(), val sel: Int = 0)
 
 /** What the keys do. The service implements it; the settings page draws the keyboard with an empty one. */
