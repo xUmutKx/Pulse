@@ -182,7 +182,13 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             }
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
             SwitchLine("window", tr("Open apps in windows on the Windows desktops (off: each app opens by itself)", "Windows masaüstlerinde uygulamalar pencerede açılır (kapalı: her biri kendi başına açılır)"), LauncherPrefs.windowedApps) { LauncherPrefs.windowedApps = it; save() }
-            SwitchLine("grid", tr("Icons snap to a grid (off: place them anywhere)", "Simgeler ızgaraya oturur (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
+            SwitchLine("grid", tr("Desktop icons on a grid (off: place them anywhere)", "Masaüstü simgeleri ızgarada (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
+            if (LauncherPrefs.snapIcons) {
+                SliderRow("${tr("Desktop grid, upright", "Masaüstü ızgarası, dikey")}: ${LauncherPrefs.deskColsPort} x ${LauncherPrefs.deskRowsPort}  ·  ${tr("columns", "sütun")}", LauncherPrefs.deskColsPort.toFloat(), 3f..7f) { LauncherPrefs.deskColsPort = it.roundToInt(); save() }
+                SliderRow("${tr("Desktop grid, upright", "Masaüstü ızgarası, dikey")}: ${LauncherPrefs.deskColsPort} x ${LauncherPrefs.deskRowsPort}  ·  ${tr("rows", "satır")}", LauncherPrefs.deskRowsPort.toFloat(), 4f..12f) { LauncherPrefs.deskRowsPort = it.roundToInt(); save() }
+                SliderRow("${tr("Desktop grid, turned", "Masaüstü ızgarası, yatay")}: ${LauncherPrefs.deskColsLand} x ${LauncherPrefs.deskRowsLand}  ·  ${tr("columns", "sütun")}", LauncherPrefs.deskColsLand.toFloat(), 4f..12f) { LauncherPrefs.deskColsLand = it.roundToInt(); save() }
+                SliderRow("${tr("Desktop grid, turned", "Masaüstü ızgarası, yatay")}: ${LauncherPrefs.deskColsLand} x ${LauncherPrefs.deskRowsLand}  ·  ${tr("rows", "satır")}", LauncherPrefs.deskRowsLand.toFloat(), 2f..8f) { LauncherPrefs.deskRowsLand = it.roundToInt(); save() }
+            }
             SwitchLine("window", tr("Extra blur: flyouts and the taskbar show the desktop picture blurred behind them, in every Windows look", "Ekstra bulanıklık: açılır paneller ve görev çubuğu, masaüstü resmini bulanık gösterir (her Windows görünümünde)"), LauncherPrefs.blurAll) { LauncherPrefs.blurAll = it; save() }
             if (LauncherPrefs.blurAll) SliderRow("${tr("Blur", "Bulanıklık")}: ${LauncherPrefs.blurAmt}", LauncherPrefs.blurAmt.toFloat(), 6f..60f) { LauncherPrefs.blurAmt = it.roundToInt(); save() }
             SliderRow("${tr("Space between icons", "Simgeler arası boşluk")}: ${LauncherPrefs.iconSpace}%", LauncherPrefs.iconSpace.toFloat(), 60f..160f) { LauncherPrefs.iconSpace = it.roundToInt(); save() }
