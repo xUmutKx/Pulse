@@ -124,6 +124,16 @@ class PlaybackService : MediaSessionService() {
         player.setVideoFrameMetadataListener { _, releaseTimeNs, _, _ -> AvSync.onFrameReleased(releaseTimeNs) }
         player.addListener(SponsorSkipper(player))
         player.addListener(SpeedKeeper(player))
+        // another app took the sound for good (Pulse's music player started): YTXTube stops, so the phone's media controls show that app instead of a paused video
+        // (stopped, not cleared: the place is kept and the play button starts it again)
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && reason == androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) {
+                    runCatching { resumeSaver?.saveNow() }
+                    player.stop()
+                }
+            }
+        })
 
 
         if (AudioOnly.enabled) {
@@ -144,8 +154,8 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-
-
+        // swiped away while paused: the media notification goes with it (a stopped player shows none)
+        session?.player?.let { p -> if (!p.playWhenReady) { runCatching { resumeSaver?.saveNow() }; p.stop() } }
         pauseAllPlayersAndStopSelf()
     }
 
