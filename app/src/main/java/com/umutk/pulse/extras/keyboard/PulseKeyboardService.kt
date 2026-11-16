@@ -644,7 +644,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (blindOf !== ic) {
             blindOf = ic
             blindIc = object : android.view.inputmethod.InputConnectionWrapper(ic, true) {
-                override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence = ""
+                // the open word is what the keyboard itself typed there: it is answered from that, so no question is ever put to the page (that froze the screen)
+                override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence = word.toString().takeLast(n)
                 override fun getTextAfterCursor(n: Int, flags: Int): CharSequence = ""
                 override fun getSelectedText(flags: Int): CharSequence? = null
                 override fun getCursorCapsMode(reqModes: Int): Int = 0
@@ -660,7 +661,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         val nAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
         blindWeb = webBox(info)
-        val nPlain = blindWeb || info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
+        val nPlain = info.inputType == 0 || (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
         val nEmail = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)
