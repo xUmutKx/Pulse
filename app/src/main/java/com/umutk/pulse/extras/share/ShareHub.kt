@@ -432,7 +432,18 @@ internal object ShareSend {
                 val f = File(ctx.cacheDir, "share/message.txt").apply { parentFile?.mkdirs(); writeText(p.text) }
                 listOf(FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f))
             } else p.uris
-            scope.launch { report(withContext(Dispatchers.IO) { LocalSendEngine.send(ctx, d.ls, uris) }.ifBlank { tr("Sent to ${d.name}", "${d.name} cihazına gönderildi") }) }
+            // the other side has to accept first (it can take a while): the page says so at once, instead of showing nothing
+            report(tr("Waiting for ${d.name} to accept…", "${d.name} cihazının kabul etmesi bekleniyor…"))
+            scope.launch {
+                val r = withContext(Dispatchers.IO) { runCatching { LocalSendEngine.send(ctx, d.ls, uris) }.getOrElse { "Failed: ${it.message}" } }
+                report(when {
+                    r.isBlank() -> tr("Nothing was sent: the files could not be read", "Hiçbir şey gönderilmedi: dosyalar okunamadı")
+                    r.startsWith("Sent") -> tr("Sent to ${d.name}", "${d.name} cihazına gönderildi")
+                    r.endsWith("declined") -> tr("${d.name} declined", "${d.name} reddetti")
+                    r.endsWith("busy") -> tr("${d.name} is busy with another transfer", "${d.name} başka bir aktarımla meşgul")
+                    else -> r
+                })
+            }
         } else if (d.rl != null && RelayHost.supported()) {
             val node = RelayHost.node(ctx)
             if (p.text != null) scope.launch { val r = node.sendText(d.rl.id, p.text); report(if (r is SendResult.Sent) tr("Sent to ${d.name}", "${d.name} cihazına gönderildi") else tr("Could not send", "Gönderilemedi")) }
