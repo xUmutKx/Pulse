@@ -57,8 +57,27 @@ object SharedVideoTexture {
 
 
 
+/** The faster video path: a SurfaceView goes straight to the display (as in the YouTube app); the TextureView path redraws the app window at every frame. */
+object YtxPerf {
+    var surfaceView by androidx.compose.runtime.mutableStateOf(true)
+    fun load(c: android.content.Context) { surfaceView = c.getSharedPreferences("ytx_perf", 0).getBoolean("surfaceView", true) }
+    fun set(c: android.content.Context, v: Boolean) { surfaceView = v; c.getSharedPreferences("ytx_perf", 0).edit().putBoolean("surfaceView", v).apply() }
+}
+
+@Composable
+private fun SurfaceVideo(player: Player?, modifier: Modifier) {
+    var view by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<android.view.SurfaceView?>(null) }
+    AndroidView(modifier = modifier, factory = { ctx -> android.view.SurfaceView(ctx).also { view = it } })
+    androidx.compose.runtime.DisposableEffect(player, view) {
+        val v = view; val p = player
+        if (v != null && p != null) runCatching { p.setVideoSurfaceView(v) }
+        onDispose { if (v != null && p != null) runCatching { p.clearVideoSurfaceView(v) } }
+    }
+}
+
 @Composable
 fun VideoSurface(player: Player?, modifier: Modifier = Modifier) {
+    if (YtxPerf.surfaceView && player != null) { SurfaceVideo(player, modifier); return }
     AndroidView(
         modifier = modifier,
         factory = { context ->

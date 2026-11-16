@@ -736,6 +736,15 @@ private fun AppearanceThemeContent(context: Context) {
             onCheckedChange = { GlassSettings.updateEnabled(it) },
         )
 
+        val perfCtx = androidx.compose.ui.platform.LocalContext.current
+        SettingsSwitchRow(
+            title = com.umutk.pulse.tr("Fast video", "Hızlı video"),
+            subtitle = com.umutk.pulse.tr("The video goes straight to the screen, as in the YouTube app (less CPU). Off: the old way, smoother mini player animation",
+                "Video doğrudan ekrana gider, YouTube uygulamasındaki gibi (daha az CPU). Kapalı: eski yol, mini oynatıcı geçişi daha yumuşak"),
+            checked = YtxPerf.surfaceView,
+            onCheckedChange = { YtxPerf.set(perfCtx, it) },
+        )
+
         val navCtx = androidx.compose.ui.platform.LocalContext.current
         SettingsSwitchRow(
             title = I18n.t("nav_shorts", "Shorts in the bottom bar"),
