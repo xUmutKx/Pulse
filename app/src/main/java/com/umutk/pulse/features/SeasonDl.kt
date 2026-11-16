@@ -470,13 +470,16 @@ object SeasonDl {
     @Composable
     private fun Caption(s: String) = Text(s, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
+    /** The series and movies page is open (its own page; going back shows the downloads). */
+    var pageOpen by androidx.compose.runtime.mutableStateOf(false)
+
     @Composable
-    fun Card() {
+    fun Card(page: Boolean = false) {
         // the free-software builds only: the Google Play build has neither this card nor the torrent engine
         if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return
         val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
-        var open by remember { mutableStateOf(false) }
+        val open = page
         var movies by remember { mutableStateOf(false) }
         var addon by remember { mutableStateOf(addon(ctx)) }
         var editAddon by remember { mutableStateOf(addon(ctx).isBlank()) }
@@ -516,7 +519,7 @@ object SeasonDl {
         }
         PCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                if (!page) Row(Modifier.fillMaxWidth().clickable { pageOpen = true }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     PIcon("download", T.text, 22.dp)
                     Spacer(Modifier.width(8.dp))
                     Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))

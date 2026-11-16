@@ -1257,7 +1257,13 @@ private fun category(f: File): String = when (f.extension.lowercase()) {
 fun DownloadsPage() {
     // no picture on this page: the chosen background shows behind the whole app
     androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }
+        // Series and movies is a page of its own: back goes to the downloads
+        if (SeasonDl.pageOpen) {
+            androidx.activity.compose.BackHandler { SeasonDl.pageOpen = false }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+            }
+        } else Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }
     }
 }
 
