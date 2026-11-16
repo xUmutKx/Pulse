@@ -688,6 +688,30 @@ private fun lowestFirst(formatRank: (MediaFormat?) -> Int): Comparator<VideoStre
         .thenBy { formatRank(it.format) }
 
 
+/** Which video codecs the phone decodes in hardware (asked once per codec). */
+object HwDecode {
+    private val cache = HashMap<String, Boolean>()
+    private fun hasHw(mime: String): Boolean = synchronized(cache) {
+        cache.getOrPut(mime) {
+            runCatching {
+                android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos.any { ci ->
+                    !ci.isEncoder && ci.supportedTypes.any { it.equals(mime, true) } &&
+                        (if (android.os.Build.VERSION.SDK_INT >= 29) ci.isHardwareAccelerated && !ci.isSoftwareOnly
+                        else !ci.name.startsWith("OMX.google") && !ci.name.startsWith("c2.android"))
+                }
+            }.getOrDefault(true)
+        }
+    }
+    fun ok(codec: String?): Boolean {
+        val c = codec.orEmpty().lowercase()
+        return when {
+            c.startsWith("av01") -> hasHw("video/av01")
+            c.startsWith("vp9") || c.startsWith("vp09") -> hasHw("video/x-vnd.on2.vp9")
+            else -> true
+        }
+    }
+}
+
 object StreamSelection {
 
     private const val MAX_TIER = 2160
@@ -709,9 +733,12 @@ object StreamSelection {
     private fun usableVideos(info: StreamInfo, allowHdr: Boolean): List<VideoStream> {
         val all = info.videoOnlyStreams
             .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.height > 0 }
-        if (allowHdr) return all
-        val sdr = all.filterNot(HdrSupport::isHdrCodec)
-        return sdr.ifEmpty { all }
+        // only what the phone decodes in hardware: AV1 or VP9 decoded in software keeps the processor busy (a phone without an AV1 chip played AV1 at three times
+        // the CPU of the YouTube app, which picks H.264 or VP9 there)
+        val hw = all.filter { HwDecode.ok(it.codec) }.ifEmpty { all }
+        if (allowHdr) return hw
+        val sdr = hw.filterNot(HdrSupport::isHdrCodec)
+        return sdr.ifEmpty { hw }
     }
 
     fun pick(info: StreamInfo): Picked {

@@ -57,6 +57,7 @@ object AvSync {
 
     private var watching = false
     private var lastDrawnNs = 0L
+    private var lastPostNs = 0L
     private var frameVsyncNs = 0L
     private var framePresentNs = 0L
     private var framePeriodNs = 0L
@@ -72,20 +73,21 @@ object AvSync {
                 if (it.size >= 2) it[1].expectedPresentationTimeNanos - it[0].expectedPresentationTimeNanos else 0L
             }.takeIf { it > 0 } ?: DEFAULT_PERIOD_NS
 
-            if (System.nanoTime() - lastDrawnNs < IDLE_NS) Choreographer.getInstance().postVsyncCallback(this)
-            else watching = false
+            // one frame time is enough for the next sample: no new call at every vsync (120 a second woke the main thread for nothing)
+            watching = false
         }
     }
 
 
     fun onFrameDrawn() {
         if (Build.VERSION.SDK_INT < 33) return
-        lastDrawnNs = System.nanoTime()
-        if (!watching) {
-
+        val now = System.nanoTime()
+        lastDrawnNs = now
+        // the timing is looked at four times a second, not at every frame
+        if (!watching && now - lastPostNs > SAMPLE_NS) {
             watching = true
+            lastPostNs = now
             Choreographer.getInstance().postVsyncCallback(vsync)
-            return
         }
         if (frameVsyncNs == usedVsyncNs) return
         usedVsyncNs = frameVsyncNs
@@ -113,12 +115,13 @@ object AvSync {
     }
 
     private const val WINDOW = 61
-    private const val MIN_SAMPLES = 15
+    private const val MIN_SAMPLES = 8
     private const val MIN_SCHEDULED_NS = 1_000_000L
     private const val MAX_GAP_US = 150_000L
     private const val MAX_OFFSET_US = 100_000L
     private const val HYSTERESIS_US = 2_000L
     private const val IDLE_NS = 1_000_000_000L
+    private const val SAMPLE_NS = 250_000_000L
     private const val DEFAULT_PERIOD_NS = 16_666_667L
 }
 
