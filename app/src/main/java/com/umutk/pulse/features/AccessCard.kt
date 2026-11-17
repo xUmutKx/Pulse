@@ -41,17 +41,18 @@ fun AccessNeededCard(feature: String, limited: String = "", modifier: Modifier =
         else -> tr("Shizuku: not installed", "Shizuku: yüklü değil")
     }
     PCard(modifier) {
-        Text(feature, color = T.text, fontSize = 15.sp)
-        if (limited.isNotBlank()) Text(limited, color = T.sub, fontSize = 13.sp)
-        Text(if (rootTried) tr("Root: not available", "Root: yok") else tr("Root: not detected", "Root: algılanmadı"), color = T.sub, fontSize = 13.sp)
-        Text(shizukuState, color = T.sub, fontSize = 13.sp)
-        if (Shell.shizukuMsg.isNotBlank()) Text(Shell.shizukuMsg, color = T.sub, fontSize = 13.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PButton(tr("Check root", "Root'u dene")) { scope.launch { withContext(Dispatchers.IO) { Shell.detectRoot() }; rootTried = true } }
+        // a title line, one line of text, and the state with its buttons at the right end of the last line
+        Text(feature, color = T.text, fontSize = 15.sp, maxLines = 1)
+        if (limited.isNotBlank()) Text(limited, color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val rootText = if (rootTried) tr("Root: not available", "Root: yok") else tr("Root: not detected", "Root: algılanmadı")
+            Text(listOf(rootText, shizukuState, Shell.shizukuMsg).filter { it.isNotBlank() }.joinToString(" · "), color = T.sub, fontSize = 12.sp, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            PButton(tr("Check root", "Root'u dene"), compact = true) { scope.launch { withContext(Dispatchers.IO) { Shell.detectRoot() }; rootTried = true } }
             when {
-                Shell.shizuku == 1 -> PButton(tr("Allow Shizuku", "Shizuku'ya izin ver")) { Shell.askShizuku(ctx) }
-                installed -> PButton(tr("Open Shizuku", "Shizuku'yu aç")) { (listOf(SHIZUKU_PKG, "rikka.shizuku", "dev.rikka.shizuku").firstNotNullOfOrNull { ctx.packageManager.getLaunchIntentForPackage(it) })?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-                else -> PButton(tr("Get Shizuku", "Shizuku'yu indir")) { Shell.askShizuku(ctx) }
+                Shell.shizuku == 1 -> PButton(tr("Allow Shizuku", "Shizuku'ya izin ver"), compact = true) { Shell.askShizuku(ctx) }
+                installed -> PButton(tr("Open Shizuku", "Shizuku'yu aç"), compact = true) { (listOf(SHIZUKU_PKG, "rikka.shizuku", "dev.rikka.shizuku").firstNotNullOfOrNull { ctx.packageManager.getLaunchIntentForPackage(it) })?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+                else -> PButton(tr("Get Shizuku", "Shizuku'yu indir"), compact = true) { Shell.askShizuku(ctx) }
             }
         }
     }
