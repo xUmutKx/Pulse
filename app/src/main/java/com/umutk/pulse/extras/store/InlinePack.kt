@@ -52,8 +52,9 @@ fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled:
     LaunchedEffect(id) {
         if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == id } }
     }
-    // [auto]: the download starts by itself, without a tap (the row then shows how far it is)
-    if (auto) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
+    // [auto]: the first time the pack is wanted it is asked once ("Download it?"); when yes it comes by itself (the row shows how far it is), when no the row keeps its button
+    if (auto) PackAsk(id, title)
+    if (auto && PackConsent.state(ctx, id) == 1) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
     val progress by StoreInstaller.progress.collectAsState()
     val errors by StoreInstaller.errors.collectAsState()
     val rev by StoreInstaller.rev.collectAsState()
@@ -74,6 +75,32 @@ fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled:
         }
         if (state != ModuleState.DOWNLOADING) PButton(if (state == ModuleState.FAILED) tr("Try again", "Tekrar dene") else tr("Download", "İndir"), compact = true) { StoreInstaller.download(ctx, m) }
     }
+}
+
+/** What the person answered when a pack was first wanted: 0 not asked, 1 yes, 2 no. */
+object PackConsent {
+    private fun sp(c: Context) = c.getSharedPreferences("pack_consent", Context.MODE_PRIVATE)
+    fun state(c: Context, id: String): Int = sp(c).getInt(id, 0)
+    fun set(c: Context, id: String, yes: Boolean) { sp(c).edit().putInt(id, if (yes) 1 else 2).apply() }
+}
+
+/** The question the first time a pack is wanted: "Download it?" with its size. Not asked when the pack is on the phone or was answered before. */
+@Composable
+fun PackAsk(id: String, title: String) {
+    val ctx = LocalContext.current
+    var show by remember(id) { mutableStateOf(!PackAuto.installed(ctx, id) && PackConsent.state(ctx, id) == 0) }
+    var module by remember(id) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == id }) }
+    LaunchedEffect(id, show) {
+        if (show && module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == id } }
+    }
+    if (show) com.umutk.pulse.PDialog(
+        title = title,
+        text = tr("Download it now" + (module?.let { " (" + formatMb(it.boyut) + ")" } ?: "") + "? It is kept on the phone and can be removed in Settings > About > Downloaded packs.",
+            "Şimdi indirilsin mi" + (module?.let { " (" + formatMb(it.boyut) + ")" } ?: "") + "? Telefonda saklanır, Ayarlar > Hakkında > İndirilen paketler'den kaldırılabilir."),
+        confirm = tr("Download", "İndir"),
+        onConfirm = { PackConsent.set(ctx, id, true); show = false; PackAuto.ensure(ctx, id) },
+        onDismiss = { PackConsent.set(ctx, id, false); show = false },
+    )
 }
 
 /**

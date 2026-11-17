@@ -80,6 +80,11 @@ object StoreInstaller {
         return "https://cdn.jsdelivr.net/gh/${m.groupValues[1]}/${m.groupValues[2]}@${m.groupValues[3]}/${m.groupValues[4]}"
     }
 
+    private fun jsDelivrOf(url: String): String? {
+        val m = Regex("^https://raw\\.githubusercontent\\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$").find(url) ?: return null
+        return "https://cdn.jsdelivr.net/gh/${m.groupValues[1]}/${m.groupValues[2]}@${m.groupValues[3]}/${m.groupValues[4]}"
+    }
+
     private fun baseDir(c: Context, loc: Int) = if (loc == 1) c.filesDir else (c.getExternalFilesDir(null)?.parentFile ?: c.filesDir)
     fun dataDir(c: Context, id: String): File = File(baseDir(c, location(c)), "extras/$id")
 
@@ -277,8 +282,17 @@ object StoreInstaller {
 
     /** The module file goes through the download manager (parallel ranges, notification, service); progress feeds the row. */
     private suspend fun fetchTo(c: Context, m: ExtraModule, out: File) {
-        require(resolveUrl(c, m.url).startsWith("https://")) { "https only" }
-        Downloads.fetchFile(c, resolveUrl(c, m.url), out, m.boyut) { p -> progress.update { it + (m.id to p) } }
+        val first = resolveUrl(c, m.url)
+        require(first.startsWith("https://")) { "https only" }
+        // the pack is in this app's own repository; when the chosen source (GitHub or jsDelivr) does not answer, the other one is tried before it fails
+        val other = if (first == m.url) jsDelivrOf(m.url) else m.url
+        try { Downloads.fetchFile(c, first, out, m.boyut) { p -> progress.update { it + (m.id to p) } } }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            if (other == null || other == first) throw e
+            out.delete()
+            Downloads.fetchFile(c, other, out, m.boyut) { p -> progress.update { it + (m.id to p) } }
+        }
         if (out.length() > m.boyut + EXTRA_LIMIT) throw IOException(tr("File is bigger than listed", "Dosya listedekinden büyük"))
     }
 

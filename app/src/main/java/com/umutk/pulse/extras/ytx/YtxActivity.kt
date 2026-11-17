@@ -447,6 +447,18 @@ fun YtxTubeApp() {
     }
 
     pip.Bind(onClosed = { player.controller?.pause() })
+    // the buttons of the picture-in-picture window: the headphones go on in the background (audio only, the window closes), then play / pause and next
+    SideEffect {
+        pip.playing = player.isPlaying
+        pip.onAction = { op ->
+            when (op) {
+                "toggle" -> player.togglePlay()
+                "next" -> player.skipNext()
+                "audio" -> { player.setAudioOnly(true); (activity as? ComponentActivity)?.moveTaskToBack(true) }
+            }
+        }
+    }
+    LaunchedEffect(player.isPlaying, pip.active) { if (pip.active) pip.refresh() }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTabletOrTv = TvMode.isTv || LocalConfiguration.current.smallestScreenWidthDp >= 600
 

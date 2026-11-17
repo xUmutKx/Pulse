@@ -89,8 +89,8 @@ object LyricsAuto {
     /** On by default: once, after the update that brought word lyrics, the lyrics on the phone get their word times in the background. */
     fun wordPassOn(c: Context) = prefs(c).getBoolean("word_pass", true)
     fun setWordPassOn(c: Context, v: Boolean) { prefs(c).edit().putBoolean("word_pass", v).apply(); if (v) ensureWordPass(c) else WorkManager.getInstance(c.applicationContext).cancelUniqueWork(WORD_NAME) }
-    fun wordPassDone(c: Context) = prefs(c).getBoolean("word_pass_done", false)
-    fun markWordPassDone(c: Context) { prefs(c).edit().putBoolean("word_pass_done", true).apply() }
+    fun wordPassDone(c: Context) = prefs(c).getBoolean("word_pass_done2", false)
+    fun markWordPassDone(c: Context) { prefs(c).edit().putBoolean("word_pass_done2", true).apply() }
     fun wordProgress(c: Context, done: Int, total: Int, got: Int) { prefs(c).edit().putInt("word_done", done).putInt("word_total", total).putInt("word_got", got).apply() }
     fun wordStatus(c: Context): Triple<Int, Int, Int> = prefs(c).let { Triple(it.getInt("word_done", 0), it.getInt("word_total", 0), it.getInt("word_got", 0)) }
 
@@ -102,7 +102,7 @@ object LyricsAuto {
 
     /** "Add now": the pass again, at once. */
     fun runWordPassNow(c: Context) {
-        prefs(c).edit().putBoolean("word_pass", true).putBoolean("word_pass_done", false).apply()
+        prefs(c).edit().putBoolean("word_pass", true).putBoolean("word_pass_done2", false).apply()
         WorkManager.getInstance(c.applicationContext).enqueueUniqueWork(WORD_NAME, ExistingWorkPolicy.REPLACE, OneTimeWorkRequestBuilder<LyricsWordWorker>().setConstraints(net).build())
     }
 
