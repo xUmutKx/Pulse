@@ -212,7 +212,7 @@ val LocalOverlayKb = androidx.compose.runtime.compositionLocalOf { false }
 @Composable
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
-    val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgb > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween((14000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
+    val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgbNow > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween((14000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
     androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue) { KeyboardViewBody(th, st, act, modifier) }
 }
 
@@ -253,8 +253,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     var handleRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
-    Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
-        .then(if (!float && KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
+    Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFxNow))
+        .then(if (!float && KeyboardPrefs.rgbNow == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
         .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float, barPx) {
         // the floating keyboard moves by its handle: the finger is followed on the window (which stays still), so the drag is smooth wherever the keyboard goes
         if (!float) return@pointerInput
@@ -305,7 +305,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     }) {
         // the picture behind the keys (Settings > Effects), under a black layer of the chosen strength
         KbPicture(KeyboardPrefs.bgPath, KeyboardPrefs.bgDim)
-        if (KeyboardPrefs.boardFx == 7) RgbWash()
+        if (KeyboardPrefs.boardFxNow == 7) RgbWash()
         Column(
             (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
                 .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
@@ -316,7 +316,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                     val r = intArrayOf(bnd.left.roundToInt(), bnd.top.roundToInt(), bnd.right.roundToInt(), bnd.bottom.roundToInt())
                     if (!r.contentEquals(st.floatRect)) { st.floatRect = r; st.refreshInsets?.invoke() }
                 }
-                .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
+                .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFxNow)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = if (float) 12.dp else if (th.samsung && !phoneLand) 6.dp else if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
@@ -347,7 +347,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
             }); if (KeyboardPrefs.topBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.topBright) / 100f))) }
-            if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
+            if (KeyboardPrefs.animOn) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
         }
         // the brightness: a black veil over the keys (the pop-up above stays bright)
@@ -769,7 +769,15 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             }
         }
     }
-    if (st.page == 0) {
+    if (st.page == 0 && KeyboardPrefs.multiTap) {
+        // the phone keypad: three keys a row, the same key again gives the next letter on it
+        MultiTap.rows(lang.code).forEach { r -> Row(Modifier.fillMaxWidth()) { r.forEach { chars -> Key(th, st, act, KbKey(chars, KeyKind.MULTI, n1 / 3f), keyH) } } }
+        Row(Modifier.fillMaxWidth()) {
+            Key(th, st, act, KbKey("", KeyKind.SHIFT, n1 / 3f), keyH)
+            Key(th, st, act, KbKey("0", KeyKind.CHAR, n1 / 3f), keyH)
+            Key(th, st, act, KbKey("", KeyKind.DELETE, n1 / 3f), keyH)
+        }
+    } else if (st.page == 0) {
         if (numRow) Row(Modifier.fillMaxWidth()) {
             "1234567890".forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, n1 / 10f, KeyboardLayouts.symbolAlts[d].orEmpty()), keyH, small = true) }
         }
@@ -978,11 +986,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
     val isLetterNow by rememberUpdatedState(isLetter)
     val view = androidx.compose.ui.platform.LocalView.current
-    val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
-        else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
-    val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
-    val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
-    val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
+    val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
+        else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
+    val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.animOn) 90 else 0), label = "key")
+    val pressedScale = when (KeyboardPrefs.motionFxNow) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
+    val grow by animateFloatAsState(if (down && KeyboardPrefs.animOn) pressedScale else 1f, if (KeyboardPrefs.motionFxNow == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
         Modifier.weight(k.weight).height(if (small) keyH * (if (th.samsung) .86f else .78f) else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[KeyboardLayouts.lower(k.label, st.lang)] = rect }
             // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
@@ -990,8 +998,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
                     down = true
+                    if (kNow.kind != KeyKind.MULTI) MultiTap.reset()
                     // the key-press effect starts where this key is
-                    if (KeyboardPrefs.pressFx > 0) { if (st.bursts.size > 4) st.bursts.removeAt(0); st.bursts.add(KbBurst(rect, System.nanoTime() / 1_000_000)) }
+                    if (KeyboardPrefs.pressFxNow > 0) { if (st.bursts.size > 4) st.bursts.removeAt(0); st.bursts.add(KbBurst(rect, System.nanoTime() / 1_000_000)) }
                     // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
                     try {
                     val key = kNow; val a = actNow
@@ -1017,7 +1026,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val seq = StringBuilder()
                     val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
                     var curRoot = startRoot
-                    val canGlide = isLetterNow && KeyboardPrefs.glide && !KeyboardPrefs.corners && st.page == 0 && st.panel == "keys"
+                    // circles and round trips on a letter: how far the finger went, how much the path turned (degrees) and its farthest point
+                    var pathLen = 0f
+                    var turned = 0.0
+                    var segAng = Double.NaN
+                    var maxOut = 0f
+                    var lastPt = startRoot
+                    val canGlide = isLetterNow && KeyboardPrefs.glide && !KeyboardPrefs.corners && !KeyboardPrefs.circleGestures && st.page == 0 && st.panel == "keys"
                     // a tap deletes its letter on release; held, the first repeat already takes a whole word (no single letter first)
                     if (key.kind == KeyKind.DELETE) due = android.os.SystemClock.uptimeMillis() + 380L
                     while (true) {
@@ -1056,13 +1071,29 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         curX = c.position.x
                         curY = c.position.y
                         curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
+                        if (KeyboardPrefs.circleGestures && isLetterNow) {
+                            val seg = curRoot - lastPt
+                            if (seg.getDistance() > 3.dp.toPx()) {
+                                val ang = Math.toDegrees(kotlin.math.atan2(seg.y.toDouble(), seg.x.toDouble()))
+                                if (!segAng.isNaN()) { var dA = ang - segAng; while (dA > 180) dA -= 360; while (dA < -180) dA += 360; turned += dA }
+                                segAng = ang; pathLen += seg.getDistance(); lastPt = curRoot
+                                maxOut = maxOf(maxOut, (curRoot - startRoot).getDistance())
+                            }
+                        }
                         if (c.changedToUp() || !c.pressed) {
                             if (st.swiped) { st.preview = null; break }
                             val up = (startRoot.y - curRoot.y)
                             // corner swipes: the symbol or key written on the corner the key was swiped toward
                             val corner = if (KeyboardPrefs.corners && isLetterNow && st.page == 0 && !long) KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx()) else null
+                            // a circle drawn on the letter: its capital; out and back again: its first long-press character
+                            val gesture = if (KeyboardPrefs.circleGestures && isLetterNow && st.page == 0 && !long) when {
+                                abs(turned) >= 300.0 && pathLen > 50.dp.toPx() -> KeyboardLayouts.lang(st.lang).let { l -> key.label.uppercase(l.locale) }
+                                maxOut > 30.dp.toPx() && (curRoot - startRoot).getDistance() < 16.dp.toPx() && abs(turned) < 250.0 -> key.alts.firstOrNull()
+                                else -> null
+                            } else null
                             when {
-                                corner != null -> { st.touch = null; if (corner.startsWith("@")) a.extraKey(corner.drop(1)) else a.type(corner) }
+                                gesture != null -> { st.touch = null; a.type(gesture) }
+                                corner != null && !(KeyboardPrefs.circleGestures && maxOut > 30.dp.toPx() && (curRoot - startRoot).getDistance() < 16.dp.toPx()) -> { st.touch = null; if (corner.startsWith("@")) a.extraKey(corner.drop(1)) else a.type(corner) }
                                 key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true) else if (delRepeats == 0) a.backspace()
                                 glide && seq.length >= 3 -> a.glide(seq.toString())
                                 glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
@@ -1075,6 +1106,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                         // a quick flick upwards types the first long-press character
                                         st.touch = if (key.kind == KeyKind.CHAR) curRoot else null
                                         if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
+                                    }
+                                    KeyKind.MULTI -> {
+                                        val (ch, again) = MultiTap.press(key.label)
+                                        if (again) a.backspace()
+                                        a.type(if (st.shift > 0) ch.uppercase() else ch)
                                     }
                                     KeyKind.SPACE -> a.space()
                                     KeyKind.SHIFT -> a.shift()
@@ -1117,7 +1153,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 if (stepNow != 0) { a.moveCursor(stepNow); lastStep += stepNow }
                                 // up and down: the cursor goes to the line above or below, at the same column
                                 val lineUnit = 20.dp.toPx() * 100f / KeyboardPrefs.cursorSens
-                                val lines = ((c.position.y - startY) / lineUnit).toInt()
+                                // only a slide that goes more up or down than across changes the line (a sideways slide that wobbles stays on its line)
+                                val dyNow = c.position.y - startY
+                                val lines = if (abs(dyNow) > abs(dx) * .8f) (dyNow / lineUnit).toInt() else lastLine
                                 if (lines != lastLine) { a.moveLine(lines - lastLine); lastLine = lines }
                             }
                             long && !held && key.alts.isNotEmpty() -> {
@@ -1139,12 +1177,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             }.padding(horizontal = if (th.samsung) 3.dp else KeyboardPrefs.gap.dp * .75f, vertical = if (th.samsung) 6.dp else KeyboardPrefs.gap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
-        val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
+        val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         val keyHue = LocalHue.current
-        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFx, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
-            .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier)
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFxNow, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
+            .then(if (KeyboardPrefs.rgbNow == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier)
             // the chasing light: a bright arc runs round the edge of the key (turning once per colour cycle, each key a little ahead of the one beside it), the rest of the edge stays faint
-            .then(if (KeyboardPrefs.rgb == 3 && keyHue != null) Modifier.drawWithContent {
+            .then(if (KeyboardPrefs.rgbNow == 3 && keyHue != null) Modifier.drawWithContent {
                 drawContent()
                 val c0 = Color.hsv((keyHue.value + rect.left / maxOf(1f, st.rootW) * 120f) % 360f, .9f, 1f)
                 rotate(keyHue.value + rect.left / maxOf(1f, st.rootW) * 90f, center) {
@@ -1162,11 +1200,15 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.EMOJI -> { Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.MENU -> { Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.LANG -> { Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
-                KeyKind.SPACE -> Text(k.label, color = if (th.samsung) th.text else th.sub, fontSize = if (th.samsung) 14.sp else 12.sp, maxLines = 1)
+                KeyKind.SPACE -> { SpaceDeco(); Text(k.label, color = if (th.samsung) th.text else th.sub, fontSize = if (th.samsung) 14.sp else 12.sp, maxLines = 1) }
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = if (th.samsung) 18.sp else 15.sp, maxLines = 1)
+                KeyKind.MULTI -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(k.label.last().toString(), color = fg, fontSize = (fs.value * .8f).sp, maxLines = 1)
+                    Text(k.label.dropLast(1).let { if (st.shift > 0) it.uppercase() else it }, color = th.sub, fontSize = 11.sp, maxLines = 1)
+                }
                 else -> {
                     // corner swipes: the small labels on the corners say what a swipe toward them gives
-                    if (KeyboardPrefs.corners && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
+                    if (KeyboardPrefs.corners && KeyboardPrefs.cornerHints && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
                         val ink = th.text.copy(alpha = .6f)
                         if (cc.nw.isNotEmpty()) Text(KeyCorners.show(cc.nw), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
                         if (cc.ne.isNotEmpty()) Text(KeyCorners.show(cc.ne), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
@@ -1219,12 +1261,43 @@ private fun androidx.compose.foundation.layout.BoxScope.RgbWash() {
     })
 }
 
+/** A picture read at no more than [max] pixels across (a camera photo at full size made the keyboard slow to open and heavy in memory). */
+internal fun kbDecode(path: String, max: Int): android.graphics.Bitmap? {
+    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(path, o)
+    var sample = 1
+    while (maxOf(o.outWidth, o.outHeight) / (sample * 2) >= max) sample *= 2
+    return android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+}
+
+/** What is behind the space bar: a picture (dimmed) and a small figure (an emoji) walking from one end to the other. Nothing in smooth mode. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.SpaceDeco() {
+    if (KeyboardPrefs.smooth) return
+    val pic = KeyboardPrefs.spacePic
+    if (pic.isNotEmpty()) {
+        val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, pic) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { kbDecode(pic, 600)?.asImageBitmap() }.getOrNull() }
+        }
+        img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize().clip(RoundedCornerShape(6.dp)).graphicsLayer { alpha = .55f }, contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+    }
+    val walker = KeyboardPrefs.spaceWalker
+    if (walker.isNotEmpty()) {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "walker")
+        val x by t.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(9000, easing = androidx.compose.animation.core.LinearEasing), androidx.compose.animation.core.RepeatMode.Reverse), label = "walkerX")
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.matchParentSize()) {
+            val w = maxWidth
+            Text(walker, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomStart).graphicsLayer { translationX = (w.toPx() - 22.dp.toPx()) * x; translationY = -2.dp.toPx(); scaleX = if (x > .999f) -1f else 1f })
+        }
+    }
+}
+
 /** The keyboard's picture behind the keys, darkened by [dim] percent (static: the first frame of a GIF). */
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.KbPicture(path: String, dim: Int) {
     if (path.isEmpty()) return
     val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(path)?.asImageBitmap() }.getOrNull() }
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { kbDecode(path, 1280)?.asImageBitmap() }.getOrNull() }
     }
     img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
     if (img != null) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = dim.coerceIn(0, 100) / 100f)))
@@ -1234,7 +1307,7 @@ private fun androidx.compose.foundation.layout.BoxScope.KbPicture(path: String, 
 
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.PressFx(th: KbTheme, st: KbState) {
-    val kind = KeyboardPrefs.pressFx
+    val kind = KeyboardPrefs.pressFxNow
     if (kind <= 0 || st.bursts.isEmpty()) return
     var now by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime() / 1_000_000) }
     val dur = KeyboardEffects.pressMs(kind)
@@ -1255,7 +1328,7 @@ private fun Preview(th: KbTheme, st: KbState) {
     val p = st.preview ?: return
     val shape = RoundedCornerShape((th.radius + 4).dp)
     val dens = androidx.compose.ui.platform.LocalDensity.current
-    val pop = remember(p.rect, p.alts.isEmpty()) { Animatable(if (KeyboardPrefs.anim) .75f else 1f) }
+    val pop = remember(p.rect, p.alts.isEmpty()) { Animatable(if (KeyboardPrefs.animOn) .75f else 1f) }
     LaunchedEffect(p.rect, p.alts.isEmpty()) { pop.animateTo(1f, tween(110)) }
     if (p.alts.isEmpty()) {
         val w = with(dens) { maxOf(p.rect.width, 52.dp.toPx()) }; val h = p.rect.height * 1.15f

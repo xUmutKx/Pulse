@@ -1688,14 +1688,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val before = c.getTextBeforeCursor(4000, 0)?.toString().orEmpty()
         val after = c.getTextAfterCursor(4000, 0)?.toString().orEmpty()
         val multi = (currentInputEditorInfo?.inputType ?: 0) and android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0 || (before + after).contains('\n')
-        if (!multi) {
-            val pos = if (delta < 0) selStart - before.length else selStart + after.length
-            val p = pos.coerceAtLeast(0)
-            if (p != selStart || p != selEnd) { c.setSelection(p, p); selStart = p; selEnd = p }
-            return
-        }
+        // one line only, or already on the first / last line: the cursor stays where it is (it never jumps to the start or the end of the text)
+        if (!multi) return
+        val room = if (delta < 0) before.count { it == '\n' } else after.count { it == '\n' }
+        val steps = minOf(Math.abs(delta), room)
+        if (steps == 0) return
         val code = if (delta < 0) android.view.KeyEvent.KEYCODE_DPAD_UP else android.view.KeyEvent.KEYCODE_DPAD_DOWN
-        repeat(Math.abs(delta)) {
+        repeat(steps) {
             c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), android.view.KeyEvent.ACTION_DOWN, code, 0))
             c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), android.view.KeyEvent.ACTION_UP, code, 0))
         }
@@ -2652,7 +2651,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         // the fast pass (completions only) gives the bar its words at once; the full pass with the corrections follows and replaces it
         // the word list is read once, as far as the neural model reaches; the nearer words of the rule are taken from the same reading
-        val reach = if (KeyboardPrefs.neural && lower.length >= 3) maxOf(limit, NN_REACH) else limit
+        val reach = if (KeyboardPrefs.neuralOn && lower.length >= 3) maxOf(limit, NN_REACH) else limit
         val nearAll = if (!fast && lower.length >= 2) candCodes.flatMap { KeyboardDictionary.correct(it, lower, reach, tc) } else emptyList()
         // the words the touches point to (a letter on a key's edge could have been the next key's)
         val touchC = if (!fast && tc != null && lower.length >= 3) candCodes.flatMap { KeyboardDictionary.touchCands(it, lower, tc, 4) } else emptyList()
@@ -2692,7 +2691,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // cost (in bits, NN_LAM per unit) taken off; the typed word wins unless a near word beats it by a margin (a real word needs a bigger one).
         // It also reaches a missing or an extra letter ("mrhaba", "gelyorum"), which the old rule could not afford, and orders the bar by the sentence.
         val nnLang = KeyboardLayouts.dict(code)
-        val lm = if (!fast && KeyboardPrefs.neural && lower.length >= 2 && !stretched && !keepCase) NeuralLm.get(this, nnLang) else null
+        val lm = if (!fast && KeyboardPrefs.neuralOn && lower.length >= 2 && !stretched && !keepCase) NeuralLm.get(this, nnLang) else null
         val nnScore = HashMap<String, Float>()
         var nnFix: KeyboardDictionary.Cand? = null
         val nnT0 = System.nanoTime()
