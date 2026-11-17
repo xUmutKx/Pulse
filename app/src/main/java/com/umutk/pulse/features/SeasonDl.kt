@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -223,11 +225,11 @@ object SeasonDl {
         var key by remember { mutableStateOf(tmdbKey(ctx)) }
         var note by remember { mutableStateOf("") }
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // a torrent nobody shares gives way to another stream of the episode after 15 seconds (bigger ones too, never under 200 MB)
+            // a torrent nobody shares gives way to another stream of the episode after 10 seconds
             Row(Modifier.fillMaxWidth().clickable { Downloads.setAutoSwitch(ctx, !Downloads.autoSwitch) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Try another stream when nobody shares", "Kimse paylaşmıyorsa başka yayını dene"), color = T.text, fontSize = 15.sp)
-                    Text(tr("After 15 seconds without anyone to download from, the next stream of the episode starts: the most shared first, up to twice the size, never under 200 MB", "Kimseden indirilemeden 15 saniye geçerse bölümün sıradaki yayını başlar: en çok paylaşılan önce, en çok iki katı boyuta kadar, 200 MB altına asla inmeden"), color = T.sub, fontSize = 12.sp)
+                    Text(tr("After 10 seconds without anyone to download from, the next stream of the episode starts: from a quarter to nearly twice the size you typed, the bigger ones first, never under 200 MB", "Kimseden indirilemeden 10 saniye geçerse bölümün sıradaki yayını başlar: yazdığın boyutun dörtte biri ile neredeyse iki katı arası, büyükler önce, 200 MB altına asla inmeden"), color = T.sub, fontSize = 12.sp)
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
@@ -332,32 +334,35 @@ object SeasonDl {
      */
     suspend fun best(addonBase: String, ep: Ep, maxBytes: Long, kind: String = "series"): Pick? = bestOf(streams(addonBase, ep, kind), maxBytes)
 
-    /** The choice of [best] out of a list already read: a stream someone shares (or that does not say) comes before one with no one sharing it. */
-    fun bestOf(all: List<Pick>, maxBytes: Long): Pick? {
-        fun alive(l: List<Pick>) = l.filter { it.seeds != 0 }.ifEmpty { l }
-        // under the limit, the stream most people share wins (a torrent with few sharing it crawls), and among close ones the one of a middle size (60 % of the limit)
-        fun score(p: Pick): Double {
-            val target = maxBytes * .6
-            val seedPart = if (p.seeds < 0) 1.0 else kotlin.math.ln(p.seeds + 1.0) * 2.0
-            return seedPart - kotlin.math.abs(p.size - target) / target
+    /**
+     * The streams of an episode in the order they are tried. [maxBytes] is the size the person typed (in GB): a stream from a quarter of it up to nearly twice it is wanted
+     * (never under 200 MB). The ones at or above the size come first (the most shared first), then the ones under it, the biggest first; in each group a stream somebody shares comes
+     * before one nobody shares. Streams that do not say their size follow, then the rest, and the ones nobody shares go to the very end.
+     */
+    fun ranked(all: List<Pick>, maxBytes: Long): List<Pick> {
+        val lo = maxOf(MIN_BYTES, maxBytes / 4); val hi = (maxBytes * 1.9).toLong()
+        fun inside(p: Pick) = p.size in lo..hi
+        fun order(l: List<Pick>): List<Pick> {
+            val up = l.filter { inside(it) && it.size >= maxBytes }.sortedWith(compareByDescending<Pick> { it.seeds }.thenBy { it.size })
+            val down = l.filter { inside(it) && it.size < maxBytes }.sortedWith(compareByDescending<Pick> { it.size }.thenByDescending { it.seeds })
+            val unknown = l.filter { it.size <= 0L }.sortedByDescending { it.seeds }
+            val outside = l.filter { it.size >= MIN_BYTES && !inside(it) }.sortedBy { kotlin.math.abs(it.size - maxBytes) }
+            val tiny = l.filter { it.size in 1 until MIN_BYTES }
+            return up + down + unknown + outside + tiny
         }
-        // streams under 200 MB are left out while any of 200 MB or more is there
-        val sized = all.filter { it.size > 0 }.let { l -> l.filter { it.size >= MIN_BYTES }.ifEmpty { l } }
-        val under = alive(sized.filter { it.size <= maxBytes }).maxByOrNull { score(it) }
-        if (under != null) return under
-        val smallest = alive(sized).minByOrNull { it.size }
-        if (smallest != null) return Pick(smallest.url, smallest.size, smallest.label, over = true, seeds = smallest.seeds)
-        return alive(all).firstOrNull()
+        return (order(all.filter { it.seeds != 0 }) + order(all.filter { it.seeds == 0 })).distinctBy { it.url }
     }
 
-    /** The streams to fall back on when [pick] finds no one to download from: the others under the limit, closest in size first, the ones with no one sharing them last (five at most). */
-    fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> {
-        // any size is fine up to twice the size looked for (a bigger one too), never under 200 MB; the streams most people share come first, then the closest in size
-        val top = maxOf(maxBytes, pick.size) * 2
-        return all.filter { it.url != pick.url && (it.size == 0L || (it.size >= MIN_BYTES && it.size <= top)) }
-            .sortedWith(compareBy<Pick>({ if (it.seeds == 0) 1 else 0 }, { -maxOf(it.seeds, 0) }, { if (it.size > 0 && pick.size > 0) kotlin.math.abs(it.size - pick.size) else Long.MAX_VALUE / 2 }))
-            .take(8).map { it.url }
+    /** The stream to start with: the first of [ranked] (marked [Pick.over] when it is bigger than the range wanted). Null only when the add-on has no stream at all. */
+    fun bestOf(all: List<Pick>, maxBytes: Long): Pick? {
+        val r = ranked(all, maxBytes).firstOrNull() ?: return null
+        return if (r.size > (maxBytes * 1.9).toLong()) Pick(r.url, r.size, r.label, over = true, seeds = r.seeds) else r
     }
+
+    /** The streams to fall back on when [pick] finds no one to download from: the rest of [ranked] in its order (eight at most). */
+    fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> = ranked(all, maxBytes).filter { it.url != pick.url }.take(8).map { it.url }
+
+    private fun gbText(mb: Int) = "%.1f".format(mb / 1024.0).removeSuffix(".0").removeSuffix(",0")
 
     /** Under 200 MB a stream is too poor to be taken, unless nothing else is there. */
     private const val MIN_BYTES = 200L * 1_048_576L
@@ -469,6 +474,20 @@ object SeasonDl {
 
     @Composable
     private fun Caption(s: String) = Text(s, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+
+    /** Series and movies as a screen of its own (opened from YTXTube): a back button and the title over the page, on the look's own background. */
+    @Composable
+    fun PageScreen(back: () -> Unit) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                // the way back in the look's own style: a Windows button on the Windows looks, the arrow elsewhere
+                if (T.id in com.umutk.pulse.winButtonLooks && T.id != "win11") PButton(tr("Back", "Geri"), compact = true, onClick = back)
+                else Box(Modifier.size(40.dp).clickable(onClick = back), contentAlignment = androidx.compose.ui.Alignment.Center) { PIcon("back", T.text, 22.dp) }
+                Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { Card(page = true) }
+        }
+    }
 
     /** The series and movies page is open (its own page; going back shows the downloads). */
     var pageOpen by androidx.compose.runtime.mutableStateOf(false)
@@ -608,9 +627,15 @@ object SeasonDl {
                     }
                     if (addon.isBlank() || editAddon) Text(tr("Open the add-on's page in your browser, copy the link of its page or of its Install button, and come back: Pulse takes it from what you copied (or press Paste).", "Eklentinin sayfasını tarayıcıda aç, sayfanın ya da Yükle düğmesinin bağlantısını kopyala ve buraya dön: Pulse kopyaladığından kendisi alır (ya da Yapıştır'a bas)."), color = T.sub, fontSize = 12.sp)
                     // 2. the size limit: the largest stream still under it is taken
-                    Caption(tr("2  Largest size per ${if (movies) "movie" else "episode"}", "2  ${if (movies) "Film" else "Bölüm"} başına en büyük boyut"))
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(SIZES) { n -> PChip(mb == n, if (n >= 1000) "${n / 1000f} GB".replace(".0", "") else "$n MB") { mb = n; save(ctx, addon, n.toFloat()); found = emptyMap() } }
+                    Caption(tr("2  Size per ${if (movies) "movie" else "episode"} (GB)", "2  ${if (movies) "Film" else "Bölüm"} başına boyut (GB)"))
+                    var gbField by remember { mutableStateOf(gbText(mb)) }
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        PField(gbField, { v ->
+                            gbField = v
+                            val g = v.replace(',', '.').trim().toDoubleOrNull()
+                            if (g != null && g in 0.2..60.0) { mb = (g * 1024).toInt(); save(ctx, addon, mb.toFloat()); found = emptyMap() }
+                        }, "GB", Modifier.width(110.dp))
+                        Text("  " + tr("looks from ${sizeText(maxOf(MIN_BYTES, limit() / 4))} to ${sizeText((limit() * 1.9).toLong())}, the bigger ones first", "${sizeText(maxOf(MIN_BYTES, limit() / 4))} ile ${sizeText((limit() * 1.9).toLong())} arası aranır, büyükler önce"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     }
                     // 3. what to download
                     Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
@@ -720,19 +745,16 @@ object SeasonDl {
                                 val sn = season
                                 if (sn != null) {
                                     val list = eps.filter { it.season == sn }
-                                    val chosen = list.filter { it.id in picked }
+                                    val chosen = list
                                     // the whole season (or the ticked episodes) in one press
                                     PButton(tr("Download season $sn  ·  ${chosen.size} of ${list.size} episodes", "Sezon $sn indir  ·  ${list.size} bölümden ${chosen.size}"), Modifier.fillMaxWidth()) { grab(chosen) }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        PChip(chosen.size == list.size, tr("All", "Hepsi")) { picked = list.map { it.id }.toSet() }
-                                        PChip(chosen.isEmpty(), tr("None", "Hiçbiri")) { picked = emptySet() }
-                                    }
-                                    // the episodes: a tap ticks or unticks one, the arrow downloads just that one
+                                    // the episodes: a tap opens the streams of that episode (who shares it, its size) to choose from, the arrow downloads the best one at once
                                     list.forEach { ep -> key(ep.id) {
                                         val on = ep.id in picked
-                                        Row(Modifier.fillMaxWidth().clickable { picked = if (on) picked - ep.id else picked + ep.id }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                            androidx.compose.foundation.layout.Box(Modifier.width(22.dp).height(22.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { if (on) PIcon("check", T.accent, 20.dp) }
-                                            Spacer(Modifier.width(8.dp))
+                                        Row(Modifier.fillMaxWidth().clickable {
+                                            choose = ep; options = null
+                                            scope.launch { options = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrDefault(emptyList()).sortedWith(compareByDescending<Pick> { it.seeds }.thenByDescending { it.size }) }
+                                        }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                             // the episode's own picture; without one the series poster, and without that the number
                                             Poster(ep.thumb.ifBlank { sel.poster }, 112.dp, 63.dp, "E%02d".format(ep.episode))
                                             Spacer(Modifier.width(10.dp))
@@ -743,11 +765,6 @@ object SeasonDl {
                                             // the size of the stream that would be taken ("…" while it is being looked for, "—" when there is none)
                                             val f = found[ep.id]
                                             Text(if (!found.containsKey(ep.id)) "…" else if (f == null) "—" else (if (f.over) "↑ " else "") + sizeText(f.size), color = if (f?.over == true) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.sub, fontSize = 12.sp)
-                                            // the list of all its streams (several qualities and sizes): one is chosen to download
-                                            androidx.compose.foundation.layout.Box(Modifier.clickable {
-                                                choose = ep; options = null
-                                                scope.launch { options = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrDefault(emptyList()).sortedByDescending { it.size } }
-                                            }.padding(6.dp)) { PIcon("more", T.text, 20.dp) }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
                                     }
@@ -773,11 +790,15 @@ object SeasonDl {
                                             Row(Modifier.fillMaxWidth().clickable {
                                                 val name = clean(show?.name.orEmpty()) + " S%02dE%02d".format(ep.season, ep.episode)
                                                 choose = null
-                                                scope.launch { start(listOf(Triple(o.url, name, alternatives(opts, o, Long.MAX_VALUE)))); note = tr("Started (${sizeText(o.size)})", "Başladı (${sizeText(o.size)})") }
+                                                scope.launch { start(listOf(Triple(o.url, name, alternatives(opts, o, if (o.size > 0) o.size else limit())))); note = tr("Started (${sizeText(o.size)})", "Başladı (${sizeText(o.size)})") }
                                             }.padding(vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                                 Text(o.label, color = T.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                                 Spacer(Modifier.width(8.dp))
-                                                Text(sizeText(o.size), color = if (o.size in 1..limit()) T.accent else T.sub, fontSize = 13.sp)
+                                                // how many share it (the add-on's own number) and its size; green when it is in the range wanted
+                                                Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                                    Text(if (o.seeds >= 0) "👤 ${o.seeds}" else "👤 ?", color = if (o.seeds == 0) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.text, fontSize = 13.sp)
+                                                    Text(sizeText(o.size), color = if (o.size in maxOf(MIN_BYTES, limit() / 4)..(limit() * 1.9).toLong()) T.accent else T.sub, fontSize = 12.sp)
+                                                }
                                             }
                                         }
                                     }

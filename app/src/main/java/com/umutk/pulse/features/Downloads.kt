@@ -707,8 +707,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             done.value = d
             error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
             val nowT = System.currentTimeMillis()
-            // nobody to download from for 15 seconds (30 when peers are connected and the file list is here): the next stream of the episode is tried
-            val patience = if (t > 0 && p > 0) 30_000L else 15_000L
+            // nobody to download from for 10 seconds (20 when peers are connected and the file list is here): the next stream of the episode is tried
+            val patience = if (t > 0 && p > 0) 20_000L else 10_000L
             if (Downloads.autoSwitch && d == 0L && alts.isNotEmpty() && nowT - began > patience) switchNow = true
             if (t > 0) {
                 if (winT == 0L) { winT = nowT; winD = d }

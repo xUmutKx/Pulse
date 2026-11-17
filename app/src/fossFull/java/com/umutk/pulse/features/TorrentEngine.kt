@@ -26,15 +26,57 @@ import java.io.IOException
 object TorrentEngine {
     val available: Boolean get() = Build.SUPPORTED_ABIS.contains("arm64-v8a")
 
-    /** Public trackers added to every link, so a bare "xt=urn:btih:..." link also finds peers when the DHT is slow to start. */
+    /**
+     * Public trackers added to every link, so a bare "xt=urn:btih:..." link also finds peers when the DHT is slow to start. The last ones speak HTTP(S): they answer on
+     * networks that block UDP (some mobile and public networks do). A fresh list of working trackers is fetched once a day ([refreshTrackers]) and added to these.
+     */
     private val TRACKERS = listOf(
         "udp://tracker.opentrackr.org:1337/announce",
         "udp://open.stealth.si:80/announce",
         "udp://tracker.torrent.eu.org:451/announce",
         "udp://exodus.desync.com:6969/announce",
+        "udp://tracker.tiny-vps.com:6969/announce",
+        "udp://tracker.dler.org:6969/announce",
         "udp://open.demonii.com:1337/announce",
         "udp://explodie.org:6969/announce",
+        "udp://tracker.moeking.me:6969/announce",
+        "udp://tracker1.bt.moack.co.kr:80/announce",
+        "udp://tracker.bitsearch.to:1337/announce",
+        "udp://p4p.arenabg.com:1337/announce",
+        "udp://tracker.cyberia.is:6969/announce",
+        "udp://opentracker.i2p.rocks:6969/announce",
+        "udp://tracker.skyts.net:6969/announce",
+        "udp://retracker.lanta-net.ru:2710/announce",
+        "https://tracker.tamersunion.org:443/announce",
+        "https://tracker.gbitt.info:443/announce",
+        "https://tracker1.520.jp:443/announce",
+        "http://tracker.openbittorrent.com:80/announce",
+        "http://tracker.bt4g.com:2095/announce",
     )
+
+    private const val TRACKER_LIST = "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt"
+    private fun trackerFile(ctx: Context) = File(ctx.filesDir, "torrent/trackers.txt")
+
+    /** The list of working trackers, asked for in the background when the saved one is a day old (or none): the next torrent uses it. */
+    private fun refreshTrackers(ctx: Context) {
+        val f = trackerFile(ctx)
+        if (f.isFile && System.currentTimeMillis() - f.lastModified() < 24L * 3_600_000L) return
+        val app = ctx.applicationContext
+        Thread {
+            runCatching {
+                val c = java.net.URL(TRACKER_LIST).openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 6_000; c.readTimeout = 8_000
+                try {
+                    if (c.responseCode in 200..299) {
+                        val lines = c.inputStream.bufferedReader().use { it.readText() }.lines().map { it.trim() }.filter { Regex("^(udp|https?)://\\S+").containsMatchIn(it) }.take(30)
+                        if (lines.size >= 5) { val t = trackerFile(app); t.parentFile?.mkdirs(); t.writeText(lines.joinToString("\n")) }
+                    }
+                } finally { c.disconnect() }
+            }
+        }.apply { isDaemon = true; name = "tracker-list" }.start()
+    }
+
+    private fun liveTrackers(ctx: Context): List<String> = runCatching { trackerFile(ctx).takeIf { it.isFile }?.readLines().orEmpty().filter { it.isNotBlank() } }.getOrDefault(emptyList())
 
     private var session: SessionManager? = null
 
@@ -139,8 +181,8 @@ object TorrentEngine {
     /** The torrent's info hash (hex) of a magnet link, or null when it is not one libtorrent understands. */
     private fun hashOf(magnet: String): String? = runCatching { AddTorrentParams.parseMagnetUri(magnet).infoHashes.best.toHex() }.getOrNull()
 
-    private fun withTrackers(magnet: String): String =
-        magnet + TRACKERS.filter { !magnet.contains(java.net.URLEncoder.encode(it, "UTF-8")) && !magnet.contains(it) }
+    private fun withTrackers(ctx: Context, magnet: String): String =
+        magnet + (TRACKERS + liveTrackers(ctx)).distinct().filter { !magnet.contains(java.net.URLEncoder.encode(it, "UTF-8")) && !magnet.contains(it) }
             .joinToString("") { "&tr=" + java.net.URLEncoder.encode(it, "UTF-8") }
 
 
@@ -152,6 +194,7 @@ object TorrentEngine {
     suspend fun download(ctx: Context, magnet: String, torrent: ByteArray?, base: File, stop: () -> Boolean, onName: (String) -> Unit, onProgress: (done: Long, total: Long, peers: Int) -> Unit): File? = withContext(Dispatchers.IO) {
         if (!ready(ctx)) throw IOException(NEEDS_ENGINE)
         System.setProperty("libtorrent4j.jni.path", libFile(ctx).absolutePath)
+        refreshTrackers(ctx)
         val s = try { sm() } catch (e: Throwable) { throw IOException("the torrent engine could not start: ${e.message ?: e.javaClass.simpleName}") }
         val idx = magnetParam(magnet, "pulse_idx")?.toIntOrNull() ?: -1
         val tInfo = torrent?.let { runCatching { TorrentInfo(it) }.getOrElse { throw IOException("this .torrent file could not be read") } }
@@ -171,7 +214,7 @@ object TorrentEngine {
                 for (i in 0 until 50) { if (s.find(sha)?.isValid != true) break; Thread.sleep(100) }
                 // added with only the wanted file asked for: a torrent with nothing wanted counts as finished and drops its peers
                 val p = if (tInfo != null) AddTorrentParams(org.libtorrent4j.swig.add_torrent_params()).also { it.swig().set_ti(tInfo.swig()) }
-                        else AddTorrentParams.parseMagnetUri(withTrackers(magnet))
+                        else AddTorrentParams.parseMagnetUri(withTrackers(ctx, magnet))
                 p.savePath = dir.absolutePath
                 // (a link that does not name its file asks for all of them until the file list shows the biggest: a few moments of the others)
                 if (early >= 0) {

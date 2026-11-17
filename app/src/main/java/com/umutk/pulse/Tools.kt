@@ -75,6 +75,8 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
         // the App lock page: opened from the More menu and the Extra apps group (it had no route, so it showed a blank screen)
         id == "applock" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AppLockPage() }
+        // Series and movies as a screen of its own (YTXTube's card opens it): not the downloads page with a window over it
+        id == "series" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.features.SeasonDl.PageScreen(back) } }
         id == "extrastore" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.extras.store.ExtraStoreScreen(onBack = back) } }
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
         id == "cover" -> {
