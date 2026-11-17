@@ -1045,6 +1045,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.panel == "vault") { if (s.all { ch -> ch.isLetterOrDigit() || ch in "@.-_ " }) { st.vaultQuery += s; refreshVault() }; return }
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (st.artOn) { st.artIn += s; return }
+        if (s.length == 1) termKey(s[0])
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         commaSpace = false
@@ -1401,6 +1402,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun space() {
         endFlash()
         val c = currentInputConnection ?: return
+        termKey(' ')
         captureEmail(c); commitNumber()
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
@@ -1434,6 +1436,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun enter() {
         endFlash()
         val c = currentInputConnection ?: return
+        termKey('\n')
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.panel == "vault") return
         if (st.trans) { transOp("apply"); return }
@@ -1452,6 +1455,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun backspace() {
         endFlash()
         val c = currentInputConnection ?: return
+        termKey('\b')
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
         if (st.panel == "vault") { st.vaultQuery = st.vaultQuery.dropLast(1); refreshVault(); return }
@@ -1623,6 +1627,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slot(i: Int) {
         st.banAsk = -1
+        // a terminal: the word in the slot takes the place of the letters typed so far (the terminal gets them as ordinary keys) and a space follows
+        if (st.terminal && st.plain && KeyboardPrefs.suggestions) {
+            val w = slotWords.getOrNull(i).orEmpty()
+            val ic = currentInputConnection
+            if (w.isEmpty() || ic == null) return
+            if (termWord.isNotEmpty()) ic.deleteSurroundingText(termWord.length, 0)
+            ic.commitText("$w ", 1)
+            termWord.setLength(0); termNote(w); termLineStart = false
+            updateSuggestions(); return
+        }
         // a login of the vault: its user name or password is written as it is
         if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { fillField(it) }; return }
         val qc = quickClip
@@ -2491,6 +2505,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // no text field to write in (a game, a screen with no field): the bar has nothing to suggest, and nothing looks like typing
         if (currentInputConnection == null || (currentInputEditorInfo?.inputType == 0 && !st.terminal)) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
+        // a terminal (Termux): no word is open and nothing is mended, but the bar offers the commands and the words typed there before
+        if (st.terminal && st.plain && KeyboardPrefs.suggestions) { termSuggestions(); return }
         if (runCatching { loginSuggestions() }.getOrDefault(false)) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
@@ -2599,6 +2615,42 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Puts [personalItems] on the bar beside the usual words: the first on the right, the second on the left (unless that place holds the word as typed). */
+    // ---- a terminal (Termux and the like): commands and words typed there before, offered on the bar; kept in memory only (a terminal sees passwords and tokens typed at prompts) ----
+    private val termWord = StringBuilder()
+    private val termSeen = LinkedHashMap<String, Int>()
+    private var termLineStart = true
+
+    /** What a key did in a terminal: letters and path signs build the word, a space or Enter ends it, delete takes one back. */
+    private fun termKey(ch: Char) {
+        if (!st.terminal || !st.plain) return
+        when {
+            ch == '\b' -> if (termWord.isNotEmpty()) termWord.setLength(termWord.length - 1)
+            ch == ' ' || ch == '\n' -> { val had = termWord.isNotEmpty(); termNote(termWord.toString()); termWord.setLength(0); termLineStart = ch == '\n' || (termLineStart && !had) }
+            ch.isLetterOrDigit() || ch in "-_./~" -> if (termWord.length < 40) termWord.append(ch)
+            else -> { termNote(termWord.toString()); termWord.setLength(0) }
+        }
+        updateSuggestions()
+    }
+
+    /** A finished word is counted (plain words of 2 to 24 characters; long mixed strings that look like a key or a token are left out). */
+    private fun termNote(w: String) {
+        if (st.incognito || w.length !in 2..24 || !w.all { it.isLetterOrDigit() || it in "-_.~" }) return
+        if (w.length >= 20 || (w.length >= 12 && w.any { it.isDigit() } && w.any { it.isUpperCase() } && w.any { it.isLowerCase() })) return
+        termSeen.merge(w, 1, Int::plus)
+        if (termSeen.size > 400) termSeen.remove(termSeen.keys.first())
+    }
+
+    private fun termSuggestions() {
+        val t = termWord.toString()
+        val hist = termSeen.entries.sortedByDescending { it.value }.map { it.key }
+        val pool = (hist + TERM_CMDS).distinct()
+        val out = if (t.isEmpty()) (if (termLineStart) (hist.filter { it in TERM_CMDS } + listOf("ls", "cd", "git", "pkg")).distinct().take(3) else hist.take(3))
+            else pool.filter { it.startsWith(t) && it != t }.take(3)
+        slotWords = arrayOf(out.getOrElse(0) { "" }, out.getOrElse(1) { "" }, out.getOrElse(2) { "" })
+        st.slots = slotWords.toList()
+        target = null
+    }
+
     // ---- a file named by the letters being typed (five or more): offered at the right of the bar ----
     private var fileHit: java.io.File? = null
     private var fileJob: kotlinx.coroutines.Job? = null
@@ -2897,3 +2949,9 @@ private fun spaceAfterCursor(c: android.view.inputmethod.InputConnection): Boole
 private val TR_GEO_HEADS = listOf("üniversitesi", "havalimanı", "köprüsü", "caddesi", "sokağı", "meydanı", "stadyumu", "parkı", "müzesi", "vadisi", "körfezi", "denizi", "boğazı", "ovası", "yaylası", "nehri", "gölü", "adası", "dağı")
 
 private val TR_ENDINGS = setOf("ı", "i", "u", "ü", "a", "e", "na", "ne", "nı", "ni", "nu", "nü", "ya", "ye", "yı", "yi", "yu", "yü", "da", "de", "ta", "te", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "la", "le", "yla", "yle", "ndan", "nden", "nda", "nde")
+
+/** The commands of a shell that a terminal bar offers from their first letters (Termux, adb, git, Python, Rust, Gradle). */
+private val TERM_CMDS = listOf("ls", "cd", "cp", "mv", "rm", "mkdir", "rmdir", "cat", "less", "head", "tail", "nano", "vim", "pwd", "echo", "touch", "chmod", "chown", "ln", "du", "df", "find", "grep",
+    "sed", "awk", "sort", "uniq", "wc", "tar", "zip", "unzip", "gzip", "curl", "wget", "ssh", "scp", "rsync", "ping", "ps", "top", "htop", "kill", "killall", "clear", "exit", "history", "which", "man", "env",
+    "export", "source", "git", "git status", "pkg", "apt", "pip", "python", "python3", "node", "npm", "cargo", "rustup", "rustc", "gradle", "gradlew", "adb", "rish", "termux-setup-storage", "termux-open",
+    "termux-clipboard-get", "termux-clipboard-set", "sudo", "su", "tmux", "make", "cmake", "java", "ffmpeg", "yt-dlp", "storage", "sdcard", "Download")
