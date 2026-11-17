@@ -1,4 +1,5 @@
-"""Redraws the Material glass launcher icons: a dark tinted glass squircle (no glare), a thin light rim and a soft light glyph.
+"""Run on the ORIGINAL glass PNGs (git history before the first redraw): the masks are read from their alpha.
+Redraws the Material glass launcher icons: a dark tinted glass squircle (no glare), a thin light rim and a soft light glyph.
 The squircle and the glyph shapes are read from the current PNGs (glyph = the opaque part, glass = the see-through part)."""
 import sys, glob, os, math
 from PIL import Image, ImageFilter, ImageDraw, ImageChops
@@ -6,14 +7,14 @@ from PIL import Image, ImageFilter, ImageDraw, ImageChops
 D = sys.argv[1]; OUT = sys.argv[2] if len(sys.argv) > 2 else D
 # tone suffix -> (body top, body bottom, glyph top, glyph bottom, rim)
 TONES = {
-    "":        ((40, 54, 86), (22, 31, 54), (196, 208, 236), (160, 176, 214)),
+    "":        ((19, 38, 66), (12, 23, 42), (150, 174, 220), (128, 151, 198)),
     "_purple": ((54, 42, 84), (32, 24, 54), (214, 200, 244), (182, 164, 222)),
     "_pink":   ((80, 40, 62), (50, 24, 40), (244, 200, 222), (220, 168, 196)),
     "_cyan":   ((26, 60, 74), (14, 38, 50), (182, 226, 238), (146, 198, 214)),
     "_green":  ((30, 64, 46), (16, 40, 28), (190, 236, 204), (154, 208, 172)),
     "_amber":  ((78, 60, 30), (50, 36, 16), (244, 220, 170), (218, 188, 132)),
 }
-BODY_A = 0.80   # the glass lets the wallpaper through a little, as Android's Material glass icons do
+BODY_A = 0.88   # the glass lets the wallpaper through a little, as Android's Material glass icons do
 
 def lerp(a, b, t): return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
 
@@ -51,7 +52,7 @@ def render(src, dst, tone, glyph_override=None):
     # thin light rim just inside the edge, stronger at the top
     inner = shape.filter(ImageFilter.MinFilter(5))
     rim = ImageChops.subtract(shape, inner)
-    rimc = lerp(top, (230, 238, 255), 0.55)
+    rimc = lerp(top, (170, 192, 232), 0.55)
     out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     body_a = shape.point(lambda v: int(v * BODY_A))
     out.paste(body, (0, 0), body_a)
