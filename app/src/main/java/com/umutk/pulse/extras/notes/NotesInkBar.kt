@@ -62,24 +62,47 @@ fun InkBar(
     textOn: Boolean, onText: () -> Unit, onPhoto: () -> Unit, moreOn: Boolean, onMore: () -> Unit,
     penTint: Color = T.text, markerTint: Color = Color(0xFFFDD835),
 ) {
-    // a floating bar: it does not touch the edges, it has a shadow and a gap under it
-    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+    // a flat strip under the title row, as in Samsung Notes
     Row(
-        Modifier.shadow(10.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel)
-            .horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp),
+        Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(14.dp)).background(T.panel)
+            .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        BarBtn(mode == InkMode.KEYBOARD, tr("Keyboard", "Klavye"), true, { onMode(InkMode.KEYBOARD) }) { PIcon("keyboard", it, 18.dp) }
-        PenTool3D(0, penTint, mode == InkMode.PEN, tr("Pen", "Kalem")) { onMode(InkMode.PEN) }
-        PenTool3D(1, markerTint, mode == InkMode.MARKER, tr("Marker", "Fosforlu kalem")) { onMode(InkMode.MARKER) }
-        PenTool3D(2, Color(0xFFF48FB1), mode == InkMode.ERASER, tr("Eraser", "Silgi")) { onMode(InkMode.ERASER) }
+        BarBtn(mode == InkMode.KEYBOARD, tr("Keyboard", "Klavye"), true, { onMode(InkMode.KEYBOARD) }) { PIcon("keyboard", it, 20.dp) }
+        Box(Modifier.width(1.dp).height(20.dp).background(T.text.copy(alpha = .18f)))
+        BarBtn(mode == InkMode.PEN, tr("Pen", "Kalem"), true, { onMode(InkMode.PEN) }) { PenGlyph(it) }
+        BarBtn(mode == InkMode.MARKER, tr("Marker", "Fosforlu kalem"), true, { onMode(InkMode.MARKER) }) { MarkerGlyph(it) }
+        BarBtn(mode == InkMode.ERASER, tr("Eraser", "Silgi"), true, { onMode(InkMode.ERASER) }) { EraserGlyph(it) }
         BarBtn(mode == InkMode.LASSO, tr("Lasso", "Kement"), true, { onMode(InkMode.LASSO) }) { LassoGlyph(it) }
-        BarBtn(false, tr("Undo", "Geri al"), canUndo, onUndo) { PIcon("undo", it, 18.dp) }
-        BarBtn(false, tr("Redo", "Yinele"), canRedo, onRedo) { PIcon("redo", it, 18.dp) }
-        BarBtn(textOn, tr("Text", "Yazı"), true, onText) { Text("Aa", color = it, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-        BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 18.dp) }
-        BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 18.dp) }
+        Box(Modifier.width(1.dp).height(20.dp).background(T.text.copy(alpha = .18f)))
+        BarBtn(false, tr("Undo", "Geri al"), canUndo, onUndo) { PIcon("undo", it, 20.dp) }
+        BarBtn(false, tr("Redo", "Yinele"), canRedo, onRedo) { PIcon("redo", it, 20.dp) }
+        Box(Modifier.width(1.dp).height(20.dp).background(T.text.copy(alpha = .18f)))
+        BarBtn(textOn, tr("Text", "Yazı"), true, onText) { Text("Aa", color = it, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+        BarBtn(false, tr("Add photo", "Fotoğraf ekle"), true, onPhoto) { PIcon("image", it, 20.dp) }
+        BarBtn(moreOn, tr("More", "Diğer"), true, onMore) { PIcon(if (moreOn) "close" else "add", it, 20.dp) }
     }
+}
+
+/** The pen's glyph: a slanted pen with a pointed tip. */
+@Composable
+private fun PenGlyph(tint: Color, size: Dp = 22.dp) {
+    Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val body = Path().apply { moveTo(w * .62f, w * .12f); lineTo(w * .88f, w * .38f); lineTo(w * .36f, w * .90f); lineTo(w * .10f, w * .90f); lineTo(w * .10f, w * .64f); close() }
+        drawPath(body, tint, style = Stroke(w * .09f, join = StrokeJoin.Round))
+        drawLine(tint, Offset(w * .52f, w * .22f), Offset(w * .78f, w * .48f), strokeWidth = w * .09f, cap = StrokeCap.Round)
+    }
+}
+
+/** The eraser's glyph: a slanted block with a line under it. */
+@Composable
+private fun EraserGlyph(tint: Color, size: Dp = 22.dp) {
+    Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val block = Path().apply { moveTo(w * .46f, w * .16f); lineTo(w * .86f, w * .56f); lineTo(w * .54f, w * .88f); lineTo(w * .14f, w * .48f); close() }
+        drawPath(block, tint, style = Stroke(w * .09f, join = StrokeJoin.Round))
+        drawLine(tint, Offset(w * .30f, w * .32f), Offset(w * .70f, w * .72f), strokeWidth = w * .07f, cap = StrokeCap.Round)
     }
 }
 
@@ -129,7 +152,7 @@ private fun PenTool3D(kind: Int, tint: Color, on: Boolean, desc: String, onClick
 private fun BarBtn(on: Boolean, desc: String, enabled: Boolean, onClick: () -> Unit, content: @Composable (Color) -> Unit) {
     val tint = if (!enabled) T.text.copy(alpha = .3f) else if (on) T.accent else T.text
     Box(
-        Modifier.size(34.dp).clip(CircleShape).background(if (on) T.accent.copy(alpha = .16f) else Color.Transparent)
+        Modifier.size(38.dp).clip(CircleShape).background(if (on) T.accent.copy(alpha = .16f) else Color.Transparent)
             .clickable(enabled = enabled) { onClick() }.semantics { contentDescription = desc },
         contentAlignment = Alignment.Center,
     ) { content(tint) }
@@ -146,7 +169,7 @@ fun InkPanel(
     onClearAll: () -> Unit, autoColor: Color,
 ) {
     var more by remember(mode) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 6.dp).shadow(8.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel).padding(horizontal = 8.dp, vertical = 4.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(14.dp)).background(T.panel).padding(horizontal = 8.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             when (mode) {
                 InkMode.ERASER -> PanelChip(tr("Erase all", "Hepsini sil"), false, Color(0xFFE53935)) { onClearAll() }
