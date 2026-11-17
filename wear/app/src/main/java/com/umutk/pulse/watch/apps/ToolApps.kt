@@ -204,7 +204,7 @@ fun SettingsScreen() {
     Page {
         ScalingLazyColumn(Modifier.fillMaxSize()) {
             item { Header("Settings") }
-            item { Chip("Crown ticks", icon = if (ticks) "✓" else "○", secondary = if (ticks) "A tick for every step of the crown" else "Off") { ticks = !ticks; Prefs.setCrownTicks(ticks) } }
+            item { Chip("Crown ticks", icon = if (ticks) "✓" else "○", secondary = if (ticks) "A tick for every step of the crown" else "Off") { ticks = !ticks; Prefs.changeCrownTicks(ticks) } }
             item { T("Accent", color = W.sub, size = 13.sp, align = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

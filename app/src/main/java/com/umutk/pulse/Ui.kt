@@ -380,7 +380,7 @@ fun ProfilePhotoRow() {
 }
 
 /** Page background: Windows 11 shows the Mica / picture behind its pages, so the page itself is see-through there; every other look paints its own colour. */
-val pageBg: Color get() = if (T.id == "win11" || PageBg.transparent) Color.Transparent else T.bg
+val pageBg: Color get() = if (T.id == "win11" || PageBg.transparent || (com.umutk.pulse.features.Backdrop.mode != "off" && com.umutk.pulse.features.Backdrop.image != null)) Color.Transparent else T.bg
 
 /** A screen that asked for see-through pages (Notes): every page background of that screen is transparent in any look. */
 object PageBg { var transparent by androidx.compose.runtime.mutableStateOf(false) }
