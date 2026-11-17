@@ -72,6 +72,26 @@ class PlayerState(private val scope: CoroutineScope) {
     var shuffleEnabled by mutableStateOf(false)
         private set
     var isMusicMode by mutableStateOf(false)
+
+    /** The music player shows the video in place of the cover (the Song / Video switch at its top, as in YouTube Music). */
+    var musicVideo by mutableStateOf(false)
+
+    private var musicDislikeTick by mutableStateOf(0)
+
+    /** The playing song is marked "not for me". */
+    val isMusicDisliked: Boolean get() = current?.id?.let { musicDislikeTick; MusicDislikes.has(it) } == true
+
+    /** "Not for me" (the thumb down of YouTube Music): the song is not suggested again and the next one plays; a second tap takes it back. */
+    fun dislikeMusic() {
+        val id = current?.id ?: return
+        val now = MusicDislikes.toggle(id)
+        musicDislikeTick++
+        if (!now) { actionMessage = "Taken back"; return }
+        actionMessage = "Not for me: it will not be suggested again"
+        musicQueue = MusicDislikes.clean(musicQueue)
+        if (Account.signedIn && currentLike != LikeStatus.Dislike) setLike(LikeStatus.Dislike)
+        skipNext()
+    }
     var autoPlayEnabled by mutableStateOf(true)
         private set
     var videoZoom by mutableFloatStateOf(1f)
@@ -254,7 +274,7 @@ class PlayerState(private val scope: CoroutineScope) {
         val item = items.getOrNull(index) ?: return
         isMusicMode = true
         applyVideoTrack()
-        musicQueue = items.drop(index + 1).filter { it.id != item.id }
+        musicQueue = MusicDislikes.clean(items.drop(index + 1).filter { it.id != item.id })
         if (expand) expanded = true
         if (current?.id == item.id && error == null) return
         known[item.id] = item
@@ -492,7 +512,7 @@ class PlayerState(private val scope: CoroutineScope) {
             skipNext()
             return
         }
-        val relList = details?.related.orEmpty().filter { it.id != currId }
+        val relList = details?.related.orEmpty().filter { it.id != currId && !(isMusicMode && MusicDislikes.has(it.id)) }
 
         val next = if (isMusicMode) {
             relList.firstOrNull { isMusicTrack(it) } ?: relList.firstOrNull()
@@ -506,7 +526,7 @@ class PlayerState(private val scope: CoroutineScope) {
             scope.launch {
                 runCatching { YouTube.details(currId) }
                     .onSuccess { d ->
-                        val list = d.related.filter { it.id != currId }
+                        val list = d.related.filter { it.id != currId && !(isMusicMode && MusicDislikes.has(it.id)) }
                         val rel = if (isMusicMode) {
                             list.firstOrNull { isMusicTrack(it) } ?: list.firstOrNull()
                         } else {

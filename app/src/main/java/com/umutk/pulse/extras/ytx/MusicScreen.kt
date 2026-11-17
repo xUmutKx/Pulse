@@ -165,8 +165,8 @@ class MusicFeedState(private val scope: CoroutineScope) {
                     val fetchedHistory = historyDeferred.await()
                     val fetchedLiked = likedDeferred.await()
 
-                    shelves = fetchedShelves
-                    recentPlays = fetchedHistory
+                    shelves = fetchedShelves.map { sh -> sh.copy(items = sh.items.filter { it.videoId?.let { v -> MusicDislikes.has(v) } != true }) }
+                    recentPlays = MusicDislikes.clean(fetchedHistory)
                     likedTracks = fetchedLiked
                 }
             } catch (t: Throwable) {
