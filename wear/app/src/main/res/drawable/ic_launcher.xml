@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse Watch: a pulse line in a ring on a dark round tile -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FF101418" android:pathData="M24,2a22,22 0,1 1,0 44a22,22 0,1 1,0 -44z" />
+    <path android:strokeColor="#FF4FC3F7" android:strokeWidth="2.5" android:fillColor="#00000000"
+        android:pathData="M24,7a17,17 0,1 1,0 34a17,17 0,1 1,0 -34z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M12,25h6l3,-7l5,14l3,-7h7" />
+</vector>
