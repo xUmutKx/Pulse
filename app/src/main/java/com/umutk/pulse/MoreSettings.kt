@@ -526,6 +526,11 @@ fun ThemeWallpaperRow(lookId: String) {
     }
     // the higher-quality versions of the stock pictures above: a download in this place
     com.umutk.pulse.extras.store.HdWallpaperRow(lookId)
+    // more pictures of the look (XP, 10): a download here, a tap makes one the look's own wallpaper
+    com.umutk.pulse.extras.store.MoreWallpapersStrip(lookId) { f ->
+        val u = android.net.Uri.fromFile(f)
+        setThemeWallpaper(ctx, lookId, u.toString()); uri = u.toString()
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         PButton("Wallpaper") { pick.launch(arrayOf("image/*")) }
         if (uri != null) PButton("Default") {

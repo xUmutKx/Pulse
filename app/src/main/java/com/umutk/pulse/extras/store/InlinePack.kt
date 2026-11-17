@@ -24,6 +24,17 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import java.io.File
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -115,6 +126,45 @@ object PackAuto {
             if (m == null) { StoreCatalog.refresh(app, force = true); m = StoreCatalog.load(app).firstOrNull { it.id == id } }
             if (m != null && StoreInstaller.state(app, m) != ModuleState.INSTALLED) StoreInstaller.download(app, m)
             else if (m == null) asked.remove(id)   // offline: tried again next time
+        }
+    }
+}
+
+/** More pictures of a look (Windows XP, Windows 10): a pack of the store, listed under the stock pictures; a tap gives the file to use as the wallpaper. */
+object MoreWalls {
+    fun packFor(lookId: String): Pair<String, String>? = when (lookId) {
+        "xp" -> "wallpapers-more-xp" to tr("More Windows XP wallpapers", "Daha fazla Windows XP duvar kağıdı")
+        "win10", "win10black" -> "wallpapers-more-win10" to tr("More Windows 10 wallpapers", "Daha fazla Windows 10 duvar kağıdı")
+        else -> null
+    }
+
+    fun files(c: Context, lookId: String): List<File> {
+        val (id, _) = packFor(lookId) ?: return emptyList()
+        return File(StoreInstaller.dataDir(c, id), "files").listFiles { f -> f.isFile && f.extension.equals("webp", true) }?.sortedBy { it.name }.orEmpty()
+    }
+}
+
+@Composable
+fun MoreWallpapersStrip(lookId: String, onPick: (File) -> Unit) {
+    val (id, title) = MoreWalls.packFor(lookId) ?: return
+    val ctx = LocalContext.current
+    var tick by remember { mutableStateOf(0) }
+    val files = remember(tick, lookId) { MoreWalls.files(ctx, lookId) }
+    Column(Modifier.fillMaxWidth()) {
+        InlinePackRow(id, title, auto = true) { tick++ }
+        if (files.isNotEmpty()) {
+            Text(title, color = T.sub, fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                files.forEach { f ->
+                    val thumb = remember(f.path) { runCatching { android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }.getOrNull() }
+                    Column(Modifier.width(110.dp).clickable { onPick(f) }) {
+                        Box(Modifier.width(110.dp).height(66.dp).clip(RoundedCornerShape(6.dp))) {
+                            if (thumb != null) Image(thumb, f.nameWithoutExtension, Modifier.width(110.dp).height(66.dp), contentScale = ContentScale.Crop)
+                        }
+                        Text(f.nameWithoutExtension, color = T.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
         }
     }
 }
