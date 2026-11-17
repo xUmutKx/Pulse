@@ -440,6 +440,42 @@
       "yayinlandi": true,
       "aciklama_en": "Two real photos per exercise as a short loop, for 111 exercises (5 MB).",
       "aciklama_tr": "111 egzersiz için başlangıç ve bitiş fotoğraflarından kısa döngüler (5 MB)."
+    },
+    {
+      "id": "wallpapers-more-xp",
+      "ad_en": "More Windows XP wallpapers",
+      "ad_tr": "Daha fazla Windows XP duvar kağıdı",
+      "tur": "veri",
+      "kategori": "gorsel",
+      "boyut": 529442,
+      "surum": "1.0.0",
+      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/wallpapers-more-xp.zip",
+      "sha256": "264112f0c0837887e67007062a1de26efd7d98c682444f81d3ddfc942ab7e91e",
+      "lisans": "LicenseRef-Microsoft-default-wallpapers",
+      "atif": "Microsoft Windows default wallpapers; the same pictures the app already holds in a small size",
+      "min_pulse": 120,
+      "guncellendi": "2026-11-17T00:00:00Z",
+      "yayinlandi": true,
+      "aciklama_en": "13 more pictures of Windows XP.",
+      "aciklama_tr": "Windows XP'nin 13 resmi daha."
+    },
+    {
+      "id": "wallpapers-more-win10",
+      "ad_en": "More Windows 10 wallpapers",
+      "ad_tr": "Daha fazla Windows 10 duvar kağıdı",
+      "tur": "veri",
+      "kategori": "gorsel",
+      "boyut": 292276,
+      "surum": "1.0.0",
+      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/wallpapers-more-win10.zip",
+      "sha256": "5c52c6b3c394f827ed7c9cd1e5ae2166345308f9bd767f5ff5f1f69cc719154a",
+      "lisans": "LicenseRef-Microsoft-default-wallpapers",
+      "atif": "Microsoft Windows default wallpapers; the same pictures the app already holds in a small size",
+      "min_pulse": 120,
+      "guncellendi": "2026-11-17T00:00:00Z",
+      "yayinlandi": true,
+      "aciklama_en": "5 more pictures of Windows 10 (Flowers).",
+      "aciklama_tr": "Windows 10'un 5 resmi daha (Çiçekler)."
     }
   ],
   "guncellendi": "2026-11-17T00:00:00Z"

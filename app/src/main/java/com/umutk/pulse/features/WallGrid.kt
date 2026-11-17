@@ -70,7 +70,7 @@ fun WallGrid(lookId: String, selected: Int, onPick: (Int) -> Unit) {
 
 /** The launcher's wallpaper chooser: the preview grid in a window of the current look. */
 @Composable
-fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPickFile: ((java.io.File) -> Unit)? = null, onPick: (Int) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth()
             .background(if (T.bevel) T.bg else T.panel)
@@ -81,6 +81,7 @@ fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPick:
             WallGrid(lookId, selected) { onPick(it) }
             // the higher-quality versions of these pictures: a download, here where the wallpaper is chosen
             com.umutk.pulse.extras.store.HdWallpaperRow(lookId)
+            if (onPickFile != null) com.umutk.pulse.extras.store.MoreWallpapersStrip(lookId, onPickFile)
         }
     }
 }

@@ -72,6 +72,8 @@ object LauncherPrefs {
     /** Sound effects: the look's start-up chime and a click when something opens. */
     var sounds by mutableStateOf(true)
     var wallDaily by mutableStateOf(false)
+    /** A wallpaper file chosen from the "more wallpapers" packs (path); empty: the look's stock pictures. */
+    var wallFile by mutableStateOf("")
     /** The screen stays on while the home is shown. */
     var keepOn by mutableStateOf(false)
     /** A short tick on a long press. */
@@ -175,7 +177,7 @@ object LauncherPrefs {
     var iconFree by mutableStateOf<Map<String, String>>(emptyMap())
 
     fun wallIndex(look: String): Int = walls[look] ?: 0
-    fun setWallIndex(look: String, i: Int) { walls = walls + (look to i) }
+    fun setWallIndex(look: String, i: Int) { walls = walls + (look to i); wallFile = "" }
 
     private const val FILE = "launcher.properties"
     private const val USE = "use."
@@ -235,7 +237,7 @@ object LauncherPrefs {
         gUp = p.getProperty("gUp") ?: if (swipeUpApps) "apps" else "none"
         gDown = p.getProperty("gDown") ?: if (swipeDownShade) "shade" else if (swipeDownSearch) "search" else "none"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
-        wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
+        wallDaily = p.getProperty("wallDaily") == "true"; wallFile = p.getProperty("wallFile").orEmpty(); keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
         clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         // once: the settings (or the Control Panel) and the Store join the desktop of a launcher set up before they existed
@@ -264,7 +266,7 @@ object LauncherPrefs {
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
         p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("bootEggs", bootEggs.toString()); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
-        p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString())
+        p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString()); p.setProperty("wallFile", wallFile)
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
         p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
@@ -305,7 +307,7 @@ object LauncherPrefs {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
-        gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
+        gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
