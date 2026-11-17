@@ -165,6 +165,9 @@ object LauncherPrefs {
     var blurAll by mutableStateOf(false)
     /** The glass of the Windows 11 taskbar, flyouts and menus: "pulse" (the blurred picture, as it was), "dark", "soft" (a little blur) or "clear". */
     var glassStyle by mutableStateOf("pulse")
+    /** "Windows Material" (glassStyle "material"): the tone from -100 (darker) over 0 to +100 (lighter), and how see-through it is (0 solid ... 90 almost clear). */
+    var matTone by mutableStateOf(0)
+    var matClear by mutableStateOf(45)
     var blurAmt by mutableStateOf(30)
     /** On Windows desktops Pulse's own apps open in windows of the desktop (the default); off: each opens as an app of its own, full screen. */
     var windowedApps by mutableStateOf(true)
@@ -217,7 +220,7 @@ object LauncherPrefs {
         val tab = c.resources.configuration.smallestScreenWidthDp >= 600
         deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 16) ?: if (tab) 6 else 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 24) ?: if (tab) 12 else 8
         deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 24) ?: if (tab) 16 else 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 16) ?: if (tab) 8 else 4
-        glassStyle = p.getProperty("glassStyle")?.takeIf { it in setOf("pulse", "dark", "soft", "clear") } ?: "pulse"; blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
+        glassStyle = p.getProperty("glassStyle")?.takeIf { it in setOf("pulse", "dark", "soft", "clear", "material") } ?: "pulse"; matTone = p.getProperty("matTone")?.toIntOrNull()?.coerceIn(-100, 100) ?: 0; matClear = p.getProperty("matClear")?.toIntOrNull()?.coerceIn(0, 90) ?: 45; blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
         bootEvery = p.getProperty("bootEvery") == "true"
         taskbarAutoHide = p.getProperty("taskbarAutoHide") == "true"
         iconSpace = p.getProperty("iconSpace2")?.toIntOrNull()?.coerceIn(60, 160) ?: 110
@@ -276,7 +279,7 @@ object LauncherPrefs {
         p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("fillGaps", fillGaps.toString())
         p.setProperty("accentOn", accentOn.toString()); p.setProperty("accentArgb", accentArgb.toString())
         p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
-        p.setProperty("glassStyle", glassStyle); p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
+        p.setProperty("glassStyle", glassStyle); p.setProperty("matTone", matTone.toString()); p.setProperty("matClear", matClear.toString()); p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
         p.setProperty("bootEvery", bootEvery.toString())
         p.setProperty("taskbarAutoHide", taskbarAutoHide.toString())
         p.setProperty("iconSpace2", iconSpace.toString())

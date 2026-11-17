@@ -138,6 +138,12 @@ button,input{font:inherit}button{color:#fff;cursor:pointer}
 .arow{display:flex;gap:8px}
 .act{width:52px;height:52px;border-radius:50%;font-weight:800;font-size:11px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);opacity:.85;transition:opacity .1s;touch-action:none}
 .act:active{opacity:1}
+/* floating action pad (the default): the A B C and jump buttons are not fixed in the corner, they open in an arc around the finger where it touches the right half of the screen and are chosen by sliding onto one; "fixed" brings the old corner buttons back (pause menu) */
+body.padfloat .actions{position:fixed;left:0;top:0;right:auto;bottom:auto;display:block;width:0;height:0;opacity:0;pointer-events:none;transition:opacity .12s}
+body.padfloat .actions.on{opacity:1}
+body.padfloat .actions .arow{display:contents}
+body.padfloat .actions .act{position:fixed;left:0;top:0;width:58px;height:58px;margin:-29px 0 0 -29px;pointer-events:none;will-change:transform;font-size:13px}
+body.padfloat .actions .act.hot{opacity:1;background:rgba(255,255,255,.3);border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}
 .act.a{background:rgba(255,85,112,.15)}.act.b{background:rgba(85,230,255,.12)}.act.c{background:rgba(167,120,255,.14)}.act.jump{background:rgba(255,227,110,.12)}
 #modOverlay{position:absolute;z-index:42;left:10px;top:calc(60px + var(--safe-top,0px));font-size:11px;line-height:1.6}
 #modOverlay .panel{background:rgba(10,14,24,.9);border:1px solid rgba(85,230,255,.35);border-radius:12px;padding:9px 11px;margin-bottom:7px;max-width:290px}
@@ -429,7 +435,7 @@ button,input{font:inherit}button{color:#fff;cursor:pointer}
 <div id="miniQuality"><div class="mq-pill" id="miniModePill">ARCADE</div><div id="miniProgress"><div id="miniProgressFill"></div></div><div class="mq-pill" id="miniTimePill">0:00</div><div class="mq-pill" id="miniControlPill">A / B / C</div><div id="miniDirector"><span class="md-pill" id="mdLevel">LV 1</span><span class="md-pill" id="mdCombo">COMBO x0</span><span class="md-pill" id="mdBonus">BONUS 0/3</span><span class="md-pill" id="mdMode">NORMAL</span></div></div>
 <div id="modOverlay" class="hidden"></div>
 <div id="miniResult"><div class="mini-panel"><div class="mini-icon" id="miniResultIcon">🏆</div><h2 id="miniResultTitle">VICTORY</h2><div class="mini-sub" id="miniResultSub"></div><div class="mini-stats"><div class="mini-stat"><b id="miniResultTime">0:00</b><span>TIME</span></div><div class="mini-stat"><b id="miniResultReward">+0</b><span>COINS</span></div><div class="mini-stat"><b id="miniResultBest">NEW</b><span>BEST</span></div></div><div class="mini-actions"><button class="primary" id="miniAgainBtn">↻ Play Again</button><button id="miniNextBtn">▶ Next Game</button><button class="wide" id="miniHubBtn">🏠 Back to Hub</button></div></div></div>
-<div id="miniPause"><div class="mini-panel"><div class="mini-icon">⏸️</div><h2>PAUSED</h2><div class="mini-sub" id="miniPauseSub">Your run is safe.</div><div class="mini-actions"><button class="primary wide" id="miniResumeBtn">▶ Resume</button><button id="miniPauseAgainBtn">↻ Restart</button><button id="miniPauseHubBtn">🏠 Hub</button></div></div></div>
+<div id="miniPause"><div class="mini-panel"><div class="mini-icon">⏸️</div><h2>PAUSED</h2><div class="mini-sub" id="miniPauseSub">Your run is safe.</div><div class="mini-actions"><button class="primary wide" id="miniResumeBtn">▶ Resume</button><button id="miniPauseAgainBtn">↻ Restart</button><button id="miniPauseHubBtn">🏠 Hub</button><button id="miniPadBtn">🎮 Buttons</button></div></div></div>
 <div id="miniToast"></div>
 <div class="controls">
 <div id="joyZone" class="joy"><div id="joyKnob" class="knob"></div></div>
@@ -1969,6 +1975,30 @@ function joyMove(e){
 function joyEnd(e){if(joyId===null)return;if(e&&e.pointerId!==joyId)return;joyId=null;IN.joyX=IN.joyY=0;joyKnob.style.transform="";joyZone.classList.remove("active")}
 addEventListener("pointerup",joyEnd);addEventListener("pointercancel",joyEnd);
 document.querySelectorAll(".act").forEach(b=>{const k=b.dataset.k;b.addEventListener("pointerdown",e=>{IN.act[k]=true});b.addEventListener("pointerup",e=>{IN.act[k]=false});b.addEventListener("pointerleave",e=>{IN.act[k]=false})});
+/* ---- floating action pad ---- */
+const padMode=()=>{try{return localStorage.getItem("megaPadMode")||"float"}catch(e){return"float"}};
+function padApply(){document.body.classList.toggle("padfloat",padMode()==="float");const b=$("miniPadBtn");if(b)b.textContent="🎮 Buttons: "+(padMode()==="float"?"around the finger":"fixed")}
+padApply();
+{const pb=$("miniPadBtn");if(pb)pb.addEventListener("click",()=>{try{localStorage.setItem("megaPadMode",padMode()==="float"?"fixed":"float")}catch(e){}padApply()})}
+const PAD_AT={b:[-76,-22],a:[-40,-70],jump:[40,-70],c:[76,-22]};
+let padId=null,padCx=0,padCy=0;const padEl=document.querySelector(".actions"),padBtns=[...document.querySelectorAll(".act")];
+function padShow(x,y){
+  padCx=Math.max(90,Math.min(innerWidth-90,x));padCy=Math.max(90,Math.min(innerHeight-24,y));
+  padBtns.forEach(b=>{const o=PAD_AT[b.dataset.k]||[0,-70];b.style.transform="translate3d("+(padCx+o[0])+"px,"+(padCy+o[1])+"px,0)";b.classList.remove("hot")});
+  padEl.classList.add("on");
+}
+function padHit(e){
+  padBtns.forEach(b=>{const o=PAD_AT[b.dataset.k]||[0,-70],d=Math.hypot(e.clientX-(padCx+o[0]),e.clientY-(padCy+o[1])),on=d<40;IN.act[b.dataset.k]=on;b.classList.toggle("hot",on)});
+}
+function padEnd(e){if(padId===null)return;if(e&&e.pointerId!==padId)return;padId=null;padBtns.forEach(b=>{IN.act[b.dataset.k]=false;b.classList.remove("hot")});padEl.classList.remove("on")}
+addEventListener("pointerdown",e=>{
+  if(padMode()!=="float"||padId!==null)return;
+  if(!ACT.mini||e.clientX<innerWidth*0.5||e.target.closest("button,.mini-panel,.glass"))return;
+  const hub=$("hubScreen");if(hub&&!hub.classList.contains("hidden"))return;
+  padId=e.pointerId;padShow(e.clientX,e.clientY);
+},true);
+addEventListener("pointermove",e=>{if(e.pointerId===padId)padHit(e)});
+addEventListener("pointerup",padEnd);addEventListener("pointercancel",padEnd);
 let drag3=false,lx=0,ly=0,lookId=null;
 cv3d.addEventListener("pointerdown",e=>{if(inSafeZone(e))return;lookId=e.pointerId;drag3=true;lx=e.clientX;ly=e.clientY});
 addEventListener("pointermove",e=>{if(drag3&&e.pointerId===lookId&&ACT.mod&&ACT.mod.dragLook){ACT.mod.dragLook(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY}});

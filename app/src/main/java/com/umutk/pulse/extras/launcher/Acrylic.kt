@@ -58,6 +58,13 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     val amount = when (style) { "soft" -> amount0 * .35f; "clear" -> amount0 * .5f; else -> amount0 }
     val blurUse = when (style) { "soft" -> blur * .35f; "clear" -> blur * .5f; else -> blur }
     val tintUse = when (style) {
+        // Windows Material: a neutral Mica grey that goes darker or lighter with the tone setting, and as see-through as the person set it (the blur stays the launcher's own)
+        "material" -> {
+            val t = LauncherPrefs.matTone / 100f
+            val base = Color(0xFF26262B)
+            val c = if (t < 0) androidx.compose.ui.graphics.lerp(base, Color.Black, -t) else androidx.compose.ui.graphics.lerp(base, Color(0xFFF2F2F7), t * .9f)
+            c.copy(alpha = (1f - LauncherPrefs.matClear / 100f).coerceIn(.06f, 1f))
+        }
         "dark" -> androidx.compose.ui.graphics.lerp(tint, Color.Black, .55f).copy(alpha = (tint.alpha + .22f).coerceAtMost(.93f))
         "clear" -> tint.copy(alpha = tint.alpha * .55f)
         else -> tint
