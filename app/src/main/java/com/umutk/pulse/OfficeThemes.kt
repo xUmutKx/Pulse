@@ -909,6 +909,8 @@ fun OfficeSettings() {
             PChip(ClippyPrefs.who == "clippy", "Clippy") { ClippyPrefs.setWho(ctx, "clippy") }
             PChip(ClippyPrefs.who == "links", "Links") { ClippyPrefs.setWho(ctx, "links") }
         }
+        // the Office Assistant's pictures are a download of 0.9 MB, asked for here, where it is wanted
+        if (ClippyPrefs.on) com.umutk.pulse.extras.store.InlinePackRow("clippy", tr("Office Assistant pictures", "Office Yardımcısı resimleri"))
     }
     PCard {
         var icDlg by remember { mutableStateOf(false) }

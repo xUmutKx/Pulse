@@ -25,13 +25,18 @@ object GymData {
     @Volatile private var foodList: List<GymFood>? = null
     private val artCache = HashMap<String, List<Path>>()
 
-    private fun lines(c: Context, name: String): List<String> = runCatching { c.assets.open("gym/$name").bufferedReader().readLines() }.getOrDefault(emptyList())
+    /** The catalogue, the programs, the foods and the pictures are a download of the Extra store ("gym", 1.5 MB) that comes by itself the first time the gym is opened; until then the lists are empty. */
+    private fun lines(c: Context, name: String): List<String> {
+        val f = java.io.File(com.umutk.pulse.extras.store.StoreInstaller.dataDir(c, "gym"), name)
+        if (!f.isFile) { com.umutk.pulse.extras.store.PackAuto.ensure(c, "gym"); return emptyList() }
+        return runCatching { f.readLines() }.getOrDefault(emptyList())
+    }
 
     fun exercises(c: Context): List<GymEx> = exs ?: synchronized(this) {
         exs ?: lines(c, "exercises.tsv").mapNotNull { l ->
             val f = l.split('\t')
             if (f.size < 9) null else GymEx(f[0], f[1], f[2], f[3].split(',').filter { it.isNotBlank() }, f[4], f[5], f[6], f[8].split('|').filter { it.isNotBlank() })
-        }.also { exs = it }
+        }.also { if (it.isNotEmpty()) exs = it }
     }
 
     fun byId(c: Context, id: String): GymEx? = exercises(c).firstOrNull { it.id == id }
@@ -41,14 +46,14 @@ object GymData {
         progs ?: lines(c, "programs.tsv").mapNotNull { l ->
             val f = l.split('\t')
             if (f.size < 5) null else GymProgramDay(f[0], f[1], f[2], f[3].toIntOrNull() ?: 0, f[4].split('|').mapNotNull { p -> p.substringAfterLast(':').toIntOrNull()?.let { n -> p.substringBeforeLast(':') to n } })
-        }.also { progs = it }
+        }.also { if (it.isNotEmpty()) progs = it }
     }
 
     fun foods(c: Context): List<GymFood> = foodList ?: synchronized(this) {
         foodList ?: lines(c, "foods.tsv").mapNotNull { l ->
             val f = l.split('\t')
             if (f.size < 7 || f[0].isBlank()) null else GymFood(f[0], f[1], f[2].toFloatOrNull() ?: 0f, f[3].toFloatOrNull() ?: 0f, f[4].toFloatOrNull() ?: 0f, f[5].toFloatOrNull() ?: 0f, f[6].toIntOrNull() ?: 0)
-        }.also { foodList = it }
+        }.also { if (it.isNotEmpty()) foodList = it }
     }
 
     /** The frames (paths in a 512 x 512 box) of an exercise's picture; empty when it has none. */
@@ -56,7 +61,7 @@ object GymData {
         if (id.isBlank()) return emptyList()
         synchronized(artCache) { artCache[id]?.let { return it } }
         val frames = lines(c, "art/$id.txt").filter { it.isNotBlank() }.mapNotNull { runCatching { PathParser().parsePathString(it).toPath() }.getOrNull() }
-        synchronized(artCache) { artCache[id] = frames }
+        if (frames.isNotEmpty()) synchronized(artCache) { artCache[id] = frames }
         return frames
     }
 

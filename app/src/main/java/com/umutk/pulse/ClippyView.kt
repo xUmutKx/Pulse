@@ -48,7 +48,9 @@ private class CFrame(val cell: Int, val dur: Int, val br: IntArray)
 private class CAgent(val w: Int, val h: Int, val cols: Int, val sheet: ImageBitmap, val anims: Map<String, List<CFrame>>)
 
 private fun loadAgent(c: Context, who: String): CAgent? = runCatching {
-    val lines = c.assets.open("clippy/$who.dat").bufferedReader().readLines().filter { it.isNotBlank() }
+    // the agents are a download (Extra store, "clippy"): asked for in the settings where Clippy is switched on
+    val dir = com.umutk.pulse.extras.store.StoreInstaller.dataDir(c, "clippy")
+    val lines = java.io.File(dir, "$who.dat").readLines().filter { it.isNotBlank() }
     val (w, h, cols) = lines[0].trim().split(' ').map { it.toInt() }
     val anims = lines.drop(1).associate { l ->
         val name = l.substringBefore('|')
@@ -57,7 +59,7 @@ private fun loadAgent(c: Context, who: String): CAgent? = runCatching {
             CFrame(p[0].toInt(), p[1].toInt(), if (p.size > 2 && p[2].isNotEmpty()) p[2].split('/').map { it.toInt() }.toIntArray() else IntArray(0))
         }
     }
-    val bmp = c.assets.open("clippy/${who}_map.webp").use { BitmapFactory.decodeStream(it) }
+    val bmp = BitmapFactory.decodeFile(java.io.File(dir, "${who}_map.webp").path)
     CAgent(w, h, cols, bmp.asImageBitmap(), anims)
 }.getOrNull()
 
@@ -72,7 +74,8 @@ private fun clippyTips() = listOf(
 @Composable
 fun ClippyView(modifier: Modifier = Modifier, saved: Boolean = false) {
     val ctx = LocalContext.current; val who = ClippyPrefs.who
-    val agent by produceState<CAgent?>(null, who) { value = withContext(Dispatchers.IO) { loadAgent(ctx, who) } }
+    val installed by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    val agent by produceState<CAgent?>(null, who, installed) { value = withContext(Dispatchers.IO) { loadAgent(ctx, who) } }
     val a = agent ?: return
     var cell by remember(a) { mutableStateOf(a.anims["RestPose"]?.firstOrNull()?.cell ?: 0) }
     var balloon by remember { mutableStateOf<String?>(null) }
@@ -86,7 +89,7 @@ fun ClippyView(modifier: Modifier = Modifier, saved: Boolean = false) {
     }
     LaunchedEffect(saved) { if (saved) { balloon = tr("Saved!", "Kaydedildi!"); req = "Save" to (req.second + 1); delay(3500); balloon = null } }
     // play the requested animation, then rest; when nothing is asked for a while, an idle one
-    LaunchedEffect(a, req) {
+    LaunchedVisible(a, req) {
         suspend fun play(name: String) {
             val fr = a.anims[name] ?: return
             var i = 0; var steps = 0
