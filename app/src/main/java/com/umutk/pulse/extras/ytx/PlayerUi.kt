@@ -1246,23 +1246,23 @@ fun BitChordMusicPlayer(
                         modifier = Modifier.size(32.dp),
                     )
                 }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        "YTX MUSIC",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = c.onSurfaceVariant.copy(alpha = 0.85f),
-                    )
-                    Text(
-                        "Now Playing",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = c.onSurface,
-                    )
+                // Song / Video, as in YouTube Music: the cover, or the video of the same track
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(c.onSurface.copy(alpha = 0.1f)).padding(3.dp),
+                    ) {
+                        listOf(false to "Song", true to "Video").forEach { (video, label) ->
+                            val on = state.musicVideo == video
+                            Box(
+                                Modifier.clip(RoundedCornerShape(50))
+                                    .background(if (on) c.onSurface.copy(alpha = 0.92f) else Color.Transparent)
+                                    .pressable(onClick = { state.musicVideo = video })
+                                    .padding(horizontal = 20.dp, vertical = 7.dp),
+                            ) {
+                                Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (on) c.surface else c.onSurface.copy(alpha = 0.8f))
+                            }
+                        }
+                    }
                 }
                 IconButton(onClick = { showTrackMenu = true }) {
                     Icon(
@@ -1289,6 +1289,15 @@ fun BitChordMusicPlayer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(if (showLyrics) 7f else 3.5f),
+                )
+            } else if (state.musicVideo) {
+                // the video of the track in place of the cover
+                VideoContent(
+                    state = state,
+                    fullscreen = false,
+                    onCollapse = onCollapse,
+                    onToggleFullscreen = {},
+                    modifier = Modifier.fillMaxWidth().aspectRatio(state.stageAspect.coerceIn(1f, 2.4f)).clip(RoundedCornerShape(16.dp)),
                 )
             } else {
                 Box(
@@ -1356,6 +1365,15 @@ fun BitChordMusicPlayer(
                     )
                 }
                 Spacer(Modifier.width(12.dp))
+                val disliked = state.isMusicDisliked
+                IconButton(onClick = state::dislikeMusic) {
+                    Icon(
+                        if (disliked) Icons.Rounded.ThumbDown else Icons.Outlined.ThumbDown,
+                        contentDescription = "Not for me",
+                        tint = if (disliked) c.primary else c.onSurfaceVariant,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
                 val liked = state.accountState?.like == LikeStatus.Like
                 IconButton(onClick = state::toggleLike) {
                     Icon(
