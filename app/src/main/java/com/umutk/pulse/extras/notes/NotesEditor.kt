@@ -263,6 +263,14 @@ fun NoteEditor(
             MIcon(Icons.Outlined.Share, tr("Share", "Paylaş"), fg) { shareNote(ctx, text) }
             MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More", "Diğer"), if (more) T.accent else fg) { more = !more }
         }
+        // the tools sit under the title row, as in Samsung Notes: pen, marker, eraser, lasso, undo and redo, text, photo, more
+        InkBar(
+            mode = mode, onMode = { pick(it) },
+            canUndo = if (inkOn) inkUndo.isNotEmpty() else undo.isNotEmpty(), canRedo = if (inkOn) inkRedo.isNotEmpty() else textRedo.isNotEmpty(),
+            onUndo = { if (inkOn) undoInk() else undoText() }, onRedo = { if (inkOn) redoInk() else redoText() },
+            textOn = fmt, onText = { fmt = !fmt }, onPhoto = { pickImage.launch(arrayOf("image/*")) }, moreOn = more, onMore = { more = !more },
+            penTint = if (penColor == 0) ink else Color(penColor), markerTint = Color(markerColor),
+        )
         if (more) Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             NChip(tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
             NChip(if (preview) tr("Edit", "Düzenle") else tr("Preview", "Önizleme"), fg) { preview = !preview }
@@ -287,7 +295,7 @@ fun NoteEditor(
         }
 
         // the settings of the tool that is on (the pen's types, its size and colours, the eraser's size, whether a finger draws) and what the lasso chose
-        androidx.compose.animation.AnimatedVisibility(panel && inkOn, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { it / 2 } + androidx.compose.animation.scaleIn(initialScale = .92f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f)), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { it / 2 }) { InkPanel(
+        androidx.compose.animation.AnimatedVisibility(panel && inkOn, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it / 2 } + androidx.compose.animation.scaleIn(initialScale = .92f, transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it / 2 }) { InkPanel(
             mode = mode, style = penStyle, onStyle = { penStyle = it; InkPrefs.setPenStyle(ctx, it) },
             color = if (mode == InkMode.MARKER) markerColor else penColor,
             onColor = { c -> if (mode == InkMode.MARKER) { markerColor = c; InkPrefs.setMarkerColor(ctx, c) } else { penColor = c; InkPrefs.setPenColor(ctx, c) } },
@@ -387,13 +395,6 @@ fun NoteEditor(
             }
             }
         }
-        InkBar(
-            mode = mode, onMode = { pick(it) },
-            canUndo = if (inkOn) inkUndo.isNotEmpty() else undo.isNotEmpty(), canRedo = if (inkOn) inkRedo.isNotEmpty() else textRedo.isNotEmpty(),
-            onUndo = { if (inkOn) undoInk() else undoText() }, onRedo = { if (inkOn) redoInk() else redoText() },
-            textOn = fmt, onText = { fmt = !fmt }, onPhoto = { pickImage.launch(arrayOf("image/*")) }, moreOn = more, onMore = { more = !more },
-            penTint = if (penColor == 0) ink else Color(penColor), markerTint = Color(markerColor),
-        )
     }
     }
 }
