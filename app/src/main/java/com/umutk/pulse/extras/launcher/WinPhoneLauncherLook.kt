@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.umutk.pulse.produceStateVisible
 
 /** Accent colours of the Windows Phone start screen; an app keeps its colour in every list. */
 private val WP_TILES = listOf(
@@ -322,7 +323,7 @@ fun WinPhoneTiles(state: LauncherState, apps: List<LaunchApp>, edge: Dp, modifie
 fun WinPhoneFeed(onApps: () -> Unit, onClose: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     androidx.activity.compose.BackHandler { onClose() }
-    val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { kotlinx.coroutines.delay(1000); value = System.currentTimeMillis() } }
+    val now by produceStateVisible(System.currentTimeMillis()) { while (true) { kotlinx.coroutines.delay(1000); value = System.currentTimeMillis() } }
     val d = java.util.Date(now)
     val forecast = remember { runCatching { com.umutk.pulse.extras.weather.WeatherStore.cached(ctx) }.getOrNull() }
     val battery = remember(now / 20_000L) {

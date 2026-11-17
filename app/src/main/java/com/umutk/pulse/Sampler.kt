@@ -210,6 +210,10 @@ object Sampler {
     /** 60-second series per key: cpu, ram, gpu, bat, ma, down, up, c0, c1, ... */
     val history = MutableStateFlow<Map<String, List<Float>>>(emptyMap())
     @Volatile var interval = 1000L
+    /** How many screens show a live graph right now ([NeedFastSamples]): with none, the readings come every few seconds, not every second (less waking, less battery). */
+    @Volatile var fast = 0
+    /** The wait between two readings: the set interval while a live graph is open, else at least four seconds. */
+    fun wait(): Long = if (fast > 0) interval else maxOf(interval, 4000L)
     @Volatile var lastSample = 0L
     private val series = HashMap<String, ArrayList<Float>>()
     private fun push(k: String, v: Float) { val l = series.getOrPut(k) { ArrayList() }; l.add(v); if (l.size > 60) l.removeAt(0) }

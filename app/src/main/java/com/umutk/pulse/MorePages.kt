@@ -88,6 +88,7 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     val storage = remember { try { val st = android.os.StatFs(android.os.Environment.getDataDirectory().path); 1f - st.availableBytes.toFloat() / st.totalBytes } catch (e: Exception) { 0f } }
     var msg by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -222,6 +223,7 @@ fun SecurityPage() {
 @Composable
 fun BatteryPage() {
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     LiveSections("Battery", 2000, top = {
         // the charging power is part of the battery, not a tool of its own
         com.umutk.pulse.extras.charging.ChargingPowerSection()
@@ -237,6 +239,7 @@ fun BatteryPage() {
 @Composable
 fun NetworkPage() {
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     val scope = rememberCoroutineScope()
     val openTool = com.umutk.pulse.LocalOpenTool.current
     LiveSections("Network", 4000, top = {
@@ -266,6 +269,7 @@ fun NetworkPage() {
 @Composable
 fun ThermalPage() {
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     LiveSections("Thermal", 2500, top = {
         PCard {
             Text("Hottest zone", color = T.sub, fontSize = 12.sp)
@@ -308,6 +312,7 @@ fun DisplayPage() {
 fun CoresPage() {
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     var info by remember { mutableStateOf<List<Hw.CoreInfo>>(emptyList()) }
     LaunchedEffect(Unit) { while (true) { info = withContext(Dispatchers.IO) { Hw.cores() }; delay(3000) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

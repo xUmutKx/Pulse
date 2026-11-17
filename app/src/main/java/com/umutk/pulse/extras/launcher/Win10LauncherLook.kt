@@ -62,6 +62,7 @@ import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import com.umutk.pulse.produceStateVisible
 
 /**
  * Windows 10 look, opaque and flat: solid taskbar and start menu, square tiles, no gradients, no blur.
@@ -97,7 +98,7 @@ class Win10LauncherLook(
     override fun Taskbar(state: LauncherState, modifier: Modifier) {
         val fg = fg()
         val edge = LocalLauncherEdge.current
-        val now by produceState(System.currentTimeMillis()) {
+        val now by produceStateVisible(System.currentTimeMillis()) {
             while (true) {
                 value = System.currentTimeMillis()
                 delay(60_000 - value % 60_000)

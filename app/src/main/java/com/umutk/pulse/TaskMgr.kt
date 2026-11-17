@@ -91,7 +91,7 @@ fun ProcessesPage() {
     var own by remember { mutableStateOf(false) }      // no root/Shizuku: only this app's own processes, CPU and virtual size unknown
     var usage by remember { mutableStateOf(false) }    // usage access: needed for network speed and app size
     var fg by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }   // package -> time on screen today (ms): the only per-app figure a phone gives without root
-    LaunchedEffect(Unit) {
+    LaunchedVisible(Unit) {
         while (true) {
             if (rows.isEmpty()) rows = withContext(Dispatchers.IO) { ProcCache.load(ctx).map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
             // without root or Shizuku the shell shows only itself ("ps"): that is not a list of apps, so the app's own parts and the apps it can see are listed instead
@@ -358,12 +358,13 @@ fun PerformancePage() {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     // the graph chosen on the left is kept for the next visit
     var sel by rememberSaveable { mutableStateOf(ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("tmPerf", "cpu") ?: "cpu") }
     LaunchedEffect(sel) { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("tmPerf", sel).apply() }
     var secs by remember { mutableStateOf<List<Section>>(emptyList()) }
     val cpuName = remember { Extra.cpuName() }
-    LaunchedEffect(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
+    LaunchedVisible(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
     fun sec(t: String) = secs.firstOrNull { it.title == t }?.rows.orEmpty()
     val avgMhz = if (s.cores.isEmpty()) 0 else s.cores.sumOf { it.mhz } / s.cores.size
     val memPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb

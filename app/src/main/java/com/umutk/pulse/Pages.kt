@@ -207,7 +207,7 @@ fun HistoryPage() {
             delay(10000)
         }
     }
-    LaunchedEffect(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
+    LaunchedVisible(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
     val total = rows.sumOf { it.ms }
     limitFor?.let { (pk, lb) -> com.umutk.pulse.applock.AppLimitDialog(pk, lb) { limitFor = null } }
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
@@ -316,7 +316,7 @@ fun DetailsPage() {
     var sort by remember { mutableStateOf("pid") }
     var q by remember { mutableStateOf("") }
     val hs = rememberScrollState()
-    LaunchedEffect(Unit) { while (true) { list = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) } }; delay(3000) } }
+    LaunchedVisible(Unit) { while (true) { list = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) } }; delay(3000) } }
     val f = list.filter { q.isBlank() || it.name.contains(q, true) || it.user.contains(q, true) || it.pid.toString() == q }
     val shown = when (sort) { "cpu" -> f.sortedByDescending { it.cpu }; "mem" -> f.sortedByDescending { it.rssMb }; "name" -> f.sortedBy { it.name.lowercase() }; "user" -> f.sortedBy { it.user }; "vsz" -> f.sortedByDescending { it.vszMb }; else -> f.sortedBy { it.pid } }
     val mono = FontFamily.Monospace
@@ -348,7 +348,7 @@ fun DetailsPage() {
 fun DevicePage() {
     val ctx = LocalContext.current
     var secs by remember { mutableStateOf<List<Section>>(emptyList()) }
-    LaunchedEffect(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
+    LaunchedVisible(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(if (T.material) 12.dp else 10.dp)) {
         Header("Device")
         secs.forEach { sc -> PCard { Text(sc.title, color = Look.accent, fontSize = if (T.material) 16.sp else 15.sp, fontWeight = if (T.material) FontWeight.Medium else FontWeight.SemiBold); InfoRows(sc.rows) } }
@@ -371,7 +371,7 @@ fun ServicesPage() {
     val tab = picked ?: "all"
     var q by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(can) { while (true) { running = withContext(Dispatchers.IO) { Extra.services(ctx) }; delay(6000) } }
+    LaunchedVisible(can) { while (true) { running = withContext(Dispatchers.IO) { Extra.services(ctx) }; delay(6000) } }
     LaunchedEffect(Unit) { declared = withContext(Dispatchers.IO) { Extra.declaredServices(ctx) } }
     val runKeys = remember(running) { running.map { it.pkg + "/" + it.cls }.toSet() }
     val base = if (tab == "run") running else if (tab == "off") declared.filter { !it.enabled } else declared
@@ -497,7 +497,7 @@ fun SettingsPage() {
                 // theme locks: a look other than the one in use is locked until one ad opens them all for 2 minutes
                 val themeGate = com.umutk.pulse.ads.rememberAdGate(tr("Unlock themes", "Temaları aç"), tr("Watch a short ad to pick any theme for 2 minutes.", "2 dakika boyunca istediğin temayı seçmek için kısa bir reklam izle."), key = com.umutk.pulse.ads.ThemeLock.KEY, minutes = com.umutk.pulse.ads.ThemeLock.MINUTES, pass = false)
                 // the lock state is read again every few seconds, so the padlocks close when the 2 minutes run out
-                val lockTick by produceState(0L) { while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(5000) } }
+                val lockTick by produceStateVisible(0L) { while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(5000) } }
                 @Composable fun ThemeRow(pair: List<PTheme>, center: Boolean = false) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, if (center) Alignment.CenterHorizontally else Alignment.Start)) {
                         pair.forEach { th ->
@@ -756,7 +756,7 @@ fun AdPassCard() {
     if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
     val ctx = LocalContext.current
     var left by remember { mutableStateOf(0L) }
-    LaunchedEffect(Unit) {
+    LaunchedVisible(Unit) {
         while (true) {
             left = com.umutk.pulse.ads.AdUnlocks.until(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) - System.currentTimeMillis()
             delay(15_000L)

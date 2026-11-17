@@ -51,6 +51,10 @@ class MonitorService : Service() {
     private val lastAlert = HashMap<String, Long>()
     private var lastKey: Pair<Boolean, List<Pair<String, String>>>? = null
     private var lastText = ""
+    /** Woken when the screen comes on, so the sleep of a screen-off minute ends at once. */
+    private val screenOn = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private val screenReceiver = object : android.content.BroadcastReceiver() { override fun onReceive(c: Context?, i: Intent?) { screenOn.trySend(Unit) } }
+    private var screenRegistered = false
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -61,6 +65,7 @@ class MonitorService : Service() {
         if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH)) else Unit
         val n = build("Pulse monitor is running")
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
+        if (!screenRegistered) { screenRegistered = true; runCatching { ContextCompat.registerReceiver(this, screenReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_ON), ContextCompat.RECEIVER_NOT_EXPORTED) } }
         if (job == null) job = scope.launch { loop() }
         return START_STICKY
     }
@@ -97,6 +102,15 @@ class MonitorService : Service() {
 
     private suspend fun loop() {
         while (true) {
+            // the screen is off: nothing shows the readings, so without alert limits nothing is read at all (the service sleeps until the screen comes on), and with them every half minute
+            val screenOff = !getSystemService(android.os.PowerManager::class.java).isInteractive
+            val hasAlerts = Opt.alertTemp != 0 || Opt.alertBat != 0 || Opt.alertRam != 0
+            if (screenOff) {
+                if (!hasAlerts && Opt.ovOn.not() && Opt.notifOn.not()) { stopSelf(); return }
+                if (hasAlerts) { Sampler.sample(this); alerts() }
+                withTimeoutOrNull(if (hasAlerts) 30_000L else 10 * 60_000L) { screenOn.receive() }
+                continue
+            }
             if (System.currentTimeMillis() - Sampler.lastSample > 2500) Sampler.sample(this)
             val text = line()
             val its = items()
@@ -152,6 +166,7 @@ class MonitorService : Service() {
     private fun hideOverlay() { tv?.let { try { wm?.removeView(it) } catch (e: Exception) { } }; tv = null }
 
     override fun onDestroy() {
+        if (screenRegistered) runCatching { unregisterReceiver(screenReceiver) }
         job?.cancel(); scope.cancel()
         hideOverlay()
         super.onDestroy()

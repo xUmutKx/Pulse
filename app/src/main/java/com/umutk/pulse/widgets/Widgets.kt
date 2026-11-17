@@ -97,7 +97,9 @@ object WidgetData {
     fun save(c: Context, s: Snap) {
         val now = System.currentTimeMillis()
         runCatching { com.umutk.pulse.features.BatteryLog.sample(c, s.charging) }
-        if (now - lastSaved < 5_000) return
+        // the widgets are redrawn every 15 s while the screen is on, every 2 minutes while it is off (a redraw wakes the launcher too)
+        val on = runCatching { (c.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive }.getOrDefault(true)
+        if (now - lastSaved < (if (on) 15_000 else 120_000)) return
         lastSaved = now
         val dl = Downloads.tasks.value
         val running = dl.filter { it.state.value == DlState.RUNNING }

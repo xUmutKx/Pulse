@@ -59,6 +59,7 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.umutk.pulse.produceStateVisible
 
 internal val XP_WINDOW = WinSkin("xp", Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF), Color(0xFF0058EE))), Color.White, Color(0xFF0831D9), 3.dp, 7.dp,
     Color.White, Color(0xFFD6DFF7), Color.White, Color(0xFF1B1B1B), Color(0xFF5A6A9A), Color(0xFF316AC5), Color.White, Color(0xFF7F9DB9))
@@ -108,10 +109,10 @@ class XpLauncherLook : LauncherLook {
     @Composable
     override fun Taskbar(state: LauncherState, modifier: Modifier) {
         val edge = LocalLauncherEdge.current
-        val clock by produceState(initialValue = "") {
+        val clock by produceStateVisible(initialValue = "") {
             while (true) {
                 value = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-                delay(1_000)
+                delay(60_000 - System.currentTimeMillis() % 60_000)   // the clock shows minutes: it is redrawn when the minute changes
             }
         }
         // the edge padding keeps the Start button and the tray out of the rounded screen corners

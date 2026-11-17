@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.umutk.pulse.NeedFastSamples
 
 /** RAM: total, available and used memory and a 60 s graph. */
 @Composable
@@ -39,6 +40,7 @@ fun RamPage() {
     val ctx = LocalContext.current
     val am = remember { ctx.getSystemService(ActivityManager::class.java) }
     val h by Sampler.history.collectAsState()
+    NeedFastSamples()
     var mi by remember { mutableStateOf<ActivityManager.MemoryInfo?>(null) }
     LaunchedEffect(Unit) {
         while (true) { mi = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }; delay(2000) }
