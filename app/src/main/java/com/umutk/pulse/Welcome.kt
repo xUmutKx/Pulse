@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Downloads where you use them: more Winamp skins in the skin picker, and 4K / Full HD wallpapers (Hubble and Earth pictures) in the wallpaper pickers of Pulse and the launcher.",
+        "İndirmeler kullandığın yerde: tema seçicide daha fazla Winamp teması, Pulse ve başlatıcının duvar kağıdı seçicilerinde 4K / Full HD duvar kağıtları (Hubble ve Dünya resimleri).")),
+    "music" to (tr("The lyrics already on your phone get their word times once, by themselves, in the background. Settings > Lyrics has the switch and an Add now button.",
+        "Telefondaki sözler bir kez, kendiliğinden, arka planda kelime zamanı alıyor. Ayarlar > Sözler'de anahtar ve Şimdi ekle düğmesi var.")),
     "music" to (tr("Lyrics word by word, even syllable by syllable, when the song has them: LRCLIB's word-timed records and NetEase as a second source. Each word fills as it is sung; without word times the lines follow, then plain text. A song with line-timed lyrics gets its words in the background.",
         "Sözler kelime kelime, varsa hece hece: LRCLIB'in kelime zamanlı kayıtları ve ikinci kaynak olarak NetEase. Her kelime söylenirken doluyor; kelime zamanı yoksa satırlar, o da yoksa düz metin. Satır zamanlı sözü olan şarkı kelimelerini arka planda alıyor.")),
     "palette" to (tr("Smaller app: 64-bit by default (a separate 32-bit APK for old phones), most Winamp skins are a download in the Extra store, Chinese, Japanese and Korean PDF character maps left out, launcher icons as WebP.",
