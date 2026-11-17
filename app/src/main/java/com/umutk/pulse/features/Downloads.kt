@@ -1265,8 +1265,19 @@ fun DownloadsPage() {
             // full screen, in a window of its own: the page is not squeezed above the keyboard (the gap it left) and back closes it
             androidx.compose.ui.window.Dialog(onDismissRequest = { SeasonDl.pageOpen = false },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black)) {
-                    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+                // no dimming behind the window: on Windows 11 the page is see-through, the app's own backdrop shows, as on every other page
+                val dialogWindow = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+                androidx.compose.runtime.SideEffect { dialogWindow?.setDimAmount(0f) }
+                Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
+                    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                        // the way back, in the look's own style: a Windows button on the Windows looks, the arrow elsewhere
+                        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            if (T.id in com.umutk.pulse.winButtonLooks && T.id != "win11") com.umutk.pulse.PButton(tr("Back", "Geri"), compact = true) { SeasonDl.pageOpen = false }
+                            else Box(Modifier.size(40.dp).clickable { SeasonDl.pageOpen = false }, contentAlignment = androidx.compose.ui.Alignment.Center) { PIcon("back", T.text, 22.dp) }
+                            Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                        }
+                        Column(Modifier.weight(1f).verticalScroll(androidx.compose.foundation.rememberScrollState())) { SeasonDl.Card(page = true) }
+                    }
                 }
             }
         } else Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }

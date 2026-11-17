@@ -193,9 +193,19 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             }
             Text(tr("Glass of the taskbar and menus", "Görev çubuğu ve menü camı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("pulse" to "Pulse", "dark" to tr("Darker", "Daha koyu"), "soft" to tr("Less blur", "Az bulanık"), "clear" to tr("Clear", "Şeffaf")).forEach { (k, n) ->
+                listOf("pulse" to "Pulse", "material" to "Windows Material", "dark" to tr("Darker", "Daha koyu"), "soft" to tr("Less blur", "Az bulanık"), "clear" to tr("Clear", "Şeffaf")).forEach { (k, n) ->
                     com.umutk.pulse.PChip(LauncherPrefs.glassStyle == k, n) { LauncherPrefs.glassStyle = k; save() }
                 }
+            }
+            // Windows Material: its darker and lighter versions, and how see-through it is, set by hand
+            if (LauncherPrefs.glassStyle == "material") {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.umutk.pulse.PChip(LauncherPrefs.matTone <= -40, tr("Darker", "Daha koyu")) { LauncherPrefs.matTone = -70; save() }
+                    com.umutk.pulse.PChip(LauncherPrefs.matTone in -39..39, tr("Standard", "Standart")) { LauncherPrefs.matTone = 0; save() }
+                    com.umutk.pulse.PChip(LauncherPrefs.matTone >= 40, tr("Lighter", "Daha açık")) { LauncherPrefs.matTone = 70; save() }
+                }
+                SliderRow("${tr("Tone, dark to light", "Ton, koyudan açığa")}: ${LauncherPrefs.matTone}", LauncherPrefs.matTone.toFloat(), -100f..100f) { LauncherPrefs.matTone = it.roundToInt(); save() }
+                SliderRow("${tr("Transparency", "Şeffaflık")}: ${LauncherPrefs.matClear}%", LauncherPrefs.matClear.toFloat(), 0f..90f) { LauncherPrefs.matClear = it.roundToInt(); save() }
             }
             SwitchLine("window", tr("Extra blur: flyouts and the taskbar show the desktop picture blurred behind them, in every Windows look", "Ekstra bulanıklık: açılır paneller ve görev çubuğu, masaüstü resmini bulanık gösterir (her Windows görünümünde)"), LauncherPrefs.blurAll) { LauncherPrefs.blurAll = it; save() }
             if (LauncherPrefs.blurAll) SliderRow("${tr("Blur", "Bulanıklık")}: ${LauncherPrefs.blurAmt}", LauncherPrefs.blurAmt.toFloat(), 6f..60f) { LauncherPrefs.blurAmt = it.roundToInt(); save() }
