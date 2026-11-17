@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "music" to (tr("YTXTube's music player has a Song / Video switch at the top like YouTube Music, and a thumb down: the song is not suggested again and the next one plays.",
-        "YTXTube'un müzik çalarında YouTube Music gibi üstte Şarkı / Video geçişi var, bir de başparmak aşağı: şarkı bir daha önerilmez ve sıradaki çalar.")),
+    "music" to (tr("YTXTube's music player has a Song / Video switch at the top like YouTube Music, and a thumb down: the song is not suggested again and the next one plays. Series and movies is a page of shelves (popular series and movies) in the Library tab.",
+        "YTXTube'un müzik çalarında YouTube Music gibi üstte Şarkı / Video geçişi var, bir de başparmak aşağı: şarkı bir daha önerilmez ve sıradaki çalar. Diziler ve filmler Library sekmesinde raflı bir sayfa (popüler diziler ve filmler).")),
     "video" to (tr("Series and movies is a screen of its own from YTXTube. Type the size in GB (it looks from a quarter to nearly twice, bigger first), tap an episode to see who shares each stream, and a torrent nobody shares gives way after 10 seconds. More trackers, also over HTTPS.",
         "Diziler ve filmler YTXTube'dan kendi ekranında açılıyor. Boyutu GB olarak yaz (dörtte birinden neredeyse iki katına kadar bakar, büyükler önce), bir bölüme dokununca her yayını kaç kişinin paylaştığını gör; kimse paylaşmıyorsa 10 saniye sonra diğerine geçer. Daha çok tracker, HTTPS dahil.")),
     "download" to (tr("Packs moved: Settings > About (Downloaded packs) and the launcher's Microsoft Store, drawn like Windows 11's Store. The Microsoft Store is in the Windows 10 look too. Storage opens with a summary by kind, says what each folder holds, and Game Hub no longer piles up old boxes.",

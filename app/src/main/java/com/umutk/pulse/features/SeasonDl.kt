@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,7 +56,7 @@ import java.net.URL
  * A torrent stream is fetched through the Stremio app's own server on the phone (it has to be running); a plain link is fetched directly.
  */
 object SeasonDl {
-    class Show(val id: String, val name: String, val year: String, val poster: String = "")
+    class Show(val id: String, val name: String, val year: String, val poster: String = "", val kind: String = "series")
     class Ep(val id: String, val season: Int, val episode: Int, val title: String, val thumb: String = "", val overview: String = "")
     /** [seeds] is the number of people sharing it when the add-on says it ("👤 12"), -1 when it does not. */
     class Pick(val url: String, val size: Long, val label: String, val over: Boolean = false, val seeds: Int = -1)
@@ -256,7 +257,17 @@ object SeasonDl {
     /** [kind] is "series" or "movie". The posters are the catalogue's own pictures, loaded as they are shown. */
     suspend fun search(q: String, kind: String): List<Show> = withContext(Dispatchers.IO) {
         val a = get("$META/catalog/$kind/top/search=${Uri.encode(q)}.json").optJSONArray("metas") ?: return@withContext emptyList()
-        (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { Show(it.optString("id"), it.optString("name"), it.optString("releaseInfo"), it.optString("poster")) } }.filter { it.id.isNotBlank() }.take(10)
+        (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { Show(it.optString("id"), it.optString("name"), it.optString("releaseInfo"), it.optString("poster"), kind) } }.filter { it.id.isNotBlank() }.take(10)
+    }
+
+    private val popularCache = HashMap<String, List<Show>>()
+
+    /** What is popular now in the catalogue (Cinemeta's "top" list of series or of movies), for the shelves of the page; kept for the run. */
+    suspend fun popular(kind: String): List<Show> = withContext(Dispatchers.IO) {
+        popularCache[kind]?.let { return@withContext it }
+        val a = get("$META/catalog/$kind/top.json").optJSONArray("metas") ?: return@withContext emptyList()
+        (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { Show(it.optString("id"), it.optString("name"), it.optString("releaseInfo"), it.optString("poster"), kind) } }
+            .filter { it.id.isNotBlank() }.take(24).also { popularCache[kind] = it }
     }
 
     suspend fun episodes(show: Show): List<Ep> = withContext(Dispatchers.IO) {
@@ -483,9 +494,26 @@ object SeasonDl {
                 // the way back in the look's own style: a Windows button on the Windows looks, the arrow elsewhere
                 if (T.id in com.umutk.pulse.winButtonLooks && T.id != "win11") PButton(tr("Back", "Geri"), compact = true, onClick = back)
                 else Box(Modifier.size(40.dp).clickable(onClick = back), contentAlignment = androidx.compose.ui.Alignment.Center) { PIcon("back", T.text, 22.dp) }
-                Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
             }
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { Card(page = true) }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { Card(page = true, shelf = true) }
+        }
+    }
+
+    private fun Modifier.graphicsLayerRotate(on: Boolean) = this.then(Modifier.graphicsLayer { rotationZ = if (on) 180f else 0f })
+
+    /** One shelf: its title over a row of posters (the poster, the name under it); a tap picks the title. */
+    @Composable
+    private fun ShelfRow(title: String, list: List<Show>, onPick: (Show) -> Unit) {
+        Text(title, color = T.text, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+        if (list.isEmpty()) { Text(tr("Loading…", "Yükleniyor…"), color = T.sub, fontSize = 12.sp); return }
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(list) { s ->
+                Column(Modifier.width(110.dp).clickable { onPick(s) }) {
+                    Poster(s.poster, 110.dp, 163.dp)
+                    Text(s.name, color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    if (s.year.isNotBlank()) Text(s.year, color = T.sub, fontSize = 11.sp, maxLines = 1)
+                }
+            }
         }
     }
 
@@ -493,7 +521,7 @@ object SeasonDl {
     var pageOpen by androidx.compose.runtime.mutableStateOf(false)
 
     @Composable
-    fun Card(page: Boolean = false) {
+    fun Card(page: Boolean = false, shelf: Boolean = false) {
         // the free-software builds only: the Google Play build has neither this card nor the torrent engine
         if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return
         val ctx = LocalContext.current
@@ -531,6 +559,26 @@ object SeasonDl {
         fun limit() = mb * 1_048_576L
         fun clean(s: String) = s.replace(Regex("[^\\p{L}\\p{N} ._()-]"), "").trim()
         fun reset() { shows = emptyList(); show = null; eps = emptyList(); note = ""; season = null; picked = emptySet(); found = emptyMap() }
+        // the shelves (shelf mode): what is popular now; and the add-on / size part, shut once an add-on is there
+        var settingsOpen by remember { mutableStateOf(addon(ctx).isBlank()) }
+        var popSeries by remember { mutableStateOf<List<Show>>(emptyList()) }
+        var popMovies by remember { mutableStateOf<List<Show>>(emptyList()) }
+        androidx.compose.runtime.LaunchedEffect(shelf) {
+            if (shelf) {
+                popSeries = runCatching { popular("series") }.getOrDefault(emptyList())
+                popMovies = runCatching { popular("movie") }.getOrDefault(emptyList())
+            }
+        }
+        /** A title is chosen (from a shelf, or from the search results): a series opens its seasons, a movie its download button. */
+        fun pick(s: Show) {
+            val mv = if (shelf) s.kind == "movie" else movies
+            movies = mv
+            show = s; eps = emptyList(); season = null; picked = emptySet(); found = emptyMap()
+            if (!mv) {
+                note = tr("Reading the episodes…", "Bölümler okunuyor…")
+                scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
+            } else note = ""
+        }
         /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
         suspend fun start(picks: List<Triple<String, String, List<String>>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
@@ -553,10 +601,21 @@ object SeasonDl {
                     }
                 }
                 if (open) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // the shelf page: a big title, a line under it, and the add-on / size part behind one row
+                    if (shelf && show == null) {
+                        Text(tr("Series and movies", "Diziler ve filmler"), color = T.text, fontSize = 26.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(tr("What is popular now. Pick one to see its seasons or to download the film.", "Şu an popüler olanlar. Sezonlarını görmek ya da filmi indirmek için birini seç."), color = T.sub, fontSize = 13.sp)
+                        Row(Modifier.fillMaxWidth().clickable { settingsOpen = !settingsOpen }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            PIcon("settings", T.sub, 18.dp)
+                            Text(tr("Add-on and size", "Eklenti ve boyut"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                            PIcon("chevron", T.sub, 18.dp, Modifier.graphicsLayerRotate(settingsOpen))
+                        }
+                    }
+                    if (!shelf) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PChip(!movies, tr("Series", "Diziler")) { movies = false; reset() }
                         PChip(movies, tr("Movies", "Filmler")) { movies = true; reset() }
                     }
+                    if ((!shelf || settingsOpen) && show == null || !shelf) {
                     // 1. where the streams come from
                     Caption(tr("1  Add-ons (as many as you like)", "1  Eklentiler (istediğin kadar)"))
                     // the add-ons given so far, each with a remove button; a new one is added with the field below (any number: when one does not answer, the next one does)
@@ -637,29 +696,30 @@ object SeasonDl {
                         }, "GB", Modifier.width(110.dp))
                         Text("  " + tr("looks from ${sizeText(maxOf(MIN_BYTES, limit() / 4))} to ${sizeText((limit() * 1.9).toLong())}, the bigger ones first", "${sizeText(maxOf(MIN_BYTES, limit() / 4))} ile ${sizeText((limit() * 1.9).toLong())} arası aranır, büyükler önce"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     }
+                    }
                     // 3. what to download
-                    Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
+                    if (!shelf) Caption(tr("3  Find the ${if (movies) "movie" else "series"}", "3  ${if (movies) "Filmi" else "Diziyi"} bul"))
                     // the results come by themselves as the name is typed (a moment after the last letter); no button to press
-                    androidx.compose.runtime.LaunchedEffect(q, movies) {
+                    androidx.compose.runtime.LaunchedEffect(q, if (shelf) false else movies) {
                         val name = q.trim()
-                        if (name.length < 2) { if (name.isEmpty() && (shows.isNotEmpty() || show != null)) reset(); return@LaunchedEffect }
+                        if (name.length < 2) { if (name.isEmpty() && (shows.isNotEmpty() || (show != null && !shelf))) reset(); return@LaunchedEffect }
                         kotlinx.coroutines.delay(450)
                         reset(); note = tr("Looking…", "Aranıyor…")
-                        shows = runCatching { search(name, if (movies) "movie" else "series") }.getOrDefault(emptyList())
+                        shows = if (shelf) runCatching { search(name, "series") }.getOrDefault(emptyList()) + runCatching { search(name, "movie") }.getOrDefault(emptyList())
+                            else runCatching { search(name, if (movies) "movie" else "series") }.getOrDefault(emptyList())
                         note = if (shows.isEmpty()) tr("Nothing found", "Bulunamadı") else ""
                     }
-                    PField(q, { q = it }, if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.fillMaxWidth(), onDone = null)
+                    if (!shelf || show == null) PField(q, { q = it }, if (shelf) tr("Search series and movies", "Dizi ve film ara") else if (movies) tr("Movie name", "Film adı") else tr("Series name", "Dizi adı"), Modifier.fillMaxWidth(), onDone = null)
+                    // the shelves, while nothing is typed
+                    if (shelf && show == null && q.isBlank()) {
+                        ShelfRow(tr("Popular series", "Popüler diziler"), popSeries) { pick(it) }
+                        ShelfRow(tr("Popular movies", "Popüler filmler"), popMovies) { pick(it) }
+                    }
                     val sel = show
                     if (sel == null) {
                         // the results: a tap chooses one, and the list gives way to it (its seasons or its download button come right under it)
                         shows.forEach { s -> key(s.id) {
-                            Row(Modifier.fillMaxWidth().clickable {
-                                show = s; eps = emptyList(); season = null; picked = emptySet(); found = emptyMap()
-                                if (!movies) {
-                                    note = tr("Reading the episodes…", "Bölümler okunuyor…")
-                                    scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
-                                } else note = ""
-                            }.padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().clickable { pick(s) }.padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                                 Poster(s.poster, 54.dp, 80.dp)
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
