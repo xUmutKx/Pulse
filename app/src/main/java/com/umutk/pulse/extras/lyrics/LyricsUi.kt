@@ -76,14 +76,14 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
     // the words (or syllables) of the line being sung fill in one by one; between two reports of the player (about four a second) the position runs on by itself, so the fill is smooth
     val animate = wordMode && mark.isBlank() && positionMs >= 0 && result.lines.getOrNull(cur)?.words?.isNotEmpty() == true
-    var base by remember { androidx.compose.runtime.mutableLongStateOf(positionMs) }
-    var baseAt by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime()) }
-    LaunchedEffect(positionMs) { base = positionMs; baseAt = System.nanoTime() }
+    var anchor by remember { androidx.compose.runtime.mutableLongStateOf(positionMs) }
+    var anchorAt by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime()) }
+    LaunchedEffect(positionMs) { anchor = positionMs; anchorAt = System.nanoTime() }
     val smooth by androidx.compose.runtime.produceState(positionMs, animate) {
         value = positionMs
         if (animate) while (true) {
             androidx.compose.runtime.withFrameNanos { }
-            value = base + ((System.nanoTime() - baseAt) / 1_000_000L).coerceIn(0L, 450L)
+            value = anchor + ((System.nanoTime() - anchorAt) / 1_000_000L).coerceIn(0L, 450L)
         }
     }
     // a line must fit the width, also the one being sung (it grows a little): the size shrinks for a long word, and the text keeps a margin for the growth
