@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "palette" to (tr("Downloads where you use them: more Winamp skins in the skin picker, and 4K / Full HD wallpapers (Hubble and Earth pictures) in the wallpaper pickers of Pulse and the launcher.",
-        "İndirmeler kullandığın yerde: tema seçicide daha fazla Winamp teması, Pulse ve başlatıcının duvar kağıdı seçicilerinde 4K / Full HD duvar kağıtları (Hubble ve Dünya resimleri).")),
+    "palette" to (tr("Downloads where you use them: more Winamp skins in the skin picker, and higher-quality versions of the Windows 11 (4K), Windows 10 and Windows 7 wallpapers in the wallpaper pickers of Pulse and the launcher.",
+        "İndirmeler kullandığın yerde: tema seçicide daha fazla Winamp teması, Pulse ve başlatıcının duvar kağıdı seçicilerinde Windows 11 (4K), Windows 10 ve Windows 7 duvar kağıtlarının yüksek kaliteli halleri.")),
     "music" to (tr("The lyrics already on your phone get their word times once, by themselves, in the background. Settings > Lyrics has the switch and an Add now button.",
         "Telefondaki sözler bir kez, kendiliğinden, arka planda kelime zamanı alıyor. Ayarlar > Sözler'de anahtar ve Şimdi ekle düğmesi var.")),
     "music" to (tr("Lyrics word by word, even syllable by syllable, when the song has them: LRCLIB's word-timed records and NetEase as a second source. Each word fills as it is sung; without word times the lines follow, then plain text. A song with line-timed lyrics gets its words in the background.",

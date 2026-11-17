@@ -524,14 +524,8 @@ fun ThemeWallpaperRow(lookId: String) {
             }
         }
     }
-    // the 4K and Full HD pictures: a download in this place, a tap sets one as this look's own wallpaper
-    Box(Modifier.padding(vertical = 6.dp)) {
-        com.umutk.pulse.extras.store.HdWallpaperStrip { f ->
-            val u = android.net.Uri.fromFile(f)
-            setThemeWallpaper(ctx, lookId, u.toString()); uri = u.toString()
-            if (lookId == "win11") scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "custom", u) }
-        }
-    }
+    // the higher-quality versions of the stock pictures above: a download in this place
+    com.umutk.pulse.extras.store.HdWallpaperRow(lookId)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         PButton("Wallpaper") { pick.launch(arrayOf("image/*")) }
         if (uri != null) PButton("Default") {
