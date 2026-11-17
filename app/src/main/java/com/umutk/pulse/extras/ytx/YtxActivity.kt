@@ -631,6 +631,7 @@ fun YtxTubeApp() {
                     onAccount = { openSettings = true },
                     onPlayNext = player::playNextMusic,
                     onOpenQueue = { items, index -> player.openMusicQueue(items, index) },
+                    onFillQueue = { items -> player.openMusicQueue(items, 0, expand = false) },
                     scrollToTop = scrollToTop[Tab.Music] ?: 0,
                 )
                 Tab.Shorts -> ShortsScreen(
