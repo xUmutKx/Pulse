@@ -61,7 +61,7 @@ fun LauncherStoreWindow() {
     val addWidget = rememberWidgetAdd { }
     val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // Windows 11 has the Microsoft Store drawn as the real one is (see-through, a rail of places at the left, cards); the other looks keep the plain tabs
-    if (T.id == "win11") MsStoreWindow(onPictures = { pickWall = true }, onWidgets = { pickWidget = true }) else Column(Modifier.fillMaxSize()) {
+    if (T.id == "win11" || T.id == "win10") MsStoreWindow(onPictures = { pickWall = true }, onWidgets = { pickWidget = true }, win10 = T.id == "win10") else Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(tab == 0, tr("Looks", "Görünümler")) { tab = 0 }
             PChip(tab == 1, tr("Pictures", "Resimler")) { tab = 1 }

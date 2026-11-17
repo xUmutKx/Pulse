@@ -3,6 +3,7 @@ package com.umutk.pulse
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +50,17 @@ private fun storeRows(ctx: Context): List<StoreRow> {
     return out.sortedByDescending { it.bytes }
 }
 
+/** The group a folder of Pulse's data belongs to, for the summary at the top. */
+private fun catOf(r: StoreRow): String = when {
+    r.path.contains("/cache/") -> tr("Temporary (cache)", "Geçici (önbellek)")
+    r.name == "gamehub" || r.name == "htmlgames" -> "Game Hub"
+    r.name == "extras" -> tr("Downloaded packs", "İndirilen paketler")
+    r.name.startsWith("torrent") -> tr("Torrent engine", "Torrent motoru")
+    r.name.startsWith("kbd") || r.name == "clips" -> tr("Keyboard", "Klavye")
+    r.name.startsWith("lyrics") || r.name.startsWith("music") || r.name in setOf("covers", "skins", "thumbs", "video_net", "artist_art") -> tr("Music, lyrics and books", "Müzik, sözler ve kitaplar")
+    else -> tr("Other", "Diğer")
+}
+
 /** The kind of a file inside a folder of Pulse's data, for the breakdown under the folder (by the name's start, the sub-folder or the extension). */
 private fun kindOf(dir: String, rel: String): String {
     val leaf = rel.substringAfterLast('/')
@@ -64,6 +76,7 @@ private fun kindOf(dir: String, rel: String): String {
         leaf.startsWith("icon_") -> tr("Game icons", "Oyun simgeleri")
         else -> tr("Other", "Diğer")
     }
+    if (dir == "torrent" && leaf.endsWith(".so")) return tr("The engine itself (libtorrent4j.so), downloaded once", "Motorun kendisi (libtorrent4j.so), bir kez indirilir")
     if (rel.contains('/')) return rel.substringBefore('/')
     return leaf.substringAfterLast('.', "").uppercase().ifEmpty { tr("Files", "Dosyalar") }
 }
@@ -135,6 +148,20 @@ fun StorageCard() {
             return@PCard
         }
         if (list.isEmpty()) Text(tr("Nothing kept yet", "Henüz bir şey tutulmuyor"), color = T.sub, fontSize = 13.sp)
+        // the summary: the folders grouped by what they are for, biggest first, each with its share as a bar
+        val total = list.sumOf { it.bytes }.coerceAtLeast(1L)
+        Text(tr("By kind", "Türe göre"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+        list.groupBy { catOf(it) }.map { (k, l) -> k to l.sumOf { it.bytes } }.sortedByDescending { it.second }.forEach { (k, b) ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(k, color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(sizeText(b), color = T.sub, fontSize = 12.sp)
+            }
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(4.dp).background(T.line)) {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth((b.toFloat() / total).coerceIn(0.01f, 1f)).height(4.dp).background(Look.accent))
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(tr("Folders", "Klasörler"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         list.forEach { row ->
             Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

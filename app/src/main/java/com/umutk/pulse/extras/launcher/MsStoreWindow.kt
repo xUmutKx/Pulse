@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -57,22 +58,24 @@ import com.umutk.pulse.tr
  * the launcher looks, their pictures, the widgets, and the downloadable packs (wallpapers in 4K, icon packs, skins, …).
  */
 @Composable
-fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
+fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean = false) {
     val ctx = LocalContext.current
     // the body of the window is see-through (the desktop shows through it, as in the real Store); the panels are tinted
     val deskWin = LocalDesktopWin.current
-    DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
+    // Windows 11 is see-through; Windows 10 is opaque and flat (square tiles, no rounding)
+    DisposableEffect(deskWin) { if (!win10) deskWin?.glass = true; onDispose { if (!win10) deskWin?.glass = false } }
     var nav by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
     val packs = rememberPacks().filter { !it.isApk }
-    val pane = T.panel.copy(alpha = .55f)
+    val pane = if (win10) T.panel else T.panel.copy(alpha = .55f)
     val line = T.sub.copy(alpha = .22f)
+    val r = if (win10) 0.dp else 8.dp
     val items = listOf("home" to tr("Home", "Ana sayfa"), "palette" to tr("Looks", "Görünümler"), "image" to tr("Pictures", "Resimler"),
         "apps" to tr("Widgets", "Widget'lar"), "download" to tr("Library", "Kitaplık"))
-    Column(Modifier.fillMaxSize().background(T.bg.copy(alpha = .35f))) {
+    Column(Modifier.fillMaxSize().background(if (win10) T.bg else T.bg.copy(alpha = .35f))) {
         // the search box: a rounded field in the middle of the top, as in the real Store
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(17.dp)).background(T.bg.copy(alpha = .5f)).border(1.dp, line, RoundedCornerShape(17.dp)).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(if (win10) 0.dp else 17.dp)).background(T.bg.copy(alpha = .5f)).border(1.dp, line, RoundedCornerShape(if (win10) 0.dp else 17.dp)).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", T.sub, 16.dp)
                     Spacer(Modifier.width(8.dp))
@@ -84,9 +87,18 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
                 }
             }
         }
+        // Windows 10: the places are a row of words at the top (the open one underlined in the accent), as in the Store of Windows 10
+        if (win10) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            items.forEachIndexed { i, (_, label) ->
+                Column(Modifier.clickable { nav = i }.padding(vertical = 6.dp)) {
+                    Text(label, color = if (nav == i) T.text else T.sub, fontSize = 15.sp, fontWeight = if (nav == i) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                    Box(Modifier.padding(top = 4.dp).height(2.dp).fillMaxWidth().background(if (nav == i) T.accent else Color.Transparent))
+                }
+            }
+        }
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            // the rail of places: the open one has the accent bar at its left edge
-            Column(Modifier.width(64.dp).fillMaxHeight().padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // the rail of places (Windows 11): the open one has the accent bar at its left edge
+            if (!win10) Column(Modifier.width(64.dp).fillMaxHeight().padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items.forEachIndexed { i, (icon, label) ->
                     val on = nav == i
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp).clip(RoundedCornerShape(6.dp)).then(if (on) Modifier.background(pane) else Modifier).clickable { nav = i }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -98,11 +110,11 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
                     }
                 }
             }
-            Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = if (win10) 12.dp else 0.dp, end = 12.dp, bottom = 12.dp, top = if (win10) 8.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (nav) {
                     0 -> {
                         // the banner: a wide rounded tile with a big title, like the featured one of the real Store
-                        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(Brush.linearGradient(listOf(T.accent, T.accent.copy(alpha = .55f), Color(0xFF5B2A86))))) {
+                        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(r)).background(Brush.linearGradient(listOf(T.accent, T.accent.copy(alpha = .55f), Color(0xFF5B2A86))))) {
                             Column(Modifier.padding(18.dp).align(Alignment.CenterStart), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(tr("Make it yours", "Senin olsun"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                                 Text(tr("Wallpapers in 4K, icon packs, skins and more", "4K duvar kağıtları, simge paketleri, kaplamalar ve daha fazlası"), color = Color.White.copy(alpha = .85f), fontSize = 13.sp)
@@ -114,18 +126,18 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
                         // three tiles that open the other places
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                             listOf(Triple("palette", tr("Looks", "Görünümler"), 1), Triple("image", tr("Pictures", "Resimler"), 2), Triple("apps", tr("Widgets", "Widget'lar"), 3)).forEach { (ic, t3, dest) ->
-                                Row(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(pane).border(1.dp, line, RoundedCornerShape(8.dp)).clickable { nav = dest }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.weight(1f).clip(RoundedCornerShape(r)).background(pane).border(1.dp, line, RoundedCornerShape(r)).clickable { nav = dest }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     PIcon(ic, T.accent, 22.dp)
                                     Text(t3, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp))
                                 }
                             }
                         }
                         Text(tr("Popular packs", "Popüler paketler") + "  ›", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        PackCards(packs.take(6), pane, line)
+                        PackCards(packs.take(6), pane, line, r)
                     }
                     1 -> {
                         Text(tr("Looks", "Görünümler"), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(pane).border(1.dp, line, RoundedCornerShape(8.dp)).padding(horizontal = 12.dp)) {
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(r)).background(pane).border(1.dp, line, RoundedCornerShape(r)).padding(horizontal = 12.dp)) {
                             LauncherLooks.all.forEach { l ->
                                 val on = LauncherPrefs.look == l.id
                                 Row(Modifier.fillMaxWidth().clickable { LauncherPrefs.look = l.id; LauncherPrefs.save(ctx) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +162,7 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
                         Text(tr("Library", "Kitaplık"), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                         val shown = packs.filter { query.isBlank() || it.name().contains(query, ignoreCase = true) }
                         if (shown.isEmpty()) Text(tr("No packs to show (offline?)", "Gösterilecek paket yok (çevrimdışı mı?)"), color = T.sub, fontSize = 13.sp)
-                        PackCards(shown, pane, line)
+                        PackCards(shown, pane, line, r)
                     }
                 }
             }
@@ -160,13 +172,13 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit) {
 
 /** The packs as small rounded cards in a grid (as many columns as fit): the kind's icon on a tinted tile, the name, the kind and size, and the Get / Remove button. */
 @Composable
-private fun PackCards(list: List<ExtraModule>, pane: Color, line: Color) {
+private fun PackCards(list: List<ExtraModule>, pane: Color, line: Color, r: androidx.compose.ui.unit.Dp) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val cols = (maxWidth / 250.dp).toInt().coerceIn(1, 4)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             list.chunked(cols).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { m -> Box(Modifier.weight(1f)) { PackCard(m, pane, line) } }
+                    row.forEach { m -> Box(Modifier.weight(1f)) { PackCard(m, pane, line, r) } }
                     repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
@@ -175,10 +187,10 @@ private fun PackCards(list: List<ExtraModule>, pane: Color, line: Color) {
 }
 
 @Composable
-private fun PackCard(m: ExtraModule, pane: Color, line: Color) {
+private fun PackCard(m: ExtraModule, pane: Color, line: Color, r: androidx.compose.ui.unit.Dp) {
     val (state, pct) = packState(m)
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(pane).border(1.dp, line, RoundedCornerShape(8.dp)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(48.dp).height(48.dp).clip(RoundedCornerShape(8.dp)).background(T.accent.copy(alpha = .22f)), contentAlignment = Alignment.Center) { PIcon(packIcon(m.kategori), T.text, 24.dp) }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(r)).background(pane).border(1.dp, line, RoundedCornerShape(r)).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(48.dp).height(48.dp).clip(RoundedCornerShape(r)).background(T.accent.copy(alpha = .22f)), contentAlignment = Alignment.Center) { PIcon(packIcon(m.kategori), T.text, 24.dp) }
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(m.name(), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(packKind(m.kategori) + "  ·  " + formatMb(m.boyut), color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
