@@ -590,7 +590,8 @@ object SeasonDl {
         /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
         suspend fun start(picks: List<Triple<String, String, List<String>>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
-            picks.forEach { (u, n, alts) -> Downloads.add(ctx, u, n, alts) }
+            // the torrent's own file name stays (not a name made of the title): subtitle search and the player find the release by it
+            picks.forEach { (u, _, alts) -> Downloads.add(ctx, u, null, alts) }
         }
         PCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -273,6 +273,8 @@ private fun PermissionsCard() {
 private val WHATS_NEW = listOf(
     "download" to (tr("Stremio's local links download as the torrent itself. Series and movies prefers streams with 70+ people sharing and sizes up to twice the one you set, and opens in YTXTube's black AMOLED look. The keyboard offers a file at the right of the bar after five letters of its name.",
         "Stremio'nun yerel bağlantıları torrentin kendisi olarak iniyor. Diziler ve filmler 70+ kişinin paylaştığı yayınları ve ayarladığın boyutun iki katına kadar olanları seçiyor, YTXTube'da siyah AMOLED görünümüyle açılıyor. Klavye bir dosyanın adının beş harfinden sonra dosyayı çubuğun sağında öneriyor.")),
+    "trash" to (tr("Deleting a download asks first, with Delete from the device ticked; the emptied folder goes too. Series downloads keep their original file names.",
+        "İndirmeyi silmek önce soruyor, Cihazdan sil işaretli geliyor; boşalan klasör de siliniyor. Dizi indirmeleri özgün dosya adını koruyor.")),
     "convert" to (tr("PowerPoint to PDF (and spreadsheets to PDF); Convert files is in Office tools too, with icons and descriptions. The Received files shortcut is gone from Files home.",
         "PowerPoint'ten PDF'e (tablolar da PDF'e); Dosya dönüştür Office araçlarında da, simgeler ve açıklamalarla. Alınan dosyalar kısayolu Dosyalar ana ekranından kalktı.")),
     "heart" to (tr("No more notification dots on the app icons for weather, playback and Buds cards. YTXTube's headphones button brings the video back when you return to the app.",

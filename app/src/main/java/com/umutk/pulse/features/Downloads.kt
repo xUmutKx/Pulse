@@ -88,6 +88,7 @@ import com.umutk.pulse.ThemedMenuItem
 import com.umutk.pulse.tr
 import com.umutk.pulse.PHead
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.PCheck
 import com.umutk.pulse.T
 import com.umutk.pulse.rate
 import kotlinx.coroutines.CancellationException
@@ -413,8 +414,8 @@ object Downloads {
     }
 
     /** Stops a download (its partial file goes too) or removes a finished one together with its file (only from the list when [keepFiles] is on). */
-    fun remove(t: DlTask) {
-        val keep = keepFiles && t.state.value == DlState.DONE
+    fun remove(t: DlTask, alsoFiles: Boolean = !keepFiles) {
+        val keep = !alsoFiles && t.state.value == DlState.DONE
         t.cancelled = true
         tasks.update { it - t }
         persist()
@@ -425,11 +426,29 @@ object Downloads {
         scope.launch {
             runCatching { running?.join() }
             sweepTorrents()
-            if (!eraseFile(t.file)) {
+            val ok = eraseFile(t.file)
+            // the folder it sat in (a season's or an episode's own) goes when nothing is left in it; the downloads folder itself never
+            if (ok) pruneEmptyDirs(t.file.parentFile, File(dirPath))
+            if (!ok) {
                 // the file is still there (the phone refused the delete): the row goes, so the file is said to stay
                 val c = app ?: return@launch
                 android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(c, com.umutk.pulse.tr("Could not delete ${t.file.name}", "${t.file.name} silinemedi"), android.widget.Toast.LENGTH_LONG).show() }
             }
+        }
+    }
+
+    /** Removes [dir] and the empty folders above it, up to (never including) [stop], while nothing is left in them (only hidden leftovers such as ".nomedia" do not count). */
+    private fun pruneEmptyDirs(dir: File?, stop: File) {
+        var d = dir
+        val root = runCatching { stop.canonicalPath }.getOrNull() ?: return
+        while (d != null && d.isDirectory) {
+            val here = runCatching { d!!.canonicalPath }.getOrNull() ?: return
+            if (here == root || !here.startsWith(root + File.separator)) return
+            val left = d.listFiles()?.filter { !it.name.startsWith(".") || it.name.startsWith(".torrent-") } ?: return
+            if (left.isNotEmpty()) return
+            d.listFiles()?.forEach { runCatching { it.delete() } }
+            if (!d.delete()) return
+            d = d.parentFile
         }
     }
 
@@ -1318,6 +1337,7 @@ private fun DownloadsContent() {
     // several rows chosen with a long press; the bar at the top deletes them all after one question
     var chosen by remember { mutableStateOf(setOf<DlTask>()) }
     var bulkAsk by remember { mutableStateOf(false) }
+    var bulkFiles by remember { mutableStateOf(!Downloads.keepFiles) }
     LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { Downloads.prune() }; chosen = chosen.filter { it in Downloads.tasks.value }.toSet(); kotlinx.coroutines.delay(2500) } }
     // Android 13+ hides notifications until the user allows them; the download still runs without
     val askNotes = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -1335,9 +1355,9 @@ private fun DownloadsContent() {
     Column(Modifier.fillMaxSize().verticalScroll(listScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PHead("Downloads")
         if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
-            title = { Text(if (Downloads.keepFiles) tr("Remove ${chosen.size} from the list (finished files stay)", "${chosen.size} indirmeyi listeden kaldır (biten dosyalar kalır)") else tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
-            text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
-            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { runCatching { Downloads.remove(it) } }
+            title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
+            text = { Row(Modifier.clickable { bulkFiles = !bulkFiles }, verticalAlignment = Alignment.CenterVertically) { PCheck(bulkFiles, { bulkFiles = it }); Text(tr("  Delete from the device", "  Cihazdan sil")) } },
+            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { runCatching { Downloads.remove(it, bulkFiles) } }
                 findScope.launch { kotlinx.coroutines.delay(1500); val left = n.count { it.file.exists() }; if (left > 0) android.widget.Toast.makeText(ctx, tr("$left files could not be deleted", "$left dosya silinemedi"), android.widget.Toast.LENGTH_LONG).show() } } },
             dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { bulkAsk = false } })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1523,7 +1543,7 @@ private fun DownloadsContent() {
                     Spacer(Modifier.width(6.dp))
                     Text(tr("All", "Tümü"), color = if (allOn) com.umutk.pulse.Look.accent else T.text, fontSize = 14.sp)
                 }
-                Box(Modifier.clickable { bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
+                Box(Modifier.clickable { bulkFiles = !Downloads.keepFiles; bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
                 Box(Modifier.clickable { chosen = emptySet() }) { PIcon("close", T.sub, 22.dp) }
             }
         }
@@ -1565,11 +1585,17 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
             if (pick) FolderPicker(File(Downloads.dirPath)) { pick = false }
             Spacer(Modifier.width(12.dp))
             var confirmDel by remember { mutableStateOf(false) }
-            Box(Modifier.clickable { confirmDel = true }) { PIcon("delete", T.sub, 22.dp) }
+            var alsoFiles by remember { mutableStateOf(!Downloads.keepFiles) }
+            Box(Modifier.clickable { alsoFiles = !Downloads.keepFiles; confirmDel = true }) { PIcon("delete", T.sub, 22.dp) }
             if (confirmDel) WinAlert(onDismissRequest = { confirmDel = false }, warn = true,
-                title = { Text(if (Downloads.keepFiles && st == DlState.DONE) tr("Remove from the list (the file stays)", "Listeden kaldır (dosya kalır)") else tr("Delete download", "İndirmeyi sil")) },
-                text = { Text(t.file.name) },
-                confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { confirmDel = false; Downloads.remove(t) } },
+                title = { Text(tr("Delete download", "İndirmeyi sil")) },
+                text = { Column {
+                    Text(t.file.name)
+                    if (st == DlState.DONE) Row(Modifier.padding(top = 10.dp).clickable { alsoFiles = !alsoFiles }, verticalAlignment = Alignment.CenterVertically) {
+                        PCheck(alsoFiles, { alsoFiles = it }); Text(tr("  Delete from the device", "  Cihazdan sil"))
+                    }
+                } },
+                confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { confirmDel = false; Downloads.remove(t, alsoFiles || st != DlState.DONE) } },
                 dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { confirmDel = false } })
         }
         // a torrent waiting for the engine: it is fetched here, once (6 MB), then every download that waited for it goes on
