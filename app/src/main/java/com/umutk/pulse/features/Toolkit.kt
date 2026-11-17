@@ -130,6 +130,7 @@ private val tools = listOf(
     Tool("Floating keyboard", "Yüzen klavye", "keyboard") { FloatingKeyboardTool() },
     Tool("Performance", "Performans", "speed", wide = true) { PerfControlTool() },
     Tool("Watch", "Saat", "clock", wide = true) { WatchManagerTool() },
+    Tool("Auto clicker", "Otomatik tıklayıcı", "touch") { AutoClickerTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
