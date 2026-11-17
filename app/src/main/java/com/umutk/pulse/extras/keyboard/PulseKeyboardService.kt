@@ -1543,6 +1543,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.banAsk = -1
         if (w.isEmpty()) return
         KeyboardDictionary.ban(this, w)
+        // the words written last are a source of the bar too: the blocked one leaves them
+        recentWords.removeIf { it.equals(w, ignoreCase = true) }
         android.widget.Toast.makeText(this, com.umutk.pulse.tr("Will not suggest \"$w\" again", "\"$w\" bir daha önerilmeyecek"), android.widget.Toast.LENGTH_SHORT).show()
         updateSuggestions()
     }
@@ -1588,6 +1590,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
+        // a blocked word is not written from the bar (the typed word itself is, it is the person's)
+        if (!w.startsWith("\"") && w != word.toString() && KeyboardDictionary.isBanned(w)) { updateSuggestions(); return }
         if (numOffered.isNotEmpty() && w in numOffered) {
             val d = digitsBefore(c)
             if (d.isNotEmpty() && w.startsWith(d)) { c.deleteSurroundingText(d.length, 0); c.commitText(w, 1); numPending = w; numOffered = emptyList(); st.emailBar = false; afterText(); return }
@@ -2447,7 +2451,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (typed.isEmpty()) {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
             if (tb.isEmpty() || tb.trimEnd(' ').let { it.isEmpty() || it.last() in ".!?\n" }) {
-                val starts = if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet") else listOf("I", "The", "Hello")
+                val starts = (if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet", "Bir", "Ve") else listOf("I", "The", "Hello", "A", "And")).filter { !KeyboardDictionary.isBanned(it) }.take(3).let { s -> s + List(3 - s.size) { "" } }
                 slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }
@@ -2580,7 +2584,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** For a bar that would stay empty: the last words you wrote (a few of them), the most common words of the language filling what is missing (capital at the start when shift is on). */
     private fun commonNext(code: String, up: Boolean): List<String> {
         val common = if (KeyboardLayouts.dict(code) == "tr") listOf("ve", "bir", "bu") else listOf("the", "to", "and")
-        val w = (recentWords.toList().take(3) + common).distinct().take(3)
+        val w = (recentWords.toList().take(3) + common).filter { !KeyboardDictionary.isBanned(it) }.distinct().take(3)
         return if (up) w.map { it.replaceFirstChar { c -> c.uppercase() } } else w
     }
 
@@ -2625,7 +2629,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false, ctxText: String? = null): Triple<List<String>, Array<String>, String?> {
         KeyboardDictionary.begin()
         if (typed.isEmpty()) {
-            val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
+            val n = KeyboardDictionary.next(code, prev, 6, prev2).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
             // after a word and a space: the emoji of the word just written takes the last place
             val em = if (KeyboardPrefs.emojiPredictions && prev != null) (KeyboardDictionary.emoji(prev) ?: EmojiData.forWord(prev)) else null
             val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, em ?: n.getOrElse(2) { "" })
@@ -2732,7 +2736,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (lm != null) NeuralLm.took((System.nanoTime() - nnT0) / 1_000_000L)
-        val fix = swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0
+        // a blocked word is never the correction, whichever of the ways found it
+        val fix = (swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0)?.takeIf { !KeyboardDictionary.isBanned(it.word) }
         val others = (comp.map { it.word } + corr.map { it.word } + nnScore.keys).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
             .let { o -> if (nnScore.isEmpty()) o else o.sortedByDescending { nnScore[it] ?: -1e9f } }
         // a word nothing is near (a slip the rule cannot reach): the bar is not left empty. A wider look for near words, and two words run together ("kşabye": "kısa bye")

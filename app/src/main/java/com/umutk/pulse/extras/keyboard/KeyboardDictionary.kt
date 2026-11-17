@@ -412,7 +412,8 @@ object KeyboardDictionary {
         val lx = lexes[lang]
         val base = lx?.index?.get(w)?.let { lx.score[it] } ?: 0f
         val u = user[w] ?: 0
-        return maxOf(base, if (u > 0) 8f + ln(1f + u) * 1.5f else 0f) + if (u > 0) 1f else 0f
+        // the words this person wrote weigh more than the language's own list: the bar is theirs first
+        return maxOf(base, if (u > 0) 9f + ln(1f + u) * 2.2f else 0f) + if (u > 0) 1.5f else 0f
     }
 
     /** Words that start with [prefix] (lowercase), the likeliest first. */
@@ -679,10 +680,13 @@ object KeyboardDictionary {
     }
 
     /** What follows [prev] in what the user typed, then the commonest words of the language. */
-    fun next(code: String, prev: String?, n: Int): List<String> {
+    fun next(code: String, prev: String?, n: Int, prev2: String? = null): List<String> {
         val lang = d(code)
         val out = ArrayList<String>()
-        if (!prev.isNullOrEmpty()) pairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n) out += it.key }
+        // what the person wrote after these two words, then after the last one, then the words they write most; only then the language's own pairs
+        if (!prev.isNullOrEmpty() && !prev2.isNullOrEmpty()) pairs[prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
+        if (!prev.isNullOrEmpty()) pairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
+        user.entries.filter { it.value >= 3 && it.key.length >= 2 }.sortedByDescending { it.value }.take(6).forEach { if (out.size < n && it.key !in out) out += it.key }
         if (!prev.isNullOrEmpty() && out.size < n) basePairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
         val seed = if (lang == "tr") listOf("bir", "bu", "ben", "ve", "ne", "çok") else listOf("I", "the", "you", "it", "to", "a")
         seed.forEach { if (out.size < n && it !in out) out += it }
