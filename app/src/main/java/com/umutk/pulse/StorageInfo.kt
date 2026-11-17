@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** One thing Pulse keeps on the phone: where it is, its size, what it is for. */
-private class StoreRow(val name: String, val path: String, val bytes: Long, val what: String, val file: File)
+private class StoreRow(val name: String, val path: String, val bytes: Long, val what: String, val file: File, val count: Int = 1, val parts: List<String> = emptyList())
 
 /** Everything Pulse keeps in its data (files) and its cache, largest first. */
 private fun storeRows(ctx: Context): List<StoreRow> {
@@ -38,14 +38,54 @@ private fun storeRows(ctx: Context): List<StoreRow> {
     val out = ArrayList<StoreRow>()
     listOf("files" to ctx.filesDir, "cache" to ctx.cacheDir).forEach { (group, dir) ->
         dir.listFiles()?.forEach { f ->
-            val bytes = runCatching { f.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
-            out += StoreRow(f.name, "$base/$group/${f.name}", bytes, whatIs(group, f.name), f)
+            val files = runCatching { f.walkTopDown().filter { it.isFile }.map { it.relativeTo(f).path.replace('\\', '/') to it.length() }.toList() }.getOrDefault(emptyList())
+            val bytes = files.sumOf { it.second }
+            // what the folder holds, by kind: how many files of each and how much they take (the biggest kinds first)
+            val parts = if (f.isDirectory) files.groupBy { kindOf(f.name, it.first) }.map { (k, l) -> Triple(k, l.size, l.sumOf { it.second }) }
+                .sortedByDescending { it.third }.take(6).map { (k, n, b) -> "$k  ·  $n  ·  ${sizeText(b)}" } else emptyList()
+            out += StoreRow(f.name, "$base/$group/${f.name}", bytes, whatIs(group, f.name), f, files.size, parts)
         }
     }
     return out.sortedByDescending { it.bytes }
 }
 
+/** The kind of a file inside a folder of Pulse's data, for the breakdown under the folder (by the name's start, the sub-folder or the extension). */
+private fun kindOf(dir: String, rel: String): String {
+    val leaf = rel.substringAfterLast('/')
+    if (dir == "gamehub") return when {
+        leaf.startsWith("cover_") -> tr("Covers you chose", "Seçtiğin kapaklar")
+        leaf.startsWith("steam_") -> tr("Steam covers", "Steam kapakları")
+        leaf.startsWith("hero_") -> tr("Wide pictures (shelf backgrounds)", "Geniş resimler (raf arka planları)")
+        leaf.startsWith("logo_") -> tr("Logos", "Logolar")
+        leaf.startsWith("shot_") -> tr("Screenshots (back of the box)", "Ekran görüntüleri (kutunun arkası)")
+        leaf.startsWith("case_") -> tr("Boxes (the case styles)", "Kutular (kılıf stilleri)")
+        leaf.startsWith("play_") -> tr("Google Play pictures", "Google Play resimleri")
+        leaf.startsWith("guide_") -> tr("Game guides", "Oyun rehberleri")
+        leaf.startsWith("icon_") -> tr("Game icons", "Oyun simgeleri")
+        else -> tr("Other", "Diğer")
+    }
+    if (rel.contains('/')) return rel.substringBefore('/')
+    return leaf.substringAfterLast('.', "").uppercase().ifEmpty { tr("Files", "Dosyalar") }
+}
+
 private fun whatIs(group: String, name: String): String = when {
+    name == "gamehub" -> tr("Game Hub: pictures of your games (covers, wide backgrounds, logos, screenshots), their boxes in the case styles, guides and icons. Fetched from the net and made again when needed.",
+        "Game Hub: oyunlarının resimleri (kapaklar, geniş arka planlar, logolar, ekran görüntüleri), kılıf stillerindeki kutuları, rehberleri ve simgeleri. Ağdan indirilir, gerektiğinde yeniden yapılır.")
+    name == "torrent" -> tr("The torrent engine (libtorrent, about 16 MB), fetched once when you first download a torrent or a series. It is not part of the app.",
+        "Torrent motoru (libtorrent, yaklaşık 16 MB): ilk torrent ya da dizi indirmende bir kez indirilir. Uygulamanın içinde değildir.")
+    name == "torrent-work" -> tr("Half-downloaded torrent pieces; they go when the download is finished or removed.", "Yarım inen torrent parçaları; indirme bitince ya da silinince giderler.")
+    name == "extras" -> tr("Packs you downloaded from the extras store (skins, wallpapers, icons, mascots, gym photos, …), each in its own folder.",
+        "Ekstra mağazasından indirdiğin paketler (kaplamalar, duvar kağıtları, simgeler, maskotlar, spor fotoğrafları, …), her biri kendi klasöründe.")
+    name == "kbd" -> tr("The keyboard's language model and what it learned from you (words, pairs, typos). Deleting it makes the keyboard forget.",
+        "Klavyenin dil modeli ve senden öğrendikleri (kelimeler, çiftler, yazım hataları). Silersen klavye unutur.")
+    name == "clips" -> tr("The keyboard's clipboard history.", "Klavyenin pano geçmişi.")
+    name == "htmlgames" -> tr("The web games you added to Game Hub, with their covers.", "Game Hub'a eklediğin web oyunları ve kapakları.")
+    name == "skins" -> tr("Skins of the music player (Winamp style) you added.", "Eklediğin müzik çalar kaplamaları (Winamp tarzı).")
+    name == "relay" -> tr("Relay: the pairing and the transfer state.", "Relay: eşleşme ve aktarım durumu.")
+    name == "standby_font" -> tr("The clock font you chose for StandBy.", "StandBy için seçtiğin saat yazı tipi.")
+    name == "weather_tiles" -> tr("Map tiles of the weather map, kept for a while.", "Hava haritası döşemeleri, bir süre saklanır.")
+    name == "updates" -> tr("An update of YTXTube that was downloaded, before it is installed.", "İndirilen bir YTXTube güncellemesi (kurulmadan önce).")
+    name == "media" -> tr("Video and audio pieces YTXTube keeps for a quick replay.", "YTXTube'un hızlı tekrar için sakladığı video ve ses parçaları.")
     name.startsWith("kbd_") -> tr("Word lists of the keyboard", "Klavye kelime listeleri")
     name == "lyrics_index.gz" -> tr("Index of the lyrics beside your songs, for search", "Şarkıların yanındaki sözlerin dizini (arama için)")
     name == "lyrics-saved" -> tr("Lyrics that could not be written beside a song", "Şarkının yanına yazılamayan sözler")
@@ -103,6 +143,10 @@ fun StorageCard() {
             }
             Text(row.path, color = T.sub, fontSize = 11.sp)
             Text(row.what, color = T.text, fontSize = 12.sp)
+            if (row.parts.isNotEmpty()) {
+                Text(tr("${row.count} files", "${row.count} dosya"), color = T.sub, fontSize = 11.sp)
+                row.parts.forEach { Text(it, color = T.sub, fontSize = 11.sp) }
+            }
             PButton(tr("Delete", "Sil"), Modifier.fillMaxWidth(), danger = true, compact = true) { askDelete = row }
         }
         Spacer(Modifier.height(6.dp))
