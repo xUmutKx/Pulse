@@ -259,8 +259,11 @@ object MiniLyrics {
                     lookup = scope.launch { res = Lyrics.forTrack(ctx, p.title, p.artist, p.album, p.durationMs, p.path)?.takeIf { it.synced } }
                 }
                 val r = res
-                val line = r?.lines?.lastOrNull { it.timeMs <= p.posMs }?.text?.takeIf { it.isNotBlank() }
-                t.text = line.orEmpty()
+                val cl = r?.lines?.lastOrNull { it.timeMs <= p.posMs }
+                val line = cl?.text?.takeIf { it.isNotBlank() }
+                // with word times the words sung are white and the ones to come dimmer
+                val sung = if (cl != null && cl.words.isNotEmpty() && LiveLyrics.wordSync(ctx)) LiveLyrics.sungChars(cl, p.posMs.toInt()) else -1
+                t.text = if (line != null && sung >= 0) LiveLyrics.sungSpan(line, sung, AColor.WHITE, 0x88FFFFFF.toInt()) else line.orEmpty()
                 t.visibility = if (line != null) View.VISIBLE else View.GONE
             }
             delay(400)

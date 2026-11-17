@@ -86,7 +86,8 @@ object StoreInstaller {
     }
 
     private fun baseDir(c: Context, loc: Int) = if (loc == 1) c.filesDir else (c.getExternalFilesDir(null)?.parentFile ?: c.filesDir)
-    fun dataDir(c: Context, id: String): File = File(baseDir(c, location(c)), "extras/$id")
+    fun dataDir(c: Context, id: String): File =
+        if (id in SmallPack.MEMBERS) File(baseDir(c, location(c)), "extras/${SmallPack.ID}/$id") else File(baseDir(c, location(c)), "extras/$id")
 
     /** Moves every unzipped module to the chosen place; a module that fails to copy stays where it was. */
     fun setLocation(c: Context, loc: Int) {

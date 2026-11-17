@@ -47,14 +47,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled: () -> Unit = {}) {
     val ctx = LocalContext.current
-    var module by remember(id) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == id }) }
+    // the packs under 1 MB are one download ("small"): the pack asked for is that one
+    val rid = SmallPack.real(id)
+    var module by remember(rid) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == rid }) }
     // the list is asked for when this pack is not in the saved one yet (a manifest older than the pack)
-    LaunchedEffect(id) {
-        if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == id } }
+    LaunchedEffect(rid) {
+        if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == rid } }
     }
     // [auto]: the first time the pack is wanted it is asked once ("Download it?"); when yes it comes by itself (the row shows how far it is), when no the row keeps its button
     if (auto) PackAsk(id, title)
-    if (auto && PackConsent.state(ctx, id) == 1) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
+    if (auto && PackConsent.state(ctx, rid) == 1) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
     val progress by StoreInstaller.progress.collectAsState()
     val errors by StoreInstaller.errors.collectAsState()
     val rev by StoreInstaller.rev.collectAsState()
@@ -67,8 +69,8 @@ fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled:
         Column(Modifier.weight(1f)) {
             Text(title, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val sub = when {
-                state == ModuleState.DOWNLOADING -> tr("Downloading ", "İndiriliyor ") + "${((progress[id] ?: 0f) * 100).toInt()}%"
-                state == ModuleState.FAILED -> errors[id] ?: tr("Could not download", "İndirilemedi")
+                state == ModuleState.DOWNLOADING -> tr("Downloading ", "İndiriliyor ") + "${((progress[rid] ?: 0f) * 100).toInt()}%"
+                state == ModuleState.FAILED -> errors[rid] ?: tr("Could not download", "İndirilemedi")
                 else -> formatMb(m.boyut)
             }
             Text(sub, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -88,18 +90,19 @@ object PackConsent {
 @Composable
 fun PackAsk(id: String, title: String) {
     val ctx = LocalContext.current
-    var show by remember(id) { mutableStateOf(!PackAuto.installed(ctx, id) && PackConsent.state(ctx, id) == 0) }
-    var module by remember(id) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == id }) }
-    LaunchedEffect(id, show) {
-        if (show && module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == id } }
+    val rid = SmallPack.real(id)
+    var show by remember(id) { mutableStateOf(!PackAuto.installed(ctx, id) && PackConsent.state(ctx, rid) == 0) }
+    var module by remember(rid) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == rid }) }
+    LaunchedEffect(rid, show) {
+        if (show && module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == rid } }
     }
     if (show) com.umutk.pulse.PDialog(
         title = title,
         text = tr("Download it now" + (module?.let { " (" + formatMb(it.boyut) + ")" } ?: "") + "? It is kept on the phone and can be removed in Settings > About > Downloaded packs.",
             "Şimdi indirilsin mi" + (module?.let { " (" + formatMb(it.boyut) + ")" } ?: "") + "? Telefonda saklanır, Ayarlar > Hakkında > İndirilen paketler'den kaldırılabilir."),
         confirm = tr("Download", "İndir"),
-        onConfirm = { PackConsent.set(ctx, id, true); show = false; PackAuto.ensure(ctx, id) },
-        onDismiss = { PackConsent.set(ctx, id, false); show = false },
+        onConfirm = { PackConsent.set(ctx, rid, true); show = false; PackAuto.ensure(ctx, id) },
+        onDismiss = { PackConsent.set(ctx, rid, false); show = false },
     )
 }
 
@@ -144,9 +147,11 @@ object PackAuto {
     /** True when the pack's files are unzipped on the phone. */
     fun installed(c: Context, id: String): Boolean = StoreInstaller.dataDir(c, id).let { d -> d.isDirectory && !d.list().isNullOrEmpty() }
 
-    fun ensure(c: Context, id: String) {
+    fun ensure(c: Context, id0: String) {
         val app = c.applicationContext
-        if (installed(app, id) || !asked.add(id)) return
+        // the packs under 1 MB are one download ("small")
+        val id = SmallPack.real(id0)
+        if (installed(app, id0) || !asked.add(id)) return
         scope.launch {
             var m = StoreCatalog.load(app).firstOrNull { it.id == id }
             // the saved list may be older than the pack (or never read): it is asked for once
@@ -154,6 +159,12 @@ object PackAuto {
             if (m != null && StoreInstaller.state(app, m) != ModuleState.INSTALLED) StoreInstaller.download(app, m)
             else if (m == null) asked.remove(id)   // offline: tried again next time
         }
+    }
+
+    /** First start: the small packs (one download of about 2 MB) come by themselves, without a question, once; when it cannot (offline) it is tried again at the next start. */
+    fun firstRun(c: Context) {
+        PackConsent.set(c, SmallPack.ID, true)
+        ensure(c, "icons-xp")
     }
 }
 

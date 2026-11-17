@@ -66,7 +66,7 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean 
     DisposableEffect(deskWin) { if (!win10) deskWin?.glass = true; onDispose { if (!win10) deskWin?.glass = false } }
     var nav by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
-    val packs = rememberPacks().filter { !it.isApk }
+    val packs = rememberPacks().filter { !it.isApk && it.id !in com.umutk.pulse.extras.store.SmallPack.MEMBERS }
     val pane = if (win10) T.panel else T.panel.copy(alpha = .55f)
     val line = T.sub.copy(alpha = .22f)
     val r = if (win10) 0.dp else 8.dp

@@ -28,6 +28,7 @@ object LockLyricsOverlay {
     private var now: TextView? = null
     private var next: TextView? = null
     private var host: Context? = null
+    private var lastSung = -1
     private var params: WindowManager.LayoutParams? = null
 
     val showing get() = box != null
@@ -42,7 +43,7 @@ object LockLyricsOverlay {
     }
 
     /** Shows the window (or updates its two lines). Returns false when no window can be drawn (no accessibility layer, no overlay permission). */
-    fun show(ctx: Context, current: String, upcoming: String?): Boolean {
+    fun show(ctx: Context, current: String, upcoming: String?, sung: Int = -1): Boolean {
         val app = ctx.applicationContext
         if (box == null && !add(app)) return false
         // the place follows the setting at once, also while the window is up
@@ -58,7 +59,10 @@ object LockLyricsOverlay {
         val fs = fontSize(app)
         if (now != null && kotlin.math.abs(now!!.textSize / (app.resources.displayMetrics.scaledDensity.takeIf { it > 0f } ?: 1f) - fs) > .6f) { now?.textSize = fs; next?.textSize = fs - 4f }
         // a new line fades in instead of jumping in, and the window keeps its height (the views reserve their lines), so nothing shifts on the screen
-        if (now?.text?.toString() != current) { now?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = current; v.animate().alpha(1f).setDuration(240).start() } }
+        // with word times the words sung are white and the ones to come dimmer, so the line fills as it is sung
+        val shown: CharSequence = if (sung >= 0) LiveLyrics.sungSpan(current, sung, Color.WHITE, 0x88FFFFFF.toInt()) else current
+        if (now?.text?.toString() != current) { now?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = shown; v.animate().alpha(1f).setDuration(240).start() }; lastSung = sung }
+        else if (sung != lastSung) { now?.text = shown; lastSung = sung }
         val n = upcoming?.takeIf { it.isNotBlank() }
         val nt = n.orEmpty()
         if (next?.text?.toString() != nt) { next?.let { v -> v.animate().cancel(); v.alpha = 0f; v.text = nt; v.animate().alpha(1f).setStartDelay(120).setDuration(240).start() } }

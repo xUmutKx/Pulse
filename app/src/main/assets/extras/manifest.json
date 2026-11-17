@@ -1,5 +1,24 @@
 {
   "schema": 1,
-  "moduller": [],
-  "guncellendi": "2026-10-19T00:00:00Z"
+  "moduller": [
+    {
+      "id": "small",
+      "ad_en": "Icons and small pictures",
+      "ad_tr": "İkonlar ve küçük resimler",
+      "tur": "veri",
+      "kategori": "gorsel",
+      "boyut": 2297912,
+      "surum": "1.0.0",
+      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/small.zip",
+      "sha256": "37afda7e31ee8df04b5f96e423d7c59fdf11a9c2f2466bfd428f2adeb22b6a7a",
+      "lisans": "mixed",
+      "atif": "",
+      "min_pulse": 847,
+      "guncellendi": "2026-11-17T00:00:00Z",
+      "yayinlandi": true,
+      "aciklama_en": "The icons of the older looks (Windows 95, XP, 11 old, One UI, ColorOS), more XP and Windows 10 wallpapers and the Office Assistants, in one small download that comes by itself the first time Pulse starts.",
+      "aciklama_tr": "Eski görünümlerin ikonları (Windows 95, XP, eski 11, One UI, ColorOS), daha fazla XP ve Windows 10 duvar kağıdı ve Office Yardımcıları; Pulse ilk açıldığında kendiliğinden inen tek küçük indirme."
+    }
+  ],
+  "guncellendi": "2026-11-17T00:00:00Z"
 }
