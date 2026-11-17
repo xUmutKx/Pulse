@@ -120,6 +120,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3") // Relay (extras/relay, Apache-2.0): its protocol messages
+    // the watch manager's ADB client (GPL-3.0-or-later OR Apache-2.0); its bcprov-jdk15to18 is left out, bcprov-jdk18on 1.79 is already here
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1") { exclude(group = "org.bouncycastle") }
     implementation("org.bouncycastle:bcpkix-jdk18on:1.79") // Relay: the self-signed certificate of this device (mutual TLS)
     implementation("androidx.palette:palette-ktx:1.0.0") // Palette (extras/palette): the colours of a wallpaper
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
