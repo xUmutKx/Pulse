@@ -231,9 +231,13 @@ fun WinampSkinSettings() {
     val turkish = tr("en", "tr") == "tr"
     var skins by remember { mutableStateOf(emptyList<InstalledSkin>()) }
     var chosen by remember { mutableStateOf(prefs.getString("skin", "")?.ifEmpty { "base-2.91.wsz" } ?: "base-2.91.wsz") }
-    LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
-    // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
-    SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(tick) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
+    // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile; the other skins are a download, here where they are used
+    Column(Modifier.fillMaxWidth()) {
+        com.umutk.pulse.extras.store.InlinePackRow("skins-more", tr("More Winamp skins", "Daha fazla Winamp teması")) { tick++ }
+        SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+    }
 }
 
 /** The playlist window when it is closed: its title bar alone, a tap opens the window again. */

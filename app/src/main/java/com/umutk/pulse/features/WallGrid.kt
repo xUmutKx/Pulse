@@ -70,7 +70,7 @@ fun WallGrid(lookId: String, selected: Int, onPick: (Int) -> Unit) {
 
 /** The launcher's wallpaper chooser: the preview grid in a window of the current look. */
 @Composable
-fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPickFile: ((java.io.File) -> Unit)? = null, onPick: (Int) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth()
             .background(if (T.bevel) T.bg else T.panel)
@@ -79,6 +79,8 @@ fun WallPickDialog(lookId: String, selected: Int, onDismiss: () -> Unit, onPick:
             Text(tr("Wallpaper", "Duvar kağıdı"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
             WallGrid(lookId, selected) { onPick(it) }
+            // the 4K and Full HD pictures: downloaded here, where the wallpaper is chosen
+            if (onPickFile != null) { Spacer(Modifier.height(12.dp)); com.umutk.pulse.extras.store.HdWallpaperStrip(onPickFile) }
         }
     }
 }

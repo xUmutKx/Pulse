@@ -55,12 +55,20 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val res = wallpaperRes(lookId, land)
     // the picture is decoded at its own size: only one at least twice as big as the screen is made smaller (the half-size decode it had made a 1280 x 800 picture 640 x 400 and then stretched it over the screen, which is what looked blurry)
-    val bmp = remember(res) {
-        res?.let { r ->
+    // a downloaded 4K / Full HD picture (Wallpaper > 4K and Full HD) is shown instead of the stock one while it is chosen
+    val file = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() && java.io.File(it).isFile }
+    val bmp = remember(res, file) {
+        val dm = ctx.resources.displayMetrics
+        val need = maxOf(dm.widthPixels, dm.heightPixels)
+        if (file != null) {
+            val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file, b)
+            var step = 1
+            while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
+            BitmapFactory.decodeFile(file, BitmapFactory.Options().apply { inSampleSize = step })?.asImageBitmap()
+        } else res?.let { r ->
             val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeResource(ctx.resources, r, b)
-            val dm = ctx.resources.displayMetrics
-            val need = maxOf(dm.widthPixels, dm.heightPixels)
             var step = 1
             while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
             BitmapFactory.decodeResource(ctx.resources, r, BitmapFactory.Options().apply { inSampleSize = step })?.asImageBitmap()
