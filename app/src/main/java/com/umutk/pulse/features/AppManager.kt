@@ -351,10 +351,10 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                     val sum = listOfNotNull(
                         tr(show.en, show.tur).takeIf { show != AmShow.ALL },
                         tr(source.en, source.tur).takeIf { source != AmSource.ANY },
-                        "${tr(sort.en, sort.tur)} ${if (asc) "↑" else "↓"}".takeIf { sort != AmSort.NAME || !asc },
+                        "${tr(sort.en, sort.tur)} ${if (asc) "As" else "Ds"}".takeIf { sort != AmSort.NAME || !asc },
                     ).joinToString(" · ").ifBlank { tr("Options", "Seçenekler") }
-                    Row(Modifier.clickable { reset() }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(sum, color = T.sub, fontSize = 12.sp, maxLines = 1)
+                    Row(Modifier.weight(1f, fill = false).clickable { reset() }.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(sum, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         Spacer(Modifier.width(4.dp))
                         PIcon("close", T.sub, 14.dp)
                     }
@@ -364,7 +364,7 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                 Row(Modifier.border(1.dp, T.line, RoundedCornerShape(50)).clickable { debloat = true }.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("delete", T.text, 16.dp)
                     Spacer(Modifier.width(6.dp))
-                    Text("Debloat", color = T.text, fontSize = 13.sp)
+                    Text("Debloat", color = T.text, fontSize = 13.sp, maxLines = 1, softWrap = false)
                 }
             }
             // the quick filters
