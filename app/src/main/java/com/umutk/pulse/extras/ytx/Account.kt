@@ -77,7 +77,7 @@ data class ChannelRef(val id: String, val name: String, val avatar: String?) {
 
 
 @Immutable
-data class FeedPage(val videos: List<VideoItem>, val next: String?, val channelHeader: ChannelHeaderMeta? = null)
+data class FeedPage(val videos: List<VideoItem>, val next: String?, val channelHeader: ChannelHeaderMeta? = null, val sorts: List<Pair<String, String>> = emptyList())
 
 
 @Immutable
@@ -1750,7 +1750,23 @@ object InnerTube {
         val root = postAny("browse", body)
         val page = parseFeed(root)
         val header = if (continuation == null) parseChannelHeader(root) else null
-        FeedPage(page.videos, page.next, header)
+        // the order chips above the videos (Latest, Popular, Oldest): their names and the continuation that loads the list in that order
+        val sorts = ArrayList<Pair<String, String>>()
+        if (continuation == null) root.walk { key, obj ->
+            when (key) {
+                "chipViewModel" -> {
+                    val t = obj.optString("text")
+                    val tok = obj.optJSONObject("tapCommand")?.optJSONObject("innertubeCommand")?.optJSONObject("continuationCommand")?.optString("token").orEmpty()
+                    if (t.isNotBlank() && tok.isNotBlank() && sorts.none { it.first == t }) sorts += t to tok
+                }
+                "chipCloudChipRenderer" -> {
+                    val t = obj.optJSONObject("text")?.let { it.optString("simpleText").ifBlank { it.optJSONArray("runs")?.optJSONObject(0)?.optString("text").orEmpty() } }.orEmpty()
+                    val tok = obj.optJSONObject("navigationEndpoint")?.optJSONObject("continuationCommand")?.optString("token").orEmpty()
+                    if (t.isNotBlank() && tok.isNotBlank() && sorts.none { it.first == t }) sorts += t to tok
+                }
+            }
+        }
+        FeedPage(page.videos, page.next, header, sorts)
     }
 
     suspend fun channelLive(channelId: String, continuation: String? = null): FeedPage = withContext(Dispatchers.IO) {
@@ -1776,6 +1792,8 @@ object InnerTube {
 
 
     private const val CHANNEL_VIDEOS_TAB = "EgZ2aWRlb3PyBgQKAjoA"
+    private const val CHANNEL_PLAYLISTS_TAB = "EglwbGF5bGlzdHPyBgQKAkIA"
+    private const val SEARCH_PLAYLISTS = "EgIQAw%3D%3D"
     private const val CHANNEL_SHORTS_TAB = "EgZzaG9ydHPyBgUKA5oBAA%3D%3D"
     private const val CHANNEL_LIVE_TAB = "EgZzdHJlYW1z8gYECgJ6AA%3D%3D"
     private const val CHANNEL_COMMUNITY_TAB = "Egljb21tdW5pdHnyBgQKAkoA"
@@ -1815,8 +1833,13 @@ object InnerTube {
     }
 
     suspend fun playlists(): List<PlaylistRef> = withContext(Dispatchers.IO) {
+        parsePlaylists(post("browse", JSONObject().put("browseId", "FEplaylist_aggregation"))).filterNot { it.id == "WL" || it.id == "LL" }
+    }
+
+    /** The playlists in an answer (the old grid and list renderers and the newer lockup view models). */
+    internal fun parsePlaylists(root: JSONObject): List<PlaylistRef> {
         val out = LinkedHashMap<String, PlaylistRef>()
-        post("browse", JSONObject().put("browseId", "FEplaylist_aggregation")).walk { key, obj ->
+        root.walk { key, obj ->
             when (key) {
                 "gridPlaylistRenderer", "playlistRenderer" -> {
                     val id = obj.optString("playlistId").ifBlank { return@walk }
@@ -1838,8 +1861,19 @@ object InnerTube {
                 }
             }
         }
-        out.values.filterNot { it.id == "WL" || it.id == "LL" }
+        return out.values.toList()
     }
+
+    /** A channel's own playlists (its Playlists tab, the first page). */
+    suspend fun channelPlaylists(channelId: String): List<PlaylistRef> = withContext(Dispatchers.IO) {
+        parsePlaylists(postAny("browse", JSONObject().put("browseId", channelId).put("params", CHANNEL_PLAYLISTS_TAB)))
+    }
+
+    /** Playlists on YouTube for a search. */
+    suspend fun searchPlaylists(query: String): List<PlaylistRef> = withContext(Dispatchers.IO) {
+        parsePlaylists(postAny("search", JSONObject().put("query", query).put("params", SEARCH_PLAYLISTS)))
+    }
+
 
 
     suspend fun videoState(videoId: String): VideoAccountState = withContext(Dispatchers.IO) {

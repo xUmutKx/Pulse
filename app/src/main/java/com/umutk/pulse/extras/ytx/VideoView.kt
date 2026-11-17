@@ -108,6 +108,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -669,7 +670,7 @@ fun VideoContent(
                         Modifier.height(EdgeScrubTimeRowHeight),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(formatDuration(state.scrubPreviewMs ?: state.positionMs), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Isolated { Text(formatDuration(state.scrubPreviewMs ?: state.positionMs), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                         Text(
                             " / " + formatDuration(state.durationMs),
                             color = Color.White.copy(alpha = 0.72f), fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -760,34 +761,36 @@ fun VideoContent(
                     .height(EdgeScrubTouchPadAbove * 2)
                     .graphicsLayer { alpha = scrubFade }
             }
-            Scrubber(
-                segments = segments,
-                positionMs = state.positionMs,
-                bufferedMs = state.bufferedMs,
-                durationMs = state.durationMs,
-                enabled = interactive,
-                active = scrubActive,
-                // the bar is free: a tap goes to that place, and a drag follows the finger (it used to move relative to where the video was)
-                relativeDrag = false,
-                edgeToEdge = portraitEdgeScrub,
-                tapToSeek = true,
-                edgeTouchPadAbove = EdgeScrubTouchPadAbove,
-                trackHeight = if (fullscreenControlsScrub) FullscreenScrubTrackHeight else 4.dp,
-                touchHeight = when {
-                    portraitEdgeScrub -> EdgeScrubTouchHeight
-                    fullscreenControlsScrub -> FullscreenScrubTouchHeight
-                    else -> EdgeScrubTouchPadAbove * 2
-                },
-                knob = if (fullscreenControlsScrub) FullscreenScrubKnob else 7.dp,
-                knobDragging = if (fullscreenControlsScrub) FullscreenScrubKnobDragging else 9.dp,
-                onPreview = { state.scrubPreviewMs = it; touched() },
-                onSeek = { ms -> if (state.scrubDragging) state.endScrubDragging(ms) else state.seekTo(ms); touched() },
-                onDraggingChanged = { dragging ->
-                    if (dragging) state.beginScrubDragging()
-                    else state.endScrubDragging()
-                },
-                modifier = scrubModifier.zIndex(10f),
-            )
+            Isolated {
+                Scrubber(
+                    segments = segments,
+                    positionMs = state.positionMs,
+                    bufferedMs = state.bufferedMs,
+                    durationMs = state.durationMs,
+                    enabled = interactive,
+                    active = scrubActive,
+                    // the bar is free: a tap goes to that place, and a drag follows the finger (it used to move relative to where the video was)
+                    relativeDrag = false,
+                    edgeToEdge = portraitEdgeScrub,
+                    tapToSeek = true,
+                    edgeTouchPadAbove = EdgeScrubTouchPadAbove,
+                    trackHeight = if (fullscreenControlsScrub) FullscreenScrubTrackHeight else 4.dp,
+                    touchHeight = when {
+                        portraitEdgeScrub -> EdgeScrubTouchHeight
+                        fullscreenControlsScrub -> FullscreenScrubTouchHeight
+                        else -> EdgeScrubTouchPadAbove * 2
+                    },
+                    knob = if (fullscreenControlsScrub) FullscreenScrubKnob else 7.dp,
+                    knobDragging = if (fullscreenControlsScrub) FullscreenScrubKnobDragging else 9.dp,
+                    onPreview = { state.scrubPreviewMs = it; touched() },
+                    onSeek = { ms -> if (state.scrubDragging) state.endScrubDragging(ms) else state.seekTo(ms); touched() },
+                    onDraggingChanged = { dragging ->
+                        if (dragging) state.beginScrubDragging()
+                        else state.endScrubDragging()
+                    },
+                    modifier = scrubModifier.zIndex(10f),
+                )
+            }
         }
         if (scrubbing && scrubPreviewMs != null) {
             Box(
@@ -870,24 +873,26 @@ fun AudioOnlyStage(
             }
             Spacer(Modifier.height(8.dp))
             var scrubPreview by remember { mutableStateOf<Long?>(null) }
-            Scrubber(
-                segments = if (SponsorBlock.enabled) state.segments.filter { it.action != SponsorBlock.Action.Off } else emptyList(),
-                positionMs = state.positionMs,
-                bufferedMs = state.bufferedMs,
-                durationMs = state.durationMs,
-                enabled = interactive,
-                onPreview = { scrubPreview = it },
-                onSeek = { scrubPreview = null; state.seekTo(it) },
-                track = c.surfaceContainerHighest,
-                buffered = c.primary.copy(alpha = 0.3f),
-                played = c.primary,
-                trackHeight = 6.dp,
-                knob = 8.dp,
-                knobDragging = 10.dp,
-            )
+            Isolated {
+                Scrubber(
+                    segments = if (SponsorBlock.enabled) state.segments.filter { it.action != SponsorBlock.Action.Off } else emptyList(),
+                    positionMs = state.positionMs,
+                    bufferedMs = state.bufferedMs,
+                    durationMs = state.durationMs,
+                    enabled = interactive,
+                    onPreview = { scrubPreview = it },
+                    onSeek = { scrubPreview = null; state.seekTo(it) },
+                    track = c.surfaceContainerHighest,
+                    buffered = c.primary.copy(alpha = 0.3f),
+                    played = c.primary,
+                    trackHeight = 6.dp,
+                    knob = 8.dp,
+                    knobDragging = 10.dp,
+                )
+            }
             Row(Modifier.fillMaxWidth().height(28.dp), verticalAlignment = Alignment.CenterVertically) {
                 val time = Modifier.width(56.dp)
-                Text(formatDuration(scrubPreview ?: state.positionMs), color = c.onSurfaceVariant, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, modifier = time)
+                Isolated { Text(formatDuration(scrubPreview ?: state.positionMs), color = c.onSurfaceVariant, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, modifier = time) }
 
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     val ask = state.askSegment
@@ -938,28 +943,44 @@ fun FullscreenPlayer(state: PlayerState, onExit: () -> Unit) {
     val exitNow by rememberUpdatedState(onExit)
     // a swipe down that starts in the middle of the screen leaves full screen (the sides keep their brightness and volume swipes);
     // the touches are only watched, never taken, so taps and the player's own gestures work as before
+    // the video follows the finger down (and shrinks a little) while it is pulled; let go past the line it leaves full screen, before it it springs back
+    val pull = remember { androidx.compose.animation.core.Animatable(0f) }
+    val pullScope = rememberCoroutineScope()
     val exitSwipe = Modifier.pointerInput(Unit) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
             val w = size.width.toFloat()
             if (down.position.x < w / 3f || down.position.x > w * 2f / 3f) return@awaitEachGesture
             val need = 110.dp.toPx()
+            var pulling = false
+            var last = 0f
             while (true) {
                 val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
                 if (!ch.pressed) break
                 val dy = ch.position.y - down.position.y
                 val dx = kotlin.math.abs(ch.position.x - down.position.x)
-                if (dy > need && dx < dy * 0.6f) { exitNow(); break }
+                if (!pulling && dy > 24.dp.toPx() && dx < dy * 0.6f) pulling = true
+                if (pulling) { last = dy.coerceAtLeast(0f); pullScope.launch { pull.snapTo(last) } }
+            }
+            if (pulling) {
+                if (last > need) { exitNow(); pullScope.launch { pull.snapTo(0f) } }
+                else pullScope.launch { pull.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 500f)) }
             }
         }
+    }
+    val pullLayer = Modifier.graphicsLayer {
+        val p = pull.value
+        translationY = p
+        val k = 1f - (p / size.height.coerceAtLeast(1f)).coerceIn(0f, 1f) * 0.25f
+        scaleX = k; scaleY = k
     }
     VideoContent(
         state = state,
         fullscreen = true,
         onCollapse = onExit,
         onToggleFullscreen = onExit,
-        modifier = Modifier.fillMaxSize().then(exitSwipe),
+        modifier = Modifier.fillMaxSize().then(exitSwipe).then(pullLayer),
     )
 }
 

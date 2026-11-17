@@ -78,7 +78,7 @@ class PlayerState(private val scope: CoroutineScope) {
         private set
 
     /** Song / Video: the video is only decoded while it is shown (a song with the cover needs no picture, and decoding it made the music player lag). */
-    fun setMusicVideo(on: Boolean) { musicVideo = on; applyVideoTrack() }
+    fun switchMusicVideo(on: Boolean) { musicVideo = on; applyVideoTrack() }
 
     private var musicDislikeTick by mutableStateOf(0)
 
@@ -320,6 +320,8 @@ class PlayerState(private val scope: CoroutineScope) {
         openedAt = android.os.SystemClock.elapsedRealtime()
         Log.i("YTXTubeTime", "open ${item.id}")
         if (startPlayback) Net.prewarmMediaConnection()
+        // another video was picked: the one playing stops at once (it went on playing until the new one had loaded)
+        if (current?.id != item.id) runCatching { controller?.pause() }
         current = item
         if (isMusicMode) RecentMusic.record(item)
         details = null

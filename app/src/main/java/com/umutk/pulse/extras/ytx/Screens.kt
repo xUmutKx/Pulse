@@ -841,6 +841,12 @@ class SearchState(private val scope: CoroutineScope) {
         private set
     var generation by mutableStateOf(0)
         private set
+    /** Playlists instead of videos (the playlist button in the search bar). */
+    var playlistsMode by mutableStateOf(false)
+        private set
+    var playlists by mutableStateOf<List<PlaylistRef>>(emptyList())
+        private set
+    fun togglePlaylists() { playlistsMode = !playlistsMode; if (submitted.isNotEmpty()) { query = submitted; submit() } }
     private var job: Job? = null
     private var suggestJob: Job? = null
 
@@ -893,7 +899,10 @@ class SearchState(private val scope: CoroutineScope) {
         error = null
         job?.cancel()
         job = scope.launch {
-            runCatching { YouTube.search(q) }
+            if (playlistsMode) runCatching { InnerTube.searchPlaylists(q) }
+                .onSuccess { playlists = it; generation++ }
+                .onFailure { error = YouTube.friendlyError(it) }
+            else runCatching { YouTube.search(q) }
                 .onSuccess { results = it; generation++ }
                 .onFailure { error = YouTube.friendlyError(it) }
             loading = false
@@ -983,6 +992,13 @@ fun SearchScreen(
                                 },
                         )
                     }
+                    // playlists instead of videos: the button is filled while it is on
+                    Box(
+                        modifier = Modifier.size(40.dp).clip(CircleShape)
+                            .background(if (state.playlistsMode) c.primary.copy(alpha = 0.18f) else Color.Transparent)
+                            .pressable { state.togglePlaylists() },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, "Playlists", tint = if (state.playlistsMode) c.primary else c.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
                     if (state.query.isNotEmpty()) {
                         Box(
                             modifier = Modifier.size(40.dp).pressable {
@@ -999,8 +1015,17 @@ fun SearchScreen(
         val draft = state.query.isNotBlank() &&
             (state.submitted.isEmpty() || state.query.trim() != state.submitted.trim())
         Box(Modifier.fillMaxSize()) {
-        Box(Modifier.padding(top = if (!draft && state.results.isNotEmpty() && state.error == null) 0.dp else top)) {
+        Box(Modifier.padding(top = if (!draft && state.results.isNotEmpty() && state.error == null && !state.playlistsMode) 0.dp else top)) {
         when {
+            !draft && state.playlistsMode && state.submitted.isNotEmpty() && state.error == null -> {
+                val openPl = LocalPlaylistOpener.current
+                if (state.loading && state.playlists.isEmpty()) Box(Modifier.fillMaxWidth().padding(top = 32.dp), Alignment.Center) {
+                    CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
+                } else if (state.playlists.isEmpty()) EmptyState(icon = Icons.Rounded.Search, title = "No playlists", body = "Nothing found for this search.")
+                else LazyColumn(contentPadding = contentPadding) {
+                    items(state.playlists, key = { "pl-" + it.id }) { pl -> PlaylistRow(pl) { openPl(pl) } }
+                }
+            }
             draft -> {
                 val matchingHistory = SearchHistory.queries.filter {
                     it.contains(state.query.trim(), ignoreCase = true)

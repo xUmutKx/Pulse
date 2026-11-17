@@ -1319,7 +1319,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * [after] is how many characters stand between the end of the word and the cursor.
      */
     private fun flashFix(c: android.view.inputmethod.InputConnection, old: String, new: String, after: Int) {
-        if (!KeyboardPrefs.fixFlash) return
+        // the grey behind the word takes the place of the phone's blue flash (both at once was a long blue band)
+        if (!KeyboardPrefs.fixFlash || KeyboardPrefs.fixSelect) return
         runCatching {
             val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
                 ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return
@@ -1330,6 +1331,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     // ---- the mended word is selected for a moment (it shows highlighted, as if picked), then the cursor goes back behind it -------------------------------------------
     private var flash: IntArray? = null   // start, end of the word and where the cursor goes back to
+    private var flashWord: String? = null  // the word shown with the grey behind it (put back plain when the moment ends)
     private val flashHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val flashEnd = Runnable { endFlash() }
     private val pauseHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -1339,7 +1341,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         pauseHandler.removeCallbacksAndMessages(null)   // every key cancels the correction that waits for a pause in the typing
         val f = flash ?: return
         flash = null; flashHandler.removeCallbacks(flashEnd)
-        runCatching { currentInputConnection?.setSelection(f[2], f[2]); selStart = f[2]; selEnd = f[2] }
+        runCatching {
+            val c = currentInputConnection ?: return@runCatching
+            // the soft grey behind the word goes: the same word again without it, closed where it is, and the cursor back where it was
+            val w = flashWord
+            if (w != null) { c.beginBatchEdit(); c.setComposingRegion(f[0], f[1]); c.setComposingText(w, 1); c.finishComposingText(); c.setSelection(f[2], f[2]); c.endBatchEdit() }
+            else c.setSelection(f[2], f[2])
+            selStart = f[2]; selEnd = f[2]
+        }
+        flashWord = null
     }
 
     /** After the key's work is done: the corrected [word] (with [tail] behind it, at the cursor) lights up for most of a second. */
@@ -1357,9 +1367,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return@post
                 val ws = end - tail.length - word.length
                 if (ws < 0) return@post
-                if (c.setSelection(ws, ws + word.length)) {
-                    flash = intArrayOf(ws, ws + word.length, end)
-                    flashHandler.postDelayed(flashEnd, 800L)
+                // a short, soft grey behind the word (the field's selection was a long, bright blue): the word is put back with a light background for a moment
+                val tint = android.text.SpannableString(word).apply { setSpan(android.text.style.BackgroundColorSpan(0x40909090), 0, word.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+                c.beginBatchEdit()
+                val ok = c.setComposingRegion(ws, ws + word.length) && c.setComposingText(tint, 1)
+                c.setSelection(end, end)
+                c.endBatchEdit()
+                if (ok) {
+                    flash = intArrayOf(ws, ws + word.length, end); flashWord = word
+                    flashHandler.postDelayed(flashEnd, 450L)
                 }
             }
         }

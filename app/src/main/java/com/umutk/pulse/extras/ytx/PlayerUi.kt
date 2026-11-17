@@ -1246,7 +1246,7 @@ fun BitChordMusicPlayer(
                             Box(
                                 Modifier.clip(RoundedCornerShape(50))
                                     .background(if (on) c.onSurface.copy(alpha = 0.92f) else Color.Transparent)
-                                    .pressable(onClick = { state.setMusicVideo(video) })
+                                    .pressable(onClick = { state.switchMusicVideo(video) })
                                     .padding(horizontal = 20.dp, vertical = 7.dp),
                             ) {
                                 Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (on) c.surface else c.onSurface.copy(alpha = 0.8f))
@@ -1279,18 +1279,20 @@ fun BitChordMusicPlayer(
 
 
             if (showLyrics) {
-                MusicLyricsPanel(
-                    lyrics = lyrics,
-                    loading = lyricsLoading,
-                    positionMs = state.positionMs,
-                    englishScript = englishScript,
-                    onToggleEnglish = { englishScript = !englishScript },
-                    onSeek = { state.seekTo(it) },
-                    onDismiss = { showLyrics = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(if (showLyrics) 7f else 3.5f),
-                )
+                IsolatedCol {
+                    MusicLyricsPanel(
+                        lyrics = lyrics,
+                        loading = lyricsLoading,
+                        positionMs = state.positionMs,
+                        englishScript = englishScript,
+                        onToggleEnglish = { englishScript = !englishScript },
+                        onSeek = { state.seekTo(it) },
+                        onDismiss = { showLyrics = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(if (showLyrics) 7f else 3.5f),
+                    )
+                }
             } else if (state.musicVideo) {
                 // the video of the track in place of the cover
                 VideoContent(
@@ -1389,47 +1391,49 @@ fun BitChordMusicPlayer(
             Spacer(Modifier.height(16.dp))
 
 
-            val duration = state.durationMs.coerceAtLeast(1L)
-            val currentPos = state.positionMs.coerceIn(0L, duration)
-            var dragPos by remember { mutableStateOf<Float?>(null) }
-            val sliderValue = dragPos ?: (currentPos.toFloat() / duration.toFloat())
+            IsolatedCol {
+                val duration = state.durationMs.coerceAtLeast(1L)
+                val currentPos = state.positionMs.coerceIn(0L, duration)
+                var dragPos by remember { mutableStateOf<Float?>(null) }
+                val sliderValue = dragPos ?: (currentPos.toFloat() / duration.toFloat())
 
-            Slider(
-                value = sliderValue.coerceIn(0f, 1f),
-                onValueChange = { dragPos = it },
-                onValueChangeFinished = {
-                    dragPos?.let {
-                        state.seekTo((it * duration).toLong())
-                    }
-                    dragPos = null
-                },
-                colors = SliderDefaults.colors(
-                    thumbColor = c.onSurface,
-                    activeTrackColor = c.onSurface,
-                    inactiveTrackColor = c.onSurface.copy(alpha = 0.2f),
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    formatDuration((dragPos?.let { (it * duration).toLong() } ?: currentPos)),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.onSurfaceVariant.copy(alpha = 0.75f),
+                Slider(
+                    value = sliderValue.coerceIn(0f, 1f),
+                    onValueChange = { dragPos = it },
+                    onValueChangeFinished = {
+                        dragPos?.let {
+                            state.seekTo((it * duration).toLong())
+                        }
+                        dragPos = null
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = c.onSurface,
+                        activeTrackColor = c.onSurface,
+                        inactiveTrackColor = c.onSurface.copy(alpha = 0.2f),
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Text(
-                    formatDuration(duration),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.onSurfaceVariant.copy(alpha = 0.75f),
-                )
+
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        formatDuration((dragPos?.let { (it * duration).toLong() } ?: currentPos)),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = c.onSurfaceVariant.copy(alpha = 0.75f),
+                    )
+                    Text(
+                        formatDuration(duration),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = c.onSurfaceVariant.copy(alpha = 0.75f),
+                    )
+                }
             }
 
             Spacer(Modifier.height(12.dp))
