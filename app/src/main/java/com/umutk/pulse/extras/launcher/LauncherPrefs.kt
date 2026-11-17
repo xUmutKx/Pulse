@@ -147,7 +147,8 @@ object LauncherPrefs {
     /** true (the default): desktop icons sit on a grid of [deskCols] x [deskRows] cells; false: they stay exactly where they are put down. */
     var snapIcons by mutableStateOf(true)
     /** The launcher's own accent colour (the Windows 11 look): off, it follows the look; on, [accentArgb]. Not Pulse's accent: the launcher keeps its own. */
-    var accentOn by mutableStateOf(false)
+    // the launcher's own accent is on by default, in Windows blue (not the app's accent)
+    var accentOn by mutableStateOf(true)
     var accentArgb by mutableStateOf(0xFF0067C0.toInt())
     /** Grid: an icon with no place of its own fills the first free cell (true) or goes after the last one used (false, the default), and a place once given is kept, so nothing moves up into a gap. */
     var fillGaps by mutableStateOf(false)
@@ -211,7 +212,7 @@ object LauncherPrefs {
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons3") != "false"; fillGaps = p.getProperty("fillGaps") == "true"
-        accentOn = p.getProperty("accentOn") == "true"; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
+        accentOn = p.getProperty("accentOn")?.let { it == "true" } ?: true; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
         // a tablet has far more room: its grid starts finer (turned 16 x 8, upright 6 x 12), so an icon can sit between two others; a phone keeps 4 x 8 and 8 x 4
         val tab = c.resources.configuration.smallestScreenWidthDp >= 600
         deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 16) ?: if (tab) 6 else 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 24) ?: if (tab) 12 else 8
