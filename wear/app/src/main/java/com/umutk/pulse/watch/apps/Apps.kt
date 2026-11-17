@@ -42,7 +42,7 @@ object Prefs {
         W.accent = Color(s.getLong("accent", ACCENTS[0]))
     }
     fun setAccent(v: Long) { W.accent = Color(v); p?.edit()?.putLong("accent", v)?.apply() }
-    fun setCrownTicks(v: Boolean) { crownTicks = v; p?.edit()?.putBoolean("crownTicks", v)?.apply() }
+    fun changeCrownTicks(v: Boolean) { crownTicks = v; p?.edit()?.putBoolean("crownTicks", v)?.apply() }
     fun string(key: String, def: String = ""): String = p?.getString(key, def) ?: def
     fun putString(key: String, v: String) { p?.edit()?.putString(key, v)?.apply() }
     fun int(key: String, def: Int = 0): Int = p?.getInt(key, def) ?: def

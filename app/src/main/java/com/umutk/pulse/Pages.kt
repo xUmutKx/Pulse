@@ -546,7 +546,8 @@ fun SettingsPage() {
                     }
                 }
                 // the picture behind the Windows 11 windows: phone wallpaper, the bundled A-D packs, or your own
-                if (T.id == "win11") com.umutk.pulse.extras.ui.FlatSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
+                // (every look: the blurred picture behind the pages, the "cloudy" background)
+                com.umutk.pulse.extras.ui.FlatSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
             }
             "general" -> GeneralSettings()
             "functions" -> FunctionsSettings()
