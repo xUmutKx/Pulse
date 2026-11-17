@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,35 +62,44 @@ private val YouTubeSpeeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2
 @Composable
 fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    var value by remember { mutableFloatStateOf(PlaybackSpeed.snap(state.speed).coerceIn(0.25f, 2.5f)) }
-    LaunchedEffect(state.speed) { value = PlaybackSpeed.snap(state.speed).coerceIn(0.25f, 2.5f) }
+    // any speed between the ends (the slider gives 1.17 as it is); the buttons and the chips go by their own steps
+    var value by remember { mutableFloatStateOf(PlaybackSpeed.free(state.speed).coerceIn(0.25f, 2.5f)) }
+    LaunchedEffect(state.speed) { value = PlaybackSpeed.free(state.speed).coerceIn(0.25f, 2.5f) }
 
     fun apply(next: Float) {
-        value = PlaybackSpeed.snap(next.coerceIn(0.25f, 2.5f))
+        value = PlaybackSpeed.free(next.coerceIn(0.25f, 2.5f))
         state.commitSpeed(value)
     }
 
     PlayerGlassSheet("Playback speed", backdrop, onDismiss) {
-        Row(
-            Modifier.fillMaxWidth().padding(bottom = 10.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Speed, null, tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(9.dp))
-            Text(
-                PlaybackSpeed.label(value) + "×",
-                fontFamily = RoundedHeavy,
-                fontWeight = FontWeight.Black,
-                fontSize = 30.sp,
-            )
+        // the speed in the middle; "Remember" is a small button at the top right (it was a whole row)
+        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+            Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Speed, null, tint = c.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(9.dp))
+                Text(PlaybackSpeed.label(value) + "×", fontFamily = RoundedHeavy, fontWeight = FontWeight.Black, fontSize = 30.sp)
+            }
+            val on = PlaybackSpeed.remember
+            Row(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (on) c.primary else c.surfaceContainerHighest)
+                    .pressable { state.toggleRememberSpeed() }
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (on) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, tint = c.onPrimary, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)) }
+                Text("Remember", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = if (on) c.onPrimary else c.onSurface)
+            }
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             SpeedStepButton(Icons.Rounded.Remove, "Slower") { apply(value - 0.25f) }
             Slider(
                 value = value,
-                onValueChange = { value = PlaybackSpeed.snap(it.coerceIn(0.25f, 2.5f)) },
+                // free: 1.17 is a speed; the video follows the slider while it moves
+                onValueChange = { value = PlaybackSpeed.free(it.coerceIn(0.25f, 2.5f)); state.previewSpeed(value) },
                 onValueChangeFinished = { state.commitSpeed(value) },
                 valueRange = 0.25f..2.5f,
                 colors = SliderDefaults.colors(
@@ -102,49 +112,21 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
             SpeedStepButton(Icons.Rounded.Add, "Faster") { apply(value + 0.25f) }
         }
 
-        Spacer(Modifier.height(16.dp))
-        YouTubeSpeeds.chunked(5).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { speed ->
+        Spacer(Modifier.height(10.dp))
+        // one row, 0.25 at the left end and 2.5 at the right end; on a narrow screen the row scrolls
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val fits = maxWidth / YouTubeSpeeds.size >= 54.dp
+            val chips: @Composable (Boolean) -> Unit = { fill ->
+                YouTubeSpeeds.forEach { speed ->
                     SpeedChip(
                         label = PlaybackSpeed.label(speed) + "×",
                         selected = abs(value - speed) < 0.001f,
-                        caption = if (speed == 1f) "Normal" else null,
-                        modifier = Modifier.weight(1f),
+                        modifier = if (fill) Modifier.weight(1f) else Modifier.width(58.dp),
                     ) { apply(speed) }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(c.surfaceContainerHigh.copy(alpha = 0.5f))
-                .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Remember speed", fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Use this speed for every video",
-                    color = c.onSurfaceVariant,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Switch(
-                checked = PlaybackSpeed.remember,
-                onCheckedChange = { state.toggleRememberSpeed() },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = c.onPrimary,
-                    checkedTrackColor = c.primary,
-                    uncheckedThumbColor = c.onSurfaceVariant,
-                    uncheckedTrackColor = c.surfaceContainerHighest,
-                ),
-            )
+            if (fits) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(true) }
+            else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(false) }
         }
         Spacer(Modifier.height(4.dp))
     }
