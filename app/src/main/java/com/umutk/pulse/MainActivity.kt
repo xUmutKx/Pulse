@@ -282,8 +282,7 @@ private val SettingsPg = Pg("settings", "Settings", "settings")
 private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
     // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
     // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
-    // (every look now: a picture behind the pages, blurred, is a background for all of them, not only Windows 11)
-    val pic = if (com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
+    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
     // landscape notch / cutout: the shells pad the top and bottom bars only, so the sides are kept clear here
     Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
         if (pic != null) {
@@ -291,8 +290,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             // the blurred copy is rendered once (off the main thread) when the choice changes; here it is only drawn
             val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
             androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
-            // Windows 11 keeps its light blue tint; the other looks lay their own background colour over the picture so the text stays readable
-            Box(Modifier.fillMaxSize().background(if (th.id == "win11") com.umutk.pulse.micaTint().copy(alpha = .12f) else th.bg.copy(alpha = .55f)))
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
         com.umutk.pulse.TabletLayout.load(wctx)
@@ -380,8 +378,7 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
         if (pic != null) {
             val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
             androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
-            // Windows 11 keeps its light blue tint; the other looks lay their own background colour over the picture so the text stays readable
-            Box(Modifier.fillMaxSize().background(if (th.id == "win11") com.umutk.pulse.micaTint().copy(alpha = .12f) else th.bg.copy(alpha = .55f)))
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
         }
         androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
             // below the status bar and the clock, so the back arrow and title stay reachable
