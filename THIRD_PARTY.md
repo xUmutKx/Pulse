@@ -54,3 +54,8 @@ The YouTube extra app is [YTXTube](https://github.com/Koustubh12345/YTXTube) 2.2
 a light glass stand-in instead of the Kyant backdrop shaders, songs saved to Music with their tags and cover, no self-updater). It uses
 [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPL-3.0), [SponsorBlock](https://sponsor.ajay.app) data (CC BY-NC-SA 4.0),
 [OkHttp](https://square.github.io/okhttp/) and [Coil](https://coil-kt.github.io/coil/) (Apache 2.0).
+
+
+## Free Exercise DB (exercise photos)
+
+The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from the Free Exercise DB, github.com/yuhonas/free-exercise-db, released into the public domain (Unlicense).

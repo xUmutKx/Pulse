@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "heart" to (tr("Less battery use: the loops of the screen stop while the app is in the background, the sampler reads less often, widgets are redrawn less, Game Hub's idle halo is still. Gym exercises show a two-photo loop. Icon packs, bird sounds, the gym data and better wallpapers are downloads that come by themselves where they are used.",
+        "Daha az pil: ekranın döngüleri uygulama arka plandayken duruyor, örnekleyici daha seyrek okuyor, widget'lar daha seyrek çiziliyor, Game Hub'ın boştaki halesi durgun. Spor egzersizleri iki fotoğraflı döngü gösteriyor. Simge paketleri, kuş sesleri, spor verisi ve daha iyi duvar kağıtları kullanıldığı yerde kendiliğinden iniyor.")),
     "palette" to (tr("Downloads where you use them: more Winamp skins in the skin picker, and higher-quality versions of the Windows 11 (4K), Windows 10 and Windows 7 wallpapers in the wallpaper pickers of Pulse and the launcher.",
         "İndirmeler kullandığın yerde: tema seçicide daha fazla Winamp teması, Pulse ve başlatıcının duvar kağıdı seçicilerinde Windows 11 (4K), Windows 10 ve Windows 7 duvar kağıtlarının yüksek kaliteli halleri.")),
     "music" to (tr("The lyrics already on your phone get their word times once, by themselves, in the background. Settings > Lyrics has the switch and an Add now button.",
