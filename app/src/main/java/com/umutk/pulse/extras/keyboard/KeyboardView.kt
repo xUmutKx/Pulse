@@ -212,7 +212,7 @@ val LocalOverlayKb = androidx.compose.runtime.compositionLocalOf { false }
 @Composable
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
-    val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgb > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween(7000, easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
+    val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgb > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween((14000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
     androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue) { KeyboardViewBody(th, st, act, modifier) }
 }
 
@@ -1142,7 +1142,16 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
         val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         val keyHue = LocalHue.current
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFx, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
-            .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier), contentAlignment = Alignment.Center) {
+            .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier)
+            // the chasing light: a bright arc runs round the edge of the key (turning once per colour cycle, each key a little ahead of the one beside it), the rest of the edge stays faint
+            .then(if (KeyboardPrefs.rgb == 3 && keyHue != null) Modifier.drawWithContent {
+                drawContent()
+                val c0 = Color.hsv((keyHue.value + rect.left / maxOf(1f, st.rootW) * 120f) % 360f, .9f, 1f)
+                rotate(keyHue.value + rect.left / maxOf(1f, st.rootW) * 90f, center) {
+                    drawRoundRect(androidx.compose.ui.graphics.Brush.sweepGradient(0f to Color.Transparent, .55f to c0.copy(alpha = .08f), .85f to c0.copy(alpha = .9f), 1f to c0, center = center),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                }
+            } else Modifier), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             // (the Samsung look: the letters are 27 sp and the digits 24 sp, measured on the real keyboard)
             val fs = if (th.samsung) 27.sp else (big * (.85f + .15f * KeyboardPrefs.heightAt(kbLand()) / 100f)).sp
@@ -1204,7 +1213,7 @@ private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape:
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.RgbWash() {
     val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "rgbWash")
-    val h by t.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(9000, easing = androidx.compose.animation.core.LinearEasing)), label = "hue")
+    val h by t.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween((18000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue")
     Box(Modifier.matchParentSize().drawBehind {
         drawRect(androidx.compose.ui.graphics.Brush.linearGradient(List(5) { Color.hsv(((h + it * 72f) % 360f + 360f) % 360f, .8f, 1f).copy(alpha = .35f) }))
     })

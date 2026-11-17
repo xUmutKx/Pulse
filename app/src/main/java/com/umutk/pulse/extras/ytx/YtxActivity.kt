@@ -106,6 +106,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -612,6 +613,7 @@ fun YtxTubeApp() {
         Box(
             Modifier
                 .fillMaxSize()
+                .nestedScroll(GlassScrollWatcher)
                 .layerBackdrop(pageBackdrop)
                 .background(c.surface)
                 .graphicsLayer {
