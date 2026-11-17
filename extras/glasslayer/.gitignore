@@ -1,0 +1,17 @@
+*.iml
+*.ipr
+*.iws
+/.idea/
+.gradle
+/local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.md
+!README.md
+/app/release/
+/app/debug/
+/app/review/
