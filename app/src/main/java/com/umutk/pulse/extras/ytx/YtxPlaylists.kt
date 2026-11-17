@@ -61,3 +61,17 @@ fun ChoiceChips(names: List<String>, selected: Int, onPick: (Int) -> Unit, modif
         }
     }
 }
+
+/**
+ * Series and movies, opened from YTXTube inside YTXTube's own task: Back returns to YTXTube, and the recent apps show YTXTube (a window of its own, as before,
+ * sent Back to the home screen and showed up there as a Pulse window). In the black AMOLED look.
+ */
+fun openSeriesPage(ctx: android.content.Context) {
+    runCatching {
+        val i = android.content.Intent(ctx, com.umutk.pulse.YtxSeriesActivity::class.java).putExtra("route", "series").putExtra("look", "amoled")
+        // the window the page is drawn in may be wrapped (a themed context): the activity under it starts the page, so it joins YTXTube's task
+        var c = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        if (c is android.app.Activity) c.startActivity(i) else { i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK); ctx.startActivity(i) }
+    }
+}

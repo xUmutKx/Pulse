@@ -1794,6 +1794,9 @@
         <!-- the home-screen shortcut of a game (Game Hub): starts it, also when it is hidden -->
         <activity android:name=".extras.gamehub.GameLaunch" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" />
         <activity android:name=".PulsePickActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <!-- Series and movies opened from YTXTube: in YTXTube's own task (Back returns to it), labelled YTXTube in the recent apps -->
+        <activity android:name=".YtxSeriesActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:label="YTXTube" android:icon="@drawable/ytx_ic_brand" android:taskAffinity="com.umutk.pulse.ytx"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.tools"
             android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
 
