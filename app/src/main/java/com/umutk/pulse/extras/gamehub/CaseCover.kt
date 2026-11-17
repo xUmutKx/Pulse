@@ -124,7 +124,21 @@ internal object CaseCover {
         val f = file(c, pkg, style); f.parentFile?.mkdirs()
         FileOutputStream(f).use { box.compress(Bitmap.CompressFormat.JPEG, 92, it) }
         box.recycle(); art.recycle()
+        // the boxes this game had in other styles are not shown any more: they are not kept (each style used to leave its own file behind)
+        STYLES.filter { it != style }.forEach { runCatching { file(c, pkg, it).delete() } }
         return true
+    }
+
+    /** Deletes the boxes that are not the ones in use (left by earlier style changes and mixes); the bytes freed. Runs when the shelf opens. */
+    fun prune(c: Context): Long {
+        val cur = style(c)
+        val keep: Set<String>? = if (cur == "mix") mixMap(c).map { (p, st) -> file(c, p, st).name }.toSet() else null
+        var freed = 0L
+        File(c.filesDir, "gamehub").listFiles { f -> f.name.startsWith("case_") && f.name.endsWith(".jpg") }?.forEach { f ->
+            val stale = if (keep != null) f.name !in keep else !f.name.endsWith("_$cur.jpg")
+            if (stale) { freed += f.length(); f.delete() }
+        }
+        return freed
     }
 
     /** Makes the box of every game that has a Steam picture, in the chosen style. */
