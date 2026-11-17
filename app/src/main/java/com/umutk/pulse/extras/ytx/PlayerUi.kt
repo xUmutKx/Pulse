@@ -870,12 +870,7 @@ fun MiniPlayer(
     var touchedAt by remember { mutableLongStateOf(0L) }
     fun touched() { touchedAt = System.currentTimeMillis() }
 
-    LaunchedEffect(miniControlsVisible, state.isPlaying, touchedAt) {
-        if (miniControlsVisible && state.isPlaying) {
-            delay(3000)
-            miniControlsVisible = false
-        }
-    }
+    // the buttons of the mini player (play, close) stay up: they never hide, so the close button answers the first tap
 
     Box(
         modifier = modifier
@@ -883,14 +878,8 @@ fun MiniPlayer(
             .aspectRatio(16f / 9f)
             .pressable(
                 pressedScale = 0.99f,
-                onClick = {
-                    if (!miniControlsVisible) {
-                        miniControlsVisible = true
-                        touched()
-                    } else {
-                        onExpand()
-                    }
-                },
+                // one tap opens the player at once (it used to show the buttons first and open on a second tap)
+                onClick = { onExpand() },
             )
             .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = 0.20f), spotColor = Color.Black.copy(alpha = 0.28f))
             .border(1.dp, c.outlineVariant.copy(alpha = 0.25f), shape)

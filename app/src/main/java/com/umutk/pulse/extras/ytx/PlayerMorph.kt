@@ -88,9 +88,10 @@ class PlayerMorph(
         if (!dragging) return
         dragging = false
         val p = progress.value
+        // the player follows the finger and only goes to the mini player when it was pulled far enough (or flung after a real pull): a small flick no longer snaps it away
         val expand = when {
-            velocityY > FLING_PX_PER_S -> false
-            velocityY < -FLING_PX_PER_S -> true
+            velocityY > FLING_PX_PER_S && (!startedExpanded || p < 1f - MIN_FLING_TRAVEL) -> false
+            velocityY < -FLING_PX_PER_S && (startedExpanded || p > MIN_FLING_TRAVEL) -> true
             startedExpanded -> p > 1f - DISMISS_FROM_FULL
             else -> p > EXPAND_FROM_MINI
         }
@@ -150,11 +151,13 @@ class PlayerMorph(
     }
 
     companion object {
-        const val FLING_PX_PER_S = 2200f
-        const val DISMISS_FROM_FULL = 0.32f
+        const val FLING_PX_PER_S = 3000f
+        const val MIN_FLING_TRAVEL = 0.12f
+        const val DISMISS_FROM_FULL = 0.4f
         const val EXPAND_FROM_MINI = 0.32f
-        private val settleSpec = spring(dampingRatio = 0.86f, stiffness = 550f, visibilityThreshold = 0.0005f)
-        private val closeSpec = spring(dampingRatio = 1f, stiffness = 550f, visibilityThreshold = 0.0005f)
+        // softer springs: the player glides into place from where the finger left it instead of jumping
+        private val settleSpec = spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = 0.0005f)
+        private val closeSpec = spring(dampingRatio = 1f, stiffness = 320f, visibilityThreshold = 0.0005f)
     }
 }
 
