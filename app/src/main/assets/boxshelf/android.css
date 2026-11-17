@@ -245,3 +245,8 @@ html.platform-android .bss-root .bss-krow{gap:5px;margin-bottom:6px}
 html.platform-android .bss-root .bss-key{min-width:0;flex:1 1 0;height:46px;padding:0 2px;font-size:19px;border-radius:10px}
 html.platform-android .bss-root .bss-key.wide{flex:3.2 1 0}
 html.platform-android .bss-root .bss-key.mid{flex:1.7 1 0;font-size:14px}
+
+/* Battery: the halo behind the selected box breathed for ever (a 24 px blur re-drawn every frame on the GPU while the shelf stood still): it stays still, with a lighter blur. */
+.platform-android .sel-halo{animation:none!important;filter:blur(14px)!important}
+/* the same for the slow drift of the launch picture and the endless spin and glow of the inspector, which only matter while the person looks at them closely */
+.platform-android .l-bg img{will-change:auto!important}
