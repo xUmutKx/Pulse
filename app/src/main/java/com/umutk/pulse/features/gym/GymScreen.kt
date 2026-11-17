@@ -99,6 +99,8 @@ fun GymScreen(onBack: () -> Unit, startTab: Int = 0) {
     var tab by remember { mutableIntStateOf(startTab.coerceIn(0, 6)) }
     var detail by remember { mutableStateOf<GymEx?>(null) }
     BackHandler { if (detail != null) detail = null else onBack() }
+    // the exercise pictures (5 MB) are asked for once, the first time the gym is opened
+    com.umutk.pulse.extras.store.PackAsk("gym-anim", tr("Exercise pictures", "Egzersiz resimleri"))
     val tabs = listOf(tr("Train", "Antrenman"), tr("Library", "Egzersizler"), tr("History", "Geçmiş"), tr("Progress", "Gelişim"), tr("Body", "Vücut"), tr("Food", "Beslenme"), tr("Recap", "Özet"))
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -156,7 +158,7 @@ private fun ArtView(art: String, size: androidx.compose.ui.unit.Dp) {
 private fun MotionView(ex: GymEx, width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
     val ctx = LocalContext.current
     val packRev by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
-    LaunchedEffect(Unit) { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, "gym-anim") }
+    LaunchedEffect(Unit) { if (com.umutk.pulse.extras.store.PackConsent.state(ctx, "gym-anim") == 1) com.umutk.pulse.extras.store.PackAuto.ensure(ctx, "gym-anim") }
     val file = remember(ex.id, packRev) { java.io.File(com.umutk.pulse.extras.store.StoreInstaller.dataDir(ctx, "gym-anim"), "${ex.id}.webp").takeIf { it.isFile } }
     if (file != null && android.os.Build.VERSION.SDK_INT >= 28) {
         androidx.compose.ui.viewinterop.AndroidView(

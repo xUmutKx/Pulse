@@ -153,6 +153,32 @@ class PipController(private val activity: ComponentActivity) {
 
     var videoBounds: Rect? = null
 
+    /** Called with "toggle", "next" or "audio" when a button of the picture-in-picture window is pressed. */
+    var onAction: (String) -> Unit = {}
+
+    /** Whether the video plays now: the middle button shows pause or play. */
+    var playing by mutableStateOf(false)
+
+    /** The buttons of the window: the headphones (play on in the background, the window closes), play / pause and next. They take the place of the phone's own media buttons. */
+    private fun remoteActions(): List<android.app.RemoteAction> {
+        fun act(op: String, icon: Int, title: String, code: Int): android.app.RemoteAction {
+            val pi = android.app.PendingIntent.getBroadcast(activity, code, android.content.Intent(PIP_ACTION).setPackage(activity.packageName).putExtra("op", op),
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+            return android.app.RemoteAction(android.graphics.drawable.Icon.createWithResource(activity, icon), title, title, pi)
+        }
+        return listOf(
+            act("audio", com.umutk.pulse.R.drawable.ytx_pip_headphones, "Play in the background", 1),
+            act("toggle", if (playing) com.umutk.pulse.R.drawable.ytx_pip_pause else com.umutk.pulse.R.drawable.ytx_pip_play, if (playing) "Pause" else "Play", 2),
+            act("next", com.umutk.pulse.R.drawable.ytx_pip_next, "Next", 3),
+        )
+    }
+
+    /** The window is open: its buttons are drawn again (the middle one follows play and pause). */
+    fun refresh() {
+        if (!supported) return
+        runCatching { activity.setPictureInPictureParams(PictureInPictureParams.Builder().setActions(remoteActions()).build()) }
+    }
+
 
     fun enter(videoAspect: Float): Boolean {
         if (!supported) return false
@@ -160,6 +186,7 @@ class PipController(private val activity: ComponentActivity) {
         val ratio = videoAspect.coerceIn(0.42f, 2.38f)
         val params = PictureInPictureParams.Builder()
             .setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
+            .setActions(remoteActions())
             .apply {
                 videoBounds?.let { b -> setSourceRectHint(android.graphics.Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())) }
             }
@@ -172,6 +199,7 @@ class PipController(private val activity: ComponentActivity) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val builder = PictureInPictureParams.Builder()
                 .setAutoEnterEnabled(enabled)
+                .setActions(remoteActions())
             if (enabled) {
                 val ratio = videoAspect.coerceIn(0.42f, 2.38f)
                 builder.setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
@@ -185,6 +213,14 @@ class PipController(private val activity: ComponentActivity) {
 
     @Composable
     fun Bind(onClosed: () -> Unit) {
+        // the buttons of the window come back as broadcasts of this app
+        DisposableEffect(activity) {
+            val receiver = object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: android.content.Context?, i: android.content.Intent?) { i?.getStringExtra("op")?.let(onAction) }
+            }
+            androidx.core.content.ContextCompat.registerReceiver(activity, receiver, android.content.IntentFilter(PIP_ACTION), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+            onDispose { runCatching { activity.unregisterReceiver(receiver) } }
+        }
         DisposableEffect(activity) {
             val listener = Consumer<PictureInPictureModeChangedInfo> { info ->
                 active = info.isInPictureInPictureMode
@@ -197,5 +233,7 @@ class PipController(private val activity: ComponentActivity) {
     }
 }
 
+
+private const val PIP_ACTION = "com.umutk.pulse.ytx.PIP_ACTION"
 
 val LocalPictureInPicture = staticCompositionLocalOf<PipController?> { null }

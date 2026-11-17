@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.T
 import com.umutk.pulse.tr
 
 /**
@@ -60,45 +61,45 @@ fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> 
         val out = if (synced) lines.sortedBy { if (it.timeMs < 0) Long.MAX_VALUE else it.timeMs } else lines.toList()
         onSave(LyricsResult(out.filter { it.text.isNotBlank() || it.timeMs >= 0 }, synced, res.source))
     }
-    Column(modifier.background(Color.Black)) {
+    Column(modifier.background(T.bg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { PIcon("close", Color.White, 22.dp) }
-            Text(tr("Edit lyrics", "Sözleri düzenle"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) { PIcon("close", T.text, 22.dp) }
+            Text(tr("Edit lyrics", "Sözleri düzenle"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             // Pulse AI, from inside the editor: it listens to the song and writes the lines (with their times) in place of these
-            if (onAi != null) IconButton(onClick = onAi) { PIcon("star", Color.White, 22.dp) }
-            if (onTogglePlay != null) IconButton(onClick = onTogglePlay) { PIcon(if (playing) "pause" else "play", Color.White, 22.dp) }
-            IconButton(onClick = { save() }) { PIcon("check", Color.White, 22.dp) }
+            if (onAi != null) IconButton(onClick = onAi) { PIcon("star", T.text, 22.dp) }
+            if (onTogglePlay != null) IconButton(onClick = onTogglePlay) { PIcon(if (playing) "pause" else "play", T.text, 22.dp) }
+            IconButton(onClick = { save() }) { PIcon("check", T.text, 22.dp) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Whole song", "Tüm şarkı"), color = Color.White.copy(alpha = .7f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text(tr("Whole song", "Tüm şarkı"), color = T.text.copy(alpha = .7f), fontSize = 13.sp, modifier = Modifier.weight(1f))
             EdChip("−.5 s") { shiftAll(-500) }
             EdChip("+.5 s") { shiftAll(500) }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), listState, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
             itemsIndexed(lines) { i, l ->
                 val now = i == current
-                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).background(if (now) Color.White.copy(alpha = .16f) else Color.Transparent, RoundedCornerShape(10.dp))
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).background(if (now) T.text.copy(alpha = .16f) else Color.Transparent, RoundedCornerShape(10.dp))
                     .padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.width(84.dp)) {
-                        Text(if (l.timeMs < 0) "--:--.--" else stamp(l.timeMs), color = Color.White.copy(alpha = if (now) 1f else .6f), fontSize = 12.sp)
+                        Text(if (l.timeMs < 0) "--:--.--" else stamp(l.timeMs), color = T.text.copy(alpha = if (now) 1f else .6f), fontSize = 12.sp)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             EdChip("−.1") { nudge(i, -100) }
                             EdChip("+.1") { nudge(i, 100) }
                         }
                     }
-                    Box(Modifier.size(32.dp).clickable { setTime(i, positionMs) }, contentAlignment = Alignment.Center) { PIcon("clock", Color.White, 18.dp) }
+                    Box(Modifier.size(32.dp).clickable { setTime(i, positionMs) }, contentAlignment = Alignment.Center) { PIcon("clock", T.text, 18.dp) }
                     BasicTextField(
                         l.text, { lines[i] = lines[i].copy(text = it) },
-                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp), cursorBrush = SolidColor(Color.White),
+                        textStyle = TextStyle(color = T.text, fontSize = 15.sp), cursorBrush = SolidColor(T.text),
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 6.dp),
                     )
-                    Box(Modifier.size(32.dp).clickable { lines.removeAt(i) }, contentAlignment = Alignment.Center) { PIcon("delete", Color.White.copy(alpha = .6f), 18.dp) }
+                    Box(Modifier.size(32.dp).clickable { lines.removeAt(i) }, contentAlignment = Alignment.Center) { PIcon("delete", T.text.copy(alpha = .6f), 18.dp) }
                 }
             }
         }
         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.Center) {
-            Box(Modifier.background(Color.White.copy(alpha = .14f), RoundedCornerShape(16.dp)).clickable { lines.add(LyricLine(if (res.synced) positionMs else -1L, "")) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                PIcon("add", Color.White, 18.dp)
+            Box(Modifier.background(T.text.copy(alpha = .14f), RoundedCornerShape(16.dp)).clickable { lines.add(LyricLine(if (res.synced) positionMs else -1L, "")) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                PIcon("add", T.text, 18.dp)
             }
         }
     }
@@ -106,7 +107,7 @@ fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> 
 
 @Composable
 private fun EdChip(t: String, onClick: () -> Unit) {
-    Text(t, color = Color.White, fontSize = 11.sp, modifier = Modifier.background(Color.White.copy(alpha = .14f), RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 7.dp, vertical = 4.dp))
+    Text(t, color = T.text, fontSize = 11.sp, modifier = Modifier.background(T.text.copy(alpha = .14f), RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 7.dp, vertical = 4.dp))
 }
 
 private fun stamp(ms: Long) = "%02d:%02d.%02d".format(ms / 60000, ms / 1000 % 60, ms / 10 % 100)

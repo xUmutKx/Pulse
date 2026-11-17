@@ -86,7 +86,7 @@ object Lyrics {
      */
     private fun upgradeInBackground(app: Context, path: String, local: LyricsResult, title: String, artist: String, durationMs: Long) {
         if (!LiveLyrics.wordSync(app) || path.contains("://")) return
-        val key = "w|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        val key = "w2|${artist.trim().lowercase()}|${title.trim().lowercase()}"
         if (!upgrading.add(key)) return
         background.launch { try { upgradeWords(app, path, local, title, artist, durationMs) } finally { upgrading.remove(key) } }
     }
@@ -96,9 +96,9 @@ object Lyrics {
      * not asked again for three days.
      */
     suspend fun upgradeWords(app: Context, path: String, local: LyricsResult, title: String, artist: String, durationMs: Long): Boolean {
-        if (!local.synced || local.source !in setOf("lrc", "tag") || local.lines.any { it.words.isNotEmpty() } || path.contains("://")) return false
-        val key = "w|${artist.trim().lowercase()}|${title.trim().lowercase()}"
-        if (missed(app, key)) return false
+        if (!local.synced || local.source !in setOf("lrc", "tag", "cache", "lrclib", "netease") || local.lines.any { it.words.isNotEmpty() } || path.contains("://")) return false
+        val key = "w2|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        if (missed(app, key, 24L * 3600 * 1000)) return false
         val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
         var rec = runCatching { wordUpgrade(LrclibClient(LyricsCache(null)), title, artist, sec) }.getOrNull()
         if (rec == null && netease(app)) rec = runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()?.takeIf { it.hasWords }
@@ -110,11 +110,11 @@ object Lyrics {
     /** The lyrics kept on the phone for a song (its tag, a .lrc beside it), without any search; null when it has none. */
     fun localOnly(path: String, title: String): LyricsResult? = runCatching { readEmbedded(path) ?: readSidecar(path, title) }.getOrNull()
 
-    /** Whether at least four in five of [a]'s lines are lines of [b] too (compared by their letters). */
+    /** Whether at least three in five of [a]'s lines are lines of [b] too (compared by their letters). */
     private fun sameWords(a: LyricsResult, b: LyricsResult): Boolean {
         val have = b.lines.map { fold(it.text) }.filter { it.isNotEmpty() }.toSet()
         val mine = a.lines.map { fold(it.text) }.filter { it.isNotEmpty() }
-        return mine.isNotEmpty() && mine.count { it in have }.toFloat() / mine.size >= .8f
+        return mine.isNotEmpty() && mine.count { it in have }.toFloat() / mine.size >= .6f
     }
 
     /** One more search of LRCLIB for the same song: a record whose words have times, when the title and the artist are close. Null when there is none. */
@@ -491,7 +491,7 @@ object Lyrics {
     }
 
     private fun missPrefs(c: Context) = c.getSharedPreferences("lyrics_miss", Context.MODE_PRIVATE)
-    private fun missed(c: Context, key: String) = System.currentTimeMillis() - missPrefs(c).getLong(sha(key), 0L) < 3L * 24 * 3600 * 1000
+    private fun missed(c: Context, key: String, ttlMs: Long = 3L * 24 * 3600 * 1000) = System.currentTimeMillis() - missPrefs(c).getLong(sha(key), 0L) < ttlMs
     private fun markMiss(c: Context, key: String) = missPrefs(c).edit().putLong(sha(key), System.currentTimeMillis()).apply()
 
     // the lyrics of the search hits of this session, by hit id: kept in memory only, not on the phone
