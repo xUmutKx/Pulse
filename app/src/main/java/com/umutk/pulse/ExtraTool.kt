@@ -259,6 +259,7 @@ open class ExtraToolActivity : ComponentActivity() {
             "messages" -> "launch_messages" to tr("Messages", "Mesajlar")
             "screenrec" -> "launch_screenrec" to tr("Screen recorder", "Ekran kaydı")
             "notifhist" -> "launch_notifhist" to tr("Notification history", "Bildirim geçmişi")
+            "series" -> "ytx_ic_brand" to "YTXTube"
             "extrastore" -> "launch_store" to tr("Store", "Mağaza")
             "localsend" -> "launch_localsend" to tr("Share", "Paylaş")
             "palette" -> "launch_palette" to "Palette"
@@ -304,6 +305,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("HealthLauncher") -> "health"
             n.endsWith("IslandLauncher") -> "island"
             n.endsWith("KeyboardLauncher") || n.endsWith("KeyboardSettingsActivity") -> "keyboard"
+            n.endsWith("YtxSeriesActivity") -> "series"
             // another app's launcher entry (Files, Calendar, Contacts, Photos...) is never the music player: it must not match the "already open" check
             n.endsWith("Launcher") -> n.substringAfterLast('.')
             else -> i.getStringExtra("route") ?: "music"
@@ -313,6 +315,12 @@ open class ExtraToolActivity : ComponentActivity() {
 
 /** The keyboard's settings, started by the system's keyboard list (the gear of the input method). */
 class KeyboardSettingsActivity : ExtraToolActivity()
+
+/**
+ * A page of Pulse opened from YTXTube (Series and movies): it sits in YTXTube's own task (same affinity, no document of its own), so Back returns to YTXTube
+ * and the recent apps show one YTXTube card, not a separate Pulse one.
+ */
+class YtxSeriesActivity : ExtraToolActivity()
 
 /** The tool activity in a see-through window: the launcher's framed Pulse windows (see FramedWindow). */
 class FramedToolActivity : ExtraToolActivity()
