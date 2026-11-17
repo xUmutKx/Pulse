@@ -237,14 +237,14 @@ fun DownloadsScreen(
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
     ) { top ->
         LazyColumn(contentPadding = contentPadding.withTop(top)) {
-            // Series and movies: pick a title, choose the streams and download them (it opens in Pulse's own page, where the downloads run)
+            // Series and movies: pick a title, choose the streams and download them (a screen of its own; the downloads run in Pulse's download manager)
             item(key = "series") {
                 val ctx = androidx.compose.ui.platform.LocalContext.current
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                         .clickable {
-                            runCatching { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.MainActivity::class.java).putExtra("series", true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
+                            runCatching { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.ExtraToolActivity::class.java).putExtra("route", "series").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                         }.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
