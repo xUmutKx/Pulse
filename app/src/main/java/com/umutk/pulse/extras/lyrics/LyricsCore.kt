@@ -15,6 +15,8 @@ data class LyricsRecord(
     val syncedLyrics: String?,
 ) {
     val hasLyrics get() = !instrumental && (!syncedLyrics.isNullOrBlank() || !plainLyrics.isNullOrBlank())
+    /** The words (or syllables) have their own times. */
+    val hasWords get() = syncedLyrics?.let { WordLyrics.hasWordTags(it) } == true
 
     companion object {
         /** A text of the JSON: null for a missing or JSON-null value (org.json would give the text "null" for it, and a song with no lyrics showed "null"). */
@@ -27,13 +29,14 @@ data class LyricsRecord(
             albumName = o.text("albumName"),
             instrumental = o.optBoolean("instrumental"),
             plainLyrics = o.text("plainLyrics"),
-            syncedLyrics = o.text("syncedLyrics"),
+            // a record with word timing (LRCLIB's "lyricsfile") gives its lyrics as an enhanced LRC, so the words keep their times everywhere the text goes
+            syncedLyrics = (if (o.optBoolean("hasWordSync")) o.text("lyricsfile")?.let { WordLyrics.fromLyricsFile(it) } else null) ?: o.text("syncedLyrics"),
         )
     }
 }
 
-/** A word (or syllable) of a line and the moment it starts: from the word tags of an enhanced LRC (`<00:12.30>word`). */
-data class LyricWord(val timeMs: Long, val text: String)
+/** A word (or syllable) of a line, the moment it starts and (when known) the moment it ends: from the word tags of an enhanced LRC (`<00:12.30>word`; a tag with no word after it ends the word before). */
+data class LyricWord(val timeMs: Long, val text: String, val endMs: Long = 0L)
 
 data class LrcLine(val timeMs: Long, val text: String, val words: List<LyricWord> = emptyList())
 
@@ -60,7 +63,9 @@ fun parseLrc(lrc: String): List<LrcLine> {
         val tags = wordTag.findAll(body).toList()
         val words = tags.mapIndexedNotNull { i, t ->
             val seg = body.substring(t.range.last + 1, if (i + 1 < tags.size) tags[i + 1].range.first else body.length)
-            if (seg.isBlank()) null else LyricWord(tagMs(t.value.trim('<', '>')), seg)
+            // the end of a word is the next tag (the last word is ended by a closing tag with no text, when the file has one)
+            val end = if (i + 1 < tags.size) tagMs(tags[i + 1].value.trim('<', '>')) else 0L
+            if (seg.isBlank()) null else LyricWord(tagMs(t.value.trim('<', '>')), seg, end)
         }
         for (m in stamps) {
             val fraction = m.groupValues[3].padEnd(3, '0').toLong() // "05" is 50 ms, "5" is 500 ms

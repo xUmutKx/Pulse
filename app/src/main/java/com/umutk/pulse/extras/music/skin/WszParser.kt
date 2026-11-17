@@ -83,7 +83,8 @@ fun bundledSkins(context: Context): List<InstalledSkin> {
 fun installedSkins(context: Context, turkish: Boolean = false): List<InstalledSkin> {
     val out = ArrayList<InstalledSkin>(bundledSkins(context).sortedBy { it.name.lowercase() })
     val ext = context.getExternalFilesDir(null)
-    val roots = listOfNotNull(ext?.parentFile, context.filesDir).map { java.io.File(it, "extras/skins") } + listOfNotNull(ext?.let { java.io.File(it, "skins") })
+    // the store packs "skins" and "skins-more" (the skins that were once inside the app: a download of 3 MB, Extra store)
+    val roots = listOfNotNull(ext?.parentFile, context.filesDir).flatMap { b -> listOf("extras/skins", "extras/skins-more").map { java.io.File(b, it) } } + listOfNotNull(ext?.let { java.io.File(it, "skins") })
     val user = ArrayList<InstalledSkin>()
     for (root in roots) {
         val names = HashMap<String, String>()

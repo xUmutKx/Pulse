@@ -353,6 +353,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
     var spread by remember { mutableStateOf(LiveLyrics.spreadPlain(c)) }
     var autoPick by remember { mutableStateOf(Lyrics.autoPick(c)) }
+    var netease by remember { mutableStateOf(Lyrics.netease(c)) }
     var wordSync by remember { mutableStateOf(LiveLyrics.wordSync(c)) }
     var minL by remember { mutableStateOf(LiveLyrics.minLines(c)) }
     var lockFont by remember { mutableStateOf(LiveLyrics.lockFont(c)) }
@@ -401,6 +402,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             SwitchRow(tr("Time plain lyrics by the song's length (experimental)", "Zamansız sözleri şarkı süresine göre zamanla (deneysel)"), spread) { spread = it; LiveLyrics.set(c, "spread_plain", it) }
             SwitchRow(tr("Take the first lyrics found", "Bulunan ilk sözleri otomatik seç"), autoPick) { autoPick = it; Lyrics.setAutoPick(c, it) }
             SwitchRow(tr("Word by word lyrics", "Kelime kelime sözler"), wordSync) { wordSync = it; LiveLyrics.set(c, "word_sync", it) }
+            SwitchRow(tr("Extra source: NetEase (word times, more songs)", "Ek kaynak: NetEase (kelime zamanları, daha çok şarkı)"), netease) { netease = it; Lyrics.setNetease(c, it) }
             SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
                 floating = it; LiveLyrics.set(c, "floating", it)
                 if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)

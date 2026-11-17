@@ -13,7 +13,7 @@ import java.security.MessageDigest
 /** [timeMs] is the start of the line; -1 for lines of unsynced lyrics. */
 data class LyricLine(val timeMs: Long, val text: String, val words: List<LyricWord> = emptyList())
 
-/** [source]: "tag", "lrc", "txt", "saved", "cache", "lrclib", "ovh" or "hit". */
+/** [source]: "tag", "lrc", "txt", "saved", "cache", "lrclib", "netease", "ovh" or "hit". */
 data class LyricsResult(val lines: List<LyricLine>, val synced: Boolean, val source: String)
 
 /** One phrase match: [line] contains the phrase, [before] / [after] are the neighbouring lyric lines. [id] is opaque, give it to [Lyrics.forHit]. */
@@ -38,8 +38,12 @@ object Lyrics {
         withContext(Dispatchers.IO) {
             val app = ctx.applicationContext
             // the phone first: the tag, a lyrics file named like the song, then any lyrics file that carries the song's title; the net comes after
-            (localPath?.let { readEdit(app, it) } ?: (localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: localPath?.let { LyricsStore(app).load(it, artist, title)?.let { r -> toResult(r, "saved") } })
-                ?.let { return@withContext it }
+            val local = localPath?.let { readEdit(app, it) } ?: (localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: localPath?.let { LyricsStore(app).load(it, artist, title)?.let { r -> toResult(r, "saved") } }
+            if (local != null) {
+                // lyrics with the times of lines only get their words' times in the background, for the next time the song is played
+                if (localPath != null) upgradeInBackground(app, localPath, local, title, artist, durationMs)
+                return@withContext local
+            }
             val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
             // a song that had no lyrics online is not asked again for three days
             if (missed(app, key)) return@withContext null
@@ -49,6 +53,17 @@ object Lyrics {
             // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
             lastError = asked.exceptionOrNull()?.let { "${it.javaClass.simpleName}: ${it.message}" }
             var found = asked.getOrNull()
+            // the words' times: a word-synced record of LRCLIB's when the one found has none, else NetEase's (which also has songs LRCLIB lacks)
+            val f0 = found
+            if (f0 != null && f0.second != "ovh" && !f0.first.hasWords) {
+                val up = wordUpgrade(client, title, artist, sec)
+                if (up != null) found = up to "lrclib"
+            }
+            val f1 = found
+            if (netease(app) && (f1 == null || f1.second == "ovh" || !f1.first.hasWords)) {
+                val n = runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()
+                if (n != null && (n.hasWords || f1 == null || f1.second == "ovh" || f1.first.syncedLyrics == null)) found = n to "netease"
+            }
             // lyrics the person deleted are not given again: the next likeliest find comes instead
             if (found != null && fingerprint(found.first) in rejectedSet(app, key)) found = candidates(app, title, artist, album, durationMs).firstOrNull()?.let { it to "lrclib" }
             // with auto-pick off nothing is taken from the net on its own: the finds are offered, and what is chosen is kept beside the song (found above next time)
@@ -60,12 +75,59 @@ object Lyrics {
             r
         }
 
+    private val upgrading = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Lyrics kept beside a song with the times of lines only: a word-synced find of the same lyrics (LRCLIB, then NetEase) is kept by the app, where it is read before the song's own file
+     * (the file is left as it is). Only when at least four in five of the lines are the same words, so a lyrics file someone timed by hand is never replaced by other lyrics.
+     * Asked once per song in three days; the network is only used with the word setting on.
+     */
+    private fun upgradeInBackground(app: Context, path: String, local: LyricsResult, title: String, artist: String, durationMs: Long) {
+        if (!local.synced || local.source !in setOf("lrc", "tag") || local.lines.any { it.words.isNotEmpty() } || path.contains("://")) return
+        if (!LiveLyrics.wordSync(app)) return
+        val key = "w|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        if (missed(app, key) || !upgrading.add(key)) return
+        background.launch {
+            try {
+                val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
+                var rec = runCatching { wordUpgrade(LrclibClient(LyricsCache(null)), title, artist, sec) }.getOrNull()
+                if (rec == null && netease(app)) rec = runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()?.takeIf { it.hasWords }
+                val res = rec?.let { toResult(it, "lrclib") }
+                if (res == null || !sameWords(local, res)) { markMiss(app, key); return@launch }
+                runCatching { editFile(app, path).apply { parentFile?.mkdirs() }.writeText(lrcText(res)) }
+            } finally { upgrading.remove(key) }
+        }
+    }
+
+    /** Whether at least four in five of [a]'s lines are lines of [b] too (compared by their letters). */
+    private fun sameWords(a: LyricsResult, b: LyricsResult): Boolean {
+        val have = b.lines.map { fold(it.text) }.filter { it.isNotEmpty() }.toSet()
+        val mine = a.lines.map { fold(it.text) }.filter { it.isNotEmpty() }
+        return mine.isNotEmpty() && mine.count { it in have }.toFloat() / mine.size >= .8f
+    }
+
+    /** One more search of LRCLIB for the same song: a record whose words have times, when the title and the artist are close. Null when there is none. */
+    private suspend fun wordUpgrade(client: LrclibClient, title: String, artist: String, sec: Int?): LyricsRecord? {
+        val titles = listOf(title, cleanTitle(title)).filter { it.isNotBlank() }.distinct()
+        val artists = (listOf(artist) + splitArtists(artist)).filter { it.isNotBlank() }.distinct()
+        val q = (artists.firstOrNull().orEmpty() + " " + titles.last()).trim()
+        return runCatching { client.search(q) }.getOrDefault(emptyList()).filter { it.hasWords }.map { r ->
+            val ts = titles.maxOf { alike(it, r.trackName) }
+            val ars = if (artists.isEmpty()) .5f else artists.maxOf { a -> maxOf(alike(a, r.artistName), splitArtists(r.artistName).maxOfOrNull { alike(a, it) } ?: 0f) }
+            r to (ts * .65f + ars * .35f)
+        }.filter { it.second >= .8f }.maxByOrNull { it.second }?.first
+    }
+
     // ---- the finds: choose, try against the song, and do not give back what was deleted ----
 
     private fun livePrefs(c: Context) = c.getSharedPreferences("lyrics_live", Context.MODE_PRIVATE)
     /** On (the default): the first lyrics found online are taken and kept at once. Off: the finds are offered and the person chooses. */
     fun autoPick(c: Context) = livePrefs(c).getBoolean("auto_pick", true)
     fun setAutoPick(c: Context, v: Boolean) = livePrefs(c).edit().putBoolean("auto_pick", v).apply()
+    /** On (the default): NetEase is asked too, for the words' times and for songs LRCLIB does not have. */
+    fun netease(c: Context) = livePrefs(c).getBoolean("netease", true)
+    fun setNetease(c: Context, v: Boolean) = livePrefs(c).edit().putBoolean("netease", v).apply()
 
     private fun rejPrefs(c: Context) = c.getSharedPreferences("lyrics_rejected", Context.MODE_PRIVATE)
     private fun rejectedSet(c: Context, key: String): Set<String> = rejPrefs(c).getStringSet(sha(key), emptySet()).orEmpty()
@@ -91,8 +153,12 @@ object Lyrics {
         pool.values.filter { fingerprint(it) !in rejected && seen.add(fingerprint(it)) }.map { r ->
             val ts = titles.maxOf { alike(it, r.trackName) }
             val ars = if (artists.isEmpty()) .5f else artists.maxOf { a -> maxOf(alike(a, r.artistName), splitArtists(r.artistName).maxOfOrNull { alike(a, it) } ?: 0f) }
-            r to (ts * 0.65f + ars * 0.35f + if (r.syncedLyrics != null) .03f else 0f)
-        }.sortedByDescending { it.second }.map { it.first }.take(8)
+            r to (ts * 0.65f + ars * 0.35f + (if (r.hasWords) .08f else if (r.syncedLyrics != null) .03f else 0f))
+        }.sortedByDescending { it.second }.map { it.first }.take(7).let { list ->
+            // NetEase's find (when that source is on) is offered too, after the ones of LRCLIB unless it has the words' times
+            val net = if (netease(app)) runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()?.takeIf { fingerprint(it) !in rejected && seen.add(fingerprint(it)) } else null
+            if (net == null) list else if (net.hasWords && list.none { it.hasWords }) listOf(net) + list else list + net
+        }
     }
 
     /** The lyrics the person chose from the finds: kept beside the song like any lyrics found online. */
@@ -122,7 +188,7 @@ object Lyrics {
 
     /** One line as LRC: stamped when synced, with a tag before each word when the words have their own times, plain otherwise. */
     private fun lrcLine(l: LyricLine, synced: Boolean): String =
-        if (synced && l.timeMs >= 0) "[" + stampOf(l.timeMs) + "]" + (if (l.words.size >= 2) l.words.joinToString("") { "<" + stampOf(it.timeMs) + ">" + it.text } else l.text) else l.text
+        if (synced && l.timeMs >= 0) "[" + stampOf(l.timeMs) + "]" + (if (l.words.size >= 2) l.words.joinToString("") { "<" + stampOf(it.timeMs) + ">" + it.text } + (l.words.last().endMs.takeIf { it > 0 }?.let { "<" + stampOf(it) + ">" } ?: "") else l.text) else l.text
 
     // ---- fuzzy lookup: spelling, several artists, decorations in the title ----
 
@@ -130,14 +196,14 @@ object Lyrics {
         .filter { it.isLetterOrDigit() }
 
     /** The title without "(feat. ..)", "[..]", "- Remastered", "- Live" and similar tails. */
-    private fun cleanTitle(t: String): String = t.replace(Regex("[\\(\\[][^\\)\\]]*[\\)\\]]"), " ").replace(Regex("(?i)\\s+-\\s+(remaster\\w*|live|radio edit|mono|stereo|version).*$"), "")
+    internal fun cleanTitle(t: String): String = t.replace(Regex("[\\(\\[][^\\)\\]]*[\\)\\]]"), " ").replace(Regex("(?i)\\s+-\\s+(remaster\\w*|live|radio edit|mono|stereo|version).*$"), "")
         .replace(Regex("(?i)\\s(feat\\.?|ft\\.?|featuring)\\s.*$"), "").trim()
 
     /** "A, B & C feat. D" -> A, B, C, D. */
-    private fun splitArtists(a: String): List<String> = a.split(Regex("(?i)\\s*(,|&|;|/|\\bfeat\\.?\\b|\\bft\\.?\\b|\\band\\b|\\bve\\b| x )\\s*")).map { it.trim() }.filter { it.length > 1 }
+    internal fun splitArtists(a: String): List<String> = a.split(Regex("(?i)\\s*(,|&|;|/|\\bfeat\\.?\\b|\\bft\\.?\\b|\\band\\b|\\bve\\b| x )\\s*")).map { it.trim() }.filter { it.length > 1 }
 
     /** 0..1: how alike two names are (edit distance on letters and digits only). */
-    private fun alike(a: String, b: String): Float {
+    internal fun alike(a: String, b: String): Float {
         val x = fold(a); val y = fold(b)
         if (x.isEmpty() || y.isEmpty()) return 0f
         if (x == y) return 1f
@@ -171,7 +237,7 @@ object Lyrics {
             val ts = titles.maxOf { alike(it, r.trackName) }
             val ars = if (wantArtists.isEmpty()) .5f else wantArtists.maxOf { a -> maxOf(alike(a, r.artistName), splitArtists(r.artistName).maxOfOrNull { alike(a, it) } ?: 0f) }
             val dur = 0f
-            r to (ts * 0.65f + ars * 0.35f + dur + if (r.syncedLyrics != null) .03f else 0f)
+            r to (ts * 0.65f + ars * 0.35f + dur + (if (r.hasWords) .08f else if (r.syncedLyrics != null) .03f else 0f))
         }.maxByOrNull { it.second }
         if (best != null && best.second >= .62f) return best.first to false
         for (a in artists) for (t in titles) ovhLyrics(a, t)?.let { return it to true }

@@ -183,7 +183,8 @@ private val RoundedShape = RoundedCornerShape(12.dp)
 
 private fun kindLabel(r: LyricsRecord) = when {
     r.instrumental -> tr("Instrumental", "Enstrümantal")
-    r.syncedLyrics != null -> tr("Synced", "Senkron")
+    r.hasWords -> tr("Word by word", "Kelime kelime")
+    r.syncedLyrics != null -> tr("Line by line", "Satır satır")
     r.plainLyrics != null -> tr("Plain text", "Düz metin")
     else -> tr("No lyrics", "Söz yok")
 }

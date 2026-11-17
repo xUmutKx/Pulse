@@ -205,7 +205,26 @@
       "min_pulse": 120,
       "guncellendi": "2026-10-18T00:00:00Z",
       "yayinlandi": false
+    },
+    {
+      "id": "skins-more",
+      "ad_en": "More Winamp skins (68)",
+      "ad_tr": "Daha fazla Winamp teması (68)",
+      "tur": "veri",
+      "kategori": "skin",
+      "boyut": 3233496,
+      "surum": "1.0.0",
+      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/skins-more.zip",
+      "sha256": "e43af05ea1ba4513ec0b77c5de0b3fdb6785044a03709657b8e1d2292a5bc9d3",
+      "lisans": "LicenseRef-community-skins",
+      "lisans_metni": "https://github.com/xUmutKx/Pulse/blob/main/extras/licenses/skins-SOURCES.md",
+      "atif": "Winamp skin authors; see SOURCES.md. Sources: Webamp demo skins, Internet Archive winampskins",
+      "min_pulse": 120,
+      "guncellendi": "2026-11-17T00:00:00Z",
+      "yayinlandi": true,
+      "aciklama_en": "The Winamp skins that used to be inside the app, now a download (3 MB).",
+      "aciklama_tr": "Eskiden uygulamanın içinde olan Winamp temaları, artık indirme (3 MB)."
     }
   ],
-  "guncellendi": "2026-10-28T09:43:34Z"
+  "guncellendi": "2026-11-17T00:00:00Z"
 }

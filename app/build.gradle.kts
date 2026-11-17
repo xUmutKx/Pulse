@@ -15,7 +15,9 @@ android {
         targetSdk = 34
         versionCode = 844
         versionName = "1.0.441"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") } // (x86_64 left out: it is for emulators and Chromebooks, and was 4 MB of the APK)
+        // the processors in the APK: 64-bit only by default (a 32-bit phone gets its own APK, -PpulseAbi=armeabi-v7a, built as the "32bit" variant of the workflow;
+        // the Play bundle holds both, Play hands each phone its own half). x86_64 is left out: it is for emulators and Chromebooks, and was 4 MB of the APK
+        ndk { abiFilters += ((project.findProperty("pulseAbi") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: listOf("arm64-v8a")) }
         resourceConfigurations += listOf("en", "tr")
     }
     // release key: private, kept in GitHub Actions secrets (see ci/README.md); the workflow writes it to a file and passes its path
@@ -56,6 +58,8 @@ android {
     // (the "armv8.2_1" build of Pulse AI's maths is left out: every phone that can run it also runs the fuller "armv8.2_2" one, which is the one chosen;
     // older processors still have the "armv8.0" build)
     packaging { jniLibs { useLegacyPackaging = true; excludes += "**/libggml-cpu-android_armv8.2_1.so" } }
+    // PDFBox's character maps for Chinese, Japanese and Korean fonts (about 1.1 MB): a PDF that uses one of those fonts shows no text from that font in the book reader; every other PDF reads as before
+    packaging { resources.excludes += listOf("com/tom_roush/fontbox/resources/cmap/{UniCNS-UCS2-H,UniCNS-UTF16-H,UniGB-UCS2-H,UniGB-UTF16-H,UniJIS-UTF16-H,UniJIS-UCS2-H,UniKS-UCS2-H,UniKS-UTF16-H,Adobe-Japan1-UCS2,Adobe-CNS1-UCS2,Adobe-GB1-UCS2,Adobe-Korea1-UCS2,GBK2K-H,GBK-EUC-H,GBKp-EUC-H}") }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class", "org/bouncycastle/pqc/crypto/picnic/**") } // (Picnic: a post-quantum signature never used here, 1 MB of tables) // the last two: BouncyCastle ships them in several jars
 }
 
