@@ -147,6 +147,34 @@ private fun ArtView(art: String, size: androidx.compose.ui.unit.Dp) {
     }
 }
 
+/**
+ * The movement of an exercise: a short loop of two real photos (start and end of the move) when the pictures pack is there (Extra store "gym-anim", 5 MB: it comes by itself the first
+ * time an exercise is opened), else the drawn two-frame picture. The photos are from the Free Exercise DB (public domain). The loop plays only while it is on the screen.
+ */
+@Composable
+private fun MotionView(ex: GymEx, width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) {
+    val ctx = LocalContext.current
+    val packRev by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    LaunchedEffect(Unit) { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, "gym-anim") }
+    val file = remember(ex.id, packRev) { java.io.File(com.umutk.pulse.extras.store.StoreInstaller.dataDir(ctx, "gym-anim"), "${ex.id}.webp").takeIf { it.isFile } }
+    if (file != null && android.os.Build.VERSION.SDK_INT >= 28) {
+        androidx.compose.ui.viewinterop.AndroidView(
+            modifier = Modifier.width(width).height(height),
+            factory = { c -> android.widget.ImageView(c).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP } },
+            update = { iv ->
+                if (iv.tag != file.path) {
+                    iv.tag = file.path
+                    runCatching {
+                        val d = android.graphics.ImageDecoder.decodeDrawable(android.graphics.ImageDecoder.createSource(file))
+                        iv.setImageDrawable(d)
+                        (d as? android.graphics.drawable.AnimatedImageDrawable)?.apply { repeatCount = android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE; start() }
+                    }
+                }
+            },
+        )
+    } else ArtView(ex.art, height - 8.dp)
+}
+
 private fun addToDraft(ctx: Context, ex: GymEx) {
     val (t, items) = GymStore.draft(ctx)
     GymStore.saveDraft(ctx, if (t > 0) t else System.currentTimeMillis(), items + GItem(ex.id))
@@ -160,7 +188,7 @@ private fun ExerciseDetail(ex: GymEx, close: () -> Unit) {
     var added by remember { mutableStateOf(false) }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(150.dp).clip(RoundedCornerShape(14.dp)).background(T.text.copy(alpha = .06f)), contentAlignment = Alignment.Center) { ArtView(ex.art, 140.dp) }
+            Box(Modifier.width(180.dp).height(120.dp).clip(RoundedCornerShape(14.dp)).background(T.text.copy(alpha = .06f)), contentAlignment = Alignment.Center) { MotionView(ex, 180.dp, 120.dp) }
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(ex.name, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 Text(GymData.muscleName(ex.primary) + (if (ex.secondary.isNotEmpty()) " · " + ex.secondary.joinToString(", ") { GymData.muscleName(it) } else ""), color = T.sub, fontSize = 13.sp)
@@ -185,8 +213,9 @@ private fun ExerciseList(onPick: (GymEx) -> Unit) {
     var q by remember { mutableStateOf("") }
     var muscle by remember { mutableStateOf("") }
     var limit by remember { mutableIntStateOf(30) }
-    val all = remember { GymData.exercises(ctx) }
-    val list = remember(q, muscle) { all.filter { (muscle.isEmpty() || it.primary == muscle || muscle in it.secondary) && (q.isBlank() || it.name.contains(q.trim(), true) || it.equipment.contains(q.trim(), true)) } }
+    val packRev by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    val all = remember(packRev) { GymData.exercises(ctx) }
+    val list = remember(q, muscle, all) { all.filter { (muscle.isEmpty() || it.primary == muscle || muscle in it.secondary) && (q.isBlank() || it.name.contains(q.trim(), true) || it.equipment.contains(q.trim(), true)) } }
     PField(q, { q = it; limit = 30 }, tr("Search ${all.size} exercises", "${all.size} egzersizde ara"), Modifier.fillMaxWidth())
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         PChip(muscle.isEmpty(), tr("All", "Hepsi")) { muscle = ""; limit = 30 }
@@ -225,7 +254,8 @@ private fun TrainTab(open: (GymEx) -> Unit) {
     var rest by remember { mutableIntStateOf(GymStore.restSec(ctx)) }
     var naming by remember { mutableStateOf(false) }
     var routineName by remember { mutableStateOf("") }
-    val exercises = remember { GymData.exercises(ctx) }
+    val packRev by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    val exercises = remember(packRev) { GymData.exercises(ctx) }
     fun save() { GymStore.saveDraft(ctx, start, items.toList()); rev++ }
     fun ensureStart() { if (start == 0L) start = System.currentTimeMillis() }
     // the rest timer: counts down, and shakes and beeps when it ends
@@ -269,7 +299,8 @@ private fun TrainTab(open: (GymEx) -> Unit) {
                 }
             }
         }
-        val days = remember { GymData.programs(ctx) }
+        val packRev2 by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+        val days = remember(packRev2) { GymData.programs(ctx) }
         val groups = remember { days.groupBy { it.program } }
         var openProg by remember { mutableStateOf("") }
         PCard {
@@ -319,7 +350,7 @@ private fun TrainTab(open: (GymEx) -> Unit) {
             }
             // the movement: the picture plays its two frames, tap it for the full exercise
             Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(14.dp)).background(T.text.copy(alpha = .06f)).clickable { ex?.let(open) }, contentAlignment = Alignment.Center) {
-                if (ex != null && ex.art.isNotBlank()) ArtView(ex.art, 150.dp) else PIcon("heart", T.sub, 40.dp)
+                if (ex != null && ex.art.isNotBlank()) MotionView(ex, 255.dp, 170.dp) else PIcon("heart", T.sub, 40.dp)
             }
             Text(ex?.name ?: it0.ex, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
             if (ex != null) Text(GymData.muscleName(ex.primary) + (if (ex.secondary.isNotEmpty()) " · " + ex.secondary.joinToString(", ") { GymData.muscleName(it) } else ""), color = T.sub, fontSize = 13.sp)
@@ -525,7 +556,8 @@ private fun FoodTab() {
     var q by remember { mutableStateOf("") }
     var pick by remember { mutableStateOf<GymFood?>(null) }
     var grams by remember { mutableStateOf("100") }
-    val foods = remember { GymData.foods(ctx) }
+    val packRev3 by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    val foods = remember(packRev3) { GymData.foods(ctx) }
     val cal = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }
     val today = remember(rev) { GymStore.foods(ctx).filter { it.t >= cal.timeInMillis } }
     val goal = remember(rev) { GymStore.kcalGoal(ctx) }

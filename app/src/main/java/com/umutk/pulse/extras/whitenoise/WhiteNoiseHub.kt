@@ -121,6 +121,13 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
             AmbientMixer.levels.value = last.ifEmpty { DefaultPreset.levels }
         }
     }
+    // the bird sounds are a download (Extra store, "birds"): they come by themselves, and the list is read again when they are there
+    val packRev by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    LaunchedEffect(packRev) {
+        com.umutk.pulse.extras.store.PackAuto.ensure(ctx, "birds")
+        val found = withContext(Dispatchers.IO) { AmbientMixer.scan(ctx) }
+        AmbientMixer.ensure(ctx, found)
+    }
     BackHandler(onBack = onBack)
     // shortcut: also fires on a configuration change; only matters when the user turned background play off
     DisposableEffect(Unit) { onDispose { if (!NoiseThemes.bool(ctx, "bg", true)) AmbientMixer.stopAll() } }

@@ -247,6 +247,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 SwitchLine("bug", tr("Surprises at the start (now and then a BIOS screen, rarely a fake blue screen)", "Açılışta sürprizler (ara sıra BIOS ekranı, nadiren sahte mavi ekran)"), LauncherPrefs.bootEggs) { LauncherPrefs.bootEggs = it; save() }
             }
             if (cur.id in setOf("win95", "xp")) SwitchLine("help", tr("Office Assistant (Clippy) on the desktop", "Masaüstünde Office Yardımcısı (Clippy)"), LauncherPrefs.clippy) { LauncherPrefs.clippy = it; save() }
+            if (cur.id in setOf("win95", "xp") && LauncherPrefs.clippy) com.umutk.pulse.extras.store.InlinePackRow("clippy", tr("Office Assistant pictures", "Office Yardımcısı resimleri"))
             // icons
             Text(tr("App picture shape", "Uygulama resmi şekli"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
