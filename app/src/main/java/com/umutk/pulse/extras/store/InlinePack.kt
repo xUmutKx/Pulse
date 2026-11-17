@@ -34,13 +34,15 @@ import kotlinx.coroutines.launch
  * Nothing is drawn once the pack is installed (the caller shows what it holds) or while the store's list cannot be read (offline and never opened).
  */
 @Composable
-fun InlinePackRow(id: String, title: String, onInstalled: () -> Unit = {}) {
+fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled: () -> Unit = {}) {
     val ctx = LocalContext.current
     var module by remember(id) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == id }) }
     // the list is asked for when this pack is not in the saved one yet (a manifest older than the pack)
     LaunchedEffect(id) {
         if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == id } }
     }
+    // [auto]: the download starts by itself, without a tap (the row then shows how far it is)
+    if (auto) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
     val progress by StoreInstaller.progress.collectAsState()
     val errors by StoreInstaller.errors.collectAsState()
     val rev by StoreInstaller.rev.collectAsState()
@@ -90,7 +92,7 @@ object HdWalls {
 @Composable
 fun HdWallpaperRow(lookId: String) {
     val (id, title) = HdWalls.packFor(lookId) ?: return
-    InlinePackRow(id, title)
+    InlinePackRow(id, title, auto = true)
 }
 
 /**
