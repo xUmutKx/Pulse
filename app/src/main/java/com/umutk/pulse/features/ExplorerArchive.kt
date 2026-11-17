@@ -862,6 +862,7 @@ object FilesPrefs {
     var start by mutableStateOf("")          // default start folder, "" = internal storage
     var hidden by mutableStateOf(false)      // show hidden files
     var grid by mutableStateOf(false)        // list or grid
+    var columns by mutableStateOf(true)      // a wide screen shows columns (a folder per column and the picked file's details at the right)
     var icon by mutableStateOf(2)            // 0 tiny, 1 small, 2 medium, 3 large, 4 huge
     var confirm by mutableStateOf(true)      // ask before delete
     var ext by mutableStateOf(true)          // show file extensions
@@ -899,7 +900,7 @@ object FilesPrefs {
         if (loaded) return
         loaded = true
         val p = sp(c)
-        start = p.getString("ex_start", "") ?: ""; hidden = p.getBoolean("ex_hidden", false); grid = p.getBoolean("ex_grid", false)
+        start = p.getString("ex_start", "") ?: ""; hidden = p.getBoolean("ex_hidden", false); grid = p.getBoolean("ex_grid", false); columns = p.getBoolean("ex_columns", true)
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
         stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); folderSize = p.getBoolean("ex_fold_size", true); folderDate = p.getBoolean("ex_fold_date", true); fileSize = p.getBoolean("ex_file_size", true); fileDate = p.getBoolean("ex_file_date", true); infoCount = p.getBoolean("ex_info_count", true)
@@ -910,7 +911,7 @@ object FilesPrefs {
     }
     fun save(c: android.content.Context) {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).apply()
-        sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
+        sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putBoolean("ex_columns", columns).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
             .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
