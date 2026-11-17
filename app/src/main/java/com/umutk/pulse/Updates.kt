@@ -118,7 +118,9 @@ fun UpdateDialog(r: Updates.Release, onDone: () -> Unit) {
         },
         confirmButton = {
             PButton(tr("Download", "İndir")) {
-                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                // the APK comes through Pulse's own download manager into Download/Pulse/Updates (not loose in Downloads); a page link opens in the browser as before
+                if (r.url.contains(".apk", ignoreCase = true)) com.umutk.pulse.features.Downloads.add(ctx, r.url, "Pulse-${r.version}", into = com.umutk.pulse.PulseDirs.updates())
+                else ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 close()
             }
         },

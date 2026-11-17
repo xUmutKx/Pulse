@@ -44,6 +44,8 @@ fun queryVideos(ctx: Context): List<VideoItem> {
     runCatching {
         ctx.contentResolver.query(V.EXTERNAL_CONTENT_URI, cols, null, null, V.DATE_ADDED + " DESC")?.use { c ->
             while (c.moveToNext()) {
+                // the camera's temporary recordings (temp_2024…, no picture, not playable) are not videos of the person's
+                if (isTempVideo(c.getString(1).orEmpty())) continue
                 out += VideoItem(
                     Uri.withAppendedPath(V.EXTERNAL_CONTENT_URI, c.getLong(0).toString()),
                     c.getString(1).orEmpty(), c.getLong(2), c.getString(3).orEmpty(),
@@ -54,6 +56,9 @@ fun queryVideos(ctx: Context): List<VideoItem> {
     }
     return out
 }
+
+/** A temporary file of a camera app ("temp_20241129_…") or a hidden one: it is not listed as a video. */
+internal fun isTempVideo(name: String): Boolean = name.startsWith("temp_", true) || name.startsWith("temp ", true) || name.startsWith(".")
 
 /** Folders the walk never enters: app data, the Android folder and developer folders with source code or dependencies. */
 private val SKIP_DIRS = setOf("Android", "node_modules", "build", "__pycache__", "vendor")

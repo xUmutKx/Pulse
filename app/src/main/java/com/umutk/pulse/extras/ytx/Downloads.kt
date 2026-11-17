@@ -150,8 +150,7 @@ object Downloads {
     val currentDownloadDir: File get() = if (::dir.isInitialized) dir else defaultDownloadDir()
 
     fun defaultDownloadDir(): File {
-        val pubDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        return File(pubDownloads, "YTXTube Downloads")
+        return com.umutk.pulse.PulseDirs.ytx()
     }
 
     fun init(context: Context) {

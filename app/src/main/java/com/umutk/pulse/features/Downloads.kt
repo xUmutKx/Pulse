@@ -356,11 +356,12 @@ object Downloads {
     }
 
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
-    fun add(ctx: Context, url: String, fixedName: String? = null, alts: List<String> = emptyList()) {
+    fun add(ctx: Context, url: String, fixedName: String? = null, alts: List<String> = emptyList(), into: File? = null) {
         val c = ctx.applicationContext
         app = c
         scope.launch {
-            val dir = File(dirPath)
+            // [into]: a folder of its own for this one download (the update of Pulse goes to Download/Pulse/Updates); else the downloads folder of the settings
+            val dir = into?.also { it.mkdirs() } ?: File(dirPath)
             // a link of the local Stremio server ends in the file's number in the torrent ("…/64"): it is named after the torrent and the number at first, and takes the real
             // name once the server has answered (asked then, not before: the start must not wait for it)
             val name = fixedName?.let { cleanName(it) } ?: magnetName(url) ?: streamFallbackName(url) ?: cleanName(Uri.parse(url).lastPathSegment)?.let { if (isHlsUrl(url)) it.replace(Regex("(?i)\\.m3u8$"), "") + ".ts" else it } ?: "download"

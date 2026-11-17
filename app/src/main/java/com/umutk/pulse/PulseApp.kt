@@ -20,6 +20,8 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
         CrashSaver.install(this)
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
         CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
+        // the folders Pulse made in Downloads before are moved under Download/Pulse (once the storage permission is there; nothing happens without it)
+        if (android.os.Build.VERSION.SDK_INT < 28 || getProcessName() == packageName) CoroutineScope(Dispatchers.IO).launch { runCatching { PulseDirs.migrateAll() } }
         // the small packs (icons of the older looks, more wallpapers, the Office Assistants: one download of about 2 MB) come once by themselves, from the main process only
         if (android.os.Build.VERSION.SDK_INT < 28 || getProcessName() == packageName) runCatching { com.umutk.pulse.extras.store.PackAuto.firstRun(this) }
         // the ads start (play build) and Premium is checked with Google Play, so a reinstall gets it back
