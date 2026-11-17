@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.BiasAlignment
@@ -99,10 +101,13 @@ fun themeWallBitmap(lookId: String): androidx.compose.ui.graphics.ImageBitmap? {
     val ctx = LocalContext.current
     val uri = themeWallpaper(lookId)
     val res = if (uri == null) builtinWall(lookId) else null
-    return remember(uri, res) {
+    // a downloaded pack of higher-quality wallpapers takes the place of the small stock picture (the picture is decoded again when one is installed)
+    val packs by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    return remember(uri, res, packs) {
         runCatching {
-            if (uri != null) ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 2 }) }
-            else res?.let { BitmapFactory.decodeResource(ctx.resources, it, BitmapFactory.Options().apply { inSampleSize = 2 }) }
+            val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
+            if (uri != null) ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { BitmapFactory.decodeStream(it, null, opts) }
+            else res?.let { r -> com.umutk.pulse.extras.store.HdWalls.file(ctx, r)?.let { f -> BitmapFactory.decodeFile(f.path, opts) } ?: BitmapFactory.decodeResource(ctx.resources, r, opts) }
         }.getOrNull()?.asImageBitmap()
     }
 }
