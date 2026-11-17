@@ -116,7 +116,7 @@ private fun OptionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 @Composable
 fun QueueCard(player: PlayerState, onOpen: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    val next = player.queue.firstOrNull() ?: return
+    val next = player.queueItems.firstOrNull() ?: return
     Row(
         Modifier
             .padding(top = 16.dp)
@@ -131,7 +131,7 @@ fun QueueCard(player: PlayerState, onOpen: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                "Queue · ${player.queue.size}",
+                "Queue · ${player.queueItems.size}",
                 color = c.onSecondaryContainer, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp,
             )
             Text(next.title, color = c.onSecondaryContainer, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -147,25 +147,25 @@ fun QueueSheet(player: PlayerState, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.surfaceContainerLow) {
         Row(Modifier.padding(horizontal = 20.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Queue", fontFamily = RoundedHeavy, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, modifier = Modifier.weight(1f))
-            if (player.queue.isNotEmpty()) {
+            if (player.queueItems.isNotEmpty()) {
                 Text(
                     "Clear", color = c.primary, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp,
-                    modifier = Modifier.pressable { player.clearQueue() }.padding(8.dp),
+                    modifier = Modifier.pressable { player.clearQueued() }.padding(8.dp),
                 )
             }
         }
-        if (player.queue.isEmpty()) {
+        if (player.queueItems.isEmpty()) {
             Text(
-                "Nothing queued. Press and hold a video to add it.",
+                "Nothing queued",
                 color = c.onSurfaceVariant, fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
             )
         } else {
             LazyColumn(Modifier.fillMaxHeight(0.7f)) {
-                itemsIndexed(player.queue, key = { i, v -> "$i-${v.id}" }) { index, video ->
+                itemsIndexed(player.queueItems, key = { i, v -> "$i-${v.id}" }) { index, video ->
                     Box(Modifier.padding(horizontal = 20.dp)) {
-                        VideoRow(video, onClick = { player.playFromQueue(index); onDismiss() }) {
-                            Box(Modifier.size(40.dp).pressable { player.removeFromQueue(index) }, contentAlignment = Alignment.Center) {
+                        VideoRow(video, onClick = { player.playQueued(index); onDismiss() }) {
+                            Box(Modifier.size(40.dp).pressable { player.removeQueued(index) }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Rounded.Close, "Remove from queue", tint = c.onSurfaceVariant)
                             }
                         }

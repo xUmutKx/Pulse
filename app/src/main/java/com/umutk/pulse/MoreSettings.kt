@@ -133,7 +133,6 @@ fun GeneralSettings() {
             }
         }
     }
-    PCard { AppIconChooser() }
     PermissionKeepCard()
     DataBackupCard()
     ExtraAppsCard()
@@ -552,7 +551,7 @@ private val launcherIcons = listOf(
 
 /** Launcher icon choice: exactly one activity-alias stays enabled; the new one is enabled before the others are switched off. */
 @Composable
-private fun AppIconChooser() {
+internal fun AppIconChooser() {
     val ctx = LocalContext.current
     fun on(i: LauncherIcon): Boolean {
         val st = ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + i.alias))

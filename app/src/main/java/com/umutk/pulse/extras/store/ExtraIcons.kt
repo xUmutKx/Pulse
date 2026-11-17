@@ -597,6 +597,11 @@ internal fun ExtraIconsScreen(rows: List<IconRow>, onBack: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             HomeIconLooks(LauncherGlass.MAIN, all) { l -> all = l; LauncherGlass.applyEveryone(ctx, l) }
             Spacer(Modifier.height(14.dp))
+            // Pulse's own icons of the old looks (Windows 95, XP, 7, 10, 11): one of them is the launcher icon (they were in Settings before)
+            Text(tr("Pulse's old icons", "Pulse'ın eski ikonları"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(6.dp))
+            com.umutk.pulse.AppIconChooser()
+            Spacer(Modifier.height(14.dp))
             Text(tr("One by one", "Tek tek"), color = T.sub, fontSize = 13.sp)
             rows.forEach { r ->
                 Row(Modifier.fillMaxWidth().clickable { edit = r }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

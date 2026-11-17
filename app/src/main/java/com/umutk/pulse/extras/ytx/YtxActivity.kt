@@ -42,6 +42,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -630,6 +631,7 @@ fun YtxTubeApp() {
                     lib, contentPadding, onOpen = player::openMusic, onSearch = { openSearch = true },
                     onAccount = { openSettings = true },
                     onPlayNext = player::playNextMusic,
+                    onAddToQueue = player::addToMusicQueue,
                     onOpenQueue = { items, index -> player.openMusicQueue(items, index) },
                     onFillQueue = { items -> player.openMusicQueue(items, 0, expand = false) },
                     scrollToTop = scrollToTop[Tab.Music] ?: 0,
@@ -1039,7 +1041,7 @@ fun YtxTubeApp() {
         optionsFor?.let { video -> VideoOptionsSheet(video, player, onDismiss = { optionsFor = null }) }
 
         if (!showPlayer) {
-            QueueMessage(player, Modifier.align(Alignment.BottomCenter).padding(bottom = navTop + (if (hasMini) MiniHeight + MiniGap else 0.dp) + 12.dp))
+            QueueMessage(player, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = navTop + (if (hasMini) MiniHeight + MiniGap else 0.dp) + 24.dp))
         }
 
 
