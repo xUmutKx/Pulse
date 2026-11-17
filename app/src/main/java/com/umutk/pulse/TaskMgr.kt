@@ -95,7 +95,7 @@ fun ProcessesPage() {
             if (rows.isEmpty()) rows = withContext(Dispatchers.IO) { ProcCache.load(ctx).map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
             val raw = withContext(Dispatchers.IO) { Sampler.processes() }
             own = raw.isEmpty()
-            val fresh = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) + visibleApps(ctx).filter { v -> ownProcesses(ctx).none { o -> o.name.substringBefore(':') == v.name } } } }
+            val fresh = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) + com.umutk.pulse.features.ownParts(ctx) + visibleApps(ctx).filter { v -> ownProcesses(ctx).none { o -> o.name.substringBefore(':') == v.name } } } }
             if (fresh.isNotEmpty()) {
                 rows = withContext(Dispatchers.IO) { fresh.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
                 withContext(Dispatchers.IO) { ProcCache.save(ctx, fresh) }
@@ -202,8 +202,8 @@ fun ProcessesPage() {
                         }
                     }
                     if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
-                        val on = sel == r.p.pid
-                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                        val on = r.p.pid > 0 && sel == r.p.pid
+                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (r.p.pid > 0) sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(Modifier.width(52.dp))
                                 Text(r.p.name.substringAfter(':', r.p.name.substringAfterLast('.')), color = if (on && (win95Authentic || xpAuthentic)) Color.White else T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = if (on && win95Authentic) Modifier.background(Color(0xFF000080)).padding(horizontal = 2.dp) else Modifier)

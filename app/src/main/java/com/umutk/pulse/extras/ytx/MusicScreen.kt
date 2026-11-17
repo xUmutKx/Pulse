@@ -187,6 +187,7 @@ fun MusicScreen(
     onAccount: () -> Unit,
     onPlayNext: (VideoItem) -> Unit = {},
     onOpenQueue: (List<VideoItem>, Int) -> Unit = { list, index -> list.getOrNull(index)?.let(onOpen) },
+    onFillQueue: (List<VideoItem>) -> Unit = {},
     scrollToTop: Int = 0,
 ) {
     val scope = rememberCoroutineScope()
@@ -320,7 +321,14 @@ fun MusicScreen(
                 results = searchResults,
                 loading = searchLoading,
                 suggestions = searchSuggestions,
-                onOpenTrack = { _, index -> onOpenQueue(searchResults, index) },
+                onOpenTrack = { track, _ ->
+                    // the picked song plays at once; the songs after it are the same artist's other songs, not the remixes of this one
+                    onOpenQueue(listOf(track), 0)
+                    scope.launch {
+                        val more = runCatching { YouTube.sameArtistSongs(track, searchResults) }.getOrDefault(emptyList())
+                        if (more.isNotEmpty()) onFillQueue(listOf(track) + more)
+                    }
+                },
                 onDownloadTrack = ::downloadAudio,
                 contentPadding = contentPadding,
             )
@@ -436,6 +444,18 @@ fun MusicScreen(
                                         items(shelf.items, key = { "item_" + (it.videoId ?: it.browseId ?: it.title) }) { item ->
                                             MusicShelfCard(
                                                 item = item,
+                                                onPlay = {
+                                                    val direct = item.toVideoItem()
+                                                    if (direct != null && item.browseId.isNullOrEmpty() && item.playlistId.isNullOrEmpty()) {
+                                                        val index = directTracks.indexOfFirst { it.id == direct.id }
+                                                        onOpenQueue(directTracks, if (index >= 0) index else 0)
+                                                    } else {
+                                                        scope.launch {
+                                                            runCatching { InnerTube.musicItemSongs(item) }.getOrNull()
+                                                                ?.takeIf { it.isNotEmpty() }?.let { onOpenQueue(it, 0) }
+                                                        }
+                                                    }
+                                                },
                                                 onClick = {
                                                     val direct = item.toVideoItem()
                                                     val isTrack = direct != null &&
@@ -749,11 +769,27 @@ fun MusicTrackOptionsSheet(
     }
 }
 
+/** The round play button in the corner of a playlist cover: it plays the list straight away. */
+@Composable
+private fun CoverPlayButton(onClick: () -> Unit, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 38.dp) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(Color.Black.copy(alpha = 0.62f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(size * 0.62f))
+    }
+}
+
 @Composable
 private fun MusicShelfCard(
     item: MusicShelfItem,
     onClick: () -> Unit,
     onOptions: () -> Unit,
+    onPlay: (() -> Unit)? = null,
 ) {
     val c = MaterialTheme.colorScheme
     Column(
@@ -789,6 +825,7 @@ private fun MusicShelfCard(
                     modifier = Modifier.size(18.dp),
                 )
             }
+            if (onPlay != null) CoverPlayButton(onPlay, Modifier.align(Alignment.BottomEnd).padding(7.dp), 36.dp)
         }
         Spacer(Modifier.height(7.dp))
         Text(
@@ -1256,6 +1293,7 @@ private fun MusicMixScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    if (songs.isNotEmpty()) CoverPlayButton({ onOpenSong(0) }, Modifier.align(Alignment.BottomEnd).padding(5.dp), 34.dp)
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {

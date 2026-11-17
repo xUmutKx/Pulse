@@ -68,6 +68,28 @@ fun ownProcesses(ctx: Context): List<Proc> {
 
 
 /**
+ * Pulse's own parts, which the phone does let it see without root: the launcher entries of the extra apps that are switched on, and the services that are running right now.
+ * They are listed under Pulse's own process line (name "package:part"); only real things are listed, and a figure the phone does not give is left blank.
+ */
+fun ownParts(ctx: Context): List<Proc> {
+    val pkg = ctx.packageName
+    val pm = ctx.packageManager
+    val out = ArrayList<Proc>()
+    runCatching {
+        pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setPackage(pkg), 0)
+            .map { it.loadLabel(pm).toString() }.distinct().forEach { out.add(Proc(0, "$pkg:$it", 0, 0f, "app", "")) }
+    }
+    runCatching {
+        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        @Suppress("DEPRECATION")
+        am.getRunningServices(100).filter { it.service.packageName == pkg }.forEach { sv ->
+            out.add(Proc(0, "$pkg:" + sv.service.shortClassName.substringAfterLast('.') + " (service)", 0, 0f, "app", ""))
+        }
+    }
+    return out.distinctBy { it.name }
+}
+
+/**
  * Without root or Shizuku the other apps' processes cannot be read. The page then lists the apps the phone does let it see (the ones used in the last week,
  * or else every app with a launcher icon): their size and network speed are read for real, and the figures that need root (memory, CPU) are left blank, not invented.
  */

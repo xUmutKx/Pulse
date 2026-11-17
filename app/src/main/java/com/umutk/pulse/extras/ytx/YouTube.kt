@@ -228,6 +228,27 @@ object YouTube {
         }
     }
 
+    /**
+     * The songs to play after [track]: the same artist's other songs, never the remixes, covers or live takes of this one.
+     * Uses the artist's own channel first; if there are too few, the rest of the search results by that artist, then other songs of the same search.
+     */
+    suspend fun sameArtistSongs(track: VideoItem, searched: List<VideoItem> = emptyList()): List<VideoItem> = withContext(Dispatchers.IO) {
+        fun artist(v: VideoItem) = v.channel.replace(" - Topic", "", true).replace("VEVO", "", true).trim().lowercase()
+        val noise = Regex("remix|mix\\b|cover|live|slowed|sped|nightcore|karaoke|instrumental|reverb|8d|bass boosted|edit\\b|mashup|version|acoustic|lyrics video|reaction|tutorial|playlist|full album|compilation", RegexOption.IGNORE_CASE)
+        fun baseTitle(v: VideoItem) = v.title.lowercase().replace(Regex("\\(.*?\\)|\\[.*?\\]"), "").replace(Regex("official|audio|video|music|lyrics|\\bhd\\b|\\bmv\\b"), "").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        val me = artist(track)
+        val myBase = baseTitle(track)
+        val seen = HashSet<String>().apply { add(track.id); add(myBase) }
+        fun clean(l: List<VideoItem>) = l.filter { v -> v.durationSec in 60..600 && (noise.containsMatchIn(track.title) || !noise.containsMatchIn(v.title)) && seen.add(baseTitle(v)) && v.id != track.id }
+        val out = ArrayList<VideoItem>()
+        val own = runCatching { searchMusic(track.channel.replace(" - Topic", "", true).trim()) }.getOrDefault(emptyList())
+        out += clean(own.filter { artist(it) == me })
+        if (out.size < 12) out += clean(searched.filter { artist(it) == me })
+        if (out.size < 12) out += clean(runCatching { searchMusic(track.channel.replace(" - Topic", "", true).trim() + " songs") }.getOrDefault(emptyList()).filter { artist(it) == me })
+        if (out.size < 6) out += clean(searched)
+        out.take(30)
+    }
+
     suspend fun searchSuggestions(query: String): List<String> = withContext(Dispatchers.IO) {
         val q = query.trim()
         if (q.isEmpty()) emptyList()

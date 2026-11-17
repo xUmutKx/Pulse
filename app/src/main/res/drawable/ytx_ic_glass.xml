@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- the YTXTube tile: a black rounded square, a white outlined screen and a white bird in it -->
+    <!-- the YTXTube tile: a black rounded square, a white outlined screen and a white play button in it -->
     <path android:fillColor="#FF000000" android:pathData="M24,6h60c9.94,0 18,8.06 18,18v60c0,9.94 -8.06,18 -18,18h-60c-9.94,0 -18,-8.06 -18,-18v-60c0,-9.94 8.06,-18 18,-18z" />
     <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineJoin="round"
         android:pathData="M28,34h52c3,0 5,2 5,5v30c0,3 -2,5 -5,5h-52c-3,0 -5,-2 -5,-5v-30c0,-3 2,-5 5,-5z" />
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M46,46c4,-2 8,-2 12,0c-1,-4 -1,-6 2,-9c-3,1 -5,2 -7,0c-3,3 -6,5 -7,9z" />
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M42,54c6,-1 12,-4 18,-7c-4,4 -9,8 -18,10c0,-1 0,-2 0,-3z M38,56c8,0 16,-2 22,-6c-3,6 -10,10 -20,10c-2,0 -2,-2 -2,-4z" />
+    <path android:fillColor="#FFFFFFFF" android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineJoin="round"
+        android:pathData="M47,45l18,13l-18,13z" />
 </vector>

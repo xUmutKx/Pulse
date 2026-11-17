@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "video" to (tr("YTXTube music: the songs after a searched song are the same artist's other songs, not its remixes. Playlist covers have a play button in the corner, outside and inside. YTXTube's icon is a white play button on black.",
+        "YTXTube müzik: aranan şarkıdan sonra gelenler aynı sanatçının diğer şarkıları, remiksler değil. Liste kapaklarının köşesinde oynat tuşu var, dışarıda ve içeride. YTXTube simgesi siyah üstüne beyaz oynat tuşu.")),
+    "palette" to (tr("Task Manager without root lists Pulse's own parts: the extra apps and the services that run. Network lab and Appearance groups from the last version are in too.",
+        "Root'suz Görev Yöneticisi Pulse'un kendi parçalarını listeliyor: ekstra uygulamalar ve çalışan servisler. Önceki sürümün Ağ laboratuvarı ve Görünüm grupları da içinde.")),
     "share" to (tr("One Pulse folder in Downloads for everything. Share lists what you received, with pictures, and a transfer is a notification with progress, Pause and Cancel.",
         "İndirilenler'de her şey için tek Pulse klasörü. Share, alınanları resimleriyle listeliyor, aktarım ilerleme çubuğu, Duraklat ve İptal'li bir bildirim.")),
     "palette" to (tr("Glass icons in the colours of Glass Material You, a screenshot stays in the bar for a minute, blocked words are gone for good.",
