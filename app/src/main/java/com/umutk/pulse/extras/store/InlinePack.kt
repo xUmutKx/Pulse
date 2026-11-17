@@ -24,6 +24,10 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * A pack of the Extra store, offered where it is used: a line with its size and a Download button, the progress while it comes, and [onInstalled] when it is there.
@@ -87,4 +91,28 @@ object HdWalls {
 fun HdWallpaperRow(lookId: String) {
     val (id, title) = HdWalls.packFor(lookId) ?: return
     InlinePackRow(id, title)
+}
+
+/**
+ * A pack that comes by itself the first time something needs it (an icon pack of a look, the sounds of the birds, the exercises of the gym): no question asked, one try per run.
+ * What is not there yet is drawn without it (the vector icons, an empty list) until the pack is installed; [StoreInstaller.rev] changes then, so screens can read again.
+ */
+object PackAuto {
+    private val asked = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** True when the pack's files are unzipped on the phone. */
+    fun installed(c: Context, id: String): Boolean = StoreInstaller.dataDir(c, id).let { d -> d.isDirectory && !d.list().isNullOrEmpty() }
+
+    fun ensure(c: Context, id: String) {
+        val app = c.applicationContext
+        if (installed(app, id) || !asked.add(id)) return
+        scope.launch {
+            var m = StoreCatalog.load(app).firstOrNull { it.id == id }
+            // the saved list may be older than the pack (or never read): it is asked for once
+            if (m == null) { StoreCatalog.refresh(app, force = true); m = StoreCatalog.load(app).firstOrNull { it.id == id } }
+            if (m != null && StoreInstaller.state(app, m) != ModuleState.INSTALLED) StoreInstaller.download(app, m)
+            else if (m == null) asked.remove(id)   // offline: tried again next time
+        }
+    }
 }
