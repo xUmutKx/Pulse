@@ -613,7 +613,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                         }
                         else if (s.startsWith("\u0003")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // a file named by what is being typed: a small page icon and its name
-                            Icon(androidx.compose.material.icons.Icons.Rounded.Description, null, tint = th.accent, modifier = Modifier.size(18.dp))
+                            Icon(kbIcon(th, "ContentCopy"), null, tint = th.accent, modifier = Modifier.size(18.dp))
                             Text(s.drop(1), color = th.sub, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
