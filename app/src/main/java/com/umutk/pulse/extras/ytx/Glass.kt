@@ -55,6 +55,29 @@ object GlassQuality {
     fun setEnabled(enabled: Boolean) {
         effectsSupported = deviceSupports && enabled
     }
+
+    /** True while a list is being scrolled (and a moment after): the glass surfaces draw a plain frosted fill instead of the refracting shader, which is what made scrolling lag. */
+    var scrolling by mutableStateOf(false)
+        private set
+
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val stopScrolling = Runnable { scrolling = false }
+
+    fun noteScroll() {
+        if (!scrolling) scrolling = true
+        handler.removeCallbacks(stopScrolling)
+        handler.postDelayed(stopScrolling, 220)
+    }
+}
+
+/** Sits at the root of the screen and tells [GlassQuality] whenever any list below it scrolls or flings (the lists themselves need no change). */
+val GlassScrollWatcher = object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+        GlassQuality.noteScroll(); return androidx.compose.ui.geometry.Offset.Zero
+    }
+    override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+        GlassQuality.noteScroll(); return androidx.compose.ui.unit.Velocity.Zero
+    }
 }
 
 /**
@@ -155,7 +178,8 @@ fun glassSpec(
 
 
 fun Modifier.liquidGlass(backdrop: Backdrop, spec: GlassSpec): Modifier =
-    if (GlassQuality.effectsSupported) {
+    // while a list scrolls the surface is the plain frosted fill (below): the blur and the lens shader on top of a moving page was the lag
+    if (GlassQuality.effectsSupported && !GlassQuality.scrolling) {
         drawBackdrop(
             backdrop = backdrop,
             shape = { spec.shape },

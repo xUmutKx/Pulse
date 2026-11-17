@@ -496,8 +496,12 @@ fun KeyboardSettings(back: () -> Unit) {
             Text("${tr("Brightness of the top bar", "Üst çubuğun parlaklığı")}: ${KeyboardPrefs.topBright}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.topBright - 5) / 95f, { KeyboardPrefs.topBright = 5 + (it * 95).roundToInt() }, 0f..1f, onDone = { save() })
             Text(tr("Moving colour light", "Hareketli renk ışığı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Around the keyboard", "Klavyenin çevresi"), 2 to tr("Around every key", "Her tuşun çevresi")).forEach { (v, n) -> PChip(KeyboardPrefs.rgb == v, n) { KeyboardPrefs.rgb = v; save() } }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Around the keyboard", "Klavyenin çevresi"), 2 to tr("Around every key", "Her tuşun çevresi"), 3 to tr("Chasing light", "Dönen ışık")).forEach { (v, n) -> PChip(KeyboardPrefs.rgb == v, n) { KeyboardPrefs.rgb = v; save() } }
+            }
+            if (KeyboardPrefs.rgb > 0) {
+                Text("${tr("Speed of the colour light", "Renk ışığının hızı")}: ${KeyboardPrefs.rgbSpeed}%", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.rgbSpeed - 25) / 275f, { KeyboardPrefs.rgbSpeed = 25 + (it * 275).roundToInt() }, 0f..1f, onDone = { save() })
             }
             Switch(tr("Sound on keypress", "Tuşta ses"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
         }

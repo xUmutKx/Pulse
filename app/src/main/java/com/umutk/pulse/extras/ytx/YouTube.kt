@@ -298,6 +298,27 @@ object YouTube {
             val next = InnerTube.postAny("next", org.json.JSONObject().put("videoId", id))
             val list = mutableListOf<VideoItem>()
             next.walk { key, obj ->
+                // YouTube's newer watch-next lists are "lockupViewModel" entries (the old compact renderers are gone from many answers): the id, title, channel, picture and length
+                if (key == "lockupViewModel" && obj.optString("contentType").contains("VIDEO")) {
+                    val vid = obj.optString("contentId")
+                    val meta = obj.optJSONObject("metadata")?.optJSONObject("lockupMetadataViewModel")
+                    val videoTitle = meta?.optJSONObject("title")?.optString("content").orEmpty()
+                    if (vid.length == 11 && vid != id && videoTitle.isNotBlank() && list.none { it.id == vid }) {
+                        val thumbVm = obj.optJSONObject("contentImage")?.optJSONObject("thumbnailViewModel")
+                        val thumb = thumbVm?.optJSONObject("image")?.optJSONArray("sources")?.let { a -> a.optJSONObject(a.length() - 1)?.optString("url") }
+                        val rows = meta?.optJSONObject("metadata")?.optJSONObject("contentMetadataViewModel")?.optJSONArray("metadataRows")
+                        val channel = rows?.optJSONObject(0)?.optJSONArray("metadataParts")?.optJSONObject(0)?.optJSONObject("text")?.optString("content").orEmpty()
+                        // the length is the badge text at the corner of the picture ("12:34")
+                        var secs = 0L
+                        val overlays = thumbVm?.optJSONArray("overlays")
+                        if (overlays != null) for (i in 0 until overlays.length()) {
+                            val badge = overlays.optJSONObject(i)?.optJSONObject("thumbnailBottomOverlayViewModel")?.optJSONArray("badges")?.optJSONObject(0)
+                                ?.optJSONObject("thumbnailBadgeViewModel")?.optString("text").orEmpty()
+                            if (Regex("^\\d{1,2}(:\\d{2}){1,2}$").matches(badge)) secs = badge.split(':').fold(0L) { acc, part -> acc * 60 + part.toLong() }
+                        }
+                        list.add(VideoItem(id = vid, title = videoTitle, channel = channel, channelUrl = null, thumbnail = thumb, avatar = null, views = -1, durationSec = secs, uploaded = null))
+                    }
+                }
                 if (key == "compactVideoRenderer" || key == "videoRenderer") {
                     val vid = obj.optString("videoId")
                     if (vid.isNotBlank() && vid != id && list.none { it.id == vid }) {
@@ -334,9 +355,10 @@ object YouTube {
 
         if (!parsed.isNullOrEmpty()) return parsed
 
-        return runCatching {
-            search(title).filter { it.id != id }
-        }.getOrDefault(emptyList())
+        // nothing in the answer: a search by the title, then by its first words (never an empty list under a video)
+        return runCatching { search(title).filter { it.id != id } }.getOrDefault(emptyList()).ifEmpty {
+            runCatching { search(title.split(' ').filter { it.isNotBlank() }.take(3).joinToString(" ")).filter { it.id != id } }.getOrDefault(emptyList())
+        }
     }
 
 
