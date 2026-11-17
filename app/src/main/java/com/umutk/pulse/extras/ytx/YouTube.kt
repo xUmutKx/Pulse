@@ -282,7 +282,7 @@ object YouTube {
             subscribers = info.uploaderSubscriberCount,
             related = info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull { it.toVideoItem() }.let { list ->
                 if (list.isNotEmpty()) list else fetchFallbackRelated(id, info.name)
-            },
+            }.let { rel -> withSameChannel(id, info.uploaderUrl, info.uploaderName.orEmpty(), rel) },
             playable = picked.isPlayable,
             quality = picked.playedHeight?.let { "${it}p${if (picked.hdr) " HDR" else ""}" }
                 ?: if (isLive) "Live" else null,
@@ -291,6 +291,26 @@ object YouTube {
             aspect = (if (picked.usesSeparate) picked.video else picked.muxed)
                 ?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height },
         )
+    }
+
+    /**
+     * The list under a video, with the channel's own other videos in it: one of the channel after each related one for the first places (the
+     * related list alone wandered off to other subjects), then the rest of both. A slow or failed channel lookup leaves the related list as it was.
+     */
+    private suspend fun withSameChannel(id: String, channelUrl: String?, channelName: String, rel: List<VideoItem>): List<VideoItem> {
+        val chId = channelUrl?.substringAfter("/channel/", "")?.substringBefore('/')?.substringBefore('?').orEmpty()
+        if (chId.isBlank()) return rel
+        val own = kotlinx.coroutines.withTimeoutOrNull(4000L) { runCatching { InnerTube.channelVideos(chId, null).videos }.getOrNull() }.orEmpty()
+            .filter { it.id != id }.map { it.copy(channel = it.channel.ifBlank { channelName }, channelUrl = it.channelUrl ?: channelUrl) }
+        if (own.isEmpty()) return rel
+        val out = LinkedHashMap<String, VideoItem>()
+        val a = rel.iterator(); val b = own.take(8).iterator()
+        while (a.hasNext() || b.hasNext()) {
+            if (a.hasNext()) a.next().let { out.putIfAbsent(it.id, it) }
+            if (b.hasNext()) b.next().let { out.putIfAbsent(it.id, it) }
+        }
+        own.drop(8).forEach { out.putIfAbsent(it.id, it) }
+        return out.values.toList()
     }
 
     private suspend fun fetchFallbackRelated(id: String, title: String): List<VideoItem> {

@@ -317,6 +317,8 @@ fun VideoContent(
                 var lastY = downY
 
                 var verticalSwipeHandled = false
+                var volStart = -1f
+                var volAnchorY = 0f
                 val upEarly = withTimeoutOrNull(holdSpeedMs) {
                     var event = awaitPointerEvent()
                     while (event.changes.any { it.pressed }) {
@@ -353,9 +355,12 @@ fun VideoContent(
                                         val maxV = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                                         val curV = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
 
-                                        val deltaV = ((dy / size.height) * maxV * 1.0f).toInt()
-                                        if (deltaV != 0) {
-                                            val newV = (curV + deltaV).coerceIn(0, maxV)
+                                        // measured from where the slide began (not move by move: each small move rounded to no step, so a whole slide gave one step):
+                                        // a slide over 60% of the screen's height goes from silent to full
+                                        if (volStart < 0f) { volStart = curV.toFloat(); volAnchorY = change.position.y }
+                                        val target = (volStart + (volAnchorY - change.position.y) / (size.height * .6f) * maxV).coerceIn(0f, maxV.toFloat())
+                                        val newV = kotlin.math.round(target).toInt()
+                                        if (newV != curV) {
                                             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newV, 0)
                                             val icon = if (newV == 0) Icons.AutoMirrored.Rounded.VolumeMute else Icons.AutoMirrored.Rounded.VolumeUp
                                             gestureHud = Pair(icon, Pair("Volume", newV.toFloat() / maxV.toFloat()))

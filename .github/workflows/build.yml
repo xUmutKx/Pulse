@@ -1,7 +1,6 @@
 name: Build APK
 on:
-  push:
-    branches: [main]
+  # only when started by hand ("Derle"): a build on every push failed again and again on unfinished work
   workflow_dispatch:
     inputs:
       release:

@@ -69,9 +69,41 @@ object KeyboardDictionary {
     /** Names that are also ordinary words (Güzel = beautiful, İpek = silk): never capitalised or given an apostrophe by the keyboard. */
     val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek")
 
+    /** Brands, apps and creators written their own way (kbd/brands.txt): the plain key ("mcdonalds") -> the written form ("McDonald's"). */
+    val brands = ConcurrentHashMap<String, String>()
+
+    /** The key a brand is found by: lower case, without apostrophes, dots, hyphens, ampersands, plus signs and spaces. */
+    fun brandKey(w: String): String = w.lowercase(Locale.ROOT).filter { it.isLetterOrDigit() }
+
+    /** The written form of a brand for a typed word: the same letters, or (a word the dictionary does not know, 5 letters or more) one letter off. */
+    fun brandFor(typed: String, known: Boolean): String? {
+        if (brands.isEmpty()) return null
+        val k = brandKey(typed)
+        if (k.length < 2) return null
+        brands[k]?.let { return it }
+        if (known || k.length < 5) return null
+        return brands.entries.firstOrNull { (bk, _) -> kotlin.math.abs(bk.length - k.length) <= 1 && bk.length >= 5 && oneOff(bk, k) }?.value
+    }
+
+    /** Two keys one change apart (a letter added, dropped, swapped or two neighbours turned around). */
+    private fun oneOff(a: String, b: String): Boolean {
+        if (a == b) return true
+        if (a.length == b.length) {
+            val diff = a.indices.filter { a[it] != b[it] }
+            return diff.size == 1 || diff.size == 2 && diff[1] == diff[0] + 1 && a[diff[0]] == b[diff[1]] && a[diff[1]] == b[diff[0]]
+        }
+        val (l, s) = if (a.length > b.length) a to b else b to a
+        var i = 0
+        while (i < s.length && l[i] == s[i]) i++
+        return l.substring(i + 1) == s.substring(i)
+    }
+
     /** Reads the word list of [lang] (and the learned words once). Call from a background thread. */
     fun load(c: Context, code: String) {
         val lang = d(code)
+        if (brands.isEmpty()) runCatching {
+            c.assets.open("kbd/brands.txt").bufferedReader().useLines { ls -> ls.forEach { l -> val f = l.trim(); if (f.isNotEmpty() && !f.startsWith("#")) brands.putIfAbsent(brandKey(f), f) } }
+        }
         if (lang == "en") runCatching { c.assets.open("kbd/proper_en.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNamesEn += it.trim().lowercase(Locale.ENGLISH) } } }
         if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) it.trim().lowercase(Locale("tr", "TR")).let { n -> if (n !in commonNames) properNouns += n } } } }
         if (!userLoaded) loadUser(c)
