@@ -24,7 +24,7 @@ jobs:
       - id: p
         run: |
           V='["full"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","32bit","play"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","32bit","play","glass","watch"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
@@ -32,7 +32,7 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     # the Google Play bundle never holds the release back: when it fails the two APKs are still published
-    continue-on-error: ${{ matrix.variant == 'play' }}
+    continue-on-error: ${{ matrix.variant == 'play' || matrix.variant == 'glass' || matrix.variant == 'watch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,14 +53,17 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          # the Glass Layer module and Pulse Watch are projects of their own on the newer Android Gradle Plugin (9.5)
+          java-version: ${{ (matrix.variant == 'glass' || matrix.variant == 'watch') && '21' || '17' }}
       - name: Install SDK packages
+        if: matrix.variant != 'glass' && matrix.variant != 'watch'
         run: |
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           yes | "$SDKMANAGER" --licenses > /dev/null
           "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0" "ndk;29.0.13113456" "cmake;3.31.6" > /dev/null
       # Pulse AI's engines: llama.cpp and whisper.cpp at the commits their JNI was written against (built into the app for arm64)
       - name: llama.cpp and whisper.cpp sources
+        if: matrix.variant != 'glass' && matrix.variant != 'watch'
         env:
           LLAMA_COMMIT: a691b2345844ce1b430201fc5fd404ce062e05f2
           WHISPER_COMMIT: f92e1e4d1056700c39d4e86c1140f0a088fe1ab6
@@ -78,7 +81,7 @@ jobs:
           test "$(grep -c 'ggml_add_cpu_backend_variant(android_' "$f")" -eq 3
       - uses: gradle/actions/setup-gradle@v5
         with:
-          gradle-version: 8.9
+          gradle-version: ${{ (matrix.variant == 'glass' || matrix.variant == 'watch') && '9.6.0' || '8.9' }}
           # a branch run also saves the downloaded libraries for the next run (the default is to only read them there)
           cache-read-only: false
       - name: Build
@@ -103,6 +106,14 @@ jobs:
               # the APK for the old 32-bit phones (armeabi-v7a): the lite app, since Pulse AI's engines are 64-bit only
               G assembleFossLiteRelease -PpulseAbi=armeabi-v7a -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
               cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-32bit.apk" ;;
+            glass|watch)
+              # the Glass Layer module (One UI edition) and Pulse Watch: projects of their own, signed with Pulse's key
+              D=$([ "$VARIANT" = glass ] && echo extras/glasslayer || echo wear)
+              yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager" --licenses > /dev/null || true
+              printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=pulse\nkeyPassword=%s\n' "$PULSE_KEYSTORE" "$PULSE_STORE_PASSWORD" "$PULSE_KEY_PASSWORD" > "$D/keystore.properties"
+              (cd "$D" && G assembleRelease)
+              NAME=$([ "$VARIANT" = glass ] && echo "GlassLayer-OneUI.apk" || echo "PulseWatch.apk")
+              cp "$(find "$D/app/build/outputs/apk" -name '*.apk' | grep -i release | head -1)" "out/$NAME" ;;
             play)
               # the Google Play build (the bundle Play takes: no APK installer permission, the Play flavor): Pulse AI inside like the full one, both processors (Play splits them)
               G bundlePlayFullRelease -PpulseAbi=arm64-v8a,armeabi-v7a -x lintVitalAnalyzePlayFullRelease -x lintVitalReportPlayFullRelease -x lintVitalPlayFullRelease
@@ -150,4 +161,6 @@ jobs:
           # the Google Play bundle when it was built (it is only for the Play Console, not for installing)
           [ -f "files/Pulse-$VER-32bit.apk" ] && ASSETS+=("files/Pulse-$VER-32bit.apk")
           [ -f "files/Pulse-$VER-play.aab" ] && ASSETS+=("files/Pulse-$VER-play.aab")
+          [ -f "files/PulseWatch.apk" ] && ASSETS+=("files/PulseWatch.apk")
+          [ -f "files/GlassLayer-OneUI.apk" ] && ASSETS+=("files/GlassLayer-OneUI.apk")
           gh release create "v$VER" "${ASSETS[@]}" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
