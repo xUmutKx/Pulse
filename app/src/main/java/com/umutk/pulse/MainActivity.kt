@@ -490,10 +490,11 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         val p = com.umutk.pulse.widgets.WidgetOpen.page
         if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); onSub("toolkit") } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings" || p == "calculator" || p == "cover") onSub(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
     }
-    LaunchedEffect(Unit) {
+    // the readings of the monitor run only while the app is on the screen, and every second only while a live graph is shown (see Visible.kt)
+    LaunchedVisible(Unit) {
         withContext(Dispatchers.IO) {
             Shell.detectRoot()
-            while (true) { Sampler.sample(ctx); delay(Sampler.interval) }
+            while (true) { Sampler.sample(ctx); delay(Sampler.wait()) }
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page

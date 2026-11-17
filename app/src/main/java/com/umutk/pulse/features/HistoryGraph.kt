@@ -27,6 +27,7 @@ import com.umutk.pulse.m3Guides
 import com.umutk.pulse.m3Line
 import com.umutk.pulse.resColor
 import kotlinx.coroutines.delay
+import com.umutk.pulse.LaunchedVisible
 
 /** One hour of samples, one per second while the screen is visible. Only touched on the main thread. */
 private object Hist {
@@ -57,7 +58,7 @@ private enum class Metric(val label: String) {
 fun HistoryGraphScreen(onBack: () -> Unit) {
     var sel by rememberSaveable { mutableStateOf(0) }
     var tick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
+    LaunchedVisible(Unit) {
         while (true) {
             val s = Sampler.snap.value
             val ramPct = if (s.ramTotalMb == 0) 0f else 100f * s.ramUsedMb / s.ramTotalMb

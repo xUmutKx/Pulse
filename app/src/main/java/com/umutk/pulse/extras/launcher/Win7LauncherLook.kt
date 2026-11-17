@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 import com.umutk.pulse.win7Flag
+import com.umutk.pulse.LaunchedVisible
 
 internal val W7_WINDOW = WinSkin("7", Brush.verticalGradient(listOf(Color(0xFFC4D8EE), Color(0xFF9DBBE0))), Color.Black, Color(0xFF7B9EC8), 5.dp, 7.dp,
     Color.White, Color(0xFFEEF3FA), Color.White, Color.Black, Color(0xFF6D6D6D), Color(0xFFCDE5FA), Color.Black, Color(0xFF7DA2CE))
@@ -349,7 +350,7 @@ class Win7LauncherLook : LauncherLook {
         val d = androidx.compose.ui.platform.LocalDensity.current
         // read again every few seconds: what is going on changes without the launcher knowing
         var tick by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
-        androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(4000); tick = System.currentTimeMillis() } }
+        LaunchedVisible(Unit) { while (true) { kotlinx.coroutines.delay(4000); tick = System.currentTimeMillis() } }
         val shown = androidx.compose.runtime.remember(tick, LauncherPrefs.trayHidden, LauncherSession.msnTray) { TRAY_ITEMS.filter { it.key !in LauncherPrefs.trayHidden && it.active(ctx) } }
         val inBar = shown.filter { it.always }
         val inFlyout = shown.filter { !it.always }

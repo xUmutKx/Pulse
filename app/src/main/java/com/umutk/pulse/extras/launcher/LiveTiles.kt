@@ -37,6 +37,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.umutk.pulse.produceStateVisible
 
 /**
  * Live tiles for the Windows 10 and 11 start menus: the time and date, a calendar tile that turns between the day and the month, the battery, the
@@ -45,8 +46,8 @@ import java.util.Locale
 @Composable
 fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f) {
     val ctx = LocalContext.current
-    val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
-    val battery by produceState(0 to false) {
+    val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
+    val battery by produceStateVisible(0 to false) {
         while (true) {
             val i = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val level = i?.let { it.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) * 100 / it.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0

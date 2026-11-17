@@ -57,11 +57,12 @@ import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.umutk.pulse.produceStateVisible
 
 /** Time and date at the top of the home screen; ticks every second so the minute is never late. */
 @Composable
 fun ClockHeader(modifier: Modifier) {
-    val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
+    val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val d = Date(now)
     val edge = LocalLauncherEdge.current
     Column(modifier.padding(horizontal = maxOf(20.dp, edge), vertical = 12.dp)) {
@@ -70,7 +71,7 @@ fun ClockHeader(modifier: Modifier) {
         // "At a glance": the next alarm, the next event of the calendar and the battery, in one quiet line
         if (LauncherPrefs.glance) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
-            val line by produceState("") { while (true) { value = withContext(kotlinx.coroutines.Dispatchers.IO) { glanceLine(ctx) }; delay(30_000) } }
+            val line by produceStateVisible("") { while (true) { value = withContext(kotlinx.coroutines.Dispatchers.IO) { glanceLine(ctx) }; delay(30_000) } }
             if (line.isNotEmpty()) Text(line, color = T.text.copy(alpha = .75f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
         }
     }

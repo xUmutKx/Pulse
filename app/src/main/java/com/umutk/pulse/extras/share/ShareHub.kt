@@ -76,6 +76,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.umutk.pulse.LaunchedVisible
 
 /** What is going to be sent: files (a list of uris), or a text. */
 internal class Payload(val uris: List<Uri>, val text: String?) {
@@ -469,7 +470,7 @@ private fun ReceivedFiles() {
         when (sort) { 1 -> l.sortedBy { it.name.lowercase() }; 2 -> l.sortedByDescending { it.length() }; else -> l.sortedByDescending { it.lastModified() } }
     }
     // a file that has just come in is listed within a moment
-    LaunchedEffect(Unit) { while (true) { delay(3000); tick++ } }
+    LaunchedVisible(Unit) { while (true) { delay(3000); tick++ } }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp).clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
         Text(tr("Received files", "Alınan dosyalar") + " · ${files.size}", color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(listOf(tr("Newest", "Yeni"), tr("Name", "Ad"), tr("Size", "Boyut"))[sort], color = T.sub, fontSize = 12.sp,

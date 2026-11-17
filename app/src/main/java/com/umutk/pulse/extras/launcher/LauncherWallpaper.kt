@@ -32,6 +32,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
+import com.umutk.pulse.LaunchedVisible
 
 /** The stock picture this look's wallpaper shows: the launcher's pick for the look, else its first picture. */
 fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
@@ -88,7 +89,7 @@ fun LauncherWallpaper(lookId: String, fallback: Color, modifier: Modifier = Modi
 @Composable
 fun TaskbarClock(color: Color, modifier: Modifier = Modifier) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { delay(15_000L); now = System.currentTimeMillis() } }
+    LaunchedVisible(Unit) { while (true) { delay(15_000L); now = System.currentTimeMillis() } }
     val time = SimpleDateFormat(if (LauncherPrefs.clock24) "HH:mm" else "h:mm a", Locale.getDefault()).format(Date(now))
     val date = SimpleDateFormat(when (LauncherPrefs.dateFmt) { "mdy" -> "MM/dd/yy"; "ymd" -> "yyyy-MM-dd"; else -> "dd/MM/yy" }, Locale.getDefault()).format(Date(now))
     Text("$time\n$date", color = color, fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.End, modifier = modifier.clickable { LauncherSession.clockOpen = !LauncherSession.clockOpen })

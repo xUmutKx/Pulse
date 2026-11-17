@@ -52,6 +52,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.umutk.pulse.produceStateVisible
 
 private class FlyLook(val bg: Color, val ink: Color, val sub: Color, val edge: Color, val hi: Color, val corner: Dp, val tiles: Boolean)
 
@@ -77,7 +78,7 @@ fun ClockFlyout(lookId: String, taskbar: Dp) {
 private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
     val ctx = LocalContext.current
     val look = remember(lookId) { flyLook(lookId) }
-    val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
+    val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val none = remember { MutableInteractionSource() }
     val cal = Calendar.getInstance().apply { timeInMillis = now }
     val scope = androidx.compose.runtime.rememberCoroutineScope()

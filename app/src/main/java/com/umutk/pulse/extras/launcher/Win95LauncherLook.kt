@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import java.util.Calendar
+import com.umutk.pulse.produceStateVisible
 
 internal val W95_WINDOW = WinSkin("95", Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))), Color.White, Color(0xFFC0C0C0), 3.dp, 0.dp,
     Color.White, Color(0xFFC0C0C0), Color.White, Color.Black, Color(0xFF404040), Color(0xFF000080), Color.White, Color(0xFF808080))
@@ -341,11 +342,11 @@ private fun DrawScope.drawGear(color: Color, hole: Color) {
 /** Clock text "HH:mm", refreshed every second. */
 @Composable
 private fun w95Clock(): String {
-    val now by produceState(initialValue = "") {
+    val now by produceStateVisible(initialValue = "") {
         while (true) {
             val c = Calendar.getInstance()
             value = "%02d:%02d".format(c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
-            delay(1000)
+            delay(60_000 - System.currentTimeMillis() % 60_000)   // the clock shows minutes: it is redrawn when the minute changes
         }
     }
     return now

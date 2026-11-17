@@ -78,6 +78,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
+import com.umutk.pulse.LaunchedVisible
 
 /** Pulse Launcher: a HOME app with its own look and layout. Runs in its own process, so Pulse's Look / Cfg / Opt stay untouched. */
 class LauncherActivity : ComponentActivity() {
@@ -94,12 +95,13 @@ class LauncherActivity : ComponentActivity() {
             LaunchedEffect(look.id, LauncherPrefs.sounds) { LauncherSounds.prepare(this@LauncherActivity, look.id) }
             // the readings of This PC and its tiles (processor, memory, temperature, battery) come from the sampler, which the launcher must run itself:
             // the main app's loop does not run while the launcher is in front. A sample is taken only when none was taken lately (no double work)
-            LaunchedEffect(Unit) {
+            // only while the launcher is on the screen (the activity stays alive behind the apps), and every second only while a live graph is open
+            LaunchedVisible(Unit) {
                 withContext(Dispatchers.IO) {
                     com.umutk.pulse.Shell.detectRoot()
                     while (true) {
                         if (System.currentTimeMillis() - com.umutk.pulse.Sampler.lastSample > 2500L) com.umutk.pulse.Sampler.sample(this@LauncherActivity)
-                        delay(1000L)
+                        delay(com.umutk.pulse.Sampler.wait())
                     }
                 }
             }
@@ -409,7 +411,7 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
 private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val ctx = LocalContext.current
     val edge = LocalLauncherEdge.current
-    LaunchedEffect(Unit) { while (true) { LauncherBadges.read(ctx); delay(2500) } }
+    LaunchedVisible(Unit) { while (true) { LauncherBadges.read(ctx); delay(2500) } }
     val vertical = LauncherPrefs.vertical
     // turned sideways, the same few columns would sit far apart: the columns follow the width (about one per 100 dp)
     val screenCfg = androidx.compose.ui.platform.LocalConfiguration.current

@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import com.umutk.pulse.produceStateVisible
 
 /**
  * The clock gadget of the desktop, in the look of each Windows: the round Aero gadget of Windows 7, a Luna panel for XP, a bevelled one for 95 and
@@ -44,7 +45,7 @@ import kotlin.math.sin
  */
 @Composable
 fun DesktopClock(lookId: String, modifier: Modifier = Modifier) {
-    val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
+    val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val d = Date(now)
     val time = SimpleDateFormat(if (LauncherPrefs.clock24) (if (LauncherPrefs.clockSeconds) "HH:mm:ss" else "HH:mm") else (if (LauncherPrefs.clockSeconds) "h:mm:ss a" else "h:mm a"), Locale.getDefault()).format(d)
     val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(d)

@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import com.umutk.pulse.LaunchedVisible
 
 /**
  * Pulse AI: local chat (llama.cpp) and speech to text (whisper.cpp), an extra app inside Pulse. Only the models are outside: they are downloaded
@@ -213,7 +214,7 @@ private fun AiModelsPage() {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
     var tick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { while (isActive) { delay(1000); tick++ } }
+    LaunchedVisible(Unit) { while (isActive) { delay(1000); tick++ } }
     var query by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<AiModel>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
@@ -267,7 +268,7 @@ private fun ModelRow(m: AiModel, tick: Int, suggested: Boolean, changed: () -> U
     val c = LocalContext.current
     // the percentage moves while the model downloads (the download goes on in Pulse's downloader, so it is read again and again)
     var p by remember { mutableFloatStateOf(Store.progress(c, m)) }
-    LaunchedEffect(tick, m.id) { while (true) { p = Store.progress(c, m); delay(400) } }
+    LaunchedVisible(tick, m.id) { while (true) { p = Store.progress(c, m); delay(400) } }
     val fit = remember(m.bytes) { if (m.bytes > 0) Device.fit(c, m) else 1 }
     val active = remember(tick) { Store.active(c, m.kind) == m.id }
     PCard(Modifier.fillMaxWidth().alpha(if (fit == 0) .55f else 1f)) {
@@ -475,7 +476,7 @@ internal fun LyricsJobProgress(showStop: Boolean) {
     val c = LocalContext.current
     val job = com.umutk.pulse.extras.lyrics.LyricsBatchJob
     var tick by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { tick = System.currentTimeMillis(); delay(1000) } }
+    LaunchedVisible(Unit) { while (true) { tick = System.currentTimeMillis(); delay(1000) } }
     val el = ((tick - job.startedAt) / 1000).coerceAtLeast(0)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(job.now.ifEmpty { tr("Starting…", "Başlıyor…") }, color = T.text, fontSize = 14.sp, maxLines = 2)
