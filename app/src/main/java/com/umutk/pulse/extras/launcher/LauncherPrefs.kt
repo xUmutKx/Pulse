@@ -212,8 +212,10 @@ object LauncherPrefs {
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons3") != "false"; fillGaps = p.getProperty("fillGaps") == "true"
         accentOn = p.getProperty("accentOn") == "true"; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
-        deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 10) ?: 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 14) ?: 8
-        deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 14) ?: 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 10) ?: 4
+        // a tablet has far more room: its grid starts finer (turned 16 x 8, upright 6 x 12), so an icon can sit between two others; a phone keeps 4 x 8 and 8 x 4
+        val tab = c.resources.configuration.smallestScreenWidthDp >= 600
+        deskColsPort = p.getProperty("deskColsPort")?.toIntOrNull()?.coerceIn(2, 16) ?: if (tab) 6 else 4; deskRowsPort = p.getProperty("deskRowsPort")?.toIntOrNull()?.coerceIn(2, 24) ?: if (tab) 12 else 8
+        deskColsLand = p.getProperty("deskColsLand")?.toIntOrNull()?.coerceIn(2, 24) ?: if (tab) 16 else 8; deskRowsLand = p.getProperty("deskRowsLand")?.toIntOrNull()?.coerceIn(2, 16) ?: if (tab) 8 else 4
         glassStyle = p.getProperty("glassStyle")?.takeIf { it in setOf("pulse", "dark", "soft", "clear") } ?: "pulse"; blurAll = p.getProperty("blurAll") == "true"; blurAmt = p.getProperty("blurAmt")?.toIntOrNull()?.coerceIn(6, 60) ?: 30
         bootEvery = p.getProperty("bootEvery") == "true"
         taskbarAutoHide = p.getProperty("taskbarAutoHide") == "true"
