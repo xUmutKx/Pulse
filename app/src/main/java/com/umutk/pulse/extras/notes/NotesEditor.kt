@@ -109,6 +109,7 @@ fun NoteEditor(
     var eraserSize by remember { mutableStateOf(InkPrefs.eraserSize(ctx)) }
     var finger by remember { mutableStateOf(InkPrefs.finger(ctx)) }
     var snap by remember { mutableStateOf(InkPrefs.snap(ctx)) }
+    var palm by remember { mutableStateOf(InkPrefs.palm(ctx)) }
     val inkUndo = remember(note.id) { mutableStateListOf<String>() }
     val inkRedo = remember(note.id) { mutableStateListOf<String>() }
     val textRedo = remember(note.id) { mutableStateListOf<String>() }
@@ -292,7 +293,7 @@ fun NoteEditor(
             onColor = { c -> if (mode == InkMode.MARKER) { markerColor = c; InkPrefs.setMarkerColor(ctx, c) } else { penColor = c; InkPrefs.setPenColor(ctx, c) } },
             size = when (mode) { InkMode.MARKER -> markerSize; InkMode.ERASER -> eraserSize; else -> penSize },
             onSize = { v -> when (mode) { InkMode.MARKER -> { markerSize = v; InkPrefs.setMarkerSize(ctx, v) }; InkMode.ERASER -> { eraserSize = v; InkPrefs.setEraserSize(ctx, v) }; else -> { penSize = v; InkPrefs.setPenSize(ctx, v) } } },
-            finger = finger, onFinger = { finger = it; InkPrefs.setFinger(ctx, it) }, snap = snap, onSnap = { snap = it; InkPrefs.setSnap(ctx, it) },
+            finger = finger, onFinger = { finger = it; InkPrefs.setFinger(ctx, it) }, snap = snap, onSnap = { snap = it; InkPrefs.setSnap(ctx, it) }, palm = palm, onPalm = { palm = it; InkPrefs.setPalm(ctx, it) },
             onClearAll = { editInk { emptyList() }; selected = emptySet() }, autoColor = ink,
         ) }
         if (mode == InkMode.LASSO && selected.isNotEmpty()) InkSelection(
@@ -347,7 +348,7 @@ fun NoteEditor(
             Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
             }
             InkLayer(
-                modifier = Modifier.matchParentSize(), strokes = inkList, tool = drawTool, penOnly = mode == InkMode.KEYBOARD, finger = finger,
+                modifier = Modifier.matchParentSize(), strokes = inkList, tool = drawTool, penOnly = mode == InkMode.KEYBOARD, finger = finger, palm = palm,
                 color = strokeColor, width = strokeWidth, kind = strokeKind, gain = strokeGain, eraser = 16f * eraserSize * density, snap = snap,
                 accent = T.accent, selected = selected,
                 onStroke = { st -> editInk { it + st } },

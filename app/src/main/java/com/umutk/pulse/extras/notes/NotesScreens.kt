@@ -122,7 +122,14 @@ fun HomeView(
     var newFolder by remember { mutableStateOf(false) }
     // a folder of the phone, picked in Pulse's own file picker: its .md / .txt files become notes and stay in that folder
     val linkFolder = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickFolder()) { path ->
-        if (path != null) { NotesLink.add(ctx, path); onChanged() }
+        if (path != null) {
+            NotesLink.add(ctx, path)
+            // the folder is listed at once (a chip), even before any .md / .txt file is in it
+            NotesPrefs.addFolder(ctx, java.io.File(path).name)
+            val texts = java.io.File(path).listFiles().orEmpty().count { it.isFile && it.extension.lowercase() in setOf("md", "txt", "markdown") }
+            noteToast(ctx, if (texts == 0) tr("Folder linked. It has no .md or .txt files yet.", "Klasör bağlandı. Henüz .md veya .txt dosyası yok.") else tr("Folder linked: $texts notes.", "Klasör bağlandı: $texts not."))
+            onChanged()
+        }
     }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
     // tags and folders come only from notes that are open, so a locked note leaks nothing
@@ -413,6 +420,7 @@ fun SettingsView(
         item { ExtraLookRow() }
         item { NRow("view", tr("Transparent background", "Şeffaf arka plan"), trailing = { PSwitch(NotesPrefs.transparent(ctx), { NotesPrefs.setTransparent(ctx, it); com.umutk.pulse.PageBg.transparent = it; onChanged() }) }) }
         item { NRow("view", tr("Black background", "Siyah arka plan"), trailing = { PSwitch(NotesPrefs.black(ctx), { NotesPrefs.setBlack(ctx, it); onChanged() }) }) }
+        item { NRow("view", tr("Palm rejection", "Avuç reddi"), trailing = { PSwitch(com.umutk.pulse.extras.notes.InkPrefs.palm(ctx), { com.umutk.pulse.extras.notes.InkPrefs.setPalm(ctx, it) }) }) }
         item {
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
