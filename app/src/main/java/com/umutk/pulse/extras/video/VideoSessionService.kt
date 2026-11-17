@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
+import com.umutk.pulse.quietMediaCard
 import androidx.media3.session.MediaSessionService
 
 /**
@@ -17,6 +18,7 @@ class VideoSessionService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        setMediaNotificationProvider(quietMediaCard())
         val p: Player = player ?: run { stopSelf(); return }
         val open = PendingIntent.getActivity(
             this, 0, packageManager.getLaunchIntentForPackage(packageName) ?: Intent(),

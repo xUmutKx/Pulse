@@ -25,7 +25,7 @@ import java.util.Locale
  */
 object WeatherReport {
     // a channel of its own: the one before was quiet, so its notifications never popped up
-    private const val CHANNEL = "pulse_weather_pop"
+    private const val CHANNEL = "pulse_weather_pop2"
     private const val ID = 4120
     private const val ID_DAYS = 4121
     private const val SIX_HOURS = 6L * 3600_000L
@@ -111,7 +111,7 @@ object WeatherReport {
     private fun post(c: Context, id: Int, title: String, text: SpannableStringBuilder, iconRes: Int) {
         val nm = c.getSystemService(NotificationManager::class.java)
         // high importance so the notification pops up; no sound or vibration, and only the first post alerts
-        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Weather", "Hava durumu"), NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null); enableVibration(false) })
+        if (Build.VERSION.SDK_INT >= 26) { runCatching { nm.deleteNotificationChannel("pulse_weather_pop") }; nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CHANNEL, tr("Weather", "Hava durumu"), NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null); enableVibration(false) }) }
         val large = ContextCompat.getDrawable(c, iconRes)?.toBitmap(160, 160)
         // a tap opens the weather app (the same page the widgets open)
         val open = android.app.PendingIntent.getActivity(c, 9200 + id, android.content.Intent().setComponent(android.content.ComponentName(c, "com.umutk.pulse.ExtraToolActivity")).putExtra("route", "weather").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),

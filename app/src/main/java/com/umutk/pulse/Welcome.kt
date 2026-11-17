@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "convert" to (tr("PowerPoint to PDF (and spreadsheets to PDF); Convert files is in Office tools too, with icons and descriptions. The Received files shortcut is gone from Files home.",
+        "PowerPoint'ten PDF'e (tablolar da PDF'e); Dosya dönüştür Office araçlarında da, simgeler ve açıklamalarla. Alınan dosyalar kısayolu Dosyalar ana ekranından kalktı.")),
+    "heart" to (tr("No more notification dots on the app icons for weather, playback and Buds cards. YTXTube's headphones button brings the video back when you return to the app.",
+        "Hava durumu, oynatma ve Buds kartları için uygulama simgelerinde artık bildirim rozeti yok. YTXTube'un kulaklık düğmesi uygulamaya dönünce videoyu geri getiriyor.")),
     "music" to (tr("Fixed: the music player's media card no longer pops up when nothing plays, an old song no longer starts on a volume press after a headset was plugged in, and YTXTube's picture-in-picture Next never opens a song.",
         "Düzeltildi: müzik çaların medya kartı hiçbir şey çalmazken çıkmıyor, kulaklık takıldıktan sonra ses tuşuna basınca eski şarkı başlamıyor, YTXTube pencere-içi pencerenin İleri tuşu şarkı açmıyor.")),
     "palette" to (tr("Two new looks: Cloud and Cloud light, soft clouds behind frosted panels (Look > Other colors). Pulse Watch builds again.",

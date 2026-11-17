@@ -928,6 +928,10 @@ class PlayerState(private val scope: CoroutineScope) {
     fun toggleRememberSpeed() = PlaybackSpeed.setRemember(!PlaybackSpeed.remember, speed)
 
 
+    /** The headphones of the picture-in-picture window turned audio-only on: back in the app it is turned off again (unless it was on before). */
+    var audioFromPip = false
+    var audioOnlyBeforePip = false
+
     fun setAudioOnly(on: Boolean) {
         AudioOnly.set(on)
         applyVideoTrack()

@@ -112,6 +112,7 @@ internal fun kindOf(name: String): String = when (extOf(name)) {
     "mp3", "m4a", "aac", "wav", "ogg", "opus", "flac", "amr" -> "audio"
     "pdf" -> "pdf"
     "docx" -> "docx"
+    "pptx" -> "pptx"
     "xlsx" -> "xlsx"
     "txt", "md", "csv", "log", "json", "xml", "html", "htm" -> "text"
     else -> "other"

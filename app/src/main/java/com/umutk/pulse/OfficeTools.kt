@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,10 +83,21 @@ private class OtTile(val key: String, val en: String, val tr: String, val subEn:
 @Composable
 fun OfficeToolsPage(onBack: () -> Unit) {
     val ctx = LocalContext.current
-    var sub by remember { mutableIntStateOf(0) }   // 0 hub, 1 scan, 2 PDF tools
+    var sub by remember { mutableIntStateOf(0) }   // 0 hub, 1 scan, 2 PDF tools, 3 convert files
     BackHandler { if (sub != 0) sub = 0 else onBack() }
     if (sub == 1) { DocScanPage { sub = 0 }; return }
     if (sub == 2) { PdfToolsPage { sub = 0 }; return }
+    if (sub == 3) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { sub = 0 }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+                PIcon("convert", T.accent, 26.dp)
+                Text(tr("Convert files", "Dosya dönüştür"), Modifier.padding(start = 8.dp), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            }
+            com.umutk.pulse.extras.mediatools.ConvertTab()
+        }
+        return
+    }
     var page by remember { mutableIntStateOf(OtPrefs.pageSize(ctx)) }
     var quality by remember { mutableIntStateOf(OtPrefs.quality(ctx)) }
     var margin by remember { mutableIntStateOf(OtPrefs.margin(ctx)) }
@@ -104,16 +116,19 @@ fun OfficeToolsPage(onBack: () -> Unit) {
         val tiles = listOf(
             OtTile("photos", "Scan document", "Belge tara", "Camera or gallery, cut out and flattened", "Kamera veya galeri, kesilir ve düzleştirilir") { sub = 1 },
             OtTile("convert", "PDF tools", "PDF araçları", "Merge, split pages, pictures to PDF", "Birleştir, sayfa böl, resimleri PDF yap") { sub = 2 },
+            OtTile("filetypes", "Convert files", "Dosya dönüştür", "PPTX, DOCX, XLSX, pictures to PDF and more", "PPTX, DOCX, XLSX, resim → PDF ve daha fazlası") { sub = 3 },
         )
-        tiles.forEach { t ->
-            PCard(Modifier.fillMaxWidth().clickable { t.go() }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PIcon(t.key, T.accent, 30.dp)
-                    Column(Modifier.padding(start = 12.dp)) {
-                        Text(tr(t.en, t.tr), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        // two tools to a row: the icon over its name, with its description under it
+        tiles.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { t ->
+                    PCard(Modifier.weight(1f).clickable { t.go() }) {
+                        PIcon(t.key, T.accent, 30.dp)
+                        Text(tr(t.en, t.tr), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
                         Text(tr(t.subEn, t.subTr), color = T.sub, fontSize = 12.sp)
                     }
                 }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
         PCard {
