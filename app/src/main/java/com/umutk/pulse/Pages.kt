@@ -513,7 +513,7 @@ fun SettingsPage() {
                     }
                 }
                 fun byId(vararg ids: String) = ids.map { id -> Themes.first { it.id == id } }
-                val folded = listOf("aurora", "sakura", "ocean", "ember", "frost")
+                val folded = listOf("aurora", "sakura", "ocean", "ember", "frost", "cloud", "cloudlight")
                 // Material You and AMOLED are plain appearance choices; the Windows looks have their own group, 95 centred on top
                 ThemeRow(byId("material", "amoled"))
                 Text("Windows", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
@@ -546,8 +546,7 @@ fun SettingsPage() {
                     }
                 }
                 // the picture behind the Windows 11 windows: phone wallpaper, the bundled A-D packs, or your own
-                // (every look: the blurred picture behind the pages, the "cloudy" background)
-                com.umutk.pulse.extras.ui.FlatSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
+                if (T.id == "win11") com.umutk.pulse.extras.ui.FlatSection(tr("Picture behind windows", "Pencere arkası resim")) { BackdropSettings() }
             }
             "general" -> GeneralSettings()
             "functions" -> FunctionsSettings()
