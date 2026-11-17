@@ -115,6 +115,7 @@ fun AboutPage() {
             }
         }
         // where the data and the cache are, what each part is for, and a delete button for each
+        com.umutk.pulse.extras.store.PacksCard()
         StorageCard()
         // licences and credits open on their own page
         PCard(Modifier.clickable { licences = true }) {

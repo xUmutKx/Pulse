@@ -181,7 +181,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
     LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
     LaunchApp(tr("Settings", "Ayarlar"), "pulse:winsettings", null, iconKey = "settings"),
-    LaunchApp(tr("Store", "Mağaza"), "pulse:store", null, iconKey = "download"),
+    LaunchApp("Microsoft Store", "pulse:store", null, iconKey = "download"),
     LaunchApp(tr("Control Center", "Denetim Merkezi"), "pulse:control", null, iconKey = "performance"),
     LaunchApp(tr("Performance", "Performans"), "pulse:perf", null, iconKey = "performance"),
     LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
@@ -351,7 +351,7 @@ internal fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
-            "pulse:store" -> "store:launcher" to tr("Store", "Mağaza"); "pulse:control" -> "controlcenter" to tr("Control Center", "Denetim Merkezi")
+            "pulse:store" -> "store:launcher" to "Microsoft Store"; "pulse:control" -> "controlcenter" to tr("Control Center", "Denetim Merkezi")
             "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
             // a window of the desktop itself: dragged, several at once, the launcher stays behind (or, with windows turned off, an app of its own)

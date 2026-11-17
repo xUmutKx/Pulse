@@ -165,12 +165,8 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
             StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null, onSettings = { iconsOpen = true })
             // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
             LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), state = ExtraListScroll.state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // only the apps: the downloaded packs are in Settings > About (Downloaded packs) and in the launcher's Microsoft Store
                 item { BuiltinRows() }
-                // only the modules already downloaded are listed here; the rest stay in the store
-                items(entries.filter { inList(states[it.key] ?: ModuleState.NOT_INSTALLED) }, key = { it.key }) { e ->
-                    StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                        onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                }
             }
         }
     }

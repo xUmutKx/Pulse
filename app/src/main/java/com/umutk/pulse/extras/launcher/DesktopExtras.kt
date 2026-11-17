@@ -51,7 +51,7 @@ import com.umutk.pulse.tr
 
 private fun Context.activity(): Activity? { var c = this; while (c is ContextWrapper) { if (c is Activity) return c; c = c.baseContext }; return null }
 
-/** A "Microsoft Store"-style window for the launcher: the looks, the stock pictures and the widgets that can be had, all from this phone (nothing is downloaded). */
+/** The launcher's Microsoft Store: the looks, the stock pictures, the widgets and the downloadable packs (wallpapers in 4K, icon packs, skins, …). */
 @Composable
 fun LauncherStoreWindow() {
     val ctx = LocalContext.current
@@ -60,11 +60,13 @@ fun LauncherStoreWindow() {
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
     val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
-    Column(Modifier.fillMaxSize()) {
+    // Windows 11 has the Microsoft Store drawn as the real one is (see-through, a rail of places at the left, cards); the other looks keep the plain tabs
+    if (T.id == "win11") MsStoreWindow(onPictures = { pickWall = true }, onWidgets = { pickWidget = true }) else Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(tab == 0, tr("Looks", "Görünümler")) { tab = 0 }
             PChip(tab == 1, tr("Pictures", "Resimler")) { tab = 1 }
             PChip(tab == 2, tr("Widgets", "Widget'lar")) { tab = 2 }
+            PChip(tab == 3, tr("Packs", "Paketler")) { tab = 3 }
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
             when (tab) {
@@ -80,6 +82,7 @@ fun LauncherStoreWindow() {
                     Text(tr("Pictures of ${LauncherLooks.byId(LauncherPrefs.look).nameEn}", "${LauncherLooks.byId(LauncherPrefs.look).nameTr} resimleri"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
                     PButton(tr("Browse pictures", "Resimlere göz at")) { pickWall = true }
                 }
+                3 -> com.umutk.pulse.extras.store.PackList()
                 else -> {
                     Text(tr("Widgets on this phone", "Bu telefondaki widget'lar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
                     PButton(tr("Browse widgets", "Widget'lara göz at")) { pickWidget = true }
