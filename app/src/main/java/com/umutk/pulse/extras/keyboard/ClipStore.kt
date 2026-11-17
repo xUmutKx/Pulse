@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.io.File
 
 /** One thing the clipboard held: a text, or a picture (kept as a file of the app); pinned ones stay until unpinned. */
-class ClipItem(val id: Long, val text: String, val image: String?, val time: Long, val pinned: Boolean)
+class ClipItem(val id: Long, val text: String, val image: String?, val time: Long, val pinned: Boolean, val src: String? = null)
 
 /**
  * Everything copied while the keyboard is the input method, kept on the phone: texts and pictures, newest first, pinned ones on top. Unpinned ones are
@@ -27,12 +27,12 @@ object ClipStore {
         loaded = true
         runCatching {
             val a = JSONArray(file(c).readText())
-            items = (0 until a.length()).map { i -> a.getJSONObject(i).let { o -> ClipItem(o.getLong("id"), o.optString("t"), o.optString("i").ifEmpty { null }, o.getLong("time"), o.optBoolean("pin")) } }
+            items = (0 until a.length()).map { i -> a.getJSONObject(i).let { o -> ClipItem(o.getLong("id"), o.optString("t"), o.optString("i").ifEmpty { null }, o.getLong("time"), o.optBoolean("pin"), o.optString("s").ifEmpty { null }) } }
         }
     }
 
     private fun write(c: Context) {
-        runCatching { file(c).writeText(JSONArray(items.map { JSONObject().put("id", it.id).put("t", it.text).put("i", it.image ?: "").put("time", it.time).put("pin", it.pinned) }).toString()) }
+        runCatching { file(c).writeText(JSONArray(items.map { JSONObject().put("id", it.id).put("t", it.text).put("i", it.image ?: "").put("time", it.time).put("pin", it.pinned).put("s", it.src ?: "") }).toString()) }
     }
 
     /** The newest copied item (text or picture) comes first, then the pinned ones, then the rest, newest first. */
@@ -48,12 +48,32 @@ object ClipStore {
         // 0 hours = for ever; otherwise the unpinned ones older than that go
         val hours = KeyboardPrefs.clipHours
         val limit = if (hours <= 0) Long.MIN_VALUE else System.currentTimeMillis() - hours * 3_600_000L
-        val keep = items.filter { it.pinned || it.time >= limit }
+        val nowMs = System.currentTimeMillis()
+        val checkGone = nowMs - lastGoneCheck > 20_000L
+        if (checkGone) lastGoneCheck = nowMs
+        // a picture whose original was deleted elsewhere (the gallery, Files) leaves the clipboard too; a pinned one stays
+        val keep = items.filter { (it.pinned || it.time >= limit) && !(checkGone && !it.pinned && it.src != null && originalGone(c, it.src)) }
         if (keep.size != items.size) { drop(c, items - keep.toSet()); items = keep; write(c) }
         return sorted(items)
     }
 
-    private fun drop(c: Context, gone: List<ClipItem>) { gone.forEach { g -> g.image?.let { File(it).delete() } } }
+    private var lastGoneCheck = 0L
+
+    /** True when the file or media item the picture was copied from no longer exists. A source that cannot be asked about counts as there. */
+    private fun originalGone(c: Context, src: String): Boolean = runCatching {
+        val u = Uri.parse(src)
+        when (u.scheme) {
+            "file" -> !File(u.path.orEmpty()).exists()
+            "content" -> c.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { it.count == 0 } ?: false
+            else -> false
+        }
+    }.getOrDefault(false)
+
+    /** Only the keyboard's own copies (in its clips folder) are ever deleted: never the picture the item was copied from. */
+    private fun drop(c: Context, gone: List<ClipItem>) {
+        val own = dir(c).canonicalPath + File.separator
+        gone.forEach { g -> g.image?.let { p -> val f = File(p); if (f.canonicalPath.startsWith(own)) f.delete() } }
+    }
 
     fun addText(c: Context, t: String): List<ClipItem> {
         read(c)
@@ -87,11 +107,11 @@ object ClipStore {
                     } else android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
                     bmp != null && jpg.outputStream().use { o -> bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, o) }
                 }.getOrDefault(false)
-                if (ok) { f.delete(); items = items + ClipItem(now, "", jpg.path, now, false); trim(c); write(c); return load(c) }
+                if (ok) { f.delete(); items = items + ClipItem(now, "", jpg.path, now, false, uri.toString()); trim(c); write(c); return load(c) }
             }
             val real = File(dir(c), "$now." + if (head[0] == 0x89.toByte() && head[1] == 'P'.code.toByte()) "png" else "jpg")
             val path = if (f.renameTo(real)) real.path else f.path
-            items = items + ClipItem(now, "", path, now, false)
+            items = items + ClipItem(now, "", path, now, false, uri.toString())
             trim(c); write(c)
         }
         return load(c)
@@ -105,7 +125,7 @@ object ClipStore {
     }
 
     fun togglePin(c: Context, id: Long): List<ClipItem> {
-        read(c); items = items.map { if (it.id == id) ClipItem(it.id, it.text, it.image, it.time, !it.pinned) else it }; write(c); return load(c)
+        read(c); items = items.map { if (it.id == id) ClipItem(it.id, it.text, it.image, it.time, !it.pinned, it.src) else it }; write(c); return load(c)
     }
 
     fun delete(c: Context, ids: Set<Long>): List<ClipItem> {
