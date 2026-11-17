@@ -61,4 +61,10 @@ object KeyCorners {
 
     /** The text shown on the corner or in the pop-up: a function shows its short name. */
     fun show(t: String): String = if (t.startsWith("@")) names[t.drop(1)] ?: t.drop(1) else t
+
+    // the glyphs of Unexpected Keyboard's icon font (res/font/kb_special.ttf) for the functions on the corners
+    private val glyphs = mapOf("tab" to '\uE00F', "copy" to '\uE030', "cut" to '\uE031', "paste" to '\uE032', "selectAll" to '\uE033', "undo" to '\uE036', "home" to '\uE00B', "end" to '\uE00C')
+
+    /** The icon of a function written on a corner (in the icon font), or null to show its text. */
+    fun glyph(t: String): String? = if (t.startsWith("@")) glyphs[t.drop(1)]?.toString() else null
 }
