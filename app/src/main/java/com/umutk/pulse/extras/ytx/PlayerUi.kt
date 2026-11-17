@@ -42,6 +42,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.SideEffect
 import androidx.compose.animation.animateContentSize
@@ -313,7 +314,7 @@ fun PlayerScreen(
 
             .then(if (interactive) Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } } else Modifier),
     ) {
-        ActionMessage(state, Modifier.align(Alignment.BottomCenter).zIndex(1f).padding(bottom = bottom + 24.dp))
+        ActionMessage(state, Modifier.align(Alignment.BottomCenter).zIndex(1f).navigationBarsPadding().padding(bottom = bottom + 48.dp))
         if (state.isMusicMode) {
             val p = morph.progress.value
             Box(
@@ -1264,6 +1265,17 @@ fun BitChordMusicPlayer(
                         }
                     }
                 }
+                // the queue: what plays after this song (the count on the icon), opened as a list to play, remove or clear
+                IconButton(onClick = { state.sheet = PlayerSheet.Queue }) {
+                    Box {
+                        Icon(Icons.Rounded.QueueMusic, contentDescription = "Queue", tint = c.onSurface, modifier = Modifier.size(26.dp))
+                        if (state.queueItems.isNotEmpty()) Text(
+                            "${state.queueItems.size}",
+                            fontSize = 9.sp, fontWeight = FontWeight.Bold, color = c.surface,
+                            modifier = Modifier.align(Alignment.TopEnd).clip(CircleShape).background(c.primary).padding(horizontal = 4.dp),
+                        )
+                    }
+                }
                 IconButton(onClick = { showTrackMenu = true }) {
                     Icon(
                         Icons.Rounded.MoreVert,
@@ -1565,6 +1577,7 @@ fun BitChordMusicPlayer(
         MusicTrackOptionsSheet(
             track = item,
             onPlayNext = { state.playNextMusic(item) },
+            onAddToQueue = { state.addToMusicQueue(item) },
             onDownloadAudio = {
                 val queued = Downloads.enqueueMusic(item)
                 Toast.makeText(

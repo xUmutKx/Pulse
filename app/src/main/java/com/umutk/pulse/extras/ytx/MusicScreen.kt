@@ -186,6 +186,7 @@ fun MusicScreen(
     onSearch: () -> Unit,
     onAccount: () -> Unit,
     onPlayNext: (VideoItem) -> Unit = {},
+    onAddToQueue: (VideoItem) -> Unit = {},
     onOpenQueue: (List<VideoItem>, Int) -> Unit = { list, index -> list.getOrNull(index)?.let(onOpen) },
     onFillQueue: (List<VideoItem>) -> Unit = {},
     scrollToTop: Int = 0,
@@ -270,10 +271,8 @@ fun MusicScreen(
     trackOptionsFor?.let { track ->
         MusicTrackOptionsSheet(
             track = track,
-            onPlayNext = {
-                onPlayNext(track)
-                Toast.makeText(context, "Playing next: ${track.title}", Toast.LENGTH_SHORT).show()
-            },
+            onPlayNext = { onPlayNext(track) },
+            onAddToQueue = { onAddToQueue(track) },
             onDownloadAudio = { downloadAudio(track) },
             onShare = {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -621,6 +620,7 @@ private fun MusicSectionHeader(
 fun MusicTrackOptionsSheet(
     track: VideoItem,
     onPlayNext: () -> Unit,
+    onAddToQueue: () -> Unit = {},
     onDownloadAudio: () -> Unit,
     onShare: () -> Unit,
     onDismiss: () -> Unit,
@@ -699,6 +699,32 @@ fun MusicTrackOptionsSheet(
                 Spacer(Modifier.width(16.dp))
                 Text(
                     "Play next",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.onSurface,
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable {
+                        onAddToQueue()
+                        onDismiss()
+                    }
+                    .padding(vertical = 14.dp, horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Rounded.QueueMusic,
+                    contentDescription = null,
+                    tint = c.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    "Add to queue",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = c.onSurface,

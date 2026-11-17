@@ -281,14 +281,28 @@ class PlayerState(private val scope: CoroutineScope) {
         show(item, startPlayback = true)
     }
 
+    /** Next in the music queue, without a message (the queue button shows it): the song goes to the front of what plays after this one. */
     fun playNextMusic(item: VideoItem) {
-        val player = controller ?: return
         known[item.id] = item
-        if (current == null || player.mediaItemCount == 0) { openMusic(item, expand = false); return }
-        player.addMediaItem(player.currentMediaItemIndex + 1, mediaItemFor(item))
-        actionMessage = "Playing next"
-        continueIfEnded(player)
+        if (current == null || !isMusicMode) { openMusic(item, expand = false); return }
+        musicQueue = listOf(item) + musicQueue.filter { it.id != item.id }
     }
+
+    /** At the end of the music queue, without a message. */
+    fun addToMusicQueue(item: VideoItem) {
+        known[item.id] = item
+        if (current == null || !isMusicMode) { openMusic(item, expand = false); return }
+        musicQueue = musicQueue.filter { it.id != item.id } + item
+    }
+
+    /** What is queued after the playing one: the music queue in the music player, the video queue otherwise. */
+    val queueItems: List<VideoItem> get() = if (isMusicMode) musicQueue else queue
+
+    fun playQueued(index: Int) { if (isMusicMode) openMusicQueue(musicQueue, index, expanded) else playFromQueue(index) }
+
+    fun removeQueued(index: Int) { if (isMusicMode) musicQueue = musicQueue.filterIndexed { i, _ -> i != index } else removeFromQueue(index) }
+
+    fun clearQueued() { if (isMusicMode) musicQueue = emptyList() else clearQueue() }
 
     
 
@@ -447,7 +461,6 @@ class PlayerState(private val scope: CoroutineScope) {
         known[item.id] = item
         if (current == null || player.mediaItemCount == 0) { open(item, expand = false); return }
         player.addMediaItem(player.currentMediaItemIndex + 1, mediaItemFor(item))
-        actionMessage = "Playing next"
         continueIfEnded(player)
     }
 
@@ -464,7 +477,6 @@ class PlayerState(private val scope: CoroutineScope) {
         known[item.id] = item
         if (current == null || player.mediaItemCount == 0) { open(item, expand = false); return }
         player.addMediaItem(mediaItemFor(item))
-        actionMessage = "Added to queue"
         continueIfEnded(player)
     }
 
@@ -520,7 +532,6 @@ class PlayerState(private val scope: CoroutineScope) {
             relList.firstOrNull { it.channel.equals(curr.channel, ignoreCase = true) } ?: relList.firstOrNull()
         }
         if (next != null) {
-            actionMessage = "Up next: ${next.title}"
             if (isMusicMode) openMusic(next, expand = expanded) else open(next, expand = expanded)
         } else {
             scope.launch {
@@ -533,7 +544,6 @@ class PlayerState(private val scope: CoroutineScope) {
                             list.firstOrNull { it.channel.equals(curr.channel, ignoreCase = true) } ?: list.firstOrNull()
                         }
                         if (rel != null) {
-                            actionMessage = "Up next: ${rel.title}"
                             if (isMusicMode) openMusic(rel, expand = expanded) else open(rel, expand = expanded)
                         }
                     }
