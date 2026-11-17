@@ -163,6 +163,14 @@ class YtxActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         shortsPlayerHolder?.pause()
+        stoppedAt = android.os.SystemClock.elapsedRealtime()
+    }
+
+    // back after a while away (not a moment in another screen of Pulse or the share sheet): YTXTube opens on Home, not on the page it was left on
+    private var stoppedAt = 0L
+    override fun onRestart() {
+        super.onRestart()
+        if (stoppedAt > 0 && android.os.SystemClock.elapsedRealtime() - stoppedAt > 30_000L) YtxEntry.backHome++
     }
 
     override fun onUserLeaveHint() {
@@ -288,7 +296,10 @@ fun YtxTubeApp() {
     var shortsEntry by remember { mutableStateOf<VideoItem?>(null) }
     var openAllSubscriptions by remember { mutableStateOf(false) }
     var openSearch by remember { mutableStateOf(false) }
-    var tab by rememberSaveable { mutableStateOf(Tab.Home) }
+    var tab by remember { mutableStateOf(Tab.Home) }
+    LaunchedEffect(YtxEntry.backHome) {
+        if (YtxEntry.backHome > 0 && !player.expanded) { tab = Tab.Home; openPlaylist = null; openChannel = null; openSearch = false; openSettings = false; openAllSubscriptions = false }
+    }
     var isShortsCommentsOpen by remember { mutableStateOf(false) }
 
 
@@ -501,9 +512,10 @@ fun YtxTubeApp() {
         }
     }
     BackHandler(enabled = !player.expanded && openSearch) { openSearch = false }
-    BackHandler(enabled = !player.expanded && openPlaylist != null) { openPlaylist = null }
     BackHandler(enabled = signingIn) { signingIn = false }
     BackHandler(enabled = !player.expanded && openChannel != null) { openChannel = null }
+    // (after the channel's: a playlist opened from a channel closes first and leaves the channel)
+    BackHandler(enabled = !player.expanded && openPlaylist != null) { openPlaylist = null }
 
     BackHandler(enabled = showFullscreen) { exitFullscreen() }
     BackHandler(enabled = shortsEntry != null) {
@@ -603,6 +615,7 @@ fun YtxTubeApp() {
             LocalVideoSurface provides if (pip.active) NoVideoSurface else sharedSurface,
             LocalPictureInPicture provides pip,
             LocalVideoMenu provides { optionsFor = it },
+            LocalPlaylistOpener provides { ref -> player.expanded = false; openPlaylist = ref },
             LocalChannelOpener provides { url ->
 
                 player.expanded = false
@@ -703,27 +716,6 @@ fun YtxTubeApp() {
 
 
         AnimatedVisibility(
-            visible = openPlaylist != null,
-            enter = if (reduced) fadeIn(snap()) else slideInHorizontally(tween(340, easing = Motion.Emphasized)) { it } + fadeIn(tween(120)),
-            exit = if (reduced) fadeOut(snap()) else slideOutHorizontally(tween(300, easing = Motion.Emphasized)) { it } + fadeOut(tween(220)),
-        ) {
-            val pl = openPlaylist
-            val feed = playlistFeed
-            if (pl != null && feed != null) {
-                PlaylistScreen(
-                    pl, feed, contentPadding,
-                    onBack = { openPlaylist = null },
-                    onOpen = { video ->
-                        if (pl.id == "MDL") player.openMusic(video)
-                        else player.open(video)
-                    },
-                    channelAvatarSeed = lib.channels.associate { it.id to it.avatar },
-                )
-            }
-        }
-
-
-        AnimatedVisibility(
             visible = openAllSubscriptions,
             enter = if (reduced) fadeIn(snap()) else slideInHorizontally(tween(340, easing = Motion.Emphasized)) { it } + fadeIn(tween(120)),
             exit = if (reduced) fadeOut(snap()) else slideOutHorizontally(tween(300, easing = Motion.Emphasized)) { it } + fadeOut(tween(220)),
@@ -752,6 +744,27 @@ fun YtxTubeApp() {
                         shortsEntry = video
                     },
                     onMessage = { player.actionMessage = it },
+                )
+            }
+        }
+
+
+        AnimatedVisibility(
+            visible = openPlaylist != null,
+            enter = if (reduced) fadeIn(snap()) else slideInHorizontally(tween(340, easing = Motion.Emphasized)) { it } + fadeIn(tween(120)),
+            exit = if (reduced) fadeOut(snap()) else slideOutHorizontally(tween(300, easing = Motion.Emphasized)) { it } + fadeOut(tween(220)),
+        ) {
+            val pl = openPlaylist
+            val feed = playlistFeed
+            if (pl != null && feed != null) {
+                PlaylistScreen(
+                    pl, feed, contentPadding,
+                    onBack = { openPlaylist = null },
+                    onOpen = { video ->
+                        if (pl.id == "MDL") player.openMusic(video)
+                        else player.open(video)
+                    },
+                    channelAvatarSeed = lib.channels.associate { it.id to it.avatar },
                 )
             }
         }
@@ -1211,3 +1224,6 @@ internal fun parseYouTubeLink(text: String): YouTubeLinkTarget? {
     }
     return null
 }
+
+/** Counts the returns to YTXTube after a while away; each one takes it back to Home. */
+internal object YtxEntry { var backHome by androidx.compose.runtime.mutableIntStateOf(0) }

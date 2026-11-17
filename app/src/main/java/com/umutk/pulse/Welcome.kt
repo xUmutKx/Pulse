@@ -283,6 +283,8 @@ private val WHATS_NEW = listOf(
         "Araç kutusu > Performans: Pulse'un işlemleri ve çalışan diğer uygulamalar (root ya da Shizuku) bellekleriyle, tek tek ya da hepsi birden durdurulur.")),
     "clock" to (tr("Toolkit > Watch: pair with a Wear OS watch over wireless debugging, install Pulse Watch or any APK, send files, manage its apps, see its screen.",
         "Araç kutusu > Saat: Wear OS saatle kablosuz hata ayıklama üzerinden eşleş, Pulse Watch ya da herhangi bir APK kur, dosya gönder, uygulamalarını yönet, ekranını gör.")),
+    "video" to (tr("YTXTube channels: Playlists tab and Latest / Popular / Oldest; playlist search; opens on Home; the video follows the finger when full screen is pulled down.",
+        "YTXTube kanalları: Oynatma listeleri sekmesi ve En yeni / Popüler / En eski; oynatma listesi arama; Ana sayfada açılır; tam ekran aşağı çekilince video parmağı izler.")),
     "video" to (tr("YTXTube: the channel's own videos under a video, and one slide at the right edge goes from silent to full volume.",
         "YTXTube: videonun altında kanalın kendi videoları da var, sağ kenarda tek kaydırma sesi sıfırdan tama çıkarır.")),
     "music" to (tr("YTXTube Music: Song / Video switch, a thumb down, a queue button; word-by-word lyrics on the lock screen, floating lyrics and the notification.",

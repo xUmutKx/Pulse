@@ -65,6 +65,7 @@ enum class ChannelTab(val label: String) {
     Videos("Videos"),
     Shorts("Shorts"),
     Live("Live"),
+    Playlists("Playlists"),
     Community("Community"),
 }
 
@@ -95,6 +96,16 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
     var communityLoading by mutableStateOf(false)
         private set
 
+    var playlists by mutableStateOf<List<PlaylistRef>>(emptyList())
+        private set
+    var playlistsLoading by mutableStateOf(false)
+        private set
+    /** The orders the channel offers for its videos (Latest, Popular, Oldest) and the one shown. */
+    var sorts by mutableStateOf<List<Pair<String, String>>>(emptyList())
+        private set
+    var sortIndex by mutableStateOf(0)
+        private set
+
     private var next: String? = null
     private var shortsNext: String? = null
     val hasMore get() = next != null
@@ -107,6 +118,7 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
             ChannelTab.Shorts -> if (shorts.isEmpty() && !shortsLoading) loadShorts()
             ChannelTab.Live -> if (liveVideos.isEmpty() && !liveLoading) loadLive()
             ChannelTab.Community -> if (communityPosts.isEmpty() && !communityLoading) loadCommunity()
+            ChannelTab.Playlists -> if (playlists.isEmpty() && !playlistsLoading) loadPlaylists()
             ChannelTab.Videos -> {}
         }
     }
@@ -124,6 +136,7 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
                         .onSuccess { p ->
                             videos = p.videos
                             next = p.next
+                            sorts = p.sorts; sortIndex = 0
                             p.channelHeader?.let { d = d.withHeader(it) }
                             details = d
                         }
@@ -133,6 +146,29 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
                         }
                 }
                 .onFailure { error = YouTube.friendlyError(it) }
+            loading = false
+        }
+    }
+
+    fun loadPlaylists() {
+        val d = details ?: return
+        playlistsLoading = true
+        scope.launch {
+            playlists = runCatching { InnerTube.channelPlaylists(d.id) }.getOrDefault(emptyList())
+            playlistsLoading = false
+        }
+    }
+
+    /** The videos again in the order picked (Latest, Popular, Oldest). */
+    fun sortBy(i: Int) {
+        val d = details ?: return
+        val tok = sorts.getOrNull(i)?.second ?: return
+        if (i == sortIndex) return
+        sortIndex = i
+        loading = true
+        videos = emptyList(); next = null
+        scope.launch {
+            runCatching { YouTube.channelVideos(d, tok) }.onSuccess { p -> videos = p.videos; next = p.next }
             loading = false
         }
     }
@@ -293,6 +329,7 @@ fun ChannelScreen(
     onMessage: (String) -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
+    val openPlaylist = LocalPlaylistOpener.current
     val list = rememberLazyListState()
     val nearEnd by remember {
         derivedStateOf { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) >= list.layoutInfo.totalItemsCount - 4 }
@@ -371,6 +408,9 @@ fun ChannelScreen(
                 }
                 when (state.activeTab) {
                     ChannelTab.Videos -> {
+                        if (state.sorts.size > 1) item(key = "sorts") {
+                            ChoiceChips(state.sorts.map { it.first }, state.sortIndex, { state.sortBy(it) })
+                        }
                         items(state.videos, key = { it.id }) { video ->
                             VideoCard(video, onClick = { onOpen(video) }, modifier = Modifier.animateItem())
                         }
@@ -425,6 +465,19 @@ fun ChannelScreen(
                             items(state.liveVideos, key = { it.id }) { video ->
                                 VideoCard(video, onClick = { onOpen(video) }, modifier = Modifier.animateItem())
                             }
+                        }
+                    }
+                    ChannelTab.Playlists -> {
+                        if (state.playlistsLoading) {
+                            item {
+                                Box(Modifier.fillMaxWidth().padding(48.dp), Alignment.Center) {
+                                    CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp))
+                                }
+                            }
+                        } else if (state.playlists.isEmpty()) {
+                            item { EmptyState(Icons.Rounded.CloudOff, "No playlists", "This channel has no public playlists.") }
+                        } else {
+                            items(state.playlists, key = { "pl-" + it.id }) { pl -> PlaylistRow(pl, Modifier.animateItem()) { openPlaylist(pl) } }
                         }
                     }
                     ChannelTab.Community -> {

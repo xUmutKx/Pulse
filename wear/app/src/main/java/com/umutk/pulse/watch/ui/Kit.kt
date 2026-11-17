@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.CurvedLayout
 import androidx.wear.compose.foundation.CurvedTextStyle
-import androidx.wear.compose.foundation.curvedText
+import androidx.wear.compose.material.curvedText
 import kotlinx.coroutines.delay
 import java.util.Date
 

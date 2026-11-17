@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     // Wear OS: the scaling list with the crown, curved text, and the navigation where a swipe to the right goes back
     implementation("androidx.wear.compose:compose-foundation:1.7.1")
+    implementation("androidx.wear.compose:compose-material:1.7.1") // curvedText
     implementation("androidx.wear.compose:compose-navigation:1.7.1")
     // the watch's own text input (keyboard, voice, handwriting) for the notes
     implementation("androidx.wear:wear-input:1.2.0")
