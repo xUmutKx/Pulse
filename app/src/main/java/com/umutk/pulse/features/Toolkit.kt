@@ -128,6 +128,7 @@ private val tools = listOf(
     Tool("Lux meter", "Işık ölçer", "light") { LuxMeter() },
     Tool("Dice", "Zar", "dice") { Dice() },
     Tool("Floating keyboard", "Yüzen klavye", "keyboard") { FloatingKeyboardTool() },
+    Tool("Performance", "Performans", "speed", wide = true) { PerfControlTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
