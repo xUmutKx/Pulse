@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Two new looks: Cloud and Cloud light, soft clouds behind frosted panels (Look > Other colors). Pulse Watch builds again.",
+        "İki yeni görünüm: Cloud ve Cloud light, buzlu panellerin arkasında yumuşak bulutlar (Görünüm > Diğer renkler). Pulse Watch yeniden derleniyor.")),
     "keyboard" to (tr("Keyboard smooth mode: no animations, effects, RGB light or neural weighing, for a phone that lags (also in Toolkit > Performance).",
         "Klavye akıcı mod: animasyon, efekt, RGB ışık ve sinirsel tartım yok, kasan telefon için (Araç kutusu > Performans'ta da var).")),
     "keyboard" to (tr("Brands, apps and creators are written their own way: Starbucks, McDonald's, YouTube, iPhone, MrBeast, and Starbucks'ta in Turkish.",
