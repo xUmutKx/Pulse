@@ -5,6 +5,7 @@
     <path android:fillColor="#FF000000" android:pathData="M24,6h60c9.94,0 18,8.06 18,18v60c0,9.94 -8.06,18 -18,18h-60c-9.94,0 -18,-8.06 -18,-18v-60c0,-9.94 8.06,-18 18,-18z" />
     <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineJoin="round"
         android:pathData="M28,34h52c3,0 5,2 5,5v30c0,3 -2,5 -5,5h-52c-3,0 -5,-2 -5,-5v-30c0,-3 2,-5 5,-5z" />
-    <path android:fillColor="#FFFFFFFF" android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineJoin="round"
-        android:pathData="M47,45l18,13l-18,13z" />
+    <!-- the play button: smaller, and centred in the screen (the screen's middle is 54,54; the triangle's own middle sits a little right so it looks centred) -->
+    <path android:fillColor="#FFFFFFFF" android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:strokeLineJoin="round"
+        android:pathData="M50.5,46.5l12,7.5l-12,7.5z" />
 </vector>

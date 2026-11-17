@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "video" to (tr("Series and movies is a screen of its own from YTXTube. Type the size in GB (it looks from a quarter to nearly twice, bigger first), tap an episode to see who shares each stream, and a torrent nobody shares gives way after 10 seconds. More trackers, also over HTTPS.",
+        "Diziler ve filmler YTXTube'dan kendi ekranında açılıyor. Boyutu GB olarak yaz (dörtte birinden neredeyse iki katına kadar bakar, büyükler önce), bir bölüme dokununca her yayını kaç kişinin paylaştığını gör; kimse paylaşmıyorsa 10 saniye sonra diğerine geçer. Daha çok tracker, HTTPS dahil.")),
+    "download" to (tr("Packs moved: Settings > About (Downloaded packs) and the launcher's Microsoft Store, drawn like Windows 11's Store. Storage says what each folder holds, and Game Hub no longer piles up old boxes.",
+        "Paketler taşındı: Ayarlar > Hakkında (İndirilen paketler) ve launcher'daki Microsoft Store (Windows 11 Mağazası gibi çizili). Depolama her klasörün ne tuttuğunu söylüyor, Game Hub artık eski kutuları biriktirmiyor.")),
     "storage" to (tr("Files on a wide tablet shows columns like a computer: places, a column per folder, and the picked file's picture and details at the right. The Columns switch in the menu brings the list back.",
         "Geniş tablette Dosyalar bilgisayardaki gibi sütunlarla açılıyor: konumlar, her klasör için bir sütun, sağda seçilen dosyanın resmi ve ayrıntıları. Menüdeki Sütunlar anahtarı listeyi geri getirir.")),
     "video" to (tr("Series and movies has a back button and follows the look (see-through on Windows 11), and YTXTube's Saved tab opens it. Launcher glass has a new Windows Material style with darker, lighter and transparency settings. Game Hub shows all 380 games, and the action buttons open around your finger. More Windows XP and 10 wallpapers.",
