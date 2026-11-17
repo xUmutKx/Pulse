@@ -344,7 +344,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
     if (pickPack) IconPackPicker(LauncherPrefs.iconPack, onPick = { LauncherPrefs.iconPack = it; save(); pickPack = false }, onDismiss = { pickPack = false })
     if (pickWidget) WidgetPickDialog(onPick = { adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
-    if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
+    if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }, onPickFile = { f -> LauncherPrefs.wallFile = f.path; save(); pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
     }
     if (pickGesture != 0) {

@@ -85,21 +85,30 @@ object Lyrics {
      * Asked once per song in three days; the network is only used with the word setting on.
      */
     private fun upgradeInBackground(app: Context, path: String, local: LyricsResult, title: String, artist: String, durationMs: Long) {
-        if (!local.synced || local.source !in setOf("lrc", "tag") || local.lines.any { it.words.isNotEmpty() } || path.contains("://")) return
-        if (!LiveLyrics.wordSync(app)) return
+        if (!LiveLyrics.wordSync(app) || path.contains("://")) return
         val key = "w|${artist.trim().lowercase()}|${title.trim().lowercase()}"
-        if (missed(app, key) || !upgrading.add(key)) return
-        background.launch {
-            try {
-                val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
-                var rec = runCatching { wordUpgrade(LrclibClient(LyricsCache(null)), title, artist, sec) }.getOrNull()
-                if (rec == null && netease(app)) rec = runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()?.takeIf { it.hasWords }
-                val res = rec?.let { toResult(it, "lrclib") }
-                if (res == null || !sameWords(local, res)) { markMiss(app, key); return@launch }
-                runCatching { editFile(app, path).apply { parentFile?.mkdirs() }.writeText(lrcText(res)) }
-            } finally { upgrading.remove(key) }
-        }
+        if (!upgrading.add(key)) return
+        background.launch { try { upgradeWords(app, path, local, title, artist, durationMs) } finally { upgrading.remove(key) } }
     }
+
+    /**
+     * The upgrade itself, for one song, now (the background pass of [LyricsWordWorker] calls it too). True when the song got word times. A song asked about and without a find is
+     * not asked again for three days.
+     */
+    suspend fun upgradeWords(app: Context, path: String, local: LyricsResult, title: String, artist: String, durationMs: Long): Boolean {
+        if (!local.synced || local.source !in setOf("lrc", "tag") || local.lines.any { it.words.isNotEmpty() } || path.contains("://")) return false
+        val key = "w|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        if (missed(app, key)) return false
+        val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
+        var rec = runCatching { wordUpgrade(LrclibClient(LyricsCache(null)), title, artist, sec) }.getOrNull()
+        if (rec == null && netease(app)) rec = runCatching { NeteaseClient.find(title, artist, durationMs) }.getOrNull()?.takeIf { it.hasWords }
+        val res = rec?.let { toResult(it, "lrclib") }
+        if (res == null || !sameWords(local, res)) { markMiss(app, key); return false }
+        return runCatching { editFile(app, path).apply { parentFile?.mkdirs() }.writeText(lrcText(res)) }.isSuccess
+    }
+
+    /** The lyrics kept on the phone for a song (its tag, a .lrc beside it), without any search; null when it has none. */
+    fun localOnly(path: String, title: String): LyricsResult? = runCatching { readEmbedded(path) ?: readSidecar(path, title) }.getOrNull()
 
     /** Whether at least four in five of [a]'s lines are lines of [b] too (compared by their letters). */
     private fun sameWords(a: LyricsResult, b: LyricsResult): Boolean {

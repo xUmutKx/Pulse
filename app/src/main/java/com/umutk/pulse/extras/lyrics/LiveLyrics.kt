@@ -364,6 +364,9 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
     var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
     var st by remember { mutableStateOf(LyricsAuto.status(c)) }
+    var wordPass by remember { mutableStateOf(LyricsAuto.wordPassOn(c)) }
+    var wst by remember { mutableStateOf(LyricsAuto.wordStatus(c)) }
+    androidx.compose.runtime.LaunchedEffect(wordPass) { while (true) { wst = LyricsAuto.wordStatus(c); kotlinx.coroutines.delay(2000) } }
     androidx.compose.runtime.LaunchedEffect(autoAll) { while (true) { st = LyricsAuto.status(c); kotlinx.coroutines.delay(2000) } }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -421,6 +424,9 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             SwitchRow(tr("Find lyrics for the whole library in the background", "Tüm kütüphane için sözleri arka planda bul"), autoAll) { autoAll = it; LyricsAuto.setOn(c, it) }
             if (st.second > 0) Text(tr("${st.first} of ${st.second} songs looked at, ${st.third} with lyrics", "${st.second} şarkıdan ${st.first} tanesine bakıldı, ${st.third} tanesinin sözü var"), color = T.sub, fontSize = 12.sp)
             com.umutk.pulse.PButton(tr("Search now", "Şimdi ara"), compact = true) { LyricsAuto.runNow(c); autoAll = true }
+            SwitchRow(tr("Give the lyrics on the phone their word times (once, in the background)", "Telefondaki sözlere kelime zamanı ekle (bir kez, arka planda)"), wordPass) { wordPass = it; LyricsAuto.setWordPassOn(c, it) }
+            if (wst.second > 0) Text(tr("${wst.first} of ${wst.second} songs looked at, ${wst.third} got word times", "${wst.second} şarkıdan ${wst.first} tanesine bakıldı, ${wst.third} tanesi kelime zamanı aldı"), color = T.sub, fontSize = 12.sp)
+            com.umutk.pulse.PButton(tr("Add word times now", "Kelime zamanlarını şimdi ekle"), compact = true) { LyricsAuto.runWordPassNow(c); wordPass = true }
             SwitchRow(tr("Share: only lines that follow each other", "Paylaşım: yalnız ardışık satırlar"), consec) { consec = it; LyricsShare.setConsecutive(c, it) }
         }
     }

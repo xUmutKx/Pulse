@@ -224,6 +224,25 @@
       "yayinlandi": true,
       "aciklama_en": "The Winamp skins that used to be inside the app, now a download (3 MB).",
       "aciklama_tr": "Eskiden uygulamanın içinde olan Winamp temaları, artık indirme (3 MB)."
+    },
+    {
+      "id": "wallpapers-hd",
+      "ad_en": "4K and Full HD wallpapers",
+      "ad_tr": "4K ve Full HD duvar kağıtları",
+      "tur": "veri",
+      "kategori": "duvar-kagidi",
+      "boyut": 2994549,
+      "surum": "1.0.0",
+      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/wallpapers-hd.zip",
+      "sha256": "aaac0cc05b7e673c17750d66e96e00a32f074c717af6b890ea7e16fd48d2919d",
+      "lisans": "LicenseRef-public-domain-NASA",
+      "lisans_metni": "https://commons.wikimedia.org/wiki/Commons:Licensing#Material_in_the_public_domain",
+      "atif": "NASA, ESA, STScI and the Hubble teams; public domain (Wikimedia Commons). Credits per picture in pack.json",
+      "min_pulse": 120,
+      "guncellendi": "2026-11-17T00:00:00Z",
+      "yayinlandi": true,
+      "aciklama_en": "Four Hubble and Earth pictures in 4K and Full HD (3 MB), for Pulse windows and the launcher.",
+      "aciklama_tr": "Pulse pencereleri ve başlatıcı için 4K ve Full HD dört Hubble ve Dünya resmi (3 MB)."
     }
   ],
   "guncellendi": "2026-11-17T00:00:00Z"
