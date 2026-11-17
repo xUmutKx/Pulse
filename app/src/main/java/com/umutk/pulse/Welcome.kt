@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Notes looks like Samsung Notes: one tool strip under the title (pen, marker, eraser, lasso, undo, redo), colours and widths in a slim row under it. Palm rejection (off by default) in Notes settings. A linked folder shows at once.",
+        "Notlar Samsung Notes gibi: başlığın altında tek araç şeridi (kalem, fosforlu, silgi, kement, geri al, yinele), altında ince renk ve kalınlık satırı. Avuç reddi (varsayılan kapalı) Notlar ayarlarında. Bağlanan klasör hemen görünüyor.")),
+    "palette" to (tr("The Message button other apps show for Pulse (Nova search, share lists) follows the glass look of the Messages icon.",
+        "Diğer uygulamaların Pulse için gösterdiği Mesaj butonu (Nova arama, paylaşım listeleri) Mesajlar ikonunun cam görünümünü izliyor.")),
     "video" to (tr("YTXTube music: the songs after a searched song are the same artist's other songs, not its remixes. Playlist covers have a play button in the corner, outside and inside. YTXTube's icon is a white play button on black.",
         "YTXTube müzik: aranan şarkıdan sonra gelenler aynı sanatçının diğer şarkıları, remiksler değil. Liste kapaklarının köşesinde oynat tuşu var, dışarıda ve içeride. YTXTube simgesi siyah üstüne beyaz oynat tuşu.")),
     "palette" to (tr("Task Manager without root lists Pulse's own parts: the extra apps and the services that run. Network lab and Appearance groups from the last version are in too.",
