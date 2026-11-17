@@ -72,3 +72,7 @@
 -keep class com.grack.nanojson.** { *; }
 -keep class org.jsoup.** { *; }
 -dontwarn org.jsoup.**
+
+# watch manager: libadb-android and its SPAKE2 pairing (native, found by name)
+-keep class io.github.muntashirakon.** { *; }
+-dontwarn io.github.muntashirakon.**
