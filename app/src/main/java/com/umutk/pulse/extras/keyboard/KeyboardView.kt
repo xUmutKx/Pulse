@@ -598,6 +598,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                                     }, Color.White)
                                 }
                             } }
+                            // a file: a small page with its kind written on it
+                            if (st.shotThumb == null && !st.shotVideo && st.shotFile.isNotEmpty()) Box(Modifier.size(width = 30.dp, height = 36.dp).clip(RoundedCornerShape(topStart = 3.dp, topEnd = 9.dp, bottomStart = 3.dp, bottomEnd = 3.dp)).background(th.accent.copy(alpha = .22f)), contentAlignment = Alignment.BottomCenter) {
+                                Text(st.shotFile, color = th.text, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
+                            }
                             // a video with no picture of its own: the play mark alone, a little bigger
                             if (st.shotThumb == null && st.shotVideo) Canvas(Modifier.size(26.dp)) {
                                 drawCircle(Color.Black.copy(alpha = .78f))
@@ -1210,11 +1214,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     // corner swipes: the small labels on the corners say what a swipe toward them gives
                     if (KeyboardPrefs.corners && KeyboardPrefs.cornerHints && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
                         val ink = th.text.copy(alpha = .6f)
-                        if (cc.nw.isNotEmpty()) Text(KeyCorners.show(cc.nw), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
-                        if (cc.ne.isNotEmpty()) Text(KeyCorners.show(cc.ne), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
-                        if (cc.sw.isNotEmpty()) Text(KeyCorners.show(cc.sw), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 1.dp, start = 4.dp))
-                        if (cc.se.isNotEmpty()) Text(KeyCorners.show(cc.se), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 1.dp, end = 4.dp))
-                        if (cc.s.isNotEmpty()) Text(KeyCorners.show(cc.s), color = ink, fontSize = 9.sp, maxLines = 1, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
+                        if (cc.nw.isNotEmpty()) Text(KeyCorners.glyph(cc.nw) ?: KeyCorners.show(cc.nw), color = ink, fontSize = if (KeyCorners.glyph(cc.nw) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.nw) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
+                        if (cc.ne.isNotEmpty()) Text(KeyCorners.glyph(cc.ne) ?: KeyCorners.show(cc.ne), color = ink, fontSize = if (KeyCorners.glyph(cc.ne) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.ne) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))
+                        if (cc.sw.isNotEmpty()) Text(KeyCorners.glyph(cc.sw) ?: KeyCorners.show(cc.sw), color = ink, fontSize = if (KeyCorners.glyph(cc.sw) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.sw) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 1.dp, start = 4.dp))
+                        if (cc.se.isNotEmpty()) Text(KeyCorners.glyph(cc.se) ?: KeyCorners.show(cc.se), color = ink, fontSize = if (KeyCorners.glyph(cc.se) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.se) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 1.dp, end = 4.dp))
+                        if (cc.s.isNotEmpty()) Text(KeyCorners.glyph(cc.s) ?: KeyCorners.show(cc.s), color = ink, fontSize = if (KeyCorners.glyph(cc.s) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.s) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
                     }
                     if (!KeyboardPrefs.corners && !special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
@@ -1260,6 +1264,9 @@ private fun androidx.compose.foundation.layout.BoxScope.RgbWash() {
         drawRect(androidx.compose.ui.graphics.Brush.linearGradient(List(5) { Color.hsv(((h + it * 72f) % 360f + 360f) % 360f, .8f, 1f).copy(alpha = .35f) }))
     })
 }
+
+/** Unexpected Keyboard's icon font, for the functions written on the corners of the keys. */
+private val kbIconFont = androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(com.umutk.pulse.R.font.kb_special))
 
 /** A picture read at no more than [max] pixels across (a camera photo at full size made the keyboard slow to open and heavy in memory). */
 internal fun kbDecode(path: String, max: Int): android.graphics.Bitmap? {

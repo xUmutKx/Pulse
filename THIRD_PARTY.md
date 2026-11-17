@@ -59,3 +59,5 @@ a light glass stand-in instead of the Kyant backdrop shaders, songs saved to Mus
 ## Free Exercise DB (exercise photos)
 
 The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from the Free Exercise DB, github.com/yuhonas/free-exercise-db, released into the public domain (Unlicense).
+
+- **Unexpected Keyboard icon font** (`app/src/main/res/font/kb_special.ttf`, `special_font.ttf` of https://github.com/Julow/Unexpected-Keyboard): GPL-3.0; its glyphs come from IcoMoon-Free and Font Awesome Free (CC BY 4.0), Material Design Icons (Apache 2.0 / OFL) and Roboto/DejaVu (Apache 2.0 / free). Used for the function symbols on the corners of the keyboard's keys.
