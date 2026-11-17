@@ -59,6 +59,9 @@ val INK_PALETTE = listOf(
     0xFF8E24AA.toInt(), 0xFFEC407A.toInt(), 0xFF6D4C41.toInt(), 0xFF000000.toInt(), 0xFFFFFFFF.toInt(),
 )
 
+/** When the pen was last used (ms): the palm rejection ignores finger touches for a moment after it. */
+object PalmGuard { @Volatile var penAt = 0L; const val QUIET_MS = 1500L }
+
 /** The marker's colours (the see-through share is added when it draws). */
 val MARKER_PALETTE = listOf(0xFFFDD835.toInt(), 0xFF8BC34A.toInt(), 0xFFFF80AB.toInt(), 0xFF40C4FF.toInt(), 0xFFFFAB40.toInt(), 0xFFB388FF.toInt())
 
@@ -77,6 +80,9 @@ object InkPrefs {
     fun setMarkerSize(c: Context, v: Float) = sp(c).edit().putFloat("marker_size", v).apply()
     fun eraserSize(c: Context) = sp(c).getFloat("eraser_size", 1f)
     fun setEraserSize(c: Context, v: Float) = sp(c).edit().putFloat("eraser_size", v).apply()
+    /** Palm rejection (off by default): a finger touch right after the pen was used is ignored, so a resting palm does not mark the page. */
+    fun palm(c: Context) = sp(c).getBoolean("palm", false)
+    fun setPalm(c: Context, v: Boolean) = sp(c).edit().putBoolean("palm", v).apply()
     /** A finger draws too (off: only the pen draws and the finger scrolls, so a palm never marks the page). */
     fun finger(c: Context) = sp(c).getBoolean("finger", false)
     fun setFinger(c: Context, v: Boolean) = sp(c).edit().putBoolean("finger", v).apply()
@@ -169,6 +175,7 @@ fun InkLayer(
     tool: InkMode,
     penOnly: Boolean,
     finger: Boolean,
+    palm: Boolean = false,
     color: Int,
     width: Float,
     kind: Int,
@@ -197,10 +204,13 @@ fun InkLayer(
     fun pressureOf(c: PointerInputChange): Float = if (c.type == PointerType.Stylus) (1f + gain * (2f * c.pressure.coerceIn(0f, 1f) - 1f) * 0.75f) else 1f
 
     Canvas(
-        modifier.pointerInput(tool, penOnly, finger, color, width, kind, gain, eraser, snap) {
+        modifier.pointerInput(tool, penOnly, finger, palm, color, width, kind, gain, eraser, snap) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 val byPen = down.type == PointerType.Stylus || down.type == PointerType.Eraser
+                if (byPen) PalmGuard.penAt = System.currentTimeMillis()
+                // palm rejection: a touch just after the pen was used is the palm, not a finger
+                else if (palm && System.currentTimeMillis() - PalmGuard.penAt < PalmGuard.QUIET_MS) return@awaitEachGesture
                 // a finger scrolls the note, unless it is allowed to draw (never in the keyboard mode)
                 if (!byPen && (penOnly || !finger)) return@awaitEachGesture
                 val use = when {

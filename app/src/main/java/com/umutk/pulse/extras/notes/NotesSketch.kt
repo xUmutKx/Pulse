@@ -143,7 +143,10 @@ fun NSketch(onDone: (String?) -> Unit) {
                         val first = awaitPointerEvent(PointerEventPass.Main)
                         val c0 = first.changes.first()
                         val stylus = c0.type == PointerType.Stylus
-                        if (stylus) penSeen.value = true else if (penSeen.value && !fingerDraw) return@awaitEachGesture
+                        if (stylus) { penSeen.value = true; PalmGuard.penAt = System.currentTimeMillis() }
+                        else if (penSeen.value && !fingerDraw) return@awaitEachGesture
+                        // palm rejection (Settings > Notes): a finger right after the pen is the palm
+                        else if (InkPrefs.palm(ctx) && System.currentTimeMillis() - PalmGuard.penAt < PalmGuard.QUIET_MS) return@awaitEachGesture
                         // the pen's button pressed twice quickly opens the tool panel beside the pen
                         var btnDown = stylusButton(first)
                         if (btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c0.position; buttonClock.value = System.currentTimeMillis() }

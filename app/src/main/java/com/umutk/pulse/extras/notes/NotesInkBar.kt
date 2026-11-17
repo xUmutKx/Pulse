@@ -135,33 +135,61 @@ private fun BarBtn(on: Boolean, desc: String, enabled: Boolean, onClick: () -> U
     ) { content(tint) }
 }
 
-/** The settings of the tool that is on: the pen types, the size, the colours; the eraser's size; whether a finger draws. */
+/**
+ * The settings of the tool that is on, as one slim row above the bar (like a PDF reader's tool row): the colours, the three widths, and a gear that
+ * opens the rest (pen types, finger drawing, straight line, palm rejection). Nothing is repeated from the bar.
+ */
 @Composable
 fun InkPanel(
     mode: InkMode, style: Int, onStyle: (Int) -> Unit, color: Int, onColor: (Int) -> Unit, size: Float, onSize: (Float) -> Unit,
-    finger: Boolean, onFinger: (Boolean) -> Unit, snap: Boolean, onSnap: (Boolean) -> Unit, onClearAll: () -> Unit, autoColor: Color,
+    finger: Boolean, onFinger: (Boolean) -> Unit, snap: Boolean, onSnap: (Boolean) -> Unit, palm: Boolean, onPalm: (Boolean) -> Unit,
+    onClearAll: () -> Unit, autoColor: Color,
 ) {
-    // floating right above the bar, like a menu that opens out of the pen
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 6.dp).shadow(10.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 6.dp)) {
-        if (mode == InkMode.PEN) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PEN_STYLES.forEach { s -> PanelChip(tr(s.en, s.tr), style == s.id) { onStyle(s.id) } }
+    var more by remember(mode) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 6.dp).shadow(8.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(T.panel).padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            when (mode) {
+                InkMode.ERASER -> PanelChip(tr("Erase all", "Hepsini sil"), false, Color(0xFFE53935)) { onClearAll() }
+                InkMode.LASSO -> Box(Modifier.weight(1f))
+                else -> {
+                    DotRow(if (mode == InkMode.MARKER) MARKER_PALETTE else INK_PALETTE, color, autoColor, onColor, Modifier.weight(1f))
+                    listOf(.75f, 1.6f, 2.6f).forEach { w ->
+                        val on = kotlin.math.abs(size - w) < .35f
+                        Box(Modifier.size(30.dp).clip(CircleShape).background(if (on) T.accent.copy(alpha = .16f) else Color.Transparent).clickable { onSize(w) }, contentAlignment = Alignment.Center) {
+                            Box(Modifier.width(18.dp).height((1.5f + 2.2f * w).dp).clip(CircleShape).background(if (on) T.accent else T.text))
+                        }
+                    }
+                }
+            }
+            Box(Modifier.size(34.dp).clip(CircleShape).clickable { more = !more }.semantics { contentDescription = tr("Settings", "Ayarlar") }, contentAlignment = Alignment.Center) {
+                PIcon("settings", if (more) T.accent else T.text, 18.dp)
             }
         }
-        if (mode != InkMode.LASSO) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { Box(Modifier.size((4 + 4 * size).dp.coerceAtMost(22.dp)).clip(CircleShape).background(T.text)) }
-                Slider(
-                    value = size, onValueChange = onSize, valueRange = 0.5f..3f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                    colors = SliderDefaults.colors(thumbColor = T.accent, activeTrackColor = T.accent),
-                )
+        androidx.compose.animation.AnimatedVisibility(more && mode != InkMode.LASSO) {
+            Column(Modifier.padding(bottom = 4.dp)) {
+                if (mode == InkMode.PEN) Row(Modifier.fillMaxWidth().padding(top = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PEN_STYLES.forEach { s -> PanelChip(tr(s.en, s.tr), style == s.id) { onStyle(s.id) } }
+                }
+                PanelSwitch(tr("Finger draws", "Parmak çizer"), finger, onFinger)
+                if (mode == InkMode.PEN) PanelSwitch(tr("Straight line (hold)", "Düz çizgi (basılı tut)"), snap, onSnap)
+                PanelSwitch(tr("Palm rejection", "Avuç reddi"), palm, onPalm)
             }
         }
-        if (mode == InkMode.PEN) SwatchRow(INK_PALETTE, color, autoColor, onColor)
-        if (mode == InkMode.MARKER) SwatchRow(MARKER_PALETTE, color and 0x00FFFFFF or (0xFF shl 24), autoColor, onColor)
-        if (mode == InkMode.ERASER) Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { PanelChip(tr("Erase all", "Hepsini sil"), false, Color(0xFFE53935)) { onClearAll() } }
-        PanelSwitch(tr("Finger draws", "Parmak çizer"), finger, onFinger)
-        if (mode == InkMode.PEN) PanelSwitch(tr("Straight line (hold)", "Düz çizgi (basılı tut)"), snap, onSnap)
+    }
+}
+
+/** A row of colour dots; the first one of the pen (0) is the automatic colour of the page. */
+@Composable
+private fun DotRow(colors: List<Int>, chosen: Int, autoColor: Color, onColor: (Int) -> Unit, modifier: Modifier) {
+    Row(modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        colors.forEach { c ->
+            val shown = if (c == 0) autoColor else Color(c)
+            Box(
+                Modifier.size(24.dp).clip(CircleShape).background(shown)
+                    .border(if (chosen == c) 2.dp else 1.dp, if (chosen == c) T.accent else T.text.copy(alpha = .35f), CircleShape)
+                    .clickable { onColor(c) }.semantics { contentDescription = if (c == 0) "Auto" else "Colour" },
+            )
+        }
     }
 }
 
