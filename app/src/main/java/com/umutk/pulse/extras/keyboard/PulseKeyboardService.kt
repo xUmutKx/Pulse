@@ -1800,6 +1800,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         finishWord("", false); lastGlide = null; lastCorrection = null
         feedback()
+        // a terminal gives no text before the cursor, so the word is taken back by key events: the letters just typed one by one, else Ctrl+W (the shell's word delete)
+        if (st.terminal) {
+            val n = termWord.length
+            if (n > 0) {
+                repeat(n) {
+                    c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0))
+                    c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL, 0))
+                }
+                termWord.setLength(0)
+            } else {
+                val m = KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
+                c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_W, m))
+                c.sendKeyEvent(softKey(SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_W, m))
+            }
+            updateSuggestions()
+            return
+        }
         val before = c.getTextBeforeCursor(80, 0)?.toString().orEmpty()
         if (before.isEmpty()) return
         var n = 0
