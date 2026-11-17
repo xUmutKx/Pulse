@@ -74,6 +74,18 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
     val wordMode = com.umutk.pulse.extras.lyrics.LiveLyrics.wordSync(androidx.compose.ui.platform.LocalContext.current)
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
+    // the words (or syllables) of the line being sung fill in one by one; between two reports of the player (about four a second) the position runs on by itself, so the fill is smooth
+    val animate = wordMode && mark.isBlank() && positionMs >= 0 && result.lines.getOrNull(cur)?.words?.isNotEmpty() == true
+    var base by remember { androidx.compose.runtime.mutableLongStateOf(positionMs) }
+    var baseAt by remember { androidx.compose.runtime.mutableLongStateOf(System.nanoTime()) }
+    LaunchedEffect(positionMs) { base = positionMs; baseAt = System.nanoTime() }
+    val smooth by androidx.compose.runtime.produceState(positionMs, animate) {
+        value = positionMs
+        if (animate) while (true) {
+            androidx.compose.runtime.withFrameNanos { }
+            value = base + ((System.nanoTime() - baseAt) / 1_000_000L).coerceIn(0L, 450L)
+        }
+    }
     // a line must fit the width, also the one being sung (it grows a little): the size shrinks for a long word, and the text keeps a margin for the growth
     androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
     val avail = maxWidth.value * 0.88f
@@ -93,7 +105,14 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
                     Text(
                         // the words of a line that has their times: the ones sung are lit as the line goes (when the setting is on)
                         if (on && wordMode && l.words.isNotEmpty() && mark.isBlank()) androidx.compose.ui.text.buildAnnotatedString {
-                            l.words.forEach { w -> withStyle(androidx.compose.ui.text.SpanStyle(color = if (w.timeMs <= positionMs) hi else lo)) { append(w.text) } }
+                            val lineEnd = result.lines.getOrNull(i + 1)?.timeMs ?: (l.timeMs + 6000L)
+                            l.words.forEachIndexed { k, w ->
+                                // a word fills from its start to its end (its own end when the lyrics have it, else the start of the next word); a short word still takes a moment
+                                val rawEnd = if (w.endMs > w.timeMs) w.endMs else l.words.getOrNull(k + 1)?.timeMs ?: lineEnd
+                                val end = maxOf(rawEnd, w.timeMs + 300L)
+                                val p = ((smooth - w.timeMs).toFloat() / (end - w.timeMs)).coerceIn(0f, 1f)
+                                withStyle(androidx.compose.ui.text.SpanStyle(color = androidx.compose.ui.graphics.lerp(lo, hi, p))) { append(w.text) }
+                            }
                         } else lyricMarked(l.text, mark, hi),
                         color = tone,
                         fontSize = fs.sp,

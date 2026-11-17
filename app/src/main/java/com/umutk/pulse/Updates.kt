@@ -61,9 +61,12 @@ object Updates {
                 val tag = j.optString("tag_name")
                 if (tag.isEmpty()) return@runCatching null
                 val apk = j.optJSONArray("assets")?.let { a ->
+                    // a phone with no 64-bit processor takes the "32bit" APK, every other phone the ones without that name (a 64-bit build cannot run on it)
+                    val only32 = android.os.Build.SUPPORTED_64_BIT_ABIS.isEmpty()
                     val apks = (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").endsWith(".apk") }
+                        .let { l -> l.filter { it.optString("name").contains("32bit") == only32 }.ifEmpty { l } }
                     // a release holds the full build (Pulse AI inside) and the "lite" one (without); each install gets its own kind
-                    (apks.firstOrNull { it.optString("name").contains("lite") == !BuildConfig.LOCAL_AI && !it.optString("name").contains("android5") }
+                    (apks.firstOrNull { (it.optString("name").contains("lite") || it.optString("name").contains("32bit")) == !BuildConfig.LOCAL_AI && !it.optString("name").contains("android5") }
                         // older releases held two builds: Android 12+ and the "android5" one; each phone gets its own
                         ?: apks.firstOrNull { (android.os.Build.VERSION.SDK_INT >= 31) != it.optString("name").contains("android5") })?.optString("browser_download_url")
                 }
