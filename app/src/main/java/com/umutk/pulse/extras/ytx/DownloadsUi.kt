@@ -244,7 +244,7 @@ fun DownloadsScreen(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                         .clickable {
-                            runCatching { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.ExtraToolActivity::class.java).putExtra("route", "series").putExtra("look", "material").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                            runCatching { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.ExtraToolActivity::class.java).putExtra("route", "series").putExtra("look", "amoled").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                         }.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
