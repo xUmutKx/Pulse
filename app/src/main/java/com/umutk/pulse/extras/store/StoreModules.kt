@@ -15,6 +15,16 @@ import java.security.MessageDigest
 const val EXTRA_MODULE_PREFIX = "com.umutk.pulse.extra."
 
 /** The live manifest (doc 13). Read with ETag, at most once a day; the bundled copy is the fallback. */
+/**
+ * The packs under 1 MB are one download, "small" (about 2 MB): the icons of the older looks, more wallpapers of Windows XP and 10 and the Office Assistants.
+ * Each keeps its own name where it is used ([real] maps it to "small") and its own folder inside the pack's folder; the pack comes by itself the first time Pulse starts.
+ */
+object SmallPack {
+    const val ID = "small"
+    val MEMBERS = setOf("icons-win95", "icons-win11old", "icons-oneui", "icons-coloros", "icons-xp", "wallpapers-more-win10", "wallpapers-more-xp", "clippy")
+    fun real(id: String) = if (id in MEMBERS) ID else id
+}
+
 const val EXTRAS_MANIFEST_URL = "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/manifest.json"
 
 /** Packs whose text manifest is bundled as assets/extras/<pack>/manifest.json. */

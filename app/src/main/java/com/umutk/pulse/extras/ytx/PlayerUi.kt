@@ -1257,7 +1257,7 @@ fun BitChordMusicPlayer(
                             Box(
                                 Modifier.clip(RoundedCornerShape(50))
                                     .background(if (on) c.onSurface.copy(alpha = 0.92f) else Color.Transparent)
-                                    .pressable(onClick = { state.musicVideo = video })
+                                    .pressable(onClick = { state.setMusicVideo(video) })
                                     .padding(horizontal = 20.dp, vertical = 7.dp),
                             ) {
                                 Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (on) c.surface else c.onSurface.copy(alpha = 0.8f))

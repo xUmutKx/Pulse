@@ -181,6 +181,32 @@ object LiveLyrics {
         return sb.toString()
     }
 
+    /** The line being sung at [posMs] (with its words, when it has them); null before the first line. */
+    fun currentLine(r: LyricsResult?, posMs: Int): LyricLine? = r?.lines?.lastOrNull { it.timeMs <= posMs }
+
+    /** How many characters of [line] are sung at [posMs]: up to the end of the last word whose time has come (0 before the first word). */
+    fun sungChars(line: LyricLine, posMs: Int): Int {
+        val upTo = line.words.count { it.timeMs <= posMs }
+        var pos = 0
+        for (w in line.words.take(upTo)) {
+            val t = w.text.trim()
+            if (t.isEmpty()) continue
+            val i = line.text.indexOf(t, pos)
+            if (i < 0) break
+            pos = i + t.length
+        }
+        return pos
+    }
+
+    /** [text] with its first [k] characters in colour [hi] and the rest in [lo]: the sung part and the part to come. */
+    fun sungSpan(text: String, k: Int, hi: Int, lo: Int): CharSequence {
+        val n = k.coerceIn(0, text.length)
+        return android.text.SpannableString(text).also {
+            if (n > 0) it.setSpan(android.text.style.ForegroundColorSpan(hi), 0, n, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (n < text.length) it.setSpan(android.text.style.ForegroundColorSpan(lo), n, text.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
     /** Line at [posMs] with the lines before and after it; null before the first line. */
     fun lineAt(r: LyricsResult?, posMs: Int): Triple<String?, String, String?>? {
         val lines = r?.lines ?: return null
@@ -238,8 +264,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
         // the separate lyrics notification: the line with its neighbours, replaced as the song moves
         if (LiveLyrics.separate(ctx) && st.isPlaying && st.current != null) {
-            val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs + AHEAD_MS)
-            postNote(st.current!!, trio)
+            val res = LiveLyrics.resultFor(ctx, st.current!!)
+            val pos = engine.positionMs + AHEAD_MS
+            val trio = LiveLyrics.lineAt(res, pos)
+            // with word times the words already sung are in bold letters and the rest plain, so the line fills as it is sung
+            val cl = LiveLyrics.currentLine(res, pos)
+            val sung = if (cl != null && cl.words.isNotEmpty() && LiveLyrics.wordSync(ctx)) LiveLyrics.sungChars(cl, pos) else -1
+            postNote(st.current!!, trio, sung)
         } else clearNote()
         // on the lock screen the line being sung and the next one are drawn in a small window (see LockLyricsOverlay), set from this
         // tick, so it keeps moving whether or not the screen was drawn; it goes away as soon as the phone is unlocked or the music stops
@@ -247,9 +278,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         // the screen went off: the next unlock starts with the lyrics again (see LockLyricsOverlay.suppress)
         if (!pm.isInteractive) LockLyricsOverlay.suppressed = false
         if (LiveLyrics.lockScreen(ctx) && st.isPlaying && cur != null && lockedNow() && !LockLyricsOverlay.suppressed) {
-            val lines = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, cur), engine.positionMs + AHEAD_MS)
+            val res = LiveLyrics.resultFor(ctx, cur)
+            val pos = engine.positionMs + AHEAD_MS
+            val lines = LiveLyrics.lineAt(res, pos)
+            val cl = LiveLyrics.currentLine(res, pos)
+            val sung = if (cl != null && cl.words.isNotEmpty() && LiveLyrics.wordSync(ctx)) LiveLyrics.sungChars(cl, pos) else -1
             // a gap between two lines keeps the last one on screen instead of blinking the window out
-            if (lines != null && lines.second.isNotBlank()) LockLyricsOverlay.show(ctx, lines.second, lines.third)
+            if (lines != null && lines.second.isNotBlank()) LockLyricsOverlay.show(ctx, lines.second, lines.third, sung)
         } else LockLyricsOverlay.hide(ctx)
         var line = if (wanted && st.isPlaying) {
             st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs + AHEAD_MS) }?.second?.takeIf { it.isNotBlank() }
@@ -283,10 +318,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     @Suppress("DEPRECATION")
     private fun lockedNow() = km.isKeyguardLocked || !pm.isInteractive
 
-    private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
+    private fun postNote(t: Track, trio: Triple<String?, String, String?>?, sung: Int = -1) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
         // the current line in bold letters behind a text-style arrow (no emoji picture), the neighbours plain
-        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25BA " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
+        val k = sung.coerceIn(0, trio.second.length)
+        // the line with its words: the ones sung are in bold letters, the ones to come plain (without word times the whole line is bold)
+        val shownCur = if (sung >= 0) LiveLyrics.bold(trio.second.take(k)) + trio.second.drop(k) else LiveLyrics.bold(trio.second)
+        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25BA " + shownCur, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         // the same line as before: nothing to do, unless the notification was swiped away (checked every few seconds), then it comes back
         val now = android.os.SystemClock.uptimeMillis()
         if (text == noteText) {
@@ -298,10 +336,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         noteText = text
         // the whole current line is also set in a real bold style, which covers the letters the Unicode bold cannot (ç ş ğ ı ...) on phones that keep spans
         val bold = android.text.SpannableStringBuilder(text).also { sp ->
-            val st = text.indexOf(LiveLyrics.bold(trio.second)).takeIf { it >= 0 }
-            if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val st = text.indexOf(shownCur).takeIf { it >= 0 }
+            val boldLen = if (sung >= 0) LiveLyrics.bold(trio.second.take(k)).length else shownCur.length
+            if (st != null && boldLen > 0) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + boldLen, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val boldLine = android.text.SpannableString(LiveLyrics.collapsed(ctx, trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+        val collapsedCur = if (sung >= 0) LiveLyrics.collapsed(ctx, trio.second.take(k)) + trio.second.drop(k) else LiveLyrics.collapsed(ctx, trio.second)
+        val boldLen2 = if (sung >= 0) LiveLyrics.collapsed(ctx, trio.second.take(k)).length else collapsedCur.length
+        val boldLine = android.text.SpannableString(collapsedCur).also { if (boldLen2 > 0) it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, boldLen2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
         // low importance: the lyric line sits in the shade and never pops up over the screen (the channel is new, the old one kept its pop-up setting)
         if (android.os.Build.VERSION.SDK_INT >= 26) { nm.deleteNotificationChannel("pulse_lyrics"); nm.deleteNotificationChannel("pulse_lyrics2") }
         if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics3", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit

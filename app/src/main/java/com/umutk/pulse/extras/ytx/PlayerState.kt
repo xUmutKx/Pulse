@@ -75,6 +75,10 @@ class PlayerState(private val scope: CoroutineScope) {
 
     /** The music player shows the video in place of the cover (the Song / Video switch at its top, as in YouTube Music). */
     var musicVideo by mutableStateOf(false)
+        private set
+
+    /** Song / Video: the video is only decoded while it is shown (a song with the cover needs no picture, and decoding it made the music player lag). */
+    fun setMusicVideo(on: Boolean) { musicVideo = on; applyVideoTrack() }
 
     private var musicDislikeTick by mutableStateOf(0)
 
@@ -944,11 +948,9 @@ class PlayerState(private val scope: CoroutineScope) {
 
     private fun applyVideoTrack() {
         runCatching {
-            // Music keeps its video track alive in the background. Toggling it off and on
-            // made the decoder re-init, which is the audible dip heard when reopening the
-            // app during background playback.
-            if (isMusicMode) return
-            val off = AudioOnly.enabled || wantBackground
+            // (the background switch never touches the video track in the music player: toggling it made the decoder start again, an audible dip)
+            // in the music player the video is off unless the Video view is open: nothing decodes a picture nobody sees
+            val off = if (isMusicMode) !musicVideo else (AudioOnly.enabled || wantBackground)
             val player = controller ?: return
             if (player.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_VIDEO) == off) return
             Log.i(TAG, if (off) "video off (${if (AudioOnly.enabled) "audio only" else "background"})" else "video on")

@@ -101,7 +101,7 @@ fun PackLine(m: ExtraModule) {
 /** All the packs of the store, the ones on the phone first. [filter] keeps the ones whose name has it. */
 @Composable
 fun PackList(filter: String = "") {
-    val packs = rememberPacks().filter { !it.isApk && (filter.isBlank() || it.name().contains(filter, ignoreCase = true)) }
+    val packs = rememberPacks().filter { !it.isApk && it.id !in SmallPack.MEMBERS && (filter.isBlank() || it.name().contains(filter, ignoreCase = true)) }
     val ctx = LocalContext.current
     val rev by StoreInstaller.rev.collectAsState()
     val here = remember(packs, rev) { packs.filter { StoreInstaller.state(ctx, it) in setOf(ModuleState.INSTALLED, ModuleState.UPDATE) } }
