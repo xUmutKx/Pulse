@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "music" to (tr("Lyrics word by word, even syllable by syllable, when the song has them: LRCLIB's word-timed records and NetEase as a second source. Each word fills as it is sung; without word times the lines follow, then plain text. A song with line-timed lyrics gets its words in the background.",
+        "Sözler kelime kelime, varsa hece hece: LRCLIB'in kelime zamanlı kayıtları ve ikinci kaynak olarak NetEase. Her kelime söylenirken doluyor; kelime zamanı yoksa satırlar, o da yoksa düz metin. Satır zamanlı sözü olan şarkı kelimelerini arka planda alıyor.")),
+    "palette" to (tr("Smaller app: 64-bit by default (a separate 32-bit APK for old phones), most Winamp skins are a download in the Extra store, Chinese, Japanese and Korean PDF character maps left out, launcher icons as WebP.",
+        "Daha küçük uygulama: varsayılan 64 bit (eski telefonlar için ayrı 32 bit APK), Winamp temalarının çoğu Ekstra mağazadan indirme, Çince, Japonca ve Korece PDF karakter haritaları çıkarıldı, başlatıcı ikonları WebP.")),
     "palette" to (tr("Notes looks like Samsung Notes: one tool strip under the title (pen, marker, eraser, lasso, undo, redo), colours and widths in a slim row under it. Palm rejection (off by default) in Notes settings. A linked folder shows at once.",
         "Notlar Samsung Notes gibi: başlığın altında tek araç şeridi (kalem, fosforlu, silgi, kement, geri al, yinele), altında ince renk ve kalınlık satırı. Avuç reddi (varsayılan kapalı) Notlar ayarlarında. Bağlanan klasör hemen görünüyor.")),
     "palette" to (tr("The Message button other apps show for Pulse (Nova search, share lists) follows the glass look of the Messages icon.",
