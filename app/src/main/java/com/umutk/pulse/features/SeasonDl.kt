@@ -351,15 +351,20 @@ object SeasonDl {
      * before one nobody shares. Streams that do not say their size follow, then the rest, and the ones nobody shares go to the very end.
      */
     fun ranked(all: List<Pick>, maxBytes: Long): List<Pick> {
-        val lo = maxOf(MIN_BYTES, maxBytes / 4); val hi = (maxBytes * 1.9).toLong()
+        val lo = maxOf(MIN_BYTES, maxBytes / 4); val hi = maxBytes * 2
         fun inside(p: Pick) = p.size in lo..hi
         fun order(l: List<Pick>): List<Pick> {
-            val up = l.filter { inside(it) && it.size >= maxBytes }.sortedWith(compareByDescending<Pick> { it.seeds }.thenBy { it.size })
-            val down = l.filter { inside(it) && it.size < maxBytes }.sortedWith(compareByDescending<Pick> { it.size }.thenByDescending { it.seeds })
+            // streams with many people sharing them come first (70 and more): they start quickly and stay fast; inside them the size nearest the one wanted from under it, then from above
+            val good = l.filter { inside(it) && it.seeds >= GOOD_SEEDS }
+            val goodDown = good.filter { it.size <= maxBytes }.sortedWith(compareByDescending<Pick> { it.size }.thenByDescending { it.seeds })
+            val goodUp = good.filter { it.size > maxBytes }.sortedWith(compareBy<Pick> { it.size }.thenByDescending { it.seeds })
+            val rest = l.filter { inside(it) && it.seeds < GOOD_SEEDS }
+            val up = rest.filter { it.size >= maxBytes }.sortedWith(compareByDescending<Pick> { it.seeds }.thenBy { it.size })
+            val down = rest.filter { it.size < maxBytes }.sortedWith(compareByDescending<Pick> { it.size }.thenByDescending { it.seeds })
             val unknown = l.filter { it.size <= 0L }.sortedByDescending { it.seeds }
-            val outside = l.filter { it.size >= MIN_BYTES && !inside(it) }.sortedBy { kotlin.math.abs(it.size - maxBytes) }
+            val outside = l.filter { it.size >= MIN_BYTES && !inside(it) }.sortedWith(compareByDescending<Pick> { it.seeds >= GOOD_SEEDS }.thenBy { kotlin.math.abs(it.size - maxBytes) })
             val tiny = l.filter { it.size in 1 until MIN_BYTES }
-            return up + down + unknown + outside + tiny
+            return goodDown + goodUp + up + down + unknown + outside + tiny
         }
         return (order(all.filter { it.seeds != 0 }) + order(all.filter { it.seeds == 0 })).distinctBy { it.url }
     }
@@ -367,13 +372,16 @@ object SeasonDl {
     /** The stream to start with: the first of [ranked] (marked [Pick.over] when it is bigger than the range wanted). Null only when the add-on has no stream at all. */
     fun bestOf(all: List<Pick>, maxBytes: Long): Pick? {
         val r = ranked(all, maxBytes).firstOrNull() ?: return null
-        return if (r.size > (maxBytes * 1.9).toLong()) Pick(r.url, r.size, r.label, over = true, seeds = r.seeds) else r
+        return if (r.size > maxBytes * 2) Pick(r.url, r.size, r.label, over = true, seeds = r.seeds) else r
     }
 
     /** The streams to fall back on when [pick] finds no one to download from: the rest of [ranked] in its order (eight at most). */
     fun alternatives(all: List<Pick>, pick: Pick, maxBytes: Long): List<String> = ranked(all, maxBytes).filter { it.url != pick.url }.take(8).map { it.url }
 
     private fun gbText(mb: Int) = "%.1f".format(mb / 1024.0).removeSuffix(".0").removeSuffix(",0")
+
+    /** A stream shared by this many people or more is the first choice. */
+    private const val GOOD_SEEDS = 70
 
     /** Under 200 MB a stream is too poor to be taken, unless nothing else is there. */
     private const val MIN_BYTES = 200L * 1_048_576L
@@ -694,7 +702,7 @@ object SeasonDl {
                             val g = v.replace(',', '.').trim().toDoubleOrNull()
                             if (g != null && g in 0.2..60.0) { mb = (g * 1024).toInt(); save(ctx, addon, mb.toFloat()); found = emptyMap() }
                         }, "GB", Modifier.width(110.dp))
-                        Text("  " + tr("looks from ${sizeText(maxOf(MIN_BYTES, limit() / 4))} to ${sizeText((limit() * 1.9).toLong())}, the bigger ones first", "${sizeText(maxOf(MIN_BYTES, limit() / 4))} ile ${sizeText((limit() * 1.9).toLong())} arası aranır, büyükler önce"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text("  " + tr("looks from ${sizeText(maxOf(MIN_BYTES, limit() / 4))} to ${sizeText((limit() * 2))}, streams shared by 70 or more first", "${sizeText(maxOf(MIN_BYTES, limit() / 4))} ile ${sizeText((limit() * 2))} arası aranır, 70 ve üzeri kişinin paylaştığı yayınlar önce"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     }
                     }
                     // 3. what to download
@@ -857,7 +865,7 @@ object SeasonDl {
                                                 // how many share it (the add-on's own number) and its size; green when it is in the range wanted
                                                 Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
                                                     Text(if (o.seeds >= 0) "👤 ${o.seeds}" else "👤 ?", color = if (o.seeds == 0) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.text, fontSize = 13.sp)
-                                                    Text(sizeText(o.size), color = if (o.size in maxOf(MIN_BYTES, limit() / 4)..(limit() * 1.9).toLong()) T.accent else T.sub, fontSize = 12.sp)
+                                                    Text(sizeText(o.size), color = if (o.size in maxOf(MIN_BYTES, limit() / 4)..(limit() * 2)) T.accent else T.sub, fontSize = 12.sp)
                                                 }
                                             }
                                         }

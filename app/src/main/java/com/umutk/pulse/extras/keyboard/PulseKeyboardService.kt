@@ -1626,6 +1626,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a login of the vault: its user name or password is written as it is
         if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { fillField(it) }; return }
         val qc = quickClip
+        // a file found by the letters being typed: a tap sends it (and the letters typed for it are taken away)
+        if (i == 2 && st.slots.getOrNull(2)?.startsWith("\u0003") == true) {
+            val f = fileHit
+            if (f != null) {
+                val typedNow = word.length
+                if (typedNow > 0) { currentInputConnection?.deleteSurroundingText(typedNow, 0); word.setLength(0) }
+                pasteVideo(f, java.net.URLConnection.guessContentTypeFromName(f.name) ?: "application/octet-stream")
+            }
+            fileHit = null; updateSuggestions(); return
+        }
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
             val v = shotVideo
@@ -2533,7 +2543,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
-                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
+                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed); withFiles(typed) }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
             kotlinx.coroutines.delay(20)
@@ -2552,7 +2562,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc == null) schedulePauseFix(typed, res.third, code, l.locale)
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
-                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed) }
+                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed); withFiles(typed) }
                 // nothing found for what is being typed (a first word, a name, a word no list knows): the bar is not left empty, it shows the word as typed (a tap keeps it)
                 // and the same word with a capital (a name), so something is always there to tap
                 if (typed.isNotEmpty() && st.slots.all { it.isBlank() }) {
@@ -2589,6 +2599,32 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Puts [personalItems] on the bar beside the usual words: the first on the right, the second on the left (unless that place holds the word as typed). */
+    // ---- a file named by the letters being typed (five or more): offered at the right of the bar ----
+    private var fileHit: java.io.File? = null
+    private var fileJob: kotlinx.coroutines.Job? = null
+
+    private fun withFiles(typed: String) {
+        fileJob?.cancel()
+        if (!KeyboardPrefs.fileSuggest || typed.length < 5 || typed.any { it.isWhitespace() } || st.incognito || st.plain || passwordField) { fileHit = null; return }
+        fileJob = scope.launch {
+            delay(250)
+            if (word.toString() != typed) return@launch
+            val hit = withContext(Dispatchers.IO) {
+                runCatching {
+                    val root = android.os.Environment.getExternalStorageDirectory()
+                    val dirs = listOf("Download", "Download/Pulse", "DCIM/Camera", "Pictures", "Pictures/Screenshots", "Documents", "Movies", "Music", "DCIM/Screenshots")
+                    dirs.flatMap { d -> java.io.File(root, d).listFiles()?.toList().orEmpty() }
+                        .filter { it.isFile && !it.name.startsWith(".") && !it.name.startsWith("temp_") && it.name.contains(typed, ignoreCase = true) }
+                        .maxByOrNull { it.lastModified() }
+                }.getOrNull()
+            }
+            if (word.toString() != typed || hit == null) { if (hit == null) fileHit = null; return@launch }
+            fileHit = hit
+            val s = st.slots.toMutableList(); if (s.size > 2) { s[2] = "\u0003" + hit.name; st.slots = s }
+            val w = slotWords.copyOf(); if (w.size > 2) { w[2] = ""; slotWords = w }
+        }
+    }
+
     private fun withPersonal(typed: String) {
         val p = personalItems(typed)
         if (p.isEmpty()) return

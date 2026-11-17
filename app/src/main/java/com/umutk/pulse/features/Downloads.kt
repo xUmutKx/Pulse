@@ -356,7 +356,9 @@ object Downloads {
     }
 
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
-    fun add(ctx: Context, url: String, fixedName: String? = null, alts: List<String> = emptyList(), into: File? = null) {
+    fun add(ctx: Context, link: String, fixedName: String? = null, alts: List<String> = emptyList(), into: File? = null) {
+        // a link of Stremio's local server is the torrent itself: it is downloaded as a torrent here (no need for Stremio to be running)
+        val url = stremioMagnet(link) ?: link
         val c = ctx.applicationContext
         app = c
         scope.launch {
@@ -729,6 +731,18 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     total.value = file.length(); done.value = file.length()
     Downloads.persist()
     return true
+}
+
+/**
+ * A link of the Stremio app's own local server ("http://127.0.0.1:11470/<infohash>/<file number or name>") names a torrent by its 40-letter infohash: it is turned into a
+ * magnet link (with the file's number) so Pulse downloads the torrent itself. Null when [u] is no such link, or this build has no torrent engine.
+ * (The idea of reading the hash out of Stremio's link is that of Magnet Bridge, https://github.com/leffmarques/MagnetBridge; this is written afresh.)
+ */
+internal fun stremioMagnet(u: String): String? {
+    if (!TorrentEngine.available) return null
+    val m = Regex("^https?://(?:127\\.0\\.0\\.1|localhost|\\[::1\\]|0\\.0\\.0\\.0)(?::\\d+)?/([A-Fa-f0-9]{40})(?:/([^/?#]*))?", RegexOption.IGNORE_CASE).find(u.trim()) ?: return null
+    val idx = m.groupValues[2].toIntOrNull()
+    return "magnet:?xt=urn:btih:" + m.groupValues[1].lowercase() + (if (idx != null) "&pulse_idx=$idx" else "")
 }
 
 /** A link to a .torrent file. */
