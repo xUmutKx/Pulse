@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto clicker (features/AutoClicker.kt): draws its floating bar and target marks and sends taps with the gesture call; it reads nothing from the screen. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:notificationTimeout="500"
+    android:canRetrieveWindowContent="false"
+    android:canPerformGestures="true"
+    android:description="@string/autoclick_service_desc" />

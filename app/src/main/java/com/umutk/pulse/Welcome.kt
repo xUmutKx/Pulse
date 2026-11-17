@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "touch" to (tr("New Auto clicker in the Toolkit and as a Quick Settings tile: a floating bar and target marks you drag to the spots to tap, 1 to 10 spots, start / stop and speed.",
+        "Araç kutusunda ve Hızlı Ayarlar karosu olarak yeni Otomatik tıklayıcı: yüzen çubuk ve dokunulacak noktalara sürüklediğin hedef işaretleri, 1 ile 10 nokta, başlat / durdur ve hız.")),
     "keyboard" to (tr("In Termux the bar offers commands and words you typed, nothing is autocorrected, and holding Delete works.",
         "Termux'ta çubuk komutları ve yazdığın kelimeleri öneriyor, otomatik düzeltme yok, Sil tuşunu basılı tutmak çalışıyor.")),
     "download" to (tr("Stremio's local links download as the torrent itself. Series and movies prefers streams with 70+ people sharing and sizes up to twice the one you set, and opens in YTXTube's black AMOLED look. The keyboard offers a file at the right of the bar after five letters of its name.",

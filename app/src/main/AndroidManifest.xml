@@ -1024,6 +1024,15 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <service android:name="com.umutk.pulse.features.AutoClickService" android:exported="true" android:label="Pulse · Auto clicker"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_autoclick" />
+        </service>
+        <service android:name="com.umutk.pulse.features.AutoClickTile" android:exported="true" android:label="Auto clicker" android:icon="@drawable/ic_toolkit_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
         <service android:name=".ToolkitTile" android:exported="true" android:label="Toolkit" android:icon="@drawable/ic_toolkit_tile"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
