@@ -50,7 +50,13 @@ class MusicPlaybackService : MediaSessionService() {
             if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1) != android.media.AudioManager.STREAM_MUSIC) return
             val v = i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 1)
             // a headset was plugged in while the volume was zero: nothing played then, the song starts when the volume is turned up
-            if (v > 0 && waitForVolume) { waitForVolume = false; Playlists.restore(c, engine); engine.play(); return }
+            // a headset was plugged in at zero volume: the wait ends after a minute, and the song never starts over another player (YTXTube, a video, a call)
+            if (waitForVolume && android.os.SystemClock.elapsedRealtime() - waitSince > 60_000L) waitForVolume = false
+            if (v > 0 && waitForVolume) {
+                waitForVolume = false
+                if (!devices.isMusicActive && devices.mode == AudioManager.MODE_NORMAL) { Playlists.restore(c, engine); engine.play() }
+                return
+            }
             if (!MusicSettings.pauseAtZeroVolume(c)) return
             // the volume turned to zero stops the song, and turned up again it carries on (only when it was stopped by this)
             if (v == 0 && engine.player.playWhenReady) { pausedByZero = true; engine.pause() }
@@ -61,6 +67,7 @@ class MusicPlaybackService : MediaSessionService() {
     private var devCb: Any? = null
     /** A headset or speaker connected while the media volume was zero: play waits until the volume is turned up. */
     private var waitForVolume = false
+    private var waitSince = 0L
 
     @androidx.annotation.RequiresApi(23)
     private inner class DevCb : AudioDeviceCallback() {
@@ -73,14 +80,31 @@ class MusicPlaybackService : MediaSessionService() {
             if (usb && MusicSettings.pauseUsbDac(this@MusicPlaybackService)) engine.pause()
             else if (wired && MusicSettings.resumeWired(this@MusicPlaybackService)) {
                 // the volume is at zero: the song does not start now, it waits for the volume to be turned up
-                if (devices.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) waitForVolume = true
+                if (devices.isMusicActive || devices.mode != AudioManager.MODE_NORMAL) return   // another player is on: it is not taken over
+                if (devices.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) { waitForVolume = true; waitSince = android.os.SystemClock.elapsedRealtime() }
                 else { Playlists.restore(this@MusicPlaybackService, engine); engine.play() }
             }
         }
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = refresh()
     }
 
+    /**
+     * The media card shows only once something was really played in this run: a widget, a tile or the Bluetooth check that loads the last queue (paused) must not
+     * pop a card up out of nowhere.
+     */
+    private var everPlayed = false
+
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        if (!everPlayed && !session.player.playWhenReady) {
+            // nothing was started: no card (a service started in the foreground by the system still gets its notification so it does not fail)
+            if (!startInForegroundRequired) return
+        }
+        super.onUpdateNotification(session, startInForegroundRequired)
+    }
+
     private val listener = object : Player.Listener {
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { if (playWhenReady) everPlayed = true }
         override fun onEvents(player: Player, events: Player.Events) {
             if (events.containsAny(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED, Player.EVENT_REPEAT_MODE_CHANGED,
                     Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_PLAYBACK_PARAMETERS_CHANGED)) refresh()

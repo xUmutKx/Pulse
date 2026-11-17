@@ -134,6 +134,12 @@ class PlayerState(private val scope: CoroutineScope) {
         }
     }
 
+    /** The next video from the picture-in-picture window: the queue, then the related list. It never opens a song of the music queue. */
+    fun skipNextVideo() {
+        isMusicMode = false
+        if (queue.isNotEmpty()) playFromQueue(0) else autoPlayNext()
+    }
+
     fun skipPrevious() {
         val player = controller ?: return
         if (player.currentPosition > 3000) {

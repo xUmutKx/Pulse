@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "music" to (tr("Fixed: the music player's media card no longer pops up when nothing plays, an old song no longer starts on a volume press after a headset was plugged in, and YTXTube's picture-in-picture Next never opens a song.",
+        "Düzeltildi: müzik çaların medya kartı hiçbir şey çalmazken çıkmıyor, kulaklık takıldıktan sonra ses tuşuna basınca eski şarkı başlamıyor, YTXTube pencere-içi pencerenin İleri tuşu şarkı açmıyor.")),
     "palette" to (tr("Two new looks: Cloud and Cloud light, soft clouds behind frosted panels (Look > Other colors). Pulse Watch builds again.",
         "İki yeni görünüm: Cloud ve Cloud light, buzlu panellerin arkasında yumuşak bulutlar (Görünüm > Diğer renkler). Pulse Watch yeniden derleniyor.")),
     "keyboard" to (tr("Keyboard smooth mode: no animations, effects, RGB light or neural weighing, for a phone that lags (also in Toolkit > Performance).",
