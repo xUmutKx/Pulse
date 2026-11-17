@@ -469,7 +469,20 @@ object KeyboardDictionary {
     }
 
     /** Words close to [typed] (lowercase): the typed word itself when it is one, and the ones a typo or a missing accent away. */
-    fun correct(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> = correctAll(code, typed, maxCost, tc).filter { !isBanned(it.word) }
+    fun correct(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> {
+        // the same word read again a moment later (the stems of a Turkish word are the typed word's own beginnings, asked for again by every key) is answered from the last reading;
+        // the touches that count are the first ones, so a word being typed keeps its key while only a letter is added to its end
+        val key = StringBuilder(typed.length + 24).append(d(code)).append('|').append(typed).append('|').append(maxCost).append('|')
+            .append(if (tc == null) 0 else tc.pts.take(typed.length).hashCode()).toString()
+        val now = System.currentTimeMillis()
+        stemCache[key]?.let { (at, list) -> if (now - at < 4000L) return list }
+        val out = correctAll(code, typed, maxCost, tc).filter { !isBanned(it.word) }
+        // a reading that was stopped by the next key is not kept (it is cut short)
+        if (!cancelled()) { if (stemCache.size > 96) stemCache.clear(); stemCache[key] = now to out }
+        return out
+    }
+
+    private val stemCache = ConcurrentHashMap<String, Pair<Long, List<Cand>>>()
 
     /** Every word within [maxCost] of [typed], the likeliest first (one pass over the list: a caller that needs a near and a wider reach reads both from it). */
     fun correctAll(code: String, typed: String, maxCost: Float, tc: TouchCtx? = null): List<Cand> {

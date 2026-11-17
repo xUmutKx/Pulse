@@ -2546,7 +2546,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed); withFiles(typed) }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
-            kotlinx.coroutines.delay(20)
+            kotlinx.coroutines.delay(55)
             if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             // nothing to suggest (an unknown word before, no completion): the bar is never left empty, it offers the words that most often come next
