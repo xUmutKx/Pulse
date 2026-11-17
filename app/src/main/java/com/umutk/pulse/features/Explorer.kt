@@ -753,6 +753,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     @Composable fun row(label: String, ic: androidx.compose.ui.graphics.vector.ImageVector, checked: Boolean? = null, act: () -> Unit) =
                         ThemedMenuItem(label, { ovf = false; act() }, icon = ic, checked = checked)
                     row(if (FilesPrefs.grid) tr("List", "Liste") else tr("Grid", "Izgara"), if (FilesPrefs.grid) Icons.Outlined.ViewList else Icons.Outlined.GridView) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
+                    if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) row(tr("Columns", "Sütunlar"), Icons.Outlined.ViewColumn, FilesPrefs.columns) { FilesPrefs.columns = !FilesPrefs.columns; FilesPrefs.save(ctx) }
                     row(tr("Sort", "Sırala"), Icons.Outlined.Sort) { sortMenu = true }
                     row(tr("Hidden files", "Gizli dosyalar"), Icons.Outlined.Visibility, showHidden) { showHidden = !showHidden }
                     row(tr("Sizes and dates", "Boyut ve tarih"), Icons.Outlined.Straighten, showSizes) { showSizes = !showSizes }
@@ -842,7 +843,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (want > 0) { kotlinx.coroutines.withTimeoutOrNull(1500) { snapshotFlow { exScroll.maxValue }.first { it >= want } }; exScroll.scrollTo(want.coerceAtMost(exScroll.maxValue)) } else exScroll.scrollTo(0)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-        Column(Modifier.fillMaxSize().onGloballyPositioned { ExScroll.viewTop = it.positionInRoot().y }.nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        // a wide screen (a tablet turned sideways): columns, as in a file manager of a computer, instead of one list with an empty right side (the list view is one tap away)
+        val columnsNow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840 && FilesPrefs.columns && !recentView && arcFile == null && resultsFor == null && !searchOpen && sel.isEmpty() && query.isBlank()
+        if (columnsNow) ExColumnsPane(dir, top, showHidden, onGo = { go(it) }, onOpen = { openFile(it) }, onList = { FilesPrefs.columns = false; FilesPrefs.save(ctx) }, onMenu = { drawer = true })
+        else Column(Modifier.fillMaxSize().onGloballyPositioned { ExScroll.viewTop = it.positionInRoot().y }.nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
@@ -2068,7 +2072,7 @@ internal fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCat
 }.isSuccess
 
 /** Shares several files at once (folders are left out: they have no single file to send). False when none could be handed over. */
-private fun exShareMany(ctx: Context, files: List<File>): Boolean = runCatching {
+internal fun exShareMany(ctx: Context, files: List<File>): Boolean = runCatching {
     val list = files.filter { it.isFile }
     val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
     val mimes = list.map { fileMime(it) }.distinct()

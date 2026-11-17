@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "storage" to (tr("Files on a wide tablet shows columns like a computer: places, a column per folder, and the picked file's picture and details at the right. The Columns switch in the menu brings the list back.",
+        "Geniş tablette Dosyalar bilgisayardaki gibi sütunlarla açılıyor: konumlar, her klasör için bir sütun, sağda seçilen dosyanın resmi ve ayrıntıları. Menüdeki Sütunlar anahtarı listeyi geri getirir.")),
     "video" to (tr("Series and movies has a back button and follows the look (see-through on Windows 11), and YTXTube's Saved tab opens it. Launcher glass has a new Windows Material style with darker, lighter and transparency settings. Game Hub shows all 380 games, and the action buttons open around your finger. More Windows XP and 10 wallpapers.",
         "Diziler ve filmler geri tuşuna sahip ve görünümü izliyor (Windows 11'de şeffaf), YTXTube'un Kaydedilenler sekmesi de onu açıyor. Başlatıcı camında yeni Windows Material stili: daha koyu, daha açık ve şeffaflık ayarı. Game Hub 380 oyunun hepsini gösteriyor, aksiyon tuşları parmağının etrafında açılıyor. Daha fazla Windows XP ve 10 duvar kağıdı.")),
     "heart" to (tr("Less battery use: the loops of the screen stop while the app is in the background, the sampler reads less often, widgets are redrawn less, Game Hub's idle halo is still. Gym exercises show a two-photo loop. Icon packs, bird sounds, the gym data and better wallpapers are downloads that come by themselves where they are used.",
