@@ -16,6 +16,14 @@ import android.text.TextPaint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
@@ -49,9 +57,41 @@ private fun targets(kind: String): List<Pair<String, String>> = when (kind) {
     "audio" -> listOf("m4a" to "M4A")
     "pdf" -> listOf("png" to tr("PNG pictures", "PNG resimler"), "jpg" to tr("JPG pictures", "JPG resimler"))
     "docx" -> listOf("pdf" to "PDF", "txt" to "TXT")
-    "xlsx" -> listOf("csv" to "CSV")
+    "pptx" -> listOf("pdf" to "PDF")
+    "xlsx" -> listOf("csv" to "CSV", "pdf" to "PDF")
     "text" -> listOf("pdf" to "PDF", "txt" to "TXT")
     else -> emptyList()
+}
+
+/** The icon and the one-line description of a target, so the choices are told apart at a glance. */
+private fun targetInfo(id: String, kind: String): Pair<String, String> = when (id) {
+    "png" -> "image" to tr("Lossless picture, keeps transparency", "Kayıpsız resim, saydamlığı korur")
+    "jpg" -> "image" to tr("Small photo", "Küçük fotoğraf")
+    "webp" -> "image" to tr("Small, for the web", "Küçük, web için")
+    "pdf" -> "document" to (if (kind == "pptx") tr("One page for each slide", "Her slayt bir sayfa") else tr("A document that opens everywhere", "Her yerde açılan belge"))
+    "onepdf" -> "document" to tr("All the pictures in one PDF", "Tüm resimler tek PDF'de")
+    "mp4" -> "play" to tr("Video that plays everywhere", "Her yerde oynayan video")
+    "m4a" -> "music" to tr("Sound only", "Yalnız ses")
+    "txt" -> "filetypes" to tr("Plain text", "Düz yazı")
+    "csv" -> "table" to tr("Table cells as text", "Tablo hücreleri yazı olarak")
+    else -> "convert" to ""
+}
+
+/** One choice: its icon, its name and its description. */
+@Composable
+private fun TargetTile(id: String, name: String, kind: String, picked: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val (icon, desc) = targetInfo(id, kind)
+    androidx.compose.foundation.layout.Row(
+        modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(if (picked) T.accent.copy(alpha = .16f) else T.panel)
+            .border(1.dp, if (picked) T.accent else T.line, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(10.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        com.umutk.pulse.PIcon(icon, if (picked) T.accent else T.text, 24.dp)
+        androidx.compose.foundation.layout.Column(Modifier.padding(start = 10.dp)) {
+            Text(name, color = if (picked) T.accent else T.text, fontSize = 14.sp, maxLines = 1)
+            if (desc.isNotEmpty()) Text(desc, color = T.sub, fontSize = 11.sp, maxLines = 2)
+        }
+    }
 }
 
 /** The Convert page: a file (or several pictures) goes in, a file of another kind comes out in Download/Pulse. */
@@ -78,8 +118,12 @@ internal fun ConvertTab() {
         if (files.isNotEmpty() && opts.isEmpty()) Text(tr("This kind of file cannot be changed here.", "Bu tür dosya burada çevrilemiyor."), color = T.sub, fontSize = 13.sp)
         if (opts.isNotEmpty()) {
             Text(tr("Change to", "Şuna çevir"), color = T.sub, fontSize = 12.sp)
-            Row(androidx.compose.ui.Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                opts.forEach { (id, n) -> PChip(to == id, n) { to = id } }
+            // two choices to a row, each with its icon, name and description
+            opts.chunked(2).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { (id, n) -> TargetTile(id, n, kind, to == id, Modifier.weight(1f)) { to = id } }
+                    if (row.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                }
             }
             if (kind == "docx" || kind == "xlsx") Text(tr("Text and table cells only: pictures and page layout are not kept.", "Yalnız yazı ve tablo hücreleri: resimler ve sayfa düzeni korunmaz."), color = T.sub, fontSize = 12.sp)
             PButton(if (busy) tr("Working…", "Çalışıyor…") else tr("Convert", "Çevir")) {
@@ -126,6 +170,12 @@ private suspend fun convert(ctx: android.content.Context, files: List<Uri>, name
         kind == "pdf" -> {
             val n = withContext(Dispatchers.IO) { pdfToPictures(ctx, first, base, to) }
             tr("Saved $n pages in Download/Pulse", "$n sayfa Download/Pulse içine kaydedildi")
+        }
+        kind == "pptx" -> {
+            val out = File(File(ctx.cacheDir, "mediatools").apply { mkdirs() }, "conv_${System.nanoTime()}.pdf")
+            val pages = withContext(Dispatchers.IO) { out.outputStream().use { com.umutk.pulse.PptPdf.write(cacheCopy(ctx, first, name), it) } }
+            saveFile(ctx, "$base.pdf", "application/pdf", out); out.delete()
+            tr("Saved $base.pdf ($pages slides)", "Kaydedildi: $base.pdf ($pages slayt)")
         }
         kind == "docx" || kind == "text" || kind == "xlsx" -> {
             val text = withContext(Dispatchers.IO) {

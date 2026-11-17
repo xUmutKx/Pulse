@@ -76,11 +76,11 @@ class BudsService : Service() {
 
     private fun note(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(NotificationChannel("buds", "Galaxy Buds", NotificationManager.IMPORTANCE_MIN))
+        if (android.os.Build.VERSION.SDK_INT >= 26) { runCatching { nm.deleteNotificationChannel("buds") }; nm.createNotificationChannel(com.umutk.pulse.QuietChannel("buds2", "Galaxy Buds", NotificationManager.IMPORTANCE_MIN)) }
         val s = BudsLink.state.value
         val text = if (s.connected) listOfNotNull(s.name.ifBlank { null }, s.batteryL.takeIf { it >= 0 }?.let { "L $it%" }, s.batteryR.takeIf { it >= 0 }?.let { "R $it%" }).joinToString("  ") else "…"
         val stop = android.app.PendingIntent.getService(this, 0, Intent(this, BudsService::class.java).setAction(ACTION_STOP), android.app.PendingIntent.FLAG_IMMUTABLE)
-        return androidx.core.app.NotificationCompat.Builder(this, "buds").setSmallIcon(R.drawable.ic_notif_music).setContentTitle("Galaxy Buds").setContentText(text).setOngoing(true)
+        return androidx.core.app.NotificationCompat.Builder(this, "buds2").setSmallIcon(R.drawable.ic_notif_music).setContentTitle("Galaxy Buds").setContentText(text).setOngoing(true)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN).addAction(0, "×", stop).build()
     }
 

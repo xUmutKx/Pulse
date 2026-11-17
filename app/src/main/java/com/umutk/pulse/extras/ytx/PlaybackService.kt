@@ -40,6 +40,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
+import com.umutk.pulse.quietMediaCard
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -62,6 +63,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         YTXTubeApplication.init(this)
         super.onCreate()
+        setMediaNotificationProvider(quietMediaCard())
 
         val sources = YouTubeMediaSourceFactory(this)
         val player = ExoPlayer.Builder(this, SyncedRenderersFactory(this))

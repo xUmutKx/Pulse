@@ -153,6 +153,13 @@ class YtxActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         setHighestRefreshRate()
+        // back from the headphones button of the picture-in-picture window: the video comes back and plays (unless audio-only was on before)
+        playerHolder?.let { p ->
+            if (p.audioFromPip) {
+                p.audioFromPip = false
+                if (!p.audioOnlyBeforePip) { p.setAudioOnly(false); }
+            }
+        }
     }
 
     override fun onPause() {
@@ -466,7 +473,8 @@ fun YtxTubeApp() {
             when (op) {
                 "toggle" -> player.togglePlay()
                 "next" -> if (player.isMusicMode) player.skipNext() else player.skipNextVideo()
-                "audio" -> { player.setAudioOnly(true); (activity as? ComponentActivity)?.moveTaskToBack(true) }
+                // the headphones: the sound goes on in the background for now; back in the app the video shows and plays again (audio-only is not left on for good)
+                "audio" -> { player.audioOnlyBeforePip = AudioOnly.enabled; player.audioFromPip = true; player.setAudioOnly(true); (activity as? ComponentActivity)?.moveTaskToBack(true) }
             }
         }
     }
