@@ -37,7 +37,7 @@ object PlaybackSpeed {
     fun init(context: Context) {
         prefs = context.getSharedPreferences("playback", Context.MODE_PRIVATE)
         remember = prefs?.getBoolean(KEY_REMEMBER, false) == true
-        saved = snap(prefs?.getFloat(KEY_SPEED, 1f) ?: 1f)
+        saved = free(prefs?.getFloat(KEY_SPEED, 1f) ?: 1f)
     }
 
 
@@ -45,12 +45,12 @@ object PlaybackSpeed {
 
     fun setRemember(on: Boolean, current: Float) {
         remember = on
-        saved = snap(current)
+        saved = free(current)
         persist()
     }
 
     fun save(speed: Float) {
-        saved = snap(speed)
+        saved = free(speed)
         persist()
     }
 
@@ -62,11 +62,14 @@ object PlaybackSpeed {
 
     fun atStep(step: Int) = ((MIN + step * STEP) * 100f).roundToInt() / 100f
     fun snap(speed: Float) = atStep(step(speed))
+
+    /** Any speed between the ends, to two decimals (the slider of the speed sheet sets 1.17 as it is; the ruler keeps its steps). */
+    fun free(speed: Float): Float = (speed.coerceIn(MIN, MAX) * 100f).roundToInt() / 100f
     fun isNormal(speed: Float) = abs(speed - 1f) < STEP / 2
 
 
     fun label(speed: Float): String =
-        String.format(Locale.US, "%.2f", snap(speed)).trimEnd('0').trimEnd('.')
+        String.format(Locale.US, "%.2f", free(speed)).trimEnd('0').trimEnd('.')
 }
 
 

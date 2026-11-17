@@ -762,9 +762,10 @@ fun VideoContent(
                 durationMs = state.durationMs,
                 enabled = interactive,
                 active = scrubActive,
-                relativeDrag = true,
+                // the bar is free: a tap goes to that place, and a drag follows the finger (it used to move relative to where the video was)
+                relativeDrag = false,
                 edgeToEdge = portraitEdgeScrub,
-                tapToSeek = false,
+                tapToSeek = true,
                 edgeTouchPadAbove = EdgeScrubTouchPadAbove,
                 trackHeight = if (fullscreenControlsScrub) FullscreenScrubTrackHeight else 4.dp,
                 touchHeight = when {
@@ -775,7 +776,7 @@ fun VideoContent(
                 knob = if (fullscreenControlsScrub) FullscreenScrubKnob else 7.dp,
                 knobDragging = if (fullscreenControlsScrub) FullscreenScrubKnobDragging else 9.dp,
                 onPreview = { state.scrubPreviewMs = it; touched() },
-                onSeek = { state.endScrubDragging(it); touched() },
+                onSeek = { ms -> if (state.scrubDragging) state.endScrubDragging(ms) else state.seekTo(ms); touched() },
                 onDraggingChanged = { dragging ->
                     if (dragging) state.beginScrubDragging()
                     else state.endScrubDragging()
@@ -1648,7 +1649,9 @@ private fun Scrubber(
                             if (slopAccum.getDistance() < slop) continue
                             dragged = true
                             onDraggingChanged(true)
-                            fraction = (currentPositionMs.toFloat() / duration).coerceIn(0f, 1f)
+                            // absolute: the bar is where the finger is; relative: it starts from where the video is
+                            fraction = if (relativeDrag) (currentPositionMs.toFloat() / duration).coerceIn(0f, 1f)
+                                else ((change.position.x - endInset) / width).coerceIn(0f, 1f)
                             dragFraction = fraction
                             onPreview((fraction * durationMs).toLong())
                         } else {

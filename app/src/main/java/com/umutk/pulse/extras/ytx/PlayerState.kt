@@ -899,7 +899,7 @@ class PlayerState(private val scope: CoroutineScope) {
 
     fun previewSpeed(value: Float) {
         val player = controller ?: return
-        val s = PlaybackSpeed.snap(value)
+        val s = PlaybackSpeed.free(value)
         if (player.playbackParameters.speed != s) player.setPlaybackSpeed(s)
         speed = s
     }
@@ -911,7 +911,7 @@ class PlayerState(private val scope: CoroutineScope) {
 
     fun commitSpeed(value: Float) {
         previewSpeed(value)
-        val s = PlaybackSpeed.snap(value)
+        val s = PlaybackSpeed.free(value)
         if (!PlaybackSpeed.remember) return
         if (PlaybackSpeed.isNormal(s) && !PlaybackSpeed.isNormal(PlaybackSpeed.saved)) PlaybackSpeed.setRemember(false, 1f)
         else PlaybackSpeed.save(s)
