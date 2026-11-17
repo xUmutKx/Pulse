@@ -15,6 +15,8 @@ object LauncherGlass {
     /** Pulse's own icon: the key of its look. */
     const val MAIN = "pulse"
     const val LINE = "line"
+    /** The alias texts and shares reach Messages by (other apps show its icon); it follows the look of the Messages icon. */
+    private const val COMPOSE = "MsgComposeLauncher"
 
     /** A glass colour: its id (the stored look), the end of the alias names ("" for the first) and its colour. */
     class Tone(val id: String, val suffix: String, val argb: Int)
@@ -57,7 +59,7 @@ object LauncherGlass {
     /** On when switched on, or never touched and on in the manifest (only Pulse's default icon is; every other alias starts off). */
     private fun enabled(c: Context, a: String): Boolean = runCatching {
         val st = c.packageManager.getComponentEnabledSetting(cn(c, a))
-        st == PackageManager.COMPONENT_ENABLED_STATE_ENABLED || (st == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && a == "IconDefault")
+        st == PackageManager.COMPONENT_ENABLED_STATE_ENABLED || (st == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && (a == "IconDefault" || a == COMPOSE))
     }.getOrDefault(false)
 
     private fun set(c: Context, a: String, on: Boolean) {
@@ -92,10 +94,14 @@ object LauncherGlass {
         only(c, MAIN, nameFor(MAIN, lookOf(c, MAIN)))
     }
 
+    /** The Messages entry other apps show (the Message button of a contact, the share list) takes the look of the Messages icon. */
+    private fun syncCompose(c: Context) = only(c, COMPOSE, nameFor(COMPOSE, lookOf(c, "MessagesLauncher")))
+
     /** Every icon on the home screen takes its look. */
     fun applyAll(c: Context) {
         ALIASES.forEach { if (shown(c, it)) setShown(c, it, true) }
         applyMain(c)
+        syncCompose(c)
     }
 
     /** The icon chooser's Apply: the app's icon is on the home screen in [look] ([LINE] or a colour id), for real (not a shortcut). */
@@ -105,6 +111,7 @@ object LauncherGlass {
         Thread {
             only(c, alias, nameFor(alias, look))
             if (alias == MAIN) MAIN_OTHERS.forEach { set(c, it, false) }
+            if (alias == "MessagesLauncher") syncCompose(c)
         }.start()
     }
 
@@ -123,6 +130,7 @@ object LauncherGlass {
         Thread {
             ALIASES.forEach { if (shown(c, it)) only(c, it, nameFor(it, look)) }
             if (variants(MAIN).any { enabled(c, it) }) only(c, MAIN, nameFor(MAIN, look))
+            syncCompose(c)
         }.start()
     }
 

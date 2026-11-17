@@ -1823,7 +1823,9 @@
             </intent-filter>
         </service>
         <activity android:name="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:label="Messages" android:theme="@style/Theme.Pulse"
-            android:windowSoftInputMode="adjustResize" android:taskAffinity="com.umutk.pulse.tools" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode">
+            android:windowSoftInputMode="adjustResize" android:taskAffinity="com.umutk.pulse.tools" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
+        <!-- the way into Messages for texts and shares: one alias is on, with the picture of the Messages icon's look (LauncherGlass), so other apps show the same icon -->
+        <activity-alias android:name=".MsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="true" android:icon="@drawable/launch_messages" android:roundIcon="@drawable/launch_messages" android:label="Messages">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SENDTO" />
@@ -1836,7 +1838,91 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias android:name=".GlassMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass" android:roundIcon="@drawable/launch_messages_glass" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPurpleMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass_purple" android:roundIcon="@drawable/launch_messages_glass_purple" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPinkMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass_pink" android:roundIcon="@drawable/launch_messages_glass_pink" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassCyanMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass_cyan" android:roundIcon="@drawable/launch_messages_glass_cyan" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassGreenMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass_green" android:roundIcon="@drawable/launch_messages_glass_green" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassAmberMsgComposeLauncher" android:targetActivity="com.umutk.pulse.extras.messages.MsgComposeActivity" android:exported="true" android:enabled="false" android:icon="@drawable/launch_messages_glass_amber" android:roundIcon="@drawable/launch_messages_glass_amber" android:label="Messages">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sms" /><data android:scheme="smsto" /><data android:scheme="mms" /><data android:scheme="mmsto" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" /><data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
         <activity android:name="com.umutk.pulse.extras.messages.MsgBubbleActivity" android:exported="true" android:theme="@style/Theme.Pulse" android:allowEmbedded="true"
             android:resizeableActivity="true" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.bubble" android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
