@@ -116,7 +116,7 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
         // one row, 0.25 at the left end and 2.5 at the right end; on a narrow screen the row scrolls
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
             val fits = maxWidth / YouTubeSpeeds.size >= 54.dp
-            val chips: @Composable (Boolean) -> Unit = { fill ->
+            val chips: @Composable androidx.compose.foundation.layout.RowScope.(Boolean) -> Unit = { fill ->
                 YouTubeSpeeds.forEach { speed ->
                     SpeedChip(
                         label = PlaybackSpeed.label(speed) + "×",
@@ -125,8 +125,8 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
                     ) { apply(speed) }
                 }
             }
-            if (fits) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(true) }
-            else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(false) }
+            if (fits) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(this, true) }
+            else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp)) { chips(this, false) }
         }
         Spacer(Modifier.height(4.dp))
     }

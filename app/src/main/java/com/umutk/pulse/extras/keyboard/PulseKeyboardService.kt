@@ -1173,6 +1173,24 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // an English first name or place typed in lower case is written with its capital (wendy -> Wendy, london -> London)
         if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn)
             out = typed.replaceFirstChar { it.titlecase(Locale.ENGLISH) }
+        // a brand, an app or a creator: written its own way (starbucks -> Starbucks, mcdonalds -> McDonald's, youtube -> YouTube, a letter off too);
+        // in Turkish an ending after it takes its apostrophe (starbucksta -> Starbucks'ta)
+        if (correct && !inAddr && !urlNow() && !st.plain && KeyboardPrefs.autocorrect && !KeyboardDictionary.isKept(typed)) {
+            val lw = typed.lowercase(lang.locale)
+            val known = KeyboardDictionary.isWord(lang.code, lw)
+            val b = KeyboardDictionary.brandFor(typed, known) ?: KeyboardDictionary.brandFor(out, KeyboardDictionary.isWord(lang.code, out.lowercase(lang.locale)))
+                ?.takeIf { KeyboardDictionary.brandKey(it) == KeyboardDictionary.brandKey(out) }
+            if (b != null) out = b
+            else if (lang.code == "tr" && !known) {
+                // the longest brand the word starts with, and a Turkish ending after it
+                val k = KeyboardDictionary.brandKey(typed)
+                for (n in k.length - 1 downTo 3) {
+                    val form = KeyboardDictionary.brands[k.substring(0, n)] ?: continue
+                    val rest = k.substring(n)
+                    if (rest in TR_ENDINGS) { out = "$form'$rest"; break }
+                }
+            }
+        }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
