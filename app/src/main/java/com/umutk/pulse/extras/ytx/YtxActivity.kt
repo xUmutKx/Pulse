@@ -465,7 +465,7 @@ fun YtxTubeApp() {
         pip.onAction = { op ->
             when (op) {
                 "toggle" -> player.togglePlay()
-                "next" -> player.skipNext()
+                "next" -> if (player.isMusicMode) player.skipNext() else player.skipNextVideo()
                 "audio" -> { player.setAudioOnly(true); (activity as? ComponentActivity)?.moveTaskToBack(true) }
             }
         }
