@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.features.AccessNeededCard
+import com.umutk.pulse.features.accessMissing
 import com.umutk.pulse.features.ownProcesses
 import com.umutk.pulse.features.visibleApps
 import com.umutk.pulse.features.ProcCache
@@ -93,7 +94,8 @@ fun ProcessesPage() {
     LaunchedEffect(Unit) {
         while (true) {
             if (rows.isEmpty()) rows = withContext(Dispatchers.IO) { ProcCache.load(ctx).map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
-            val raw = withContext(Dispatchers.IO) { Sampler.processes() }
+            // without root or Shizuku the shell shows only itself ("ps"): that is not a list of apps, so the app's own parts and the apps it can see are listed instead
+            val raw = withContext(Dispatchers.IO) { if (accessMissing()) emptyList() else Sampler.processes() }
             own = raw.isEmpty()
             val fresh = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) + com.umutk.pulse.features.ownParts(ctx) + visibleApps(ctx).filter { v -> ownProcesses(ctx).none { o -> o.name.substringBefore(':') == v.name } } } }
             if (fresh.isNotEmpty()) {
@@ -168,7 +170,7 @@ fun ProcessesPage() {
                 }
             }
         }
-        AccessNeededCard(tr("Processes", "İşlemler"), tr("Showing this app's own processes only. Other apps' processes, CPU and virtual size need root or Shizuku.", "Yalnızca bu uygulamanın kendi işlemleri gösteriliyor. Diğer uygulamaların işlemleri, CPU ve sanal bellek için root veya Shizuku gerekir."), Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+        AccessNeededCard(tr("Processes", "İşlemler"), tr("Only this app's own processes. The others need root or Shizuku.", "Yalnızca bu uygulamanın işlemleri. Diğerleri için root veya Shizuku gerekir."), Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         if (own && !usage) com.umutk.pulse.PCard(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
             Text(tr("Time on screen, network and size of each app need usage access.", "Her uygulamanın ekran süresi, ağ ve boyutu için kullanım erişimi gerekir."), color = T.sub, fontSize = 13.sp)
             PButton(tr("Allow usage access", "Kullanım erişimine izin ver")) { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
