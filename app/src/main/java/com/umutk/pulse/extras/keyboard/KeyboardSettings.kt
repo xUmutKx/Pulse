@@ -242,7 +242,11 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
             Switch(tr("Corner swipes", "Köşe kaydırmaları"), tr("Swipe a letter toward a corner for the symbol or key written there (Esc, Tab, Copy ...). Turns swipe typing off", "Harfi köşesine kaydırınca orada yazan sembol ya da tuş çalışır (Esc, Tab, Kopyala ...). Kaydırarak yazmayı kapatır"), KeyboardPrefs.corners) { KeyboardPrefs.corners = it; save() }
+            if (KeyboardPrefs.corners) Switch(tr("Symbols on the corners", "Köşelerde semboller"), tr("The small labels around each letter", "Her harfin çevresindeki küçük yazılar"), KeyboardPrefs.cornerHints) { KeyboardPrefs.cornerHints = it; save() }
+            Switch(tr("Circle and round trip", "Daire ve gidiş-dönüş"), tr("A circle on a letter types its capital, out and back types its accent. Turns swipe typing off", "Harfte daire büyük harfini, gidip dönmek aksanlısını yazar. Kaydırarak yazmayı kapatır"), KeyboardPrefs.circleGestures) { KeyboardPrefs.circleGestures = it; save() }
+            Switch(tr("Phone keypad (multi-tap)", "Telefon tuş takımı (çoklu basış)"), tr("Letters on nine digit keys, as on an old phone", "Harfler dokuz rakam tuşunda, eski telefonlardaki gibi"), KeyboardPrefs.multiTap) { KeyboardPrefs.multiTap = it; save() }
             Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
+            Switch(tr("Smooth mode", "Akıcı mod"), tr("No animations, effects, RGB light or neural weighing", "Animasyon, efekt, RGB ışık ve sinirsel tartım yok"), KeyboardPrefs.smooth) { KeyboardPrefs.smooth = it; save() }
             // (the Samsung look has its own switch, off until it is asked for)
             if (KeyboardPrefs.theme == "samsung") Switch(tr("Extra key row (Samsung look)", "Ek tuş satırı (Samsung görünümü)"), tr("Esc, Tab, Ctrl, Alt, Win, arrows", "Esc, Tab, Ctrl, Alt, Win, oklar"), KeyboardPrefs.samProRow) { KeyboardPrefs.samProRow = it; save() }
             Switch(tr("Extra key row", "Ek tuş satırı"), tr("Esc, Tab, Ctrl, Alt, Win, arrows, F-keys", "Esc, Tab, Ctrl, Alt, Win, oklar, F tuşları"), KeyboardPrefs.proRow) { KeyboardPrefs.proRow = it; save() }
@@ -463,6 +467,28 @@ fun KeyboardSettings(back: () -> Unit) {
                 Text(tr("Choose", "Seç"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { picPick.launch("image/*") }.padding(8.dp))
                 if (KeyboardPrefs.bgPath.isNotEmpty()) Text(tr("Remove", "Kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { KeyboardPrefs.bgPath = ""; save() }.padding(8.dp))
             }
+            // the space bar's own picture and the small figure walking on it
+            val spacePick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
+                if (uri != null) runCatching {
+                    val f = java.io.File(ctxPic.filesDir, "kb_space.img")
+                    ctxPic.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+                    KeyboardPrefs.spacePic = ""; KeyboardPrefs.spacePic = f.absolutePath; save()
+                }
+            }
+            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Space bar picture", "Boşluk tuşu resmi"), color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(tr("Choose", "Seç"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { spacePick.launch("image/*") }.padding(8.dp))
+                if (KeyboardPrefs.spacePic.isNotEmpty()) Text(tr("Remove", "Kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { KeyboardPrefs.spacePic = ""; save() }.padding(8.dp))
+            }
+            Text(tr("On the space bar", "Boşluk tuşunda"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("", "🐈", "🐕", "🐢", "🦆", "🐧", "🚗", "🚀", "👾", "🦖", "🐌", "⭐").forEach { e ->
+                    val on = KeyboardPrefs.spaceWalker == e
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(if (on) T.accent.copy(alpha = .25f) else T.text.copy(alpha = .06f)).clickable { KeyboardPrefs.spaceWalker = e; save() }, contentAlignment = Alignment.Center) {
+                        if (e.isEmpty()) PIcon("close", T.sub, 18.dp) else Text(e, fontSize = 20.sp)
+                    }
+                }
+            }
             if (KeyboardPrefs.bgPath.isNotEmpty()) {
                 Text("${tr("Picture darkness", "Resim karartma")}: ${KeyboardPrefs.bgDim}%", color = T.sub, fontSize = 12.sp)
                 PSlider(KeyboardPrefs.bgDim / 100f, { KeyboardPrefs.bgDim = (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
@@ -585,7 +611,9 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // the e-mail addresses the bar offers from their first letters in any field: the ones typed or copied are kept by themselves, and one can be added by hand here
-        KbSection("mail", tr("Your e-mail addresses", "E-posta adreslerin")) {
+        // what the keyboard keeps about the user, in one place: e-mail addresses, numbers typed often, blocked suggestions
+        KbSection("person", tr("Personal data", "Kişisel veriler")) {
+            Text(tr("E-mail addresses", "E-posta adresleri"), color = T.sub, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
             val sp = remember { ctx.getSharedPreferences("pulse_kb_emails", android.content.Context.MODE_PRIVATE) }
             var mails by remember { mutableStateOf(sp.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }) }
             var addM by remember { mutableStateOf("") }
@@ -604,10 +632,8 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             if (mails.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
-        }
-
-        // numbers typed again and again (a phone number, an ID number): kept on the phone only and offered from their first digits (typed twice before, or added here)
-        KbSection("calc", tr("Numbers I type often", "Sık yazdığım sayılar")) {
+            // numbers typed again and again (a phone number, an ID number): kept on the phone only and offered from their first digits (typed twice before, or added here)
+            Text(tr("Numbers I type often", "Sık yazdığım sayılar"), color = T.sub, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
             var nums by remember { mutableStateOf(KbNumbers.all(ctx).map { it.key to it.value }.sortedByDescending { it.second }) }
             var addN by remember { mutableStateOf("") }
             var on by remember { mutableStateOf(KeyboardPrefs.rememberNumbers) }
@@ -632,10 +658,8 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             if (nums.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
             else PButton(tr("Forget all", "Hepsini unut"), danger = true) { KbNumbers.clear(ctx); reload() }
-        }
-
-        // the suggestions blocked from the bar (a word, a name or an e-mail address held and blocked): a tap brings one back
-        KbSection("eyeOff", tr("Blocked suggestions", "Engellenen öneriler")) {
+            // the suggestions blocked from the bar (a word, a name or an e-mail address held and blocked): a tap brings one back
+            Text(tr("Blocked suggestions", "Engellenen öneriler"), color = T.sub, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
             var blocked by remember { mutableStateOf(KeyboardDictionary.bannedList(ctx)) }
             if (blocked.isEmpty()) Text(tr("None", "Yok"), color = T.sub, fontSize = 13.sp)
             blocked.forEach { w ->
