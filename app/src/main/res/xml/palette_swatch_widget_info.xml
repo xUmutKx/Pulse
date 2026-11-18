@@ -10,5 +10,5 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
+    android:widgetCategory="home_screen|keyguard"
     android:initialLayout="@layout/palette_widget_swatch" />

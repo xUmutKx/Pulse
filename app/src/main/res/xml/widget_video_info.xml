@@ -7,4 +7,4 @@
     android:initialLayout="@layout/widget_video_main"
     android:configure="com.umutk.pulse.widgets.music.VideoWidgetConfig" android:widgetFeatures="reconfigurable"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

@@ -11,4 +11,4 @@
     android:resizeMode="horizontal|vertical"
     android:configure="com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig"
     android:widgetFeatures="reconfigurable"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

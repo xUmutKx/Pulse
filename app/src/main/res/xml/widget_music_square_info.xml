@@ -6,6 +6,6 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_music_square"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
+    android:widgetCategory="home_screen|keyguard"
     android:widgetFeatures="reconfigurable"
     android:configure="com.umutk.pulse.widgets.music.MusicWidgetConfig" />

@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.weather
 
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,25 +48,8 @@ fun MoonPhase(nowMs: Long, fg: Color, sub: Color) {
         Canvas(Modifier.size(84.dp)) {
             val r = size.minDimension / 2
             val center = Offset(size.width / 2, size.height / 2)
-            // the unlit disc first, faintly lit by the earth, then the lit part cut from the phase and drawn with the moon's seas and craters
-            drawCircle(Color(0xFF232A3D), r, center)
-            drawCircle(Color(0xFF3A4259).copy(alpha = .5f), r * .3f, Offset(center.x - r * .3f, center.y - r * .2f))
-            val rx = r * abs(c)
-            val lit = androidx.compose.ui.graphics.Path().apply {
-                val circle = androidx.compose.ui.geometry.Rect(Offset(center.x - r, center.y - r), Size(2 * r, 2 * r))
-                val ell = androidx.compose.ui.geometry.Rect(Offset(center.x - rx, center.y - r), Size(2 * rx, 2 * r))
-                // right side lit (waxing): the right half of the disc, closed by the terminator that bulges left when more than half is lit, right when less
-                arcTo(circle, -90f, 180f, true)
-                arcTo(ell, 90f, if (c < 0) 180f else -180f, false)
-                close()
-            }
-            val flip = age >= syn / 2
-            withTransform({ if (flip) scale(-1f, 1f, center) }) {
-                clipPath(lit) {
-                    // the face is drawn the right way round for the waning moon too (the cut is flipped, the seas are not)
-                    withTransform({ if (flip) scale(-1f, 1f, center) }) { moonSurface(center.x, center.y, r) }
-                }
-            }
+            // the real moon of this night: its face, lit by the true phase, the night side faintly lit by the earth
+            drawIntoCanvas { MoonArt.draw(it.nativeCanvas, center.x, center.y, r, age) }
             drawCircle(sub.copy(alpha = .35f), r, center, style = Stroke(1.dp.toPx()))
         }
         Column {

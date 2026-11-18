@@ -133,6 +133,7 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Weather, detail", "WeatherDetailWidget"),
     WidgetEntry("Weather and clock, no background", "WeatherClearWidget"),
     WidgetEntry("Weather, scenery", "WeatherSceneWidget"),
+    WidgetEntry("Moon phase", "MoonWidget"),
     WidgetEntry("Weather, daily forecast", "WeatherDailyWidget"),
     WidgetEntry("Weather, hourly forecast", "WeatherHourlyWidget"),
     WidgetEntry("Weather and daily forecast", "WeatherNowDailyWidget"),
@@ -481,6 +482,7 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
         "WeatherDetailWidget" -> DpSize(110.dp, 110.dp)
         "WeatherClearWidget" -> DpSize(250.dp, 130.dp)
         "WeatherSceneWidget" -> DpSize(150.dp, 150.dp)
+        "MoonWidget" -> DpSize(110.dp, 110.dp)
         "WeatherDailyWidget" -> DpSize(250.dp, 110.dp)
         "WeatherHourlyWidget" -> DpSize(250.dp, 110.dp)
         "WeatherNowDailyWidget" -> DpSize(250.dp, 180.dp)

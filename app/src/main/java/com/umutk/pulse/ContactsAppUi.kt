@@ -95,7 +95,8 @@ internal fun ctHandle(i: Intent?) {
     ctPick = false
     i ?: return
     when (i.action) {
-        Intent.ACTION_VIEW, Intent.ACTION_EDIT -> ctInUri = i.data
+        // a tap on a contact's picture in WhatsApp, Beeper and other apps sends QUICK_CONTACT with the same contact link
+        Intent.ACTION_VIEW, Intent.ACTION_EDIT, "android.provider.action.QUICK_CONTACT", "com.android.contacts.action.QUICK_CONTACT" -> ctInUri = i.data
         Intent.ACTION_DIAL -> ctInDial = i.data?.schemeSpecificPart?.let { Uri.decode(it) } ?: ""
         Intent.ACTION_PICK -> ctPick = true
         Intent.ACTION_INSERT, Intent.ACTION_INSERT_OR_EDIT -> {

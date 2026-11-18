@@ -9,4 +9,4 @@
     android:updatePeriodMillis="900000"
     android:initialLayout="@layout/widget_usage"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

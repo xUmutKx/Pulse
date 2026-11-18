@@ -194,10 +194,8 @@ object WeatherLand {
             val r = h * .06f
             p.shader = RadialGradient(mx, my, h * .4f, intArrayOf(ColorUtils.setAlphaComponent(0xFFDDE6FF.toInt(), (90 * vis).toInt()), 0x00000000), null, Shader.TileMode.CLAMP)
             c.drawCircle(mx, my, h * .4f, p); p.shader = null
-            p.color = 0xFFF4F1DE.toInt(); p.alpha = (255 * vis).toInt(); c.drawCircle(mx, my, r, p)
-            p.color = 0xFFC9C5AE.toInt(); p.alpha = (110 * vis).toInt()
-            c.drawCircle(mx - r * .3f, my - r * .2f, r * .25f, p); c.drawCircle(mx + r * .35f, my + r * .25f, r * .2f, p); c.drawCircle(mx + r * .1f, my - r * .5f, r * .14f, p)
-            p.alpha = 255
+            // the real moon of tonight, by its true phase
+            MoonArt.draw(c, mx, my, r, WeatherFmt.moonAge(), vis)
             sunX = mx; sunReflect = vis > .2f
         }
 
