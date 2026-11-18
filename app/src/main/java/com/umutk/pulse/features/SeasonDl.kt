@@ -235,7 +235,7 @@ object SeasonDl {
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
             // without Stremio the torrents of Series and movies are downloaded by the engine in Pulse: it is in the full build only, on a 64-bit phone
-            if (!TorrentEngine.available) Text(tr("Torrents need the full Pulse build (not Lite or the Play one) on a 64-bit phone: Stremio is not used any more.", "Torrent için tam Pulse sürümü (Lite ya da Play değil) ve 64 bit telefon gerekir: Stremio artık kullanılmıyor."), color = androidx.compose.ui.graphics.Color(0xFFE08A3A), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+            if (!TorrentEngine.available && Downloads.localServer.isBlank()) Text(tr("Torrents need the full Pulse build (not Lite or the Play one) on a 64-bit phone, or a local torrent server below.", "Torrent için tam Pulse sürümü (Lite ya da Play değil) ve 64 bit telefon gerekir, ya da aşağıdaki yerel torrent sunucusu."), color = androidx.compose.ui.graphics.Color(0xFFE08A3A), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
             // a magnet link (and a Stremio link, which is one) starts as a torrent only when this is on: off by default
             Row(Modifier.fillMaxWidth().clickable { Downloads.setMagnetLinks(ctx, !Downloads.magnetLinks) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -243,6 +243,15 @@ object SeasonDl {
                     Text(tr("A magnet link or a Stremio link is downloaded as a torrent when this is on. Off: they are not started.", "Açıkken magnet bağlantısı ya da Stremio bağlantısı torrent olarak indirilir. Kapalıyken başlatılmaz."), color = T.sub, fontSize = 12.sp)
                 }
                 com.umutk.pulse.PSwitch(Downloads.magnetLinks, { Downloads.setMagnetLinks(ctx, it) })
+            }
+            // an optional local torrent server (Stremio's, or another app's such as Nuvio): empty = Pulse's own torrent engine
+            run {
+                var addr by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Downloads.localServer) }
+                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                    Text(tr("Local torrent server (optional)", "Yerel torrent sunucusu (isteğe bağlı)"), color = T.text, fontSize = 15.sp)
+                    Text(tr("Stremio's is http://127.0.0.1:11470. Empty: Pulse's own torrent engine downloads the stream.", "Stremio'nunki http://127.0.0.1:11470. Boşken Pulse'un kendi torrent motoru indirir."), color = T.sub, fontSize = 12.sp)
+                    PField(addr, { addr = it; Downloads.setLocalServer(ctx, it) }, "http://127.0.0.1:11470", Modifier.fillMaxWidth().padding(top = 6.dp), onDone = null)
+                }
             }
             // removing a finished download from the list leaves its file on the phone (off: the file goes too)
             Row(Modifier.fillMaxWidth().clickable { Downloads.setKeepFiles(ctx, !Downloads.keepFiles) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -308,7 +317,9 @@ object SeasonDl {
         // the add-ons list "tracker:udp://..." and "dht:<hash>": only the trackers go in the link, without their label
         val tr = (0 until (src?.length() ?: 0)).map { src!!.optString(it) }.filter { it.startsWith("tracker:") }
             .joinToString("&") { "tr=" + Uri.encode(it.removePrefix("tracker:")) }
-        // no Stremio any more: a torrent is always downloaded by the torrent engine in Pulse (a build without the engine cannot, and skips such a stream)
+        // a local torrent server (Stremio, or another app that serves torrents the same way) when its address is set; else the torrent engine in Pulse (full build, 64-bit)
+        val server = Downloads.localServer.trim().trimEnd('/')
+        if (server.isNotEmpty()) return "$server/$hash/${maxOf(idx, 0)}" + if (tr.isNotEmpty()) "?$tr" else ""
         if (!TorrentEngine.available) return null
         return "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + (if (idx >= 0) "&pulse_idx=$idx" else "")
     }

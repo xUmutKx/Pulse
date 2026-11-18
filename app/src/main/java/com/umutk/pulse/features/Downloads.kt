@@ -224,6 +224,8 @@ object Downloads {
     var autoSwitch by mutableStateOf(true)
     /** Magnet links, and Stremio's local links that become magnets: off by default, they start only when this is on. */
     var magnetLinks by mutableStateOf(false)
+    /** The address of a local torrent server (Stremio's, or another app's that serves torrents the same way): empty = the torrent engine in Pulse; Series and movies sends its torrents there when set. */
+    var localServer by mutableStateOf("")
     /** index into [SPEED_KBS]: caps downloads and installer copies; kept between runs */
     var speed by mutableStateOf(0)
     /** false while there is no working network; transfers wait for it instead of failing */
@@ -245,6 +247,7 @@ object Downloads {
         keepFiles = p.getBoolean("dlKeepFiles", false)
         autoSwitch = p.getBoolean("dlAutoSwitch", true)
         magnetLinks = p.getBoolean("dlMagnet", false)
+        localServer = p.getString("dlLocalServer", "") ?: ""
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
         // the activity, the service and the boot receiver all call this; the list is read once per process
         if (loaded) return
@@ -297,6 +300,11 @@ object Downloads {
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
         val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+    }
+
+    fun setLocalServer(ctx: Context, v: String) {
+        localServer = v.trim()
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString("dlLocalServer", localServer).apply()
     }
 
     fun setMagnetLinks(ctx: Context, v: Boolean) {
