@@ -44,7 +44,9 @@ import com.umutk.pulse.produceStateVisible
  * notifications waiting and the day of the year. They refresh while the menu is open.
  */
 @Composable
-fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f) {
+fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f, compact: Boolean = false) {
+    // a turned screen has little height: the tiles are short there, so the apps below them stay in view
+    fun f(x: Int) = (x * (if (compact) .66f else 1f)).sp
     val ctx = LocalContext.current
     val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val battery by produceStateVisible(0 to false) {
@@ -62,23 +64,23 @@ fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f) {
     val turn = (now / 4000L) % 2L == 0L
     val shape = RoundedCornerShape(corner)
     val notes = LauncherBadges.counts.values.sum()
-    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(88.dp).clip(shape).background(c.copy(alpha = c.alpha * see)).padding(10.dp), contentAlignment = Alignment.BottomStart) { content() }
+    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(if (compact) 52.dp else 88.dp).clip(shape).background(c.copy(alpha = c.alpha * see)).padding(if (compact) 7.dp else 10.dp), contentAlignment = Alignment.BottomStart) { content() }
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(2f)) { tile(2f, Color(0xFF0078D7)) {
                 Column {
-                    Text(SimpleDateFormat(if (LauncherPrefs.clock24) "HH:mm" else "h:mm a", Locale.getDefault()).format(d), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Light)
-                    Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(d), color = Color.White.copy(alpha = .85f), fontSize = 12.sp, maxLines = 1)
+                    Text(SimpleDateFormat(if (LauncherPrefs.clock24) "HH:mm" else "h:mm a", Locale.getDefault()).format(d), color = Color.White, fontSize = f(32), fontWeight = FontWeight.Light)
+                    Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(d), color = Color.White.copy(alpha = .85f), fontSize = f(12), maxLines = 1)
                 }
             } }
             Box(Modifier.weight(1f)) { tile(1f, Color(0xFF107C10)) {
                 Crossfade(turn, animationSpec = tween(600), label = "cal") { t ->
                     if (t) Column {
-                        Text(cal.get(Calendar.DAY_OF_MONTH).toString(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Light)
-                        Text(SimpleDateFormat("EEE", Locale.getDefault()).format(d), color = Color.White.copy(alpha = .85f), fontSize = 12.sp)
+                        Text(cal.get(Calendar.DAY_OF_MONTH).toString(), color = Color.White, fontSize = f(34), fontWeight = FontWeight.Light)
+                        Text(SimpleDateFormat("EEE", Locale.getDefault()).format(d), color = Color.White.copy(alpha = .85f), fontSize = f(12))
                     } else Column {
-                        Text(SimpleDateFormat("MMM", Locale.getDefault()).format(d), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                        Text(cal.get(Calendar.YEAR).toString(), color = Color.White.copy(alpha = .85f), fontSize = 12.sp)
+                        Text(SimpleDateFormat("MMM", Locale.getDefault()).format(d), color = Color.White, fontSize = f(28), fontWeight = FontWeight.Light)
+                        Text(cal.get(Calendar.YEAR).toString(), color = Color.White.copy(alpha = .85f), fontSize = f(12))
                     }
                 }
             } }
@@ -86,20 +88,20 @@ fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f) {
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(1f)) { tile(1f, Color(0xFF5C2D91)) {
                 Column {
-                    Text("${battery.first}%", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                    Text(if (battery.second) tr("Charging", "Şarjda") else tr("Battery", "Pil"), color = Color.White.copy(alpha = .85f), fontSize = 12.sp)
+                    Text("${battery.first}%", color = Color.White, fontSize = f(28), fontWeight = FontWeight.Light)
+                    Text(if (battery.second) tr("Charging", "Şarjda") else tr("Battery", "Pil"), color = Color.White.copy(alpha = .85f), fontSize = f(12))
                 }
             } }
             Box(Modifier.weight(1f)) { tile(1f, Color(0xFFD83B01)) {
                 Column {
-                    Text(notes.toString(), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                    Text(tr("Notifications", "Bildirim"), color = Color.White.copy(alpha = .85f), fontSize = 12.sp)
+                    Text(notes.toString(), color = Color.White, fontSize = f(28), fontWeight = FontWeight.Light)
+                    Text(tr("Notifications", "Bildirim"), color = Color.White.copy(alpha = .85f), fontSize = f(12))
                 }
             } }
             Box(Modifier.weight(1f)) { tile(1f, Color(0xFF008272)) {
                 Column {
-                    Text(cal.get(Calendar.DAY_OF_YEAR).toString(), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                    Text(tr("Day of the year", "Yılın günü"), color = Color.White.copy(alpha = .85f), fontSize = 12.sp, maxLines = 1)
+                    Text(cal.get(Calendar.DAY_OF_YEAR).toString(), color = Color.White, fontSize = f(28), fontWeight = FontWeight.Light)
+                    Text(tr("Day of the year", "Yılın günü"), color = Color.White.copy(alpha = .85f), fontSize = f(12), maxLines = 1)
                 }
             } }
         }

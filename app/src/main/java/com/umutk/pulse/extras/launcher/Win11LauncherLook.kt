@@ -154,8 +154,9 @@ class Win11LauncherLook : LauncherLook {
                 "win11", if (dark()) Color(0x8C141B2A) else Color(0x9AF3F3F3),
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
-                    .fillMaxWidth()
+                    // the width limit comes first: after fillMaxWidth it is ignored and the menu fills the whole turned screen
                     .widthIn(max = if (land) 560.dp else 640.dp)
+                    .fillMaxWidth()
                     .fillMaxHeight(if (land) .9f else .78f)
                     .shadow(24.dp, shape, clip = false)
                     .border(1.dp, Color(0x33FFFFFF), shape)
@@ -206,7 +207,7 @@ class Win11LauncherLook : LauncherLook {
                             }
                         }
                     } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        LiveTiles(8.dp, Modifier.padding(bottom = 8.dp), see = .55f)
+                        LiveTiles(8.dp, Modifier.padding(bottom = 8.dp), see = .55f, compact = land)
                         Win11Heading(tr("Apps", "Uygulamalar"), fg) {
                             Row(Modifier.clip(shape).clickable { allPage = true }.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 12.sp)
