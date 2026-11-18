@@ -434,7 +434,7 @@ fun KeyboardSettings(back: () -> Unit) {
             // every key-press effect in two rows that scroll together with one swipe
             Text(tr("Key press effect", "Tuşa basınca efekt"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Column(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0 until 10, 10 until 20).forEach { range ->
+                listOf(0 until 10, 10 until KeyboardEffects.pressNames.size).forEach { range ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         range.forEach { i ->
                             val on = KeyboardPrefs.pressFx == i
