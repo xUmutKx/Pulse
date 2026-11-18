@@ -93,7 +93,7 @@ object LocalSendEngine {
     }
 
     /** Visible to the nearby devices all the time Pulse runs (on by default), not only while the LocalSend page is open: else a phone whose page is closed is never found. */
-    fun alwaysOn(c: Context): Boolean = prefs(c).getBoolean("always", true)
+    fun alwaysOn(c: Context): Boolean = prefs(c).getBoolean("always", false)
     fun setAlwaysOn(c: Context, on: Boolean) { prefs(c).edit().putBoolean("always", on).apply(); if (on) start(c) }
     fun keepAlive(c: Context) { if (alwaysOn(c)) start(c) }
 
