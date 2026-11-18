@@ -247,7 +247,7 @@ class Win11LauncherLook : LauncherLook {
                         Box(Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fg.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Glyph("person", fg, 16.dp) }
                         Text(tr("This PC", "Bu bilgisayar"), color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
                     }
-                    Box(Modifier.size(36.dp).clip(shape).clickable { onClose(); logOff(logCtx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
+                    PowerClick(onClose, Modifier.size(36.dp).clip(shape)) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
                 }
             }
             }

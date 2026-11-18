@@ -206,9 +206,10 @@ class XpLauncherLook : LauncherLook {
             // the foot: the grey-blue band with Log Off and Turn Off Computer
             Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF4A8DEA), Color(0xFF2357D1)))).padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Log Off", "Oturumu kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp), modifier = Modifier.clickable { onClose() }.padding(6.dp))
+                val xpCtx = androidx.compose.ui.platform.LocalContext.current
+                Text(tr("Log Off", "Oturumu kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp), modifier = Modifier.clickable { onClose(); logOff(xpCtx) }.padding(6.dp))
                 Spacer(Modifier.width(12.dp))
-                Text(tr("Turn Off Computer", "Bilgisayarı kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp), modifier = Modifier.clickable { onClose() }.padding(6.dp))
+                PowerClick(onClose, Modifier.padding(6.dp)) { Text(tr("Turn Off Computer", "Bilgisayarı kapat"), style = TextStyle(color = Color.White, fontSize = 13.sp)) }
             }
         }
     }

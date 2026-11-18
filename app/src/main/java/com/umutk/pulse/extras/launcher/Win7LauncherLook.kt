@@ -200,8 +200,11 @@ class Win7LauncherLook : LauncherLook {
                             Box(Modifier.width(1.dp).fillMaxHeight().background(W7_SHUT_EDGE))
                             Box(Modifier.width(22.dp).fillMaxHeight().clickable { power = !power }, contentAlignment = Alignment.Center) { Text("▸", color = Color(0xFF1B2B3F), fontSize = 12.sp) }
                         }
-                        if (power) Column(Modifier.align(Alignment.BottomEnd).padding(bottom = 30.dp).width(130.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF1F5FA)).border(1.dp, W7_SHUT_EDGE, RoundedCornerShape(4.dp))) {
-                            listOf(tr("Lock", "Kilitle") to { globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN); onClose() },
+                        if (power) Column(Modifier.align(Alignment.BottomEnd).padding(bottom = 30.dp).width(150.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF1F5FA)).border(1.dp, W7_SHUT_EDGE, RoundedCornerShape(4.dp))) {
+                            listOf(tr("Sleep", "Uyku") to { powerAction(ctx, "sleep"); onClose() },
+                                tr("Lock", "Kilitle") to { powerAction(ctx, "lock"); onClose() },
+                                tr("Restart", "Yeniden başlat") to { onClose(); powerAction(ctx, "restart") },
+                                tr("Shut down", "Kapat") to { onClose(); powerAction(ctx, "off") },
                                 tr("Log off", "Oturumu kapat") to { onClose(); logOff(ctx) }).forEach { (t, a) ->
                                 Text(t, color = Color.Black, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clickable(onClick = a).padding(horizontal = 10.dp, vertical = 8.dp))
                             }
