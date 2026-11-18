@@ -145,7 +145,7 @@ class Win10LauncherLook(
         Box(modifier.clickable(interactionSource = noRipple, indication = null, onClick = onClose)) {
             Row(
                 Modifier.align(Alignment.BottomStart).padding(start = edge, bottom = taskbarHeight)
-                    .fillMaxWidth(.92f).widthIn(max = 420.dp).fillMaxHeight(.8f)
+                    .widthIn(max = 420.dp).fillMaxWidth(.92f).fillMaxHeight(.8f)
                     .background(panel()).border(0.5.dp, border())
                     .clickable(interactionSource = noRipple, indication = null) {}
             ) {
@@ -154,7 +154,7 @@ class Win10LauncherLook(
                     LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
                         // no search: the pinned tiles, then the apps in their tile groups; searching gives one flat list of rows
                         if (query.isBlank()) {
-                            item { LiveTiles(0.dp, Modifier.padding(bottom = 4.dp)) }
+                            item { LiveTiles(0.dp, Modifier.padding(bottom = 4.dp), compact = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) }
                             if (pinned.isNotEmpty()) items(pinned.chunked(3)) { row -> TileRow(row, state, onClose) }
                             groupedApps(all).forEach { (g, apps) ->
                                 item { WinHeading(tr(g.en, g.tr), fg) }
