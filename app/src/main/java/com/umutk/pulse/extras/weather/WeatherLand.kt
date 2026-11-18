@@ -1262,11 +1262,15 @@ object WeatherLand {
         }
         // rain
         if (sky == Sky.RAIN || sky == Sky.DRIZZLE || sky == Sky.STORM) {
-            val n = if (sky == Sky.DRIZZLE) 22 else 44
-            p.color = 0xFFB8D8FF.toInt(); p.alpha = 190; p.strokeWidth = (if (sky == Sky.DRIZZLE) 1.2f else 2f) * u; p.strokeCap = Paint.Cap.ROUND
+            // fine, short, dense drops: sized by the width of the scene, not a tenth of its height
+            val n = if (sky == Sky.DRIZZLE) 110 else if (sky == Sky.STORM) 260 else 190
+            val len = w / 400f * (if (sky == Sky.DRIZZLE) 9f else 15f)
+            p.color = 0xFFB8D8FF.toInt(); p.strokeWidth = maxOf(1f, w / 400f * 1.1f); p.strokeCap = Paint.Cap.ROUND
             for (k in 0 until n) {
-                val sx = frac(k * .6180339f) * w; val sy = ((t * (if (sky == Sky.DRIZZLE) 1f else 2f) + frac(k * .381966f) * 3f) % 1f) * h
-                c.drawLine(sx, sy, sx - h * .02f, sy + h * .09f, p)
+                val sx = frac(k * .6180339f) * w; val seed2 = frac(k * .7548777f)
+                val sy = ((t * (if (sky == Sky.DRIZZLE) 1.4f else 2.6f) + seed2 * 3f) % 1f) * h
+                p.alpha = (140 + seed2 * 90f).toInt()
+                c.drawLine(sx, sy, sx - len * .22f, sy + len, p)
             }
             p.alpha = 255
         }
