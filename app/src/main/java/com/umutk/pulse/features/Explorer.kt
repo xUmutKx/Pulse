@@ -477,7 +477,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         value = arcFile?.let { f -> withContext(Dispatchers.IO) { runCatching { archiveEntries(f) }.getOrDefault(emptyList()) } }
     }
     var showHidden by remember { mutableStateOf(FilesPrefs.hidden) }
-    var showSizes by rememberSaveable { mutableStateOf(true) }
+    // the plain list shows names only: sizes and dates belong to the Detailed list (the menu switch below turns them on in the plain list too)
+    var showSizes by rememberSaveable { mutableStateOf(false) }
     var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent) }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
     var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT)) }
