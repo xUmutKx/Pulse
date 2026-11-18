@@ -93,6 +93,7 @@ class AutoClickService : AccessibilityService() {
     private var idx = 0
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun dp(v: Float) = (v * resources.displayMetrics.density).toInt()
 
     override fun onServiceConnected() {
         instance = this
@@ -190,6 +191,19 @@ class AutoClickService : AccessibilityService() {
         val b = object : LinearLayout(this) {
             private var dx = 0f
             private var dy = 0f
+            private var downX = 0f
+            private var downY = 0f
+            private var dragging = false
+            // a drag that starts on a button moves the bar too (the buttons take the touch otherwise, and only the thin edge moved it)
+            override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
+                val lp = layoutParams as? WindowManager.LayoutParams ?: return false
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; dragging = false; dx = e.rawX - lp.x; dy = e.rawY - lp.y }
+                    MotionEvent.ACTION_MOVE -> if (!dragging && kotlin.math.hypot(e.rawX - downX, e.rawY - downY) > dp(8)) dragging = true
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> dragging = false
+                }
+                return dragging
+            }
             override fun onTouchEvent(e: MotionEvent): Boolean {
                 val lp = layoutParams as? WindowManager.LayoutParams ?: return false
                 when (e.actionMasked) {
@@ -232,28 +246,20 @@ class AutoClickService : AccessibilityService() {
         runCatching { wm?.addView(b, lp) }
     }
 
-    /** A target mark: rings round a dot and its number; dragged, it sets where tap lands. */
+    /** A target mark: a small half-transparent white dot with a black outline; dragged, it sets where the tap lands. */
     private inner class Marker(val pt: AutoClick.Pt, val number: Int) : View(this@AutoClickService) {
-        val size = dp(60)
+        val size = dp(36)
         val lp = WindowManager.LayoutParams(size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, flags, PixelFormat.TRANSLUCENT)
             .apply { gravity = Gravity.TOP or Gravity.START; x = pt.x - size / 2; y = pt.y - size / 2 }
-        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0xFFFF4D4D.toInt(); strokeWidth = dp(3).toFloat() }
-        private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = Color.WHITE; strokeWidth = dp(1).toFloat() }
-        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xFFFF4D4D.toInt() }
-        private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x33FF4D4D }
-        private val txt = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = dp(11).toFloat(); textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x88FFFFFF.toInt() }
+        private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0xCC000000.toInt(); strokeWidth = dp(1.5f).toFloat() }
         private var dx = 0f
         private var dy = 0f
 
         override fun onDraw(c: Canvas) {
-            val cx = width / 2f; val cy = height / 2f; val r = width / 2f - dp(4)
-            c.drawCircle(cx, cy, r, back)
-            c.drawCircle(cx, cy, r, ring); c.drawCircle(cx, cy, r, rim)
-            c.drawCircle(cx, cy, r * .6f, ring)
-            c.drawLine(cx - r, cy, cx + r, cy, rim); c.drawLine(cx, cy - r, cx, cy + r, rim)
-            c.drawCircle(cx, cy, dp(4).toFloat(), fill)
-            c.drawCircle(width - dp(10).toFloat(), dp(10).toFloat(), dp(9).toFloat(), fill)
-            c.drawText("$number", width - dp(10).toFloat(), dp(10) + txt.textSize / 3f, txt)
+            val cx = width / 2f; val cy = height / 2f; val r = dp(7).toFloat()
+            c.drawCircle(cx, cy, r, fill)
+            c.drawCircle(cx, cy, r, line)
         }
 
         override fun onTouchEvent(e: MotionEvent): Boolean {
