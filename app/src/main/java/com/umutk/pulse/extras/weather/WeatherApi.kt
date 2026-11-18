@@ -31,6 +31,7 @@ data class Forecast(
     val days: List<Day>, val hours: List<Hour>, val aqi: Int = -1, val precip: Double = 0.0,
     val dew: Double = 0.0, val visKm: Double = -1.0, val yMax: Double = Double.NaN, val yMin: Double = Double.NaN,
     val pollen: Map<String, Int> = emptyMap(), val hours48: List<Hour> = emptyList(), val viaMgm: Boolean = false, val sources: Int = 1,
+    val elev: Double = Double.NaN,
 )
 
 /** Open-Meteo: forecast, air quality and geocoding, no key. Same HTTPS helper as the store. */
@@ -196,6 +197,7 @@ object WeatherApi {
             days, hours, aqi, cur.optDouble("precipitation", 0.0),
             cur.optDouble("dew_point_2m", 0.0), if (hv != null && start < hv.length() && !hv.isNull(start)) hv.optDouble(start, 0.0) / 1000.0 else -1.0,
             ex?.optDouble("ymax", Double.NaN) ?: Double.NaN, ex?.optDouble("ymin", Double.NaN) ?: Double.NaN, pol, hours48,
+            elev = j.optDouble("elevation", Double.NaN),
         )
         val withMgm = ex?.optJSONObject("mgm")?.let { runCatching { applyMgm(base, it) }.getOrNull() } ?: base
         return ex?.optJSONObject("ens")?.let { runCatching { applyEnsemble(withMgm, it) }.getOrNull() } ?: withMgm
@@ -520,8 +522,8 @@ object WeatherStore {
     /** How the weather page looks: "sky" (a sky that follows the weather), "amoled" (black) or "app" (the app look). */
     fun skin(c: Context): String = p(c).getString("skin", "sky") ?: "sky"
     fun setSkin(c: Context, v: String) = p(c).edit().putString("skin", v).apply()
-    /** The scenery behind the weather: "auto" (each place its own) or one of the WeatherLand keys. */
-    fun land(c: Context): String = p(c).getString("land", "auto") ?: "auto"
+    /** The scenery behind the weather: "random" (the default: one of them, changing every few hours), "region" (by the place: its height above the sea) or one of the WeatherLand keys. */
+    fun land(c: Context): String = p(c).getString("land", "random")?.takeIf { it != "auto" } ?: "random"
     fun setLand(c: Context, v: String) = p(c).edit().putString("land", v).apply()
 
     fun setUnits(c: Context, u: String) = p(c).edit().putString("units", u).apply()

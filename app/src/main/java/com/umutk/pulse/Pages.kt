@@ -513,7 +513,7 @@ fun SettingsPage() {
                     }
                 }
                 fun byId(vararg ids: String) = ids.map { id -> Themes.first { it.id == id } }
-                val folded = listOf("aurora", "sakura", "ocean", "ember", "frost", "cloud", "cloudlight")
+                val folded = listOf("aurora", "sakura", "ocean", "ember", "frost")
                 // Material You and AMOLED are plain appearance choices; the Windows looks have their own group, 95 centred on top
                 ThemeRow(byId("material", "amoled"))
                 Text("Windows", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))

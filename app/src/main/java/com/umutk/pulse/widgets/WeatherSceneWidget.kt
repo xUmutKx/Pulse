@@ -54,7 +54,7 @@ class WeatherSceneWidget : WeatherWidgetBase(wide = false) {
             val c = Canvas(bmp)
             val r = minOf(w, h) * .16f
             c.clipPath(Path().apply { addRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), r, r, Path.Direction.CW) })
-            val land = WeatherLand.pick(WeatherStore.land(ctx), f?.place.orEmpty())
+            val land = WeatherLand.pick(WeatherStore.land(ctx), f?.place.orEmpty(), f?.elev ?: Double.NaN)
             WeatherLand.draw(c, w.toFloat(), h.toFloat(), land, skyOf(f?.code ?: 0), WeatherLand.clockOf(f))
             // a soft shade top and bottom keeps the white text readable on every sky
             val sh = Paint()
