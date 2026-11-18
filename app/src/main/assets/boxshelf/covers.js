@@ -150,16 +150,21 @@ function backAsync(style,game,lines,blurb){
   const shots=backPics(game),key=shots.length?bkey(style,game)+"|shots":bkey(style,game);
   if(cache.has(key))return Promise.resolve(cache.get(key));
   if(pend.has(key))return pend.get(key).p.then(u=>u||back(style,game,lines,blurb));
-  if(!shots.length)return encodeAsync(key,drawBack(style,game,lines,blurb)).then(u=>u||back(style,game,lines,blurb));
-  return Promise.all(shots.map(loadPic)).then(pics=>encodeAsync(key,drawBack(style,game,lines,blurb,pics)).then(u=>u||back(style,game,lines,blurb)));
+  // the back is the front's colour carried on (the same average colour the spine band takes), so front, spine and back read as one box
+  const fu=game.art&&typeof game.art.front==="string"?game.art.front:null;
+  return (fu?coverTint(fu):Promise.resolve(null)).then(t=>{game._tint=t;
+    if(!shots.length)return encodeAsync(key,drawBack(style,game,lines,blurb)).then(u=>u||back(style,game,lines,blurb));
+    return Promise.all(shots.map(loadPic)).then(pics=>encodeAsync(key,drawBack(style,game,lines,blurb,pics)).then(u=>u||back(style,game,lines,blurb)))});
 }
+// "rgb(r,g,b)" scaled toward black by k (0..1)
+const shade=(c,k)=>{const m=/(\d+),\s*(\d+),\s*(\d+)/.exec(c||"");return m?`rgb(${(m[1]*k)|0},${(m[2]*k)|0},${(m[3]*k)|0})`:null};
 const hasBack=(style,game)=>cache.has(bkey(style,game)+(backPics(game).length?"|shots":""));
 function drawBack(style,game,lines,blurb,pics){
   const W=420,Hh=Math.round(W/style.ratio),c=document.createElement("canvas");c.width=W;c.height=Hh;const ctx=c.getContext("2d",{willReadFrequently:true});const r=rng(game.seed^0x9e3779b9);
   // a Game Hub box: its console's own colours (PS5 blue, Switch red, Xbox green-black...), the way the real case's back is; a Steam box keeps the drawn backdrop
   const boxed=!!(game.box&&game.box!=="steam"&&style.caseColor);
   const g=ctx.createLinearGradient(0,0,0,Hh);
-  if(boxed){g.addColorStop(0,style.caseColor);g.addColorStop(1,style.caseSide||style.caseColor)}else{g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7))}
+  if(boxed){g.addColorStop(0,style.caseColor);g.addColorStop(1,style.caseSide||style.caseColor)}else if(game._tint&&shade(game._tint.bg,.55)){g.addColorStop(0,shade(game._tint.bg,.55));g.addColorStop(1,shade(game._tint.bg,.22))}else{g.addColorStop(0,hsl(game.hue+200,40,16));g.addColorStop(1,hsl(game.hue+230,45,7))}
   ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh);
   const bandH=band(ctx,W,Hh,style,"");
   ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="alphabetic";ctx.font=`22px "${FONTS[game.seed%FONTS.length]}", Lexend, sans-serif`;
