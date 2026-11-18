@@ -124,6 +124,16 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
             frozen = false, running = false, updatedSystem = false, installer = null, lastUsed = lastUsed[pkg], system = false, disabled = false,
             restricted = false, module = false, hidden = true)
     }
+    // apps hidden outside Pulse (pm hide from a shell or another tool): the system lists them with the "uninstalled" flag; user apps only (a system app removed for this user is not one)
+    val known = hiddenRows.map { it.pkg }.toSet()
+    val outside = runCatching {
+        @Suppress("DEPRECATION")
+        pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES)
+            .filter { ai -> ai.packageName != ctx.packageName && ai.packageName !in names && ai.packageName !in known && (ai.flags and 0x00800000) != 0 && (ai.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+            .map { ai -> AmRow(pkg = ai.packageName, label = runCatching { pm.getApplicationLabel(ai).toString() }.getOrDefault(ai.packageName), version = "", sizeBytes = runCatching { File(ai.sourceDir).length() }.getOrDefault(0L),
+                installed = 0L, updated = 0L, frozen = false, running = false, updatedSystem = false, installer = null, lastUsed = lastUsed[ai.packageName], system = false, disabled = false,
+                restricted = false, module = false, hidden = true) }
+    }.getOrDefault(emptyList())
     return listed.mapNotNull { p ->
         // extra modules from the Extra Apps store stay out of the app list
         if (com.umutk.pulse.extras.store.StoreInstaller.isStoreInstalled(ctx, p.packageName)) return@mapNotNull null
@@ -146,7 +156,7 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
             restricted = isRestrictedInBackground(ops, ai),
             module = isXposedModule(ai),
         )
-    }.plus(hiddenRows)
+    }.plus(hiddenRows).plus(outside)
 }
 
 /** Reads the app list in the background a little after Pulse starts, so the App manager opens with the list already there and the saved filter and sort apply to it at once (no empty page while it loads). */
