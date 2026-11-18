@@ -248,7 +248,7 @@ impl Shelf {
 
     pub fn render(&mut self, view: &wgpu::TextureView) {
         let aspect = self.w as f32 / self.h as f32;
-        let eye = Vec3::new(0.0, 0.35, 6.4);
+        let eye = Vec3::new(0.0, 0.35, 5.5);
         let proj = Mat4::perspective_rh(40f32.to_radians(), aspect, 0.5, 40.0);
         let viewm = Mat4::look_at_rh(eye, Vec3::new(0.0, 0.1, 0.0), Vec3::Y);
         let floor = -0.72f32;
@@ -332,7 +332,7 @@ fn flat(c: [f32; 3], k: f32) -> Vec<u8> {
 fn box_matrix(o: f32, flip: f32, ratio: f32) -> Mat4 {
     let ax = o.abs();
     let sign = if o < 0.0 { -1.0 } else { 1.0 };
-    let x = sign * if ax <= 1.0 { ax * 0.86 } else { 0.86 + (ax - 1.0) * 0.42 };
+    let x = sign * if ax <= 1.0 { ax * 0.8 } else { 0.8 + (ax - 1.0) * 0.4 };
     let z = -ax.min(1.0) * 0.8 - (ax - 1.0).max(0.0) * 0.3;
     let yaw = -sign * ax.min(1.0) * 0.8;
     let sc = 1.0 - 0.12 * ax.min(1.0);
