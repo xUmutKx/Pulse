@@ -1,0 +1,14 @@
+name: Purge old release APKs
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Delete the APKs of the old releases (15 stay)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/purge_release_apks.sh
