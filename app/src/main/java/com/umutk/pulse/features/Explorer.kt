@@ -2046,7 +2046,7 @@ private fun exStorage(top: File): Pair<Long, Long> = runCatching {
 
 /** Moves [files] into a trash folder at the storage root, replacing the previous trash, so Undo can bring them back. Null when nothing moved. */
 private fun exTrash(top: File, files: List<File>): ExUndo? {
-    val trash = File(top, ".pulse_trash").apply { mkdirs() }
+    val trash = com.umutk.pulse.PulseDirs.trash().apply { mkdirs() }
     val stamp = System.currentTimeMillis()
     val moves = files.mapIndexedNotNull { i, f ->
         val t = File(trash, "$stamp-$i-${f.name}")

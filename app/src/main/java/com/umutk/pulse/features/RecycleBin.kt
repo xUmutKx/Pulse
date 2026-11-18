@@ -33,7 +33,7 @@ import java.io.File
  * and each one's original place is kept in .origins so it can be put back.
  */
 object RecycleBin {
-    fun dir(): File = File(Environment.getExternalStorageDirectory(), ".pulse_trash")
+    fun dir(): File = com.umutk.pulse.PulseDirs.trash()
     private fun origins() = File(dir(), ".origins")
 
     /** Original path of every trashed file: trash name to where it came from. */

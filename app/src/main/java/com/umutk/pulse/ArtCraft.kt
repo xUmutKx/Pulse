@@ -50,7 +50,7 @@ object ArtCraft {
     private fun ui(block: () -> Unit) = main.post(block)
 
     fun dir(c: Context) = File(c.filesDir, "artcraft").apply { mkdirs() }
-    fun shared(): File = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "ArtCraft").apply { mkdirs() }
+    fun shared(): File = com.umutk.pulse.PulseDirs.artcraft().apply { mkdirs() }
     // "cadcraft-release.apk" and "cadcraft-0.9.0.apk" are both the app "Cadcraft"
     fun appName(file: String) = file.substringBefore("-").replaceFirstChar { it.uppercase() }
     fun pkgOf(item: Item) = PKG_PREFIX + item.app.lowercase()

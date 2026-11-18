@@ -97,7 +97,7 @@ fun HomeSheet() {
         // paste what was cut or copied in a file window or on a file of the desktop: into the Desktop folder, each file also put on the desktop
         if (FileClip.files.isNotEmpty()) ActionRow("paste", tr("Paste", "Yapıştır"), w.text) {
             HomeSheetState.sheet = false
-            val desk = java.io.File(android.os.Environment.getExternalStorageDirectory(), "Desktop").also { it.mkdirs() }
+            val desk = com.umutk.pulse.PulseDirs.desktop().also { it.mkdirs() }
             val names = FileClip.files.map { it.name }
             pasteInto(desk)
             val now = names.mapNotNull { n -> desk.listFiles()?.firstOrNull { it.name == n || it.name.startsWith(n.substringBeforeLast('.') + " (") }?.let { "file:" + it.path } }
