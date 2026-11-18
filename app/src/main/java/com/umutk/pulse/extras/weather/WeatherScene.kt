@@ -213,12 +213,16 @@ fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) 
             }
         }
         if (k == Sky.RAIN || k == Sky.DRIZZLE || k == Sky.STORM) {
-            val n = if (k == Sky.DRIZZLE) 22 else 40
+            // fine, short, dense drops: their size follows the width of the screen (they were as long as a tenth of the page)
+            val u = w / 400f
+            val n = if (k == Sky.DRIZZLE) 70 else if (k == Sky.STORM) 170 else 120
+            val len = u * (if (k == Sky.DRIZZLE) 9f else 15f)
             for (i in 0 until n) {
                 val seed = (i * 0.6180339f) % 1f
+                val seed2 = (i * 0.7548777f) % 1f
                 val x = seed * w
-                val y = ((t * (if (k == Sky.DRIZZLE) 1f else 2f) + seed * 3f) % 1f) * h
-                drawLine(DROP.copy(alpha = .8f), Offset(x, y), Offset(x - h * .02f, y + h * .09f), 2.2f, StrokeCap.Round)
+                val y = ((t * (if (k == Sky.DRIZZLE) 1.4f else 2.6f) + seed2 * 3f) % 1f) * h
+                drawLine(DROP.copy(alpha = .55f + seed2 * .3f), Offset(x, y), Offset(x - len * .22f, y + len), u * 1.1f, StrokeCap.Round)
             }
         }
         if (k == Sky.SNOW) for (i in 0 until 36) {
