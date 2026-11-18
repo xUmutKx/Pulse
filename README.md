@@ -185,6 +185,9 @@ Settings has one **Apps** card for everything optional: the standalone apps, the
 - **White noise**: a mixer of ambient sounds and bird songs, each with its own level, with presets you can save.
 - **Paint**: a drawing app in the style of MS Paint: pencil, brush, eraser, fill, colour picker, line, rectangle and ellipse, the classic 28 colours, a line width, undo, opening a picture and saving to `Pictures/Paint`.
 - **ArtCraft**: a launcher for the APKs of the ArtCraft project (download, install, update).
+- **Game Hub**: your games on a 3D shelf of boxes in the console case you pick (Steam, PS5, Switch, Xbox …), with the built-in and web games drawn on demand (no pictures kept on the phone), hidden apps listed, and an optional native shelf drawn by Rust and wgpu.
+- **Keyboard engine**: the language model of the keyboard runs in Rust (about four times faster than the Java code, which stays as the fallback), and the next-word suggestions follow the whole sentence.
+- **Folders**: everything Pulse writes to shared storage lives under `Download/Pulse` (Share, Backup, AI, Crash, Desktop, ArtCraft, Updates); nothing is made at the storage root.
 - Each of them has its own launcher entry and its own look. It never changes the look of the main Pulse app. They start without an opening animation.
 
 
