@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.asImageBitmap
@@ -142,7 +143,8 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
             .clip(shape).clipToBounds(),
     ) {
     if (wall != null) androidx.compose.foundation.Image(wall, null,
-        Modifier.requiredSize(areaW, areaH).offset(if (w.max) 0.dp else (-w.x).dp, if (w.max) 0.dp else (-w.y).dp).blur(if (skin.kind == "11") 28.dp else 16.dp),
+        // unbounded from the top left: a bare requiredSize centres a picture bigger than the window, which left the lower and the outer parts of the window without the blur
+        Modifier.wrapContentSize(Alignment.TopStart, unbounded = true).requiredSize(areaW, areaH).offset(if (w.max) 0.dp else (-w.x).dp, if (w.max) 0.dp else (-w.y).dp).blur(if (skin.kind == "11") 28.dp else 16.dp),
         contentScale = androidx.compose.ui.layout.ContentScale.Crop)
     Column(
         Modifier.fillMaxSize().background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
