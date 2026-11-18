@@ -232,7 +232,7 @@ class Win10LauncherLook(
                 contentAlignment = Alignment.Center
             ) { Canvas(Modifier.size(16.dp)) { gearIcon(fg, bg) } }
             // log off: leaves the desktop for the rest of Pulse
-            Box(Modifier.size(48.dp).clickable { onClose(); logOff(ctx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("power", fg, 20.dp) }
+            PowerClick(onClose, Modifier.size(48.dp)) { com.umutk.pulse.PIcon("power", fg, 20.dp) }
         }
     }
 
