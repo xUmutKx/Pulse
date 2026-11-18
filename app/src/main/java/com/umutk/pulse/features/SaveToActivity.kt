@@ -148,7 +148,13 @@ class SaveToActivity : ComponentActivity() {
                         android.media.MediaScannerConnection.scanFile(this, arrayOf(out.path), null, null)
                     }.isSuccess
                     // without the all-files permission the folder cannot be written directly: the media store takes the copy instead
-                    if (direct || saveViaMediaStore(u, raw, dir.name)) ok++
+                    if (direct) { ok++; com.umutk.pulse.files.recent.RecentStore.add(this, out.path) }
+                    else if (saveViaMediaStore(u, raw, dir.name)) {
+                        ok++
+                        // the copy sits in the public folder under the name asked for: it shows in Files > Recent
+                        val sub = if (dir.name == "Download") "Download" else dir.name
+                        com.umutk.pulse.files.recent.RecentStore.add(this, File(android.os.Environment.getExternalStoragePublicDirectory(sub), raw).path)
+                    }
                 }
             }
             runOnUiThread { android.widget.Toast.makeText(this, if (ok > 0) tr("Saved $ok to ${dir.name}", "$ok dosya ${dir.name} içine kaydedildi") else tr("Could not save", "Kaydedilemedi"), android.widget.Toast.LENGTH_SHORT).show(); finish() }

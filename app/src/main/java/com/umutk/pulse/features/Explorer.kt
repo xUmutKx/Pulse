@@ -744,6 +744,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Text("$nd ${tr("folders", "klasör")}, ${shown.size - nd} ${tr("files", "dosya")}", color = T.sub, fontSize = 12.sp, maxLines = 1)
                 }
             }
+            // a wide screen: the way back to the columns (the list view's own button; it is also in the menu)
+            if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840 && !FilesPrefs.columns) Box(Modifier.size(40.dp).clickable { FilesPrefs.columns = true; FilesPrefs.save(ctx) }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.ViewColumn, "columns", T.text, 22.dp) }
             Box(Modifier.size(40.dp).clickable { searchOpen = true }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.Search, "search", T.text, 22.dp) }
             Box {
                 Box(Modifier.size(40.dp).clickable { ovf = true }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 22.dp) }
@@ -845,7 +847,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         Box(Modifier.weight(1f).fillMaxWidth()) {
         // a wide screen (a tablet turned sideways): columns, as in a file manager of a computer, instead of one list with an empty right side (the list view is one tap away)
         val columnsNow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840 && FilesPrefs.columns && !recentView && arcFile == null && resultsFor == null && !searchOpen && sel.isEmpty() && query.isBlank()
-        if (columnsNow) ExColumnsPane(dir, top, showHidden, onGo = { go(it) }, onOpen = { openFile(it) }, onList = { FilesPrefs.columns = false; FilesPrefs.save(ctx) }, onMenu = { drawer = true })
+        if (columnsNow) ExColumnsPane(dir, top, showHidden, onGo = { go(it) }, onOpen = { openFile(it) }, onList = { FilesPrefs.columns = false; FilesPrefs.save(ctx) }, onMenu = { drawer = true }, filter = filtNow, onFilter = { sortMenu = true })
         else Column(Modifier.fillMaxSize().onGloballyPositioned { ExScroll.viewTop = it.positionInRoot().y }.nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
@@ -1831,7 +1833,7 @@ private val EX_FILTER_ICONS = mapOf("all" to Icons.Outlined.FilterList, "images"
     "docs" to Icons.Outlined.Description, "archives" to Icons.Outlined.FolderZip, "apks" to Icons.Outlined.Apps, "folders" to Icons.Outlined.Folder)
 private val EX_FILTERS = listOf("all" to "All", "images" to "Images", "videos" to "Videos", "audio" to "Audio", "docs" to "Documents", "archives" to "Archives", "apks" to "APKs", "folders" to "Folders only")
 
-private fun exFilterOk(f: File, type: String, isDir: Boolean = f.isDirectory): Boolean {
+internal fun exFilterOk(f: File, type: String, isDir: Boolean = f.isDirectory): Boolean {
     if (type == "all") return true
     if (type == "folders") return isDir
     if (isDir) return true // folders stay so the list can still be walked
