@@ -2,6 +2,7 @@ package com.umutk.pulse.features
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -191,12 +192,30 @@ private const val DEBLOAT_PATH = "M8,8V6a4,4 0 0 1 8,0v2h2a2,2 0 0 1 2,2v10a2,2 
 
 /** Debloater: remove the system apps the list marks, see what is removed, and bring them back. Uses root (pm / cmd package). */
 @Composable
+/**
+ * The apps that are on the phone's system partition but removed for this user (by Canta, by pm uninstall --user 0, or by Pulse), read from the system itself: its list holds them
+ * with the "installed" flag off. This needs no root: only bringing one back does. Returns package -> name.
+ */
+private fun removedBySystem(ctx: Context): Map<String, String> = runCatching {
+    val pm = ctx.packageManager
+    val all = pm.getInstalledPackages(PackageManager.MATCH_UNINSTALLED_PACKAGES)
+    val out = LinkedHashMap<String, String>()
+    for (p in all) {
+        val ai = p.applicationInfo ?: continue
+        if (ai.flags and ApplicationInfo.FLAG_INSTALLED != 0) continue
+        out[p.packageName] = runCatching { ai.loadLabel(pm).toString() }.getOrDefault(p.packageName).ifBlank { p.packageName }
+    }
+    out
+}.getOrDefault(emptyMap())
+
+@Composable
 fun DebloatScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var list by remember { mutableStateOf(debloatList(ctx)) }
     // the names of the apps that are gone are kept too, so the reinstall list still shows them
-    val labels = remember { savedNames(ctx) + installedLabels(ctx).also { rememberNames(ctx, it) } }
+    val gone = remember { removedBySystem(ctx) }
+    val labels = remember { savedNames(ctx) + installedLabels(ctx).also { rememberNames(ctx, it) } + gone.filter { it.value != it.key } }
     var removed by remember { mutableStateOf(removedOf(ctx)) }
     var tab by remember { mutableStateOf("uninstall") }
     var ask by remember { mutableStateOf<String?>(null) }
@@ -220,7 +239,8 @@ fun DebloatScreen(onBack: () -> Unit) {
     // the reinstall list also holds the system apps of the catalog that are gone from the phone, removed by Canta or another tool (root needed to tell)
     // only the apps this phone has had (seen on it) and that are gone now, plus the ones removed here
     val removedShown = remember(removed, installed) {
-        removed + (installed?.let { inst -> seenPkgs(ctx).filter { it !in inst && it !in removed } } ?: emptyList())
+        // the apps the system itself says are removed for this user come first of all (Canta's own list), then the ones Pulse saw leave, then the ones removed here
+        (removed + gone.keys.filter { it !in removed } + (installed?.let { inst -> seenPkgs(ctx).filter { it !in inst && it !in removed && it !in gone } } ?: emptyList()))
     }
     LaunchedEffect(Unit) {
         // no list yet (first open, or never downloaded): fetch it once, so each app shows why it can go
