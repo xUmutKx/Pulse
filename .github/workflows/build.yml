@@ -78,6 +78,20 @@ jobs:
           f=llama.cpp/ggml/src/CMakeLists.txt   # (this step is still inside localai/vendor)
           sed -i -E '/ggml_add_cpu_backend_variant\(android_armv(8\.6_1|9\.0_1|9\.2_1|9\.2_2)[ )]/d' "$f"
           test "$(grep -c 'ggml_add_cpu_backend_variant(android_' "$f")" -eq 3
+      # The keyboard's language model in Rust (native/kbdlm): about four times faster than the Java one. Optional: when this step fails the APK holds no libpulse_lm.so and the keyboard uses its Java code.
+      - name: Rust keyboard model
+        if: matrix.variant != 'watch'
+        continue-on-error: true
+        shell: bash
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi
+          BIN=$(ls -d "$ANDROID_HOME"/ndk/29.0.13113456)/toolchains/llvm/prebuilt/linux-x86_64/bin
+          cd native/kbdlm
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$BIN/aarch64-linux-android24-clang" cargo build --release --target aarch64-linux-android
+          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$BIN/armv7a-linux-androideabi24-clang" cargo build --release --target armv7-linux-androideabi
+          mkdir -p ../../app/src/main/jniLibs/arm64-v8a ../../app/src/main/jniLibs/armeabi-v7a
+          cp target/aarch64-linux-android/release/libpulse_lm.so ../../app/src/main/jniLibs/arm64-v8a/
+          cp target/armv7-linux-androideabi/release/libpulse_lm.so ../../app/src/main/jniLibs/armeabi-v7a/
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: ${{ (matrix.variant == 'watch') && '9.6.0' || '8.9' }}

@@ -26,6 +26,8 @@ public final class CharLm {
     private final float[] ws, bh; // 3H
     private final byte[] o;       // V x H
     private final float[] os, bo; // V
+    /** The handle of the Rust copy of this model (0: none, the Java code below is used). */
+    private long nat;
 
     private CharLm(DataInputStream in) throws IOException {
         byte[] magic = new byte[4];
@@ -50,7 +52,14 @@ public final class CharLm {
     }
 
     public static CharLm load(InputStream raw) throws IOException {
-        try (DataInputStream in = new DataInputStream(new java.io.BufferedInputStream(raw, 1 << 16))) { return new CharLm(in); }
+        java.io.ByteArrayOutputStream all = new java.io.ByteArrayOutputStream(1 << 19);
+        byte[] buf = new byte[1 << 16];
+        try (InputStream r = raw) { for (int n; (n = r.read(buf)) > 0; ) all.write(buf, 0, n); }
+        byte[] data = all.toByteArray();
+        CharLm lm;
+        try (DataInputStream in = new DataInputStream(new java.io.ByteArrayInputStream(data))) { lm = new CharLm(in); }
+        if (CharLmNative.AVAILABLE) { try { lm.nat = CharLmNative.load(data); } catch (Throwable t) { lm.nat = 0; } }
+        return lm;
     }
 
     private static float[] floats(DataInputStream in, int n) throws IOException {
@@ -123,6 +132,7 @@ public final class CharLm {
 
     /** The state after the start of a text and [text] (the last 120 characters are enough). */
     public float[] state(CharSequence text) {
+        if (nat != 0) return CharLmNative.state(nat, text.toString());
         float[] st = new float[h]; float[] tmp = new float[3 * h];
         step(st, start, tmp);
         int from = Math.max(0, text.length() - 120);
@@ -132,6 +142,7 @@ public final class CharLm {
 
     /** The state [st] after [more] was read too (a new state; [st] is not changed). */
     public float[] advance(float[] st, CharSequence more) {
+        if (nat != 0) return CharLmNative.advance(nat, st, more.toString());
         float[] r = st.clone(); float[] tmp = new float[3 * h];
         for (int i = 0; i < more.length(); i++) step(r, index(more.charAt(i)), tmp);
         return r;
@@ -145,6 +156,7 @@ public final class CharLm {
      * (higher than the real one) is returned. A word that is still above the floor at its end gets its exact score.
      */
     public float score(float[] ctx, CharSequence word, float floor) {
+        if (nat != 0) return CharLmNative.score(nat, ctx, word.toString(), floor);
         float[] st = ctx.clone(); float[] tmp = new float[3 * h]; float[] lg = new float[v];
         float s = 0f;
         int n = word.length();
@@ -159,6 +171,7 @@ public final class CharLm {
 
     /** How long one step takes on this phone, in nanoseconds (the median of a few runs after a warm-up): the keyboard uses the model only where this is small. */
     public long stepNanos() {
+        if (nat != 0) return CharLmNative.stepNanos(nat);
         float[] st = new float[h]; float[] tmp = new float[3 * h];
         for (int i = 0; i < 60; i++) step(st, i % v, tmp);
         long[] t = new long[7];
