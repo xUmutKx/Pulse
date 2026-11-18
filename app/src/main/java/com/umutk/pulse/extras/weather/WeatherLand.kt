@@ -1262,16 +1262,39 @@ object WeatherLand {
         }
         // rain
         if (sky == Sky.RAIN || sky == Sky.DRIZZLE || sky == Sky.STORM) {
-            // fine, short, dense drops: sized by the width of the scene, not a tenth of its height
-            val n = if (sky == Sky.DRIZZLE) 110 else if (sky == Sky.STORM) 260 else 190
-            val len = w / 400f * (if (sky == Sky.DRIZZLE) 9f else 15f)
-            p.color = 0xFFB8D8FF.toInt(); p.strokeWidth = maxOf(1f, w / 400f * 1.1f); p.strokeCap = Paint.Cap.ROUND
-            for (k in 0 until n) {
-                val sx = frac(k * .6180339f) * w; val seed2 = frac(k * .7548777f)
-                val sy = ((t * (if (sky == Sky.DRIZZLE) 1.4f else 2.6f) + seed2 * 3f) % 1f) * h
-                p.alpha = (140 + seed2 * 90f).toInt()
-                c.drawLine(sx, sy, sx - len * .22f, sy + len, p)
+            // rain in three depths: many far fine drops, a middle layer, and a few near long bright ones, all leaning the same way with the wind; drops land as small rings on the ground
+            val dz = sky == Sky.DRIZZLE; val storm = sky == Sky.STORM
+            val lean = if (storm) .30f else .18f
+            val layers = arrayOf(
+                floatArrayOf(if (dz) 70f else if (storm) 190f else 140f, 6f, .8f, 1.5f, 95f),
+                floatArrayOf(if (dz) 40f else if (storm) 110f else 80f, 11f, 1.1f, 2.4f, 150f),
+                floatArrayOf(if (dz) 8f else if (storm) 40f else 24f, 22f, 1.7f, 3.5f, 215f))
+            p.color = 0xFFC8E0FF.toInt(); p.strokeCap = Paint.Cap.ROUND; p.style = Paint.Style.STROKE
+            for ((li, ly) in layers.withIndex()) {
+                val len = w / 400f * ly[1]; p.strokeWidth = maxOf(1f, w / 400f * ly[2])
+                for (k in 0 until ly[0].toInt()) {
+                    val seed = frac(k * .6180339f + li * .31f); val seed2 = frac(k * .7548777f + li * .17f)
+                    val sy = ((t * ly[3] + seed2 * 3f) % 1f) * (h + len) - len
+                    val sx = seed * (w + h * lean) - sy * lean * .5f
+                    p.alpha = (ly[4] * (.7f + .3f * seed2)).toInt()
+                    c.drawLine(sx, sy, sx - len * lean, sy + len, p)
+                }
             }
+            // rings where drops land on the ground (the lower fifth of the scene), each growing and fading
+            run {
+                p.strokeWidth = maxOf(1f, w / 400f)
+                val rings = if (dz) 18 else if (storm) 46 else 32
+                for (k in 0 until rings) {
+                    val ph = frac(t * 2.2f + k * .37f); val rx = frac(k * .6180339f + .11f) * w
+                    val ry = horizon + (h - horizon) * (.25f + .7f * frac(k * .3141f))
+                    val rr = w / 400f * (2f + ph * 11f)
+                    p.color = 0xFFDDEBFF.toInt(); p.alpha = ((1f - ph) * 120f).toInt()
+                    c.drawOval(android.graphics.RectF(rx - rr, ry - rr * .35f, rx + rr, ry + rr * .35f), p)
+                }
+            }
+            p.style = Paint.Style.FILL
+            // a light mist rising from the wet ground
+            p.shader = LinearGradient(0f, h * .78f, 0f, h, 0x00B8D8FF, 0x33B8D8FF, Shader.TileMode.CLAMP); c.drawRect(0f, h * .78f, w, h, p); p.shader = null
             p.alpha = 255
         }
         // snow falling

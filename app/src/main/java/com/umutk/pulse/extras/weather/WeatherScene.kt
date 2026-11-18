@@ -213,16 +213,23 @@ fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) 
             }
         }
         if (k == Sky.RAIN || k == Sky.DRIZZLE || k == Sky.STORM) {
-            // fine, short, dense drops: their size follows the width of the screen (they were as long as a tenth of the page)
+            // rain in three depths: many far fine drops, a middle layer, a few near long bright ones, leaning with the wind
             val u = w / 400f
-            val n = if (k == Sky.DRIZZLE) 70 else if (k == Sky.STORM) 170 else 120
-            val len = u * (if (k == Sky.DRIZZLE) 9f else 15f)
-            for (i in 0 until n) {
-                val seed = (i * 0.6180339f) % 1f
-                val seed2 = (i * 0.7548777f) % 1f
-                val x = seed * w
-                val y = ((t * (if (k == Sky.DRIZZLE) 1.4f else 2.6f) + seed2 * 3f) % 1f) * h
-                drawLine(DROP.copy(alpha = .55f + seed2 * .3f), Offset(x, y), Offset(x - len * .22f, y + len), u * 1.1f, StrokeCap.Round)
+            val dz = k == Sky.DRIZZLE; val storm = k == Sky.STORM
+            val lean = if (storm) .30f else .18f
+            val layers = arrayOf(
+                floatArrayOf(if (dz) 60f else if (storm) 160f else 120f, 6f, .8f, 1.5f, .35f),
+                floatArrayOf(if (dz) 34f else if (storm) 90f else 70f, 11f, 1.1f, 2.4f, .6f),
+                floatArrayOf(if (dz) 6f else if (storm) 34f else 20f, 22f, 1.7f, 3.5f, .85f))
+            for ((li, ly) in layers.withIndex()) {
+                val len = u * ly[1]
+                for (i in 0 until ly[0].toInt()) {
+                    val seed = (i * 0.6180339f + li * .31f) % 1f
+                    val seed2 = (i * 0.7548777f + li * .17f) % 1f
+                    val y = ((t * ly[3] + seed2 * 3f) % 1f) * (h + len) - len
+                    val x = seed * (w + h * lean) - y * lean * .5f
+                    drawLine(DROP.copy(alpha = ly[4] * (.7f + .3f * seed2)), Offset(x, y), Offset(x - len * lean, y + len), u * ly[2], StrokeCap.Round)
+                }
             }
         }
         if (k == Sky.SNOW) for (i in 0 until 36) {
