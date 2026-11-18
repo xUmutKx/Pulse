@@ -181,11 +181,12 @@ fun WidgetsPage() {
     // the plain widgets of a design: one row is shown, the rest fold under "More" (a search opens them)
     var textOpen by remember { mutableStateOf(setOf<String>()) }
     val providers = remember { WidgetData.all.associateBy { it.javaClass.simpleName } }
+    fun simple(n: String) = n.substringAfterLast('.')
     val classOf = remember { SkinWidgets.all.associate { it.skin to it.javaClass.simpleName } }
     val current = designOf(Look.theme.id)
     val designs = DESIGNS.sortedBy { if (it.first == current) 0 else 1 }.filter { d -> only.let { it == null || it == d.first } }
     fun hit(name: String) = query.isBlank() || name.contains(query, ignoreCase = true)
-    val oldShown = WIDGET_ENTRIES.filter { hit(it.label) && it.provider in providers }
+    val oldShown = WIDGET_ENTRIES.filter { hit(it.label) && simple(it.provider) in providers }
     // every installed Winamp skin, read off the main thread; each one is a card under Music
     val winampSkins by produceState<List<InstalledSkin>>(emptyList(), ctx) {
         value = withContext(drawer) { runCatching { installedSkins(ctx) }.getOrDefault(emptyList()) }
@@ -240,7 +241,13 @@ fun WidgetsPage() {
             // the plain widgets in this design's style; with all designs shown, once, in the picked style, after the first
             val plainStyle = if (only == null) style.takeIf { theme == designs.first().first } else styleFor(theme, style)
             val plain = mutableListOf<Pair<String, @Composable () -> Unit>>()
-            if (plainStyle != null) oldShown.forEach { w -> plain += "t_${theme}_${w.provider}" to @Composable { TextCard(ctx, w, providers.getValue(w.provider), plainStyle) } }
+            if (plainStyle != null) oldShown.forEach { w -> plain += "t_${theme}_${w.provider}" to @Composable { TextCard(ctx, w, providers.getValue(simple(w.provider)), plainStyle) } }
+            // the photo frame: a square tile with a photo of your own (its photo, crop and corners are chosen when it is placed)
+            if (plainStyle != null && hit("Photo frame")) plain += "photo_$theme" to @Composable {
+                WidgetCard(tr("Photo frame", "Fotoğraf çerçevesi"), { addToHome(ctx, "PhotoWidget") }, aspect = 1f) {
+                    androidx.compose.foundation.Image(remember { com.umutk.pulse.widgets.PhotoWidget.render(null, true, .18f, true).asImageBitmap() }, null, Modifier.fillMaxSize())
+                }
+            }
             if (cards.isNotEmpty() || plain.isNotEmpty()) {
                 item(key = "h_$theme") { FamilyHeader(theme, label) }
                 items(cards.chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }

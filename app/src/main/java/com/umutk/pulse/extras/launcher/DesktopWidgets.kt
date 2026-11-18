@@ -141,7 +141,7 @@ internal fun EditDot(icon: String, modifier: Modifier, onClick: (() -> Unit)? = 
 @Composable
 private fun WidgetOptions(w: Float, h: Float, onSize: (Float, Float) -> Unit, onReset: () -> Unit, onRemove: () -> Unit, onClose: () -> Unit) {
     WinAlert(onDismissRequest = onClose,
-        title = { Text(tr("Widget options", "Widget seçenekleri")) },
+        title = { Text(tr("Gadget options", "Gadget seçenekleri")) },
         text = {
             Column(Modifier.fillMaxWidth(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
                 listOf(Triple(tr("Width", "Genişlik"), w, true), Triple(tr("Height", "Yükseklik"), h, false)).forEach { (name, v, isW) ->
