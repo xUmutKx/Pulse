@@ -891,6 +891,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 0)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
+    var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", false)) }
     var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
     val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
     // the library's own search: a floating button on the right opens the field under the sort row
@@ -962,7 +963,7 @@ fun GameHubHub(onBack: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawer,
         // the shelf's own swipes (between the games, turning a case) are not taken by the side menu
-        gesturesEnabled = !(page == 1 && theme == "shelf" && webShelfOk) || drawer.isOpen,
+        gesturesEnabled = !(page == 1 && theme == "shelf" && (webShelfOk || (nativeShelf && NativeShelf.AVAILABLE))) || drawer.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = pal.card, drawerContentColor = pal.text) {
                 Text("Game Hub", color = pal.text, fontSize = 20.sp, modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 12.dp))
@@ -1052,7 +1053,11 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
-                    } } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
+                    } } else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
+                        shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
+                        onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
+                        onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
+                    ) } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         // black under the page until it is painted (the screen behind is white, and it showed before the shelf)
                         Modifier.fillMaxSize().background(Color.Black).navigationBarsPadding(),
@@ -1139,6 +1144,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     }
                     SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true) { on ->
                         showHidden = on; prefs(ctx).edit().putBoolean("showHidden", on).apply()
+                    }
+                    // the shelf drawn natively by the Rust renderer (wgpu) instead of the web page; the web one stays the default until this is chosen
+                    if (NativeShelf.AVAILABLE) SettingRow(pal, tr("Native shelf (wgpu, preview)", "Yerel raf (wgpu, önizleme)"), nativeShelf, true) { on ->
+                        nativeShelf = on; prefs(ctx).edit().putBoolean("nativeShelf", on).apply(); ShelfSync.bump()
                     }
                     SectionTitle(pal, tr("Icons", "Simgeler"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
