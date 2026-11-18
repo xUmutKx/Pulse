@@ -2805,7 +2805,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false, ctxText: String? = null): Triple<List<String>, Array<String>, String?> {
         KeyboardDictionary.begin()
         if (typed.isEmpty()) {
-            val n = KeyboardDictionary.next(code, prev, 6, prev2).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
+            // the next word is chosen by the sentence so far, not only by the last two words: the candidates (the person's own pairs, their words, the language's pairs) are weighed by
+            // the neural model after the whole text before the cursor; the order of the old rule still counts a little, so what the person writes most is not lost
+            val pool = KeyboardDictionary.next(code, prev, 16, prev2).filter { !KeyboardDictionary.isBanned(it) }
+            val nnLang0 = KeyboardLayouts.dict(code)
+            val lm0 = if (!fast && KeyboardPrefs.neuralOn) NeuralLm.get(this, nnLang0) else null
+            val ranked = if (lm0 == null || pool.size <= 3) pool else runCatching {
+                val t0 = System.nanoTime()
+                val stt = NeuralLm.state(lm0, nnLang0, (ctxText ?: lmCtx).let { if (lm0.cased()) it else it.lowercase(loc) })
+                val r = pool.withIndex().sortedByDescending { (i, w) -> lm0.score(stt, w) + (pool.size - i) * .15f }.map { it.value }
+                NeuralLm.took((System.nanoTime() - t0) / 1_000_000L)
+                r
+            }.getOrDefault(pool)
+            val n = ranked.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
             // after a word and a space: the emoji of the word just written takes the last place
             val em = if (KeyboardPrefs.emojiPredictions && prev != null) (KeyboardDictionary.emoji(prev) ?: EmojiData.forWord(prev)) else null
             val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, em ?: n.getOrElse(2) { "" })
