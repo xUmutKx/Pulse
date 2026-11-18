@@ -4,3 +4,17 @@ app/src/main/assets/** linguist-vendored
 app/src/main/java/rikka/** linguist-vendored
 app/src/main/java/moe/** linguist-vendored
 docs/** linguist-documentation
+native/** linguist-vendored
+tools/** linguist-vendored
+scripts/** linguist-vendored
+ci/** linguist-vendored
+icon-sources/** linguist-vendored
+localai/** linguist-vendored
+aistt/** linguist-vendored
+*.java linguist-vendored
+*.html linguist-vendored
+*.js linguist-vendored
+*.css linguist-vendored
+*.py linguist-vendored
+*.rs linguist-vendored
+*.wgsl linguist-vendored
