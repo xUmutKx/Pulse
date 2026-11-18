@@ -1041,6 +1041,8 @@ fun FilesSettings() {
             val ttl = listOf(15 to "15 min", 60 to "1 h", 360 to "6 h", 1440 to "1 day", 0 to tr("Never", "Hiç"))
             Chips(tr("Delete temporary copies after", "Geçici kopyalar şu süre sonra silinsin"), "delete", ttl.map { it.second }, ttl.indexOfFirst { it.first == TempCopies.minutes(ctx) }.coerceAtLeast(1)) { TempCopies.setMinutes(ctx, ttl[it].first) }
             SwRow(tr("Show hidden files", "Gizli dosyaları göster"), "search", fp.hidden) { fp.hidden = it }
+            run { var sysShare by remember { mutableStateOf(ShareMenuPref.system(ctx)) }
+                SwRow(tr("Use the phone's own Share menu", "Telefonun kendi paylaş menüsünü kullan"), "share", sysShare) { sysShare = it; ShareMenuPref.set(ctx, it) } }
             SwRow(tr("Open on the Browse page", "Gözat sayfasında aç"), "folder", fp.startBrowse) { fp.startBrowse = it }
             SwRow(tr("Size, type and cleanup icons in the header", "Başlıkta boyut, tür ve temizlik simgeleri"), "disk", fp.analysis) { fp.analysis = it }
             SwRow(tr("Show file extensions", "Dosya uzantılarını göster"), "notes", fp.ext) { fp.ext = it }
