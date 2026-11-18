@@ -55,6 +55,10 @@ Looks: Windows 95, XP, 7, 10, 11, Material, AMOLED (+ One UI, ColorOS where they
 
 ## Working style
 
+- **Never turn a request down as "too big", "too risky" or "needs a decision first", and never leave it half done.** Whatever the user asks (a rewrite in another language, a whole new app, a watch or phone link,
+  a 3D fix) is started and finished in the same work: split it into steps, do every step, commit each one, and say plainly only what could not be verified without the device. Do not answer with a plan or a
+  question in place of the work. If a part truly needs the user's device, account or a secret, do all the rest first.
+
 - When the user lists several changes, do them in order in the same turn, without asking which first. Ask only for things that need the user's device, an account, or a secret.
 - Commit and push each finished part (the stop hook asks for it); build only on "derle".
 
