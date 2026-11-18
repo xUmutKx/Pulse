@@ -5,6 +5,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
@@ -380,7 +381,15 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     fun gotoHit(k: Int) {
         if (hits.isEmpty()) return
         curHit = ((k % hits.size) + hits.size) % hits.size
-        scope.launch { list.animateScrollToItem(hits[curHit].page.coerceIn(0, p.count - 1)) }
+        val h = hits[curHit]
+        scope.launch {
+            val pg = h.page.coerceIn(0, p.count - 1)
+            // the page first, then down to the word itself (the page is a screen or more tall: the page top alone leaves the hit out of sight)
+            list.animateScrollToItem(pg)
+            val w = withContext(Dispatchers.Default) { p.words(pg, ctx).getOrNull(h.a) }
+            val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == pg }
+            if (w != null && item != null) list.animateScrollBy((w.y * item.size - list.layoutInfo.viewportSize.height / 3f).coerceAtLeast(0f))
+        }
     }
     LaunchedEffect(findOn, query, OfFind.case) {
         hits.clear(); curHit = -1; scanned = 0
