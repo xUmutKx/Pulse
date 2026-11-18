@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "tool" to (tr("Fixed a crash in the Toolkit windows (a tool with a scrolling page of its own).",
+        "Araç kutusu pencerelerindeki bir çökme düzeltildi (kendi kaydırmalı sayfası olan bir araç).")),
     "game" to (tr("Game Hub opens on the normal (web) shelf again; the native shelf is a choice in its settings and now keeps only the games near the middle in memory. Pulse Watch has Apps, Files, Water, Tip, Reaction and Convert.",
         "Game Hub yine normal (web) rafla açılıyor; yerel raf ayarlarından seçilir ve artık yalnızca ortadaki oyunların çevresini bellekte tutuyor. Pulse Watch'ta Uygulamalar, Dosyalar, Su, Bahşiş, Tepki ve Çevirici var.")),
     "video" to (tr("YTXTube: the quality panel and the settings sheet are the same dark glass with the controls hidden behind them, the edge of the video is a dead zone for the system's swipes, and leaving full screen turns the page upright even when the rotation is locked. The first start no longer shows a blank window.",
