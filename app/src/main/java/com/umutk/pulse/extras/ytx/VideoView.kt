@@ -304,6 +304,11 @@ fun VideoContent(
                 if (fullscreen && down.position.y <= with(viewConfiguration) { 120f }) {
                     return@awaitEachGesture
                 }
+                // a dead zone round the whole edge of the picture: a touch that starts there (the system's swipes for the quick panel, the notifications, back and home) does nothing here
+                val dead = 28.dp.toPx()
+                if (down.position.x < dead || down.position.x > size.width - dead || down.position.y < dead || down.position.y > size.height - dead) {
+                    return@awaitEachGesture
+                }
                 down.consume()
                 if (!currentInteractive) {
                     waitForUpOrCancellation()
