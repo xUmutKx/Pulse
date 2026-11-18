@@ -234,6 +234,8 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
+            // without Stremio the torrents of Series and movies are downloaded by the engine in Pulse: it is in the full build only, on a 64-bit phone
+            if (!TorrentEngine.available) Text(tr("Torrents need the full Pulse build (not Lite or the Play one) on a 64-bit phone: Stremio is not used any more.", "Torrent için tam Pulse sürümü (Lite ya da Play değil) ve 64 bit telefon gerekir: Stremio artık kullanılmıyor."), color = androidx.compose.ui.graphics.Color(0xFFE08A3A), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
             // a magnet link (and a Stremio link, which is one) starts as a torrent only when this is on: off by default
             Row(Modifier.fillMaxWidth().clickable { Downloads.setMagnetLinks(ctx, !Downloads.magnetLinks) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
