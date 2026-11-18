@@ -210,6 +210,43 @@ internal fun ctLocalAccount(ctx: Context): Pair<String, String>? = runCatching {
     } ?: if (android.os.Build.MANUFACTURER.equals("samsung", true)) known[0] else null
 }.getOrNull()
 
+/**
+ * Contacts written earlier without an account are not seen by Samsung's Phone app (it shows the bare number, its Info opens nothing) nor by the messaging apps:
+ * each is copied, all its details with it (not the groups of no account), into the phone's own "Phone" account and the old copy is removed. Only on Samsung, and only
+ * when the copy went in. Returns how many were moved.
+ */
+internal fun ctMoveToPhoneAccount(ctx: Context): Int = runCatching {
+    if (!android.os.Build.MANUFACTURER.equals("samsung", true)) return@runCatching 0
+    val acc = ctLocalAccount(ctx) ?: return@runCatching 0
+    val r = ctx.contentResolver
+    val raws = ArrayList<Pair<Long, Int>>()
+    r.query(CC.RawContacts.CONTENT_URI, arrayOf(CC.RawContacts._ID, CC.RawContacts.STARRED), "${CC.RawContacts.ACCOUNT_TYPE} IS NULL AND ${CC.RawContacts.DELETED}=0", null, null)?.use { c -> while (c.moveToNext()) raws += c.getLong(0) to c.getInt(1) }
+    var moved = 0
+    for ((id, starred) in raws) {
+        val ops = ArrayList<ContentProviderOperation>()
+        ops.add(ContentProviderOperation.newInsert(CC.RawContacts.CONTENT_URI).withValue(CC.RawContacts.ACCOUNT_TYPE, acc.first).withValue(CC.RawContacts.ACCOUNT_NAME, acc.second).withValue(CC.RawContacts.STARRED, starred).build())
+        r.query(CC.Data.CONTENT_URI, null, "${CC.Data.RAW_CONTACT_ID}=?", arrayOf(id.toString()), null)?.use { c ->
+            val mimeI = c.getColumnIndex(CC.Data.MIMETYPE)
+            while (c.moveToNext()) {
+                val mime = if (mimeI >= 0) c.getString(mimeI) else null
+                if (mime == null || mime == GroupMembership.CONTENT_ITEM_TYPE) continue
+                val b = ContentProviderOperation.newInsert(CC.Data.CONTENT_URI).withValueBackReference(CC.Data.RAW_CONTACT_ID, 0).withValue(CC.Data.MIMETYPE, mime)
+                for (n in 1..15) {
+                    val i = c.getColumnIndex("data$n"); if (i < 0 || c.isNull(i)) continue
+                    if (c.getType(i) == android.database.Cursor.FIELD_TYPE_BLOB) b.withValue("data$n", c.getBlob(i)) else b.withValue("data$n", c.getString(i))
+                }
+                ops.add(b.build())
+            }
+        }
+        if (ops.size < 2) continue
+        val res = r.applyBatch(CC.AUTHORITY, ops)
+        if (res.isEmpty() || res[0].uri == null) continue
+        r.delete(CC.RawContacts.CONTENT_URI.buildUpon().appendQueryParameter(CC.CALLER_IS_SYNCADAPTER, "true").build(), "${CC.RawContacts._ID}=?", arrayOf(id.toString()))
+        moved++
+    }
+    moved
+}.getOrDefault(0)
+
 /** Writes [d] (id 0 or no raws = new contact). Only the fields the editor shows are replaced; groups and other data stay. */
 internal fun ctSave(ctx: Context, d: CtDetail, photo: ByteArray?, clearPhoto: Boolean): Boolean = runCatching {
     val ops = ArrayList<ContentProviderOperation>()

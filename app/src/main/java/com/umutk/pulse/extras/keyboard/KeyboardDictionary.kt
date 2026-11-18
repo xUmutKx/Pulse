@@ -481,7 +481,17 @@ object KeyboardDictionary {
             .append(if (tc == null) 0 else tc.pts.take(typed.length).hashCode()).toString()
         val now = System.currentTimeMillis()
         stemCache[key]?.let { (at, list) -> if (now - at < 4000L) return list }
-        val out = correctAll(code, typed, maxCost, tc).filter { !isBanned(it.word) }
+        var out = correctAll(code, typed, maxCost, tc).filter { !isBanned(it.word) }
+        // the space bar missed: a letter just above it (c, v, b, n) typed where a space was meant joins two words into one ("açılanvekran" for "açılan ekran");
+        // when the typed word is none and both sides of such a letter are words, the two words are offered (and mended to) with the space back in
+        val tl = typed.lowercase(Locale.ROOT)
+        if (tl.length >= 5 && !isWord(code, tl) && (out.isEmpty() || out.first().cost > .35f)) {
+            val splits = (2..tl.length - 3).filter { tl[it] in "cvbn" }.mapNotNull { i ->
+                val a = tl.substring(0, i); val b = tl.substring(i + 1)
+                if (isWord(code, a) && isWord(code, b)) Cand("$a $b", minOf(score(code, a), score(code, b)), .25f) else null
+            }
+            if (splits.isNotEmpty()) out = (splits.sortedByDescending { it.score } + out).take(maxOf(out.size, 1) + splits.size)
+        }
         // a reading that was stopped by the next key is not kept (it is cut short)
         if (!cancelled()) { if (stemCache.size > 96) stemCache.clear(); stemCache[key] = now to out }
         return out
