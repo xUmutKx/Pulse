@@ -22,6 +22,7 @@ class NfSeg(val text: String, val color: Color? = null, val bold: Boolean = fals
  */
 object NeofetchText {
     val GREEN = Color(0xFF3DDC84)
+    // as the real neofetch (ZeroTermux): the labels green, the values white, the logo green, the colour blocks at the foot
     private val KEY = Color(0xFF3DDC84)
     private val PALETTE = listOf(0xFF000000, 0xFFCD3131, 0xFF0DBC79, 0xFFE5E510, 0xFF2472C8, 0xFFBC3FBC, 0xFF11A8CD, 0xFFE5E5E5,
         0xFF666666, 0xFFF14C4C, 0xFF23D18B, 0xFFF5F543, 0xFF3B8EEA, 0xFFD670D6, 0xFF29B8DB, 0xFFFFFFFF).map { Color(it) }
@@ -113,11 +114,11 @@ object NeofetchText {
         val info = info(ctx)
         val host = (Build.MODEL.ifBlank { "phone" }).lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
         val right = ArrayList<List<NfSeg>>()
-        right.add(listOf(NfSeg("pulse", KEY, true), NfSeg("@", null), NfSeg(host, KEY, true)))
-        right.add(listOf(NfSeg("-".repeat("pulse@$host".length), null)))
+        right.add(listOf(NfSeg("pulse", Color(0xFFFFFFFF), true), NfSeg("@", Color(0xFFFFFFFF)), NfSeg(host, KEY, true)))
+        right.add(listOf(NfSeg("-".repeat("pulse@$host".length), Color(0xFFFFFFFF))))
         info.take(rows).forEach { (k, v) -> right.add(listOf(NfSeg(k, KEY, true), NfSeg(": "), NfSeg(v))) }
         right.add(emptyList())
-        right.add(PALETTE.take(8).map { NfSeg("   ", null).let { _ -> NfSeg("\u2588\u2588\u2588", it) } })
+        right.add(PALETTE.take(8).map { NfSeg("\u2588\u2588\u2588", it) })
         right.add(PALETTE.drop(8).map { NfSeg("\u2588\u2588\u2588", it) })
         return art to right
     }
