@@ -5,6 +5,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -97,7 +98,12 @@ fun MovableDesktopClock(lookId: String) {
     val p = pos()
     val editing = WidgetEdit.id == -1 && !LauncherPrefs.lockLayout
     androidx.compose.foundation.layout.Box(Modifier.offset(p[0].dp, p[1].dp)) {
-        androidx.compose.foundation.layout.Box(Modifier.graphicsLayer { scaleX = p[2]; scaleY = p[2]; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) }.longPressEdit(-1, !LauncherPrefs.lockLayout) { WidgetEdit.id = -1 }) {
+        androidx.compose.foundation.layout.Box(Modifier.graphicsLayer { scaleX = p[2]; scaleY = p[2]; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) }.longPressEdit(-1, !LauncherPrefs.lockLayout) { WidgetEdit.id = -1 }
+            // a tap opens the phone's Clock app, as the clock widgets of the home screen do
+            .clickable(enabled = !editing, indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
+                val i = android.content.Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                runCatching { ctx.startActivity(i) }
+            }) {
             DesktopClock(lookId)
         }
         if (editing) {

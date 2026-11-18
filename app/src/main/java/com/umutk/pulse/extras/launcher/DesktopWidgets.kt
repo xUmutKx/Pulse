@@ -42,8 +42,10 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** x, y, width, height of a widget on the desktop, in dp. */
-private fun posOf(id: Int, i: Int, minW: Int, minH: Int): FloatArray =
+private fun posOf(id: Int, i: Int, minW: Int, minH: Int, cell: Pair<Float, Float>? = null): FloatArray =
     LauncherPrefs.widgetPos[id]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 4 }?.toFloatArray()
+        // the first size of a widget fits the grid: as many whole cells as its own smallest size needs
+        ?: cell?.let { (cw, ch) -> floatArrayOf(cw * (i % 2), ch * (1 + i * 2), cw * Math.ceil((minW.coerceAtLeast(60) / cw).toDouble()).toFloat().coerceAtLeast(1f), ch * Math.ceil((minH.coerceAtLeast(60) / ch).toDouble()).toFloat().coerceAtLeast(1f)) }
         ?: floatArrayOf(12f + (i % 3) * 12f, 96f + i * 40f, (if (minW in 1..90) minW.coerceAtLeast(84) else minW.coerceAtLeast(110)).toFloat(), (if (minH in 1..90) minH.coerceAtLeast(84) else minH.coerceAtLeast(110)).toFloat())
 
 /**
@@ -58,9 +60,16 @@ fun DesktopWidgetLayer() {
     val placed = LauncherPrefs.widgets
     DisposableEffect(host) { host.startListening(); onDispose { host.stopListening() } }
     if (placed.isEmpty()) return
-    placedWidgets().forEachIndexed { i, w ->
-        val info = mgr.getAppWidgetInfo(w.id) ?: return@forEachIndexed
-        key(w.id) { DesktopWidget(w, i, info) }
+    // the grid of the desktop icons (the columns and rows set for this way of holding the phone) is also the grid of the widgets while they snap
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val gridCols = if (land) LauncherPrefs.deskColsLand else LauncherPrefs.deskColsPort
+        val gridRows = if (land) LauncherPrefs.deskRowsLand else LauncherPrefs.deskRowsPort
+        val cell: Pair<Float, Float>? = if (LauncherPrefs.snapWidgets) (maxWidth.value / gridCols.coerceAtLeast(1)) to (maxHeight.value / gridRows.coerceAtLeast(1)) else null
+        placedWidgets().forEachIndexed { i, w ->
+            val info = mgr.getAppWidgetInfo(w.id) ?: return@forEachIndexed
+            key(w.id) { DesktopWidget(w, i, info, cell) }
+        }
     }
 }
 
@@ -84,6 +93,40 @@ internal fun Modifier.longPressEdit(key: Any, enabled: Boolean = true, onLong: (
         if (held == null) onLong()
     }
 }
+
+/**
+ * A long press that goes on as a drag: after the hold the widget is in its edit mode and follows the finger at once, with no small grip to hit. Until the hold is done nothing is
+ * taken from the widget, so its taps work; once it is done the touch belongs to the drag. [onDrag] gets the finger's step in px, [onEnd] the lifting.
+ */
+internal fun Modifier.longPressMove(key: Any, enabled: Boolean = true, onLong: () -> Unit, onDrag: (androidx.compose.ui.geometry.Offset) -> Unit, onEnd: () -> Unit): Modifier = pointerInput(key, enabled) {
+    if (!enabled) return@pointerInput
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val timeout = viewConfiguration.longPressTimeoutMillis
+        val slop = viewConfiguration.touchSlop
+        val held = withTimeoutOrNull<Unit>(timeout) {
+            while (true) {
+                val e = awaitPointerEvent(PointerEventPass.Initial)
+                val c = e.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull
+                if (!c.pressed || (c.position - down.position).getDistance() > slop) return@withTimeoutOrNull
+            }
+        }
+        if (held == null) {
+            onLong()
+            while (true) {
+                val e = awaitPointerEvent(PointerEventPass.Initial)
+                val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                if (!c.pressed) { c.consume(); onEnd(); break }
+                val step = c.positionChange()
+                if (step != androidx.compose.ui.geometry.Offset.Zero) onDrag(step)
+                c.consume()
+            }
+        }
+    }
+}
+
+/** A coordinate moved to the nearest cell line of a grid of [cell] dp (the widget's own value when it is free). */
+private fun snapTo(v: Float, cell: Float?, min: Float = 0f): Float = if (cell == null || cell <= 0f) v else (Math.round(v / cell) * cell).coerceAtLeast(min)
 
 /** The round grip of the edit mode. */
 @Composable
@@ -118,15 +161,20 @@ private fun WidgetOptions(w: Float, h: Float, onSize: (Float, Float) -> Unit, on
 }
 
 @Composable
-private fun DesktopWidget(w: PlacedWidget, index: Int, info: android.appwidget.AppWidgetProviderInfo) {
+private fun DesktopWidget(w: PlacedWidget, index: Int, info: android.appwidget.AppWidgetProviderInfo, cell: Pair<Float, Float>?) {
     val ctx = LocalContext.current
     val host = LauncherWidgetHost.get(ctx)
     val d = LocalDensity.current.density
-    val p = posOf(w.id, index, info.minWidth, info.minHeight)
+    val p = posOf(w.id, index, info.minWidth, info.minHeight, cell)
+    fun cur() = posOf(w.id, index, info.minWidth, info.minHeight, cell)
     fun put(x: Float, y: Float, wd: Float, hd: Float) { LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (w.id to "$x,$y,$wd,$hd") }
+    // on the grid, a lifted finger leaves the widget on the nearest cell lines, and its size is whole cells (at least one)
+    fun settle() { val q = cur(); put(snapTo(q[0], cell?.first), snapTo(q[1], cell?.second), snapTo(q[2], cell?.first, cell?.first ?: 0f), snapTo(q[3], cell?.second, cell?.second ?: 0f)); LauncherPrefs.save(ctx) }
     val editing = WidgetEdit.id == w.id && !LauncherPrefs.lockLayout
     var options by remember { mutableStateOf(false) }
-    Box(Modifier.offset(p[0].dp, p[1].dp).size(p[2].dp, p[3].dp).longPressEdit(w.id, !LauncherPrefs.lockLayout) { WidgetEdit.id = w.id }) {
+    Box(Modifier.offset(p[0].dp, p[1].dp).size(p[2].dp, p[3].dp)
+        // hold the widget, then drag it: it needs no grip; a plain tap still reaches the widget (its own app opens)
+        .longPressMove(w.id, !LauncherPrefs.lockLayout, { WidgetEdit.id = w.id }, { step -> val q = cur(); put((q[0] + step.x / d).coerceAtLeast(0f), (q[1] + step.y / d).coerceAtLeast(0f), q[2], q[3]) }, { settle() })) {
         AndroidView(
             factory = { c -> host.createView(c, w.id, info) },
             update = { it.setAppWidget(w.id, info); it.updateAppWidgetSize(null, p[2].toInt(), p[3].toInt(), p[2].toInt(), p[3].toInt()) },
@@ -136,13 +184,13 @@ private fun DesktopWidget(w: PlacedWidget, index: Int, info: android.appwidget.A
         if (editing) {
             Box(Modifier.matchParentSize().border(2.dp, Color(0xCCFFFFFF)))
             EditDot("gridView", Modifier.align(Alignment.TopStart).pointerInput(w.id) {
-                detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = posOf(w.id, index, info.minWidth, info.minHeight); put(q[0] + drag.x / d, (q[1] + drag.y / d).coerceAtLeast(0f), q[2], q[3]) }
+                detectDragGestures(onDragEnd = { settle() }) { c, drag -> c.consume(); val q = cur(); put(q[0] + drag.x / d, (q[1] + drag.y / d).coerceAtLeast(0f), q[2], q[3]) }
             })
             EditDot("close", Modifier.align(Alignment.TopEnd)) { WidgetEdit.id = null; removeWidget(ctx, w.id) }
             EditDot("check", Modifier.align(Alignment.TopCenter)) { WidgetEdit.id = null }
             EditDot("settings", Modifier.align(Alignment.BottomStart)) { options = true }
             EditDot("scale", Modifier.align(Alignment.BottomEnd).pointerInput(w.id) {
-                detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = posOf(w.id, index, info.minWidth, info.minHeight); put(q[0], q[1], (q[2] + drag.x / d).coerceAtLeast(80f), (q[3] + drag.y / d).coerceAtLeast(60f)) }
+                detectDragGestures(onDragEnd = { settle() }) { c, drag -> c.consume(); val q = cur(); put(q[0], q[1], (q[2] + drag.x / d).coerceAtLeast(60f), (q[3] + drag.y / d).coerceAtLeast(60f)) }
             })
         }
     }
