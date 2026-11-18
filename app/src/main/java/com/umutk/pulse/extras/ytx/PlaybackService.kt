@@ -156,6 +156,9 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        // any task of Pulse that is swiped away reaches this: only YTXTube's own task (or an unknown one) stops the player, so closing another Pulse app does not stop a video in the picture-in-picture window
+        val removed = rootIntent?.component?.className.orEmpty()
+        if (removed.isNotEmpty() && !removed.contains("ytx", ignoreCase = true) && !removed.contains("Ytx")) return
         // swiped away while paused: the media notification goes with it (a stopped player shows none)
         session?.player?.let { p -> if (!p.playWhenReady) { runCatching { resumeSaver?.saveNow() }; p.stop() } }
         pauseAllPlayersAndStopSelf()

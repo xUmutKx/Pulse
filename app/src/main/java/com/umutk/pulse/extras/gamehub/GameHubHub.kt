@@ -891,6 +891,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 0)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
+    var selectOpen by remember { mutableStateOf(false) }
+    var shelfHidden by remember { mutableStateOf(shelfHiddenSet(ctx)) }
     var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", NativeShelf.AVAILABLE)) }
     var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
     val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
@@ -1053,8 +1055,8 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
-                    } } else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
-                        shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
+                    } } else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size, shelfHidden.size) { NativeShelfScreen(
+                        shown.filter { it.pkg !in shelfHidden }.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onSettings = { go(2) },
@@ -1150,6 +1152,11 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (NativeShelf.AVAILABLE) SettingRow(pal, tr("Native shelf (wgpu, preview)", "Yerel raf (wgpu, önizleme)"), nativeShelf, true) { on ->
                         nativeShelf = on; prefs(ctx).edit().putBoolean("nativeShelf", on).apply(); ShelfSync.bump()
                     }
+                    // the games kept on the shelf: the phone's games, the hidden ones, every other app
+                    Row(Modifier.fillMaxWidth().clickable { selectOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Select games", "Oyunları seç"), color = pal.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text(if (shelfHidden.isEmpty()) tr("All", "Tümü") else "${shelfHidden.size} " + tr("off", "kapalı"), color = pal.sub, fontSize = 13.sp)
+                    }
                     SectionTitle(pal, tr("Icons", "Simgeler"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Cover, else APK icon", "Kapak, yoksa APK simgesi"), 1 to tr("APK icon only", "Yalnız APK simgesi")).forEach { (k, label) ->
@@ -1241,6 +1248,7 @@ fun GameHubHub(onBack: () -> Unit) {
     // the first time the shelf look opens: a short setup (games found, box art, play time, more apps)
     if (setupOpen) ShelfSetup(pal, theme, onTheme = { setTheme(it) }, onAddMore = { addOpen = true }, onDone = { prefs(ctx).edit().putBoolean("shelfSetup", true).apply(); setupOpen = false })
     // a game opens as its own page: the back arrow at the top left returns to the library
+    if (selectOpen) SelectGamesDialog(ctx, pal, { selectOpen = false }, { shelfHidden = shelfHiddenSet(ctx); ShelfSync.bump() })
     profile?.let { g ->
         if (theme == "shelf" || theme == "shelfc") {
             val u = usage[g.pkg]
