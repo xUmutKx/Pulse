@@ -298,6 +298,9 @@ object SeasonDl {
     private fun pathId(id: String) = Uri.encode(id, ":")
 
     /** The address of a stream: a plain link as it is; a torrent as a magnet link (the file number goes along when the stream names one). */
+    /** Whether Stremio's local server answers on this phone (its link is used for a torrent only then; without it the torrent engine in Pulse downloads the stream). */
+    private fun stremioUp(): Boolean = runCatching { java.net.Socket().use { it.connect(java.net.InetSocketAddress("127.0.0.1", 11470), 300) }; true }.getOrDefault(false)
+
     private fun streamUrl(s: JSONObject): String? {
         s.optString("url").takeIf { it.startsWith("http") }?.let { return it }
         val hash = s.optString("infoHash").takeIf { it.length == 40 } ?: return null
@@ -307,7 +310,7 @@ object SeasonDl {
         val tr = (0 until (src?.length() ?: 0)).map { src!!.optString(it) }.filter { it.startsWith("tracker:") }
             .joinToString("&") { "tr=" + Uri.encode(it.removePrefix("tracker:")) }
         // the engine in Pulse only when "Magnet links as torrents" is on (off by default: the normal download); else the Stremio server on the phone
-        return if (TorrentEngine.available && Downloads.magnetLinks) "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + (if (idx >= 0) "&pulse_idx=$idx" else "")
+        return if (TorrentEngine.available && (Downloads.magnetLinks || !stremioUp())) "magnet:?xt=urn:btih:$hash" + (if (tr.isNotEmpty()) "&$tr" else "") + (if (idx >= 0) "&pulse_idx=$idx" else "")
         else "http://127.0.0.1:11470/$hash/${maxOf(idx, 0)}" + if (tr.isNotEmpty()) "?$tr" else ""
     }
 
