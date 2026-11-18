@@ -467,12 +467,12 @@ body.pad-input,body.pad-input *{cursor:none!important}
   background:radial-gradient(ellipse 55% 50% at 50% 40%,transparent,color-mix(in srgb,var(--l-t1) 88%,transparent) 100%),
              linear-gradient(180deg,color-mix(in srgb,var(--l-t0) 30%,transparent),color-mix(in srgb,var(--l-t1) 75%,transparent))}
 .l-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px;transition:opacity .28s,transform .28s}
-.l-card{position:relative;height:min(38vh,380px);padding:5px;border-radius:12px;background:var(--l-case);overflow:hidden;
+.l-card{position:relative;height:min(38vh,380px);padding:0;border-radius:14px;background:none;overflow:visible;
   box-shadow:0 34px 80px rgba(0,0,0,.55),0 0 70px color-mix(in srgb,var(--l-glow) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.12);
   will-change:transform}
 /* the card only moves while the launch screen shows (it used to float on, unseen, the whole time) */
 #app.launching .l-card{animation:lCardIn .7s cubic-bezier(.2,.8,.2,1) both,lFloat 4.8s 0.7s ease-in-out infinite alternate}
-.l-card img{display:block;height:100%;width:auto;max-width:min(60vw,520px);object-fit:cover;border-radius:8px}
+.l-card img{display:block;height:100%;width:auto;max-width:min(60vw,520px);object-fit:contain;border-radius:14px}
 .l-card img:not([src]){visibility:hidden;width:calc(min(38vh,380px)*.7)}
 .l-glare{position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-14deg);
   animation:lGlare 1.1s .55s cubic-bezier(.3,.6,.3,1) both;pointer-events:none}
