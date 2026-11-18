@@ -26,6 +26,10 @@ object Apps {
         WatchApp("dice", "Dice & coin", "🎲", "Roll or flip") { DiceScreen() },
         WatchApp("metronome", "Metronome", "🎵", "Beats on the wrist") { MetronomeScreen() },
         WatchApp("light", "Flashlight", "🔦", "The whole screen white") { FlashlightScreen() },
+        WatchApp("water", "Water", "💧", "Glasses today") { WaterScreen() },
+        WatchApp("tip", "Tip", "💵", "Bill, tip and split") { TipScreen() },
+        WatchApp("reaction", "Reaction", "⚡", "Tap on green") { ReactionScreen() },
+        WatchApp("convert", "Convert", "🔁", "°C °F, km mi, kg lb, cm in") { ConvertScreen() },
         WatchApp("settings", "Settings", "⚙", "Accent, crown ticks, clock") { SettingsScreen() },
     )
 }
