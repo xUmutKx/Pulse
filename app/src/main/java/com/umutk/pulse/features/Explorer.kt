@@ -1751,7 +1751,7 @@ private fun DenseSelSquare(tint: Color, onClick: () -> Unit, big: Boolean = fals
 
 /** Header glyph: Fluent on Windows 11 (the app's own icon set), the Material vector everywhere else. */
 @Composable
-private fun ExGlyph(material: ImageVector, fluent: String, tint: Color, size: Dp) {
+internal fun ExGlyph(material: ImageVector, fluent: String, tint: Color, size: Dp) {
     if (T.id == "win11") PIcon(fluent, tint, size) else Icon(material, null, Modifier.size(size), tint)
 }
 
