@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.ytx
 
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.unit.IntOffset
@@ -204,6 +205,30 @@ fun PlayerScreen(
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var descriptionOpen by remember(item.id) { mutableStateOf(false) }
+    // the lower part of the page (comments, more videos) pulled down puts the video in the middle of a black screen (portrait stays, the picture sits in the middle)
+    var cinema by remember(item.id) { mutableStateOf(false) }
+    var listH by remember { mutableStateOf(1) }
+    var downY by remember { mutableStateOf(0f) }
+    var cinemaAcc by remember { mutableStateOf(0f) }
+    val pageConn = remember(morph) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            private fun lower() = downY > listH * 0.35f
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
+                if (lower()) androidx.compose.ui.geometry.Offset.Zero else morph.nestedScroll.onPreScroll(available, source)
+            override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (!lower()) return morph.nestedScroll.onPostScroll(consumed, available, source)
+                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput && available.y > 0f) { cinemaAcc += available.y; return androidx.compose.ui.geometry.Offset(0f, available.y) }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                if (!lower()) return morph.nestedScroll.onPreFling(available)
+                if (cinemaAcc > 140f) { cinema = true; cinemaAcc = 0f; return available }
+                cinemaAcc = 0f
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = cinema) { cinema = false }
 
     val context = LocalContext.current
     var dominantColor by remember(item.id) { mutableStateOf(c.primaryContainer) }
@@ -379,6 +404,10 @@ fun PlayerScreen(
                     }
                 }
             }
+        } else if (cinema && state.expanded) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Box(Modifier.zIndex(2f)) { VideoStage(state, morph, onCollapse, onFullscreen, interactive) }
+        }
         } else {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.height(top))
@@ -394,7 +423,9 @@ fun PlayerScreen(
                 modifier = Modifier
                     .weight(1f)
                     .zIndex(0f)
-                    .nestedScroll(morph.nestedScroll)
+                    .onSizeChanged { listH = it.height.coerceAtLeast(1) }
+                    .pointerInput(Unit) { awaitPointerEventScope { while (true) { val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial); e.changes.firstOrNull { it.pressed && !it.previousPressed }?.let { downY = it.position.y; cinemaAcc = 0f } } } }
+                    .nestedScroll(pageConn)
                     .graphicsLayer {
 
 
