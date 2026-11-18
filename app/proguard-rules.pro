@@ -79,3 +79,6 @@
 
 # the keyboard model in Rust: its JNI functions are found by the class and method names
 -keep class com.umutk.pulse.extras.keyboard.CharLmNative { native <methods>; }
+
+# the native shelf (Rust, wgpu): JNI functions are found by the class and method names
+-keep class com.umutk.pulse.extras.gamehub.NativeShelf { native <methods>; }

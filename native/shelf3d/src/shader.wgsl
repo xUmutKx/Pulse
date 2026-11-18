@@ -1,0 +1,92 @@
+struct Globals {
+    vp: mat4x4<f32>,
+    eye: vec4<f32>,
+    time: vec4<f32>,   // x: seconds, y: floor y, z: aspect, w: unused
+};
+@group(0) @binding(0) var<uniform> g: Globals;
+@group(1) @binding(0) var tex: texture_2d<f32>;
+@group(1) @binding(1) var smp: sampler;
+
+struct VIn {
+    @location(0) pos: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+    @location(3) tint: vec4<f32>,   // rgb: colour factor, a: how much of the texture (1) or the flat colour (0)
+};
+struct VOut {
+    @builtin(position) clip: vec4<f32>,
+    @location(0) world: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+    @location(3) tint: vec4<f32>,
+};
+
+@vertex
+fn vs(v: VIn) -> VOut {
+    var o: VOut;
+    o.clip = g.vp * vec4<f32>(v.pos, 1.0);
+    o.world = v.pos;
+    o.normal = v.normal;
+    o.uv = v.uv;
+    o.tint = v.tint;
+    return o;
+}
+
+fn shade(v: VOut) -> vec3<f32> {
+    let t = textureSample(tex, smp, v.uv).rgb;
+    let base = mix(v.tint.rgb, t, v.tint.a);
+    let n = normalize(v.normal);
+    let l = normalize(vec3<f32>(-0.35, 0.55, 0.75));
+    let diff = max(dot(n, l), 0.0);
+    let vd = normalize(g.eye.xyz - v.world);
+    let h = normalize(l + vd);
+    let spec = pow(max(dot(n, h), 0.0), 48.0) * 0.18;
+    return base * (0.55 + 0.55 * diff) + vec3<f32>(spec);
+}
+
+@fragment
+fn fs(v: VOut) -> @location(0) vec4<f32> {
+    return vec4<f32>(shade(v), 1.0);
+}
+
+// the box mirrored in the floor: faded out with the distance from it
+@fragment
+fn fs_reflect(v: VOut) -> @location(0) vec4<f32> {
+    let d = max(g.time.y - v.world.y, 0.0);
+    let fade = clamp(0.38 - d * 0.32, 0.0, 0.38);
+    return vec4<f32>(shade(v) * 0.8, fade);
+}
+
+// ---- background -------------------------------------------------------------------------------------------------------------------------------
+
+struct BOut {
+    @builtin(position) clip: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+};
+
+@vertex
+fn vs_bg(@builtin(vertex_index) i: u32) -> BOut {
+    var p = array<vec2<f32>, 3>(vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0));
+    var o: BOut;
+    o.clip = vec4<f32>(p[i], 0.999, 1.0);
+    o.uv = vec2<f32>(p[i].x * 0.5 + 0.5, 0.5 - p[i].y * 0.5);
+    return o;
+}
+
+@fragment
+fn fs_bg(b: BOut) -> @location(0) vec4<f32> {
+    let top = vec3<f32>(0.04, 0.30, 0.38);
+    let mid = vec3<f32>(0.03, 0.18, 0.26);
+    let bot = vec3<f32>(0.015, 0.04, 0.07);
+    var c = mix(top, mid, smoothstep(0.0, 0.5, b.uv.y));
+    c = mix(c, bot, smoothstep(0.45, 0.95, b.uv.y));
+    // slow soft waves of light
+    let t = g.time.x * 0.12;
+    let w1 = sin(b.uv.x * 6.0 + t * 3.0 + b.uv.y * 4.0) * 0.5 + 0.5;
+    let band = smoothstep(0.012, 0.0, abs(b.uv.y - (0.22 + 0.06 * sin(b.uv.x * 5.0 + t * 4.0))));
+    c = c + vec3<f32>(0.10, 0.28, 0.30) * band * (0.4 + 0.6 * w1);
+    // a glow under the middle box
+    let gl = exp(-pow((b.uv.x - 0.5) * 2.2, 2.0) - pow((b.uv.y - 0.66) * 4.0, 2.0));
+    c = c + vec3<f32>(0.10, 0.20, 0.22) * gl * 0.7;
+    return vec4<f32>(c, 1.0);
+}
