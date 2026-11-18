@@ -133,7 +133,17 @@ fun NeofetchCard(art: List<String>, right: List<List<NfSeg>>, fs: Float, shown: 
     val mono = androidx.compose.ui.text.font.FontFamily.Monospace
     val lh = (fs * 1.25f).sp
     androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
-        androidx.compose.material3.Text(art.take(shown).joinToString("\n"), color = NeofetchText.GREEN, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = art.size.coerceAtLeast(1), softWrap = false)
+        // the logo as the real neofetch draws it: green, and the two letter pairs on the eyes' line (m: and :m) white
+        val logo = androidx.compose.ui.text.buildAnnotatedString {
+            art.take(shown).forEachIndexed { row, line ->
+                if (row > 0) append("\n")
+                line.forEachIndexed { j, ch ->
+                    val white = row == 3 && (j == 10 || j == 11 || j == 20 || j == 21)
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = if (white) Color(0xFFFFFFFF) else NeofetchText.GREEN)); append(ch.toString()); pop()
+                }
+            }
+        }
+        androidx.compose.material3.Text(logo, fontFamily = mono, fontSize = fs.sp, lineHeight = lh, maxLines = art.size.coerceAtLeast(1), softWrap = false)
         androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.width((fs * 1.6f).dp))
         val a = androidx.compose.ui.text.buildAnnotatedString {
             right.take(shown).forEachIndexed { i, line ->
