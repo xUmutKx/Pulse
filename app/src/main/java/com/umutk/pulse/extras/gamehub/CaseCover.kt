@@ -109,9 +109,29 @@ internal object CaseCover {
         return out
     }
 
+    /** The boxes of the built-in and the web games are drawn when asked and kept only in memory (a few at a time): 380 of them on disk took about 70 MB for pictures that are made from an emoji and a name. */
+    private val live = object : android.util.LruCache<String, ByteArray>(6 * 1024 * 1024) { override fun sizeOf(key: String, value: ByteArray) = value.size }
+
+    fun isLive(pkg: String) = MegaGames.isMega(pkg) || HtmlGames.isHtml(pkg)
+
+    fun liveBox(c: Context, pkg: String, style: String): ByteArray? {
+        val key = "$pkg|$style"
+        live.get(key)?.let { return it }
+        val art: Bitmap = when {
+            MegaGames.isMega(pkg) -> runCatching { MegaGames.cover(c, pkg.removePrefix(MegaGames.PREFIX)) }.getOrNull()
+            HtmlGames.isHtml(pkg) -> HtmlGames.coverFile(c, HtmlGames.idOf(pkg)).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.absolutePath) }
+            else -> null
+        } ?: return null
+        val box = compose(c, art, style) ?: return null
+        val out = java.io.ByteArrayOutputStream(); box.compress(Bitmap.CompressFormat.JPEG, 86, out)
+        box.recycle(); art.recycle()
+        return out.toByteArray().also { live.put(key, it) }
+    }
+
     /** Makes the box of game [pkg] in [style] from its Steam cover (else its wide Steam picture, else a picture made of its icon and name). False when there is nothing to make it from. */
     fun make(c: Context, pkg: String, style: String): Boolean {
         if (style == "plain") return false
+        if (isLive(pkg)) return true // drawn when asked (see liveBox), never stored
         val cover = source(c, pkg)
         // the built-in games and the games of your own have a picture of their own: it goes into the case too
         val own: Bitmap? = when {
@@ -134,6 +154,9 @@ internal object CaseCover {
         val cur = style(c)
         val keep: Set<String>? = if (cur == "mix") mixMap(c).map { (p, st) -> file(c, p, st).name }.toSet() else null
         var freed = 0L
+        // the stored boxes of built-in and web games (older versions kept them) and the cached built-in covers are deleted
+        File(c.filesDir, "gamehub").listFiles { f -> (f.name.startsWith("case_mega_") || f.name.startsWith("case_html_")) && f.name.endsWith(".jpg") }?.forEach { f -> freed += f.length(); f.delete() }
+        File(c.cacheDir, "megacover").takeIf { it.isDirectory }?.let { d -> d.listFiles()?.forEach { freed += it.length() }; d.deleteRecursively() }
         File(c.filesDir, "gamehub").listFiles { f -> f.name.startsWith("case_") && f.name.endsWith(".jpg") }?.forEach { f ->
             val stale = if (keep != null) f.name !in keep else !f.name.endsWith("_$cur.jpg")
             if (stale) { freed += f.length(); f.delete() }

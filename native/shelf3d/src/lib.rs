@@ -346,7 +346,7 @@ fn box_matrix(o: f32, flip: f32, ratio: f32) -> Mat4 {
 
 /// The three parts of a box centred on the origin (1.0 wide, 1.4 high, 0.2 deep): the front, the back, and the sides/top/bottom.
 fn box_parts(side: [f32; 3], _mirror_floor: f32) -> [Vec<Vertex>; 3] {
-    let (hw, hh, hd) = (0.5f32, 0.7f32, 0.1f32);
+    let (hw, hh, hd) = (0.5f32, 0.7f32, 0.045f32);
     let tex = |n: [f32; 3], a: [f32; 3], b: [f32; 3], c: [f32; 3], d: [f32; 3]| -> Vec<Vertex> {
         let t = [1.0, 1.0, 1.0, 1.0];
         let v = |p: [f32; 3], uv: [f32; 2]| Vertex { pos: p, normal: n, uv, tint: t };

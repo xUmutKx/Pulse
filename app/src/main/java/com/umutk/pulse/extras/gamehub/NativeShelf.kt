@@ -89,7 +89,14 @@ private fun average(b: Bitmap): FloatArray {
 
 /** The front of a game's box: its cover, or its icon on a dark gradient with its name when it has none. */
 private fun frontOf(c: Context, g: GameRow): Bitmap {
-    val file = listOf(coverFile(c, g.pkg), caseFile(c, g.pkg), steamCoverFile(c, g.pkg), playCoverFile(c, g.pkg)).firstOrNull { it.isFile }
+    // the box in the chosen case (the console's top band with its logo and the title) first; the built-in and web games' boxes are drawn here when asked, never stored
+    val st = CaseCover.styleOf(c, g.pkg)
+    if (CaseCover.isLive(g.pkg)) {
+        if (st != "plain") CaseCover.liveBox(c, g.pkg, st)?.let { b -> BitmapFactory.decodeByteArray(b, 0, b.size)?.let { return cover(it) } }
+        val own = if (MegaGames.isMega(g.pkg)) MegaGames.cover(c, g.pkg.removePrefix(MegaGames.PREFIX)) else decode(HtmlGames.coverFile(c, HtmlGames.idOf(g.pkg)))
+        own?.let { return cover(it) }
+    }
+    val file = listOf(caseFile(c, g.pkg), coverFile(c, g.pkg), steamCoverFile(c, g.pkg), playCoverFile(c, g.pkg)).firstOrNull { it.isFile }
     file?.let { decode(it) }?.let { return cover(it) }
     val out = Bitmap.createBitmap(ART_W, ART_H, Bitmap.Config.ARGB_8888)
     val cv = Canvas(out); val hue = (g.pkg.hashCode() and 0x7fffffff) % 360
@@ -208,9 +215,13 @@ internal fun NativeShelfScreen(games: List<GameRow>, modifier: Modifier = Modifi
     val g = games.getOrNull(sel)
     Box(modifier.fillMaxSize()) {
         AndroidView(factory = { c -> NativeShelfView(c, { sel = it }, { games.getOrNull(sel)?.let { onLaunch(it.pkg) } }).also { view = it; it.setGames(games) } }, modifier = Modifier.fillMaxSize())
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(bottom = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(g?.name ?: "", color = Color.White, fontSize = 22.sp)
-            Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+        // the title sits under the middle box, as on the web shelf: big white name, a small line under it; the buttons are at the bottom
+        Column(Modifier.fillMaxSize().navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.foundation.layout.Spacer(Modifier.weight(.70f))
+            Text(g?.name ?: "", color = Color.White, fontSize = 28.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
+            Text(tr("Game", "Oyun"), color = Color(0xB3FFFFFF), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.weight(.30f))
+            Row(Modifier.padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(26.dp)) {
                 Box(Modifier.androidx_clickable { g?.let { onLaunch(it.pkg) } }) { FluentIcon("play", Color.White, 34.dp) }
                 Box(Modifier.androidx_clickable { view?.flip() }) { FluentIcon("refresh", Color.White, 30.dp) }
                 Box(Modifier.androidx_clickable { g?.let { onDetails(it.pkg) } }) { FluentIcon("info", Color.White, 30.dp) }

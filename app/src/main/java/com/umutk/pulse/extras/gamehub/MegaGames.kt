@@ -777,12 +777,9 @@ internal object MegaGames {
     /** The picture of a game of the page: its own (assets/megacovers), or for the others one made from its mark and name on a colour, kept in the cache. Null for an unknown id. */
     fun cover(c: Context, id: String): android.graphics.Bitmap? {
         runCatching { c.assets.open("megacovers/$id.webp").use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()?.let { return it }
-        val f = java.io.File(c.cacheDir, "megacover/$id.png")
-        if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path)?.let { return it }
+        // drawn each time (a few milliseconds) and not kept on the phone: 330 of these as files took about 50 MB
         val item = LIST.firstOrNull { it.id == id } ?: return null
-        val b = made(item)
-        runCatching { f.parentFile?.mkdirs(); f.outputStream().use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } }
-        return b
+        return made(item)
     }
 
     /** A 400 x 600 picture: a colour of its own (from its name), the game's mark large in the upper part, its group above and its name below. */
