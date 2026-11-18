@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -130,36 +129,8 @@ val Themes = listOf(
         glassA = .8f, wall = Brush.linearGradient(listOf(c(0xFF1B2433), c(0xFF2A2236), c(0xFF1A2B30)))),
     PTheme("acrylic2", "Acrylic (new)", true, c(0xFF14161C), c(0xFF262A36), c(0xFFFFFFFF), c(0xFFB8BECC), c(0xFF60CDFF), c(0xFF4A5064), 8.dp,
         glassA = .56f, wall = Brush.linearGradient(listOf(c(0xFF123B5E), c(0xFF4B2C73), c(0xFF0F5560)))),
-    // Cloud: soft coloured clouds behind frosted panels (a few big blurred lights over a deep or a pale base), dark and light
-    PTheme("cloud", "Cloud", true, c(0xFF0D1020), c(0xFF1E2238), c(0xFFFFFFFF), c(0xFFB3B8D6), c(0xFF8AB4FF), c(0xFF2E3454), 18.dp,
-        glassA = .5f, wall = CloudBrush(c(0xFF0D1020), listOf(c(0xFF5B3FD1), c(0xFF1E8FB3), c(0xFFC2457E), c(0xFF2D5BD8)))),
-    PTheme("cloudlight", "Cloud light", false, c(0xFFF2F1F8), c(0xFFFFFFFF), c(0xFF1A1C2B), c(0xFF5E6278), c(0xFF5868E0), c(0xFFDADCEB), 18.dp,
-        glassA = .55f, wall = CloudBrush(c(0xFFF4F2FA), listOf(c(0xFFB9C7FF), c(0xFFFFC9E1), c(0xFFB8F0E6), c(0xFFFFE2B8)))),
     amoledWindow(),   // the app's own AMOLED black (pure black background, grey panels)
 )
-
-/**
- * The Cloud looks' backdrop: a base colour with a few big, soft colour lights (radial gradients fading to nothing) laid over it,
- * like clouds lit from behind. Drawn by the GPU as one shader, nothing is blurred at run time.
- */
-class CloudBrush(private val base: Color, private val lights: List<Color>) : androidx.compose.ui.graphics.ShaderBrush() {
-    override fun createShader(size: androidx.compose.ui.geometry.Size): androidx.compose.ui.graphics.Shader {
-        val w = size.width.coerceAtLeast(1f); val h = size.height.coerceAtLeast(1f)
-        val r = maxOf(w, h)
-        // where each light sits (fractions of the width and height) and how far it reaches
-        val spots = listOf(Triple(.15f, .12f, .75f), Triple(.9f, .3f, .7f), Triple(.25f, .78f, .8f), Triple(.85f, .92f, .65f))
-        var shader: android.graphics.Shader = android.graphics.LinearGradient(0f, 0f, 0f, h, base.toArgb(), base.toArgb(), android.graphics.Shader.TileMode.CLAMP)
-        lights.forEachIndexed { i, col ->
-            val (fx, fy, fr) = spots[i % spots.size]
-            val light = android.graphics.RadialGradient(w * fx, h * fy, r * fr, intArrayOf(col.copy(alpha = .75f).toArgb(), col.copy(alpha = .25f).toArgb(), col.copy(alpha = 0f).toArgb()),
-                floatArrayOf(0f, .5f, 1f), android.graphics.Shader.TileMode.CLAMP)
-            shader = android.graphics.ComposeShader(shader, light, android.graphics.PorterDuff.Mode.SRC_OVER)
-        }
-        return shader
-    }
-    override fun equals(other: Any?) = other is CloudBrush && other.base == base && other.lights == lights
-    override fun hashCode() = base.hashCode() * 31 + lights.hashCode()
-}
 
 /** Material accents: pastel, plus the four wallpaper themes A-D (indices 7..10). */
 val MaterialAccents = listOf(0xFF1E88E5, 0xFF00ACC1, 0xFF00897B, 0xFF43A047, 0xFF7CB342,
