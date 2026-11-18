@@ -58,6 +58,7 @@ import java.io.File
 internal fun ExColumnsPane(
     dir: File, top: File, showHidden: Boolean,
     onGo: (String) -> Unit, onOpen: (File) -> Unit, onList: () -> Unit, onMenu: () -> Unit,
+    filter: String = "all", onFilter: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     var picked by remember(dir.path) { mutableStateOf<File?>(null) }
@@ -83,6 +84,8 @@ internal fun ExColumnsPane(
                     if (!last) Text("  ›  ", color = T.sub, fontSize = 13.sp)
                 }
             }
+            // the filter and sort options, at the right as in the list view; lit while a filter is on
+            Box(Modifier.size(40.dp).clickable { onFilter() }, contentAlignment = Alignment.Center) { PIcon("filter", if (filter != "all") Look.accent else T.text, 22.dp) }
             Box(Modifier.size(40.dp).clickable { onList() }, contentAlignment = Alignment.Center) { PIcon("listView", T.text, 22.dp) }
         }
         Row(Modifier.fillMaxSize()) {
@@ -112,7 +115,7 @@ internal fun ExColumnsPane(
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
                 chain.forEachIndexed { i, folder ->
                     val next = chain.getOrNull(i + 1)
-                    ExColumn(folder, showHidden, mark = next?.path ?: picked?.path, last = i == chain.lastIndex,
+                    ExColumn(folder, showHidden, filter, mark = next?.path ?: picked?.path, last = i == chain.lastIndex,
                         onFolder = { onGo(it.path) }, onFile = { picked = it })
                     Box(Modifier.width(1.dp).fillMaxHeight().background(T.line.copy(alpha = .6f)))
                 }
@@ -127,10 +130,10 @@ internal fun ExColumnsPane(
 
 /** One column: the contents of [folder], folders first, then files; the row of [mark] is marked. */
 @Composable
-private fun ExColumn(folder: File, showHidden: Boolean, mark: String?, last: Boolean, onFolder: (File) -> Unit, onFile: (File) -> Unit) {
-    val list by produceState<List<File>?>(null, folder.path, showHidden) {
+private fun ExColumn(folder: File, showHidden: Boolean, filter: String, mark: String?, last: Boolean, onFolder: (File) -> Unit, onFile: (File) -> Unit) {
+    val list by produceState<List<File>?>(null, folder.path, showHidden, filter) {
         value = withContext(Dispatchers.IO) {
-            runCatching { folder.listFiles()?.filter { showHidden || !it.name.startsWith(".") }?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) }.getOrNull() ?: emptyList()
+            runCatching { folder.listFiles()?.filter { (showHidden || !it.name.startsWith(".")) && exFilterOk(it, filter) }?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) }.getOrNull() ?: emptyList()
         }
     }
     Column(Modifier.width(270.dp).fillMaxHeight()) {
