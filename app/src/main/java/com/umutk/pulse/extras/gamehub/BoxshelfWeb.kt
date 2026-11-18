@@ -164,6 +164,23 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
         }
         return arr.toString()
     }
+    /** Select games: the hidden apps (hidden by Pulse, by another tool, or found by the shell), as [{pkg, name}]. */
+    @JavascriptInterface fun hiddenApps(): String = JSONArray().also { a -> hiddenAppsAll(c).forEach { a.put(JSONObject().put("pkg", it.pkg).put("name", it.name)) } }.toString()
+    /** Select games: every other app with a launcher icon (not a game of the shelf), as [{pkg, name, on}]; on = it is in the library. */
+    @JavascriptInterface fun otherApps(): String {
+        val pm = c.packageManager
+        val games = loadGames(c).map { it.pkg }.toSet()
+        val mine = customSet(c)
+        val a = JSONArray()
+        runCatching {
+            pm.getInstalledApplications(0).filter { it.packageName != c.packageName && it.packageName !in games && pm.getLaunchIntentForPackage(it.packageName) != null }
+                .sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
+                .forEach { a.put(JSONObject().put("pkg", it.packageName).put("name", pm.getApplicationLabel(it).toString()).put("on", it.packageName in mine)) }
+        }
+        return a.toString()
+    }
+    /** Select games: an app is put in the library by hand (or taken out). */
+    @JavascriptInterface fun setCustomApp(pkg: String, on: Boolean) { saveCustom(c, if (on) customSet(c) + pkg else customSet(c) - pkg); ShelfSync.bump() }
     /** The case style of the shelf: the id of one of Boxshelf's own cases (pc = a Steam-like case, custom, ps5, ps4, x360, sw ...). */
     /** The guide kept for a game (empty until it was read), and the start of reading it in the background. */
     @JavascriptInterface fun guideCached(pkg: String): String = when {

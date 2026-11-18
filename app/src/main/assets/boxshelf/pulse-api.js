@@ -251,14 +251,23 @@
     box.querySelector('.none').onclick = () => setAll(false);
     window.__pulseSelectGames = () => {
       const body = box.querySelector('.sb'); body.innerHTML = ''; rows = [];
-      const hid = hiddenIds(), groups = [['Games on this phone', []], ['Built-in games', []], ['HTML games', []]];
-      list().forEach(g => groups[/^mega:/.test(g.pkg) ? 1 : /^html:/.test(g.pkg) ? 2 : 0][1].push(g));
-      groups.forEach(([name, items]) => {
+      const hid = hiddenIds(), phone = [], hiddenG = [];
+      list().forEach(g => { if (/^(mega|html):/.test(g.pkg)) return; (g.hidden ? hiddenG : phone).push(g); });
+      const known = new Set(phone.concat(hiddenG).map(g => g.pkg));
+      // the games first, then the hidden ones (also the ones hidden outside Pulse), then every other app (a switch on puts it in the library)
+      let hApps = [], other = [];
+      try { hApps = JSON.parse(H.hiddenApps()); } catch (e) {}
+      try { other = JSON.parse(H.otherApps()); } catch (e) {}
+      hApps.forEach(a => { if (!known.has(a.pkg)) hiddenG.push({ pkg: a.pkg, name: a.name, hidden: true, outside: true }); });
+      const groups = [['Games on this phone', phone, false], ['Hidden games', hiddenG, false], ['Other apps', other.map(a => ({ pkg: a.pkg, name: a.name, on: a.on })), true]];
+      groups.forEach(([name, items, isApp]) => {
         if (!items.length) return;
         const h = document.createElement('h3'); h.textContent = name + ' · ' + items.length; body.appendChild(h);
         items.sort((a, b) => String(a.name).localeCompare(String(b.name))).forEach(g => {
           const id = 'app-' + g.pkg, l = document.createElement('label'), cb = document.createElement('input'), s = document.createElement('span');
-          cb.type = 'checkbox'; cb.checked = !hid.has(id); s.textContent = g.name || g.pkg;
+          cb.type = 'checkbox'; s.textContent = g.name || g.pkg;
+          if (isApp) { cb.checked = !!g.on; cb.onchange = () => { try { H.setCustomApp(g.pkg, cb.checked); } catch (e) {} }; l.append(cb, s); body.appendChild(l); return; }
+          cb.checked = !hid.has(id);
           cb.onchange = () => { try { Shelf.setHidden(id, !cb.checked); } catch (e) {} };
           l.append(cb, s); body.appendChild(l); rows.push({ id, cb });
         });

@@ -163,8 +163,8 @@ private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("show
 internal fun forgetGame(c: Context, pkg: String) {
     saveHidden(c, hiddenSet(c) - pkg); saveCustom(c, customSet(c) - pkg); prefs(c).edit().remove("name_$pkg").apply()
 }
-private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
-private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
+internal fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
+internal fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
 
 /** A hidden game has no name or icon for the system: each one without a saved name is shown for a moment (pm unhide), its name and icon are kept, and it is hidden again. */
 private fun readHiddenInfo(c: Context) {
@@ -185,7 +185,7 @@ private fun readHiddenInfo(c: Context) {
 }
 
 /** Whether the system still shows the app to Pulse (a hidden app cannot be found by its package name). */
-private fun visibleTo(c: Context, pkg: String): Boolean = runCatching { c.packageManager.getApplicationInfo(pkg, 0) }.isSuccess
+internal fun visibleTo(c: Context, pkg: String): Boolean = runCatching { c.packageManager.getApplicationInfo(pkg, 0) }.isSuccess
 
 /** Games switched on in the old add list (before a switch meant hiding) are hidden now, once: each one is hidden and leaves that list. */
 private fun migrateAdded(c: Context) {
@@ -1920,4 +1920,28 @@ class GameMenuService : android.app.Service() {
         if (col.measuredHeight > maxH) lpPanel.height = maxH
         if (runCatching { wm.addView(scroll, lpPanel) }.isSuccess) panel = scroll
     }
+}
+
+
+/** Apps hidden from the system's lists (pm hide, from Pulse or from elsewhere): the ones Game Hub knows, the ones the system still lists with the "uninstalled" flag, and with root or Shizuku
+ *  the shell's own list (`pm list packages -u` minus the visible ones). Name and package; never Termux and the like. */
+internal fun hiddenAppsAll(c: Context): List<GameRow> {
+    val pm = c.packageManager
+    val out = LinkedHashMap<String, String>()
+    hiddenSet(c).forEach { out[it] = prefs(c).getString("name_$it", null) ?: it }
+    runCatching {
+        @Suppress("DEPRECATION")
+        pm.getInstalledApplications(android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES)
+            .filter { ai -> ai.packageName != c.packageName && (ai.flags and 0x00800000) != 0 && !visibleTo(c, ai.packageName) }
+            .forEach { ai -> out.putIfAbsent(ai.packageName, runCatching { pm.getApplicationLabel(ai).toString() }.getOrDefault(ai.packageName)) }
+    }
+    if (Privilege.mode.let { it == Privilege.Mode.Root || it == Privilege.Mode.Shizuku }) runCatching {
+        val all = Privilege.run("pm list packages -u").text.lines().mapNotNull { it.trim().removePrefix("package:").takeIf { l -> l.isNotEmpty() && it.trim().startsWith("package:") } }.toSet()
+        val live = Privilege.run("pm list packages").text.lines().mapNotNull { it.trim().removePrefix("package:").takeIf { l -> l.isNotEmpty() && it.trim().startsWith("package:") } }.toSet()
+        // only the ones that are still on the phone for this user (an uninstalled app with kept data is in the first list too: `pm path` answers for a hidden one)
+        (all - live).filter { it != c.packageName }.forEach { pkg ->
+            if (pkg !in out && Privilege.run("pm path $pkg").text.contains("package:")) out[pkg] = prettyName(c, pkg, pkg)
+        }
+    }
+    return out.filterKeys { it !in NEVER_HIDE }.map { (k, v) -> GameRow(k, v) }.sortedBy { it.name.lowercase() }
 }
