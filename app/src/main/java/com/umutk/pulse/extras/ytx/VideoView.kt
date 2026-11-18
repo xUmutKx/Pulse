@@ -169,6 +169,9 @@ fun VideoContent(
     onInactiveTap: () -> Unit = {},
 
     portraitEdgeScrub: Boolean = false,
+    // a pull down on the stage follows the finger (the player shrinks as it is pulled) and settles on release; null: the old one-step collapse
+    onPullDown: ((Float) -> Unit)? = null,
+    onPullEnd: ((Float) -> Unit)? = null,
 ) {
 
 
@@ -322,8 +325,16 @@ fun VideoContent(
                 var volAnchorY = 0f
                 // left side: brightness, right side: volume (like the video player); the middle keeps its swipe down to leave full screen
                 val gestureZone = if (!VideoGestureSettings.enabled) 0 else if (downX < 0.4f) 1 else if (downX > 0.6f) 2 else 0
+                var pullMode = false
+                val pullTracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
                 fun applyDrag(change: androidx.compose.ui.input.pointer.PointerInputChange, dy: Float) {
                     change.consume()
+                    if (pullMode) {
+                        pullTracker.addPosition(change.uptimeMillis, change.position)
+                        onPullDown?.invoke(-dy)
+                        lastY = change.position.y
+                        return
+                    }
                     if (gestureZone == 1 && activity != null) {
                         val attrs = activity.window.attributes
                         val cur = if (attrs.screenBrightness < 0f) 0.5f else attrs.screenBrightness
@@ -364,7 +375,12 @@ fun VideoContent(
                             } else {
 
 
-                                if (!verticalSwipeHandled && isVerticalIntent && kotlin.math.abs(totalDy) > 90f) {
+                                if (onPullDown != null && !isDraggingGesture && isVerticalIntent && totalDy < -24f) {
+                                    pullMode = true; isDraggingGesture = true
+                                    applyDrag(change, dy)
+                                    return@withTimeoutOrNull null
+                                }
+                                if ((onPullDown == null || totalDy > 0f) && !verticalSwipeHandled && isVerticalIntent && kotlin.math.abs(totalDy) > 90f) {
                                     verticalSwipeHandled = true
                                     change.consume()
                                     if (totalDy < -90f) {
@@ -387,6 +403,7 @@ fun VideoContent(
                         val c = ev.changes.firstOrNull { it.pressed } ?: break
                         applyDrag(c, lastY - c.position.y)
                     }
+                    if (pullMode) onPullEnd?.invoke(pullTracker.calculateVelocity().y)
                     return@awaitEachGesture
                 }
                 if (verticalSwipeHandled) {

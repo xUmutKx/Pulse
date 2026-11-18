@@ -561,6 +561,8 @@ private fun VideoStage(state: PlayerState, morph: PlayerMorph, onCollapse: () ->
             onToggleFullscreen = onFullscreen,
             controlsAlpha = controlsAlpha,
             portraitEdgeScrub = true,
+            onPullDown = { morph.dragBy(it) },
+            onPullEnd = { v -> morph.settle(v, false) },
             modifier = stage,
         )
     }

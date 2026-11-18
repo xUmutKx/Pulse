@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import androidx.compose.ui.graphics.graphicsLayer
 import android.content.Context
 import android.os.Environment
 import androidx.compose.foundation.background
@@ -115,8 +116,15 @@ internal fun ExColumnsPane(
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
                 chain.forEachIndexed { i, folder ->
                     val next = chain.getOrNull(i + 1)
-                    ExColumn(folder, showHidden, filter, mark = next?.path ?: picked?.path, last = i == chain.lastIndex,
-                        onFolder = { onGo(it.path) }, onFile = { picked = it })
+                    // a column that opens slides in a little from the right and fades up
+                    androidx.compose.runtime.key(folder.path) {
+                        val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+                        LaunchedEffect(Unit) { enter.animateTo(1f, androidx.compose.animation.core.tween(220)) }
+                        Box(Modifier.fillMaxHeight().graphicsLayer { alpha = enter.value; translationX = (1f - enter.value) * 40.dp.toPx() }) {
+                            ExColumn(folder, showHidden, filter, mark = next?.path ?: picked?.path, last = i == chain.lastIndex,
+                                onFolder = { onGo(it.path) }, onFile = { picked = it })
+                        }
+                    }
                     Box(Modifier.width(1.dp).fillMaxHeight().background(T.line.copy(alpha = .6f)))
                 }
             }
