@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.boundedHeight
 import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.Notification
@@ -235,7 +236,7 @@ fun ToolkitPage() {
                 (if (t.wide) Modifier.fillMaxWidth(.98f).fillMaxHeight(.94f) else Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp))
                     .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
                     .clip(RoundedCornerShape(T.radius)).background(T.panel)
-                    .verticalScroll(rememberScrollState()).padding(16.dp),
+                    .boundedHeight().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 PHead(tr(t.label, t.trLabel))
@@ -243,7 +244,7 @@ fun ToolkitPage() {
             }
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().boundedHeight().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(tr("Toolkit", "Araç kutusu"), guide = "toolkit")
         tools.chunked(3).forEachIndexed { r, row ->
             // a short last row is centred: the empty room is split evenly on both sides, no gap is left on one side

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.stats
 
+import com.umutk.pulse.boundedHeight
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -307,7 +308,7 @@ fun RecapScreen(back: () -> Unit) {
                 // each page fades and rises in when it is turned to; the numbers count up with it
                 val enter = remember { Animatable(0f) }
                 LaunchedEffect(pager.currentPage == page) { if (pager.currentPage == page) enter.animateTo(1f, tween(700)) else enter.snapTo(0f) }
-                Column(Modifier.fillMaxSize().then(if (page >= 6) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = if (page >= 6) Arrangement.Top else Arrangement.Center) {
+                Column(Modifier.fillMaxSize().then(if (page >= 6) Modifier.boundedHeight().verticalScroll(rememberScrollState()) else Modifier).padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = if (page >= 6) Arrangement.Top else Arrangement.Center) {
                     when (page) {
                         0 -> {
                             Text(label.uppercase(), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
