@@ -33,6 +33,7 @@ object KeyboardEffects {
         "Wave" to "Büyük dalga", "Flash" to "Parlama", "Edge" to "Kenar ışığı", "Sweep" to "Süpürme", "Rings" to "Halkalar",
         "Neon" to "Neon", "Ember" to "Kor", "Snow" to "Kar", "Matrix" to "Matrix", "Smoke" to "Duman",
         "RGB halo" to "RGB hale", "RGB edge" to "RGB şerit", "Rainbow" to "Gökkuşağı", "Pulse" to "Nabız",
+        "RGB keycap" to "RGB tuş kenarı",
     )
     val colorNames = listOf("Theme" to "Tema", "Cyan" to "Camgöbeği", "Pink" to "Pembe", "Green" to "Yeşil", "RGB" to "RGB", "Custom" to "Özel")
     /** The colour of one press: the chosen neon, or (RGB) a hue that moves with the time of the press. */
@@ -121,6 +122,14 @@ object KeyboardEffects {
             18 -> { val x = -size.width * .3f + size.width * 1.6f * p
                 drawRect(Brush.horizontalGradient(List(7) { Color.hsv(it * 55f, .8f, 1f).copy(alpha = .35f * fade) }, x - size.width * .25f, x + size.width * .25f)) }
             19 -> { val r = kh * (.6f + .9f * (1f - fade * fade)); drawCircle(accent.copy(alpha = .5f * fade), r, c); drawCircle(accent.copy(alpha = fade), r, c, style = Stroke(1.5.dp.toPx())) }
+            // the RGB edge round the pressed key's own cap: a ring of moving colours with a soft glow, fading as it goes
+            20 -> {
+                val sw = 2.5.dp.toPx(); val sh = ((p * 360f * 1.2f + seed * 5f) % 360f + 360f) % 360f
+                val rr = CornerRadius(kh * .22f)
+                fun ring(width: Float, a: Float) = drawRoundRect(Brush.sweepGradient(List(7) { Color.hsv((sh + it * 60f) % 360f, .85f, 1f).copy(alpha = a * fade) }, c),
+                    Offset(key.left + width / 2f, key.top + width / 2f), Size(kw - width, kh - width), rr, Stroke(width))
+                ring(sw * 4f, .22f); ring(sw * 2f, .45f); ring(sw, .95f)
+            }
             15 -> repeat(5) {
                 val x = c.x + (rnd.nextFloat() - .5f) * kw * .9f
                 val y = c.y - kh * .9f * p * (.6f + rnd.nextFloat() * .6f)
