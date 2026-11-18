@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "palette" to (tr("Keyboard: colours or a picture for each key cap, ready colour sets, your own space bar figure that faces the way it walks, RGB ring round a pressed key. Launcher: windows blur all over, widgets drag after a hold, start menus keep their size in landscape.",
+        "Klavye: her tuş kapağına renk ya da resim, hazır renk setleri, gittiği yöne bakan kendi boşluk tuşu figürün, basılan tuşta RGB halka. Launcher: pencere bulanıklığı her yerde, widget'lar basılı tutunca sürükleniyor, başlat menüleri yatayda kendi boyunda.")),
     "weather" to (tr("Weather now has drawn scenery: mountains, sea, city, forest, street or highland under the sky of the hour, with rain, snow and fog. A new Weather, scenery widget shows it on the home screen.",
         "Hava durumunda çizimli manzaralar var: saate göre gökyüzü altında dağ, deniz, şehir, orman, sokak ya da yayla; yağmur, kar ve sis ile. Yeni Hava durumu, manzara widget'ı bunu ana ekranda gösterir.")),
     "touch" to (tr("New Auto clicker in the Toolkit and as a Quick Settings tile: a floating bar and target marks you drag to the spots to tap, 1 to 10 spots, start / stop and speed.",
