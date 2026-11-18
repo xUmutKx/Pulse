@@ -520,7 +520,7 @@ fun VideoContent(
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "${(state.videoZoom * 10).toInt() / 10f}× · Tap to reset",
+                    text = "Reset",
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -1279,7 +1279,7 @@ fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () ->
                 )
 
 
-                val zoomText = if (state.videoZoom > 1.05f) "${(state.videoZoom * 10).toInt() / 10f}× (Reset)" else "1.0×"
+                val zoomText = if (state.videoZoom > 1.05f) "Reset" else "1.0×"
                 PlayerSettingItem(
                     icon = Icons.Rounded.ZoomIn,
                     title = "Video zoom",
