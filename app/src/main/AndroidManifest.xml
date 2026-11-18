@@ -366,6 +366,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.item/contact" />
             </intent-filter>
+            <!-- a tap on a contact's picture in WhatsApp, Beeper and other apps -->
+            <intent-filter>
+                <action android:name="android.provider.action.QUICK_CONTACT" />
+                <action android:name="com.android.contacts.action.QUICK_CONTACT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.item/contact" />
+                <data android:mimeType="vnd.android.cursor.item/person" />
+            </intent-filter>
             <!-- the contact "Info" button (Samsung Phone and the Contacts provider): content://com.android.contacts/... with the contact or raw contact type -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -3014,6 +3022,12 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.MoonWidget" android:label="Pulse · Moon phase" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_moon" />
         </receiver>
         <receiver android:name="com.umutk.pulse.widgets.WeatherSceneWidget" android:label="Pulse · Weather, scenery" android:exported="false">
             <intent-filter>

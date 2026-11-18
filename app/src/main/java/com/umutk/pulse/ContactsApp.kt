@@ -202,11 +202,21 @@ internal fun ctPhotoBitmap(ctx: Context, uri: Uri): Bitmap? = runCatching {
 
 internal fun ctJpeg(b: Bitmap): ByteArray = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
 
+/** The phone's own contacts account (Samsung keeps its "Phone" contacts in vnd.sec.contact.phone), or null where contacts without an account are the phone's own. */
+internal fun ctLocalAccount(ctx: Context): Pair<String, String>? = runCatching {
+    val known = listOf("vnd.sec.contact.phone" to "vnd.sec.contact.phone", "com.android.huawei.phone" to "Phone", "com.xiaomi" to "Phone")
+    ctx.contentResolver.query(CC.RawContacts.CONTENT_URI, arrayOf(CC.RawContacts.ACCOUNT_TYPE, CC.RawContacts.ACCOUNT_NAME), "${CC.RawContacts.ACCOUNT_TYPE} IN (${known.joinToString(",") { "'" + it.first + "'" }})", null, null)?.use { c ->
+        if (c.moveToFirst()) (c.getString(0) to (c.getString(1) ?: c.getString(0))) else null
+    } ?: if (android.os.Build.MANUFACTURER.equals("samsung", true)) known[0] else null
+}.getOrNull()
+
 /** Writes [d] (id 0 or no raws = new contact). Only the fields the editor shows are replaced; groups and other data stay. */
 internal fun ctSave(ctx: Context, d: CtDetail, photo: ByteArray?, clearPhoto: Boolean): Boolean = runCatching {
     val ops = ArrayList<ContentProviderOperation>()
     val isNew = d.raws.isEmpty()
-    if (isNew) ops.add(ContentProviderOperation.newInsert(CC.RawContacts.CONTENT_URI).withValue(CC.RawContacts.ACCOUNT_TYPE, null).withValue(CC.RawContacts.ACCOUNT_NAME, null).build())
+    // a new contact goes into the phone's own account where the phone has one (Samsung's "Phone" account), so the dialer, WhatsApp and Beeper see and name it like any other
+    val acc = ctLocalAccount(ctx)
+    if (isNew) ops.add(ContentProviderOperation.newInsert(CC.RawContacts.CONTENT_URI).withValue(CC.RawContacts.ACCOUNT_TYPE, acc?.first).withValue(CC.RawContacts.ACCOUNT_NAME, acc?.second).build())
     else {
         val ids = d.raws.joinToString(",")
         val mimes = mutableListOf(StructuredName.CONTENT_ITEM_TYPE, Phone.CONTENT_ITEM_TYPE, Email.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE, Note.CONTENT_ITEM_TYPE, Nickname.CONTENT_ITEM_TYPE)

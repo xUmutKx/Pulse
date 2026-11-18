@@ -6,4 +6,4 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_lyrics"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

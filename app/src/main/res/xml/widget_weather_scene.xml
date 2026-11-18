@@ -10,4 +10,4 @@
     android:initialLayout="@layout/widget_usage"
     android:resizeMode="horizontal|vertical"
     android:previewImage="@drawable/preview_weather_scene"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

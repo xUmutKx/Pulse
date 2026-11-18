@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -106,12 +108,8 @@ internal fun DrawScope.moonSurface(cx: Float, cy: Float, r: Float) {
 
 /** A moon with a face (see [moonSurface]); [crescent] cuts a sky-coloured disc over its left side. */
 internal fun DrawScope.moonDisc(cx: Float, cy: Float, r: Float, crescent: Boolean = false) {
-    val lit = Path().apply { addOval(androidx.compose.ui.geometry.Rect(Offset(cx - r, cy - r), Size(2 * r, 2 * r))) }
-    clipPath(lit) {
-        moonSurface(cx, cy, r)
-        // a crescent: a disc of sky colour cut over the left side
-        if (crescent) drawCircle(Color(0xFF14213D).copy(alpha = .93f), r * .92f, Offset(cx - r * .55f, cy - r * .12f))
-    }
+    // the real moon of tonight (MoonArt), whatever the caller asked for: its phase is the true one
+    drawIntoCanvas { MoonArt.draw(it.nativeCanvas, cx, cy, r, WeatherFmt.moonAge()) }
 }
 
 /** A soft cloud: many round puffs, brighter on top, so it reads as vapour and not as a flat shape. */

@@ -10,6 +10,6 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_notes" android:previewImage="@drawable/preview_widget_quick"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
+    android:widgetCategory="home_screen|keyguard"
     android:widgetFeatures="reconfigurable"
     android:configure="com.umutk.pulse.widgets.WidgetConfigActivity" />
