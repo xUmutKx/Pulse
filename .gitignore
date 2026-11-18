@@ -15,3 +15,4 @@ localai/vendor/
 localai/.cxx/
 aistt/.cxx/
 native/**/target/
+app/src/main/jniLibs/

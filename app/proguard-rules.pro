@@ -76,3 +76,6 @@
 # watch manager: libadb-android and its SPAKE2 pairing (native, found by name)
 -keep class io.github.muntashirakon.** { *; }
 -dontwarn io.github.muntashirakon.**
+
+# the keyboard model in Rust: its JNI functions are found by the class and method names
+-keep class com.umutk.pulse.extras.keyboard.CharLmNative { native <methods>; }
