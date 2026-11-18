@@ -1057,6 +1057,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
+                        onSettings = { go(2) },
                     ) } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         // black under the page until it is painted (the screen behind is white, and it showed before the shelf)

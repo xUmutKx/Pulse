@@ -130,3 +130,23 @@ pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_frame(_e:
         Err(_) => 0,
     }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_startLaunch(_e: JNIEnv, _c: JClass, h: jlong) {
+    st(h).shelf.start_launch();
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_cancelLaunch(_e: JNIEnv, _c: JClass, h: jlong) {
+    st(h).shelf.cancel_launch();
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_launchDone(_e: JNIEnv, _c: JClass, h: jlong) -> jboolean {
+    st(h).shelf.launch_done() as jboolean
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_restartIntro(_e: JNIEnv, _c: JClass, h: jlong) {
+    st(h).shelf.restart_intro();
+}

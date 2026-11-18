@@ -67,6 +67,9 @@ pub struct Shelf {
     flip: f32,
     flip_to: f32,
     time: f32,
+    intro: f32,
+    launch: f32,
+    launching: bool,
 }
 
 fn mip_chain(data: &[u8], w: u32, h: u32) -> Vec<(Vec<u8>, u32, u32)> {
@@ -138,7 +141,7 @@ impl Shelf {
         let vbuf = device.create_buffer(&wgpu::BufferDescriptor { label: None, size: vcap, usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
         let mut s = Shelf {
             device, queue, format, w: 0, h: 0, msaa: None, depth: None, globals_buf, globals_bg, tex_layout, sampler, p_bg, p_box, p_ref, vbuf, vcap,
-            boxes: Vec::new(), scroll: 0.0, target: 0.0, vel: 0.0, dragging: false, flip: 0.0, flip_to: 0.0, time: 0.0,
+            boxes: Vec::new(), scroll: 0.0, target: 0.0, vel: 0.0, dragging: false, flip: 0.0, flip_to: 0.0, time: 0.0, intro: 0.0, launch: 0.0, launching: false,
         };
         s.resize(w, h);
         s
@@ -191,6 +194,7 @@ impl Shelf {
             out.push(GpuBox { front, back, plain, side: g.side, ratio: g.fw as f32 / g.fh.max(1) as f32 });
         }
         self.boxes = out;
+        self.intro = 0.0;
         let max = self.boxes.len().saturating_sub(1) as f32;
         self.scroll = self.scroll.clamp(0.0, max);
         self.target = self.target.clamp(0.0, max);
@@ -209,6 +213,10 @@ impl Shelf {
     pub fn flip(&mut self, back: bool) {
         self.flip_to = if back { 1.0 } else { 0.0 };
     }
+    pub fn start_launch(&mut self) { self.launching = true; self.flip_to = 0.0; }
+    pub fn cancel_launch(&mut self) { self.launching = false; }
+    pub fn launch_done(&self) -> bool { self.launching && self.launch >= 1.0 }
+    pub fn restart_intro(&mut self) { self.intro = 0.0; }
     pub fn flipped(&self) -> bool {
         self.flip_to > 0.5
     }
@@ -236,6 +244,8 @@ impl Shelf {
             self.vel += a * dt;
             self.scroll += self.vel * dt;
         }
+        self.intro = (self.intro + dt * 1.4).min(3.0);
+        if self.launching { self.launch = (self.launch + dt * 3.2).min(1.0); } else { self.launch = (self.launch - dt * 4.0).max(0.0); }
         let kf = 14.0;
         self.flip += (self.flip_to - self.flip) * (1.0 - (-kf * dt).exp());
     }
@@ -257,7 +267,7 @@ impl Shelf {
                 if o.abs() > 5.0 {
                     continue;
                 }
-                let m = box_matrix(o, self.flip, b.ratio);
+                let m = box_matrix(o, self.flip, b.ratio, i, self.time, self.intro, self.launch, self.vel);
                 let parts = box_parts(b.side, if mirrored { floor } else { f32::NAN });
                 for (part, mesh) in parts.into_iter().enumerate() {
                     let start = verts.len() as u32;
@@ -321,20 +331,30 @@ fn flat(c: [f32; 3], k: f32) -> Vec<u8> {
     (0..4).flat_map(|_| px).collect()
 }
 
-fn box_matrix(o: f32, flip: f32, ratio: f32) -> Mat4 {
+fn box_matrix(o: f32, flip: f32, ratio: f32, index: usize, time: f32, intro: f32, launch: f32, vel: f32) -> Mat4 {
     let ax = o.abs();
     let sign = if o < 0.0 { -1.0 } else { 1.0 };
     let x = sign * if ax <= 1.0 { ax * 0.8 } else { 0.8 + (ax - 1.0) * 0.4 };
     let z = -ax.min(1.0) * 0.8 - (ax - 1.0).max(0.0) * 0.3;
-    let yaw = -sign * ax.min(1.0) * 0.8;
+    let tilt = (-vel * 0.045).clamp(-0.35, 0.35);
+    let yaw = -sign * ax.min(1.0) * 0.8 + tilt;
     let sc = 1.0 - 0.12 * ax.min(1.0);
     let centre = (1.0 - ax.min(1.0)).max(0.0);
     let flipa = flip * std::f32::consts::PI * centre;
     let w = (ratio * 1.4).clamp(0.9, 1.6);
     let _ = w;
-    Mat4::from_translation(Vec3::new(x, 0.0, z)) * Mat4::from_rotation_y(yaw + flipa) * Mat4::from_scale(Vec3::splat(sc))
+    // the middle box floats a little, and leans with the swipe
+    let bob = (time * 1.6 + index as f32).sin() * 0.018 * centre;
+    let sway = (time * 1.1).sin() * 0.03 * centre;
+    // coming in: each box rises into place a moment after the one before it
+    let k = ((intro - index.min(12) as f32 * 0.07) / 1.0).clamp(0.0, 1.0);
+    let e = 1.0 - (1.0 - k).powi(3);
+    let (dx, dy, dz, isc) = ((1.0 - e) * 1.6, (1.0 - e) * -0.5, (1.0 - e) * -1.2, 0.7 + 0.3 * e);
+    // launching: the middle box leaves the shelf towards the camera and grows
+    let la = launch * launch * (3.0 - 2.0 * launch);
+    let lz = la * 1.5 * centre; let ls = 1.0 + la * 0.45 * centre; let ly = la * 0.1 * centre;
+    Mat4::from_translation(Vec3::new(x + dx, bob + dy + ly, z + dz + lz)) * Mat4::from_rotation_y(yaw + flipa + sway) * Mat4::from_scale(Vec3::splat(sc * isc * ls))
 }
-
 fn box_parts(side: [f32; 3], _mirror_floor: f32) -> [Vec<Vertex>; 3] {
     let (hw, hh, hd) = (0.5f32, 0.7f32, 0.045f32);
     let tex = |n: [f32; 3], a: [f32; 3], b: [f32; 3], c: [f32; 3], d: [f32; 3]| -> Vec<Vertex> {
@@ -356,3 +376,4 @@ fn box_parts(side: [f32; 3], _mirror_floor: f32) -> [Vec<Vertex>; 3] {
     sides.extend(flat_q([0.0, -1.0, 0.0], [-hw, -hh, -hd], [hw, -hh, -hd], [hw, -hh, hd], [-hw, -hh, hd], 0.5));
     [front, back, sides]
 }
+

@@ -15,7 +15,12 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,6 +61,10 @@ internal object NativeShelf {
     @JvmStatic external fun selected(h: Long): Int
     @JvmStatic external fun flipped(h: Long): Boolean
     @JvmStatic external fun frame(h: Long, dt: Float): Boolean
+    @JvmStatic external fun startLaunch(h: Long)
+    @JvmStatic external fun cancelLaunch(h: Long)
+    @JvmStatic external fun launchDone(h: Long): Boolean
+    @JvmStatic external fun restartIntro(h: Long)
 }
 
 private const val ART_W = 384
@@ -137,6 +146,7 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
     private var pendingGames: List<GameRow>? = null
     private val ui = Handler(Looper.getMainLooper())
     private var flung = false
+    @Volatile private var launchCb: (() -> Unit)? = null
     private val unit get() = width * .42f
 
     private val detector = GestureDetector(c, object : GestureDetector.SimpleOnGestureListener() {
@@ -157,7 +167,10 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
     init { holder.addCallback(this) }
 
     private fun post2(f: (Long) -> Unit) { jobs.add(f) }
-    fun flip() = post2 { NativeShelf.flip(it, !NativeShelf.flipped(it)) }
+    /** The middle box leaves the shelf towards you (the renderer animates it), then [done] runs (the game starts); the shelf settles back a moment later. */
+    fun launchGame(done: () -> Unit) { launchCb = done; post2 { NativeShelf.startLaunch(it) } }
+    @Volatile var flipped = false
+    fun flip() { flipped = !flipped; post2 { NativeShelf.flip(it, flipped) } }
     fun select(i: Int) = post2 { NativeShelf.select(it, i) }
 
     /** The games (and their pictures, read off the render thread's way: on a thread of their own) go to the renderer. */
@@ -197,6 +210,7 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
                 while (true) { val j = jobs.poll() ?: break; j(handle) }
                 val now = System.nanoTime(); val dt = (now - last) / 1e9f; last = now
                 if (!NativeShelf.frame(handle, dt)) { Thread.sleep(50) }
+                launchCb?.let { cb -> if (NativeShelf.launchDone(handle)) { launchCb = null; ui.post(cb); ui.postDelayed({ post2 { NativeShelf.cancelLaunch(it) } }, 1500) } }
                 val sel = NativeShelf.selected(handle)
                 if (sel != lastSel) { lastSel = sel; ui.post { onSelected(sel) } }
             }
@@ -207,25 +221,58 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
     private fun stop() { run = false; thread?.join(2000); thread = null }
 }
 
-/** The native shelf with its title and buttons. */
+/** The native shelf with its header (title, count, clock, search and buttons), the title of the middle game under it and the play button. */
 @Composable
-internal fun NativeShelfScreen(games: List<GameRow>, modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit) {
+internal fun NativeShelfScreen(games: List<GameRow>, modifier: Modifier = Modifier, onLaunch: (String) -> Unit, onDetails: (String) -> Unit, onSettings: () -> Unit = {}) {
     var sel by remember { mutableIntStateOf(0) }
     var view by remember { mutableStateOf<NativeShelfView?>(null) }
-    val g = games.getOrNull(sel)
+    var searching by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val shown = remember(games, query) { if (query.isBlank()) games else games.filter { it.name.contains(query, true) } }
+    LaunchedEffect(shown) { view?.setGames(shown) }
+    val g = shown.getOrNull(sel)
+    val clock by androidx.compose.runtime.produceState("") {
+        while (true) {
+            val f = java.text.SimpleDateFormat("EEE, MMM d   h:mm a", java.util.Locale.getDefault())
+            value = f.format(java.util.Date()); kotlinx.coroutines.delay(15_000)
+        }
+    }
+    fun play() { g?.let { gg -> view?.launchGame { onLaunch(gg.pkg) } ?: onLaunch(gg.pkg) } }
     Box(modifier.fillMaxSize()) {
-        AndroidView(factory = { c -> NativeShelfView(c, { sel = it }, { games.getOrNull(sel)?.let { onLaunch(it.pkg) } }).also { view = it; it.setGames(games) } }, modifier = Modifier.fillMaxSize())
-        // the title sits under the middle box, as on the web shelf: big white name, a small line under it; the buttons are at the bottom
+        AndroidView(factory = { c -> NativeShelfView(c, { sel = it }, { play() }).also { view = it; it.setGames(shown) } }, modifier = Modifier.fillMaxSize())
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("GAMES", "OYUNLAR"), color = Color.White, fontSize = 30.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 3.sp)
+                    Text(tr("ON THIS PHONE", "BU TELEFONDA"), color = Color(0xB3FFFFFF), fontSize = 12.sp, letterSpacing = 3.sp)
+                    Text("${shown.size} " + tr("APPS", "UYGULAMA"), color = Color(0x99FFFFFF), fontSize = 12.sp, letterSpacing = 3.sp, modifier = Modifier.padding(top = 6.dp))
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(clock, color = Color.White, fontSize = 14.sp)
+                    Text("${if (shown.isEmpty()) 0 else sel + 1} / ${shown.size}", color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                @Composable fun pill(ic: String, on: Boolean = false, f: () -> Unit) {
+                    Box(Modifier.padding(start = 8.dp).size(width = 52.dp, height = 40.dp).androidx_clickable(f)
+                        .background(if (on) Color(0x33FFFFFF) else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                        .border(1.dp, Color(0x66FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)), contentAlignment = Alignment.Center) { FluentIcon(ic, Color.White, 22.dp) }
+                }
+                pill("search", searching) { searching = !searching; if (!searching) query = "" }
+                pill("info") { g?.let { onDetails(it.pkg) } }
+                pill("refresh", view?.flipped == true) { view?.flip() }
+                pill("menu") { onSettings() }
+            }
+            if (searching) androidx.compose.foundation.text.BasicTextField(query, { query = it; sel = 0 }, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 17.sp), cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp).background(Color(0x33000000), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).border(1.dp, Color(0x55FFFFFF), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp))
+        }
         Column(Modifier.fillMaxSize().navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
             androidx.compose.foundation.layout.Spacer(Modifier.weight(.70f))
             Text(g?.name ?: "", color = Color.White, fontSize = 28.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
             Text(tr("Game", "Oyun"), color = Color(0xB3FFFFFF), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
             androidx.compose.foundation.layout.Spacer(Modifier.weight(.30f))
-            Row(Modifier.padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-                Box(Modifier.androidx_clickable { g?.let { onLaunch(it.pkg) } }) { FluentIcon("play", Color.White, 34.dp) }
-                Box(Modifier.androidx_clickable { view?.flip() }) { FluentIcon("refresh", Color.White, 30.dp) }
-                Box(Modifier.androidx_clickable { g?.let { onDetails(it.pkg) } }) { FluentIcon("info", Color.White, 30.dp) }
-            }
+            Box(Modifier.padding(bottom = 18.dp).androidx_clickable { play() }) { FluentIcon("play", Color.White, 40.dp) }
         }
     }
 }
