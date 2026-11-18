@@ -997,7 +997,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val view = androidx.compose.ui.platform.LocalView.current
     val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
         else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
-    val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.animOn) 90 else 0), label = "key")
+    // a cap of the person's own: its colour replaces the theme's (the press still lightens it)
+    val capKey = when (k.kind) { KeyKind.SPACE -> "space"; KeyKind.ENTER -> "enter"; KeyKind.SHIFT -> "shift"; KeyKind.DELETE -> "delete"; else -> k.label.lowercase().takeIf { k.kind == KeyKind.CHAR && it.length == 1 } }
+    val own = capKey?.let { KeyboardPrefs.capColors[it] }?.let { androidx.compose.ui.graphics.Color(it) }
+    val bgNow = own ?: bg
+    val fill by animateColorAsState(if (down) lerp(bgNow, th.text, .2f) else bgNow, tween(if (KeyboardPrefs.animOn) 90 else 0), label = "key")
     val pressedScale = when (KeyboardPrefs.motionFxNow) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
     val grow by animateFloatAsState(if (down && KeyboardPrefs.animOn) pressedScale else 1f, if (KeyboardPrefs.motionFxNow == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
@@ -1199,6 +1203,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
                 }
             } else Modifier), contentAlignment = Alignment.Center) {
+            // the picture chosen for this cap, under its letter
+            capKey?.let { ck -> KeyboardPrefs.capPics[ck]?.let { path -> CapPicture(path, th.radius) } }
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             // (the Samsung look: the letters are 27 sp and the digits 24 sp, measured on the real keyboard)
             val fs = if (th.samsung) 27.sp else (big * (.85f + .15f * KeyboardPrefs.heightAt(kbLand()) / 100f)).sp
@@ -1294,14 +1300,35 @@ private fun androidx.compose.foundation.layout.BoxScope.SpaceDeco() {
         img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize().clip(RoundedCornerShape(6.dp)).graphicsLayer { alpha = .55f }, contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
     }
     val walker = KeyboardPrefs.spaceWalker
-    if (walker.isNotEmpty()) {
+    val walkerPic = KeyboardPrefs.spaceWalkerPic
+    if (walker.isNotEmpty() || walkerPic.isNotEmpty()) {
         val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "walker")
-        val x by t.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(9000, easing = androidx.compose.animation.core.LinearEasing), androidx.compose.animation.core.RepeatMode.Reverse), label = "walkerX")
+        // one round trip: out along the bar, then back; the figure is turned toward the way it goes
+        val ph by t.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(18000, easing = androidx.compose.animation.core.LinearEasing), androidx.compose.animation.core.RepeatMode.Restart), label = "walkerX")
+        val x = if (ph < .5f) ph * 2f else 2f - ph * 2f
+        val right = ph < .5f
+        // most emoji look to the left; a few look to the right (and a picture of the person's own is taken to look to the right); "turn round" in the settings sets it straight
+        val looksRight = walkerPic.isNotEmpty() || walker in setOf("🦖", "🐌", "🚀")
+        val flip = (right != looksRight) != KeyboardPrefs.spaceFlip
+        val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, walkerPic) {
+            value = if (walkerPic.isEmpty()) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { kbDecode(walkerPic, 96)?.asImageBitmap() }.getOrNull() }
+        }
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.matchParentSize()) {
             val w = maxWidth
-            Text(walker, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomStart).graphicsLayer { translationX = (w.toPx() - 22.dp.toPx()) * x; translationY = -2.dp.toPx(); scaleX = if (x > .999f) -1f else 1f })
+            val mod = Modifier.align(Alignment.BottomStart).graphicsLayer { translationX = (w.toPx() - 22.dp.toPx()) * x; translationY = -2.dp.toPx(); scaleX = if (flip) -1f else 1f }
+            if (walkerPic.isNotEmpty()) img?.let { androidx.compose.foundation.Image(it, null, mod.size(20.dp)) }
+            else Text(walker, fontSize = 15.sp, modifier = mod)
         }
     }
+}
+
+/** A picture on one key cap, dimmed so the letter stays readable. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.CapPicture(path: String, radius: Int) {
+    val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { kbDecode(path, 160)?.asImageBitmap() }.getOrNull() }
+    }
+    img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize().clip(RoundedCornerShape(radius.dp)).graphicsLayer { alpha = .8f }, contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
 }
 
 /** The keyboard's picture behind the keys, darkened by [dim] percent (static: the first frame of a GIF). */

@@ -41,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.LaunchedEffect
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.keyWash
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
@@ -490,6 +492,24 @@ fun KeyboardSettings(back: () -> Unit) {
                     }
                 }
             }
+            // the person's own figure: any emoji or letters typed, or a picture from the gallery; and a switch to turn it round when it walks backwards
+            run {
+                var own by remember { mutableStateOf(if (KeyboardPrefs.spaceWalker in listOf("", "🐈", "🐕", "🐢", "🦆", "🐧", "🚗", "🚀", "👾", "🦖", "🐌", "⭐")) "" else KeyboardPrefs.spaceWalker) }
+                val walkPick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
+                    if (uri != null) runCatching {
+                        val f = java.io.File(ctxPic.filesDir, "kb_walker.img")
+                        ctxPic.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+                        KeyboardPrefs.spaceWalkerPic = ""; KeyboardPrefs.spaceWalkerPic = f.absolutePath; save()
+                    }
+                }
+                Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.umutk.pulse.PField(own, { v -> own = v.take(4); KeyboardPrefs.spaceWalker = own; save() }, tr("Your own: an emoji or letters", "Kendin: bir emoji ya da harfler"), Modifier.weight(1f))
+                    Text(tr("Picture", "Resim"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { walkPick.launch("image/*") }.padding(8.dp))
+                    if (KeyboardPrefs.spaceWalkerPic.isNotEmpty()) Text(tr("Remove", "Kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { KeyboardPrefs.spaceWalkerPic = ""; save() }.padding(8.dp))
+                }
+                Switch(tr("Turn it round", "Ters çevir"), tr("If the figure walks backwards, switch this", "Figür geri geri yürüyorsa bunu aç"), KeyboardPrefs.spaceFlip) { KeyboardPrefs.spaceFlip = it; save() }
+            }
+            CapEditor(ctxPic) { save() }
             if (KeyboardPrefs.bgPath.isNotEmpty()) {
                 Text("${tr("Picture darkness", "Resim karartma")}: ${KeyboardPrefs.bgDim}%", color = T.sub, fontSize = 12.sp)
                 PSlider(KeyboardPrefs.bgDim / 100f, { KeyboardPrefs.bgDim = (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
@@ -1003,5 +1023,80 @@ private fun StatRing(f: Float, size: androidx.compose.ui.unit.Dp, stroke: androi
             drawArc(acc, -90f, 360f * anim, false, tl, sz, style = st)
         }
         content()
+    }
+}
+
+
+/**
+ * The caps of the person's own: pick a key, give it a colour (a swatch or red, green and blue) or a picture, or take a ready set (Rainbow, Sunset, Ocean, Candy, Forest, Mono, Neon)
+ * that colours every key at once.
+ */
+@Composable
+private fun CapEditor(ctx: android.content.Context, save: () -> Unit) {
+    var sel by remember { mutableStateOf("a") }
+    val rows = listOf("qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç")
+    val own = KeyboardPrefs.capColors[sel]
+    val swatches = listOf(0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047, 0xFF00ACC1, 0xFF1E88E5, 0xFF5E35B1, 0xFFD81B60, 0xFF6D4C41, 0xFF546E7A, 0xFF263238, 0xFFFFFFFF).map { it.toInt() }
+    fun setColor(v: Int?) { KeyboardPrefs.capColors = if (v == null) KeyboardPrefs.capColors - sel else KeyboardPrefs.capColors + (sel to v); save() }
+    val capPick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
+        if (uri != null) runCatching {
+            val f = java.io.File(ctx.filesDir, "kb_cap_" + sel.hashCode() + ".img")
+            ctx.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+            KeyboardPrefs.capPics = KeyboardPrefs.capPics - sel; KeyboardPrefs.capPics = KeyboardPrefs.capPics + (sel to f.absolutePath); save()
+        }
+    }
+    fun mixC(a: Int, b: Int, t: Float) = androidx.compose.ui.graphics.lerp(Color(a), Color(b), t.coerceIn(0f, 1f)).toArgb()
+    // ready sets: each paints all the letters by their place on the board, and the special keys with the set's first colour
+    val presets: List<Pair<String, (Int, Int, Int) -> Int>> = listOf(
+        "Rainbow" to { r, c, _ -> Color.hsv((c * 31f + r * 20f) % 360f, .62f, .55f).toArgb() },
+        "Sunset" to { r, c, n -> mixC(0xFFB5446E.toInt(), 0xFFF2994A.toInt(), (c.toFloat() / n + r * .15f)) },
+        "Ocean" to { r, c, n -> mixC(0xFF0F4C75.toInt(), 0xFF1B9AAA.toInt(), (c.toFloat() / n + r * .1f)) },
+        "Candy" to { r, c, _ -> if ((r + c) % 2 == 0) 0xFFD94F94.toInt() else 0xFF3FA7C9.toInt() },
+        "Forest" to { r, c, n -> mixC(0xFF1B4332.toInt(), 0xFF52B788.toInt(), (c.toFloat() / n + r * .1f)) },
+        "Mono" to { r, c, _ -> if ((r + c) % 2 == 0) 0xFF2B2B33.toInt() else 0xFF3C3C48.toInt() },
+        "Neon" to { r, c, _ -> if ((r + c) % 2 == 0) 0xFF0A3D4D.toInt() else 0xFF4D0A3D.toInt() },
+    )
+    Text(tr("Key caps", "Tuş kapakları"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        presets.forEach { (name, f) ->
+            Text(name, color = T.text, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(T.text.copy(alpha = .08f)).clickable {
+                val m = HashMap<String, Int>()
+                rows.forEachIndexed { r, row -> row.forEachIndexed { c, ch -> m[ch.toString()] = f(r, c, row.length) } }
+                val special = f(0, 0, 1); m["space"] = special; m["enter"] = special; m["shift"] = special; m["delete"] = special
+                KeyboardPrefs.capColors = m; save()
+            }.padding(horizontal = 12.dp, vertical = 8.dp))
+        }
+        Text(tr("Clear all", "Hepsini temizle"), color = T.sub, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { KeyboardPrefs.capColors = emptyMap(); KeyboardPrefs.capPics = emptyMap(); save() }.padding(horizontal = 12.dp, vertical = 8.dp))
+    }
+    // the board in small: a tap picks the key to dress
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        (rows + listOf("")).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                if (row.isEmpty()) listOf("shift", "space", "enter", "delete").forEach { key -> CapChip(key, sel == key, KeyboardPrefs.capColors[key], wide = key == "space") { sel = key } }
+                else row.forEach { ch -> CapChip(ch.toString(), sel == ch.toString(), KeyboardPrefs.capColors[ch.toString()]) { sel = ch.toString() } }
+            }
+        }
+    }
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        swatches.forEach { c -> Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(Color(c)).border(if (own == c) 2.dp else 1.dp, if (own == c) T.accent else T.text.copy(alpha = .2f), RoundedCornerShape(8.dp)).clickable { setColor(c) }) }
+    }
+    val cur = own ?: 0xFF303038.toInt()
+    listOf(Triple(tr("Red", "Kırmızı"), 16, Color(0xFFFF5252)), Triple(tr("Green", "Yeşil"), 8, Color(0xFF52FF7A)), Triple(tr("Blue", "Mavi"), 0, Color(0xFF5290FF))).forEach { (name, shift, _) ->
+        Text("$name: ${(cur shr shift) and 255}", color = T.sub, fontSize = 12.sp)
+        PSlider(((cur shr shift) and 255) / 255f, { v -> setColor((0xFF shl 24) or ((cur and (255 shl shift).inv()) or ((v * 255f).roundToInt().coerceIn(0, 255) shl shift))) }, 0f..1f, onDone = { })
+    }
+    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Picture on this key", "Bu tuşta resim"), color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Text(tr("Choose", "Seç"), color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable { capPick.launch("image/*") }.padding(8.dp))
+        if (KeyboardPrefs.capPics.containsKey(sel)) Text(tr("Remove", "Kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { KeyboardPrefs.capPics = KeyboardPrefs.capPics - sel; save() }.padding(8.dp))
+        if (own != null) Text(tr("Colour off", "Rengi kaldır"), color = T.sub, fontSize = 14.sp, modifier = Modifier.clickable { setColor(null) }.padding(8.dp))
+    }
+}
+
+@Composable
+private fun CapChip(label: String, selected: Boolean, color: Int?, wide: Boolean = false, onClick: () -> Unit) {
+    val sh = RoundedCornerShape(6.dp)
+    Box(Modifier.size(width = if (wide) 84.dp else 26.dp, height = 30.dp).clip(sh).background(color?.let { Color(it) } ?: T.text.copy(alpha = .08f)).border(if (selected) 2.dp else 1.dp, if (selected) T.accent else T.text.copy(alpha = .15f), sh).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(if (label.length == 1) label else label.take(3), color = if (color != null && Color(color).luminance() > .55f) Color.Black else T.text, fontSize = if (label.length == 1) 13.sp else 10.sp, maxLines = 1)
     }
 }
