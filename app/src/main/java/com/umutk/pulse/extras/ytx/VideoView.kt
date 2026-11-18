@@ -1044,64 +1044,31 @@ private fun SkippedNote(state: PlayerState, modifier: Modifier) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QualitySheet(state: PlayerState, onDismiss: () -> Unit) {
-    val c = MaterialTheme.colorScheme
+fun QualitySheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
     val details = state.details ?: return
     val chosen = QualityPreference.height
     val chosenHdr = QualityPreference.hdr
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 20.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Quality",
-                    fontFamily = RoundedHeavy,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                state.playingFormat?.let {
-                    Text(it, color = c.onSurfaceVariant, fontSize = 11.5.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            QualityRow("Auto", "Adapts to your internet speed", chosen == null) {
-                state.setQuality(null)
+    PlayerSideGlassSheet("Quality", state.playingFormat, backdrop, onDismiss) {
+        QualityRow("Auto", "Adapts to your internet speed", chosen == null) {
+            state.setQuality(null)
+            onDismiss()
+        }
+        val qualities = details.qualities.ifEmpty {
+            if (state.current?.isLive == true || details.item.isLive) {
+                listOf(1080, 720, 480, 360, 240, 144)
+            } else emptyList()
+        }
+        qualities.forEach { h ->
+            QualityRow("${h}p", qualityTag(h), chosen == h && !chosenHdr) {
+                state.setQuality(h, preferHdr = false)
                 onDismiss()
             }
-
-            val qualities = details.qualities.ifEmpty {
-                if (state.current?.isLive == true || details.item.isLive) {
-                    listOf(1080, 720, 480, 360, 240, 144)
-                } else emptyList()
-            }
-            qualities.forEach { h ->
-                QualityRow("${h}p", qualityTag(h), chosen == h && !chosenHdr) {
-                    state.setQuality(h, preferHdr = false)
-                    onDismiss()
-                }
-            }
-            details.hdrQualities.forEach { h ->
-                QualityRow("${h}p HDR", listOfNotNull("HDR", qualityTag(h)).joinToString(" · "), chosen == h && chosenHdr) {
-                    state.setQuality(h, preferHdr = true)
-                    onDismiss()
-                }
+        }
+        details.hdrQualities.forEach { h ->
+            QualityRow("${h}p HDR", listOfNotNull("HDR", qualityTag(h)).joinToString(" · "), chosen == h && chosenHdr) {
+                state.setQuality(h, preferHdr = true)
+                onDismiss()
             }
         }
     }

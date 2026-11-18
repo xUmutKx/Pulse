@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -403,6 +404,42 @@ private fun PlayerGlassSheet(
                     .verticalScroll(rememberScrollState()),
                 content = content,
             )
+        }
+    }
+}
+
+/** The same glass as the other player sheets, but a panel on the right side of the screen (the quality list), with a clear backdrop so the video stays visible. */
+@Composable
+fun PlayerSideGlassSheet(
+    title: String,
+    trailing: String?,
+    backdrop: Backdrop,
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = MaterialTheme.colorScheme
+    BackHandler(onBack = onDismiss)
+    val shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+    val spec = glassSpec(shape = shape, tint = glassFill(0.34f), blur = 22.dp, refractionHeight = 14.dp, refractionAmount = 18.dp)
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(340.dp)
+                .liquidGlass(backdrop, spec)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
+                .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, fontFamily = RoundedHeavy, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                if (trailing != null) Text(trailing, color = c.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(end = 8.dp))
+                CircleAction(Icons.Rounded.Close, "Close", onDismiss)
+            }
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), content = content)
         }
     }
 }

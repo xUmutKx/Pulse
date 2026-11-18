@@ -716,7 +716,7 @@ fun InstallerPage() {
         val items = all - black.toSet()
         if (items.isEmpty()) return
         val p = Installer.cur
-        if (items.size == 1 && (p.ask || items[0].mismatch || items[0].kind() == "Downgrade")) {
+        if (items.size == 1 && (items[0].type == "APK" || p.ask || items[0].mismatch || items[0].kind() == "Downgrade")) {
             refused = false; win = items[0]; return
         }
         val bad = items.filter { it.mismatch }
@@ -879,7 +879,10 @@ fun InstallerPage() {
     // the installer's own look (Settings > Installer) for its window and confirm boxes
     CompositionLocalProvider(LocalWindowLook provides installLook()) {
         win?.let { w ->
-            InstallWindow(w, root = root, refused = refused, uninstOk = prof.uninst, busy = busy,
+            // a single APK opens the same floating window as an APK opened from outside; bundles keep this dialog (it lists the splits)
+            val single = if (w.type == "APK") w.parts.firstOrNull()?.takeIf { it.isFile } else null
+            if (single != null) Box(Modifier.fillMaxSize()) { com.umutk.pulse.features.InstallWindow(single, null) { win = null } }
+            else InstallWindow(w, root = root, refused = refused, uninstOk = prof.uninst, busy = busy,
                 onInstall = { win = null; installAll(listOf(w), false) },
                 onDowngrade = { installAll(listOf(w), false, forceDown = true) },
                 onRestore = { removeRestore(w) },
