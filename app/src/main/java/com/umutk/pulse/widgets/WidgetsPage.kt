@@ -123,6 +123,7 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Quick", "QuickWidget"),
     WidgetEntry("Notes", "com.umutk.pulse.extras.notes.NotesWidget"),
     WidgetEntry("Voice recorder", "VoiceWidget"),
+    WidgetEntry("Contacts", "ContactsWidget"),
     WidgetEntry("Steps", "StepsWidget"),
     WidgetEntry("Distance and calories", "DistanceWidget"),
     WidgetEntry("Heart rate", "HeartWidget"),

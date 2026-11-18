@@ -898,6 +898,12 @@
         <activity android:name="com.umutk.pulse.widgets.PhotoWidgetConfig" android:exported="true" android:theme="@style/Theme.Pulse">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
+        <receiver android:name="com.umutk.pulse.widgets.ContactsWidget" android:label="Pulse · Contacts" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_contacts" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.widgets.VoiceWidget" android:label="Pulse · Voice recorder" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
