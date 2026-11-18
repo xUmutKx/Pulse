@@ -150,3 +150,23 @@ pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_launchDon
 pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_restartIntro(_e: JNIEnv, _c: JClass, h: jlong) {
     st(h).shelf.restart_intro();
 }
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_setCount(_e: JNIEnv, _c: JClass, h: jlong, n: jint) {
+    st(h).shelf.set_count(n.max(0) as usize);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_setBox<'l>(env: JNIEnv<'l>, _c: JClass<'l>, h: jlong, i: jint, front: JByteArray<'l>, fw: jint, fh: jint, back: JByteArray<'l>, bw: jint, bh: jint, r: jfloat, g: jfloat, b: jfloat) {
+    let s = st(h);
+    let f = env.convert_byte_array(&front).unwrap_or_default();
+    let back = if back.is_null() { None } else { env.convert_byte_array(&back).ok().map(|d| (d, bw as u32, bh as u32)) };
+    if f.len() as i64 >= fw as i64 * fh as i64 * 4 && fw > 0 && fh > 0 {
+        s.shelf.set_box(i.max(0) as usize, GameBox { front: f, fw: fw as u32, fh: fh as u32, back, side: [r, g, b] });
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_clearBox(_e: JNIEnv, _c: JClass, h: jlong, i: jint) {
+    st(h).shelf.clear_box(i.max(0) as usize);
+}

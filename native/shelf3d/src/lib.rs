@@ -59,7 +59,8 @@ pub struct Shelf {
     p_ref: wgpu::RenderPipeline,
     vbuf: wgpu::Buffer,
     vcap: u64,
-    boxes: Vec<GpuBox>,
+    boxes: Vec<Option<GpuBox>>,
+    blank: wgpu::BindGroup,
     pub scroll: f32,
     target: f32,
     vel: f32,
@@ -139,9 +140,16 @@ impl Shelf {
         let p_ref = make("ref", "vs", "fs_reflect", &[vlayout], false, Some(wgpu::BlendState::ALPHA_BLENDING));
         let vcap = 64 * 1024;
         let vbuf = device.create_buffer(&wgpu::BufferDescriptor { label: None, size: vcap, usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+        let placeholder = {
+            let tex = device.create_texture(&wgpu::TextureDescriptor { label: None, size: wgpu::Extent3d { width: 2, height: 2, depth_or_array_layers: 1 }, mip_level_count: 1, sample_count: 1, dimension: wgpu::TextureDimension::D2, format: wgpu::TextureFormat::Rgba8UnormSrgb, usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST, view_formats: &[] });
+            let px: Vec<u8> = (0..4).flat_map(|_| [58u8, 64, 76, 255]).collect();
+            queue.write_texture(wgpu::TexelCopyTextureInfo { texture: &tex, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All }, &px, wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(8), rows_per_image: Some(2) }, wgpu::Extent3d { width: 2, height: 2, depth_or_array_layers: 1 });
+            let view = tex.create_view(&Default::default());
+            device.create_bind_group(&wgpu::BindGroupDescriptor { label: None, layout: &tex_layout, entries: &[wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) }, wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) }] })
+        };
         let mut s = Shelf {
             device, queue, format, w: 0, h: 0, msaa: None, depth: None, globals_buf, globals_bg, tex_layout, sampler, p_bg, p_box, p_ref, vbuf, vcap,
-            boxes: Vec::new(), scroll: 0.0, target: 0.0, vel: 0.0, dragging: false, flip: 0.0, flip_to: 0.0, time: 0.0, intro: 0.0, launch: 0.0, launching: false,
+            boxes: Vec::new(), blank: placeholder, scroll: 0.0, target: 0.0, vel: 0.0, dragging: false, flip: 0.0, flip_to: 0.0, time: 0.0, intro: 0.0, launch: 0.0, launching: false,
         };
         s.resize(w, h);
         s
@@ -183,22 +191,35 @@ impl Shelf {
     }
 
     pub fn set_games(&mut self, games: Vec<GameBox>) {
-        let mut out = Vec::new();
-        for g in games {
-            let front = self.upload(&g.front, g.fw, g.fh);
-            let back = match &g.back {
-                Some((d, w, h)) => self.upload(d, *w, *h),
-                None => self.upload(&flat(g.side, 0.5), 2, 2),
-            };
-            let plain = self.upload(&flat(g.side, 1.0), 2, 2);
-            out.push(GpuBox { front, back, plain, side: g.side, ratio: g.fw as f32 / g.fh.max(1) as f32 });
-        }
-        self.boxes = out;
+        self.boxes = Vec::new();
+        self.set_count(games.len());
+        for (i, g) in games.into_iter().enumerate() { self.set_box(i, g); }
         self.intro = 0.0;
-        let max = self.boxes.len().saturating_sub(1) as f32;
+    }
+
+    /// The number of boxes on the shelf; boxes whose pictures are not loaded stand as plain grey ones.
+    pub fn set_count(&mut self, n: usize) {
+        self.boxes.truncate(n);
+        while self.boxes.len() < n { self.boxes.push(None); }
+        let max = n.saturating_sub(1) as f32;
         self.scroll = self.scroll.clamp(0.0, max);
         self.target = self.target.clamp(0.0, max);
+        self.intro = 0.0;
     }
+
+    pub fn set_box(&mut self, i: usize, g: GameBox) {
+        if i >= self.boxes.len() { return; }
+        let front = self.upload(&g.front, g.fw, g.fh);
+        let back = match &g.back {
+            Some((d, w, h)) => self.upload(d, *w, *h),
+            None => self.upload(&flat(g.side, 0.5), 2, 2),
+        };
+        let plain = self.upload(&flat(g.side, 1.0), 2, 2);
+        self.boxes[i] = Some(GpuBox { front, back, plain, side: g.side, ratio: g.fw as f32 / g.fh.max(1) as f32 });
+    }
+
+    /// A box's pictures are given back (the memory of a shelf of hundreds of games is kept to a few at a time).
+    pub fn clear_box(&mut self, i: usize) { if let Some(b) = self.boxes.get_mut(i) { *b = None; } }
 
     pub fn count(&self) -> usize {
         self.boxes.len()
@@ -262,13 +283,14 @@ impl Shelf {
         let mut verts: Vec<Vertex> = Vec::new();
         let mut draws: Vec<(usize, u8, std::ops::Range<u32>, bool)> = Vec::new(); // (box, part, range, mirrored)
         for mirrored in [true, false] {
-            for (i, b) in self.boxes.iter().enumerate() {
+            for (i, ob) in self.boxes.iter().enumerate() {
+                let (side, ratio) = ob.as_ref().map(|b| (b.side, b.ratio)).unwrap_or(([0.23, 0.25, 0.30], 0.7));
                 let o = i as f32 - self.scroll;
                 if o.abs() > 5.0 {
                     continue;
                 }
-                let m = box_matrix(o, self.flip, b.ratio, i, self.time, self.intro, self.launch, self.vel);
-                let parts = box_parts(b.side, if mirrored { floor } else { f32::NAN });
+                let m = box_matrix(o, self.flip, ratio, i, self.time, self.intro, self.launch, self.vel);
+                let parts = box_parts(side, if mirrored { floor } else { f32::NAN });
                 for (part, mesh) in parts.into_iter().enumerate() {
                     let start = verts.len() as u32;
                     for v in mesh {
@@ -302,10 +324,10 @@ impl Shelf {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            if let Some(b) = self.boxes.first() {
+            {
                 pass.set_pipeline(&self.p_bg);
                 pass.set_bind_group(0, &self.globals_bg, &[]);
-                pass.set_bind_group(1, &b.plain, &[]);
+                pass.set_bind_group(1, &self.blank, &[]);
                 pass.draw(0..3, 0..1);
             }
             pass.set_vertex_buffer(0, self.vbuf.slice(..));
@@ -316,8 +338,8 @@ impl Shelf {
                     if *mirrored != pass_mirrored {
                         continue;
                     }
-                    let b = &self.boxes[*i];
-                    pass.set_bind_group(1, match part { 0 => &b.front, 1 => &b.back, _ => &b.plain }, &[]);
+                    let bg = match &self.boxes[*i] { Some(b) => match part { 0 => &b.front, 1 => &b.back, _ => &b.plain }, None => &self.blank };
+                    pass.set_bind_group(1, bg, &[]);
                     pass.draw(range.clone(), 0..1);
                 }
             }

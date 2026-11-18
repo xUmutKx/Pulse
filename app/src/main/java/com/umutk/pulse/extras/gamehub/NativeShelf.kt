@@ -61,14 +61,17 @@ internal object NativeShelf {
     @JvmStatic external fun selected(h: Long): Int
     @JvmStatic external fun flipped(h: Long): Boolean
     @JvmStatic external fun frame(h: Long, dt: Float): Boolean
+    @JvmStatic external fun setCount(h: Long, n: Int)
+    @JvmStatic external fun setBox(h: Long, i: Int, front: ByteArray, fw: Int, fh: Int, back: ByteArray?, bw: Int, bh: Int, r: Float, g: Float, b: Float)
+    @JvmStatic external fun clearBox(h: Long, i: Int)
     @JvmStatic external fun startLaunch(h: Long)
     @JvmStatic external fun cancelLaunch(h: Long)
     @JvmStatic external fun launchDone(h: Long): Boolean
     @JvmStatic external fun restartIntro(h: Long)
 }
 
-private const val ART_W = 384
-private const val ART_H = 576
+private const val ART_W = 256
+private const val ART_H = 384
 
 private fun decode(f: File): Bitmap? = if (f.isFile) runCatching {
     val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -143,7 +146,6 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
     private var thread: Thread? = null
     private var handle = 0L
     private var sw = 1; private var sh = 1
-    private var pendingGames: List<GameRow>? = null
     private val ui = Handler(Looper.getMainLooper())
     private var flung = false
     @Volatile private var launchCb: (() -> Unit)? = null
@@ -173,16 +175,36 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
     fun flip() { flipped = !flipped; post2 { NativeShelf.flip(it, flipped) } }
     fun select(i: Int) = post2 { NativeShelf.select(it, i) }
 
-    /** The games (and their pictures, read off the render thread's way: on a thread of their own) go to the renderer. */
-    fun setGames(games: List<GameRow>) {
-        pendingGames = games
-        Thread {
-            val ctx = context.applicationContext
-            val boxes = games.map { g -> val f = frontOf(ctx, g); val side = average(f); Triple(f, backOf(ctx, g, side), side) }
-            val data = boxes.map { (f, b, s) -> arrayOf<Any>(rgba(f), rgba(b), s) }
-            post2 { h -> data.forEach { d -> NativeShelf.addGame(h, d[0] as ByteArray, ART_W, ART_H, d[1] as ByteArray, ART_W, ART_H, (d[2] as FloatArray)[0], (d[2] as FloatArray)[1], (d[2] as FloatArray)[2]) }; NativeShelf.commit(h) }
-            boxes.forEach { it.first.recycle(); it.second.recycle() }
-        }.start()
+    private var games: List<GameRow> = emptyList()
+    private val loaded = HashSet<Int>()
+    private val loader = java.util.concurrent.Executors.newSingleThreadExecutor()
+
+    /** The list of games: the renderer gets the count, and the pictures of the games near the middle one only (a shelf of hundreds of games held every picture at once and ran out of memory). */
+    fun setGames(list: List<GameRow>) {
+        synchronized(loaded) { games = list; loaded.clear() }
+        post2 { h -> NativeShelf.setCount(h, 0); NativeShelf.setCount(h, list.size) }
+        ensureWindow(0)
+    }
+
+    private fun ensureWindow(sel: Int) {
+        val ctx = context.applicationContext
+        val toLoad = ArrayList<Int>(); val toDrop = ArrayList<Int>()
+        synchronized(loaded) {
+            val n = games.size
+            for (i in (sel - 6).coerceAtLeast(0)..(sel + 6).coerceAtMost(n - 1)) if (loaded.add(i)) toLoad += i
+            loaded.filter { it < sel - 10 || it > sel + 10 }.forEach { loaded.remove(it); toDrop += it }
+        }
+        toDrop.forEach { i -> post2 { h -> NativeShelf.clearBox(h, i) } }
+        toLoad.forEach { i ->
+            val g = games.getOrNull(i) ?: return@forEach
+            loader.execute {
+                runCatching {
+                    val f = frontOf(ctx, g); val side = average(f); val b = backOf(ctx, g, side)
+                    val fd = rgba(f); val bd = rgba(b); f.recycle(); b.recycle()
+                    post2 { h -> NativeShelf.setBox(h, i, fd, ART_W, ART_H, bd, ART_W, ART_H, side[0], side[1], side[2]) }
+                }
+            }
+        }
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -204,7 +226,7 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
         thread = Thread {
             handle = NativeShelf.create(surface, sw, sh)
             if (handle == 0L) { run = false; return@Thread }
-            pendingGames?.let { setGames(it) }
+            ensureWindow(0)
             var last = System.nanoTime(); var lastSel = -1
             while (run) {
                 while (true) { val j = jobs.poll() ?: break; j(handle) }
@@ -212,7 +234,7 @@ internal class NativeShelfView(c: Context, private val onSelected: (Int) -> Unit
                 if (!NativeShelf.frame(handle, dt)) { Thread.sleep(50) }
                 launchCb?.let { cb -> if (NativeShelf.launchDone(handle)) { launchCb = null; ui.post(cb); ui.postDelayed({ post2 { NativeShelf.cancelLaunch(it) } }, 1500) } }
                 val sel = NativeShelf.selected(handle)
-                if (sel != lastSel) { lastSel = sel; ui.post { onSelected(sel) } }
+                if (sel != lastSel) { lastSel = sel; ensureWindow(sel); ui.post { onSelected(sel) } }
             }
             NativeShelf.destroy(handle); handle = 0L
         }.also { it.name = "native-shelf"; it.start() }

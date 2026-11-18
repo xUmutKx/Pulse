@@ -893,7 +893,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     var selectOpen by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { autoHideGames(ctx) }; ShelfSync.bump() }
-    var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", NativeShelf.AVAILABLE)) }
+    var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", false)) }
     var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
     val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
     // the library's own search: a floating button on the right opens the field under the sort row
