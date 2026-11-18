@@ -570,7 +570,7 @@ private fun bookExists(c: Context, b: Book): Boolean = runCatching {
 /** The books found in the phone's Books and Download folders (by name; a book is read when it is opened). */
 private fun scanBooks(): List<Book> {
     val root = android.os.Environment.getExternalStorageDirectory()
-    return listOf(File(root, "Books"), File(root, "Download")).flatMap { dir ->
+    return listOf(File(root, "Books"), com.umutk.pulse.PulseDirs.books(), File(root, "Download")).flatMap { dir ->
         dir.listFiles()?.filter { it.isFile && Ebook.isBook(it.name) }?.sortedBy { it.name.lowercase() }?.map { f ->
             Book(Uri.fromFile(f).toString(), f.name.substringBeforeLast('.'), "", f.name.endsWith(".pdf", true), emptyList())
         }.orEmpty()
@@ -1250,7 +1250,7 @@ private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
     var adding by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var newUrl by remember { mutableStateOf("") }
-    val booksDir = File(android.os.Environment.getExternalStorageDirectory(), "Books")
+    val booksDir = com.umutk.pulse.PulseDirs.books()
     fun search() {
         if (query.isBlank()) return
         scope.launch {
@@ -1770,7 +1770,7 @@ private fun ColumnScope.CategoryBooks(th: Theme, ctx: Context, topic: String, on
     var page by remember(topic) { mutableStateOf(0) }
     var total by remember(topic) { mutableStateOf(0) }
     var busy by remember(topic) { mutableStateOf("") }
-    val booksDir = File(android.os.Environment.getExternalStorageDirectory(), "Books")
+    val booksDir = com.umutk.pulse.PulseDirs.books()
     fun more() {
         scope.launch {
             busy = tr("Loading...", "Yükleniyor...")

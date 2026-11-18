@@ -60,6 +60,20 @@ object PulseDirs {
         }
     }
 
+    private fun storage(): File = Environment.getExternalStorageDirectory()
+
+    /** The desktop's folder of the Pulse launcher (it was Desktop at the storage root): Download/Pulse/Desktop. */
+    fun desktop(): File { migrate(File(storage(), "Desktop"), sub("Desktop")); return sub("Desktop") }
+
+    /** The books Pulse downloads: Download/Pulse/Books (a Books folder of the person at the storage root stays theirs and is still read). */
+    fun books(): File = sub("Books")
+
+    /** The recycle bin (it was the hidden .pulse_trash at the storage root): Download/Pulse/.trash. */
+    fun trash(): File { migrate(File(storage(), ".pulse_trash"), sub(".trash")); return sub(".trash") }
+
+    /** The drawings and apps of ArtCraft that were shared (it was Download/ArtCraft): Download/Pulse/ArtCraft. */
+    fun artcraft(): File { migrate(File(downloads(), "ArtCraft"), sub("ArtCraft")); return sub("ArtCraft") }
+
     /** The AI models: Download/Pulse/AI (the old Download/PulseAI is moved there). */
     fun ai(): File {
         migrate(File(downloads(), "PulseAI"), sub("AI"))
