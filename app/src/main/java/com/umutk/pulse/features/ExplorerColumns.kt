@@ -76,7 +76,6 @@ internal fun ExColumnsPane(
     Column(Modifier.fillMaxSize()) {
         // the way to here, as one pill; each part opens that folder
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { onMenu() }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
             Row(Modifier.weight(1f).clip(RoundedCornerShape(50)).background(T.panel).horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 chain.forEachIndexed { i, f ->
                     val last = i == chain.lastIndex
@@ -86,8 +85,17 @@ internal fun ExColumnsPane(
                 }
             }
             // the filter and sort options, at the right as in the list view; lit while a filter is on
-            Box(Modifier.size(40.dp).clickable { onFilter() }, contentAlignment = Alignment.Center) { PIcon("filter", if (filter != "all") Look.accent else T.text, 22.dp) }
-            Box(Modifier.size(40.dp).clickable { onList() }, contentAlignment = Alignment.Center) { PIcon("listView", T.text, 22.dp) }
+            val small = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp < 600
+            val ic = if (small) 18.dp else 24.dp; val hit = if (small) 34.dp else 42.dp
+            Box(Modifier.size(hit).clickable { onFilter() }, contentAlignment = Alignment.Center) { PIcon("filter", if (filter != "all") Look.accent else T.text, ic) }
+            var viewMenu by remember { mutableStateOf(false) }
+            Box {
+                Box(Modifier.size(hit).clickable { viewMenu = true }, contentAlignment = Alignment.Center) { ExGlyph(androidx.compose.material.icons.Icons.Outlined.ViewColumn, "columns", T.text, ic) }
+                androidx.compose.material3.DropdownMenu(viewMenu, { viewMenu = false }) {
+                    androidx.compose.material3.DropdownMenuItem(text = { Text(tr("Columns", "Sütunlar"), color = Look.accent) }, onClick = { viewMenu = false })
+                    androidx.compose.material3.DropdownMenuItem(text = { Text(tr("List", "Liste")) }, onClick = { viewMenu = false; onList() })
+                }
+            }
         }
         Row(Modifier.fillMaxSize()) {
             // the usual places
@@ -129,7 +137,7 @@ internal fun ExColumnsPane(
                 }
             }
             // the picked file, or the folder
-            Column(Modifier.width(300.dp).fillMaxHeight().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.width(300.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ExDetails(ctx, picked ?: dir, onOpen)
             }
         }
@@ -144,7 +152,10 @@ private fun ExColumn(folder: File, showHidden: Boolean, filter: String, mark: St
             runCatching { folder.listFiles()?.filter { (showHidden || !it.name.startsWith(".")) && exFilterOk(it, filter) }?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) }.getOrNull() ?: emptyList()
         }
     }
-    Column(Modifier.width(270.dp).fillMaxHeight()) {
+    val smallScreen = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp < 600
+    // as wide as its longest name (a fixed width left most of a column empty)
+    val colW = ((list?.maxOfOrNull { it.name.length } ?: 14) * (if (smallScreen) 7.2f else 8f) + (if (smallScreen) 58f else 76f)).coerceIn(140f, 300f).dp
+    Column(Modifier.width(colW).fillMaxHeight()) {
         val l = list
         if (l == null) Box(Modifier.fillMaxSize())
         else if (l.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("Empty", "Boş"), color = T.sub, fontSize = 13.sp) }
@@ -153,7 +164,7 @@ private fun ExColumn(folder: File, showHidden: Boolean, filter: String, mark: St
                 val on = f.path == mark
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (on) Look.accent.copy(alpha = if (last) .22f else .14f) else androidx.compose.ui.graphics.Color.Transparent)
                     .clickable { if (f.isDirectory) onFolder(f) else onFile(f) }.padding(horizontal = 8.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon(if (f.isDirectory) "folder" else "document", if (f.isDirectory) Look.accent else T.sub, 22.dp)
+                    PIcon(if (f.isDirectory) "folder" else "document", if (f.isDirectory) Look.accent else T.sub, if (smallScreen) 18.dp else 22.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -185,8 +196,20 @@ private fun ExDetails(ctx: Context, f: File, onOpen: (File) -> Unit) {
             PButton(tr("Share", "Paylaş"), compact = true) { exShareMany(ctx, listOf(f)) }
         }
     }
+    // a text file (txt, bat, log, json …): its first lines on black in white, as the editor shows them
+    if (f.isFile && com.umutk.pulse.ofIsText(f)) {
+        val head by produceState("", f.path) {
+            value = withContext(Dispatchers.IO) { runCatching { f.bufferedReader().use { r -> r.lineSequence().take(28).joinToString("\n") { it.take(80) } } }.getOrDefault("") }
+        }
+        if (head.isNotEmpty()) Text(head, color = androidx.compose.ui.graphics.Color.White, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 28,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black).padding(8.dp))
+    }
     @Composable fun line(k: String, v: String) { if (v.isNotBlank()) Column { Text(k, color = T.sub, fontSize = 11.sp); Text(v, color = T.text, fontSize = 13.sp) } }
     line(tr("Size", "Boyut"), if (f.isFile) exSize(f.length()) else (f.list()?.size ?: 0).let { tr("$it items", "$it öğe") })
     line(tr("Last modified", "Son değişiklik"), exDate(f.lastModified(), 0))
     line(tr("Path", "Konum"), f.path)
+    // open with another app
+    if (f.isFile) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(T.panel).clickable { exHandOver(ctx, f, false) }, contentAlignment = Alignment.Center) { PIcon("gridView", T.text, 20.dp) }
+    }
 }
