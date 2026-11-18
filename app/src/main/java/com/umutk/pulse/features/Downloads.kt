@@ -367,8 +367,7 @@ object Downloads {
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
     fun add(ctx: Context, link: String, fixedName: String? = null, alts: List<String> = emptyList(), into: File? = null) {
         // a link of Stremio's local server is the torrent itself: it is downloaded as a torrent here (no need for Stremio to be running)
-        // off (the default): a magnet link or a Stremio link is not started as a torrent; the link is not taken at all
-        if (!Downloads.magnetLinks && (link.startsWith("magnet:", true) || stremioMagnet(link) != null)) return
+        // Stremio's local link becomes a torrent (magnet) only when the switch is on; off, the link goes as it is, as before the switch existed
         val url = (if (Downloads.magnetLinks) stremioMagnet(link) else null) ?: link
         val c = ctx.applicationContext
         app = c
