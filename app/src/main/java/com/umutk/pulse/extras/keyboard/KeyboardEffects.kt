@@ -126,7 +126,7 @@ object KeyboardEffects {
             20 -> {
                 val sw = 2.5.dp.toPx(); val sh = ((p * 360f * 1.2f + seed * 5f) % 360f + 360f) % 360f
                 val rr = CornerRadius(kh * .22f)
-                fun ring(width: Float, a: Float) = drawRoundRect(Brush.sweepGradient(List(7) { Color.hsv((sh + it * 60f) % 360f, .85f, 1f).copy(alpha = a * fade) }, c),
+                fun ring(width: Float, a: Float) = drawRoundRect(Brush.sweepGradient(colors = List<Color>(7) { Color.hsv((sh + it * 60f) % 360f, .85f, 1f).copy(alpha = a * fade) }, center = c),
                     Offset(key.left + width / 2f, key.top + width / 2f), Size(kw - width, kh - width), rr, Stroke(width))
                 ring(sw * 4f, .22f); ring(sw * 2f, .45f); ring(sw, .95f)
             }

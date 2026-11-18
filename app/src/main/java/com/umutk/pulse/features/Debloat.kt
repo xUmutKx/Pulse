@@ -191,7 +191,6 @@ private const val DEBLOAT_PATH = "M8,8V6a4,4 0 0 1 8,0v2h2a2,2 0 0 1 2,2v10a2,2 
     "M10,13L11,12L12,13L13,12L14,13L13,14L14,15L13,16L12,15L11,16L10,15L11,14Z"
 
 /** Debloater: remove the system apps the list marks, see what is removed, and bring them back. Uses root (pm / cmd package). */
-@Composable
 /**
  * The apps that are on the phone's system partition but removed for this user (by Canta, by pm uninstall --user 0, or by Pulse), read from the system itself: its list holds them
  * with the "installed" flag off. This needs no root: only bringing one back does. Returns package -> name.
