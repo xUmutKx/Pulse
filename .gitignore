@@ -14,3 +14,4 @@ tools/classic_shell.kt
 localai/vendor/
 localai/.cxx/
 aistt/.cxx/
+native/**/target/
