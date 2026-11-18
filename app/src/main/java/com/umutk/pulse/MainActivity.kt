@@ -89,8 +89,18 @@ object Cfg {
 open class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // the system's own start screen stays until Pulse has drawn its first frame (up to 2.5 s), so there is no blank window in between
-        if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { val t0 = android.os.SystemClock.uptimeMillis(); splashScreen.setKeepOnScreenCondition { !MainReady.ready && android.os.SystemClock.uptimeMillis() - t0 < 2500L } }
+        // the system's own start screen stays until Pulse has composed its first frame (up to 2.5 s): the first draw waits, so there is no blank window in between
+        if (this !is FilesActivity) run {
+            val t0 = android.os.SystemClock.uptimeMillis()
+            val content = findViewById<android.view.View>(android.R.id.content)
+            content.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (!MainReady.ready && android.os.SystemClock.uptimeMillis() - t0 < 2500L) return false
+                    content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            })
+        }
         Cfg.load(this); Opt.load(this); ToolPlace.attach(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
         com.umutk.pulse.extras.messages.MsgNotifier.forgetOldShortcuts(this)
         // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)

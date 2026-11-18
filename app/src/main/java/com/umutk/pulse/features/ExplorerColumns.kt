@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.ui.graphics.graphicsLayer
 import android.content.Context
 import android.os.Environment
