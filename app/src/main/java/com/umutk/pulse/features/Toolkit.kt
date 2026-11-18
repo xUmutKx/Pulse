@@ -240,7 +240,8 @@ fun ToolkitPage() {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 PHead(tr(t.label, t.trLabel))
-                t.body()
+                // the window scrolls, so a tool is measured with no height limit; a tool that has a scrolling page of its own (graphicsLayer + verticalScroll) crashed on that, so it gets a limit
+                Box(Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .8f).dp)) { t.body() }
             }
         }
     }
