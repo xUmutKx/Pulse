@@ -84,16 +84,16 @@ private fun serve(c: Context, url: android.net.Uri): WebResourceResponse? {
                 val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() } } ?: return null
                 val pkg = HtmlGames.PREFIX + id
                 val st = CaseCover.styleOf(c, pkg)
-                val cased = if (st == "plain") null else runCatching { val cf = CaseCover.file(c, pkg, st); if (!cf.isFile) CaseCover.make(c, pkg, st); cf.takeIf { it.isFile } }.getOrNull()
-                WebResourceResponse("image/jpeg", null, FileInputStream(cased ?: HtmlGames.coverFile(c, id).takeIf { it.isFile } ?: return null))
+                CaseCover.liveBox(c, pkg, st)?.takeIf { st != "plain" }?.let { return@runCatching WebResourceResponse("image/jpeg", null, ByteArrayInputStream(it)) }
+                WebResourceResponse("image/jpeg", null, FileInputStream(HtmlGames.coverFile(c, id).takeIf { it.isFile } ?: return null))
             }
             "mcover" -> {
                 val id = parts.getOrNull(1)?.takeIf { it.all { ch -> ch.isLetterOrDigit() || ch == '_' } } ?: return null
                 // in a case style the built-in game's picture sits in that case like every other game's
                 val pkg = MegaGames.PREFIX + id
                 val st = CaseCover.styleOf(c, pkg)
-                val cased = if (st == "plain") null else runCatching { val cf = CaseCover.file(c, pkg, st); if (!cf.isFile) CaseCover.make(c, pkg, st); cf.takeIf { it.isFile } }.getOrNull()
-                if (cased != null) WebResourceResponse("image/jpeg", null, FileInputStream(cased)) else {
+                val cased = if (st == "plain") null else CaseCover.liveBox(c, pkg, st)
+                if (cased != null) WebResourceResponse("image/jpeg", null, ByteArrayInputStream(cased)) else {
                     val own = runCatching { c.assets.open("megacovers/$id.webp") }.getOrNull()
                     if (own != null) WebResourceResponse("image/webp", null, own)
                     else { val b = MegaGames.cover(c, id) ?: return null; val bos = java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bos); WebResourceResponse("image/png", null, java.io.ByteArrayInputStream(bos.toByteArray())) }
