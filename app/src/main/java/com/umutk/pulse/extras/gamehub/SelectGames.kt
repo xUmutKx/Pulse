@@ -58,9 +58,20 @@ internal fun SelectGamesDialog(ctx: Context, pal: Pal, onClose: () -> Unit, onCh
     }
     var off by remember { mutableStateOf(shelfHiddenSet(ctx)) }
     var mine by remember { mutableStateOf(customSet(ctx)) }
+    var hiddenNow by remember { mutableStateOf(hiddenSet(ctx)) }
+    // a game is hidden for real (pm hide: gone from every launcher) through root or Shizuku; without them it is only kept off the shelf
     fun setShown(r: SelRow, on: Boolean) {
         if (r.kind == 2) { mine = if (on) mine + r.pkg else mine - r.pkg; saveCustom(ctx, mine) }
-        else { off = if (on) off - r.pkg else off + r.pkg; saveShelfHidden(ctx, off) }
+        else {
+            val done = setGameHidden(ctx, r.pkg, !on, quiet = true)
+            hiddenNow = hiddenSet(ctx)
+            if (done) { off = off - r.pkg; saveShelfHidden(ctx, off) }
+            else {
+                off = if (on) off - r.pkg else off + r.pkg; saveShelfHidden(ctx, off)
+                android.widget.Toast.makeText(ctx, tr("Hidden from the shelf only: root or Shizuku hides it from the phone", "Yalnız raftan gizlendi: telefondan gizlemek için root ya da Shizuku gerekir"), android.widget.Toast.LENGTH_SHORT).show()
+            }
+            tick++
+        }
         onChanged()
     }
     fun all(on: Boolean) {
@@ -84,7 +95,7 @@ internal fun SelectGamesDialog(ctx: Context, pal: Pal, onClose: () -> Unit, onCh
                         item(key = "h$last") { Text("$label · $n", color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp)) }
                     }
                     item(key = "${r.kind}_${r.pkg}") {
-                        val on = if (r.kind == 2) r.pkg in mine else r.pkg !in off
+                        val on = if (r.kind == 2) r.pkg in mine else r.pkg !in off && r.pkg !in hiddenNow
                         Row(Modifier.fillMaxWidth().clickable { setShown(r, !on) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Checkbox(on, { setShown(r, it) }, colors = CheckboxDefaults.colors(checkedColor = pal.accent, uncheckedColor = pal.sub))
                             Text(r.name, color = pal.text, fontSize = 15.sp, maxLines = 1)
