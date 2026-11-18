@@ -37,6 +37,6 @@ object ExtraKeys {
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
     )
-    const val DEFAULT_MENU = "gamepad,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout,aifix"
-    const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
+    const val DEFAULT_MENU = "gamepad,emoji,aifix,layout,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,auth"
+    const val DEFAULT_TOOLBAR = "layout,clip,menu,translate,settings"
 }

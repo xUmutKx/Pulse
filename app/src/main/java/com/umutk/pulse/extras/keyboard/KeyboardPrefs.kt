@@ -255,6 +255,14 @@ object KeyboardPrefs {
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
         // the emoji key lives beside ?123 again; the bar keeps the three-dot menu in its place
         if (p.getInt("menuVer", 0) < 4) { toolbarItems = toolbarItems.split(',').map { if (it == "emoji") "menu" else it }.distinct().joinToString(","); p.edit().putInt("menuVer", 4).putString("toolbarItems", toolbarItems).apply() }
+        // the menu's first row is Gamepad, Emoji, AI fix and Key layout; the password manager (Quick auth) moves from the bar's icons into the menu (the feature stays)
+        if (p.getInt("menuVer", 0) < 5) {
+            val first = listOf("gamepad", "emoji", "aifix", "layout")
+            val rest = menuItems.split(',').filter { it.isNotBlank() && it !in first }
+            menuItems = (first + rest + "auth").distinct().joinToString(",")
+            toolbarItems = toolbarItems.split(',').filter { it != "auth" }.joinToString(",")
+            p.edit().putInt("menuVer", 5).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
+        }
         // the key bar (Fn, Home/End, Page keys, ...) gets a quick toggle beside the mic, next to voice
         if (p.getInt("menuVer", 0) < 5) {
             val items = toolbarItems.split(',').toMutableList()
