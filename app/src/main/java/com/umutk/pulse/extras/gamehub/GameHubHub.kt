@@ -209,6 +209,9 @@ private fun reconcileHidden(c: Context) {
 private fun onPhone(c: Context, pkg: String): Boolean =
     runCatching { c.packageManager.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES) }.isSuccess
 
+/** Apps Game Hub never hides, even when one is added to a list by hand. */
+private val NEVER_HIDE = setOf("com.termux", "com.termux.api", "com.termux.x11", "com.termux.styling", "com.termux.widget", "com.termux.boot", "moe.shizuku.privileged.api")
+
 /** Games the system does not always mark as games (their category is missing), so the list names them. */
 private val ALWAYS_GAMES = setOf("com.supercell.clashroyale", "com.supercell.clashofclans", "com.supercell.brawlstars", "com.supercell.hayday", "com.supercell.squad")
 
@@ -216,7 +219,15 @@ private val ALWAYS_GAMES = setOf("com.supercell.clashroyale", "com.supercell.cla
 internal fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
     // a game removed from the phone leaves Game Hub's lists too (it stayed in the hidden and the added lists after it was uninstalled)
-    (hiddenSet(c) + customSet(c)).filter { !onPhone(c, it) }.forEach { forgetGame(c, it) }
+    // only a game the system really lost leaves the lists: a hidden game can look "not found" to the app, so with root or Shizuku the shell is asked (pm list packages -u keeps
+    // the hidden ones), and without them nothing is forgotten (hidden games vanished from the lists when the app could not see them)
+    val known = (hiddenSet(c) + customSet(c)).filter { !onPhone(c, it) }
+    if (known.isNotEmpty() && Privilege.mode.let { it == Privilege.Mode.Root || it == Privilege.Mode.Shizuku }) {
+        val all = Privilege.run("pm list packages -u").text
+        if (all.contains("package:")) known.filter { !all.contains("package:$it\n") && !all.endsWith("package:$it") }.forEach { forgetGame(c, it) }
+    }
+    // tools that must never be hidden from the launcher (Termux and the like): if one got hidden, it is shown again and leaves Game Hub's lists
+    (hiddenSet(c) + customSet(c)).filter { it in NEVER_HIDE }.forEach { Privilege.run("pm unhide $it"); forgetGame(c, it) }
     val installed = runCatching {
         pm.getInstalledApplications(0)
             .filter { ai -> ai.packageName != c.packageName && Build.VERSION.SDK_INT >= 26 && ai.category == ApplicationInfo.CATEGORY_GAME }
@@ -292,6 +303,7 @@ private fun iconFile(c: Context, pkg: String): java.io.File {
 
 /** Hides or shows a game in every launcher through the root or Shizuku shell (pm hide / pm unhide). */
 internal fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean = false): Boolean {
+    if (hide && pkg in NEVER_HIDE) { if (!quiet) toast(c, tr("This app is not hidden", "Bu uygulama gizlenmez")); return false }
     // the name and the icon are kept while the game is still visible to the system: afterwards it cannot be found by the system
     if (hide) runCatching {
         val pm = c.packageManager

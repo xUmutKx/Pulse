@@ -64,6 +64,8 @@ window.Inspect3D = (() => {
     // the supersampling has a budget (a 1080p screen's 1.5x): on an ultrawide or 4K screen it would draw 11+ million pixels a
     // frame, up to 240 times a second. Never below the screen's own pixels, so the art stays as sharp as the panel shows it
     renderer.setPixelRatio(Math.max(Math.min(pr0, devicePixelRatio || 1), Math.min(pr0, Math.sqrt(1920 * 1080 * 2.25 / Math.max(1, w * h))))); /* with effects on, a little supersampling: the case's glossy edges and light glints stop shimmering as it turns */ // one object on screen: render at the panel's real pixels so the art stays sharp
+    // a phone's screen is small: one case drawn at the screen's own pixels (up to 2.5x, 4.2 million pixels) stays sharp instead of blocky
+    { const d = Math.min(devicePixelRatio || 1, 2.5); if (w * h * d * d <= 4.2e6 && d > renderer.getPixelRatio()) renderer.setPixelRatio(d); }
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     cvRect = canvas.classList.contains('on') ? canvas.getBoundingClientRect() : null;
   }
