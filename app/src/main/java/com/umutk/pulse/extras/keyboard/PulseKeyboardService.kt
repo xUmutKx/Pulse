@@ -310,6 +310,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun authTick() { if (st.panel == "auth") refreshAuth() }
 
+    /** A field that does not say it takes pictures may still accept the system's paste: the file goes on the phone's clipboard as an address and the field is asked to paste it. */
+    private fun pasteViaClipboard(f: java.io.File, mime: String): Boolean = runCatching {
+        val u = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f)
+        clipboard?.setPrimaryClip(android.content.ClipData.newUri(contentResolver, f.name, u).also { lastClipSig = "paste|" + f.name })
+        currentInputConnection?.performContextMenuAction(android.R.id.paste) == true
+    }.getOrDefault(false)
+
     override fun pasteClip(item: ClipItem) {
         val c = currentInputConnection ?: return
         finishWord("", false)
@@ -319,7 +326,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val ok = types.any { it.startsWith("image/") || it == "*/*" }
-        if (!ok) { android.widget.Toast.makeText(this, com.umutk.pulse.tr("This field takes no pictures", "Bu alan resim kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return }
+        if (!ok) {
+            if (pasteViaClipboard(java.io.File(path), "image/*")) { st.panel = "keys"; return }
+            android.widget.Toast.makeText(this, com.umutk.pulse.tr("This field takes no pictures", "Bu alan resim kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return
+        }
         runCatching {
             val f = java.io.File(path)
             val u = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f)
@@ -606,6 +616,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val kind = mime.substringBefore('/')
         if (types.none { it.startsWith("$kind/") || it == "*/*" }) {
+            if (pasteViaClipboard(f, mime)) { st.panel = "keys"; return }
             android.widget.Toast.makeText(this, if (kind == "image") com.umutk.pulse.tr("This field takes no pictures", "Bu alan resim kabul etmiyor") else if (kind == "video") com.umutk.pulse.tr("This field takes no videos", "Bu alan video kabul etmiyor") else com.umutk.pulse.tr("This field takes no files", "Bu alan dosya kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return
         }
         runCatching {
