@@ -891,7 +891,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 0)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
-    var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", false)) }
+    var nativeShelf by remember { mutableStateOf(prefs(ctx).getBoolean("nativeShelf", NativeShelf.AVAILABLE)) }
     var viewMode by remember { mutableStateOf(prefs(ctx).getInt("view", 0)) }   // library: 0 tiles, 1 banners
     val favs = remember(GameHubState.favVersion.intValue) { favSet(ctx) }
     // the library's own search: a floating button on the right opens the field under the sort row

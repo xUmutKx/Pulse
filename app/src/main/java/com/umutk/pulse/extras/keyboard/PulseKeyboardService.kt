@@ -166,6 +166,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         if (uri != null && clip.description.hasMimeType("image/*")) {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
+        } else if (uri != null && !clip.description.hasMimeType("text/*")) {
+            // a copied file (music, video, an APK, a document): it waits in the bar's right slot to be pasted into a chat, from a copy in the app's cache (not saved anywhere else)
+            val mime = clip.description.getMimeType(0) ?: "application/octet-stream"
+            scope.launch(Dispatchers.IO) {
+                val f = runCatching {
+                    val name = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "file"
+                    val dir = java.io.File(cacheDir, "clipfile").apply { deleteRecursively(); mkdirs() }
+                    java.io.File(dir, name.replace(Regex("[\\\\/:*?\"<>|]"), "_")).also { out -> contentResolver.openInputStream(uri)?.use { ins -> out.outputStream().use { ins.copyTo(it) } } }
+                }.getOrNull()?.takeIf { it.isFile && it.length() > 0 }
+                if (f != null) withContext(Dispatchers.Main) {
+                    quickClip = null; shotItem = null; shotVideo = f; shotVideoMime = mime
+                    shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
+                    st.shotThumb = null; st.shotVideo = false; st.shotFile = f.extension.uppercase().take(4).ifEmpty { "FILE" }
+                    shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 60_000L)
+                    updateSuggestions()
+                }
+            }
         } else {
             // a very long copy can come as a text file behind an address instead of inline: it is read from there (up to 2 MB)
             val t = (runCatching { item.coerceToText(this)?.toString() }.getOrNull()?.takeIf { uri == null || it != uri.toString() }
