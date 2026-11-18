@@ -1,5 +1,3 @@
-//! Pulse's keyboard language model (a one-layer character GRU) in Rust: the same file format and the same maths as
-//! `CharLm.java`, called through JNI. The Java class stays as the fallback when this library is not in the APK.
 
 use jni::objects::{JClass, JFloatArray, JString};
 use jni::sys::{jfloat, jlong};
@@ -54,7 +52,6 @@ impl<'a> Rd<'a> {
     }
 }
 
-/// IEEE half float to float.
 fn half(b: u16) -> f32 {
     let e = ((b >> 10) & 0x1f) as i32;
     let m = (b & 0x3ff) as u32;
@@ -116,9 +113,7 @@ impl Lm {
         self.chars.contains(&(b'A' as u16))
     }
 
-    /// The index of a UTF-16 unit, as `CharLm.index` does it.
     fn index(&self, u: u16) -> i32 {
-        // Java's Character.isWhitespace: not the no-break spaces
         let ws = matches!(u, 9..=13 | 28..=31 | 32 | 0x1680 | 0x2000..=0x2006 | 0x2008..=0x200A | 0x2028 | 0x2029 | 0x205F | 0x3000);
         if ws {
             return self.space;
@@ -140,7 +135,6 @@ impl Lm {
         }
     }
 
-    /// One character in: the state moves on in place. `tmp` holds 3H floats.
     fn step(&self, st: &mut [f32], c: i32, tmp: &mut [f32]) {
         let h = self.h;
         let g = 3 * h;
@@ -172,7 +166,6 @@ impl Lm {
         }
     }
 
-    /// log2 of the chance of character `c` after state `st`.
     fn logp(&self, st: &[f32], c: i32, lg: &mut [f32]) -> f32 {
         let h = self.h;
         let mut max = -1e30f32;
@@ -264,8 +257,6 @@ impl Lm {
         t[t.len() / 2]
     }
 }
-
-// ---- JNI: com.umutk.pulse.extras.keyboard.CharLmNative ------------------------------------------------------------------------------------------
 
 fn utf16(env: &mut JNIEnv, s: &JString) -> Vec<u16> {
     env.get_string(s).map(|j| String::from(j).encode_utf16().collect()).unwrap_or_default()
