@@ -599,7 +599,8 @@ object SeasonDl {
         suspend fun start(picks: List<Triple<String, String, List<String>>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")
             // the torrent's own file name stays (not a name made of the title): subtitle search and the player find the release by it
-            picks.forEach { (u, _, alts) -> Downloads.add(ctx, u, null, alts) }
+            // the episode's own name ("Dexter S05E02") is the file's name: the torrent's file name is kept only when no name was given
+            picks.forEach { (u, name, alts) -> Downloads.add(ctx, u, name.takeIf { it.isNotBlank() }?.let { Downloads.cleanName(it) }, alts) }
         }
         PCard {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
