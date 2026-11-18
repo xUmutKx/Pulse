@@ -300,6 +300,8 @@ fun CtRoot() {
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(ok, tick) {
         if (ok) {
+            // contacts of no account are moved into the phone's own one first, so Samsung's Phone app names them and its Info opens them
+            withContext(Dispatchers.IO) { ctMoveToPhoneAccount(ctx) }
             list = withContext(Dispatchers.IO) { ctLoadAll(ctx) }
             val g = withContext(Dispatchers.IO) { ctLoadGroups(ctx) }
             groups = g.first; members = g.second
