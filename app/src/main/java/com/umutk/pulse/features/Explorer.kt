@@ -2596,13 +2596,13 @@ private fun exZipForShare(ctx: Context, picks: List<File>): File {
 }
 
 /** The Share button: the apps that take the files in a row at the top, then the other ways to send them (a zip with the folders, Bluetooth, the names, the paths). */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 /** Whether Share opens the phone's own Share menu instead of Pulse's sheet (off by default: Pulse's sheet). */
 object ShareMenuPref {
     fun system(c: android.content.Context): Boolean = c.getSharedPreferences("pulse_share", android.content.Context.MODE_PRIVATE).getBoolean("system", false)
     fun set(c: android.content.Context, on: Boolean) = c.getSharedPreferences("pulse_share", android.content.Context.MODE_PRIVATE).edit().putBoolean("system", on).apply()
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String) -> Unit) {
     val ctx = LocalContext.current
