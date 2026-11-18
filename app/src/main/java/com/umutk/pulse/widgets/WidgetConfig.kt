@@ -150,7 +150,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            if (kind != null && kind !is WeatherClearWidget && kind !is WeatherPartsWidget) {
+                            if (kind != null && kind !is WeatherClearWidget && kind !is WeatherSceneWidget && kind !is WeatherPartsWidget) {
                                 Text(com.umutk.pulse.tr("Number size", "Sayı boyutu"), color = wl.text, fontSize = 14.sp)
                                 val def = if (kind is WeatherDetailWidget) .65f else 1f
                                 val cur = textLvl.value ?: WidgetText.shown(c, widgetId, def)

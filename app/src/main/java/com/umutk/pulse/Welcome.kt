@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "weather" to (tr("Weather now has drawn scenery: mountains, sea, city, forest, street or highland under the sky of the hour, with rain, snow and fog. A new Weather, scenery widget shows it on the home screen.",
+        "Hava durumunda çizimli manzaralar var: saate göre gökyüzü altında dağ, deniz, şehir, orman, sokak ya da yayla; yağmur, kar ve sis ile. Yeni Hava durumu, manzara widget'ı bunu ana ekranda gösterir.")),
     "touch" to (tr("New Auto clicker in the Toolkit and as a Quick Settings tile: a floating bar and target marks you drag to the spots to tap, 1 to 10 spots, start / stop and speed.",
         "Araç kutusunda ve Hızlı Ayarlar karosu olarak yeni Otomatik tıklayıcı: yüzen çubuk ve dokunulacak noktalara sürüklediğin hedef işaretleri, 1 ile 10 nokta, başlat / durdur ve hız.")),
     "keyboard" to (tr("In Termux the bar offers commands and words you typed, nothing is autocorrected, and holding Delete works.",

@@ -520,6 +520,9 @@ object WeatherStore {
     /** How the weather page looks: "sky" (a sky that follows the weather), "amoled" (black) or "app" (the app look). */
     fun skin(c: Context): String = p(c).getString("skin", "sky") ?: "sky"
     fun setSkin(c: Context, v: String) = p(c).edit().putString("skin", v).apply()
+    /** The scenery behind the weather: "auto" (each place its own) or one of the WeatherLand keys. */
+    fun land(c: Context): String = p(c).getString("land", "auto") ?: "auto"
+    fun setLand(c: Context, v: String) = p(c).edit().putString("land", v).apply()
 
     fun setUnits(c: Context, u: String) = p(c).edit().putString("units", u).apply()
 
