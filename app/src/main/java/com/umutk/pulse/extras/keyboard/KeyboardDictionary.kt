@@ -119,6 +119,7 @@ object KeyboardDictionary {
             }
         }
         if (ws.isNotEmpty()) lexes[lang] = Lex(ws.toTypedArray(), sc.toFloatArray())
+        if (lang == "tr") learnAllBlocked(c)
         // the word pairs of real sentences (treebanks, CC BY-SA): what follows what before the person has written anything
         runCatching {
             c.assets.open("kbd/bi_$lang.txt").bufferedReader().useLines { lines ->
@@ -196,6 +197,8 @@ object KeyboardDictionary {
         runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
         // the letters the owner presses for others (typed, meant), counted from their slips: each such swap costs a fifth of a neighbour key
         runCatching { c.assets.open("kbd/confusion_user.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 2) confusion.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
+        // and the ones learned on this phone since (from the suggestions tapped and the words blocked)
+        runCatching { File(c.filesDir, "kbd_confusion.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 2) confusion[p[0]] = maxOf(confusion[p[0]] ?: 0, p[1].toIntOrNull() ?: 1) } }
         subReset()
         runCatching { c.assets.open("kbd/kbd_keep.txt").bufferedReader().useLines { it.forEach { l -> if (l.isNotBlank()) kept += l.trim().lowercase(Locale.ROOT) } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
@@ -436,6 +439,8 @@ object KeyboardDictionary {
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
+        // a word the person blocked is a slip of theirs, never a word: it is corrected like any other typo
+        if (l in banned) return false
         return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l))
     }
 
@@ -659,8 +664,43 @@ object KeyboardDictionary {
     }
     fun ban(c: Context, w: String) {
         if (!userLoaded) loadUser(c)
-        banned += w.lowercase(Locale.ROOT)
+        val k = w.lowercase(Locale.ROOT)
+        banned += k
+        // a blocked word is a slip: it leaves the learned words (else it would count as a word and never be corrected) and teaches which keys the finger slipped to
+        user.remove(k); dirty = 1; saveUser(c)
         runCatching { File(c.filesDir, "kbd_banned.txt").writeText(banned.joinToString("\n")) }
+        Thread { runCatching { learnFromBlocked(c, k) } }.start()
+    }
+
+    /**
+     * What a blocked word teaches: the nearest real word is what was meant (açılmıyor for açılöıyor), so the slip is kept as a typo to mend at once, and the letters that differ
+     * (ö typed for m) count as this person's slips, which then cost little in every other word. E-mail addresses on the list are left alone.
+     */
+    private fun learnFromBlocked(c: Context, w: String) {
+        if ('@' in w || w.length < 3 || w.any { it.isDigit() }) return
+        val best = (correctAll("tr", w, 1.4f, null) + correctAll("en", w, 1.0f, null))
+            .filter { it.word != w && !isBanned(it.word) && (isWord("tr", it.word) || isWord("en", it.word)) }
+            .minByOrNull { it.cost - it.score * .02f }?.word ?: return
+        typos.putIfAbsent(w, best)
+        if (best.length == w.length) {
+            val diffs = w.indices.filter { w[it] != best[it] }
+            if (diffs.size in 1..3) diffs.forEach { i -> val key = "" + w[i] + best[i]; confusion[key] = (confusion[key] ?: 0) + 2 }
+            subReset()
+        }
+        saveConfusion(c)
+        runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
+    }
+
+    private fun saveConfusion(c: Context) {
+        runCatching { File(c.filesDir, "kbd_confusion.txt").writeText(confusion.entries.joinToString("\n") { "${it.key} ${it.value}" }) }
+    }
+
+    // the blocked words of before are read once the word lists are in, so the slips they show count from now on
+    @Volatile private var blockedLearned = false
+    private fun learnAllBlocked(c: Context) {
+        if (blockedLearned || lexes["tr"] == null) return
+        blockedLearned = true
+        Thread { banned.toList().forEach { runCatching { learnFromBlocked(c, it) } } }.start()
     }
 
     /** The word this exact typo was turned into before (by tapping the suggestion), or null. */
@@ -692,7 +732,7 @@ object KeyboardDictionary {
         }
         typos[typed] = word
         // one letter wrong in a word of the same length: that letter pair is this person's slip
-        if (typed.length == word.length) { val d = typed.indices.filter { typed[it] != word[it] }; if (d.size == 1) { confusion["" + typed[d[0]] + word[d[0]]] = (confusion["" + typed[d[0]] + word[d[0]]] ?: 0) + 1; subReset() } }
+        if (typed.length == word.length) { val d = typed.indices.filter { typed[it] != word[it] }; if (d.size == 1) { confusion["" + typed[d[0]] + word[d[0]]] = (confusion["" + typed[d[0]] + word[d[0]]] ?: 0) + 1; subReset(); saveConfusion(c) } }
         runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
 
@@ -860,7 +900,8 @@ object KeyboardDictionary {
     }
 
     private fun subSlow(a: Char, b: Char): Float {
-        if (confusion["" + a + b] != null) return .2f
+        // the slips this person makes most (o for ı, ğ for ü, p for o, more than fifty times) cost the least
+        confusion["" + a + b]?.let { n -> return if (n >= 50) .12f else .2f }
         val fa = foldc(a); val fb = foldc(b)
         return if (fa == fb) .15f else if (near(a, b) || near(fa, fb)) .5f else 1f
     }
