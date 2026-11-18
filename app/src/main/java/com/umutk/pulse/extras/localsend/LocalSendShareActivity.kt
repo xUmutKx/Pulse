@@ -65,7 +65,7 @@ class LocalSendShareActivity : ComponentActivity() {
         setContent { LookHost(transparent = true) { Panel(list) } }
     }
 
-    override fun onDestroy() { super.onDestroy(); if (LocalSendEngine.busy.isEmpty()) LocalSendEngine.stop(); AppLookGuard.leave(this) }
+    override fun onDestroy() { super.onDestroy(); if (LocalSendEngine.busy.isEmpty() && !LocalSendEngine.alwaysOn(this)) LocalSendEngine.stop(); AppLookGuard.leave(this) }
 
     @Composable
     private fun Panel(list: List<Uri>) {

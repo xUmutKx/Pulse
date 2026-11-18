@@ -73,7 +73,7 @@ fun LocalSendHub(back: () -> Unit) {
     val scope = rememberCoroutineScope()
     BackHandler { back() }
     // leaving the page while something is going: the bubble keeps the transfer in sight and the engine runs on
-    DisposableEffect(Unit) { LocalSendEngine.start(ctx); onDispose { if (LocalSendEngine.busy.isNotEmpty() && LocalSendBubble.show(ctx)) Unit else LocalSendEngine.stop() } }
+    DisposableEffect(Unit) { LocalSendEngine.start(ctx); onDispose { if (LocalSendEngine.busy.isNotEmpty() && LocalSendBubble.show(ctx)) Unit else if (!LocalSendEngine.alwaysOn(ctx)) LocalSendEngine.stop() } }
     // announce again now and then, so devices that joined later find this phone
     LaunchedEffect(Unit) { while (true) { delay(15_000); LocalSendEngine.announce() } }
     var target by remember { mutableStateOf<Peer?>(null) }
@@ -94,7 +94,14 @@ fun LocalSendHub(back: () -> Unit) {
         PCard {
             Text(tr("This phone", "Bu telefon"), color = T.sub, fontSize = 12.sp)
             PField(nameEdit, { nameEdit = it; LocalSendEngine.setAlias(ctx, it) }, tr("Name", "Ad"), Modifier.fillMaxWidth())
-            Text(tr("Visible on port ${LocalSendEngine.PORT} while this page is open", "Bu sayfa açıkken ${LocalSendEngine.PORT} portunda görünür"), color = T.sub, fontSize = 12.sp)
+            var always by remember { mutableStateOf(LocalSendEngine.alwaysOn(ctx)) }
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Always visible", "Her zaman görünür"), color = T.text, fontSize = 14.sp)
+                    Text(tr("Nearby devices find this phone even when this page is closed (same Wi-Fi or hotspot)", "Bu sayfa kapalıyken de yakındaki cihazlar bu telefonu bulur (aynı Wi-Fi ya da hotspot)"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(always, { always = it; LocalSendEngine.setAlwaysOn(ctx, it) })
+            }
             Text(tr("Received files go to Download/LocalSend", "Gelen dosyalar Download/LocalSend içine gider"), color = T.sub, fontSize = 12.sp)
         }
         if (LocalSendEngine.busy.isNotEmpty()) PCard {

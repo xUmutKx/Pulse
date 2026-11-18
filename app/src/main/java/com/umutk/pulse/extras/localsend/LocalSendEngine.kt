@@ -92,6 +92,11 @@ object LocalSendEngine {
         return if (d.isDirectory || d.mkdirs()) d else File(c.getExternalFilesDir(null) ?: c.filesDir, "LocalSend").apply { mkdirs() }
     }
 
+    /** Visible to the nearby devices all the time Pulse runs (on by default), not only while the LocalSend page is open: else a phone whose page is closed is never found. */
+    fun alwaysOn(c: Context): Boolean = prefs(c).getBoolean("always", true)
+    fun setAlwaysOn(c: Context, on: Boolean) { prefs(c).edit().putBoolean("always", on).apply(); if (on) start(c) }
+    fun keepAlive(c: Context) { if (alwaysOn(c)) start(c) }
+
     fun setAlias(c: Context, a: String) { alias = a.trim().ifEmpty { Build.MODEL }; prefs(c).edit().putString("alias", alias).apply() }
 
     private fun me(announce: Boolean? = null): JSONObject = JSONObject().put("alias", alias).put("version", V).put("deviceModel", Build.MODEL).put("deviceType", "mobile")
@@ -108,6 +113,8 @@ object LocalSendEngine {
         pool.execute { runCatching { serve(app) }.onFailure { note = "Server: ${it.message}" } }
         pool.execute { runCatching { listen() } }
         pool.execute { repeat(3) { announce(); Thread.sleep(2000) } }
+        // while it stays on, it says it is here now and then, so a phone that joins the network (or the hotspot) later finds it without a manual refresh
+        pool.execute { while (running) { runCatching { Thread.sleep(60_000) }; if (running) announce() } }
         scan()
     }
 
@@ -124,12 +131,19 @@ object LocalSendEngine {
     fun announce() {
         runCatching {
             val data = me(true).toString().toByteArray()
-            MulticastSocket().use { s -> s.send(DatagramPacket(data, data.size, InetAddress.getByName(GROUP), PORT)) }
+            // on every network the phone is on: the Wi-Fi, its own hotspot, USB tethering (the default one alone missed the phones on the hotspot)
+            val nis = ifaces()
+            if (nis.isEmpty()) MulticastSocket().use { s -> s.send(DatagramPacket(data, data.size, InetAddress.getByName(GROUP), PORT)) }
+            else nis.forEach { ni -> runCatching { MulticastSocket().use { s -> s.networkInterface = ni; s.send(DatagramPacket(data, data.size, InetAddress.getByName(GROUP), PORT)) } } }
         }
     }
 
     private fun listen() {
-        val s = MulticastSocket(null).apply { reuseAddress = true; bind(InetSocketAddress(PORT)); joinGroup(InetAddress.getByName(GROUP)) }
+        val s = MulticastSocket(null).apply { reuseAddress = true; bind(InetSocketAddress(PORT)) }
+        // listen on every network the phone is on (the hotspot's own one too), not only the default one
+        val nis = ifaces()
+        if (nis.isEmpty()) s.joinGroup(InetAddress.getByName(GROUP))
+        else nis.forEach { ni -> runCatching { s.joinGroup(InetSocketAddress(InetAddress.getByName(GROUP), PORT), ni) } }
         mcast = s
         val buf = ByteArray(4096)
         while (running) {
@@ -193,10 +207,17 @@ object LocalSendEngine {
             }.getOrNull() ?: continue
             val peer = peerOf(r.put("protocol", if (https) "https" else "http").put("port", PORT), ip) ?: return false
             peers[ip] = peer
+            // the found phone is told about this one too, so each lists the other (finding it was one-sided before)
+            pool.execute { runCatching { post(peer, "register", me(false).toString().toByteArray()) } }
             return true
         }
         return false
     }
+
+    /** The networks the phone is on that can carry the announcement (up, not loopback, with an IPv4 address of a local network). */
+    private fun ifaces(): List<NetworkInterface> = runCatching {
+        NetworkInterface.getNetworkInterfaces().toList().filter { ni -> ni.isUp && !ni.isLoopback && ni.supportsMulticast() && ni.inetAddresses.toList().any { it is java.net.Inet4Address && it.isSiteLocalAddress } }
+    }.getOrDefault(emptyList())
 
     private fun locals(): List<String> = runCatching {
         NetworkInterface.getNetworkInterfaces().toList().filter { it.isUp && !it.isLoopback }
