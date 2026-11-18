@@ -320,6 +320,29 @@ fun VideoContent(
                 var verticalSwipeHandled = false
                 var volStart = -1f
                 var volAnchorY = 0f
+                // left side: brightness, right side: volume (like the video player); the middle keeps its swipe down to leave full screen
+                val gestureZone = if (!VideoGestureSettings.enabled) 0 else if (downX < 0.4f) 1 else if (downX > 0.6f) 2 else 0
+                fun applyDrag(change: androidx.compose.ui.input.pointer.PointerInputChange, dy: Float) {
+                    change.consume()
+                    if (gestureZone == 1 && activity != null) {
+                        val attrs = activity.window.attributes
+                        val cur = if (attrs.screenBrightness < 0f) 0.5f else attrs.screenBrightness
+                        val nb = (cur + (dy / size.height) * 1.2f).coerceIn(0.01f, 1f)
+                        attrs.screenBrightness = nb
+                        activity.window.attributes = attrs
+                        gestureHud = Pair(Icons.Rounded.BrightnessMedium, Pair("Brightness", nb))
+                    } else if (gestureZone == 2 && audioManager != null) {
+                        val maxV = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                        val curV = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                        if (volStart < 0f) { volStart = curV.toFloat(); volAnchorY = downY }
+                        val target = (volStart + (volAnchorY - change.position.y) / (size.height * .6f) * maxV).coerceIn(0f, maxV.toFloat())
+                        val nv = kotlin.math.round(target).toInt()
+                        if (nv != curV) audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
+                        val icon = if (nv == 0) Icons.AutoMirrored.Rounded.VolumeMute else Icons.AutoMirrored.Rounded.VolumeUp
+                        gestureHud = Pair(icon, Pair("Volume", nv.toFloat() / maxV.toFloat()))
+                    }
+                    lastY = change.position.y
+                }
                 val upEarly = withTimeoutOrNull(holdSpeedMs) {
                     var event = awaitPointerEvent()
                     while (event.changes.any { it.pressed }) {
@@ -332,42 +355,11 @@ fun VideoContent(
                             val isVerticalIntent = kotlin.math.abs(totalDy) > kotlin.math.abs(totalDx) * 1.5f
 
                             if (fullscreen) {
-                                val gesturesOn = VideoGestureSettings.enabled
-                                val isLeftEdge = gesturesOn && downX < 0.20f
-                                val isRightEdge = gesturesOn && downX > 0.80f
-
-                                if (!isDraggingGesture && isVerticalIntent && kotlin.math.abs(totalDy) > 60f) {
-                                    if (isLeftEdge || isRightEdge) {
-                                        isDraggingGesture = true
-                                    }
-                                }
-                                if (isDraggingGesture) {
-                                    change.consume()
-                                    if (isLeftEdge && activity != null) {
-                                        val window = activity.window
-                                        val attrs = window.attributes
-                                        val currentB = if (attrs.screenBrightness < 0f) 0.5f else attrs.screenBrightness
-
-                                        val newB = (currentB + (dy / size.height) * 0.85f).coerceIn(0.02f, 1f)
-                                        attrs.screenBrightness = newB
-                                        window.attributes = attrs
-                                        gestureHud = Pair(Icons.Rounded.BrightnessMedium, Pair("Brightness", newB))
-                                    } else if (isRightEdge && audioManager != null) {
-                                        val maxV = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                        val curV = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-
-                                        // measured from where the slide began (not move by move: each small move rounded to no step, so a whole slide gave one step):
-                                        // a slide over 60% of the screen's height goes from silent to full
-                                        if (volStart < 0f) { volStart = curV.toFloat(); volAnchorY = change.position.y }
-                                        val target = (volStart + (volAnchorY - change.position.y) / (size.height * .6f) * maxV).coerceIn(0f, maxV.toFloat())
-                                        val newV = kotlin.math.round(target).toInt()
-                                        if (newV != curV) {
-                                            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newV, 0)
-                                            val icon = if (newV == 0) Icons.AutoMirrored.Rounded.VolumeMute else Icons.AutoMirrored.Rounded.VolumeUp
-                                            gestureHud = Pair(icon, Pair("Volume", newV.toFloat() / maxV.toFloat()))
-                                        }
-                                    }
-                                    lastY = change.position.y
+                                if (!isDraggingGesture && isVerticalIntent && kotlin.math.abs(totalDy) > 24f && gestureZone != 0) {
+                                    isDraggingGesture = true
+                                    // the drag goes on after the hold-speed wait is over: leave this loop and carry on below
+                                    applyDrag(change, dy)
+                                    return@withTimeoutOrNull null
                                 }
                             } else {
 
@@ -389,7 +381,15 @@ fun VideoContent(
                     event.changes.firstOrNull()
                 }
 
-                if (isDraggingGesture || verticalSwipeHandled) {
+                if (isDraggingGesture) {
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val c = ev.changes.firstOrNull { it.pressed } ?: break
+                        applyDrag(c, lastY - c.position.y)
+                    }
+                    return@awaitEachGesture
+                }
+                if (verticalSwipeHandled) {
                     return@awaitEachGesture
                 }
 

@@ -609,23 +609,6 @@ fun LibraryScreen(
             topPadding = top,
         ) {
         LazyColumn(state = rememberScrollToTop(scrollToTop), contentPadding = contentPadding.withTop(top)) {
-            // Series and movies: a page of shelves (popular series and movies) of its own, signed in or not
-            item(key = "seriesAndMovies") {
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                        .clickable { openSeriesPage(ctx) }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Rounded.VideoLibrary, null, Modifier.size(24.dp), MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text("Series and movies", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("Popular now: pick one and download its episodes", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
             if (!signedIn) {
                 item {
                     EmptyState(

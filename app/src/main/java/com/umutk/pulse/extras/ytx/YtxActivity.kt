@@ -349,9 +349,15 @@ fun YtxTubeApp() {
 
 
     val rootView = LocalView.current
+    // the screen stays on while a video plays (the window flag, not only the view's: it survives full screen and rotation)
+    val awakeAct = rootView.context as? android.app.Activity
     DisposableEffect(player.isPlaying) {
         rootView.keepScreenOn = player.isPlaying
-        onDispose { rootView.keepScreenOn = false }
+        if (player.isPlaying) awakeAct?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            rootView.keepScreenOn = false
+            awakeAct?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
 
