@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -573,7 +575,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
             Text(title, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text(value, color = sub, fontSize = 14.sp)
         }
     }
-    Column(Modifier.fillMaxSize().background(bg).padding(horizontal = pageGutter)) {
+    Column(Modifier.fillMaxSize().background(bg).verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("back", fg, 22.dp, Modifier.clickable(onClick = onBack))
             Text(tr("Weather settings", "Hava durumu ayarları"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))

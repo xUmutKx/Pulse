@@ -74,7 +74,8 @@ object WeatherLand {
         // outside Ramadan the mosques are left out of every pool; the scenery of a place changes once a day, not every few hours
         val ram = isRamadan()
         val pool = if (ram) pool0 else pool0.filter { it.first != Land.MOSQUE }
-        val seed = System.currentTimeMillis() / 86_400_000L + place.hashCode()
+        // the day picks, and so does a change of weather: a new kind of sky gives a new scenery the same day
+        val seed = System.currentTimeMillis() / 86_400_000L + place.hashCode() + sky.ordinal * 7919
         var r = ((seed xor (seed ushr 7)).toInt() and 0x7fffffff) % pool.sumOf { it.second }
         for ((l, wt) in pool) { if (r < wt) return l; r -= wt }
         return pool.first().first
