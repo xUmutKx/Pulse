@@ -79,11 +79,13 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
     var welcome by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         launch { fade.animateTo(1f, tween(200)) }
+        // the length setting: short is about half, long about one and a half times
+        val m = when (Opt.splashLen) { 0 -> .5f; 2 -> 1.6f; else -> 1f }
         when (th.id) {
-            "xp" -> { delay(1100); welcome = true; delay(900) }
-            "win7" -> { delay(2800); welcome = true; delay(900) }
-            "win10" -> delay(1800)
-            else -> delay(850)
+            "xp" -> { delay((1100 * m).toLong()); welcome = true; delay((900 * m).toLong()) }
+            "win7" -> { delay((2800 * m).toLong()); welcome = true; delay((900 * m).toLong()) }
+            "win10" -> delay((1800 * m).toLong())
+            else -> delay((850 * m).toLong())
         }
         onDone()
     }

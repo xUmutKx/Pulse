@@ -123,6 +123,10 @@ fun GeneralSettings() {
         var crashAsk by remember { mutableStateOf(CrashReport.enabled(ctx)) }
         SwitchRow(tr("Offer a bug report after a crash", "Çökmeden sonra hata raporu öner"), tr("Opens GitHub with the error filled in; nothing is sent by itself", "GitHub'ı hatayla doldurulmuş açar; kendiliğinden hiçbir şey gönderilmez"), crashAsk) { crashAsk = it; CrashReport.setEnabled(ctx, it) }
         SwitchRow(tr("Opening animation", "Açılış animasyonu"), tr("The Pulse splash at start", "Başlangıçtaki Pulse açılış animasyonu"), Opt.splash) { Opt.splash = it; Opt.save(ctx) }
+        if (Opt.splash) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Length", "Süre"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            listOf(0 to tr("Short", "Kısa"), 1 to tr("Normal", "Normal"), 2 to tr("Long", "Uzun")).forEach { (k, label) -> PChip(Opt.splashLen == k, label) { Opt.splashLen = k; Opt.save(ctx) } }
+        }
         SliderRow("Text size ${(Opt.fontScale * 100).toInt()}%", Opt.fontScale, .8f..1.4f, { Opt.fontScale = it }) { Opt.save(ctx) }
     }
     PCard {

@@ -165,7 +165,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (uri != null && clip.description.hasMimeType("image/*")) {
-            scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
+            scope.launch(Dispatchers.IO) {
+                val l = ClipStore.addImage(this@PulseKeyboardService, uri)
+                // a screenshot or a picture just copied takes the bar's right slot from an older copied text (a phone that puts its screenshot on the clipboard showed the old text)
+                val thumb = runCatching { contentResolver.openInputStream(uri)?.use { ins -> android.graphics.BitmapFactory.decodeStream(ins, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() } }.getOrNull()
+                withContext(Dispatchers.Main) {
+                    st.clipItems = l
+                    val newest = l.firstOrNull { it.image != null }
+                    if (newest != null && thumb != null) {
+                        quickClip = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; shotItem = newest
+                        shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false; st.shotThumb = thumb
+                        shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L)
+                        updateSuggestions()
+                    }
+                }
+            }
         } else if (uri != null && !clip.description.hasMimeType("text/*")) {
             // a copied file (music, video, an APK, a document): it waits in the bar's right slot to be pasted into a chat, from a copy in the app's cache (not saved anywhere else)
             val mime = clip.description.getMimeType(0) ?: "application/octet-stream"

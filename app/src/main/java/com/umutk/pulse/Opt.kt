@@ -18,6 +18,7 @@ object Opt {
     var crt by mutableStateOf(false)         // the old-monitor filter over the app
     var signIn by mutableStateOf(false)      // on: the look's sign-in screen at start; off: Pulse opens directly
     var startSound by mutableStateOf(false)   // the look's start-up sound (Windows) when the app opens; off until it is switched on
+    var splashLen by mutableStateOf(1)       // the opening animation's length: 0 short, 1 normal, 2 long
     var splash by mutableStateOf(true)       // on: the opening animation at start; off: Pulse opens straight to its first page
     /** Old designs (default): Windows 95 / XP / 7 / 10 / 11 pop-ups drawn like the real systems. Off: the earlier, plainer menus. */
     var oldPopups by mutableStateOf(true)
@@ -47,7 +48,7 @@ object Opt {
         lang = p.getString("lang", "auto") ?: "auto"
         amoledBg = p.getBoolean("amoledBg", true)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
-        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); splash = p.getBoolean("splash", true); startSound = p.getBoolean("startSound", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
+        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); splash = p.getBoolean("splash", true); splashLen = p.getInt("splashLen", 1).coerceIn(0, 2); startSound = p.getBoolean("startSound", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false);
         ovOn = p.getBoolean("ovOn", false); notifOn = p.getBoolean("notifOn", false)
         ovAlpha = p.getFloat("ovAlpha", .75f); ovSize = p.getFloat("ovSize", 11f)
@@ -56,6 +57,7 @@ object Opt {
     }
 
     fun save(c: Context) {
+        sp(c).edit().putInt("splashLen", splashLen).apply()
         sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("splash", splash).putBoolean("startSound", startSound).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons).putBoolean("filesFull", filesFull)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)

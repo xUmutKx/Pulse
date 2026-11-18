@@ -778,8 +778,9 @@ internal fun NeofetchFace(ctx: Context, tick: Long) {
     // the card is read off the main thread (it counts the installed apps): the cover keeps drawing while it is made
     val card by androidx.compose.runtime.produceState<Pair<List<String>, List<List<NfSeg>>>>(emptyList<String>() to emptyList(), tick / 30) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runCatching { NeofetchText.columns(ctx) }.getOrDefault(emptyList<String>() to emptyList()) } }
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding(10.dp), contentAlignment = Alignment.Center) {
-        // the card is about 70 characters wide: the letters are as large as the width allows
-        val fs = (maxWidth.value / 44f).coerceIn(2.6f, 13f)
+        // the card is as wide as its logo, the gap and its longest line (about 80 characters): the letters are as large as that allows (a fixed share cut the lines at the right)
+        val chars = (card.first.maxOfOrNull { it.length } ?: 36) + 3 + (card.second.maxOfOrNull { line -> line.sumOf { it.text.length } } ?: 44)
+        val fs = (maxWidth.value / (chars * 0.64f)).coerceIn(2.2f, 13f)
         NeofetchCard(card.first, card.second, fs)
     }
 }
