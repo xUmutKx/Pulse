@@ -244,8 +244,8 @@ impl Shelf {
             self.vel += a * dt;
             self.scroll += self.vel * dt;
         }
-        self.intro = (self.intro + dt * 1.4).min(3.0);
-        if self.launching { self.launch = (self.launch + dt * 3.2).min(1.0); } else { self.launch = (self.launch - dt * 4.0).max(0.0); }
+        self.intro = (self.intro + dt * 3.2).min(3.0);
+        if self.launching { self.launch = (self.launch + dt * 6.0).min(1.0); } else { self.launch = (self.launch - dt * 4.0).max(0.0); }
         let kf = 14.0;
         self.flip += (self.flip_to - self.flip) * (1.0 - (-kf * dt).exp());
     }
@@ -347,7 +347,7 @@ fn box_matrix(o: f32, flip: f32, ratio: f32, index: usize, time: f32, intro: f32
     let bob = (time * 1.6 + index as f32).sin() * 0.018 * centre;
     let sway = (time * 1.1).sin() * 0.03 * centre;
     // coming in: each box rises into place a moment after the one before it
-    let k = ((intro - index.min(12) as f32 * 0.07) / 1.0).clamp(0.0, 1.0);
+    let k = ((intro - index.min(12) as f32 * 0.04) / 1.0).clamp(0.0, 1.0);
     let e = 1.0 - (1.0 - k).powi(3);
     let (dx, dy, dz, isc) = ((1.0 - e) * 1.6, (1.0 - e) * -0.5, (1.0 - e) * -1.2, 0.7 + 0.3 * e);
     // launching: the middle box leaves the shelf towards the camera and grows
