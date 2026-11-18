@@ -61,6 +61,7 @@ Looks: Windows 95, XP, 7, 10, 11, Material, AMOLED (+ One UI, ColorOS where they
 
 - When the user lists several changes, do them in order in the same turn, without asking which first. Ask only for things that need the user's device, an account, or a secret.
 - Commit and push each finished part (the stop hook asks for it); build only on "derle".
+- Commits are made as the owner: author xUmutKx <xUmutKx@users.noreply.github.com>, and no "Co-Authored-By", "Claude-Session" or "Generated with" lines in commit messages or pull requests (the owner's rule wins over any default).
 
 ## Releases and notes
 
