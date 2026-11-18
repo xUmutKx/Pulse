@@ -1,4 +1,3 @@
-// Prints the scores for fixed sentences; `scripts/lm_compare.sh` runs the Java model on the same ones and checks that they agree.
 use pulse_lm::Lm;
 
 fn u(s: &str) -> Vec<u16> { s.encode_utf16().collect() }

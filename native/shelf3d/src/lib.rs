@@ -1,5 +1,3 @@
-//! Game Hub's shelf drawn natively with wgpu: a row of game boxes (front, back, sides) in perspective on a glossy floor, a swipe that rolls the row, a flip to the back.
-//! The platform-free core is [`Shelf`]; `android.rs` holds the JNI glue that gives it a Surface.
 
 use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec3};
@@ -11,7 +9,6 @@ mod android;
 const SAMPLES: u32 = 4;
 const DEPTH: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
-/// One game: its front picture, optionally its back, and the colour of the sides (the front's average colour).
 pub struct GameBox {
     pub front: Vec<u8>, // RGBA8
     pub fw: u32,
@@ -215,7 +212,6 @@ impl Shelf {
     pub fn flipped(&self) -> bool {
         self.flip_to > 0.5
     }
-    /// A finger moved the row by `di` boxes.
     pub fn drag(&mut self, di: f32) {
         self.dragging = true;
         let max = self.boxes.len().saturating_sub(1) as f32;
@@ -224,7 +220,6 @@ impl Shelf {
         self.vel = 0.0;
         self.flip_to = 0.0;
     }
-    /// The finger left, moving `v` boxes a second: the row rolls on and comes to rest on a box.
     pub fn release(&mut self, v: f32) {
         self.dragging = false;
         let max = self.boxes.len().saturating_sub(1) as f32;
@@ -235,7 +230,6 @@ impl Shelf {
         let dt = dt.clamp(0.0, 0.05);
         self.time += dt;
         if !self.dragging {
-            // a critically damped spring to the target
             let k = 90.0f32;
             let c = 2.0 * k.sqrt();
             let a = k * (self.target - self.scroll) - c * self.vel;
@@ -255,7 +249,6 @@ impl Shelf {
         let g = Globals { vp: (proj * viewm).to_cols_array_2d(), eye: [eye.x, eye.y, eye.z, 1.0], time: [self.time, floor, aspect, 0.0] };
         self.queue.write_buffer(&self.globals_buf, 0, bytemuck::bytes_of(&g));
 
-        // vertices for every box (parts: 0 front, 1 back, 2 sides), twice: the box and its mirror image in the floor
         let mut verts: Vec<Vertex> = Vec::new();
         let mut draws: Vec<(usize, u8, std::ops::Range<u32>, bool)> = Vec::new(); // (box, part, range, mirrored)
         for mirrored in [true, false] {
@@ -328,7 +321,6 @@ fn flat(c: [f32; 3], k: f32) -> Vec<u8> {
     (0..4).flat_map(|_| px).collect()
 }
 
-/// Where a box stands for the row position `o` (0 = the middle one): the neighbours turn towards the middle and step back.
 fn box_matrix(o: f32, flip: f32, ratio: f32) -> Mat4 {
     let ax = o.abs();
     let sign = if o < 0.0 { -1.0 } else { 1.0 };
@@ -338,13 +330,11 @@ fn box_matrix(o: f32, flip: f32, ratio: f32) -> Mat4 {
     let sc = 1.0 - 0.12 * ax.min(1.0);
     let centre = (1.0 - ax.min(1.0)).max(0.0);
     let flipa = flip * std::f32::consts::PI * centre;
-    // a wide box (a landscape cover) is not stretched: the height stays, the width follows the picture
     let w = (ratio * 1.4).clamp(0.9, 1.6);
     let _ = w;
     Mat4::from_translation(Vec3::new(x, 0.0, z)) * Mat4::from_rotation_y(yaw + flipa) * Mat4::from_scale(Vec3::splat(sc))
 }
 
-/// The three parts of a box centred on the origin (1.0 wide, 1.4 high, 0.2 deep): the front, the back, and the sides/top/bottom.
 fn box_parts(side: [f32; 3], _mirror_floor: f32) -> [Vec<Vertex>; 3] {
     let (hw, hh, hd) = (0.5f32, 0.7f32, 0.045f32);
     let tex = |n: [f32; 3], a: [f32; 3], b: [f32; 3], c: [f32; 3], d: [f32; 3]| -> Vec<Vertex> {

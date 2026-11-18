@@ -1,4 +1,3 @@
-// Renders the shelf off-screen (software Vulkan on a build machine) and writes /tmp/shelf.png so the picture can be looked at.
 use pulse_shelf::{GameBox, Shelf};
 use std::sync::Arc;
 
@@ -29,7 +28,6 @@ fn render_png() {
     let (w, h) = (512u32, 960u32);
     let fmt = wgpu::TextureFormat::Rgba8UnormSrgb;
     let mut shelf = Shelf::new(dev.clone(), q.clone(), fmt, w, h);
-    // real covers when COVER_DIR has png files (the build machine's own check); the drawn ones otherwise
     if let Ok(dir) = std::env::var("COVER_DIR") {
         let mut files: Vec<_> = std::fs::read_dir(dir).unwrap().filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().map(|x| x == "png").unwrap_or(false)).collect();
         files.sort();

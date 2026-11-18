@@ -1,4 +1,3 @@
-//! JNI glue for com.umutk.pulse.extras.gamehub.NativeShelf: a Surface in, a shelf drawn on it by wgpu.
 
 use crate::{GameBox, Shelf};
 use jni::objects::{JByteArray, JClass, JObject};
@@ -66,7 +65,6 @@ pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_resize(_e
     s.shelf.resize(s.config.width, s.config.height);
 }
 
-/// One game, RGBA pixels (width x height); back may be null. Call [commit] after the last one.
 #[no_mangle]
 pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_addGame<'l>(env: JNIEnv<'l>, _c: JClass<'l>, h: jlong, front: JByteArray<'l>, fw: jint, fh: jint, back: JByteArray<'l>, bw: jint, bh: jint, r: jfloat, g: jfloat, b: jfloat) {
     let s = st(h);
@@ -114,7 +112,6 @@ pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_flipped(_
     st(h).shelf.flipped() as jboolean
 }
 
-/// One frame: the animation moves on by `dt` seconds and the picture is presented. Returns false when the surface was lost.
 #[no_mangle]
 pub extern "system" fn Java_com_umutk_pulse_extras_gamehub_NativeShelf_frame(_e: JNIEnv, _c: JClass, h: jlong, dt: jfloat) -> jboolean {
     let s = st(h);

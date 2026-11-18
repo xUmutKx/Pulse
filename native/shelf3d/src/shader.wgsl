@@ -49,15 +49,12 @@ fn fs(v: VOut) -> @location(0) vec4<f32> {
     return vec4<f32>(shade(v), 1.0);
 }
 
-// the box mirrored in the floor: faded out with the distance from it
 @fragment
 fn fs_reflect(v: VOut) -> @location(0) vec4<f32> {
     let d = max(g.time.y - v.world.y, 0.0);
     let fade = clamp(0.38 - d * 0.32, 0.0, 0.38);
     return vec4<f32>(shade(v) * 0.8, fade);
 }
-
-// ---- background -------------------------------------------------------------------------------------------------------------------------------
 
 struct BOut {
     @builtin(position) clip: vec4<f32>,
@@ -88,7 +85,6 @@ fn fs_bg(b: BOut) -> @location(0) vec4<f32> {
     let horizon = 0.64;
     var c = mix(top, mid, smoothstep(0.0, 0.55, b.uv.y));
     c = mix(c, bot, smoothstep(horizon - 0.1, 1.0, b.uv.y));
-    // three layers of slow light waves, each its own speed, height and tint
     for (var i = 0; i < 3; i = i + 1) {
         let fi = f32(i);
         let y0 = 0.16 + fi * 0.17;
@@ -100,17 +96,14 @@ fn fs_bg(b: BOut) -> @location(0) vec4<f32> {
         let tint = mix(vec3<f32>(0.15, 0.55, 0.62), vec3<f32>(0.30, 0.45, 0.75), fi * 0.5);
         c = c + tint * (core * 0.55 + glow * 0.5);
     }
-    // soft beams from the top
     let beam = smoothstep(0.0, 0.5, 1.0 - b.uv.y) * (0.5 + 0.5 * sin(b.uv.x * 9.0 + t * 0.2)) * 0.035;
     c = c + vec3<f32>(0.2, 0.5, 0.55) * beam;
-    // floating specks of light
     let cell = floor(vec2<f32>(b.uv.x * 14.0, (b.uv.y + t * 0.015) * 24.0));
     let h = hash21(cell);
     let ctr = vec2<f32>(fract(h * 7.0), fract(h * 13.0));
     let f2 = fract(vec2<f32>(b.uv.x * 14.0, (b.uv.y + t * 0.015) * 24.0)) - ctr;
     let speck = smoothstep(0.09, 0.0, length(f2)) * step(0.82, h) * (0.4 + 0.6 * sin(t * 1.3 + h * 40.0));
     c = c + vec3<f32>(0.4, 0.8, 0.85) * speck * 0.35 * (1.0 - smoothstep(horizon - 0.05, horizon + 0.05, b.uv.y));
-    // the floor: darker, with faint vertical tiles and a pool of light under the middle box
     if (b.uv.y > horizon) {
         let k = smoothstep(horizon, horizon + 0.04, b.uv.y);
         let stripe = 0.5 + 0.5 * sin(b.uv.x * 90.0);
@@ -118,7 +111,6 @@ fn fs_bg(b: BOut) -> @location(0) vec4<f32> {
     }
     let gl = exp(-pow((b.uv.x - 0.5) * 2.0, 2.0) - pow((b.uv.y - 0.70) * 4.5, 2.0));
     c = c + vec3<f32>(0.12, 0.26, 0.28) * gl * 0.8;
-    // vignette
     let v = length((b.uv - vec2<f32>(0.5, 0.45)) * vec2<f32>(1.0, 0.8));
     c = c * (1.0 - smoothstep(0.45, 0.95, v) * 0.45);
     return vec4<f32>(c, 1.0);
