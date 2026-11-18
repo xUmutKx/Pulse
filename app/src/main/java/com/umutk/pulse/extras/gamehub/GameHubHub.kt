@@ -772,7 +772,19 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     }
     var query by remember { mutableStateOf("") }
     var hiddenOpen by remember { mutableStateOf(true) }
-    val hiddenList = hiddenPkgs.map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }
+    // apps hidden outside Pulse (pm hide from a shell, by another tool): the system still lists them with the "uninstalled" flag; they show here too, so they can be seen without root
+    val outsideHidden by produceState<List<GameRow>>(emptyList(), tick) {
+        value = withContext(Dispatchers.IO) {
+            val pm = ctx.packageManager
+            runCatching {
+                @Suppress("DEPRECATION")
+                pm.getInstalledApplications(android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES)
+                    .filter { ai -> ai.packageName != ctx.packageName && (ai.flags and 0x00800000) != 0 && ai.packageName !in hiddenSet(ctx) && !visibleTo(ctx, ai.packageName) }
+                    .map { ai -> GameRow(ai.packageName, runCatching { pm.getApplicationLabel(ai).toString() }.getOrDefault(ai.packageName)) }
+            }.getOrDefault(emptyList())
+        }
+    }
+    val hiddenList = (hiddenPkgs.map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) } + outsideHidden).distinctBy { it.pkg }.sortedBy { it.name.lowercase() }
     val visible = apps.filter { it.pkg !in hiddenPkgs && it.name.contains(query, true) }
     fun changed() { hiddenPkgs = hiddenSet(ctx); tick++; onChanged() }
     Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
