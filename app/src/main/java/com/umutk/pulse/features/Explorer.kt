@@ -2597,6 +2597,12 @@ private fun exZipForShare(ctx: Context, picks: List<File>): File {
 
 /** The Share button: the apps that take the files in a row at the top, then the other ways to send them (a zip with the folders, Bluetooth, the names, the paths). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+/** Whether Share opens the phone's own Share menu instead of Pulse's sheet (off by default: Pulse's sheet). */
+object ShareMenuPref {
+    fun system(c: android.content.Context): Boolean = c.getSharedPreferences("pulse_share", android.content.Context.MODE_PRIVATE).getBoolean("system", false)
+    fun set(c: android.content.Context, on: Boolean) = c.getSharedPreferences("pulse_share", android.content.Context.MODE_PRIVATE).edit().putBoolean("system", on).apply()
+}
+
 @Composable
 private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String) -> Unit) {
     val ctx = LocalContext.current
@@ -2612,6 +2618,11 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
             else Intent(Intent.ACTION_SEND_MULTIPLE).setType(mime).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
         i.clipData = ClipData.newRawUri("", uris[0]).also { cd -> uris.drop(1).forEach { cd.addItem(ClipData.Item(it)) } }
         return i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    // the person chose the phone's own Share menu in the settings: it opens instead of Pulse's sheet
+    if (ShareMenuPref.system(ctx) && files.isNotEmpty() && !folders) {
+        LaunchedEffect(Unit) { runCatching { ctx.startActivity(Intent.createChooser(sendIntent(files), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; onDismiss() }
+        return
     }
     // the apps that take this share, read off the main thread
     var targets by remember { mutableStateOf<List<ShareTarget>>(emptyList()) }
