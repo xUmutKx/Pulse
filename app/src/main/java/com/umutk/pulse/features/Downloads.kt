@@ -222,6 +222,8 @@ object Downloads {
     var keepFiles by mutableStateOf(false)
     /** A torrent that finds nobody to download from within 15 seconds gives way to another stream of the episode (a bigger one is fine, never under 200 MB). On at first. */
     var autoSwitch by mutableStateOf(true)
+    /** Magnet links, and Stremio's local links that become magnets: off by default, they start only when this is on. */
+    var magnetLinks by mutableStateOf(false)
     /** index into [SPEED_KBS]: caps downloads and installer copies; kept between runs */
     var speed by mutableStateOf(0)
     /** false while there is no working network; transfers wait for it instead of failing */
@@ -242,6 +244,7 @@ object Downloads {
         directOpen = p.getBoolean("openDirect", false)
         keepFiles = p.getBoolean("dlKeepFiles", false)
         autoSwitch = p.getBoolean("dlAutoSwitch", true)
+        magnetLinks = p.getBoolean("dlMagnet", false)
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
         // the activity, the service and the boot receiver all call this; the list is read once per process
         if (loaded) return
@@ -294,6 +297,11 @@ object Downloads {
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
         val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+    }
+
+    fun setMagnetLinks(ctx: Context, v: Boolean) {
+        magnetLinks = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlMagnet", v).apply()
     }
 
     fun setAutoSwitch(ctx: Context, v: Boolean) {
@@ -359,7 +367,9 @@ object Downloads {
     /** [fixedName] (without extension) is kept: the file is named so, with the extension its content type tells. */
     fun add(ctx: Context, link: String, fixedName: String? = null, alts: List<String> = emptyList(), into: File? = null) {
         // a link of Stremio's local server is the torrent itself: it is downloaded as a torrent here (no need for Stremio to be running)
-        val url = stremioMagnet(link) ?: link
+        // off (the default): a magnet link or a Stremio link is not started as a torrent; the link is not taken at all
+        if (!Downloads.magnetLinks && (link.startsWith("magnet:", true) || stremioMagnet(link) != null)) return
+        val url = (if (Downloads.magnetLinks) stremioMagnet(link) else null) ?: link
         val c = ctx.applicationContext
         app = c
         scope.launch {
@@ -1429,7 +1439,7 @@ private fun DownloadsContent() {
                             pending.add(u)
                             findScope.launch {
                                 // a magnet link is a download of its own: it starts at once
-                                if (u.startsWith("magnet:", ignoreCase = true)) { Downloads.add(ctx, u); pending.remove(u); return@launch }
+                                if (u.startsWith("magnet:", ignoreCase = true)) { if (Downloads.magnetLinks) Downloads.add(ctx, u); pending.remove(u); return@launch }
                                 // a file starts at once; a web page is read for its download links
                                 when (val r = LinkFinder.find(u)) {
                                     is LinkFinder.Result.Direct -> Downloads.add(ctx, u)
