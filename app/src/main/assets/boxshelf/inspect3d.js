@@ -58,6 +58,7 @@ window.Inspect3D = (() => {
     coverMat = null; if (standInTex) { try { standInTex.dispose(); } catch {} standInTex = null; } phase = 'idle'; pend = null; fadeT0 = 0; target = null; tok++;
     const cb = onDone; onDone = null; if (cb) try { cb(true); } catch {} // a box still hidden for a flight that can't finish now comes back
   }
+  let adEma = 16, adSlow = 0, adCap = Infinity; // the adaptive sharpness (see frame)
   function resize() {
     const w = innerWidth, h = innerHeight;
     const pr0 = Math.min((devicePixelRatio || 1) * (document.body.classList.contains('fx') ? 1.5 : 1), (document.body.classList.contains('fx') ? 2 : 1.5) * (window.BS_AUTOZOOM || 1), (window.Perf ? Perf.get().inspectPr : 2) * (window.BS_AUTOZOOM || 1));
@@ -65,7 +66,7 @@ window.Inspect3D = (() => {
     // frame, up to 240 times a second. Never below the screen's own pixels, so the art stays as sharp as the panel shows it
     renderer.setPixelRatio(Math.max(Math.min(pr0, devicePixelRatio || 1), Math.min(pr0, Math.sqrt(1920 * 1080 * 2.25 / Math.max(1, w * h))))); /* with effects on, a little supersampling: the case's glossy edges and light glints stop shimmering as it turns */ // one object on screen: render at the panel's real pixels so the art stays sharp
     // a phone's screen is small: one case drawn at the screen's own pixels (up to 2.5x, 4.2 million pixels) stays sharp instead of blocky
-    { const d = Math.min(devicePixelRatio || 1, 2.5); if (w * h * d * d <= 4.2e6 && d > renderer.getPixelRatio()) renderer.setPixelRatio(d); }
+    { const d = Math.min(devicePixelRatio || 1, 2.5); if (w * h * d * d <= 4.2e6 && d > renderer.getPixelRatio() && d <= adCap) renderer.setPixelRatio(d); }
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     cvRect = canvas.classList.contains('on') ? canvas.getBoundingClientRect() : null;
   }
@@ -469,7 +470,10 @@ window.Inspect3D = (() => {
   function frame(now) {
     if (!cur || paused) { raf = 0; lastT = 0; return; } // (beta.10) paused (a manual is open) or nothing shown: the loop stops; setPaused(false) / open() start it again
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(.05, lastT ? (now - lastT) / 1000 : .016); lastT = now;
+    const dt = Math.min(.05, lastT ? (now - lastT) / 1000 : .016);
+    // the sharpness follows the phone: when the frames run slow (over 26 ms on average) the drawing size steps down towards 1x and stays there, so the extra pixels never cost smoothness
+    if (lastT) { adEma = adEma * .9 + (now - lastT) * .1; if (adEma > 26 && renderer.getPixelRatio() > 1.01) { if (++adSlow > 20) { adCap = Math.max(1, renderer.getPixelRatio() * .8); renderer.setPixelRatio(adCap); adSlow = 0; adEma = 16; } } else adSlow = 0; }
+    lastT = now;
     // the quick cross-fade: the canvas keeps its last picture, only its opacity moves (no re-render)
     if (fadeT0) {
       const k = Math.min(1, (now - fadeT0) / FADE_MS); canvas.style.opacity = (fadeFrom * (1 - easeIO(k))).toFixed(3);
