@@ -26,6 +26,8 @@ object Apps {
         WatchApp("dice", "Dice & coin", "🎲", "Roll or flip") { DiceScreen() },
         WatchApp("metronome", "Metronome", "🎵", "Beats on the wrist") { MetronomeScreen() },
         WatchApp("light", "Flashlight", "🔦", "The whole screen white") { FlashlightScreen() },
+        WatchApp("apps", "Apps", "📱", "Open what is on the watch") { AppsScreen() },
+        WatchApp("files", "Files", "📁", "Browse the watch's storage") { FilesScreen() },
         WatchApp("water", "Water", "💧", "Glasses today") { WaterScreen() },
         WatchApp("tip", "Tip", "💵", "Bill, tip and split") { TipScreen() },
         WatchApp("reaction", "Reaction", "⚡", "Tap on green") { ReactionScreen() },

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.wear.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -134,3 +136,40 @@ fun ConvertScreen() {
 }
 
 private class Conv(val a: String, val b: String, val f: (Double) -> Double)
+
+@Composable
+fun AppsScreen() {
+    val ctx = LocalContext.current
+    val pm = ctx.packageManager
+    val apps = remember {
+        pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0)
+            .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.filter { it.second != ctx.packageName }.sortedBy { it.first.lowercase() }
+    }
+    Page(showTime = false) {
+        androidx.wear.compose.foundation.lazy.ScalingLazyColumn(Modifier.fillMaxSize()) {
+            item { T("Apps · ${apps.size}", color = W.accent, size = 14.sp, weight = FontWeight.SemiBold) }
+            items(apps.size) { k ->
+                val (name, pkg) = apps[k]
+                T(name, size = 15.sp, maxLines = 1, modifier = Modifier.clickable { pm.getLaunchIntentForPackage(pkg)?.let { ctx.startActivity(it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(vertical = 6.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun FilesScreen() {
+    val root = remember { android.os.Environment.getExternalStorageDirectory() }
+    var dir by remember { mutableStateOf(root) }
+    val list = remember(dir) { dir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) ?: emptyList() }
+    Page(showTime = false) {
+        androidx.wear.compose.foundation.lazy.ScalingLazyColumn(Modifier.fillMaxSize()) {
+            item { T(if (dir == root) "Files" else dir.name, color = W.accent, size = 14.sp, weight = FontWeight.SemiBold) }
+            if (dir != root) item { T("↰ back", color = W.sub, size = 14.sp, modifier = Modifier.clickable { dir = dir.parentFile ?: root }.padding(vertical = 6.dp)) }
+            items(list.size) { k ->
+                val f = list[k]
+                T((if (f.isDirectory) "▸ " else "") + f.name + if (f.isFile) "  ${f.length() / 1024} KB" else "", size = 14.sp, maxLines = 1,
+                    modifier = Modifier.clickable { if (f.isDirectory) dir = f }.padding(vertical = 5.dp))
+            }
+        }
+    }
+}
