@@ -223,8 +223,13 @@ object KeyboardDictionary {
     fun saveUser(c: Context, force: Boolean = false) {
         if (dirty == 0 && !force) return
         dirty = 0
-        if (force) writeUser(c) else saver.execute { writeUser(c) }
+        if (force) { writeUser(c); return }
+        // a long message makes many saves in a row (every 25 words), each one sorting and writing five files: one write follows a few seconds after the burst instead,
+        // and it writes what is known by then (the typing after a long message was slow while those writes ran)
+        if (!savePending.compareAndSet(false, true)) return
+        saver.execute { try { Thread.sleep(4000) } catch (_: InterruptedException) {}; savePending.set(false); writeUser(c) }
     }
+    private val savePending = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun writeUser(c: Context) {
         runCatching {
