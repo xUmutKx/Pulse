@@ -139,7 +139,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
     Box(
         Modifier.offset(if (w.max) 0.dp else w.x.dp, if (w.max) 0.dp else w.y.dp).size(fw, fh)
             // a touch anywhere on the window brings it to the front, without taking the touch from what is inside
-            .pointerInput(w.id, areaW, areaH) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); DesktopWindows.front(w) } }
+            .pointerInput(w.id, areaW, areaH) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial); DesktopWindows.front(w) } }
             .clip(shape).clipToBounds(),
     ) {
     if (wall != null) androidx.compose.foundation.Image(wall, null,

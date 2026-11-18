@@ -133,7 +133,10 @@ fun Wmp12Player(
                     showLyrics, { showLyrics = !showLyrics; if (showLyrics) showList = false }, queue.getOrNull(current), pos, onSeek)
             }
             if (fluent) FluentTransport(pos, dur, playing, onPrev, onPlayPause, onNext, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty())
-            else Transport(pos, dur, playing, onPrev, onPlayPause, onNext, onStop, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty(), { picking = !picking })
+            // the control bar lies on a band that runs the whole width of the window, edge to edge, so the pill is never left on bare ground
+            else Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC0A0F15))))) {
+                Transport(pos, dur, playing, onPrev, onPlayPause, onNext, onStop, onSeek, shuffleOn, repeat, onShuffle, onRepeat, lib, { lib = !lib }, library.isNotEmpty(), { picking = !picking })
+            }
         }
         // the looks to choose from: round swatches over the pill
         if (picking && !fluent) Row(Modifier.align(Alignment.BottomEnd).padding(end = 10.dp, bottom = 78.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xDD0B1118)).border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(20.dp)).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -153,7 +156,9 @@ private fun WmpBackdrop(th: WTheme, cover: ImageBitmap?) {
         val w = size.width; val h = size.height
         drawRect(Color(th.base))
         val big = maxOf(w, h)
-        drawRect(Brush.radialGradient(listOf(Color(th.glow).copy(alpha = .95f), Color(th.glow2).copy(alpha = .75f), Color.Transparent), center = androidx.compose.ui.geometry.Offset(w * .66f, h * .72f), radius = big * .95f))
+        // two glows low on the window, one each side, so a wide (turned) window is lit all along and neither end is left dark or empty
+        drawRect(Brush.radialGradient(listOf(Color(th.glow).copy(alpha = .9f), Color(th.glow2).copy(alpha = .7f), Color.Transparent), center = androidx.compose.ui.geometry.Offset(w * .72f, h * .74f), radius = big * .75f))
+        drawRect(Brush.radialGradient(listOf(Color(th.glow).copy(alpha = .75f), Color(th.glow2).copy(alpha = .55f), Color.Transparent), center = androidx.compose.ui.geometry.Offset(w * .22f, h * .78f), radius = big * .65f))
         drawRect(Brush.radialGradient(listOf(Color(th.glow2).copy(alpha = .55f), Color.Transparent), center = androidx.compose.ui.geometry.Offset(w * .08f, h * .12f), radius = big * .55f))
         // the light ribbons
         fun ribbon(y0: Float, amp: Float, a: Float, wd: Float) {
@@ -166,7 +171,7 @@ private fun WmpBackdrop(th: WTheme, cover: ImageBitmap?) {
         }
         ribbon(.62f, .16f, .20f, 18f); ribbon(.66f, .12f, .26f, 6f); ribbon(.58f, .2f, .12f, 30f); ribbon(.70f, .1f, .16f, 3f)
         // a darker foot and edges, as the real window's vignette
-        drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .55f)), startY = h * .55f, endY = h))
+        drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .30f)), startY = h * .6f, endY = h))
     }
     if (th.id == "cover" && cover != null) {
         Image(cover, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop, alpha = .45f)
@@ -207,7 +212,8 @@ private fun NowPlaying(
                 else if (showList && !side) QueueList(queue, current, onPick, Modifier.fillMaxSize())
                 else {
                     // the cover is as large as the room allows, square, in a thin frame
-                    val s = minOf(maxWidth, maxHeight).coerceAtLeast(60.dp)
+                    // not larger than a part of the window: on a turned screen the cover took most of the width
+                    val s = minOf(maxWidth, maxHeight, if (side) 200.dp else 300.dp).coerceAtLeast(60.dp)
                     val cs = RoundedCornerShape(if (fluent) 12.dp else 2.dp)
                     Box(Modifier.size(s).then(if (fluent) Modifier.shadow(16.dp, cs) else Modifier).clip(cs).background(Color(0x22FFFFFF)).then(if (fluent) Modifier else Modifier.border(1.dp, Color(0x66FFFFFF), cs)), contentAlignment = Alignment.Center) {
                         if (cover != null) Image(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
