@@ -446,7 +446,7 @@ object WeatherLand {
                 p.color = 0xFFFFF08A.toInt(); p.alpha = (255 * a2).toInt(); c.drawCircle(fx, fy, u * 1.8f, p); p.alpha = 255
             }
         }
-        if (land == Land.PLATEAU) {
+        if (land == Land.PLATEAU && variant == 0) {
             val hx = w * (.18f + rnd(0, 3f) * .06f); val hy = horizon + h * .035f + rnd(0, 8f) * h * .02f
             for (k in 0 until 4) {
                 val ph = frac(t + k * .25f)

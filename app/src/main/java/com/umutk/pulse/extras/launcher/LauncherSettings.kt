@@ -184,6 +184,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
             SwitchLine("window", tr("Open apps in windows on the Windows desktops (off: each app opens by itself)", "Windows masaüstlerinde uygulamalar pencerede açılır (kapalı: her biri kendi başına açılır)"), LauncherPrefs.windowedApps) { LauncherPrefs.windowedApps = it; save() }
             SwitchLine("grid", tr("Desktop icons on a grid (off: place them anywhere)", "Masaüstü simgeleri ızgarada (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
+            SwitchLine("scale", tr("Widgets on the grid (off: place and size them freely)", "Widget'lar ızgarada (kapalı: serbest yerleştir ve boyutlandır)"), LauncherPrefs.snapWidgets) { LauncherPrefs.snapWidgets = it; save() }
             if (LauncherPrefs.snapIcons) {
                 SwitchLine("grid", tr("Fill empty spaces (icons move up into a gap)", "Boşlukları doldur (simgeler boşluğa kayar)"), LauncherPrefs.fillGaps) { LauncherPrefs.fillGaps = it; save() }
                 SliderRow("${tr("Desktop grid, upright", "Masaüstü ızgarası, dikey")}: ${LauncherPrefs.deskColsPort} x ${LauncherPrefs.deskRowsPort}  ·  ${tr("columns", "sütun")}", LauncherPrefs.deskColsPort.toFloat(), 3f..12f) { LauncherPrefs.deskColsPort = it.roundToInt(); save() }
