@@ -105,6 +105,7 @@ fun WeatherHub(onBack: () -> Unit) {
     var showMap by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
+    var land by remember { mutableStateOf(WeatherStore.land(ctx)) }
     val devicePlace = Place(tr("My location", "Konumum"), 0.0, 0.0, device = true)
 
     fun load(p: Place) {
@@ -211,6 +212,7 @@ fun WeatherHub(onBack: () -> Unit) {
     if (showSettings) {
         WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts, WeatherStore.combine(ctx), { WeatherStore.setCombine(ctx, it); place?.let { p -> load(p) } },
             onSkin = { skin = it; WeatherStore.setSkin(ctx, it) },
+            land = land, onLand = { land = it; WeatherStore.setLand(ctx, it) },
             onUnits = { imp = it; WeatherStore.setUnits(ctx, if (it) "f" else "c") },
             onSource = { source = it; WeatherStore.setSource(ctx, it); place?.let { p -> load(p) } },
             onAlerts = { setAlerts(it) },
@@ -239,7 +241,7 @@ fun WeatherHub(onBack: () -> Unit) {
         detectHorizontalDragGestures(onDragStart = { dragSum = 0f }, onDragEnd = { if (dragSum < -160f) go(1) else if (dragSum > 160f) go(-1); dragSum = 0f }) { _, dx -> dragSum += dx }
     }) {
     // the sky look: the weather scene (clouds, sun, rain) is the background of the whole page, not only of the first card
-    if (skin == "sky") fc?.let { WeatherScene(it.code, Modifier.fillMaxSize(), day = it.isDay) }
+    if (skin == "sky") fc?.let { WeatherSky(it, land, Modifier.fillMaxSize()) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -303,7 +305,7 @@ fun WeatherHub(onBack: () -> Unit) {
             val rainSoon = f.hours.take(6).maxOfOrNull { it.rain } ?: 0
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))) {
-                if (skin != "sky") WeatherScene(f.code, Modifier.matchParentSize(), day = f.isDay)
+                if (skin != "sky") WeatherSky(f, land, Modifier.matchParentSize())
                 Column(Modifier.fillMaxWidth().then(if (skin == "sky") Modifier.background(Color.Black.copy(alpha = .30f)) else Modifier).padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     val wh = androidx.compose.ui.graphics.Color.White
                     Text(f.place, color = wh.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1)
@@ -559,9 +561,11 @@ private fun Tile(label: String, value: String, fg: androidx.compose.ui.graphics.
 /** The weather settings: how the page looks, the unit, where the data comes from, the alerts. Full rows that open a list, like the other settings screens. */
 @Composable
 private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp: Boolean, source: String, alerts: Boolean, combine: Boolean, onCombine: (Boolean) -> Unit,
-                            onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
+                            onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit,
+                            land: String = "auto", onLand: (String) -> Unit = {}) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
+    val lands = listOf("auto" to tr("Automatic (each place its own)", "Otomatik (her yerin kendisi)")) + WeatherLand.Land.values().map { it.key to tr(it.en, it.tr) }
     val sources = listOf("all" to tr("All sources, combined", "Hepsi, birleştirilmiş"), "om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "wttr" to tr("wttr.in (no key)", "wttr.in (anahtarsız)"), "brightsky" to tr("Bright Sky, DWD (no key)", "Bright Sky, DWD (anahtarsız)"), "owm" to "OpenWeatherMap", "wapi" to "WeatherAPI.com", "pirate" to "Pirate Weather")
     val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
@@ -575,6 +579,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
             Text(tr("Weather settings", "Hava durumu ayarları"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
         }
         Row2(tr("Colours", "Renkler"), skins.first { it.first == skin }.second) { ask = "skin" }
+        Row2(tr("Scenery", "Manzara"), lands.first { it.first == land }.second) { ask = "land" }
         Row2(tr("Temperature unit", "Sıcaklık birimi"), if (imp) "°F" else "°C") { ask = "units" }
         Row2(tr("Data source", "Veri kaynağı"), sources.first { it.first == source }.second) { ask = "source" }
         // the key is shown always: OpenWeatherMap is a source, and it also joins the combined forecast when the key is set
@@ -613,6 +618,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
     }
     when (ask) {
         "skin" -> com.umutk.pulse.extras.video.PickDialog(tr("Colours", "Renkler"), skins.map { it.second to (it.first == skin) }, { ask = "" }) { onSkin(skins[it].first); ask = "" }
+        "land" -> com.umutk.pulse.extras.video.PickDialog(tr("Scenery", "Manzara"), lands.map { it.second to (it.first == land) }, { ask = "" }) { onLand(lands[it].first); ask = "" }
         "units" -> com.umutk.pulse.extras.video.PickDialog(tr("Temperature unit", "Sıcaklık birimi"), listOf("°C" to !imp, "°F" to imp), { ask = "" }) { onUnits(it == 1); ask = "" }
         "source" -> com.umutk.pulse.extras.video.PickDialog(tr("Data source", "Veri kaynağı"), sources.map { it.second to (it.first == source) }, { ask = "" }) { onSource(sources[it].first); ask = "" }
     }
