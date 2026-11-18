@@ -888,6 +888,16 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stickynote_info" />
         </receiver>
+        <!-- photo frame: one photo per widget, a square tile; its settings open when it is placed and when it is tapped -->
+        <receiver android:name="com.umutk.pulse.widgets.PhotoWidget" android:label="Pulse · Photo frame" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_photo_info" />
+        </receiver>
+        <activity android:name="com.umutk.pulse.widgets.PhotoWidgetConfig" android:exported="true" android:theme="@style/Theme.Pulse">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
         <receiver android:name="com.umutk.pulse.widgets.VoiceWidget" android:label="Pulse · Voice recorder" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

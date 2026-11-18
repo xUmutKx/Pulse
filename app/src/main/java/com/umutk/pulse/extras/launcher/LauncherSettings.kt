@@ -86,7 +86,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     var pickWall by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
-    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the gadget", "Gadget ekle"), tr("Watch a short ad to add this gadget. It is added only when the ad is watched to the end.", "Bu gadget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // the live previews of the placed widgets update only while the host listens
     val widgetHost = LauncherWidgetHost.get(ctx)
     DisposableEffect(widgetHost) { widgetHost.startListening(); onDispose { widgetHost.stopListening() } }
@@ -135,7 +135,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             }
         }
         if (cat == "widgets") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            ValueRow("add", tr("Add widget", "Widget ekle"), "") { pickWidget = true }
+            ValueRow("add", tr("Add gadget", "Gadget ekle"), "") { pickWidget = true }
             val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
             placedWidgets().forEach { w ->
                 val info = mgr.getAppWidgetInfo(w.id) ?: return@forEach
@@ -164,7 +164,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 }
             }
             SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
-            if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock widget", "Masaüstü saat widget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
+            if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock gadget", "Masaüstü saat gadget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }
@@ -184,7 +184,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
             SwitchLine("window", tr("Open apps in windows on the Windows desktops (off: each app opens by itself)", "Windows masaüstlerinde uygulamalar pencerede açılır (kapalı: her biri kendi başına açılır)"), LauncherPrefs.windowedApps) { LauncherPrefs.windowedApps = it; save() }
             SwitchLine("grid", tr("Desktop icons on a grid (off: place them anywhere)", "Masaüstü simgeleri ızgarada (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
-            SwitchLine("scale", tr("Widgets on the grid (off: place and size them freely)", "Widget'lar ızgarada (kapalı: serbest yerleştir ve boyutlandır)"), LauncherPrefs.snapWidgets) { LauncherPrefs.snapWidgets = it; save() }
+            SwitchLine("scale", tr("Gadgets on the grid (off: place and size them freely)", "Gadget'lar ızgarada (kapalı: serbest yerleştir ve boyutlandır)"), LauncherPrefs.snapWidgets) { LauncherPrefs.snapWidgets = it; save() }
             if (LauncherPrefs.snapIcons) {
                 SwitchLine("grid", tr("Fill empty spaces (icons move up into a gap)", "Boşlukları doldur (simgeler boşluğa kayar)"), LauncherPrefs.fillGaps) { LauncherPrefs.fillGaps = it; save() }
                 SliderRow("${tr("Desktop grid, upright", "Masaüstü ızgarası, dikey")}: ${LauncherPrefs.deskColsPort} x ${LauncherPrefs.deskRowsPort}  ·  ${tr("columns", "sütun")}", LauncherPrefs.deskColsPort.toFloat(), 3f..12f) { LauncherPrefs.deskColsPort = it.roundToInt(); save() }
@@ -397,7 +397,7 @@ private val LAUNCHER_CATS = listOf(
     LCat("dock", 0xFFB9AE20, "pin", "Dock", "Dok", "Pinned apps", "Sabitli uygulamalar"),
     LCat("apps", 0xFF47C223, "sort", "App drawer", "Uygulama çekmecesi", "Sort, columns, hidden apps, icon pack", "Sıralama, sütunlar, gizli uygulamalar, simge paketi"),
     LCat("folders", 0xFF22BFB5, "folder", "Folders", "Klasörler", "How a folder looks", "Klasörün görünümü"),
-    LCat("widgets", 0xFF7BAFE9, "gridView", "Widgets", "Widget'lar", "Add and remove widgets", "Widget ekle ve kaldır"),
+    LCat("widgets", 0xFF7BAFE9, "gridView", "Gadgets", "Gadget'lar", "Add and remove gadgets", "Gadget ekle ve kaldır"),
     LCat("desktop", 0xFFC998EE, "folder", "Desktop icons", "Masaüstü simgeleri", "Which shortcuts sit on the Windows desktops", "Windows masaüstlerindeki kısayollar"),
     LCat("feel", 0xFFEC8CC8, "palette", "Look and feel", "Görünüm ve his", "Icon shape, wallpaper effects, sounds, boot screens", "Simge şekli, duvar kağıdı efektleri, sesler, açılış ekranları"),
     LCat("gestures", 0xFFEA9788, "sensors", "Gestures and inputs", "Hareketler ve girişler", "Double tap, swipes, vibration", "Çift dokunuş, kaydırmalar, titreşim"),

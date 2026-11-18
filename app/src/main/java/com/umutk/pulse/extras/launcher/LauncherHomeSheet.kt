@@ -62,7 +62,7 @@ fun HomeSheet() {
     // the Properties window of an app (opened from its menu) is drawn from here, at the top level of the home
     PropertiesHost()
     val addWidget = rememberWidgetAdd { }
-    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the gadget", "Gadget ekle"), tr("Watch a short ad to add this gadget. It is added only when the ad is watched to the end.", "Bu gadget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // a file or a picture for the home screen: its place on the phone is kept, the file itself is not copied
     fun addLink(path: String?) {
         if (path == null) { android.widget.Toast.makeText(ctx, tr("This file cannot be put on the home screen", "Bu dosya ana ekrana konamaz"), android.widget.Toast.LENGTH_SHORT).show(); return }
@@ -103,7 +103,7 @@ fun HomeSheet() {
             val now = names.mapNotNull { n -> desk.listFiles()?.firstOrNull { it.name == n || it.name.startsWith(n.substringBeforeLast('.') + " (") }?.let { "file:" + it.path } }
             if (now.isNotEmpty()) { LauncherPrefs.links = (LauncherPrefs.links + now).distinct(); LauncherPrefs.save(ctx) }
         }
-        ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
+        ActionRow("gridView", tr("Gadgets", "Gadget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
         var addOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
         ActionRow("add", tr("New", "Yeni"), w.text) { addOpen = !addOpen }
         if (addOpen) androidx.compose.foundation.layout.Column(Modifier.padding(start = 24.dp)) {

@@ -59,13 +59,13 @@ fun LauncherStoreWindow() {
     var pickWall by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
-    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the gadget", "Gadget ekle"), tr("Watch a short ad to add this gadget. It is added only when the ad is watched to the end.", "Bu gadget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // Windows 11 has the Microsoft Store drawn as the real one is (see-through, a rail of places at the left, cards); the other looks keep the plain tabs
     if (T.id == "win11" || T.id == "win10") MsStoreWindow(onPictures = { pickWall = true }, onWidgets = { pickWidget = true }, win10 = T.id == "win10") else Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(tab == 0, tr("Looks", "Görünümler")) { tab = 0 }
             PChip(tab == 1, tr("Pictures", "Resimler")) { tab = 1 }
-            PChip(tab == 2, tr("Widgets", "Widget'lar")) { tab = 2 }
+            PChip(tab == 2, tr("Gadgets", "Gadget'lar")) { tab = 2 }
             PChip(tab == 3, tr("Packs", "Paketler")) { tab = 3 }
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
@@ -84,8 +84,8 @@ fun LauncherStoreWindow() {
                 }
                 3 -> com.umutk.pulse.extras.store.PackList()
                 else -> {
-                    Text(tr("Widgets on this phone", "Bu telefondaki widget'lar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-                    PButton(tr("Browse widgets", "Widget'lara göz at")) { pickWidget = true }
+                    Text(tr("Gadgets on this phone", "Bu telefondaki gadget'lar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    PButton(tr("Browse gadgets", "Gadget'lara göz at")) { pickWidget = true }
                 }
             }
         }

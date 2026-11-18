@@ -71,7 +71,7 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean 
     val line = T.sub.copy(alpha = .22f)
     val r = if (win10) 0.dp else 8.dp
     val items = listOf("home" to tr("Home", "Ana sayfa"), "palette" to tr("Looks", "Görünümler"), "image" to tr("Pictures", "Resimler"),
-        "apps" to tr("Widgets", "Widget'lar"), "download" to tr("Library", "Kitaplık"))
+        "apps" to tr("Gadgets", "Gadget'lar"), "download" to tr("Library", "Kitaplık"))
     Column(Modifier.fillMaxSize().background(if (win10) T.bg else T.bg.copy(alpha = .35f))) {
         // the search box: a rounded field in the middle of the top, as in the real Store
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -80,7 +80,7 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean 
                     PIcon("search", T.sub, 16.dp)
                     Spacer(Modifier.width(8.dp))
                     Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) Text(tr("Search packs, looks, widgets and more", "Paket, görünüm, widget ve daha fazlasını ara"), color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (query.isEmpty()) Text(tr("Search packs, looks, gadgets and more", "Paket, görünüm, gadget ve daha fazlasını ara"), color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         BasicTextField(query, { query = it; if (it.isNotBlank()) nav = 4 }, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 13.sp),
                             cursorBrush = SolidColor(T.accent), modifier = Modifier.fillMaxWidth())
                     }
@@ -125,7 +125,7 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean 
                         }
                         // three tiles that open the other places
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                            listOf(Triple("palette", tr("Looks", "Görünümler"), 1), Triple("image", tr("Pictures", "Resimler"), 2), Triple("apps", tr("Widgets", "Widget'lar"), 3)).forEach { (ic, t3, dest) ->
+                            listOf(Triple("palette", tr("Looks", "Görünümler"), 1), Triple("image", tr("Pictures", "Resimler"), 2), Triple("apps", tr("Gadgets", "Gadget'lar"), 3)).forEach { (ic, t3, dest) ->
                                 Row(Modifier.weight(1f).clip(RoundedCornerShape(r)).background(pane).border(1.dp, line, RoundedCornerShape(r)).clickable { nav = dest }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     PIcon(ic, T.accent, 22.dp)
                                     Text(t3, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp))
@@ -154,9 +154,9 @@ fun MsStoreWindow(onPictures: () -> Unit, onWidgets: () -> Unit, win10: Boolean 
                         PButton(tr("Browse pictures", "Resimlere göz at"), onClick = onPictures)
                     }
                     3 -> {
-                        Text(tr("Widgets", "Widget'lar"), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Text(tr("Widgets on this phone", "Bu telefondaki widget'lar"), color = T.sub, fontSize = 13.sp)
-                        PButton(tr("Browse widgets", "Widget'lara göz at"), onClick = onWidgets)
+                        Text(tr("Gadgets", "Gadget'lar"), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                        Text(tr("Gadgets on this phone", "Bu telefondaki gadget'lar"), color = T.sub, fontSize = 13.sp)
+                        PButton(tr("Browse gadgets", "Gadget'lara göz at"), onClick = onWidgets)
                     }
                     else -> {
                         Text(tr("Library", "Kitaplık"), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)

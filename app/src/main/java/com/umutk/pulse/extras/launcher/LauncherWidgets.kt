@@ -173,7 +173,7 @@ private fun groupName(g: String): String = when (g) {
 private val GROUP_ORDER = listOf("clock", "music", "notes", "calendar", "system", "photos", "other")
 
 /**
- * The widget board, as the Windows 11 "Add widgets" pane: Pulse's own widgets sorted into groups (clocks, music, notes, calendar, system, photos) with one chip per group,
+ * The widget board, as the Windows 11 "Add gadgets" pane: Pulse's own widgets sorted into groups (clocks, music, notes, calendar, system, photos) with one chip per group,
  * and the other apps' widgets under their app. A card is as wide and as high as its widget really is (wide widgets take the whole row), so nothing is cropped or
  * stretched. A search finds a widget by its name or app. The board stays open after an add (the card gets a check), so several can be added in one go.
  */
@@ -207,12 +207,12 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (tab == 1 && app != null && q.isEmpty()) Box(Modifier.size(32.dp).clickable { app = null }, contentAlignment = Alignment.Center) { PIcon("back", w.text, 18.dp) }
-                Text(if (tab == 1 && app != null && q.isEmpty()) appOf(app!!) else tr("Add widgets", "Widget ekle"), color = w.text, maxLines = 1)
+                Text(if (tab == 1 && app != null && q.isEmpty()) appOf(app!!) else tr("Add gadgets", "Gadget ekle"), color = w.text, maxLines = 1)
             }
         },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                com.umutk.pulse.PField(query, { query = it }, tr("Search widgets", "Widget ara"), Modifier.fillMaxWidth())
+                com.umutk.pulse.PField(query, { query = it }, tr("Search gadgets", "Gadget ara"), Modifier.fillMaxWidth())
                 if (q.isEmpty()) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         com.umutk.pulse.PChip(tab == 0, "Pulse") { tab = 0; app = null }
@@ -253,7 +253,7 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
                         }
                     }
                 }
-                else if (flat != null && flat.isEmpty()) Text(tr("No widgets", "Widget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
+                else if (flat != null && flat.isEmpty()) Text(tr("No gadgets", "Gadget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
                 else LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (flat != null) gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
                     else GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
