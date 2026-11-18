@@ -82,6 +82,7 @@ import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.ZoomIn
@@ -644,8 +645,8 @@ fun VideoContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val skip = if (fullscreen) 50.dp else 43.dp
-                    GlassButton(Icons.Rounded.Replay10, "Back 10 seconds", enabled, size = skip, iconSize = skip * 0.6f, backdrop = videoBackdrop) {
-                        touched(); state.seekBy(-10_000)
+                    GlassButton(Icons.Rounded.SkipPrevious, "Previous video", enabled, size = skip, iconSize = skip * 0.6f, backdrop = videoBackdrop) {
+                        touched(); state.skipPrevious()
                     }
                     val playGlass = Modifier.liquidGlass(
                         videoBackdrop,
@@ -668,8 +669,8 @@ fun VideoContent(
                         backdrop = playGlass,
                         glass = true,
                     ) { touched(); state.togglePlay() }
-                    GlassButton(Icons.Rounded.Forward10, "Forward 10 seconds", enabled, size = skip, iconSize = skip * 0.6f, backdrop = videoBackdrop) {
-                        touched(); state.seekBy(10_000)
+                    GlassButton(Icons.Rounded.SkipNext, "Next video", enabled, size = skip, iconSize = skip * 0.6f, backdrop = videoBackdrop) {
+                        touched(); state.skipNextVideo()
                     }
                 }
                 Column(

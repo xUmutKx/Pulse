@@ -142,10 +142,12 @@ class PlayerState(private val scope: CoroutineScope) {
 
     fun skipPrevious() {
         val player = controller ?: return
-        if (player.currentPosition > 3000) {
+        if (player.currentPosition > 3000 || history.isEmpty()) {
             player.seekTo(0)
         } else {
-            player.seekTo(0)
+            val prev = history.removeAt(history.size - 1)
+            goingBack = true
+            try { open(prev) } finally { goingBack = false }
         }
     }
 
@@ -321,13 +323,40 @@ class PlayerState(private val scope: CoroutineScope) {
 
     private var openedAt = 0L
 
+    /** The videos played before this one (the previous button goes back through them). */
+    private val history = ArrayList<VideoItem>()
+    private var goingBack = false
+    private var fadeInNext = false
+    private val fadeHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** The player's volume moves from [from] to [to] over [ms] (a fade out when a video is changed, a fade in when the next one starts). */
+    private fun fadeVolume(from: Float, to: Float, ms: Long) {
+        fadeHandler.removeCallbacksAndMessages(null)
+        val start = android.os.SystemClock.uptimeMillis()
+        val step = object : Runnable {
+            override fun run() {
+                val p = controller ?: return
+                val t = ((android.os.SystemClock.uptimeMillis() - start).toFloat() / ms).coerceIn(0f, 1f)
+                p.volume = from + (to - from) * t
+                if (t < 1f) fadeHandler.postDelayed(this, 16)
+            }
+        }
+        fadeHandler.post(step)
+    }
+
     private fun show(item: VideoItem, startPlayback: Boolean) {
         endHoldSpeed()
         openedAt = android.os.SystemClock.elapsedRealtime()
         Log.i("YTXTubeTime", "open ${item.id}")
         if (startPlayback) Net.prewarmMediaConnection()
-        // another video was picked: the one playing stops at once (it went on playing until the new one had loaded)
-        if (current?.id != item.id) runCatching { controller?.pause() }
+        // another video was picked: the one playing fades out quickly and stops (it went on playing until the new one had loaded); the new one fades in when it starts
+        val old = current
+        if (old != null && old.id != item.id && !goingBack) { history.add(old); while (history.size > 50) history.removeAt(0) }
+        if (current?.id != item.id) runCatching {
+            val p = controller
+            if (p != null && p.isPlaying) { fadeVolume(p.volume, 0f, 180); fadeHandler.postDelayed({ runCatching { controller?.pause() } }, 190) } else { p?.volume = 0f; p?.pause() }
+            fadeInNext = true
+        }
         current = item
         if (isMusicMode) RecentMusic.record(item)
         details = null
@@ -1021,6 +1050,13 @@ class PlayerState(private val scope: CoroutineScope) {
     internal fun syncFromPlayer() {
         val player = controller ?: return
         isPlaying = player.isPlaying
+        if (player.isPlaying && fadeInNext) { fadeInNext = false; fadeVolume(0f, 1f, 450) }
+        // a song fades out in its last two seconds, so the next one (which fades in) follows without a cut
+        if (isMusicMode && player.isPlaying && !fadeInNext) {
+            val dur = player.duration; val left = dur - player.currentPosition
+            if (dur > 8000 && left in 0..2000) player.volume = (left / 2000f).coerceIn(0f, 1f)
+            else if (player.volume < 1f && left > 2500) player.volume = 1f
+        }
 
         isBuffering = player.playbackState == Player.STATE_BUFFERING || StreamRecovery.recovering == current?.id
         positionMs = player.currentPosition.coerceAtLeast(0L)

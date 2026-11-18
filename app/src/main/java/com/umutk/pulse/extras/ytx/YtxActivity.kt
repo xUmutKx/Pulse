@@ -269,8 +269,8 @@ enum class Tab(val defaultLabel: String, val icon: ImageVector, val selectedIcon
     Home("Home", Icons.Outlined.Home, Icons.Rounded.Home),
     Music("Music", Icons.Outlined.MusicNote, Icons.Rounded.MusicNote),
     Shorts("Shorts", Icons.Outlined.PlayCircle, Icons.Rounded.PlayCircle),
-    Library("Library", Icons.Outlined.VideoLibrary, Icons.Rounded.VideoLibrary),
-    Downloads("Saved", Icons.Outlined.Download, Icons.Rounded.Download);
+    Downloads("Saved", Icons.Outlined.Download, Icons.Rounded.Download),
+    Library("Library", Icons.Outlined.VideoLibrary, Icons.Rounded.VideoLibrary);
 
     val label: String
         get() = when (this) {
