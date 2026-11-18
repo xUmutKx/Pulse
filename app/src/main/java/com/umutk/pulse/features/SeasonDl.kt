@@ -234,6 +234,14 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
+            // a magnet link (and a Stremio link, which is one) starts as a torrent only when this is on: off by default
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setMagnetLinks(ctx, !Downloads.magnetLinks) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Magnet links as torrents", "Magnet bağlantıları torrent olarak"), color = T.text, fontSize = 15.sp)
+                    Text(tr("A magnet link or a Stremio link is downloaded as a torrent when this is on. Off: they are not started.", "Açıkken magnet bağlantısı ya da Stremio bağlantısı torrent olarak indirilir. Kapalıyken başlatılmaz."), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.magnetLinks, { Downloads.setMagnetLinks(ctx, it) })
+            }
             // removing a finished download from the list leaves its file on the phone (off: the file goes too)
             Row(Modifier.fillMaxWidth().clickable { Downloads.setKeepFiles(ctx, !Downloads.keepFiles) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
