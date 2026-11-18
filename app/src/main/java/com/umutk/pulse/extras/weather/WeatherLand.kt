@@ -46,6 +46,13 @@ object WeatherLand {
      * The scenery to draw. A chosen one is kept; "region" reads the place (high ground is mountains or highland, low ground by the coast is the sea, the rest city or forest,
      * by the height above the sea the forecast brings); anything else is random, a new pick every three hours, the same one at that time on the page and in the widgets.
      */
+    /** Whether today is in Ramadan (the ninth month of the Hijri year): the only time of the year the mosques are drawn. Before Android 8 there is no Hijri calendar: never. */
+    fun isRamadan(nowMs: Long = System.currentTimeMillis()): Boolean = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 26) return@runCatching false
+        val d = java.time.chrono.HijrahDate.from(java.time.Instant.ofEpochMilli(nowMs).atZone(java.time.ZoneId.systemDefault()).toLocalDate())
+        d.get(java.time.temporal.ChronoField.MONTH_OF_YEAR) == 9
+    }.getOrDefault(false)
+
     fun pick(pref: String, place: String, elev: Double = Double.NaN, sky: Sky = Sky.CLEAR): Land {
         val all = Land.values()
         all.firstOrNull { it.key == pref }?.let { return it }
@@ -53,21 +60,24 @@ object WeatherLand {
             elev > 1300.0 -> Land.MOUNTAIN
             elev > 650.0 -> Land.PLATEAU
             elev < 60.0 -> Land.SEA
-            (place.hashCode() and 1) == 0 -> Land.MOSQUE
+            (place.hashCode() and 1) == 0 -> if (isRamadan()) Land.MOSQUE else Land.CITY
             else -> Land.FOREST
         }
         // random, and fit to the weather: snow picks a snowy place, rain a city, street or sea, fog a forest or the coast, and mosques are the commonest of all
-        val pool = when (sky) {
+        val pool0 = when (sky) {
             Sky.SNOW -> listOf(Land.MOUNTAIN to 2, Land.FOREST to 2, Land.VILLAGE to 2, Land.MOSQUE to 2, Land.STREET to 1, Land.CITY to 1, Land.PLATEAU to 1, Land.EVEREST to 3, Land.AURORA to 3, Land.MUSHROOM to 1)
             Sky.RAIN, Sky.DRIZZLE, Sky.STORM -> listOf(Land.CITY to 2, Land.STREET to 2, Land.SEA to 2, Land.MOSQUE to 2, Land.FOREST to 1, Land.VILLAGE to 1, Land.NEON to 4, Land.JUNGLE to 3, Land.FUJI to 1)
             Sky.FOG -> listOf(Land.FOREST to 3, Land.SEA to 2, Land.MOUNTAIN to 2, Land.MOSQUE to 2, Land.VILLAGE to 1, Land.JUNGLE to 2, Land.FUJI to 2, Land.EVEREST to 1)
             Sky.CLOUD -> listOf(Land.CITY to 1, Land.MOUNTAIN to 1, Land.FOREST to 1, Land.MOSQUE to 3, Land.VILLAGE to 1, Land.STREET to 1, Land.PLATEAU to 1, Land.SEA to 1, Land.EVEREST to 2, Land.VOLCANO to 2, Land.MUSHROOM to 2, Land.NEON to 2, Land.LAVENDER to 1, Land.FUJI to 2)
             else -> listOf(Land.MOSQUE to 4, Land.SEA to 1, Land.MOUNTAIN to 1, Land.CITY to 1, Land.FOREST to 1, Land.STREET to 1, Land.PLATEAU to 1, Land.VILLAGE to 1, Land.DESERT to 2, Land.EVEREST to 2, Land.SAVANNA to 2, Land.ISLAND to 2, Land.LAVENDER to 2, Land.FUJI to 2, Land.MUSHROOM to 2, Land.VOLCANO to 1, Land.AURORA to 1)
         }
-        val seed = System.currentTimeMillis() / 10_800_000L + place.hashCode()
+        // outside Ramadan the mosques are left out of every pool; the scenery of a place changes once a day, not every few hours
+        val ram = isRamadan()
+        val pool = if (ram) pool0 else pool0.filter { it.first != Land.MOSQUE }
+        val seed = System.currentTimeMillis() / 86_400_000L + place.hashCode()
         var r = ((seed xor (seed ushr 7)).toInt() and 0x7fffffff) % pool.sumOf { it.second }
         for ((l, wt) in pool) { if (r < wt) return l; r -= wt }
-        return Land.MOSQUE
+        return pool.first().first
     }
 
     /** One of three looks of a scenery, a new one each day (the same on the page and in the widgets). */
@@ -1272,7 +1282,7 @@ object WeatherLand {
 /** The weather page's scenery: the chosen landscape under the sky of this hour and this weather, with the weather moving in it. */
 @Composable
 fun WeatherSky(f: Forecast, landPref: String, modifier: Modifier = Modifier) {
-    val land = remember(f.place, landPref, f.code, System.currentTimeMillis() / 10_800_000L) { WeatherLand.pick(landPref, f.place, f.elev, skyOf(f.code)) }
+    val land = remember(f.place, landPref, f.code, System.currentTimeMillis() / 86_400_000L) { WeatherLand.pick(landPref, f.place, f.elev, skyOf(f.code)) }
     val ck = remember(f) { WeatherLand.clockOf(f) }
     val vr = remember(f.place, land) { WeatherLand.variantOf(f.place, land) }
     val sky = skyOf(f.code)

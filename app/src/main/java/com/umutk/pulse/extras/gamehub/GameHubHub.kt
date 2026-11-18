@@ -205,9 +205,15 @@ private fun reconcileHidden(c: Context) {
     if (real != hiddenSet(c)) saveHidden(c, real)
 }
 
+/** Whether the app is on the phone at all (hidden with pm hide still counts; a removed one does not). */
+private fun onPhone(c: Context, pkg: String): Boolean =
+    runCatching { c.packageManager.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES) }.isSuccess
+
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
 internal fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
+    // a game removed from the phone leaves Game Hub's lists too (it stayed in the hidden and the added lists after it was uninstalled)
+    (hiddenSet(c) + customSet(c)).filter { !onPhone(c, it) }.forEach { forgetGame(c, it) }
     val installed = runCatching {
         pm.getInstalledApplications(0)
             .filter { ai -> ai.packageName != c.packageName && Build.VERSION.SDK_INT >= 26 && ai.category == ApplicationInfo.CATEGORY_GAME }
