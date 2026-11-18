@@ -29,9 +29,27 @@ fn render_png() {
     let (w, h) = (512u32, 960u32);
     let fmt = wgpu::TextureFormat::Rgba8UnormSrgb;
     let mut shelf = Shelf::new(dev.clone(), q.clone(), fmt, w, h);
+    // real covers when COVER_DIR has png files (the build machine's own check); the drawn ones otherwise
+    if let Ok(dir) = std::env::var("COVER_DIR") {
+        let mut files: Vec<_> = std::fs::read_dir(dir).unwrap().filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().map(|x| x == "png").unwrap_or(false)).collect();
+        files.sort();
+        let games: Vec<GameBox> = files.iter().map(|p| {
+            let im = image::open(p).unwrap().to_rgba8();
+            let (w, h) = im.dimensions();
+            let n = (w * h) as f32;
+            let mut s = [0f32; 3];
+            for px in im.pixels() { for c in 0..3 { s[c] += px[c] as f32 / 255.0 / n; } }
+            GameBox { front: im.into_raw(), fw: w, fh: h, back: None, side: s }
+        }).collect();
+        shelf.set_games(games);
+        shelf.select(std::env::var("SEL").ok().and_then(|v| v.parse().ok()).unwrap_or(3));
+        if std::env::var("FLIP").is_ok() { shelf.flip(true); }
+        for _ in 0..140 { shelf.update(0.016); }
+    } else {
     shelf.set_games((0..5).map(|i| GameBox { front: art(256, 384, i as f32 * 1.3), fw: 256, fh: 384, back: if i == 1 { Some((art(256, 384, 9.0), 256, 384)) } else { None }, side: [0.2 + i as f32 * 0.12, 0.35, 0.8 - i as f32 * 0.1] }).collect());
     shelf.select(1);
     for _ in 0..120 { shelf.update(0.016); }
+    }
     let tex = dev.create_texture(&wgpu::TextureDescriptor { label: None, size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 }, mip_level_count: 1, sample_count: 1, dimension: wgpu::TextureDimension::D2, format: fmt, usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC, view_formats: &[] });
     let view = tex.create_view(&Default::default());
     shelf.render(&view);
