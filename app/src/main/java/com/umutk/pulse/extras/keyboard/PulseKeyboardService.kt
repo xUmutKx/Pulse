@@ -266,7 +266,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val q = st.vaultQuery.trim().lowercase()
         vaultShown = runCatching { com.umutk.pulse.features.VaultStore.all(this) }.getOrDefault(emptyList())
             .filter { it.type == 1 && (q.isEmpty() || it.name.lowercase().contains(q) || it.user.lowercase().contains(q) || it.uris.any { u -> u.lowercase().contains(q) }) }
-            .sortedWith(compareBy({ it.id !in fit }, { it.name.lowercase() })).take(40)
+            .sortedWith(compareBy({ it.id !in fit }, { it.name.lowercase() }))
         st.vaultRows = vaultShown.map { Triple(it.name.ifBlank { it.user }, it.user, it.id in fit) }
     }
     override fun vaultPick(i: Int, other: Boolean) {
