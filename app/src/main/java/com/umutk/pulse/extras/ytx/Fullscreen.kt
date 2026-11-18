@@ -52,7 +52,8 @@ class OrientationController(private val activity: Activity) {
 
 
                 forced == Forced.Landscape && physicallyLandscape && autoRotateOn() -> forced = null
-                forced == Forced.Portrait && physicallyPortrait -> forced = null
+                // with the phone's rotation lock on, the forced portrait stays (the lock may be on landscape and would turn the page sideways again)
+                forced == Forced.Portrait && physicallyPortrait && autoRotateOn() -> forced = null
             }
         }
     }
@@ -64,7 +65,8 @@ class OrientationController(private val activity: Activity) {
 
     /** Leave the player's forced orientation and follow the device again. */
     fun exitFullscreen() {
-        forced = null
+        // leaving full screen goes back to upright even when the rotation is locked (to landscape or portrait); with auto-rotate on the device is followed
+        forced = if (autoRotateOn()) null else Forced.Portrait
         apply()
     }
 
