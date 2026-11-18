@@ -35,29 +35,40 @@ import kotlin.math.sin
 object WeatherLand {
     enum class Land(val key: String, val en: String, val tr: String) {
         MOUNTAIN("mountain", "Mountains", "Dağ"), SEA("sea", "Sea", "Deniz"), CITY("city", "City", "Şehir"),
-        FOREST("forest", "Forest", "Orman"), STREET("street", "Street", "Sokak"), PLATEAU("plateau", "Highland", "Yayla")
+        FOREST("forest", "Forest", "Orman"), STREET("street", "Street", "Sokak"), PLATEAU("plateau", "Highland", "Yayla"),
+        MOSQUE("mosque", "Mosque", "Cami"), VILLAGE("village", "Village", "Köy"), DESERT("desert", "Desert", "Çöl")
     }
 
     /**
      * The scenery to draw. A chosen one is kept; "region" reads the place (high ground is mountains or highland, low ground by the coast is the sea, the rest city or forest,
      * by the height above the sea the forecast brings); anything else is random, a new pick every three hours, the same one at that time on the page and in the widgets.
      */
-    fun pick(pref: String, place: String, elev: Double = Double.NaN): Land {
+    fun pick(pref: String, place: String, elev: Double = Double.NaN, sky: Sky = Sky.CLEAR): Land {
         val all = Land.values()
         all.firstOrNull { it.key == pref }?.let { return it }
         if (pref == "region" && !elev.isNaN()) return when {
             elev > 1300.0 -> Land.MOUNTAIN
             elev > 650.0 -> Land.PLATEAU
             elev < 60.0 -> Land.SEA
-            (place.hashCode() and 1) == 0 -> Land.CITY
+            (place.hashCode() and 1) == 0 -> Land.MOSQUE
             else -> Land.FOREST
         }
+        // random, and fit to the weather: snow picks a snowy place, rain a city, street or sea, fog a forest or the coast, and mosques are the commonest of all
+        val pool = when (sky) {
+            Sky.SNOW -> listOf(Land.MOUNTAIN to 2, Land.FOREST to 2, Land.VILLAGE to 3, Land.MOSQUE to 3, Land.STREET to 2, Land.CITY to 1, Land.PLATEAU to 1)
+            Sky.RAIN, Sky.DRIZZLE, Sky.STORM -> listOf(Land.CITY to 3, Land.STREET to 3, Land.SEA to 2, Land.MOSQUE to 3, Land.FOREST to 2, Land.VILLAGE to 1)
+            Sky.FOG -> listOf(Land.FOREST to 3, Land.SEA to 2, Land.MOUNTAIN to 2, Land.MOSQUE to 3, Land.VILLAGE to 2)
+            Sky.CLOUD -> listOf(Land.CITY to 2, Land.MOUNTAIN to 2, Land.FOREST to 2, Land.MOSQUE to 4, Land.VILLAGE to 2, Land.STREET to 2, Land.PLATEAU to 2, Land.SEA to 1)
+            else -> listOf(Land.MOSQUE to 5, Land.SEA to 2, Land.MOUNTAIN to 2, Land.CITY to 2, Land.FOREST to 2, Land.STREET to 1, Land.PLATEAU to 2, Land.VILLAGE to 2, Land.DESERT to 2)
+        }
         val seed = System.currentTimeMillis() / 10_800_000L + place.hashCode()
-        return all[((seed xor (seed ushr 7)).toInt() and 0x7fffffff) % all.size]
+        var r = ((seed xor (seed ushr 7)).toInt() and 0x7fffffff) % pool.sumOf { it.second }
+        for ((l, wt) in pool) { if (r < wt) return l; r -= wt }
+        return Land.MOSQUE
     }
 
     /** One of three looks of a scenery, a new one each day (the same on the page and in the widgets). */
-    fun variantOf(place: String): Int = ((place.hashCode() and 0x7fffffff) + (System.currentTimeMillis() / 86_400_000L).toInt()) % 3
+    fun variantOf(place: String, land: Land): Int = ((place.hashCode() and 0x7fffffff) + (System.currentTimeMillis() / 86_400_000L).toInt()) % (if (land == Land.MOSQUE) 4 else 3)
 
     /** The hour now at the place (from the forecast's own clock, moved on by the time since it was read) and that day's sunrise and sunset, in hours. */
     class Clock(val hour: Float, val rise: Float, val set: Float)
@@ -127,6 +138,9 @@ object WeatherLand {
                 Land.FOREST -> Triple(0xFF1E8A6E.toInt(), 0xFFD6F0A0.toInt(), .30f)
                 Land.STREET -> null
                 Land.PLATEAU -> Triple(0xFF6FB6FF.toInt(), 0xFFFFF1C2.toInt(), .35f)
+                Land.MOSQUE -> Triple(0xFF2E4A9A.toInt(), 0xFFFFC98A.toInt(), .30f)
+                Land.VILLAGE -> Triple(0xFF3D6BB0.toInt(), 0xFFF4C58A.toInt(), .28f)
+                Land.DESERT -> Triple(0xFFD0642E.toInt(), 0xFFFFD27A.toInt(), .40f)
             }
             if (gc != null) {
                 val dayE = sin(((ck.hour - ck.rise) / (ck.set - ck.rise)).coerceIn(0f, 1f) * PI.toFloat())
@@ -138,7 +152,8 @@ object WeatherLand {
         val snowAmt = if (snow) .68f else 0f
         val horizon = h * when (land.key + variant) {
             "city0" -> .70f; "city2" -> .70f; "forest1" -> .56f; "forest2" -> .72f; "mountain1" -> .66f; "sea2" -> .58f; "plateau1" -> .70f; "plateau2" -> .72f
-            else -> when (land) { Land.SEA -> .60f; Land.CITY -> .74f; Land.STREET -> .62f; Land.MOUNTAIN -> .72f; Land.FOREST -> .74f; Land.PLATEAU -> .70f }
+            "mosque1", "desert2", "village1" -> .66f; "mosque3" -> .62f; "village2" -> .72f
+            else -> when (land) { Land.SEA -> .60f; Land.CITY -> .74f; Land.STREET -> .62f; Land.MOUNTAIN -> .72f; Land.FOREST -> .74f; Land.PLATEAU -> .70f; Land.MOSQUE, Land.VILLAGE, Land.DESERT -> .70f }
         }
         val u = (h / 300f).coerceAtLeast(.6f)
         val vis = (1f - g * 1.15f).coerceIn(0f, 1f)
@@ -298,6 +313,38 @@ object WeatherLand {
             for (k in 0 until n) {
                 val y = top + (k + 1) * (bottom - top) / (n + 1.5f); val half = (5f + k * 4f) * u * (.5f + .5f * sin(t * 4f * PI.toFloat() + k * 1.3f))
                 col(mix(0xFFFFE9A8.toInt(), 0xFFEAF0FF.toInt(), night), (.67f * (1f - k / (n + 1f)) * vis).coerceIn(0f, 1f)); ln(sunX - half, y, sunX + half, y, h * .006f)
+            }
+        }
+
+        // figures shared by the newer sceneries: a mosque, a cypress, a house and a palm
+        fun mosq(cx: Float, by: Float, sz: Float, cc: Int, mn: Int) {
+            col(cc); rectF(cx - sz * .62f, by - sz * .42f, cx + sz * .62f, by + u); dome(cx, by - sz * .42f, sz * .5f)
+            rectF(cx - u * 1.2f, by - sz * .92f - u * 7f, cx + u * 1.2f, by - sz * .92f); circ(cx, by - sz * .92f - u * 9f, u * 2.6f)
+            for (sd in intArrayOf(-1, 1)) { dome(cx + sd * sz * .48f, by - sz * .4f, sz * .24f); dome(cx + sd * sz * .74f, by - sz * .34f, sz * .16f) }
+            for (k in 0 until mn) {
+                val sd = if (k % 2 == 1) 1 else -1; val rk = k / 2; val nx = cx + sd * (sz * .98f + rk * sz * .26f); val mh = sz * (1.6f - rk * .22f)
+                rectF(nx - sz * .04f, by - mh, nx + sz * .04f, by + u); rectF(nx - sz * .07f, by - mh * .72f, nx + sz * .07f, by - mh * .72f + sz * .03f)
+                tri(nx, by - mh - sz * .32f, nx - sz * .06f, by - mh, nx + sz * .06f, by - mh)
+            }
+            if (night > .12f) { col(0xFFFFD27A.toInt(), night.coerceIn(0f, 1f) * .9f); for (q in 0 until 5) rectF(cx - sz * .5f + q * sz * .25f, by - sz * .3f, cx - sz * .43f + q * sz * .25f, by - sz * .13f) }
+        }
+        fun cypress(x: Float, by: Float, hh: Float, cc: Int) {
+            col(cc); val q = Path(); q.moveTo(x, by - hh); q.quadTo(x + hh * .16f, by - hh * .45f, x + hh * .07f, by); q.lineTo(x - hh * .07f, by); q.quadTo(x - hh * .16f, by - hh * .45f, x, by - hh); c.drawPath(q, p)
+        }
+        fun house(x: Float, by: Float, bw: Float, bh: Float, body: Int, roof: Int, snowy: Boolean, seed: Int) {
+            col(body); rectF(x, by - bh, x + bw, by); col(roof); tri(x - u * 2f, by - bh, x + bw / 2f, by - bh - bw * .5f, x + bw + u * 2f, by - bh)
+            if (snowy) { col(Color.WHITE, .92f); val q = Path(); q.moveTo(x - u * 2f, by - bh); q.lineTo(x + bw / 2f, by - bh - bw * .5f); q.lineTo(x + bw + u * 2f, by - bh); q.lineTo(x + bw * .92f, by - bh); q.lineTo(x + bw / 2f, by - bh - bw * .38f); q.lineTo(x + bw * .08f, by - bh); q.close(); c.drawPath(q, p) }
+            val on = night > .12f && rnd(seed, 3f) > .25f
+            if (on) col(0xFFFFD27A.toInt(), .95f) else col(mix(0xFF20304A.toInt(), bot, .4f)); rectF(x + bw * .3f, by - bh * .7f, x + bw * .7f, by - bh * .35f)
+        }
+        fun palm(px: Float, py: Float, lh: Float, lean: Float) {
+            p.style = Paint.Style.STROKE; p.strokeWidth = u * 3.2f; p.strokeCap = Paint.Cap.ROUND; p.color = tint(.95f, 0xFF2A1E16.toInt()); p.alpha = 255
+            val trunk = Path(); trunk.moveTo(px, py); trunk.quadTo(px + lean * .2f, py - lh * .55f, px + lean, py - lh); c.drawPath(trunk, p); p.style = Paint.Style.FILL
+            val tx = px + lean; val ty = py - lh
+            for (k in 0 until 7) {
+                val a = -PI.toFloat() * .9f + k * (PI.toFloat() * .8f / 6f) + sin(t * 2f * PI.toFloat() + k) * .05f
+                c.save(); c.translate(tx, ty); c.rotate(a * 57.2958f); col(tint(.95f, 0xFF1F5A34.toInt(), .2f))
+                val leaf = Path(); leaf.moveTo(0f, 0f); leaf.quadTo(lh * .35f, -lh * .22f, lh * .7f, lh * .08f); leaf.quadTo(lh * .35f, -lh * .06f, 0f, u * 2f); c.drawPath(leaf, p); c.restore()
             }
         }
 
@@ -754,6 +801,164 @@ object WeatherLand {
                     for (k in 0 until 6) { val ph = frac(t * 2f + k / 6f); col(0xFFFFC060.toInt(), (1f - ph) * .9f); circ(fx + sin(ph * 8f + k) * u * 8f, fy - u * 10f - ph * h * .18f, u * 1.2f) }
                 }
             }
+            "mosque0" -> {
+                // a mosque on a hill above the houses of its town, cypresses in front
+                ridge(horizon, h * .08f, 1.1f, 2.4f, tint(.22f, 0xFF4C566E.toInt(), .1f))
+                val hy = horizon - h * .03f
+                col(tint(.5f, 0xFF394560.toInt(), .3f))
+                run { val hill = Path(); hill.moveTo(0f, h); hill.lineTo(0f, hy + h * .18f); hill.quadTo(w * .28f, hy + h * .02f, w * .5f, hy); hill.quadTo(w * .74f, hy + h * .02f, w, hy + h * .2f); hill.lineTo(w, h); hill.close(); c.drawPath(hill, p) }
+                for (k in 0 until 26) { val hx = w * (.02f + k * .037f); val slope = abs(hx / w - .5f) * h * .2f + h * .04f; house(hx, hy + slope + h * .05f, w * .03f, h * .035f, tint(.7f, 0xFFE3D2B8.toInt(), .2f), tint(.6f, 0xFFB5533C.toInt()), snow, k) }
+                mosq(w * .5f, hy + h * .01f, h * .2f, tint(.62f, 0xFFCFC7B8.toInt(), .15f), 2)
+                for (x in floatArrayOf(w * .06f, w * .14f, w * .9f, w * .96f)) cypress(x, h, h * .3f, tint(1f, 0xFF10241C.toInt(), .5f))
+                col(tint(1f, 0xFF1A1F2A.toInt(), .4f)); rectF(0f, h * .95f, w, h)
+            }
+            "mosque1" -> {
+                // a grand mosque of cascading domes and six minarets, mirrored in the pool before it
+                ridge(horizon - h * .01f, h * .06f, 1.0f, 3.3f, tint(.22f, 0xFF4C566E.toInt(), .1f))
+                val by = horizon + h * .04f; val sz = h * .25f; val mc = tint(.58f, 0xFFD8CFC0.toInt(), .15f)
+                col(mc); for (sd in intArrayOf(-1, 1)) dome(w * .5f + sd * sz * 1.1f, by - sz * .3f, sz * .2f)
+                mosq(w * .5f, by, sz, mc, 6)
+                col(tint(.7f, 0xFF3A4256.toInt(), .2f)); rectF(0f, by, w, by + h * .02f)
+                run {
+                    val py = by + h * .03f
+                    waterFill(py, mix(bot, 0xFF2A5F86.toInt(), .35f), mix(0xFF123A5A.toInt(), 0xFF04141F.toInt(), night * .6f + .2f))
+                    c.saveLayerAlpha(0f, py, w, h, 102); c.translate(0f, py); c.scale(1f, -.8f); c.translate(0f, -py); mosq(w * .5f, by, sz, mc, 6); c.restore()
+                    for (k in 0 until 5) { val y = py + (k + .7f) * (h - py) / 6f; col(Color.WHITE, .18f); ln(w * (.1f + frac(k * .37f) * .5f), y + sin((t + k * .1f) * 2f * PI.toFloat()) * u * .7f, w * (.3f + frac(k * .37f) * .6f), y, u * 1.1f) }
+                }
+                for (x in floatArrayOf(w * .05f, w * .13f, w * .87f, w * .95f)) cypress(x, h, h * .32f, tint(1f, 0xFF10241C.toInt(), .5f))
+                for (k in 0 until 4) { val px = frac(drift * 2f + k * .27f) * w; val py2 = h * (.88f + rnd(k, 2f) * .06f); col(tint(.9f, 0xFFCCCCCC.toInt(), .2f)); oval(px, py2, u * 2.2f, u * 1.4f) }
+            }
+            "mosque2" -> {
+                // a small village mosque in a valley with houses, poplars and a thread of smoke
+                peaks(horizon, h * .30f, .9f, 2.0f, tint(.2f, 0xFF6A7C96.toInt(), .4f), true)
+                ridge(horizon + h * .05f, h * .12f, 1.2f, 4.5f, tint(.45f, 0xFF4F8A4A.toInt(), 1f))
+                ridge(horizon + h * .12f, h * .10f, 1.0f, 1.1f, tint(.7f, 0xFF3E7A3E.toInt(), 1f))
+                for (k in 0 until 7) house(w * (.08f + k * .12f) + rnd(k, 1f) * w * .03f, horizon + h * .16f + rnd(k, 2f) * h * .04f, w * .06f, h * .05f, tint(.75f, 0xFFE3D2B8.toInt(), .2f), tint(.65f, 0xFFB5533C.toInt()), snow, k)
+                mosq(w * .5f, horizon + h * .2f, h * .1f, tint(.8f, 0xFFDCD0C0.toInt(), .15f), 1)
+                for (k in 0 until 4) { val ph = frac(t + k * .25f); col(mix(Color.WHITE, bot, .3f), .4f * (1f - ph)); circ(w * .2f + ph * u * 10f, horizon + h * .12f - ph * h * .1f, u * (2f + ph * 4f)) }
+                ridge(h * 1.01f, h * .18f, .8f, 6.6f, tint(1f, 0xFF265A2E.toInt(), 1f))
+                for (x in floatArrayOf(w * .1f, w * .2f, w * .78f, w * .9f)) cypress(x, h * .98f, h * .3f, tint(1f, 0xFF1D3A22.toInt(), .6f))
+            }
+            "mosque3" -> {
+                // a mosque on the shore with two minarets, its lights on the water, a far bridge and a boat
+                ridge(horizon, h * .05f, 1.2f, 2.6f, tint(.25f, 0xFF4C566E.toInt(), .1f))
+                run {
+                    val bx = horizon + h * .01f; val bc = tint(.35f, 0xFF3A4560.toInt(), .1f)
+                    col(bc); rectF(0f, bx, w, bx + u * 2.4f); for (tx in floatArrayOf(w * .15f, w * .85f)) rectF(tx - u * 2f, bx - h * .1f, tx + u * 2f, bx)
+                    p.style = Paint.Style.STROKE; p.strokeWidth = u; p.color = bc; p.alpha = 255
+                    val cab = Path(); cab.moveTo(w * .15f, bx - h * .1f); cab.quadTo(w * .5f, bx + h * .02f, w * .85f, bx - h * .1f); c.drawPath(cab, p); p.style = Paint.Style.FILL
+                    if (night > .1f) { var x = 0f; while (x < w) { col(0xFFFFE3A0.toInt(), (night * .8f).coerceIn(0f, 1f)); circ(x, bx, u * .9f); x += u * 9f } }
+                }
+                val sy = horizon + h * .12f
+                waterFill(horizon, mix(bot, 0xFF0B4A72.toInt(), .35f), mix(0xFF0A3558.toInt(), 0xFF031829.toInt(), night * .6f + .2f))
+                reflect(horizon, h, 10)
+                val mc = tint(.55f, 0xFFD8CFC0.toInt(), .15f); val mx = w * .3f; val sz = h * .2f
+                col(tint(.6f, 0xFF3A4256.toInt(), .2f)); rectF(0f, sy, w * .62f, sy + h * .03f)
+                mosq(mx, sy, sz, mc, 2)
+                c.saveLayerAlpha(0f, sy + h * .03f, w, h, 89); c.translate(0f, sy + h * .03f); c.scale(1f, -.7f); c.translate(0f, -sy - h * .03f); mosq(mx, sy, sz, mc, 2); c.restore()
+                run {
+                    val bx2 = w * .7f + sin(t * 4f * PI.toFloat()) * u * 1.2f; val by2 = horizon + h * .2f
+                    col(tint(.9f, 0xFF10202C.toInt())); quadP(bx2 - u * 14f, by2, bx2 + u * 14f, by2, bx2 + u * 9f, by2 + u * 6f, bx2 - u * 9f, by2 + u * 6f)
+                    col(mix(Color.WHITE, bot, .35f)); tri(bx2, by2 - u * 20f, bx2 + u * 10f, by2 - u * 2f, bx2, by2 - u * 2f)
+                }
+                ridge(h * .99f, h * .10f, .9f, 5.5f, tint(1f, 0xFF0C1620.toInt(), .8f))
+            }
+            "village0" -> {
+                // a village under snow (or, without snow, in its autumn colours): gabled houses, chimney smoke, pines
+                peaks(horizon, h * .34f, .8f, 3.4f, tint(.2f, 0xFF6A7C96.toInt(), .4f), true)
+                ridge(horizon + h * .05f, h * .12f, 1.1f, 6f, tint(.5f, 0xFF5C8A52.toInt(), 1f))
+                ridge(horizon + h * .12f, h * .1f, .9f, 2f, tint(.75f, 0xFF4A7A44.toInt(), 1f))
+                val cols = intArrayOf(0xFFC9A27E.toInt(), 0xFFB98C6A.toInt(), 0xFFD9B890.toInt(), 0xFFA9805F.toInt())
+                for (k in 0 until 9) {
+                    val hx = w * (.02f + k * .11f) + rnd(k, 5f) * w * .02f; val hb = horizon + h * (.16f + rnd(k, 7f) * .08f); val bw = w * (.095f + rnd(k, 9f) * .03f)
+                    house(hx, hb, bw, bw * .7f, tint(.8f, cols[k % 4], .2f), tint(.7f, 0xFF6A3A2A.toInt()), snow, k)
+                    for (q in 0 until 2) { val ph = frac(t + q * .5f + k * .13f); col(mix(Color.WHITE, bot, .3f), .38f * (1f - ph)); circ(hx + bw * .75f + ph * u * 8f, hb - bw * .7f - bw * .5f - ph * h * .08f, u * (1.6f + ph * 3.4f)) }
+                }
+                ridge(h * 1.01f, h * .16f, .8f, 6.6f, tint(1f, 0xFF2F6A34.toInt(), 1f))
+                for (k in 0 until 6) pine(w * (if (k < 3) k * .05f + .01f else .8f + (k - 3) * .06f), h * 1.01f, h * (.2f + rnd(k, 5f) * .06f), tint(1f, 0xFF10241C.toInt(), .7f))
+            }
+            "village1" -> {
+                // a hillside village in terraces: houses stepped up the slope, warm lights, green hills behind
+                peaks(horizon, h * .28f, .9f, 1.7f, tint(.2f, 0xFF6A7C96.toInt(), .4f), true)
+                ridge(horizon + h * .03f, h * .12f, 1.0f, 3.3f, tint(.4f, 0xFF5C9A52.toInt(), 1f))
+                fun slope(x: Float) = horizon + h * .42f - (x / w) * h * .34f
+                col(tint(.7f, 0xFF4A8A44.toInt(), 1f))
+                run { val hl = Path(); hl.moveTo(0f, h); var x = 0f; while (x <= w) { hl.lineTo(x, slope(x) + h * .03f + sin(x / w * 14f) * u * 2f); x += w / 40f }; hl.lineTo(w, h); hl.close(); c.drawPath(hl, p) }
+                val cols2 = intArrayOf(0xFFE3D2B8.toInt(), 0xFFCFA77E.toInt(), 0xFFD9B890.toInt(), 0xFFC9A27E.toInt(), 0xFFE9DCC4.toInt())
+                for (r in 0 until 4) for (k in 0 until 9) {
+                    val hx = w * (.02f + k * .115f) + r * w * .03f - (r % 2) * w * .02f; val hb = slope(hx) + r * h * .075f + h * .05f
+                    if (hb > h) continue
+                    house(hx, hb, w * .07f, h * .06f, tint(.7f + r * .08f, cols2[(k + r) % 5], .2f), tint(.6f + r * .08f, 0xFFB5533C.toInt()), snow, k * 4 + r)
+                }
+                col(tint(1f, 0xFF1A2A1E.toInt(), .5f)); rectF(0f, h * .97f, w, h)
+            }
+            "village2" -> {
+                // farmland with a windmill: crop stripes in perspective, a barn and haystacks
+                ridge(horizon, h * .10f, 1.0f, 2.9f, tint(.25f, 0xFF6A7C96.toInt(), .4f))
+                val crops = intArrayOf(0xFF7A9A3E.toInt(), 0xFFC9B24A.toInt(), 0xFF5A8A3A.toInt(), 0xFFB59A3A.toInt())
+                for (k in 0 until 9) {
+                    val y0 = horizon + h * .02f + Math.pow((k / 9f).toDouble(), 1.7).toFloat() * (h - horizon); val y1 = horizon + h * .02f + Math.pow(((k + 1) / 9f).toDouble(), 1.7).toFloat() * (h - horizon)
+                    col(tint(.4f + k * .07f, crops[k % 4], .8f)); rectF(0f, y0, w, y1 + 1f)
+                }
+                run {
+                    val mx = w * .68f; val by = horizon + h * .12f; val mh = h * .3f
+                    col(tint(.7f, 0xFFDCD0C0.toInt(), .2f)); quadP(mx - u * 12f, by, mx + u * 12f, by, mx + u * 7f, by - mh, mx - u * 7f, by - mh)
+                    col(tint(.6f, 0xFF8A4A3A.toInt())); tri(mx - u * 10f, by - mh, mx, by - mh - u * 14f, mx + u * 10f, by - mh)
+                    c.save(); c.translate(mx, by - mh); c.rotate(t * 360f)
+                    for (k in 0 until 4) { c.rotate(90f); col(tint(.8f, 0xFFF1EAD8.toInt(), .2f)); rectF(-u * 1.4f, 0f, u * 1.4f, mh * .9f); col(tint(.8f, 0xFFE6DCC0.toInt(), .2f)); rectF(u * 1.4f, mh * .2f, u * 10.4f, mh * .7f) }
+                    c.restore()
+                }
+                house(w * .18f, horizon + h * .2f, w * .14f, h * .09f, tint(.75f, 0xFFB5533C.toInt(), .3f), tint(.6f, 0xFF6A3A2A.toInt()), false, 3)
+                for (k in 0 until 5) { val hx = w * (.35f + k * .07f); val hy = h * (.86f + rnd(k, 4f) * .06f); col(tint(.9f, 0xFFD9B24A.toInt(), .3f)); dome(hx, hy, u * 11f); rectF(hx - u * 11f, hy, hx + u * 11f, hy + u * 6f) }
+            }
+            "desert0" -> {
+                // dunes in the low sun and a caravan of camels along the crest
+                ridge(horizon, h * .10f, 1.0f, 2.1f, tint(.35f, 0xFFC9966A.toInt(), .6f))
+                ridge(horizon + h * .06f, h * .16f, .9f, 4.4f, tint(.55f, 0xFFD9A070.toInt(), .7f))
+                fun crest(x: Float) = horizon + h * .15f - sin(x / w * 5f + 1.2f) * h * .035f
+                ridge(horizon + h * .16f, h * .12f, .7f, .6f, tint(.8f, 0xFFB8764A.toInt(), .7f))
+                ridge(h * 1.01f, h * .2f, .8f, 6.6f, tint(1f, 0xFF9A5A3A.toInt(), .6f))
+                fun camel(x: Float, y: Float, s2: Float, ph: Float) {
+                    val lg = sin((t * 4f + ph) * 2f * PI.toFloat()) * s2 * .08f; val cc = tint(.95f, 0xFF4A2E1E.toInt())
+                    col(cc); oval(x, y - s2 * .5f, s2 * .5f, s2 * .22f); circ(x - s2 * .12f, y - s2 * .78f, s2 * .16f); circ(x + s2 * .18f, y - s2 * .74f, s2 * .14f)
+                    p.style = Paint.Style.STROKE; p.strokeWidth = s2 * .07f; p.strokeCap = Paint.Cap.ROUND; p.color = cc; p.alpha = 255
+                    val neck = Path(); neck.moveTo(x + s2 * .38f, y - s2 * .58f); neck.quadTo(x + s2 * .6f, y - s2 * .8f, x + s2 * .66f, y - s2 * 1.1f); c.drawPath(neck, p)
+                    for (lgp in arrayOf(floatArrayOf(-.3f, lg), floatArrayOf(-.15f, -lg), floatArrayOf(.2f, lg), floatArrayOf(.35f, -lg))) c.drawLine(x + lgp[0] * s2, y - s2 * .32f, x + lgp[0] * s2 + lgp[1], y, p)
+                    p.style = Paint.Style.FILL; col(cc); oval(x + s2 * .7f, y - s2 * 1.12f, s2 * .12f, s2 * .07f)
+                }
+                for (k in 0 until 4) { val cx0 = frac(drift * 3f + k * .1f) * (w + h * .8f) - h * .4f; camel(cx0, crest(cx0) + h * .02f, h * .12f - k * .004f, k * .25f) }
+            }
+            "desert1" -> {
+                // an oasis: a small pond with palms among the dunes
+                ridge(horizon, h * .08f, 1.0f, 2.5f, tint(.2f, 0xFFC9966A.toInt(), .4f))
+                ridge(horizon + h * .07f, h * .13f, .9f, 5.0f, tint(.42f, 0xFFD9A878.toInt(), .5f))
+                val py = horizon + h * .1f
+                col(tint(.8f, 0xFFC98E5A.toInt(), .5f)); rectF(0f, py - h * .02f, w, h)
+                p.shader = LinearGradient(0f, py, 0f, py + h * .12f, mix(bot, 0xFF1F8FA8.toInt(), .5f), mix(0xFF16758A.toInt(), 0xFF05202C.toInt(), night * .7f), Shader.TileMode.CLAMP); oval(w * .5f, py + h * .07f, w * .34f, h * .075f); p.shader = null
+                for (k in 0 until 4) { val y = py + h * .035f + k * h * .03f; col(Color.WHITE, .3f); ln(w * (.28f + frac(k * .37f) * .1f), y + sin((t + k * .2f) * 2f * PI.toFloat()) * u * .5f, w * (.5f + frac(k * .37f) * .2f), y, u * 1.1f) }
+                palm(w * .2f, py + h * .12f, h * .26f, w * .03f); palm(w * .28f, py + h * .14f, h * .2f, -w * .02f); palm(w * .8f, py + h * .12f, h * .24f, -w * .04f)
+                ridge(h * 1.01f, h * .06f, .8f, 6.6f, tint(1f, 0xFFB8764A.toInt(), .4f))
+            }
+            "desert2" -> {
+                // a red canyon: layered mesas with strata, lit from the side
+                fun mesa(x: Float, base: Float, bw: Float, bh: Float, cc: Int, d: Float) {
+                    val tp = bw * .16f
+                    p.shader = LinearGradient(0f, base - bh, 0f, base, tint(d, mix(cc, 0xFFFFE0B0.toInt(), .18f), .3f), mix(tint(d, cc, .3f), bot, .25f), Shader.TileMode.CLAMP)
+                    quadP(x - bw / 2f, base, x - bw / 2f + tp, base - bh, x + bw / 2f - tp, base - bh, x + bw / 2f, base); p.shader = null
+                    col(0xFF3C140A.toInt(), .18f)
+                    for (k in 1 until 6) { val y = base - bh * k / 6f; ln(x - bw / 2f + tp * (1f - k / 6f), y, x + bw / 2f - tp * (1f - k / 6f), y, u) }
+                }
+                for (k in 0 until 6) mesa(w * (k * .2f), horizon, w * (.22f + rnd(k, 1f) * .1f), h * (.22f + rnd(k, 2f) * .12f), 0xFF9A4A32.toInt(), .3f)
+                for (k in 0 until 5) mesa(w * (.1f + k * .22f), horizon + h * .06f, w * (.2f + rnd(k, 3f) * .1f), h * (.16f + rnd(k, 4f) * .1f), 0xFFB5573A.toInt(), .5f)
+                for (k in 0 until 4) mesa(w * (.02f + k * .3f), horizon + h * .12f, w * (.22f + rnd(k, 5f) * .12f), h * (.12f + rnd(k, 6f) * .08f), 0xFFC96A42.toInt(), .7f)
+                col(tint(.85f, 0xFFA0563A.toInt(), .4f)); rectF(0f, horizon + h * .12f, w, h)
+                ridge(h * 1.01f, h * .16f, .8f, 6.6f, tint(1f, 0xFF8A4A32.toInt(), .4f))
+                run {
+                    val bx = frac(drift * 3f) * (w + 40f * u) - 20f * u; val by = h * .3f + sin(drift * 30f) * u * 5f; val fl = sin(t * 8f * PI.toFloat()) * u * 2f
+                    p.style = Paint.Style.STROKE; p.strokeWidth = u * 1.3f; p.color = 0xB31E1414.toInt()
+                    val wing = Path(); wing.moveTo(bx - u * 6f, by - u * 2f + fl); wing.quadTo(bx - u * 2f, by - u * 3f, bx, by); wing.quadTo(bx + u * 2f, by - u * 3f, bx + u * 6f, by - u * 2f + fl); c.drawPath(wing, p); p.style = Paint.Style.FILL
+                }
+            }
             else -> {}
         }
 
@@ -777,7 +982,7 @@ object WeatherLand {
             }
             c.restore()
         }
-        if (night < .4f && (sky == Sky.CLEAR || sky == Sky.PARTLY || sky == Sky.CLOUD) && (land == Land.MOUNTAIN || land == Land.SEA || land == Land.PLATEAU || land == Land.FOREST)) {
+        if (night < .4f && (sky == Sky.CLEAR || sky == Sky.PARTLY || sky == Sky.CLOUD) && (land == Land.MOUNTAIN || land == Land.SEA || land == Land.PLATEAU || land == Land.FOREST || land == Land.MOSQUE || land == Land.VILLAGE)) {
             p.color = 0xB31E2840.toInt(); p.style = Paint.Style.STROKE; p.strokeWidth = u * 1.3f; p.strokeCap = Paint.Cap.ROUND
             for (k in 0 until 3) {
                 val bx = frac(drift * 3f + k * .31f) * (w + 60f * u) - 30f * u; val by = horizon * (.22f + k * .09f) + sin(drift * 40f + k) * u * 3f
@@ -839,9 +1044,9 @@ object WeatherLand {
 /** The weather page's scenery: the chosen landscape under the sky of this hour and this weather, with the weather moving in it. */
 @Composable
 fun WeatherSky(f: Forecast, landPref: String, modifier: Modifier = Modifier) {
-    val land = remember(f.place, landPref, System.currentTimeMillis() / 10_800_000L) { WeatherLand.pick(landPref, f.place, f.elev) }
+    val land = remember(f.place, landPref, f.code, System.currentTimeMillis() / 10_800_000L) { WeatherLand.pick(landPref, f.place, f.elev, skyOf(f.code)) }
     val ck = remember(f) { WeatherLand.clockOf(f) }
-    val vr = remember(f.place) { WeatherLand.variantOf(f.place) }
+    val vr = remember(f.place, land) { WeatherLand.variantOf(f.place, land) }
     val sky = skyOf(f.code)
     val t by rememberInfiniteTransition(label = "land").animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "t")
     val drift by rememberInfiniteTransition(label = "landDrift").animateFloat(0f, 1f, infiniteRepeatable(tween(60000, easing = LinearEasing), RepeatMode.Restart), label = "d")
