@@ -209,6 +209,9 @@ private fun reconcileHidden(c: Context) {
 private fun onPhone(c: Context, pkg: String): Boolean =
     runCatching { c.packageManager.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES) }.isSuccess
 
+/** Games the system does not always mark as games (their category is missing), so the list names them. */
+private val ALWAYS_GAMES = setOf("com.supercell.clashroyale", "com.supercell.clashofclans", "com.supercell.brawlstars", "com.supercell.hayday", "com.supercell.squad")
+
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
 internal fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
@@ -220,6 +223,18 @@ internal fun loadGames(c: Context): List<GameRow> {
             .map { ai -> GameRow(ai.packageName, prettyName(c, ai.packageName, pm.getApplicationLabel(ai).toString())) }
     }.getOrDefault(emptyList())
     val seen = installed.map { it.pkg }.toSet()
+    // games hidden outside Pulse (pm hide from a shell): the system lists them only with MATCH_UNINSTALLED_PACKAGES; they join the hidden games so they show in the lists and can be shown again
+    val outside = runCatching {
+        pm.getInstalledApplications(android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES)
+            .filter { ai -> ai.packageName != c.packageName && ai.packageName !in seen && ai.packageName !in hiddenSet(c) &&
+                (ai.packageName in ALWAYS_GAMES || (Build.VERSION.SDK_INT >= 26 && ai.category == ApplicationInfo.CATEGORY_GAME)) &&
+                !visibleTo(c, ai.packageName) }
+            .map { it.packageName }
+    }.getOrDefault(emptyList())
+    if (outside.isNotEmpty()) {
+        for (pkg in outside) runCatching { prefs(c).edit().putString("name_$pkg", pm.getApplicationLabel(pm.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES)).toString()).apply() }
+        saveHidden(c, hiddenSet(c) + outside)
+    }
     val hiddenRows = hiddenSet(c).filter { it !in seen }.map { GameRow(it, prettyName(c, it, prefs(c).getString("name_$it", null) ?: it)) }
     val added = customSet(c).filter { it !in seen && it !in hiddenSet(c) }.mapNotNull { pkg ->
         runCatching { GameRow(pkg, prettyName(c, pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString())) }.getOrNull()

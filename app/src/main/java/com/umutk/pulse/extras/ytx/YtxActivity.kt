@@ -980,7 +980,7 @@ fun YtxTubeApp() {
         }
 
         when (player.sheet) {
-            PlayerSheet.Quality -> QualitySheet(player, onDismiss = { player.sheet = null })
+            PlayerSheet.Quality -> QualitySheet(player, glassBackdrop, onDismiss = { player.sheet = null })
             PlayerSheet.Subtitles -> SubtitlesSheet(player, onDismiss = { player.sheet = null })
             PlayerSheet.Settings -> Unit
             PlayerSheet.Comments -> Unit

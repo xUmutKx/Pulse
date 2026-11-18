@@ -243,7 +243,11 @@ fun WeatherHub(onBack: () -> Unit) {
         detectHorizontalDragGestures(onDragStart = { dragSum = 0f }, onDragEnd = { if (dragSum < -160f) go(1) else if (dragSum > 160f) go(-1); dragSum = 0f }) { _, dx -> dragSum += dx }
     }) {
     // the sky look: the weather scene (clouds, sun, rain) is the background of the whole page, not only of the first card
-    if (skin == "sky") fc?.let { WeatherSky(it, land, Modifier.fillMaxSize()) }
+    if (skin == "sky") fc?.let {
+        WeatherSky(it, land, Modifier.fillMaxSize())
+        // the scenery stays a quiet backdrop: a soft shade under the cards so towers and roofs do not run through the text
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, .35f to Color.Black.copy(alpha = .28f), 1f to Color.Black.copy(alpha = .5f))))
+    }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.shadow
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.app.PendingIntent
@@ -319,14 +321,19 @@ fun AutoClickerTool() {
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (true) { delay(600); tick++ } }
     val svc = remember(tick) { AutoClickService.instance }
-    PCard {
+    // a small white note, not the board: paper colour, dark ink, about half the page wide
+    Column(
+        Modifier.fillMaxWidth(.72f).shadow(6.dp, androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .background(androidx.compose.ui.graphics.Color(0xFFFFFEF7), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PIcon("touch", com.umutk.pulse.Look.accent, 28.dp)
             Text(
                 if (svc == null) tr("Accessibility service is off", "Erişilebilirlik hizmeti kapalı")
                 else if (AutoClick.running) tr("Running", "Çalışıyor")
                 else if (svc.shown) tr("Ready", "Hazır") else tr("On", "Açık"),
-                color = T.text, fontSize = 16.sp
+                color = androidx.compose.ui.graphics.Color(0xFF1F1F1F), fontSize = 16.sp
             )
         }
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
