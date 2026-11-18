@@ -1012,12 +1012,17 @@ object WeatherLand {
                 // a jungle: a waterfall from a green cliff, deep canopy layers, mist and a parrot crossing
                 val greens = intArrayOf(0xFF2E6B3A.toInt(), 0xFF24592F.toInt(), 0xFF1B4A25.toInt(), 0xFF123A1C.toInt())
                 for (k in 0 until 14) { col(tint(.25f, greens[0], .3f)); circ(w * (k / 13f), horizon + rnd(k, 1f) * h * .04f, h * (.08f + rnd(k, 2f) * .05f)) }
-                col(tint(.5f, 0xFF3A5A3A.toInt(), .3f)); quadP(w * .38f, h, w * .4f, horizon - h * .12f, w * .62f, horizon - h * .14f, w * .64f, h)
                 run {
-                    val fx = w * .46f; val fw = w * .08f; val fy = horizon - h * .13f
-                    p.shader = LinearGradient(fx, 0f, fx + fw, 0f, intArrayOf(0xBFDCF0FF.toInt(), 0xF2FFFFFF.toInt(), 0xBFDCF0FF.toInt()), null, Shader.TileMode.CLAMP); c.drawRect(fx, fy, fx + fw, h, p); p.shader = null
-                    for (k in 0 until 8) { val x = fx + fw * (k + .5f) / 8f; val y = fy + frac(t * 2f + k * .37f) * (h - fy); col(0xFFB4D2E6.toInt(), .7f); ln(x, y, x, y + h * .06f, u) }
-                    for (k in 0 until 8) { val ph = frac(t + k / 8f); col(Color.WHITE, .4f * (1f - ph)); circ(fx + fw / 2f + (rnd(k, 3f) - .5f) * w * .2f, h * .86f - ph * h * .08f, u * (6f + ph * 10f)) }
+                    // a waterfall: two rock walls with a gap, a narrow fall that widens a little as it drops, short dense streaks, a foaming pool at its foot
+                    val cx = w * .5f; val fw = w * .07f; val top = horizon - h * .10f; val pool = horizon + h * .07f; val foot = pool + h * .05f
+                    col(tint(.5f, 0xFF3F5A44.toInt(), .3f)); quadP(w * .26f, foot, w * .28f, top - h * .01f, cx - fw * .7f, top, cx - fw * .85f, foot)
+                    quadP(cx + fw * .85f, foot, cx + fw * .7f, top, w * .74f, top - h * .01f, w * .76f, foot)
+                    col(tint(.7f, 0xFF6E8F6A.toInt(), .3f), .8f); rectF(w * .28f, top - h * .012f, cx - fw * .7f, top); rectF(cx + fw * .7f, top - h * .012f, w * .74f, top)
+                    val fall = Path(); fall.moveTo(cx - fw * .35f, top); fall.lineTo(cx + fw * .35f, top); fall.lineTo(cx + fw * .5f, pool); fall.lineTo(cx - fw * .5f, pool); fall.close()
+                    p.shader = LinearGradient(cx - fw / 2f, 0f, cx + fw / 2f, 0f, intArrayOf(0xCCDCF0FF.toInt(), 0xFFFFFFFF.toInt(), 0xCCDCF0FF.toInt()), null, Shader.TileMode.CLAMP); c.drawPath(fall, p); p.shader = null
+                    for (k in 0 until 16) { val x = cx + (rnd(k, 5f) - .5f) * fw * .8f; val y = top + frac(t * 2.5f + rnd(k, 6f)) * (pool - top); col(0xFFB4D2E6.toInt(), .6f); ln(x, y, x, minOf(pool, y + h * .022f), u * .8f) }
+                    col(0xFFE8F6FF.toInt(), .55f); oval(cx, pool, fw * 1.3f, h * .012f)
+                    for (k in 0 until 8) { val ph = frac(t * 1.2f + k / 8f); col(Color.WHITE, .5f * (1f - ph)); circ(cx + (rnd(k, 3f) - .5f) * fw * 1.6f, pool - ph * h * .04f, u * (2f + ph * 5f)) }
                 }
                 for (r in 0 until 3) for (k in 0 until 9) {
                     val x = w * (k / 8f) + (r % 2) * w * .06f
@@ -1025,8 +1030,8 @@ object WeatherLand {
                     col(tint(.45f + r * .2f, greens[r + 1], .3f))
                     for (b in arrayOf(floatArrayOf(-.6f, 0f, 1f), floatArrayOf(.6f, .1f, .9f), floatArrayOf(0f, -.6f, 1.1f))) circ(x + b[0] * h * .05f + sin(t * 2f * PI.toFloat() + k) * u * .6f, horizon + h * (.1f + r * .12f) + b[1] * h * .05f, h * .06f * b[2] * (1f + r * .25f))
                 }
-                p.style = Paint.Style.STROKE; p.strokeWidth = u * 1.4f; p.color = tint(.9f, 0xFF1B3A1C.toInt(), .3f)
-                for (k in 0 until 6) { val x = w * (.05f + k * .18f); val sw = sin(t * 2f * PI.toFloat() + k) * u * 4f; val vine = Path(); vine.moveTo(x, 0f); vine.quadTo(x + sw, h * .2f, x + sw * 1.5f, h * (.25f + rnd(k, 4f) * .15f)); c.drawPath(vine, p) }
+                p.style = Paint.Style.STROKE; p.strokeWidth = u * .9f; p.color = tint(.9f, 0xFF1B3A1C.toInt(), .3f)
+                for (k in 0 until 4) { val x = w * (.1f + k * .26f); val sw = sin(t * 2f * PI.toFloat() + k) * u * 4f; val vine = Path(); vine.moveTo(x, 0f); vine.quadTo(x + sw, h * .05f, x + sw * 1.2f, h * (.07f + rnd(k, 4f) * .05f)); c.drawPath(vine, p) }
                 p.style = Paint.Style.FILL
                 run {
                     val bx = frac(drift * 4f) * (w + 40f * u) - 20f * u; val by = h * .3f + sin(drift * 20f) * u * 6f; val fl = sin(t * 8f * PI.toFloat()) * u * 3f
