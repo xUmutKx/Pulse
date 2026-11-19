@@ -1453,7 +1453,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
     }
 
-    propsOf?.let { f ->
+    // the Windows looks: the same Properties window as the desktop's (General, Security, Details tabs)
+    if (T.id in com.umutk.pulse.winButtonLooks) propsOf?.let { f -> com.umutk.pulse.extras.launcher.FilePropertiesDialog(f, { propsOf = null }) { refresh++ } }
+    else propsOf?.let { f ->
         var p by remember(f) { mutableStateOf<ExProps?>(null) }
         LaunchedEffect(f) { p = withContext(Dispatchers.IO) { exProps(f) } }
         WinAlert(onDismissRequest = { propsOf = null },
