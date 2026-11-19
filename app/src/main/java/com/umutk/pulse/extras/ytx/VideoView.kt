@@ -1262,48 +1262,19 @@ fun PlayerSettingsSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () ->
                 )
 
 
-                PlayerSettingItem(
-                    icon = Icons.Rounded.Repeat,
-                    title = "Loop video",
-                    value = if (state.loopEnabled) "On" else "Off",
-                    onClick = { state.toggleLoop() }
-                )
-
-
-                PlayerSettingItem(
-                    icon = Icons.Rounded.PlayCircle,
-                    title = "Autoplay",
-                    value = if (state.autoPlayEnabled) "On" else "Off",
-                    onClick = { state.toggleAutoPlay() }
-                )
-
-
-                PlayerSettingItem(
-                    icon = if (state.zoomToFill) Icons.Rounded.AspectRatio else Icons.Rounded.CropFree,
-                    title = "Video aspect",
-                    value = if (state.zoomToFill) "Zoom to fill" else "Fit to screen",
-                    onClick = { state.toggleZoomToFill() }
-                )
-
-
-                val zoomText = if (state.videoZoom > 1.05f) "Reset" else "1.0×"
-                PlayerSettingItem(
-                    icon = Icons.Rounded.ZoomIn,
-                    title = "Video zoom",
-                    value = zoomText,
-                    onClick = { state.resetZoom() }
-                )
-
-                
-
-
-                state.playingFormat?.let { format ->
-                    PlayerSettingItem(
-                        icon = Icons.Rounded.Info,
-                        title = "Video format",
-                        value = format,
-                        onClick = null
-                    )
+                // loop, autoplay and fill as three icon switches: lit when on, dim when off (the pinch zooms, a double tap on the zoom label resets it)
+                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    @Composable fun Toggle(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, on: Boolean, onClick: () -> Unit) {
+                        Box(
+                            Modifier.size(52.dp).clip(CircleShape)
+                                .background(if (on) c.primary.copy(alpha = 0.22f) else c.onSurface.copy(alpha = 0.06f))
+                                .clickable(onClick = onClick),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(icon, label, tint = if (on) c.primary else c.onSurface.copy(alpha = 0.38f), modifier = Modifier.size(26.dp)) }
+                    }
+                    Toggle(if (state.loopEnabled) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, "Loop", state.loopEnabled || state.loopAll) { state.toggleLoop() }
+                    Toggle(Icons.Rounded.PlayCircle, "Autoplay", state.autoPlayEnabled) { state.toggleAutoPlay() }
+                    Toggle(if (state.zoomToFill) Icons.Rounded.AspectRatio else Icons.Rounded.CropFree, "Fill the screen", state.zoomToFill) { state.toggleZoomToFill() }
                 }
 
                 Spacer(Modifier.height(6.dp))
