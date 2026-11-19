@@ -194,6 +194,8 @@ object FilesLaunch {
 
 /** When set, tapping a file hands it to this callback instead of opening it (the Office "Open file" picker). */
 val LocalFilePick = androidx.compose.runtime.staticCompositionLocalOf<((File) -> Unit)?> { null }
+/** True when Files is open as another app's file picker: any file can be picked, not only documents. */
+val LocalPickAny = androidx.compose.runtime.staticCompositionLocalOf { false }
 
 /** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. Full screen (Settings > Functions) puts it in its own window with the look's caption buttons. */
 @Composable
@@ -411,6 +413,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var name by remember { mutableStateOf("") }
     var newExt by remember { mutableStateOf("docx") }
     val filePick = LocalFilePick.current
+    val pickAny = LocalPickAny.current
     var note by remember { mutableStateOf("") }
     var viewing by remember { mutableStateOf<File?>(null) }
     var propsOf by remember { mutableStateOf<File?>(null) }
@@ -626,7 +629,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val inDeskWindow = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
     // an APK asks first: view its contents, or install it (a tap on other files opens them as before)
     fun openFile(f: File) {
-        if (filePick != null) { if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
+        if (filePick != null) { if (pickAny || f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
         if (inDeskWindow && f.isFile && !f.extension.equals("apk", true) && !isArchiveFile(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.extras.launcher.DesktopWindows.open("view:" + f.path, f.name); return }
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }

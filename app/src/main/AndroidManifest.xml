@@ -207,6 +207,20 @@
         </activity-alias>
         <!-- an APK opened from a file app: the install window floats over the current app (see features/InstallActivity.kt) -->
         <!-- Pulse Files: its own launcher entry and task (Edge panel, recents), opens the Files page -->
+        <!-- Pulse Files as another app's file picker (choose a file to upload or attach) -->
+        <activity android:name=".FilePickActivity" android:exported="true" android:theme="@style/Theme.Pulse" android:label="@string/files_name" android:icon="@mipmap/ic_files" android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <activity android:name=".FilesActivity" android:process=":files" android:theme="@style/Theme.Pulse.Files" android:exported="true" android:label="@string/files_name" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTask" android:taskAffinity="com.umutk.pulse.files" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
                     <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
