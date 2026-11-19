@@ -93,6 +93,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var quickClip: String? = null
     /** Words corrected in the last minutes (what was typed, when): typed again, they are learned instead of corrected twice. */
     private val recentFixed = LinkedHashMap<String, Long>()
+    /** The rhythm of the word being typed (WM Keyboard's KeystrokeTiming): slow, careful letters are a word meant as it is. */
+    private val rhythm = KeystrokeTiming()
+
+    /**
+     * WM Keyboard's adaptive confidence, simply: corrections made and corrections undone are counted (halved past 200, so old habits fade);
+     * when more than one in ten is undone, the hybrid correction makes only one-letter fixes until the rate falls again.
+     */
+    private fun hybridCount(made: Boolean) {
+        val sp = getSharedPreferences("pulse_kb_hybrid", MODE_PRIVATE)
+        var m = sp.getInt("made", 0); var u = sp.getInt("undone", 0)
+        if (made) m++ else u++
+        if (m > 200) { m /= 2; u /= 2 }
+        sp.edit().putInt("made", m).putInt("undone", u).apply()
+    }
+    private fun hybridStrict(): Boolean { val sp = getSharedPreferences("pulse_kb_hybrid", MODE_PRIVATE); val m = sp.getInt("made", 0); return m >= 20 && sp.getInt("undone", 0) * 10 > m }
+    private fun editDistance(a: String, b: String): Int {
+        val d = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) { var prev = d[0]; d[0] = i; for (j in 1..b.length) { val tmp = d[j]; d[j] = minOf(d[j] + 1, d[j - 1] + 1, prev + if (a[i - 1] == b[j - 1]) 0 else 1); prev = tmp } }
+        return d[b.length]
+    }
     private var quickAt = 0L
     private var quickLeft = 0
     private var quickPinned = false
@@ -1140,6 +1160,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (tb != word.toString()) { c.finishComposingText(); word.clear(); peak = null; touchPts.clear(); target = null }
             }
             editAt = SystemClock.uptimeMillis()
+            if (word.isEmpty()) rhythm.reset()
+            rhythm.onKeystroke(SystemClock.uptimeMillis())
             word.append(ch)
             target = null
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
@@ -1214,6 +1236,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (correct && KeyboardPrefs.hybridFix && KeyboardPrefs.autocorrect && !inAddr && !st.plain && !urlNow()) {
             val lw = typed.lowercase(lang.locale)
             val known = KeyboardDictionary.isWord(lang.code, lw) || KeyboardDictionary.isKnown(lw)
+            // typed slowly and carefully (a name, a foreign word): not rewritten silently, it stays in the bar to be picked
+            if (rhythm.multiplier(1f) >= 1.3) t = null
+            // many corrections were undone lately: only a one-letter fix is made silently
+            if (t != null && hybridStrict() && editDistance(typed.lowercase(lang.locale), t!!.lowercase(lang.locale)) > 1) t = null
             // never rewritten: short words, all-capital words (acronyms), words with two or more digits
             if (typed.length < 3 || (typed.length >= 2 && typed.all { !it.isLetter() || it.isUpperCase() }) || typed.count { it.isDigit() } >= 2) t = null
             else if (!known && t == null) {
@@ -1264,7 +1290,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 }
             }
         }
-        if (correct && out != typed && !out.equals(typed, true)) { recentFixed[typed.lowercase(lang.locale)] = SystemClock.uptimeMillis(); if (recentFixed.size > 40) recentFixed.remove(recentFixed.keys.first()) }
+        if (correct && out != typed && !out.equals(typed, true)) { hybridCount(true); recentFixed[typed.lowercase(lang.locale)] = SystemClock.uptimeMillis(); if (recentFixed.size > 40) recentFixed.remove(recentFixed.keys.first()) }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
@@ -1550,7 +1576,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
                 lastCorrection = null
                 if (!st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
-                if (!st.incognito) KbStats.add(this, "undone")
+                if (!st.incognito) KbStats.add(this, "undone"); hybridCount(false)
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
                 editAt = SystemClock.uptimeMillis()
                 word.append(lc.original); touchPts.clear(); target = null; peak = null
@@ -1675,7 +1701,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val typed = if (word.isNotEmpty()) word.toString() else lastCorrection?.original.orEmpty()
             if (typed.length >= 2 && typed.none { it.isDigit() }) {
                 KeyboardDictionary.learnWord(typed, 4)
-                lastCorrection?.let { KeyboardDictionary.reject(this, it.original, it.corrected); KbStats.add(this, "undone") }
+                lastCorrection?.let { KeyboardDictionary.reject(this, it.original, it.corrected); KbStats.add(this, "undone"); hybridCount(false) }
                 android.widget.Toast.makeText(this, com.umutk.pulse.tr("Saved \"$typed\" as a right word", "\"$typed\" doğru kelime olarak kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
                 updateSuggestions()
             }
@@ -1753,7 +1779,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             lastCorrection = null
             if (n > 0) {
                 if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lcb.original, lcb.corrected)
-                if (!st.incognito) KbStats.add(this, "undone")
+                if (!st.incognito) KbStats.add(this, "undone"); hybridCount(false)
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lcb.original, 1); c.endBatchEdit()
                 word.append(lcb.original); target = null
             }
