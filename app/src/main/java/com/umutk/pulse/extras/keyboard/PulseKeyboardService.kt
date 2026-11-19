@@ -515,8 +515,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
         // the newest copy wins the slot: a screenshot takes it from a copied text
         quickClip = null; shotItem = null; shotVideo = file; shotVideoMime = mime; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
-        // the screenshot is kept in the clipboard history too, so it is there after the bar's picture is gone
-        if (!st.incognito) scope.launch(Dispatchers.IO) { runCatching { val l = ClipStore.addImage(this@PulseKeyboardService, android.net.Uri.fromFile(file)); withContext(Dispatchers.Main) { st.clipItems = l } } }
+        // only a screenshot is kept in the clipboard history too; a camera photo or a downloaded picture is offered in the bar for a moment and nothing more
+        val isShot = (file.name + "/" + file.path).lowercase(Locale.ROOT).let { both -> listOf("screenshot", "screen_shot", "screen shot", "screen-shot", "screencap", "screen_cap", "ekran g", "ekran_g", "ekrang", "capture", "smartselect", "scrnshot").any { it in both } }
+        if (!st.incognito && isShot) scope.launch(Dispatchers.IO) { runCatching { val l = ClipStore.addImage(this@PulseKeyboardService, android.net.Uri.fromFile(file)); withContext(Dispatchers.Main) { st.clipItems = l } } }
         st.shotThumb = withContext(Dispatchers.IO) { runCatching {
             val bmp = android.graphics.BitmapFactory.decodeFile(file.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }) ?: return@runCatching null
             // the camera stores a portrait photo sideways with an orientation tag: it is turned upright here
