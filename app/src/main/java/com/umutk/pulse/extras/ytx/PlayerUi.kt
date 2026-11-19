@@ -92,6 +92,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.outlined.QueueMusic as QueueMusicLine
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Share
@@ -1292,7 +1293,7 @@ fun BitChordMusicPlayer(
                 IconButton(onClick = { state.sheet = PlayerSheet.Queue }) {
                     Box {
                         // a line icon; the count sits outside its corner so it never covers the lines
-                        Icon(androidx.compose.material.icons.Icons.Outlined.QueueMusic, contentDescription = "Queue", tint = c.onSurface, modifier = Modifier.size(26.dp))
+                        Icon(Icons.Outlined.QueueMusicLine, contentDescription = "Queue", tint = c.onSurface, modifier = Modifier.size(26.dp))
                         if (state.queueItems.isNotEmpty()) Text(
                             if (state.queueItems.size > 99) "99+" else "${state.queueItems.size}",
                             fontSize = 8.sp, fontWeight = FontWeight.Bold, color = c.surface, lineHeight = 10.sp,
