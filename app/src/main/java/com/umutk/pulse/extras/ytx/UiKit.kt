@@ -256,8 +256,9 @@ fun Thumbnail(url: String?, modifier: Modifier = Modifier, radius: Int = 22, vid
         model = model,
         contentDescription = null,
         contentScale = ContentScale.Crop,
+        // no clip at all for the square-cornered feed pictures (a clip on every row costs a layer while scrolling)
         modifier = modifier
-            .clip(RoundedCornerShape(radius.dp))
+            .then(if (radius > 0) Modifier.clip(RoundedCornerShape(radius.dp)) else Modifier)
             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
     )
 }

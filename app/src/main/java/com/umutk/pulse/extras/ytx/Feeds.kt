@@ -242,11 +242,11 @@ fun FeedList(
     PullToRefresh(enabled = pullToRefresh, refreshing = feed.refreshing, onRefresh = feed::refresh, topPadding = indicatorTop) {
     LazyColumn(state = list, contentPadding = contentPadding) {
         header()
-        items(listVideos, key = { it.id }) { video ->
+        // one kind of row, no item animation: the list reuses its rows as it scrolls and nothing is measured twice
+        items(listVideos, key = { it.id }, contentType = { "video" }) { video ->
             VideoCard(
                 video,
                 onClick = { onOpen(video) },
-                modifier = Modifier.animateItem(),
             )
         }
         when {
