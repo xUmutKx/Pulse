@@ -1,3 +1,5 @@
+pub mod wm;
+pub mod wmfix;
 
 use jni::objects::{JClass, JFloatArray, JString};
 use jni::sys::{jfloat, jlong};
@@ -329,4 +331,29 @@ pub extern "system" fn Java_com_umutk_pulse_extras_keyboard_CharLmNative_score<'
 pub extern "system" fn Java_com_umutk_pulse_extras_keyboard_CharLmNative_stepNanos(_env: JNIEnv, _c: JClass, h: jlong) -> jlong {
     let lm = unsafe { &*(h as *const Lm) };
     lm.step_nanos()
+}
+
+// ---- WM Keyboard's correction engine (wmfix): a fixer per word list, its search as "word\tscore\tedits" lines ----
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_keyboard_WmFixNative_create<'l>(mut env: JNIEnv<'l>, _c: JClass<'l>, list: JString<'l>, rows: JString<'l>) -> jlong {
+    let list: String = match env.get_string(&list) { Ok(s) => s.into(), Err(_) => return 0 };
+    let rows: String = match env.get_string(&rows) { Ok(s) => s.into(), Err(_) => return 0 };
+    let r: Vec<&str> = rows.split(',').collect();
+    match wmfix::Fixer::new(&list, &r) { Some(f) => Box::into_raw(Box::new(f)) as jlong, None => 0 }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_keyboard_WmFixNative_free(_env: JNIEnv, _c: JClass, h: jlong) {
+    if h != 0 { unsafe { drop(Box::from_raw(h as *mut wmfix::Fixer)); } }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_extras_keyboard_WmFixNative_search<'l>(mut env: JNIEnv<'l>, _c: JClass<'l>, h: jlong, typed: JString<'l>, limit: jni::sys::jint) -> JString<'l> {
+    let out = if h == 0 { String::new() } else {
+        let f = unsafe { &mut *(h as *mut wmfix::Fixer) };
+        let t: String = env.get_string(&typed).map(|s| s.into()).unwrap_or_default();
+        f.search(&t, limit.max(1) as usize).into_iter().map(|(w, s, e)| format!("{w}\t{s:.3}\t{e}")).collect::<Vec<_>>().join("\n")
+    };
+    env.new_string(out).unwrap_or_else(|_| env.new_string("").unwrap())
 }

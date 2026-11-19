@@ -1238,8 +1238,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val known = KeyboardDictionary.isWord(lang.code, lw) || KeyboardDictionary.isKnown(lw)
             // typed slowly and carefully (a name, a foreign word): not rewritten silently, it stays in the bar to be picked
             if (rhythm.multiplier(1f) >= 1.3) t = null
+            // WM Keyboard's own engine (its fuzzy search over the same word list): when both engines name the same word, the fix is sure;
+            // when Pulse found nothing, WM's clear one-letter fix is taken. When they disagree Pulse's stays (it reads the sentence around the word).
+            val dl = KeyboardLayouts.dict(st.lang); WmFix.warm(this, dl)
+            var agree = false
+            if (!known && typed.length >= 3) {
+                val wm = WmFix.search(dl, lw, 3)
+                val top = wm.firstOrNull()?.takeIf { it.word != lw }
+                if (top != null) {
+                    if (t?.lowercase(lang.locale) == top.word) agree = true
+                    else if (t == null && top.edits <= 1 && top.word.length >= 3 && (wm.getOrNull(1)?.let { top.score - it.score >= 1.5 } ?: true)) {
+                        t = if (typed[0].isUpperCase()) top.word.replaceFirstChar { it.titlecase(lang.locale) } else top.word
+                    }
+                }
+            }
             // the confidence gate (fitted for Pulse in the way of WM Keyboard's): a fix it is not sure of stays in the bar instead of replacing the word
-            t?.let { cand ->
+            if (!agree) t?.let { cand ->
                 if (' ' !in cand) {
                     val lc = cand.lowercase(lang.locale)
                     val run = slotWords.firstOrNull { it.isNotBlank() && !it.equals(cand, true) && !it.equals(typed, true) && it.none { ch -> ch.isWhitespace() } }?.lowercase(lang.locale)
