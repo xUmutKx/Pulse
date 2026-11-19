@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd6" to (tr("Keyboard: Gamepad, Emoji, AI fix and Key layout left the ⋮ menu; Quick auth is a top-bar icon again (or in the menu, your choice), and its password chips show only in number boxes. YTXTube's Saved tab is now Watch (Series and movies, no download manager). The weather notification shows emoji signs by default.",
+        "Klavye: Gamepad, Emoji, AI fix ve Key layout ⋮ menüsünden kalktı; Hızlı kimlik yine üst çubukta (ya da menüde, sen seç) ve şifre önerileri yalnızca sayı kutularında çıkar. YTXTube'da Saved sekmesi İzle oldu (Diziler ve filmler, indirme yöneticisi yok). Hava durumu bildirimi varsayılan olarak emoji işaretleri gösterir.")),
     "tool" to (tr("Fixed a crash in the Toolkit windows (a tool with a scrolling page of its own).",
         "Araç kutusu pencerelerindeki bir çökme düzeltildi (kendi kaydırmalı sayfası olan bir araç).")),
     "game" to (tr("Game Hub opens on the normal (web) shelf again; the native shelf is a choice in its settings and now keeps only the games near the middle in memory. Pulse Watch has Apps, Files, Water, Tip, Reaction and Convert.",

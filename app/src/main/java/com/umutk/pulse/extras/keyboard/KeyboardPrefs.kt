@@ -317,6 +317,15 @@ object KeyboardPrefs {
         }
         // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
         if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }
+        // Gamepad, Emoji, AI fix and Key layout leave the menu; Quick auth (the password manager) is an icon of the top bar (or the menu row, see authPlace)
+        if (!p.getBoolean("menuClean12", false)) {
+            val gone = setOf("gamepad", "emoji", "aifix", "layout", "auth")
+            menuItems = menuItems.split(',').filter { it.isNotBlank() && it !in gone }.joinToString(",")
+            val tb = toolbarItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            if ("auth" !in tb) tb.add(minOf(tb.indexOf("clip") + 1, tb.size).coerceAtLeast(0), "auth")
+            toolbarItems = tb.joinToString(",")
+            p.edit().putBoolean("menuClean12", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
+        }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); rgbSpeed = p.getInt("rgbSpeed", 100); clipHours = p.getInt("clipKeep", clipHours); clipLimitOn = p.getBoolean("clipLimitOn", false); clipLimit = p.getInt("clipLimit", 3000).coerceIn(10, 100000); clipLayout = p.getString("clipLayout", "list") ?: "list"; commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); pressFx = p.getInt("pressFx", 0); fxColor = p.getInt("fxColor", 0); fxCustom = p.getInt("fxCustom", 0xFF7C4DFF.toInt()); bgPath = p.getString("bgPath", "") ?: ""; bgDim = p.getInt("bgDim", 50); fxSpeed = p.getInt("fxSpeed", 100); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 

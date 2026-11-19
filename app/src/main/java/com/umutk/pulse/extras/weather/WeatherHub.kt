@@ -620,6 +620,14 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
             }
             PSwitch(report, { report = it; WeatherReport.setEnabled(ctx, it) })
         }
+        var emo by remember { mutableStateOf(WeatherReport.emoji(ctx)) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Emoji signs in the notification", "Bildirimde emoji işaretleri"), color = fg, fontSize = 16.sp)
+                Text(tr("Off: plain line signs", "Kapalı: düz çizgi işaretleri"), color = sub, fontSize = 12.sp)
+            }
+            PSwitch(emo, { emo = it; WeatherReport.setEmoji(ctx, it) })
+        }
         Text(tr("MGM gives the station values of now and the first hours for places in Turkey; the 96 hours and 16 days come from Open-Meteo.", "MGM, Türkiye'deki yerler için şu anın ve ilk saatlerin istasyon değerlerini verir; 96 saat ve 16 gün Open-Meteo'dan gelir."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     }
     when (ask) {

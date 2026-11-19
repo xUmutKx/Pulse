@@ -2538,6 +2538,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // a number box is a login box only when it says so (a student or ID number, a phone), or says nothing
             (numeric && (userLabel || label.isBlank())))
         if (!passBox && !user) return false
+        // the vault's chips come only in number boxes (a student or ID number, a phone, a PIN)
+        if (!numeric) return false
         // a verification code box (SMS, e-mail, authenticator) is no login: nothing from the vault is offered there
         if (listOf("otp", "one-time", "verification", "doğrulama", "dogrulama", "sms", "tek kullanımlık", "tek kullanimlik", "kod", "code").any { label.contains(it) }) return false
         if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false

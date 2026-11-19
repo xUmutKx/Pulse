@@ -314,6 +314,12 @@ fun KeyboardSettings(back: () -> Unit) {
 
         // typing
         KbSection("edit", tr("Typing", "Yazım")) {
+            Switch(tr("Quick auth in the top bar", "Hızlı kimlik üst çubukta"), tr("Off: it sits in the ⋮ menu", "Kapalı: ⋮ menüsünde durur"), "auth" in KeyboardPrefs.toolbarItems.split(',')) { top ->
+                val tb = KeyboardPrefs.toolbarItems.split(',').filter { it.isNotBlank() && it != "auth" }.toMutableList()
+                val mn = KeyboardPrefs.menuItems.split(',').filter { it.isNotBlank() && it != "auth" }.toMutableList()
+                if (top) tb.add(minOf(tb.indexOf("clip") + 1, tb.size).coerceAtLeast(0), "auth") else mn.add("auth")
+                KeyboardPrefs.toolbarItems = tb.joinToString(","); KeyboardPrefs.menuItems = mn.joinToString(","); save()
+            }
             Switch(tr("Quick auth: fingerprint first", "Hızlı kimlik: önce parmak izi"), tr("Off: the codes show at once", "Kapalı: kodlar hemen görünür"), KeyboardPrefs.authLock) { KeyboardPrefs.authLock = it; save() }
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Correct when typing pauses", "Yazarken durunca düzelt"), tr("A word that can only be a slip is mended without a space (so a message sent with the app's own button is corrected too)", "Ancak hata olabilecek kelime boşluk olmadan düzeltilir (uygulamanın kendi gönder tuşuyla da düzeltilmiş gider)"), KeyboardPrefs.pauseFix) { KeyboardPrefs.pauseFix = it; save() }

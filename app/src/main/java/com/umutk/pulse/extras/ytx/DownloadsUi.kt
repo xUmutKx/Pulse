@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -237,24 +238,6 @@ fun DownloadsScreen(
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
     ) { top ->
         LazyColumn(contentPadding = contentPadding.withTop(top)) {
-            // Series and movies: pick a title, choose the streams and download them (a screen of its own; the downloads run in Pulse's download manager)
-            item(key = "series") {
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                        .clickable {
-                            openSeriesPage(ctx)
-                        }.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Rounded.Download, null, Modifier.size(24.dp), MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text("Series and movies", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("Pick a show or a film, choose the streams and download", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
             item(key = "sections") {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -505,5 +488,31 @@ fun formatBytes(bytes: Long): String {
         mb >= 10 -> String.format(Locale.US, "%.0f MB", mb)
         mb >= 1 -> String.format(Locale.US, "%.1f MB", mb)
         else -> String.format(Locale.US, "%.0f KB", bytes / 1024.0)
+    }
+}
+
+/** The Watch page: Series and movies, played straight from the streams (no download manager, no seeding). */
+@Composable
+fun WatchScreen(contentPadding: PaddingValues, onSearch: () -> Unit, onAccount: () -> Unit, scrollToTop: Int = 0) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    CollapsingHeaderLayout(
+        resetKey = scrollToTop,
+        header = { ScreenHeader(title = com.umutk.pulse.tr("Watch", "İzle")) { HeaderActions(onSearch, onAccount) } },
+    ) { top ->
+        LazyColumn(contentPadding = contentPadding.withTop(top)) {
+            item(key = "series") {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .clickable { openSeriesPage(ctx) }.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, null, Modifier.size(28.dp), MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                }
+            }
+        }
     }
 }

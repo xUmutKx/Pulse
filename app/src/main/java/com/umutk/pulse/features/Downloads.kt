@@ -1463,7 +1463,6 @@ private fun DownloadsContent() {
                 }
             }
         }
-        SeasonDl.Card()
         // a link still being looked at: a row with a small spinner, until its download starts (then its own row with the bar takes over)
         pending.forEach { u ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

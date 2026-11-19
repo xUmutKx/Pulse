@@ -37,10 +37,15 @@ object WeatherReport {
     private fun p(c: Context) = c.getSharedPreferences("weather_report", Context.MODE_PRIVATE)
     fun enabled(c: Context) = p(c).getBoolean("on", true)
     fun setEnabled(c: Context, on: Boolean) { p(c).edit().putBoolean("on", on).apply() }
+    /** The sign beside each hour: coloured emoji (default) or the plain line symbols. */
+    fun emoji(c: Context) = p(c).getBoolean("emoji", true)
+    fun setEmoji(c: Context, on: Boolean) { p(c).edit().putBoolean("emoji", on).apply() }
+    @Volatile private var useEmoji = true
 
     /** Posts the hour report and/or the five-day report when they are due. */
     fun maybePost(c: Context) {
         if (!enabled(c)) return
+        useEmoji = emoji(c)
         val f = WeatherStore.cached(c) ?: return
         val sp = p(c)
         val now = System.currentTimeMillis()
@@ -92,6 +97,16 @@ object WeatherReport {
     private fun sign(code: Int, time: String): String {
         val hour = time.substringAfter('T', "").take(2).toIntOrNull() ?: 12
         val night = hour < 6 || hour >= 20
+        if (useEmoji) return when (skyOf(code)) {
+            Sky.CLEAR -> if (night) "\uD83C\uDF19" else "\u2600\uFE0F"
+            Sky.PARTLY -> if (night) "\uD83C\uDF19\u2601\uFE0F" else "\u26C5"
+            Sky.CLOUD -> "\u2601\uFE0F"
+            Sky.FOG -> "\uD83C\uDF2B\uFE0F"
+            Sky.DRIZZLE -> "\uD83C\uDF26\uFE0F"
+            Sky.RAIN -> "\uD83C\uDF27\uFE0F"
+            Sky.SNOW -> "\u2744\uFE0F"
+            Sky.STORM -> "\u26C8\uFE0F"
+        }
         return when (skyOf(code)) {
             Sky.CLEAR -> if (night) "☾" else "☀︎"
             Sky.PARTLY -> if (night) "☾☁︎" else "☀︎☁︎"
