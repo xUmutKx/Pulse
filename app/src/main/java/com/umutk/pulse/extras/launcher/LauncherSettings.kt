@@ -390,7 +390,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
         tr("Reset", "Sıfırla"), onConfirm = { LauncherPrefs.reset(ctx); askReset = false }, onDismiss = { askReset = false })
 }
 
-private val SORTS = listOf("name", "installed", "opened")
+private val SORTS = listOf("name", "installed", "opened", "category")
 
 /** One category of the launcher settings: its colour, icon, name and what is inside. */
 private class LCat(val key: String, val color: Long, val icon: String, val en: String, val trName: String, val enSub: String, val trSub: String)
@@ -415,6 +415,7 @@ private val LAUNCHER_CATS = listOf(
 private fun sortLabel(s: String): String = when (s) {
     "installed" -> tr("Newest installed", "En son yüklenen")
     "opened" -> tr("Last opened", "Son açılan")
+    "category" -> tr("By category", "Kategoriye göre")
     else -> tr("A to Z", "A'dan Z'ye")
 }
 

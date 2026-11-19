@@ -425,6 +425,8 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         when (sort) {
             "installed" -> list.sortedWith(compareByDescending<LaunchApp> { it.installed }.thenBy { it.label.lowercase() })
             "opened" -> list.sortedWith(compareByDescending<LaunchApp> { usage[it.pkg] ?: 0L }.thenBy { it.label.lowercase() })
+            // Smart Launcher's way: the apps go together by what they are (games, media, communication, ...), A to Z inside
+            "category" -> list.sortedWith(compareBy<LaunchApp> { startGroup(it).ordinal }.thenBy { it.label.lowercase() })
             else -> list
         }
     }
