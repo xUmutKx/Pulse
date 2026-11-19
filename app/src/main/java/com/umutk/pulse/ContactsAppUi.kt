@@ -257,6 +257,7 @@ private fun CtInput(value: String, onChange: (String) -> Unit, label: String, mo
     // the label sits on the top border, left-aligned, and cuts the line behind it; the text starts a little lower inside the box
     var focused by remember { mutableStateOf(false) }
     var labelW by remember { mutableStateOf(0) }
+    var labelH by remember { mutableStateOf(0) }
     val border = if (focused) ctAcc else T.line
     val labelX = maxOf(12.dp, ctRadius + 4.dp)
     Box(modifier.padding(top = 8.dp)) {
@@ -277,7 +278,8 @@ private fun CtInput(value: String, onChange: (String) -> Unit, label: String, mo
             trailing?.invoke()
         }
         Text(label, color = if (focused) ctAcc else T.sub, fontSize = 12.sp, maxLines = 1,
-            modifier = Modifier.align(Alignment.TopStart).offset(labelX, (-8).dp).padding(horizontal = 4.dp).onSizeChanged { labelW = it.width })
+            // its middle exactly on the border line
+            modifier = Modifier.align(Alignment.TopStart).offset { androidx.compose.ui.unit.IntOffset(labelX.roundToPx(), -labelH / 2) }.padding(horizontal = 4.dp).onSizeChanged { labelW = it.width; labelH = it.height })
     }
 }
 
