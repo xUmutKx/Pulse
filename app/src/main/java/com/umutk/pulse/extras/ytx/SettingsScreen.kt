@@ -745,6 +745,15 @@ private fun AppearanceThemeContent(context: Context) {
             onCheckedChange = { YtxPerf.set(perfCtx, it) },
         )
 
+        var keepOld by remember { mutableStateOf(PlayerState.keepUntilReady) }
+        SettingsSwitchRow(
+            title = com.umutk.pulse.tr("Keep playing until the next is ready", "Sonraki hazır olana kadar çalmaya devam et"),
+            subtitle = com.umutk.pulse.tr("A video picked while another plays: the old one goes on until the new one can start, then they fade into each other",
+                "Biri oynarken seçilen video: eskisi yenisi başlayabilene kadar sürer, sonra birbirine geçerler"),
+            checked = keepOld,
+            onCheckedChange = { keepOld = it; PlayerState.keepUntilReady = it },
+        )
+
         val navCtx = androidx.compose.ui.platform.LocalContext.current
         SettingsSwitchRow(
             title = I18n.t("nav_shorts", "Shorts in the bottom bar"),

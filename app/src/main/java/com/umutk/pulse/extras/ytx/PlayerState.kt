@@ -41,6 +41,15 @@ import kotlinx.coroutines.withContext
 
 @Stable
 class PlayerState(private val scope: CoroutineScope) {
+    companion object {
+        private fun sp() = runCatching { YTXTubeApplication.appContext.getSharedPreferences("ytx_play", android.content.Context.MODE_PRIVATE) }.getOrNull()
+        /** The video playing goes on until the newly picked one can start (a setting, off by default). */
+        var keepUntilReady: Boolean
+            get() = sp()?.getBoolean("keepUntilReady", false) ?: false
+            set(v) { sp()?.edit()?.putBoolean("keepUntilReady", v)?.apply() }
+    }
+    /** The old video is still playing while the new one loads; it fades out right before the new one starts. */
+    private var holdOld = false
     var controller by mutableStateOf<MediaController?>(null)
         internal set
 
@@ -373,7 +382,9 @@ class PlayerState(private val scope: CoroutineScope) {
         if (old != null && old.id != item.id && !goingBack) { history.add(old); while (history.size > 50) history.removeAt(0) }
         if (current?.id != item.id) runCatching {
             val p = controller
-            if (p != null && p.isPlaying) { fadeVolume(p.volume, 0f, 180); fadeHandler.postDelayed({ runCatching { controller?.pause() } }, 190) } else { p?.volume = 0f; p?.pause() }
+            holdOld = false
+            if (p != null && p.isPlaying && keepUntilReady) holdOld = true
+            else if (p != null && p.isPlaying) { fadeVolume(p.volume, 0f, 180); fadeHandler.postDelayed({ runCatching { controller?.pause() } }, 190) } else { p?.volume = 0f; p?.pause() }
             fadeInNext = true
         }
         current = item
@@ -484,6 +495,14 @@ class PlayerState(private val scope: CoroutineScope) {
 
     private fun startPlayback(item: VideoItem) {
         val player = controller ?: run { pendingStart = item; return }
+        // the old video went on while this one loaded: it fades out now, then this one starts (and fades in)
+        if (holdOld && player.isPlaying) {
+            holdOld = false
+            fadeVolume(player.volume, 0f, 220)
+            fadeHandler.postDelayed({ if (current?.id == item.id) startPlayback(item) }, 240)
+            return
+        }
+        holdOld = false
 
         replaceCurrent(player, item, positionMs = ResumeStore.startPosition(item.id))
         player.play()
@@ -1116,6 +1135,8 @@ class PlayerState(private val scope: CoroutineScope) {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (mediaItem != null) onPlayerMovedTo(mediaItem)
+            // the next one of the queue (by itself or by the next button) fades in too, like a video picked from a list
+            if (mediaItem != null && !swapping && reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) controller?.let { c -> c.volume = 0f; fadeVolume(0f, 1f, 350) }
             val lang = selectedSubtitleLanguage
             if (lang != null) {
                 setSubtitleLanguage(lang)

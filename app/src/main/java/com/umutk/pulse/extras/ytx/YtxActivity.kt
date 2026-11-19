@@ -480,7 +480,9 @@ fun YtxTubeApp() {
                 "toggle" -> player.togglePlay()
                 "next" -> if (player.isMusicMode) player.skipNext() else player.skipNextVideo()
                 // the headphones: the sound goes on in the background for now; back in the app the video shows and plays again (audio-only is not left on for good)
-                "audio" -> { player.audioOnlyBeforePip = AudioOnly.enabled; player.audioFromPip = true; player.setAudioOnly(true); (activity as? ComponentActivity)?.moveTaskToBack(true) }
+                "audio" -> { player.audioOnlyBeforePip = AudioOnly.enabled; player.audioFromPip = true; player.setAudioOnly(true); val wasPlaying = player.controller?.isPlaying == true; (activity as? ComponentActivity)?.moveTaskToBack(true)
+                    // leaving the picture-in-picture window stops the player on the way out: the sound goes on in the background
+                    if (wasPlaying) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ runCatching { player.controller?.play() } }, 450) }
             }
         }
     }
