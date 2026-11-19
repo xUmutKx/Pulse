@@ -54,6 +54,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.luminance
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -90,7 +91,7 @@ fun FileWindow(path: String) {
             val text = remember(path) { runCatching { ofReadText(f).take(300_000) }.getOrDefault("") }
             Box(Modifier.fillMaxSize().background(T.bg)) {
                 SelectionContainer {
-                    Text(text, color = T.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp))
+                    Text(com.umutk.pulse.SyntaxColor.color(text, ext, T.bg.luminance() < 0.5f), color = T.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp))
                 }
             }
         }

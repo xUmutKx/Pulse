@@ -49,7 +49,7 @@ fun ofReadText(f: File): String {
     }
 }
 
-fun ofIsText(f: File) = f.extension.lowercase() in OF_TEXT_EXTS || f.extension.lowercase() in setOf("kt", "java", "py", "sh", "properties", "yaml", "cfg", "gradle", "htm", "vcf", "ics", "eml", "gpx", "kml", "sql", "css", "tsv", "conf", "bat")
+fun ofIsText(f: File) = f.extension.lowercase() in OF_TEXT_EXTS || f.extension.lowercase() in setOf("kt", "kts", "java", "py", "sh", "properties", "yaml", "cfg", "gradle", "htm", "xhtml", "vcf", "ics", "eml", "gpx", "kml", "sql", "css", "scss", "tsv", "conf", "bat", "cmd", "js", "mjs", "ts", "tsx", "jsx", "c", "h", "cpp", "hpp", "cs", "go", "rs", "rb", "php", "lua", "swift", "toml", "env", "gitignore", "csv", "svg", "rst", "tex", "pro", "cfg", "inf", "reg", "ps1", "vbs", "smali", "wgsl", "glsl")
 
 fun ofCreateText(ext: String, base: String): File {
     val dir = OfficePrefs.folder.apply { mkdirs() }
@@ -106,7 +106,8 @@ class OfficeTextActivity : ComponentActivity() {
                         Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), pink) }
                     }
                     BasicTextField(text, { text = it }, Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
-                        textStyle = TextStyle(color = pink, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = SolidColor(Look.accent))
+                        textStyle = TextStyle(color = pink, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = SolidColor(Look.accent),
+                        visualTransformation = SyntaxColor.transform(f.extension, black || T.bg.luminance() < 0.5f))
                 }
                 if (saveAs) OfSaveAsDialog(f.name, (listOf(f.extension.lowercase()) + OF_TEXT_EXTS + "tsv").filter { it.isNotEmpty() }.distinct(), f.parentFile, { saveAs = false }) { d ->
                     saveAs = false
