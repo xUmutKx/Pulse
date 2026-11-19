@@ -1315,6 +1315,8 @@ object WeatherLand {
 /** The weather page's scenery: the chosen landscape under the sky of this hour and this weather, with the weather moving in it. */
 @Composable
 fun WeatherSky(f: Forecast, landPref: String, modifier: Modifier = Modifier) {
+    // scenery off: the classic sky (blue, sun, clouds, moon) with no landscape
+    if (landPref == "off") { WeatherScene(f.code, modifier, f.isDay); return }
     val land = remember(f.place, landPref, f.code, System.currentTimeMillis() / 86_400_000L) { WeatherLand.pick(landPref, f.place, f.elev, skyOf(f.code)) }
     val ck = remember(f) { WeatherLand.clockOf(f) }
     val vr = remember(f.place, land) { WeatherLand.variantOf(f.place, land) }

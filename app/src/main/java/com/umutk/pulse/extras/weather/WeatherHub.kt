@@ -571,7 +571,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                             land: String = "random", onLand: (String) -> Unit = {}) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
-    val lands = listOf("random" to tr("Random (changes every few hours)", "Rastgele (birkaç saatte bir değişir)"), "region" to tr("By my region", "Bölgeme göre")) + WeatherLand.Land.values().map { it.key to tr(it.en, it.tr) }
+    val lands = listOf("random" to tr("Random (changes every few hours)", "Rastgele (birkaç saatte bir değişir)"), "region" to tr("By my region", "Bölgeme göre"), "off" to tr("Off (classic sky)", "Kapalı (klasik gökyüzü)")) + WeatherLand.Land.values().map { it.key to tr(it.en, it.tr) }
     val sources = listOf("all" to tr("All sources, combined", "Hepsi, birleştirilmiş"), "om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "wttr" to tr("wttr.in (no key)", "wttr.in (anahtarsız)"), "brightsky" to tr("Bright Sky, DWD (no key)", "Bright Sky, DWD (anahtarsız)"), "owm" to "OpenWeatherMap", "wapi" to "WeatherAPI.com", "pirate" to "Pirate Weather")
     val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
