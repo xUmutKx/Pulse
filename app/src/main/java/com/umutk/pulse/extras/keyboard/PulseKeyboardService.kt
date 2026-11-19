@@ -1698,7 +1698,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
             if (!shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
         }
-        if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
+        if (i == 2 && qc != null && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
+            // a word being typed is kept as it is, then the copied text follows it
+            if (word.isNotEmpty()) finishWord("", false)
             currentInputConnection?.commitText(qc, 1)
             // pasted twice, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
             quickLeft--
@@ -2522,7 +2524,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val q = quickClip ?: return
         // the copied text stays in the bar for two minutes; after that it is only in the clipboard (a newer copy replaces it)
         if (!quickPinned && SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
-        if (word.isNotEmpty() || emailField || st.plain) return
+        // it stays at the right while a word is being typed too (until it is pasted twice, a newer copy comes, or the two minutes pass)
+        if (emailField || st.plain) return
         val label = "\u0001" + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
         slotWords = arrayOf(slotWords[0], slotWords[1], q)
         st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, label)
@@ -2671,7 +2674,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
-                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed); withFiles(typed) }
+                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first; withPersonal(typed); withFiles(typed); showClipSlot() }
             }
             // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
             kotlinx.coroutines.delay(55)
