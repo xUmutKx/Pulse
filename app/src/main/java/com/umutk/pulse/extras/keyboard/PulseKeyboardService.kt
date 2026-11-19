@@ -1749,6 +1749,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         if (word.isNotEmpty()) {
             val typed = word.toString()
+            // the quoted word at the left is what was typed: a tap keeps it as it is, and it is remembered so it is not mended again
+            if (st.slots.getOrNull(i)?.startsWith("\"") == true && w == typed && KeyboardPrefs.learn && !st.incognito && !st.plain && typed.length >= 2 && typed.none { it.isDigit() }) {
+                KeyboardDictionary.learnWord(typed, 3)
+            }
             word.clear(); target = null
             // a tapped suggestion that is not a completion: this typo means that word from now on
             if (!isEmoji && KeyboardPrefs.learn && !st.plain && !st.incognito) {

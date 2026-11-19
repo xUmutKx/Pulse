@@ -1,7 +1,10 @@
 package com.umutk.pulse.extras.launcher
 
 import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,10 +52,27 @@ internal fun PowerDialog(onDismiss: () -> Unit, onDone: () -> Unit) {
         confirmButton = { PButton(tr("Cancel", "Vazgeç"), onClick = onDismiss) })
 }
 
-/** A power button of a start menu: a press shows all the ways out. */
+/** A power button of a start menu: a press shows all the ways out in a small panel right above the button (no dialog over the whole screen). */
 @Composable
 internal fun PowerClick(onDone: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Box(modifier.clickable { open = true }, contentAlignment = Alignment.Center) { content() }
-    if (open) PowerDialog({ open = false }, onDone)
+    val ctx = LocalContext.current
+    Box(modifier.clickable { open = true }, contentAlignment = Alignment.Center) {
+        content()
+        if (open) androidx.compose.ui.window.Popup(
+            popupPositionProvider = object : androidx.compose.ui.window.PopupPositionProvider {
+                override fun calculatePosition(anchorBounds: androidx.compose.ui.unit.IntRect, windowSize: androidx.compose.ui.unit.IntSize, layoutDirection: androidx.compose.ui.unit.LayoutDirection, popupContentSize: androidx.compose.ui.unit.IntSize): androidx.compose.ui.unit.IntOffset {
+                    val x = (anchorBounds.left).coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
+                    val y = (anchorBounds.top - popupContentSize.height - 6).coerceAtLeast(0)
+                    return androidx.compose.ui.unit.IntOffset(x, y)
+                }
+            },
+            onDismissRequest = { open = false },
+        ) {
+            Column(Modifier.width(190.dp).background(com.umutk.pulse.T.panel).border(1.dp, com.umutk.pulse.T.sub.copy(alpha = .4f)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("sleep" to tr("Sleep", "Uyku"), "lock" to tr("Lock", "Kilitle"), "off" to tr("Shut down", "Kapat"), "restart" to tr("Restart", "Yeniden başlat"), "signout" to tr("Sign out", "Oturumu kapat"))
+                    .forEach { (k, label) -> PButton(label, Modifier.fillMaxWidth()) { open = false; onDone(); powerAction(ctx, k) } }
+            }
+        }
+    }
 }
