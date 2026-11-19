@@ -476,7 +476,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
 
     look.Background(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            look.SideDock(state, Modifier.fillMaxHeight())
+            if (!look.id.startsWith("winphone") || LauncherPrefs.wpSideDock) look.SideDock(state, Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
             if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())

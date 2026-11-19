@@ -41,6 +41,8 @@ object LauncherPrefs {
     var windowed by mutableStateOf(false)
     var lockPortrait by mutableStateOf(false)
     var fullScreen by mutableStateOf(false)
+    /** The Windows Phone look's dock on the left edge (off by default: the tiles cover the whole screen). */
+    var wpSideDock by mutableStateOf(false)
     /** Package -> time of the last launch; only filled while [sort] is "opened". */
     var usage by mutableStateOf<Map<String, Long>>(emptyMap())
     /** Wallpaper picked per look: index into Pulse's stock pictures for that look (see [LauncherWallpaper]). */
@@ -253,6 +255,7 @@ object LauncherPrefs {
         windowed = p.getProperty("windowed") == "true"
         lockPortrait = p.getProperty("lockPortrait") == "true"
         fullScreen = p.getProperty("fullScreen") == "true"
+        wpSideDock = p.getProperty("wpSideDock") == "true"
         usage = p.stringPropertyNames().filter { it.startsWith(USE) }
             .associate { it.removePrefix(USE) to (p.getProperty(it).toLongOrNull() ?: 0L) }
         widgets = p.getProperty("widgets").orEmpty().split(';').filter { it.isNotBlank() }
@@ -272,7 +275,7 @@ object LauncherPrefs {
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
         p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
-        p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
+        p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString()); p.setProperty("wpSideDock", wpSideDock.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
         p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
