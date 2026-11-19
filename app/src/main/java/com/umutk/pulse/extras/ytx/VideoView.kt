@@ -371,7 +371,8 @@ fun VideoContent(
 
                             val isVerticalIntent = kotlin.math.abs(totalDy) > kotlin.math.abs(totalDx) * 1.5f
 
-                            if (fullscreen) {
+                            // full screen, or the tall black stage of the cinema view: the sides set brightness and volume
+                            if (fullscreen || (size.height > size.width * 1.2f && gestureZone != 0)) {
                                 if (!isDraggingGesture && isVerticalIntent && kotlin.math.abs(totalDy) > 24f && gestureZone != 0) {
                                     isDraggingGesture = true
                                     // the drag goes on after the hold-speed wait is over: leave this loop and carry on below

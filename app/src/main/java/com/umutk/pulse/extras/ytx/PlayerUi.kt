@@ -406,7 +406,7 @@ fun PlayerScreen(
             }
         } else if (cinema && state.expanded) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-            Box(Modifier.zIndex(2f)) { VideoStage(state, morph, onCollapse, onFullscreen, interactive) }
+            Box(Modifier.zIndex(2f).fillMaxSize()) { VideoStage(state, morph, onCollapse, onFullscreen, interactive, fill = true) }
         }
         } else {
         Column(Modifier.fillMaxSize()) {
@@ -496,7 +496,7 @@ fun PlayerScreen(
 
 
 @Composable
-private fun VideoStage(state: PlayerState, morph: PlayerMorph, onCollapse: () -> Unit, onFullscreen: () -> Unit, interactive: Boolean) {
+private fun VideoStage(state: PlayerState, morph: PlayerMorph, onCollapse: () -> Unit, onFullscreen: () -> Unit, interactive: Boolean, fill: Boolean = false) {
     val reduced = rememberReducedMotion()
     val scope = rememberCoroutineScope()
 
@@ -512,9 +512,10 @@ private fun VideoStage(state: PlayerState, morph: PlayerMorph, onCollapse: () ->
     var decided by remember { mutableStateOf(false) }
     var pulling by remember { mutableStateOf(false) }
     val stage = Modifier
-        .padding(horizontal = StageSideGap)
+        .padding(horizontal = if (fill) 0.dp else StageSideGap)
         .fillMaxWidth()
-        .aspectRatio(aspect)
+        // cinema: the stage is the whole black screen, so a touch on the black above or below the picture works like one on the picture
+        .then(if (fill) Modifier.fillMaxHeight() else Modifier.aspectRatio(aspect))
         .graphicsLayer {
 
             val k = 1f + 0.06f * (1f - exp(-pullUp.value / (pullDistance * 1.5f)))
