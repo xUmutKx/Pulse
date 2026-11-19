@@ -989,10 +989,27 @@ object WeatherLand {
                 // the roof of the world: a great snowy peak with snow blowing off its summit, prayer flags and base camp tents
                 peaks(horizon - h * .02f, h * .30f, 1.3f, 2.2f, tint(.2f, 0xFF5A6A88.toInt(), .4f), true)
                 run {
-                    val px = w * .52f; val py = horizon - h * .52f; val rock = tint(.4f, 0xFF47546E.toInt(), .3f)
-                    col(rock); val m = Path(); m.moveTo(w * .08f, horizon + h * .04f); m.lineTo(w * .34f, horizon - h * .22f); m.lineTo(px, py); m.lineTo(w * .66f, horizon - h * .26f); m.lineTo(w * .95f, horizon + h * .04f); m.close(); c.drawPath(m, p)
-                    col(mix(mix(Color.WHITE, bot, .2f), rock, .08f)); val s2 = Path(); s2.moveTo(w * .38f, horizon - h * .25f); s2.lineTo(px, py); s2.lineTo(w * .63f, horizon - h * .27f); s2.lineTo(w * .56f, horizon - h * .22f); s2.lineTo(w * .5f, horizon - h * .28f); s2.lineTo(w * .45f, horizon - h * .21f); s2.close(); c.drawPath(s2, p)
-                    col(tint(.55f, 0xFF2E3850.toInt(), .3f), .5f); quadP(px, py, w * .66f, horizon - h * .26f, w * .95f, horizon + h * .04f, w * .6f, horizon + h * .04f)
+                    // the massif: a jagged outline with shoulders and a summit, a snow cap with a ragged edge, and the right faces in shadow
+                    val pts = floatArrayOf(.02f, .04f, .12f, -.10f, .20f, -.16f, .27f, -.14f, .34f, -.27f, .40f, -.33f, .45f, -.42f, .49f, -.48f, .52f, -.52f, .56f, -.47f, .60f, -.43f, .64f, -.36f, .68f, -.38f, .73f, -.28f, .80f, -.22f, .88f, -.12f, .98f, .04f)
+                    fun at(k: Int) = w * pts[k * 2] to horizon + h * pts[k * 2 + 1]
+                    val n = pts.size / 2
+                    val m = Path(); at(0).let { m.moveTo(it.first, it.second) }; for (k in 1 until n) at(k).let { m.lineTo(it.first, it.second) }; m.close()
+                    val rock = tint(.4f, 0xFF4A5670.toInt(), .3f)
+                    p.style = Paint.Style.FILL; p.alpha = 255
+                    p.shader = LinearGradient(0f, horizon - h * .52f, 0f, horizon + h * .04f, mix(rock, Color.WHITE, .08f), mix(rock, bot, .25f), Shader.TileMode.CLAMP); c.drawPath(m, p); p.shader = null
+                    // the snow above a ragged line
+                    c.save()
+                    val snowLine = Path(); snowLine.moveTo(0f, 0f); var x = 0f
+                    while (x <= w) { snowLine.lineTo(x, horizon - h * (.29f + .035f * noise(x / w * 18f, 3f))); x += w / 48f }
+                    snowLine.lineTo(w, 0f); snowLine.close(); c.clipPath(snowLine)
+                    col(mix(Color.WHITE, bot, .18f)); c.drawPath(m, p)
+                    c.restore()
+                    // the faces turned away from the light: from the summit down its right side
+                    val sh = Path(); at(8).let { sh.moveTo(it.first, it.second) }; for (k in 9 until n) at(k).let { sh.lineTo(it.first, it.second) }
+                    sh.lineTo(w * .66f, horizon + h * .04f); sh.lineTo(w * .58f, horizon - h * .18f); sh.lineTo(w * .54f, horizon - h * .36f); sh.close()
+                    col(tint(.6f, 0xFF1E2638.toInt(), .2f), .38f); c.drawPath(sh, p)
+                    // snow blowing off the summit
+                    val (px, py) = at(8)
                     for (k in 0 until 14) { val ph = frac(t + k / 14f); col(Color.WHITE, .5f * (1f - ph)); circ(px + ph * w * .35f, py + sin(ph * 5f + k) * u * 4f - ph * h * .02f, u * (1.5f + ph * 5f)) }
                 }
                 ridge(horizon + h * .08f, h * .08f, 1.2f, 4f, tint(.75f, 0xFFD8E0EA.toInt(), 1f))
