@@ -775,6 +775,7 @@ fun YtxTubeApp() {
                         else player.open(video)
                     },
                     channelAvatarSeed = lib.channels.associate { it.id to it.avatar },
+                    onPlayAll = { list, shuffle -> player.playAll(list, shuffle, music = pl.id == "MDL") },
                 )
             }
         }

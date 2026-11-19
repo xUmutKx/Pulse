@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Subscriptions
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -763,6 +765,7 @@ fun PlaylistScreen(
     onBack: () -> Unit,
     onOpen: (VideoItem) -> Unit,
     channelAvatarSeed: Map<String, String?> = emptyMap(),
+    onPlayAll: (List<VideoItem>, Boolean) -> Unit = { _, _ -> },
 ) {
     LaunchedEffect(playlist.id) { feed.ensureLoaded() }
     val avatarSeed = remember(channelAvatarSeed) { channelAvatarSeed }
@@ -786,7 +789,20 @@ fun PlaylistScreen(
             val body = if (playlist.id == "DL") "Downloaded videos will appear here." else "Videos you add to this playlist will show up here."
             Box(Modifier.padding(top = top)) { EmptyState(icon, title, body) }
         } else {
-            FeedList(feed, contentPadding.withTop(top), onOpen, indicatorTop = top, channelAvatarSeed = avatarSeed)
+            FeedList(feed, contentPadding.withTop(top), onOpen, indicatorTop = top, channelAvatarSeed = avatarSeed, header = {
+                // the playlist's cover on top, its size, and play all / shuffle
+                if (feed.videos.isNotEmpty()) item(key = "pl_head") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        coil.compose.AsyncImage(feed.videos.first().thumbnail, null, Modifier.fillMaxWidth(.8f).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        Text(playlist.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
+                        Text("${feed.videos.size}${if (feed.hasMore) "+" else ""} videos", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            androidx.compose.material3.Button(onClick = { onPlayAll(feed.videos, false) }) { Icon(Icons.Rounded.PlayArrow, null); Text(" Play all") }
+                            androidx.compose.material3.OutlinedButton(onClick = { onPlayAll(feed.videos, true) }) { Icon(Icons.Rounded.Shuffle, null); Text(" Shuffle") }
+                        }
+                    }
+                }
+            })
         }
     }
     }

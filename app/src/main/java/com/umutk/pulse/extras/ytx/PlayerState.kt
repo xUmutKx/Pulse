@@ -286,6 +286,20 @@ class PlayerState(private val scope: CoroutineScope) {
 
 
 
+    /** A whole playlist: the first one opens, the others follow in the queue (in a shuffled order when [shuffle]). */
+    fun playAll(items: List<VideoItem>, shuffle: Boolean, music: Boolean = false) {
+        val list = if (shuffle) items.shuffled() else items
+        val first = list.firstOrNull() ?: return
+        if (music) { openMusicQueue(list, 0); return }
+        open(first)
+        scope.launch {
+            // the rest join the queue once the first one is in the player
+            var waited = 0
+            while ((controller?.mediaItemCount ?: 0) == 0 && waited < 15000) { kotlinx.coroutines.delay(250); waited += 250 }
+            list.drop(1).forEach { addToQueue(it) }
+        }
+    }
+
     fun openMusicQueue(items: List<VideoItem>, index: Int, expand: Boolean = true) {
         val item = items.getOrNull(index) ?: return
         isMusicMode = true
