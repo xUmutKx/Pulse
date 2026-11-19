@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -264,7 +267,8 @@ fun LyricsSheet(
                 PLoader()
                 Text(tr("Searching for lyrics…", "Sözler aranıyor…"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
             }
-            else -> Column(Modifier.fillMaxSize().padding(horizontal = 28.dp), Arrangement.Center, Alignment.CenterHorizontally) {
+            // the keyboard of the search fields pushes this part up instead of covering it
+            else -> Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 24.dp), Arrangement.Center, Alignment.CenterHorizontally) {
                 PIcon("book", Color.White.copy(alpha = .6f), 40.dp)
                 Text(tr("No lyrics found", "Söz bulunamadı"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = if (Lyrics.lastError == null) 12.dp else 2.dp))
                 Lyrics.lastError?.let { Text(tr("Network: ", "Ağ: ") + it, color = Color.White.copy(alpha = .5f), fontSize = 11.sp, modifier = Modifier.padding(bottom = 12.dp)) }
