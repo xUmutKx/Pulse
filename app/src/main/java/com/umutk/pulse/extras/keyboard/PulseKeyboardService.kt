@@ -1238,6 +1238,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val known = KeyboardDictionary.isWord(lang.code, lw) || KeyboardDictionary.isKnown(lw)
             // typed slowly and carefully (a name, a foreign word): not rewritten silently, it stays in the bar to be picked
             if (rhythm.multiplier(1f) >= 1.3) t = null
+            // the confidence gate (fitted for Pulse in the way of WM Keyboard's): a fix it is not sure of stays in the bar instead of replacing the word
+            t?.let { cand ->
+                if (' ' !in cand) {
+                    val lc = cand.lowercase(lang.locale)
+                    val run = slotWords.firstOrNull { it.isNotBlank() && !it.equals(cand, true) && !it.equals(typed, true) && it.none { ch -> ch.isWhitespace() } }?.lowercase(lang.locale)
+                    // a Turkish word with endings is not in the list itself (only its base): it is scored as an ordinary word of the list
+                    fun sc(x: String) = KeyboardDictionary.lexScore(lang.code, x).let { v -> if (v <= 0f && KeyboardDictionary.isWord(lang.code, x)) 8f else v }
+                    val p = CorrectionGate.probability(lw, lc, sc(lc), run, run?.let { sc(it) } ?: 0f)
+                    if (p < CorrectionGate.THRESHOLD) t = null
+                }
+            }
             // many corrections were undone lately: only a one-letter fix is made silently
             if (t != null && hybridStrict() && editDistance(typed.lowercase(lang.locale), t!!.lowercase(lang.locale)) > 1) t = null
             // never rewritten: short words, all-capital words (acronyms), words with two or more digits

@@ -431,6 +431,8 @@ object KeyboardDictionary {
     }
 
     fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
+    /** The word list's own score of [w] (ln of its count), 0 when the list does not have it; what the person typed does not count here. */
+    fun lexScore(code: String, w: String): Float { val lx = lexes[d(code)] ?: return 0f; return lx.index[w.lowercase(Locale.ROOT)]?.let { lx.score[it] } ?: 0f }
 
     /** How often the person wrote [w] (the learned words; typos left uncorrected are learned too, so this is a hint, not proof of a word). */
     fun userCount(w: String): Int = user[w.lowercase(Locale.ROOT)] ?: 0
