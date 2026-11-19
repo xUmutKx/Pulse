@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.setValue
@@ -130,6 +132,23 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
                 onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; onLong() },
                 onDoubleTap = { runGesture(ctx, LauncherPrefs.gDouble) },
             )
+        }
+        .pointerInput(Unit) {
+            // two fingers pinched in or spread out on the home (each a setting, nothing by default)
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                var start = 0f; var done = false
+                do {
+                    val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val ps = ev.changes.filter { it.pressed }
+                    if (ps.size >= 2 && !done) {
+                        val d = (ps[0].position - ps[1].position).getDistance()
+                        if (start == 0f) start = d
+                        else if (d < start * .6f && LauncherPrefs.gPinchIn != "none") { done = true; runGesture(ctx, LauncherPrefs.gPinchIn) }
+                        else if (d > start * 1.6f && LauncherPrefs.gPinchOut != "none") { done = true; runGesture(ctx, LauncherPrefs.gPinchOut) }
+                    }
+                } while (ev.changes.any { it.pressed })
+            }
         }
         .pointerInput(Unit) {
             // a long swipe on the home: down opens the notification shade, up opens the apps list (each is a setting)

@@ -129,6 +129,11 @@ object LauncherPrefs {
     var drawerAz by mutableStateOf(true)
     /** What a double tap, a long swipe up and a long swipe down on the home do: one of [GESTURE_ACTIONS]. */
     var gDouble by mutableStateOf("none")
+    /** Two-finger gestures of the home (Smart Launcher's): pinch in and pinch out. */
+    var gPinchIn by mutableStateOf("none")
+    var gPinchOut by mutableStateOf("none")
+    /** The page the home opens on and goes back to with the home button (0 = the first). */
+    var homePage by mutableStateOf(0)
     var gUp by mutableStateOf("none")
     var gDown by mutableStateOf("none")
     /** Notification counts on the app pictures. */
@@ -238,6 +243,7 @@ object LauncherPrefs {
         menuOrder = p.getProperty("menuOrder").orEmpty().split(",").filter { it.isNotBlank() }; menuOff = p.getProperty("menuOff").orEmpty().split(",").filter { it.isNotBlank() }.toSet()
         bootEggs = p.getProperty("bootEggs") != "false"; drawerAz = p.getProperty("drawerAz") != "false"; glance = p.getProperty("glance") != "false"
         gDouble = p.getProperty("gDouble") ?: if (gestureLock) "lock" else "none"
+        gPinchIn = p.getProperty("gPinchIn") ?: "none"; gPinchOut = p.getProperty("gPinchOut") ?: "none"; homePage = p.getProperty("homePage")?.toIntOrNull() ?: 0
         gUp = p.getProperty("gUp") ?: if (swipeUpApps) "apps" else "none"
         gDown = p.getProperty("gDown") ?: if (swipeDownShade) "shade" else if (swipeDownSearch) "search" else "none"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
@@ -270,7 +276,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString()); p.setProperty("drawerIconDp", drawerIconDp.toString()); p.setProperty("labelScale", labelScale.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("bootEggs", bootEggs.toString()); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
+        p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("bootEggs", bootEggs.toString()); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gPinchIn", gPinchIn); p.setProperty("gPinchOut", gPinchOut); p.setProperty("homePage", homePage.toString()); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString()); p.setProperty("wallFile", wallFile)
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())

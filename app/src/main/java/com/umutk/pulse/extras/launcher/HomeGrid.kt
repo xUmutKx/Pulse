@@ -110,7 +110,9 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     // while something is held, one empty page waits at the end so it can be put there
     val basePages = items.chunked(perPage)
     val pages: List<List<HomeItem>> = if (dragKey != null && basePages.isNotEmpty()) basePages + listOf(emptyList<HomeItem>()) else basePages.ifEmpty { listOf(emptyList<HomeItem>()) }
-    val pager = rememberPagerState(pageCount = { pages.size })
+    val pager = rememberPagerState(initialPage = LauncherPrefs.homePage.coerceIn(0, (pages.size - 1).coerceAtLeast(0)), pageCount = { pages.size })
+    // the home button goes back to the chosen home page
+    LaunchedEffect(LauncherSession.homeTick) { if (LauncherSession.homeTick > 0 && dragKey == null) pager.animateScrollToPage(LauncherPrefs.homePage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))) }
     val side = when {
         dragKey == null -> 0
         finger.x - rootPos.x < 40 * density -> -1
