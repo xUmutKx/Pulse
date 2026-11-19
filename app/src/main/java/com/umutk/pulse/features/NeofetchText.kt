@@ -47,7 +47,7 @@ object NeofetchText {
             "      `/++MMMMh++hMMMM++/`      ",
             "          MMMMo  oMMMM          ",
             "          MMMMo  oMMMM          ",
-            "          oNMm-  -mMNs          ",
+            "          oNMm-  -mNMo          ",
     )
 
     private fun uptime(): String {

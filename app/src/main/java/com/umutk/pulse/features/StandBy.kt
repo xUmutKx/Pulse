@@ -625,17 +625,18 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             listOf(tr("All", "Tümü"), tr("Clocks", "Saatler"), tr("Info", "Bilgi"), tr("Media", "Medya"), tr("Panels", "Paneller"), tr("Tools", "Araçlar")).forEachIndexed { i, label -> PChip(pageCat == i, label) { pageCat = i } }
         }
         Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            STANDBY_PAGES.filter { (id, _) -> id != "dash_line" && id != "dash_plain" && (pageCat == 0 || pageKind(id) == pageCat) }.forEach { (id, nm) ->
+            // three rows of pages, scrolled sideways
+            STANDBY_PAGES.filter { (id, _) -> id != "dash_line" && id != "dash_plain" && (pageCat == 0 || pageKind(id) == pageCat) }.chunked(3).forEach { col -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { col.forEach { (id, nm) ->
                 val on = id in pages
-                Column(Modifier.width(140.dp).clickable { editing = id; rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.width(112.dp).clickable { editing = id; rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
                     Box {
-                        MiniScreen(140.dp, id == editing) { PageView(ctx, id, ink, tick) }
+                        MiniScreen(112.dp, id == editing) { PageView(ctx, id, ink, tick) }
                         // the mark of the pages that are in the cover's swipe
                         if (on) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).clip(RoundedCornerShape(9.dp)).background(com.umutk.pulse.Look.accent), contentAlignment = Alignment.Center) { PIcon("check", Color.White, 12.dp) }
                     }
-                    Text(tr(nm.first, nm.second), color = if (id == editing) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                    Text(tr(nm.first, nm.second), color = if (id == editing) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
                 }
-            }
+            } } }
         } }
         1 -> Column {
             if (editing == "dash" || editing == "dash_line" || editing == "dash_plain") {
@@ -721,12 +722,17 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     }
     // the charging animations come last, under the covers: each look plays in its own small picture
     Text(tr("Charging animation", "Şarj animasyonu"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+    // two rows of charging looks, scrolled sideways
     LazyRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(chargeNames()) { (v, n) ->
-            val shape = RoundedCornerShape(12.dp)
-            Column(Modifier.width(88.dp).clickable { chg = v; StandByPrefs.setChargeAnim(ctx, v) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                ChargeMini(v, Modifier.size(88.dp, 120.dp).clip(shape).border(if (chg == v) 2.dp else 1.dp, if (chg == v) T.accent else T.line, shape))
-                Text(n, color = if (chg == v) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+        items(chargeNames().chunked(2)) { col ->
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                col.forEach { (v, n) ->
+                    val shape = RoundedCornerShape(12.dp)
+                    Column(Modifier.width(80.dp).clickable { chg = v; StandByPrefs.setChargeAnim(ctx, v) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        ChargeMini(v, Modifier.size(80.dp, 104.dp).clip(shape).border(if (chg == v) 2.dp else 1.dp, if (chg == v) T.accent else T.line, shape))
+                        Text(n, color = if (chg == v) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
             }
         }
     }
