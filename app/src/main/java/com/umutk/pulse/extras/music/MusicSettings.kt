@@ -40,6 +40,9 @@ object MusicSettings {
 
     /** The AI button of the lyrics: timed lyrics made on the phone by Pulse AI for a song that has none. */
     fun aiLyrics(c: Context) = sp(c).getBoolean("aiLyrics", true)
+    /** YouTube Music and Spotify songs in the search, after the ones on the phone (off by default). */
+    fun onlineSearch(c: Context) = sp(c).getBoolean("onlineSearch", false)
+    fun setOnlineSearch(c: Context, on: Boolean) = sp(c).edit().putBoolean("onlineSearch", on).apply()
     fun setAiLyrics(c: Context, on: Boolean) = sp(c).edit().putBoolean("aiLyrics", on).apply()
 
     fun skipSilence(c: Context) = sp(c).getBoolean("skipSil", false)

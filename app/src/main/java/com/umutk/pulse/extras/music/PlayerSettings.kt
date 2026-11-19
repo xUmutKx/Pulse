@@ -96,6 +96,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         if (rg > 0) SliderRow("${tr("Untagged files", "Etiketsiz dosyalar")}  $rgFb dB", rgFb.toFloat(), -15f..0f) { rgFb = it.toInt(); MusicSettings.setRgFallback(c, rgFb); push() }
         FadeCurve(xfade) { xfade = it; MusicSettings.setCrossfade(c, it); push() }
         SwitchRow(tr("Skip silence", "Sessizliği atla"), skipSil) { skipSil = it; MusicSettings.setSkipSilence(c, it); push() }
+        var onl by remember { mutableStateOf(MusicSettings.onlineSearch(c)) }
+        SwitchRow(tr("YouTube Music and Spotify in the search (after the songs on the phone)", "Aramada YouTube Music ve Spotify (telefondaki şarkılardan sonra)"), onl) { onl = it; MusicSettings.setOnlineSearch(c, it) }
         var aiLy by remember { mutableStateOf(MusicSettings.aiLyrics(c)) }
         SwitchRow(tr("AI lyrics for songs without lyrics (Pulse AI, on the phone)", "Sözü olmayan şarkılara yapay zekâ ile söz (Pulse AI, telefonda)"), aiLy) { aiLy = it; MusicSettings.setAiLyrics(c, it) }
         SliderRow("${tr("Speed", "Hız")}  ${"%.2f".format(speed)}x", speed, .5f..2f) { speed = (Math.round(it * 20) / 20f); MusicSettings.setSpeed(c, speed); push() }

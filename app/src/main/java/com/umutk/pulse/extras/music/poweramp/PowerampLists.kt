@@ -668,6 +668,16 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         lyricHits = Lyrics.searchByText(ctx, query)
         lyricsBusy = false
     }
+    // YouTube Music and Spotify (a setting): searched after a pause in the typing, listed after the songs on the phone
+    var online by remember { mutableStateOf<List<com.umutk.pulse.extras.music.OnlineMusic.Hit>>(emptyList()) }
+    LaunchedEffect(query) {
+        online = emptyList()
+        if (query.trim().length < 2 || !com.umutk.pulse.extras.music.MusicSettings.onlineSearch(ctx)) return@LaunchedEffect
+        delay(700)
+        val yt = com.umutk.pulse.extras.music.OnlineMusic.youtube(ctx, query)
+        val sp = com.umutk.pulse.extras.music.OnlineMusic.spotify(ctx, query)
+        online = com.umutk.pulse.extras.music.OnlineMusic.merge(library, yt, sp)
+    }
     // the search page opens with the keyboard up
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
@@ -770,6 +780,19 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
             if (songHits.isNotEmpty() && (kind == 0 || kind == 1)) item { SearchHeader(tr("Songs", "Şarkılar"), style, { onPlayList(songHits, 0) }, { onPlayList(songHits.shuffled(), 0) }) }
             if (kind == 0 || kind == 1) { if (query.isNotBlank()) itemsIndexed(songHits) { pos, t -> TrackRow(t, t == current, style, onClick = { onPlayList(songHits, pos) }) }
             else itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) } }
+            if (online.isNotEmpty() && (kind == 0 || kind == 1)) {
+                item { Text(tr("Online", "Çevrimiçi"), color = style.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp, top = 10.dp, bottom = 4.dp)) }
+                itemsIndexed(online) { _, h ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { com.umutk.pulse.extras.music.OnlineMusic.play(ctx, h) } }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(style.chip)) { coil.compose.AsyncImage(h.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(h.title, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(h.artist + "  ·  " + (if (h.source == "sp") "Spotify" else "YouTube Music"), color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(Icons.Rounded.PlayArrow, null, tint = style.textDim, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
             if (albumGroups.isNotEmpty() && (kind == 0 || kind == 2)) {
                 item { SearchHeader(tr("Albums", "Albümler"), style, { onPlayList(albumGroups.flatMap { it.second }, 0) }, { onPlayList(albumGroups.flatMap { it.second }.shuffled(), 0) }) }
                 itemsIndexed(albumGroups) { _, (name, list) ->

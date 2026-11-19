@@ -1,0 +1,49 @@
+package com.umutk.pulse.extras.music
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.umutk.pulse.extras.music.poweramp.displayName
+
+/**
+ * YouTube Music and Spotify in the music player's search (a setting, off by default): the songs on the phone come first, then YouTube Music's,
+ * then Spotify's (when signed in). A song that is already on the phone is not listed again. YouTube Music songs play in YTXTube; a Spotify song
+ * is played from YouTube Music too (the same title and artist), since Spotify only lets its own app play its songs.
+ */
+object OnlineMusic {
+    class Hit(val title: String, val artist: String, val thumb: String?, val source: String, val ytId: String?)
+
+    private fun norm(s: String) = s.lowercase().replace(Regex("\\(.*?\\)|\\[.*?\\]|official|audio|video|lyrics|- topic"), "").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    private suspend fun ytInit(ctx: Context) = withContext(Dispatchers.Main) { runCatching { com.umutk.pulse.extras.ytx.YTXTubeApplication.init(ctx) } }
+
+    suspend fun youtube(ctx: Context, q: String): List<Hit> {
+        ytInit(ctx)
+        return runCatching { com.umutk.pulse.extras.ytx.YouTube.searchMusic(q) }.getOrDefault(emptyList()).take(10)
+            .map { Hit(it.title, it.channel.replace(" - Topic", "", true).trim(), it.thumbnail, "yt", it.id) }
+    }
+
+    suspend fun spotify(ctx: Context, q: String): List<Hit> =
+        runCatching { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).search(q) }.getOrDefault(emptyList()).take(10)
+            .map { Hit(it.title, it.artist, it.image, "sp", null) }
+
+    /** The online hits that are not already among the [local] songs (title and artist), YouTube Music first, then Spotify; each song once. */
+    fun merge(local: List<Track>, yt: List<Hit>, sp: List<Hit>): List<Hit> {
+        val have = local.map { norm(it.displayName()) }.toHashSet()
+        val seen = HashSet<String>()
+        return (yt + sp).filter { h -> val k = norm(h.title); k.isNotEmpty() && k !in have && have.none { it.contains(k) } && seen.add(k + "|" + norm(h.artist)) }
+    }
+
+    /** Plays [h] in YTXTube's music player (a Spotify song is looked up on YouTube Music first). */
+    suspend fun play(ctx: Context, h: Hit) {
+        val id = h.ytId ?: youtube(ctx, "${h.artist} ${h.title}").firstOrNull()?.ytId ?: return
+        withContext(Dispatchers.Main) {
+            runCatching {
+                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/watch?v=$id"))
+                    .setClassName(ctx, "com.umutk.pulse.extras.ytx.YtxActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+}
