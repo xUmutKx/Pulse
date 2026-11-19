@@ -91,6 +91,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
     private var quickClip: String? = null
+    /** Words corrected in the last minutes (what was typed, when): typed again, they are learned instead of corrected twice. */
+    private val recentFixed = LinkedHashMap<String, Long>()
     private var quickAt = 0L
     private var quickLeft = 0
     private var quickPinned = false
@@ -1208,6 +1210,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (!inAddr && sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
+        // the same word typed again soon after it was corrected: the person means it, so it is learned as a word and left alone from now on
+        if (correct && t != null && !t.equals(typed, true) && typed.length >= 2 && typed.none { it.isDigit() }) {
+            val lk = typed.lowercase(lang.locale); val at = recentFixed[lk]
+            if (at != null && SystemClock.uptimeMillis() - at < 300_000L) {
+                recentFixed.remove(lk); t = null
+                if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.learnWord(typed, 4)
+            }
+        }
         if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && !KeyboardDictionary.rejectedAny(typed.lowercase(lang.locale))) out = t
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
@@ -1235,6 +1245,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 }
             }
         }
+        if (correct && out != typed && !out.equals(typed, true)) { recentFixed[typed.lowercase(lang.locale)] = SystemClock.uptimeMillis(); if (recentFixed.size > 40) recentFixed.remove(recentFixed.keys.first()) }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
