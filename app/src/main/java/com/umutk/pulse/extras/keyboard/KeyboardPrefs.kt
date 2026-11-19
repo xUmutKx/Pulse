@@ -90,7 +90,7 @@ object KeyboardPrefs {
     /** A corrected word is also selected for a moment (off: only the phone's own blue highlight of a correction shows). */
     var fixSelect by mutableStateOf(true)
     /** A word that can only be a slip is mended when the typing pauses (no space needed), so the app's own send button sends it corrected. */
-    var pauseFix by mutableStateOf(true)
+    var pauseFix by mutableStateOf(false)
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
     var quickPinBtn by mutableStateOf(true)
@@ -236,7 +236,7 @@ object KeyboardPrefs {
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
-        suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect2", true); pauseFix = p.getBoolean("pauseFix", pauseFix)
+        suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect2", true); pauseFix = p.getBoolean("pauseFix", false) && p.getBoolean("pauseOff13", false)
         undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill); neural = p.getBoolean("neural", neural); smooth = p.getBoolean("smooth", false); cornerHints = p.getBoolean("cornerHints", true); circleGestures = p.getBoolean("circleGestures", false); multiTap = p.getBoolean("multiTap", false); fileSuggest = p.getBoolean("fileSuggest", true); spacePic = p.getString("spacePic", "") ?: ""; spaceWalker = p.getString("spaceWalker", "") ?: ""; spaceWalkerPic = p.getString("spaceWalkerPic", "") ?: ""; spaceFlip = p.getBoolean("spaceFlip", false); capColors = parseInts(p.getString("capColors", "") ?: ""); capPics = parseStrs(p.getString("capPics", "") ?: "")
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
@@ -326,6 +326,8 @@ object KeyboardPrefs {
             toolbarItems = tb.joinToString(",")
             p.edit().putBoolean("menuClean12", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
         }
+        // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
+        if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); rgbSpeed = p.getInt("rgbSpeed", 100); clipHours = p.getInt("clipKeep", clipHours); clipLimitOn = p.getBoolean("clipLimitOn", false); clipLimit = p.getInt("clipLimit", 3000).coerceIn(10, 100000); clipLayout = p.getString("clipLayout", "list") ?: "list"; commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); pressFx = p.getInt("pressFx", 0); fxColor = p.getInt("fxColor", 0); fxCustom = p.getInt("fxCustom", 0xFF7C4DFF.toInt()); bgPath = p.getString("bgPath", "") ?: ""; bgDim = p.getInt("bgDim", 50); fxSpeed = p.getInt("fxSpeed", 100); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
