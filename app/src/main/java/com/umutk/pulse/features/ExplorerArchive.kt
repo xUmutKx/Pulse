@@ -969,9 +969,8 @@ fun FilesSettings() {
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
     // a detailed example: what a root folder, a folder, a folder shown by name only and files show under their names with these choices
-    com.umutk.pulse.PCard {
-        Text(tr("Preview", "Önizleme"), color = T.text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        Text(tr("How the rows look with the choices below", "Aşağıdaki seçimlerle satırlar böyle görünür"), color = T.sub, fontSize = 12.sp)
+    // the preview is a closed section of its own (it took the whole top of the page before)
+    com.umutk.pulse.PCard { Sec(tr("Preview", "Önizleme"), "view") {
         val now = System.currentTimeMillis()
         // one example row: an icon, the name, what the row shows under it, and the kind of place it stands for
         @Composable fun Example(icon: String, name: String, sub: String, caption: String) {
@@ -990,7 +989,7 @@ fun FilesSettings() {
         Example("folder", "Download", "", tr("A folder with names only (set per folder)", "Yalnızca isim (klasöre özel)"))
         Example("office", if (fp.ext) "Notes.txt" else "Notes", exInfoParts(false, 0, 2_300_000L, now - 86_400_000L * 2), tr("A file changed earlier", "Daha önce değişmiş dosya"))
         Example("office", if (fp.ext) "Photo.jpg" else "Photo", exInfoParts(false, 0, 1_100_000L, now - 3_600_000L), tr("A file changed today", "Bugün değişmiş dosya"))
-    }
+    } }
     com.umutk.pulse.PCard {
         Sec(tr("Look", "Görünüm"), "palette") {
         val looks = listOf("app" to tr("App theme", "Uygulama teması"), "material" to "Material You", "amoled" to "AMOLED black", "coloros" to "ColorOS", "win11" to "Windows 11",
