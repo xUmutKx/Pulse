@@ -42,11 +42,18 @@ fun OnlineBrowse(onBack: () -> Unit) {
     var list by remember { mutableStateOf<List<OnlineMusic.Hit>>(emptyList()) }
     var title by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var ytIn by remember { mutableStateOf(false) }
+    var ytLists by remember { mutableStateOf<List<com.umutk.pulse.extras.ytx.PlaylistRef>>(emptyList()) }
     var spLists by remember { mutableStateOf<List<com.umutk.pulse.extras.spotify.SpPlaylist>>(emptyList()) }
     fun show(t: String, load: suspend () -> List<OnlineMusic.Hit>) { title = t; busy = true; scope.launch { list = runCatching { load() }.getOrDefault(emptyList()); busy = false } }
     LaunchedEffect(tab) {
         list = emptyList()
-        if (tab == 0) show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") }
+        if (tab == 0) {
+            // signed in to YouTube Music (in YTXTube): your own liked songs first, then your playlists; else what is popular
+            ytIn = OnlineMusic.ytSignedIn(ctx)
+            ytLists = if (ytIn) OnlineMusic.ytPlaylists(ctx) else emptyList()
+            if (ytIn) show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } else show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") }
+        }
         else {
             spLists = runCatching { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).playlists() }.getOrDefault(emptyList())
             show(tr("Liked songs", "Beğenilen şarkılar")) { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).liked().map { OnlineMusic.Hit(it.title, it.artist, it.image, "sp", null) } }
@@ -68,6 +75,23 @@ fun OnlineBrowse(onBack: () -> Unit) {
         BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 16.sp), cursorBrush = SolidColor(Look.accent),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(T.panel).padding(horizontal = 16.dp, vertical = 12.dp),
             decorationBox = { inner -> if (query.isEmpty()) Text(tr("Search songs", "Şarkı ara"), color = T.sub, fontSize = 16.sp); inner() })
+        // your YouTube Music: liked, recent, popular, then your playlists as covers
+        if (tab == 0 && query.isBlank()) {
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                @Composable fun chip(t: String, on: () -> Unit) = Text(t, color = T.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).clickable { on() }.padding(horizontal = 12.dp, vertical = 7.dp))
+                if (ytIn) { chip(tr("Liked", "Beğenilen")) { show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } }; chip(tr("Recent", "Son çalınan")) { show(tr("Played lately", "Son çalınanlar")) { OnlineMusic.ytHistory(ctx) } } }
+                chip(tr("Popular", "Popüler")) { show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") } }
+            }
+            if (!ytIn) Text(tr("Sign in to YouTube in YTXTube to see your own songs here.", "Kendi şarkıların burada görünsün diye YTXTube'da YouTube'a giriş yap."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            if (ytLists.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(ytLists) { pl ->
+                    Column(Modifier.width(96.dp).clickable { show(pl.title) { OnlineMusic.ytPlaylist(ctx, pl.id) } }) {
+                        coil.compose.AsyncImage(pl.thumbnail, null, Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                        Text(pl.title, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
         if (tab == 1 && spLists.isNotEmpty() && query.isBlank()) androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(spLists) { pl ->
                 Column(Modifier.width(96.dp).clickable { show(pl.name) { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).playlistTracks(pl.id).map { OnlineMusic.Hit(it.title, it.artist, it.image, "sp", null) } } }) {
@@ -78,8 +102,10 @@ fun OnlineBrowse(onBack: () -> Unit) {
         }
         if (tab == 1 && spLists.isEmpty() && list.isEmpty() && !busy) Text(tr("Sign in to Spotify in the music settings to see your playlists and to search Spotify.", "Çalma listelerin ve Spotify araması için müzik ayarlarından Spotify’a giriş yap."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         Text(if (busy) tr("Loading…", "Yükleniyor…") else title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+        // filtered as you type, at once; the online search then brings the rest
+        val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }
         LazyColumn(Modifier.weight(1f)) {
-            items(list) { h ->
+            items(shown) { h ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { OnlineMusic.play(ctx, h) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     coil.compose.AsyncImage(h.thumb, null, Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(T.panel), contentScale = ContentScale.Crop)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {

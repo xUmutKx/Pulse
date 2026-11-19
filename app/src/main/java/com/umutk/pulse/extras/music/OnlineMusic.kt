@@ -25,6 +25,15 @@ object OnlineMusic {
             .map { Hit(it.title, it.channel.replace(" - Topic", "", true).trim(), it.thumbnail, "yt", it.id) }
     }
 
+    private fun hits(l: List<com.umutk.pulse.extras.ytx.VideoItem>) = l.map { Hit(it.title, it.channel.replace(" - Topic", "", true).trim(), it.thumbnail, "yt", it.id) }
+
+    /** The YouTube Music account signed in in YTXTube (its own sign-in): its liked songs, what it played lately, its playlists. Empty when not signed in. */
+    suspend fun ytSignedIn(ctx: Context): Boolean { ytInit(ctx); return runCatching { com.umutk.pulse.extras.ytx.Account.signedIn }.getOrDefault(false) }
+    suspend fun ytLiked(ctx: Context): List<Hit> { ytInit(ctx); return hits(runCatching { com.umutk.pulse.extras.ytx.InnerTube.musicLiked() }.getOrDefault(emptyList())) }
+    suspend fun ytHistory(ctx: Context): List<Hit> { ytInit(ctx); return hits(runCatching { com.umutk.pulse.extras.ytx.InnerTube.musicHistory() }.getOrDefault(emptyList())) }
+    suspend fun ytPlaylists(ctx: Context): List<com.umutk.pulse.extras.ytx.PlaylistRef> { ytInit(ctx); return runCatching { com.umutk.pulse.extras.ytx.InnerTube.playlists() }.getOrDefault(emptyList()) }
+    suspend fun ytPlaylist(ctx: Context, id: String): List<Hit> { ytInit(ctx); return hits(runCatching { com.umutk.pulse.extras.ytx.InnerTube.playlist(id).videos }.getOrDefault(emptyList())) }
+
     suspend fun spotify(ctx: Context, q: String): List<Hit> =
         runCatching { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).search(q) }.getOrDefault(emptyList()).take(10)
             .map { Hit(it.title, it.artist, it.image, "sp", null) }
