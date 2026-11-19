@@ -91,6 +91,8 @@ object KeyboardPrefs {
     var fixSelect by mutableStateOf(true)
     /** A word that can only be a slip is mended when the typing pauses (no space needed), so the app's own send button sends it corrected. */
     var pauseFix by mutableStateOf(false)
+    /** Speech typing with the Whisper model of Pulse AI (on the phone) instead of the phone's recogniser. */
+    var voiceWhisper by mutableStateOf(false)
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
     var quickPinBtn by mutableStateOf(true)
@@ -326,6 +328,9 @@ object KeyboardPrefs {
             toolbarItems = tb.joinToString(",")
             p.edit().putBoolean("menuClean12", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
         }
+        voiceWhisper = p.getBoolean("voiceWhisper", false)
+        // the AI fix key (Pulse AI on the phone) has its place in the top bar, once
+        if (!p.getBoolean("aiBar13", false)) { val tb = toolbarItems.split(',').filter { it.isNotBlank() }.toMutableList(); if ("aifix" !in tb) tb.add(minOf(tb.indexOf("translate") + 1, tb.size).coerceAtLeast(0), "aifix"); toolbarItems = tb.joinToString(","); p.edit().putBoolean("aiBar13", true).putString("toolbarItems", toolbarItems).apply() }
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
         if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); rgbSpeed = p.getInt("rgbSpeed", 100); clipHours = p.getInt("clipKeep", clipHours); clipLimitOn = p.getBoolean("clipLimitOn", false); clipLimit = p.getInt("clipLimit", 3000).coerceIn(10, 100000); clipLayout = p.getString("clipLayout", "list") ?: "list"; commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); pressFx = p.getInt("pressFx", 0); fxColor = p.getInt("fxColor", 0); fxCustom = p.getInt("fxCustom", 0xFF7C4DFF.toInt()); bgPath = p.getString("bgPath", "") ?: ""; bgDim = p.getInt("bgDim", 50); fxSpeed = p.getInt("fxSpeed", 100); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
@@ -339,7 +344,7 @@ object KeyboardPrefs {
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
-            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("undoOnBackspace", undoOnBackspace)
+            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("voiceWhisper", voiceWhisper).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("rememberNumbers", rememberNumbers).putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("corners", corners).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)

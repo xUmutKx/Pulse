@@ -2077,6 +2077,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         if (st.panel == "voice") { stopListening(); st.panel = "keys"; return }
         val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted && KeyboardPrefs.voiceWhisper && com.umutk.pulse.extras.ai.Transcriber.ready(this)) { whisperDictation(); return }
         if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
         val tag = if (lang.code == "tr") "tr-TR" else "en-US"
         val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
@@ -2113,7 +2114,53 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { rec.startListening(i) }.onFailure { st.listening = false; st.panel = "keys"; switchToVoiceKeyboard() }
     }
 
+    @Volatile private var whisperRec: android.media.AudioRecord? = null
+    @Volatile private var whisperStop = false
+
+    /**
+     * Speech typing with the Whisper model of Pulse AI, on the phone (nothing is sent anywhere): it records until the voice key is pressed again (or 30 seconds), then listens to
+     * the recording and writes the words. Used when the setting is on and a speech model is there.
+     */
+    private fun whisperDictation() {
+        if (whisperRec != null) { whisperStop = true; return }
+        val rate = 16000
+        val min = android.media.AudioRecord.getMinBufferSize(rate, android.media.AudioFormat.CHANNEL_IN_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT).coerceAtLeast(4096)
+        val rec = runCatching { android.media.AudioRecord(android.media.MediaRecorder.AudioSource.MIC, rate, android.media.AudioFormat.CHANNEL_IN_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT, min * 4) }.getOrNull()
+        if (rec == null || rec.state != android.media.AudioRecord.STATE_INITIALIZED) { rec?.release(); switchToVoiceKeyboard(); return }
+        whisperRec = rec; whisperStop = false
+        st.voiceText = ""; st.panel = "voice"; st.listening = true
+        val code = if (lang.code == "tr") "tr" else lang.code.take(2)
+        Thread {
+            val pcm = java.io.ByteArrayOutputStream()
+            val buf = ShortArray(min)
+            val t0 = android.os.SystemClock.uptimeMillis()
+            runCatching {
+                rec.startRecording()
+                while (!whisperStop && android.os.SystemClock.uptimeMillis() - t0 < 30_000L) {
+                    val n = rec.read(buf, 0, buf.size)
+                    if (n > 0) for (i in 0 until n) { pcm.write(buf[i].toInt() and 0xFF); pcm.write((buf[i].toInt() shr 8) and 0xFF) }
+                }
+            }
+            runCatching { rec.stop() }; rec.release(); whisperRec = null
+            val bytes = pcm.toByteArray()
+            val samples = FloatArray(bytes.size / 2) { i -> ((bytes[2 * i].toInt() and 0xFF) or (bytes[2 * i + 1].toInt() shl 8)).toShort() / 32768f }
+            android.os.Handler(mainLooper).post { st.listening = false; st.voiceText = com.umutk.pulse.tr("Listening to what you said…", "Söylediğin dinleniyor…") }
+            val text = if (samples.size < 8000) "" else runCatching {
+                var pfd: android.os.ParcelFileDescriptor? = null
+                try {
+                    val path = com.umutk.pulse.extras.ai.Transcriber.modelPath(this) { pfd = it } ?: return@runCatching ""
+                    com.umutk.pulse.ai.stt.Whisper.open(path).use { w -> w.transcribe(samples, code, null).joinToString(" ") { it.text.trim() }.trim() }
+                } finally { runCatching { pfd?.close() } }
+            }.getOrDefault("")
+            android.os.Handler(mainLooper).post {
+                st.panel = "keys"; st.voiceText = ""
+                if (text.isNotBlank()) { currentInputConnection?.commitText("$text ", 1); afterText() }
+            }
+        }.start()
+    }
+
     private fun stopListening() {
+        if (whisperRec != null) { whisperStop = true; return }
         st.listening = false
         runCatching { recognizer?.stopListening() }
     }

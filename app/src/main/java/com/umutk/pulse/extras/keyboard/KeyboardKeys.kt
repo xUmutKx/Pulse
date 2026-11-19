@@ -24,7 +24,7 @@ object ExtraKeys {
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
         "auth" to "Quick auth", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "emoji" to "Emoji", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
-        "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
+        "aifix" to "AI fix", "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
@@ -38,5 +38,5 @@ object ExtraKeys {
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
     )
     const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide"
-    const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
+    const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,aifix,settings"
 }
