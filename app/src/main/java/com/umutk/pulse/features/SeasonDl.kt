@@ -308,6 +308,16 @@ object SeasonDl {
     /** The id of an episode in a path: the colons stay as they are ("tt0773262:1:2"), as the apps ask for it (an encoded colon was not found by the add-ons). */
     private fun pathId(id: String) = Uri.encode(id, ":")
 
+    /** Plays a stream straight away in Pulse's video player (no download, nothing is kept): plain links and a local torrent server's links. A magnet link has to be downloaded first. */
+    fun watch(ctx: Context, url: String): Boolean {
+        if (!url.startsWith("http")) return false
+        return runCatching {
+            val i = android.content.Intent(ctx, com.umutk.pulse.ExtraToolActivity::class.java).setAction(android.content.Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*").putExtra("route", "video")
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(i)
+        }.isSuccess
+    }
+
     /** The address of a stream: a plain link as it is; a torrent as a magnet link (the file number goes along when the stream names one). */
     private fun streamUrl(s: JSONObject): String? {
         s.optString("url").takeIf { it.startsWith("http") }?.let { return it }
@@ -769,6 +779,18 @@ object SeasonDl {
                             }
                             PChip(false, tr("Back", "Geri")) { show = null; eps = emptyList(); note = "" }
                         }
+                        if (movies) PButton(tr("Watch now", "Hemen izle"), Modifier.fillMaxWidth()) {
+                            if (busy) return@PButton
+                            if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
+                            busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
+                            scope.launch {
+                                val all = runCatching { streams(addon, Ep(sel.id, 0, 0, ""), "movie") }.getOrDefault(emptyList())
+                                // a stream that plays straight away (a plain link or the local server) first; the best-seeded one of those
+                                val direct = all.filter { it.url.startsWith("http") }.sortedByDescending { maxOf(it.seeds, 0) }.firstOrNull()
+                                note = if (direct != null && watch(ctx, direct.url)) "" else if (all.isEmpty()) tr("No stream found", "Yayın bulunamadı") else tr("These streams are torrents: set a local torrent server or an add-on with direct links to watch at once", "Bu yayınlar torrent: hemen izlemek için yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
+                                busy = false
+                            }
+                        }
                         if (movies) PButton(tr("Download the movie (up to ${mb} MB)", "Filmi indir (en çok ${mb} MB)"), Modifier.fillMaxWidth()) {
                             if (busy) return@PButton
                             if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
@@ -856,6 +878,15 @@ object SeasonDl {
                                             // the size of the stream that would be taken ("…" while it is being looked for, "—" when there is none)
                                             val f = found[ep.id]
                                             Text(if (!found.containsKey(ep.id)) "…" else if (f == null) "—" else (if (f.over) "↑ " else "") + sizeText(f.size), color = if (f?.over == true) androidx.compose.ui.graphics.Color(0xFFE5A04D) else T.sub, fontSize = 12.sp)
+                                            androidx.compose.foundation.layout.Box(Modifier.clickable {
+                                                if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@clickable }
+                                                note = tr("Finding the stream…", "Yayın aranıyor…")
+                                                scope.launch {
+                                                    val all = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()
+                                                    val direct = all.filter { it.url.startsWith("http") }.sortedByDescending { maxOf(it.seeds, 0) }.firstOrNull()
+                                                    note = if (direct != null && watch(ctx, direct.url)) "" else if (all.isEmpty()) tr("No stream found", "Yayın bulunamadı") else tr("These streams are torrents: set a local torrent server or an add-on with direct links to watch at once", "Bu yayınlar torrent: hemen izlemek için yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
+                                                }
+                                            }.padding(6.dp)) { PIcon("play", T.accent, 20.dp) }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }
                                         }
                                     }
