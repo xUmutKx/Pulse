@@ -1062,7 +1062,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                 exWriteNamesSet(ctx, namesDir)
                             }, checked = namesOnly)
                             ThemedMenuItem(tr("Only for this folder", "Yalnızca bu klasör"), {
-                                viewMenu = false
                                 viewDir = if (viewOwn != null) viewDir - here else viewDir + (here to cur)
                                 exWriteViewMap(ctx, viewDir)
                             }, checked = viewOwn != null)

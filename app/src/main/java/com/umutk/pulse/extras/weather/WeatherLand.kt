@@ -1051,7 +1051,6 @@ object WeatherLand {
                         val sc = neon[k % 5]; val sy = horizon - bh * (.3f + rnd(k, 4f) * .4f); val fl = if (sin(t * 14f * PI.toFloat() + k * 3f) > -.85f) 1f else .25f
                         glow(x + bw / 2f, sy, bw * .9f, sc, (115 * fl).toInt())
                         p.style = Paint.Style.STROKE; p.strokeWidth = u * 2f; p.color = sc; p.alpha = (255 * fl).toInt(); c.drawRect(x + bw * .15f, sy - u * 6f, x + bw * .85f, sy + u * 6f, p); p.style = Paint.Style.FILL
-                        col(sc, .6f * fl); rectF(x + bw * .25f, sy - u * 1.5f, x + bw * .75f, sy + u * 1.5f)
                     }
                     x += bw + u * 2f; k++
                 }

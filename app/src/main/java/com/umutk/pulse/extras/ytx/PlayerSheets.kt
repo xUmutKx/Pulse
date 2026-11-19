@@ -96,7 +96,7 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SpeedStepButton(Icons.Rounded.Remove, "Slower") { apply(value - 0.25f) }
+            SpeedStepButton(Icons.Rounded.Remove, "Slower") { apply(value - 0.1f) }
             Slider(
                 value = value,
                 // free: 1.17 is a speed; the video follows the slider while it moves
@@ -110,7 +110,7 @@ fun SpeedSheet(state: PlayerState, backdrop: Backdrop, onDismiss: () -> Unit) {
                 ),
                 modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
             )
-            SpeedStepButton(Icons.Rounded.Add, "Faster") { apply(value + 0.25f) }
+            SpeedStepButton(Icons.Rounded.Add, "Faster") { apply(value + 0.1f) }
         }
 
         Spacer(Modifier.height(10.dp))
