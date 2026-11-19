@@ -1057,7 +1057,6 @@ object WeatherLand {
                 p.shader = LinearGradient(0f, horizon, 0f, h, 0xFF120C24.toInt(), 0xFF05030C.toInt(), Shader.TileMode.CLAMP); c.drawRect(0f, horizon, w, h, p); p.shader = null
                 for (q in 0 until 26) { val rx = frac(q * .618f) * w; col(neon[q % 5], (.18f + .1f * sin(t * 4f * PI.toFloat() + q)).coerceIn(0f, 1f)); rectF(rx, horizon + u * 2f, rx + u * (2f + rnd(q, 5f) * 4f), horizon + u * 2f + (h - horizon) * (.4f + rnd(q, 6f) * .5f)) }
                 col(Color.WHITE, .08f); for (q in 0 until 6) { val y = horizon + (q + 1) * (h - horizon) / 7f; ln(0f, y, w, y, u) }
-                col(0xFFB4C8FF.toInt(), .35f); for (q in 0 until 30) { val sx = frac(q * .6180339f) * w; val sy = ((t * 2f + frac(q * .381966f) * 3f) % 1f) * h; ln(sx, sy, sx - h * .015f, sy + h * .07f, u) }
             }
             "mushroom0" -> {
                 // a village of mushroom houses: red and blue caps with white spots, little doors and windows, flowers in the grass
