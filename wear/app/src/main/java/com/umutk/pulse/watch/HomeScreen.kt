@@ -6,6 +6,7 @@ import android.os.BatteryManager
 import android.text.format.DateFormat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,15 +76,40 @@ private fun FacePage(onOpen: (String) -> Unit) {
             if (l >= 0 && s > 0) l * 100 / s else -1
         } ?: -1
     }
+    // a tap on the face changes it: digital, analog, analog with the digital time under the hands
+    var face by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(com.umutk.pulse.watch.apps.Prefs.int("face", 0)) }
     Page(showTime = false) {
+        Box(Modifier.fillMaxSize().clickable { face = (face + 1) % 3; com.umutk.pulse.watch.apps.Prefs.putInt("face", face) })
+        if (face > 0) Canvas(Modifier.fillMaxSize().padding(14.dp)) {
+            val c = center; val r = size.minDimension / 2f
+            // the hour marks: long at 12, 3, 6 and 9
+            for (k in 0 until 60) {
+                val a = Math.toRadians(k * 6.0 - 90.0); val long = k % 15 == 0; val hour = k % 5 == 0
+                val r1 = r * (if (long) .82f else if (hour) .88f else .94f)
+                drawLine(if (hour) W.text else W.sub.copy(alpha = .5f), Offset(c.x + r1 * Math.cos(a).toFloat(), c.y + r1 * Math.sin(a).toFloat()), Offset(c.x + r * Math.cos(a).toFloat(), c.y + r * Math.sin(a).toFloat()), if (hour) 3.dp.toPx() else 1.dp.toPx(), StrokeCap.Round)
+            }
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = now }
+            val sec = cal.get(java.util.Calendar.SECOND); val min = cal.get(java.util.Calendar.MINUTE) + sec / 60f; val hr = cal.get(java.util.Calendar.HOUR) + min / 60f
+            fun hand(deg: Float, len: Float, wd: Float, col: androidx.compose.ui.graphics.Color) {
+                val a = Math.toRadians(deg - 90.0)
+                drawLine(col, Offset(c.x - r * .1f * Math.cos(a).toFloat(), c.y - r * .1f * Math.sin(a).toFloat()), Offset(c.x + r * len * Math.cos(a).toFloat(), c.y + r * len * Math.sin(a).toFloat()), wd, StrokeCap.Round)
+            }
+            hand(hr * 30f, .5f, 6.dp.toPx(), W.text)
+            hand(min * 6f, .74f, 4.dp.toPx(), W.text)
+            hand(sec * 6f, .84f, 1.5.dp.toPx(), W.accent)
+            drawCircle(W.accent, 4.dp.toPx(), c)
+        }
         // the battery ring: the part that is left, in the accent, round the edge (red under 20 %)
         Canvas(Modifier.fillMaxSize().padding(4.dp)) {
             val w = 5.dp.toPx()
             drawArc(W.card, -90f, 360f, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w))
             if (battery >= 0) drawArc(if (battery < 20) W.red else W.accent, -90f, 360f * battery / 100f, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w, cap = StrokeCap.Round))
         }
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            T(DateFormat.getTimeFormat(ctx).format(Date(now)), size = 46.sp, weight = FontWeight.Light, align = TextAlign.Center)
+        if (face == 1) Column(Modifier.align(Alignment.Center).padding(top = 70.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            T(DateFormat.format("EEE d", now).toString(), color = W.sub, size = 13.sp, align = TextAlign.Center)
+        } else Column(Modifier.align(if (face == 2) Alignment.BottomCenter else Alignment.Center).padding(bottom = if (face == 2) 34.dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (face == 0) T(DateFormat.getTimeFormat(ctx).format(Date(now)), size = 46.sp, weight = FontWeight.Light, align = TextAlign.Center)
+            else T(DateFormat.getTimeFormat(ctx).format(Date(now)), size = 15.sp, weight = FontWeight.Medium, align = TextAlign.Center)
             T(DateFormat.format("EEE d MMM", now).toString(), color = W.sub, size = 15.sp, align = TextAlign.Center)
             if (battery >= 0) T("$battery %", color = if (battery < 20) W.red else W.sub, size = 13.sp, align = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
         }
@@ -114,9 +141,20 @@ private fun QuickPage(onOpen: (String) -> Unit) {
 private fun AppsPage(onOpen: (String) -> Unit) {
     val state = rememberScalingLazyListState()
     Page {
+        // a tap on the title switches between the round icons (three in a row) and the list
+        var grid by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.umutk.pulse.watch.apps.Prefs.int("appsGrid", 1) == 1) }
         ScalingLazyColumn(modifier = Modifier.fillMaxSize(), state = state) {
-            item { Header("Apps") }
-            items(Apps.all) { app -> Chip(app.name, icon = app.icon, secondary = app.about) { onOpen(app.route) } }
+            item { Box(Modifier.clickable { grid = !grid; com.umutk.pulse.watch.apps.Prefs.putInt("appsGrid", if (grid) 1 else 0) }) { Header("Apps") } }
+            if (grid) items(Apps.all.chunked(3)) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { app ->
+                        Column(Modifier.size(width = 50.dp, height = 66.dp).clickable { onOpen(app.route) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(46.dp).clip(CircleShape).background(W.accent.copy(alpha = .22f)), contentAlignment = Alignment.Center) { T(app.icon, size = 20.sp) }
+                            T(app.name, color = W.sub, size = 9.sp, align = TextAlign.Center, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
+                }
+            } else items(Apps.all) { app -> Chip(app.name, icon = app.icon, secondary = app.about) { onOpen(app.route) } }
         }
     }
 }
