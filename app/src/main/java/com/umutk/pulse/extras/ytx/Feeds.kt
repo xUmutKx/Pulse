@@ -77,6 +77,8 @@ class FeedState(
     private val shown = HashSet<String>()
     private var job: Job? = null
     val hasMore get() = next != null
+    /** Takes out what was just marked "not interested" (or its channel) without loading again. */
+    fun dropHidden() { videos = videos.filter(Taste::ok) }
 
     fun ensureLoaded() { if (!loaded && !loading) refresh() }
 
@@ -89,7 +91,7 @@ class FeedState(
         job = scope.launch {
             runCatching { if (freshOnRefresh && shown.isNotEmpty()) loadFresh() else loader(null) }
                 .onSuccess {
-                    videos = it.videos
+                    videos = if (freshOnRefresh) Taste.rank(it.videos) else it.videos.filter(Taste::ok)
                     next = it.next
                     generation++
                     if (freshOnRefresh) it.videos.forEach { v -> shown += v.id }
@@ -108,7 +110,7 @@ class FeedState(
             runCatching { loader(token) }
                 .onSuccess { page ->
                     val seen = videos.mapTo(HashSet()) { it.id }
-                    val added = page.videos.filter { seen.add(it.id) }
+                    val added = page.videos.filter { seen.add(it.id) && Taste.ok(it) }
                     videos = videos + added
                     if (freshOnRefresh) added.forEach { v -> shown += v.id }
                     next = page.next
@@ -220,7 +222,9 @@ fun FeedList(
     channelAvatarSeed: Map<String, String?> = emptyMap(),
 ) {
     val c = MaterialTheme.colorScheme
-    val listVideos = videos ?: feed.videos
+    // "not interested": the video (or its channel) leaves the list at once
+    LaunchedEffect(Taste.rev) { if (Taste.rev > 0) feed.dropHidden() }
+    val listVideos = (videos ?: feed.videos).let { l -> if (videos != null) l.filter(Taste::ok) else l }
     val scope = rememberCoroutineScope()
     LaunchedEffect(listVideos, channelAvatarSeed) {
         ChannelAvatars.resolve(scope, listVideos, channelAvatarSeed)

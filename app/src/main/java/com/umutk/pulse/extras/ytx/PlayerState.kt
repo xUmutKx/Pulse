@@ -269,6 +269,7 @@ class PlayerState(private val scope: CoroutineScope) {
         private set
 
     fun open(item: VideoItem, expand: Boolean = true) {
+        runCatching { Taste.watched(item) }
         isMusicMode = false
         AudioOnly.set(false)
         runCatching { applyVideoTrack() }

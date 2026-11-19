@@ -58,6 +58,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.PersonOff
 import androidx.compose.ui.unit.sp
 
 
@@ -86,6 +88,8 @@ fun VideoOptionsSheet(video: VideoItem, player: PlayerState, onDismiss: () -> Un
         if (Account.signedIn) {
             OptionRow(Icons.Rounded.WatchLater, "Save to Watch later") { player.saveToWatchLater(video); onDismiss() }
         }
+        OptionRow(Icons.Rounded.Block, "Not interested") { Taste.notInterested(video); player.actionMessage = "You won't see this video again"; onDismiss() }
+        OptionRow(Icons.Rounded.PersonOff, "Don't recommend this channel") { Taste.hideChannel(video); player.actionMessage = "${video.channel} is hidden"; onDismiss() }
         OptionRow(Icons.Rounded.Share, "Share") {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain")
                 .putExtra(Intent.EXTRA_TEXT, "https://youtu.be/${video.id}")
