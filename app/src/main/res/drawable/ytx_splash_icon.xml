@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- YTXTube's start window: the red play button (the same as its own opening used to draw), inside the splash icon's safe circle -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFF0033" android:pathData="M38,38 L70,38 Q80,38 80,48 L80,60 Q80,70 70,70 L38,70 Q28,70 28,60 L28,48 Q28,38 38,38 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M48,45 L63,54 L48,63 Z" />
+</vector>
