@@ -147,7 +147,7 @@ class YtxActivity : ComponentActivity() {
         ) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        setContent { YtxTubeTheme { androidx.compose.foundation.layout.Box { YtxTubeApp(); var splash by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(savedInstanceState == null) }; if (splash) YtxSplash { splash = false } } } }
+        setContent { YtxTubeTheme { YtxTubeApp() } }
     }
 
     override fun onResume() {
