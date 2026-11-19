@@ -315,7 +315,7 @@ private fun FilesPageInner() {
         val shape = if (windowed) RoundedCornerShape(if (w.tabs) w.radius else if (w.material) 20.dp else 12.dp) else RoundedCornerShape(0.dp)
         ExOpenAnim {
         Column(Modifier.fillMaxSize().then(if (windowed) Modifier.padding(horizontal = 14.dp, vertical = 30.dp) else Modifier).clip(shape)
-            .background(if (glass) w.bg.copy(alpha = w.glassA) else w.bg).statusBarsPadding().navigationBarsPadding()
+            .background(if (glass) w.bg.copy(alpha = if (FilesPrefs.glassAmt >= 0) 1f - FilesPrefs.glassAmt / 100f else w.glassA) else w.bg).statusBarsPadding().navigationBarsPadding()
             .then(if (w.id == "win95") Modifier.bevel(true) else Modifier)) {
             Row(Modifier.fillMaxWidth().height(if (w.id == "win95") 22.dp else 34.dp)
                 .then(if (classic) Modifier.background(w.title!!) else if (w.material) Modifier.background(if (glass) w.panel.copy(alpha = .4f) else w.panel) else Modifier)

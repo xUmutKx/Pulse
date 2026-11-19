@@ -888,6 +888,8 @@ object FilesPrefs {
     var folderCards by mutableStateOf(false) // a card behind each folder (Material looks start without it)
     var alt by mutableStateOf(false)         // alternate row colours
     var startBrowse by mutableStateOf(false) // the standalone app opens on the Browse page, not the Home page
+    /** How see-through the glass window is, 10..95 %; -1 = the look's own amount (the default, unchanged). */
+    var glassAmt by mutableStateOf(-1)
     var glass by mutableStateOf(true)        // the standalone app is see-through (blurred behind) in the glass looks (Windows 11); off: opaque
     var analysis by mutableStateOf(false)    // the folder sizes / file types / cleanup icons in the header (the menu and the home page reach them anyway)
     var radius by mutableStateOf(1)          // card corner radius: small / medium / large
@@ -906,11 +908,11 @@ object FilesPrefs {
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); folderSize = p.getBoolean("ex_fold_size", true); folderDate = p.getBoolean("ex_fold_date", true); fileSize = p.getBoolean("ex_file_size", true); fileDate = p.getBoolean("ex_file_date", true); infoCount = p.getBoolean("ex_info_count", true)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
-        analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false); glass = p.getBoolean("ex_glass", true)
+        analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false); glass = p.getBoolean("ex_glass", true); glassAmt = p.getInt("ex_glass_amt", -1)
         libHidden = p.getStringSet("ex_lib_off", emptySet())?.toSet() ?: emptySet()
     }
     fun save(c: android.content.Context) {
-        sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).apply()
+        sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).putInt("ex_glass_amt", glassAmt).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putBoolean("ex_columns", columns).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
             .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
@@ -1080,6 +1082,11 @@ fun FilesSettings() {
         }
         Sec(tr("Appearance of rows", "Satır görünümü"), "gridView") {
             SwRow(tr("Transparency", "Şeffaflık"), "light", fp.glass, tr("See-through Files window in Windows 11 (next time it opens)", "Windows 11'de şeffaf Dosyalar penceresi (bir sonraki açılışta)")) { fp.glass = it }
+            if (fp.glass) {
+                // a chosen amount between clear and solid (the look's own until one is picked)
+                Text(tr("See-through amount: ", "Saydamlık miktarı: ") + (if (fp.glassAmt < 0) tr("look's own", "temanınki") else "${fp.glassAmt}%"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 44.dp, top = 2.dp))
+                com.umutk.pulse.PSlider((if (fp.glassAmt < 0) 80 else fp.glassAmt).toFloat(), { fp.glassAmt = it.toInt().coerceIn(10, 95) }, 10f..95f, onDone = { fp.save(ctx) })
+            }
             SwRow(tr("Separate rows (cards)", "Ayrı satırlar (kartlar)"), "gridView", fp.cards, tr("Each file in its own card", "Her dosya kendi kartında")) { fp.cards = it }
             SwRow(tr("Folder cards", "Klasör kartları"), "folder", fp.folderCards, tr("A card behind each folder", "Her klasörün arkasında kart")) { fp.folderCards = it }
             SwRow(tr("Row separators", "Satır çizgileri"), "folder", fp.rowSep, tr("A thin line between list rows", "Liste satırları arasında ince çizgi")) { fp.rowSep = it }
