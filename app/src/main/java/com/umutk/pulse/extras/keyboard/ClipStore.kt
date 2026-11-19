@@ -141,7 +141,18 @@ object ClipStore {
 /** Short names for a copied text: typing the name offers the whole text (an address, a number, a phrase). */
 object KeyShortcuts {
     private fun sp(c: Context) = c.getSharedPreferences("pulse_kb_shortcuts", Context.MODE_PRIVATE)
-    fun find(c: Context, name: String): String? = sp(c).getString(name, null)?.takeIf { it.isNotEmpty() }
+    /** A shortcut's text; {date}, {time} and {clip} in it become today's date, the time now and the last copied text. */
+    fun find(c: Context, name: String): String? = sp(c).getString(name, null)?.takeIf { it.isNotEmpty() }?.let { fill(c, it) }
+    private fun fill(c: Context, t: String): String {
+        if ('{' !in t) return t
+        val now = java.util.Date()
+        var out = t.replace("{date}", android.text.format.DateFormat.getDateFormat(c).format(now)).replace("{time}", android.text.format.DateFormat.getTimeFormat(c).format(now))
+        if ("{clip}" in out) {
+            val clip = runCatching { (c.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip?.getItemAt(0)?.coerceToText(c)?.toString() }.getOrNull().orEmpty()
+            out = out.replace("{clip}", clip)
+        }
+        return out
+    }
     fun put(c: Context, name: String, text: String) { sp(c).edit().putString(name, text).apply() }
     fun all(c: Context): Map<String, String> = sp(c).all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
     fun remove(c: Context, name: String) { sp(c).edit().remove(name).apply() }
