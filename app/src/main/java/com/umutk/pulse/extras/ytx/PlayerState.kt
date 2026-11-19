@@ -68,6 +68,8 @@ class PlayerState(private val scope: CoroutineScope) {
     var speed by mutableFloatStateOf(1f)
         private set
     var loopEnabled by mutableStateOf(false)
+    /** The whole list plays again from its start when it ends. */
+    var loopAll by mutableStateOf(false)
         private set
     var shuffleEnabled by mutableStateOf(false)
         private set
@@ -153,10 +155,12 @@ class PlayerState(private val scope: CoroutineScope) {
 
     fun toggleLoop() {
         val player = controller ?: return
-        val next = if (player.repeatMode == Player.REPEAT_MODE_ONE) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ONE
+        // off -> the whole list -> this one song -> off
+        val next = when (player.repeatMode) { Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL; Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE; else -> Player.REPEAT_MODE_OFF }
         player.repeatMode = next
         loopEnabled = next == Player.REPEAT_MODE_ONE
-        actionMessage = if (loopEnabled) "Loop on" else "Loop off"
+        loopAll = next == Player.REPEAT_MODE_ALL
+        actionMessage = when (next) { Player.REPEAT_MODE_ALL -> "Loop the list"; Player.REPEAT_MODE_ONE -> "Loop this one"; else -> "Loop off" }
     }
     var speedPanelOpen by mutableStateOf(false)
 
@@ -872,6 +876,8 @@ class PlayerState(private val scope: CoroutineScope) {
 
     fun togglePlay() {
         val player = controller ?: return
+        // the song is still being opened: the player holds the one before (or nothing), so a press would start that or jump to the next; it only says "play when ready"
+        if (loading) { player.playWhenReady = !player.playWhenReady; return }
         if (player.isPlaying) player.pause() else {
             if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
             if (player.playbackState == Player.STATE_IDLE) player.prepare()
@@ -1064,6 +1070,7 @@ class PlayerState(private val scope: CoroutineScope) {
         durationMs = player.duration.takeIf { it > 0 } ?: ((current?.durationSec ?: 0L) * 1000L)
         speed = player.playbackParameters.speed
         loopEnabled = player.repeatMode == Player.REPEAT_MODE_ONE
+        loopAll = player.repeatMode == Player.REPEAT_MODE_ALL
 
         if (selectedSubtitleLanguage != null && activeCues.isNotEmpty()) {
             val pos = positionMs

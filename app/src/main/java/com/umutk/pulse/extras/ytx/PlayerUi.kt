@@ -1290,11 +1290,12 @@ fun BitChordMusicPlayer(
                 // the queue: what plays after this song (the count on the icon), opened as a list to play, remove or clear
                 IconButton(onClick = { state.sheet = PlayerSheet.Queue }) {
                     Box {
-                        Icon(Icons.Rounded.QueueMusic, contentDescription = "Queue", tint = c.onSurface, modifier = Modifier.size(26.dp))
+                        // a line icon; the count sits outside its corner so it never covers the lines
+                        Icon(androidx.compose.material.icons.Icons.Outlined.QueueMusic, contentDescription = "Queue", tint = c.onSurface, modifier = Modifier.size(26.dp))
                         if (state.queueItems.isNotEmpty()) Text(
-                            "${state.queueItems.size}",
-                            fontSize = 9.sp, fontWeight = FontWeight.Bold, color = c.surface,
-                            modifier = Modifier.align(Alignment.TopEnd).clip(CircleShape).background(c.primary).padding(horizontal = 4.dp),
+                            if (state.queueItems.size > 99) "99+" else "${state.queueItems.size}",
+                            fontSize = 8.sp, fontWeight = FontWeight.Bold, color = c.surface, lineHeight = 10.sp,
+                            modifier = Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-7).dp).clip(CircleShape).background(c.primary).padding(horizontal = 4.dp, vertical = 1.dp),
                         )
                     }
                 }
@@ -1549,7 +1550,7 @@ fun BitChordMusicPlayer(
                     Icon(
                         if (state.loopEnabled) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
                         contentDescription = "Repeat",
-                        tint = if (state.loopEnabled) c.primary else c.onSurfaceVariant.copy(alpha = 0.7f),
+                        tint = if (state.loopEnabled || state.loopAll) c.primary else c.onSurfaceVariant.copy(alpha = 0.7f),
                         modifier = Modifier.size(24.dp),
                     )
                 }
