@@ -1210,6 +1210,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (!inAddr && sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
+        // the hybrid correction (a setting, off by default): WM Keyboard's rules on top of Pulse's own
+        if (correct && KeyboardPrefs.hybridFix && KeyboardPrefs.autocorrect && !inAddr && !st.plain && !urlNow()) {
+            val lw = typed.lowercase(lang.locale)
+            val known = KeyboardDictionary.isWord(lang.code, lw) || KeyboardDictionary.isKnown(lw)
+            // never rewritten: short words, all-capital words (acronyms), words with two or more digits
+            if (typed.length < 3 || (typed.length >= 2 && typed.all { !it.isLetter() || it.isUpperCase() }) || typed.count { it.isDigit() } >= 2) t = null
+            else if (!known && t == null) {
+                // a letter held down too long: "helllo" -> "hello"
+                val two = lw.replace(Regex("(.)\\1{2,}"), "$1$1"); val one = lw.replace(Regex("(.)\\1{2,}"), "$1")
+                t = when { two != lw && KeyboardDictionary.isKnown(two) -> two; one != lw && KeyboardDictionary.isKnown(one) -> one; else -> null }
+                // a missed space: two known words run together ("nasılsınbugün" -> "nasılsın bugün"), the split nearest the middle wins
+                if (t == null && lw.length >= 5) {
+                    t = (2..lw.length - 2).sortedBy { kotlin.math.abs(it - lw.length / 2) }
+                        .firstOrNull { i -> KeyboardDictionary.isKnown(lw.substring(0, i)) && KeyboardDictionary.isKnown(lw.substring(i)) && lw.substring(0, i).length >= 2 && lw.substring(i).length >= 2 }
+                        ?.let { i -> lw.substring(0, i) + " " + lw.substring(i) }
+                }
+                if (t != null && typed[0].isUpperCase()) t = t!!.replaceFirstChar { it.titlecase(lang.locale) }
+            }
+        }
         // the same word typed again soon after it was corrected: the person means it, so it is learned as a word and left alone from now on
         if (correct && t != null && !t.equals(typed, true) && typed.length >= 2 && typed.none { it.isDigit() }) {
             val lk = typed.lowercase(lang.locale); val at = recentFixed[lk]

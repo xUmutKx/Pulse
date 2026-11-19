@@ -296,8 +296,8 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
         val classic = id == "win95" || id == "xp"
         // Windows 11 is acrylic: the window blurs the screen behind it where the phone can, the panel and the button strip are translucent tints
         val blur = if (id == "win11") rememberWindowBlur(8.dp) else false
-        val body = containerColor ?: when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win11" -> (if (w.dark) Color(0xFF202020) else Color(0xFFF3F3F3)).copy(alpha = if (blur) .92f else .97f); else -> w.panel }
-        val footer = when (id) { "win7" -> Color(0xFFF0F0F0); "win10" -> if (w.dark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0); "win11" -> w.bg.copy(alpha = .9f); else -> body }
+        val body = containerColor ?: when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win11" -> (if (w.dark) Color(0xFF202020) else Color(0xFFF3F3F3)).copy(alpha = if (blur) .7f else .88f); else -> w.panel }
+        val footer = when (id) { "win7" -> Color(0xFFF0F0F0); "win10" -> if (w.dark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0); "win11" -> w.bg.copy(alpha = .5f); else -> body }
         val titleCol = if (classic) Color.White else w.text
         val outer = when (id) {
             "win95" -> Modifier.background(body).bevel(true).padding(3.dp)

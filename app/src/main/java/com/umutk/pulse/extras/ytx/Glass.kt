@@ -126,6 +126,13 @@ fun glassFill(alpha: Float = 1f): Color {
         Color(0xFFFAFAFA).copy(alpha = 0.34f * alpha)
 }
 
+/** The player's side and bottom sheets (quality, sound, settings): a deep glass, dark enough that the video behind does not show through the words. */
+@Composable
+fun sheetFill(): Color {
+    if (!GlassQuality.effectsSupported) return MaterialTheme.colorScheme.surfaceContainerHigh
+    return if (isSystemInDarkTheme()) Color(0xFF0E0E0E).copy(alpha = 0.80f) else Color(0xFFF4F4F4).copy(alpha = 0.86f)
+}
+
 /**
  * Opaque fill for controls drawn directly on top of video. Those controls keep
  * white icons in both themes, so with Liquid Glass off they need a dark solid

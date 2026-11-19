@@ -93,6 +93,8 @@ object KeyboardPrefs {
     var pauseFix by mutableStateOf(false)
     /** Speech typing with the Whisper model of Pulse AI (on the phone) instead of the phone's recogniser. */
     var voiceWhisper by mutableStateOf(false)
+    /** Hybrid correction: WM Keyboard's rules (no acronyms, no codes, held-down letters, a missed space) over Pulse's own correction. Off: as before. */
+    var hybridFix by mutableStateOf(false)
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
     var quickPinBtn by mutableStateOf(true)
@@ -328,7 +330,7 @@ object KeyboardPrefs {
             toolbarItems = tb.joinToString(",")
             p.edit().putBoolean("menuClean12", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
         }
-        voiceWhisper = p.getBoolean("voiceWhisper", false)
+        voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
         if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
@@ -343,7 +345,7 @@ object KeyboardPrefs {
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
-            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("voiceWhisper", voiceWhisper).putBoolean("undoOnBackspace", undoOnBackspace)
+            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("rememberNumbers", rememberNumbers).putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("corners", corners).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)

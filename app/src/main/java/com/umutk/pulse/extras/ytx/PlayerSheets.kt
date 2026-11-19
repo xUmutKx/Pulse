@@ -347,7 +347,7 @@ private fun PlayerGlassSheet(
     val shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
     val spec = glassSpec(
         shape = shape,
-        tint = glassFill(0.78f),
+        tint = sheetFill(),
         blur = 28.dp,
         refractionHeight = 18.dp,
         refractionAmount = 24.dp,
@@ -420,7 +420,7 @@ fun PlayerSideGlassSheet(
     val c = MaterialTheme.colorScheme
     BackHandler(onBack = onDismiss)
     val shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
-    val spec = glassSpec(shape = shape, tint = glassFill(0.78f), blur = 28.dp, refractionHeight = 14.dp, refractionAmount = 18.dp)
+    val spec = glassSpec(shape = shape, tint = sheetFill(), blur = 28.dp, refractionHeight = 14.dp, refractionAmount = 18.dp)
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
