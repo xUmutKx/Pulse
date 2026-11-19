@@ -222,6 +222,8 @@ object Downloads {
     var keepFiles by mutableStateOf(false)
     /** A torrent that finds nobody to download from within 15 seconds gives way to another stream of the episode (a bigger one is fine, never under 200 MB). On at first. */
     var autoSwitch by mutableStateOf(true)
+    /** On a Wi-Fi that blocks torrents (a school, a hotel), the torrents go over mobile data while they run (the rest of the phone keeps the Wi-Fi). */
+    var torrentCell by mutableStateOf(false)
     /** Magnet links, and Stremio's local links that become magnets: off by default, they start only when this is on. */
     var magnetLinks by mutableStateOf(false)
     /** The address of a local torrent server (Stremio's, or another app's that serves torrents the same way): empty = the torrent engine in Pulse; Series and movies sends its torrents there when set. */
@@ -246,6 +248,7 @@ object Downloads {
         directOpen = p.getBoolean("openDirect", false)
         keepFiles = p.getBoolean("dlKeepFiles", false)
         autoSwitch = p.getBoolean("dlAutoSwitch", true)
+        torrentCell = p.getBoolean("dlTorrentCell", false)
         magnetLinks = p.getBoolean("dlMagnet", false)
         localServer = p.getString("dlLocalServer", "") ?: ""
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
@@ -310,6 +313,48 @@ object Downloads {
     fun setMagnetLinks(ctx: Context, v: Boolean) {
         magnetLinks = v
         ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlMagnet", v).apply()
+    }
+
+    fun setTorrentCell(ctx: Context, v: Boolean) {
+        torrentCell = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlTorrentCell", v).apply()
+    }
+
+    /** The Wi-Fi the phone is on asks for a sign-in page first (a captive portal) or has no working internet: nothing reaches the torrent peers through it. */
+    fun wifiBlocked(ctx: Context): Boolean = runCatching {
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val nc = cm.getNetworkCapabilities(cm.activeNetwork) ?: return@runCatching false
+        nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) &&
+            (nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) || !nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+    }.getOrDefault(false)
+
+    private var cellCb: android.net.ConnectivityManager.NetworkCallback? = null
+    private var cellUsers = 0
+
+    /** While a torrent runs with [torrentCell] on and the phone is on Wi-Fi: the app's connections go over mobile data. Undone by [releaseCell]. */
+    @Synchronized fun holdCell(ctx: Context) {
+        if (!torrentCell) return
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val on = cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+        if (!on) return
+        cellUsers++
+        if (cellCb != null) return
+        val cb = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) { runCatching { cm.bindProcessToNetwork(network) } }
+            override fun onLost(network: android.net.Network) { runCatching { cm.bindProcessToNetwork(null) } }
+        }
+        cellCb = cb
+        runCatching { cm.requestNetwork(android.net.NetworkRequest.Builder().addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR).addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET).build(), cb) }
+    }
+
+    @Synchronized fun releaseCell(ctx: Context) {
+        if (cellUsers > 0) cellUsers--
+        if (cellUsers > 0) return
+        val cb = cellCb ?: return
+        cellCb = null
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        runCatching { cm.bindProcessToNetwork(null) }
+        runCatching { cm.unregisterNetworkCallback(cb) }
     }
 
     fun setAutoSwitch(ctx: Context, v: Boolean) {
@@ -727,7 +772,9 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     var switchNow = false
     // a torrent that crawls (under 40 KB/s for a whole minute) while little of it is here also gives way to the next stream
     var winT = 0L; var winD = 0L
-    val got = TorrentEngine.download(c, url, torrent, Downloads.torrentWork(c), { cancelled || paused || switchNow },
+    Downloads.holdCell(c)
+    val blocked = Downloads.wifiBlocked(c) && !Downloads.torrentCell
+    val got = try { TorrentEngine.download(c, url, torrent, Downloads.torrentWork(c), { cancelled || paused || switchNow },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
             if (!quiet && done.value == 0L) {
@@ -744,7 +791,7 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             // while the file list is on its way, or no peer is sending yet, the row says so (instead of a still "0 MB")
             if (t > 0) total.value = t
             done.value = d
-            error.value = when { t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
+            error.value = when { t <= 0 && blocked -> "this Wi-Fi blocks torrents (sign-in page or no internet): use mobile data"; t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
             val nowT = System.currentTimeMillis()
             // nobody to download from for 10 seconds (20 when peers are connected and the file list is here): the next stream of the episode is tried
             val patience = if (t > 0 && p > 0) 20_000L else 10_000L
@@ -758,7 +805,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
                 }
             }
         },
-    ) ?: run { if (switchNow && !cancelled && !paused) throw SwitchStream(); return false }
+    ) } finally { Downloads.releaseCell(c) }
+    if (got == null) { if (switchNow && !cancelled && !paused) throw SwitchStream(); return false }
     file.delete()
     if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }
     TorrentEngine.done(got)

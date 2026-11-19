@@ -234,6 +234,14 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
+            // a Wi-Fi that blocks torrents (school, hotel, sign-in page): they run over mobile data while the rest of the phone stays on the Wi-Fi
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentCell(ctx, !Downloads.torrentCell) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Torrents over mobile data on Wi-Fi", "Wi-Fi'deyken torrentler mobil veriden"), color = T.text, fontSize = 15.sp)
+                    Text(tr("For a Wi-Fi that blocks torrents or asks for a sign-in page", "Torrentleri engelleyen ya da giriş sayfası isteyen Wi-Fi için"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.torrentCell, { Downloads.setTorrentCell(ctx, it) })
+            }
             // without Stremio the torrents of Series and movies are downloaded by the engine in Pulse: it is in the full build only, on a 64-bit phone
             if (!TorrentEngine.available && Downloads.localServer.isBlank()) Text(tr("Torrents need the full Pulse build (not Lite or the Play one) on a 64-bit phone, or a local torrent server below.", "Torrent için tam Pulse sürümü (Lite ya da Play değil) ve 64 bit telefon gerekir, ya da aşağıdaki yerel torrent sunucusu."), color = androidx.compose.ui.graphics.Color(0xFFE08A3A), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
             // a magnet link (and a Stremio link, which is one) starts as a torrent only when this is on: off by default
