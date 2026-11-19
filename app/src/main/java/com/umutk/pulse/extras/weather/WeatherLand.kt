@@ -1014,16 +1014,7 @@ object WeatherLand {
                 }
                 ridge(horizon + h * .08f, h * .08f, 1.2f, 4f, tint(.75f, 0xFFD8E0EA.toInt(), 1f))
                 col(tint(.85f, 0xFFE8EEF4.toInt(), 1f)); rectF(0f, h * .86f, w, h)
-                run {
-                    val cols = intArrayOf(0xFF2F6FD8.toInt(), 0xFFF2F2F2.toInt(), 0xFFE04A3A.toInt(), 0xFF2FA86B.toInt(), 0xFFF2C02E.toInt())
-                    p.style = Paint.Style.STROKE; p.strokeWidth = u * .8f; p.color = 0xB33C3228.toInt()
-                    val rope = Path(); rope.moveTo(0f, h * .66f); rope.quadTo(w * .5f, h * .76f, w, h * .64f); c.drawPath(rope, p); p.style = Paint.Style.FILL
-                    for (k in 0 until 18) {
-                        val tq = (k + .5f) / 18f; val x = tq * w; val y = (1 - tq) * (1 - tq) * h * .66f + 2f * (1 - tq) * tq * h * .76f + tq * tq * h * .64f; val fl = sin(t * 6f * PI.toFloat() + k) * u * 2f
-                        col(cols[k % 5], .95f); tri(x - u * 4f, y, x + u * 4f, y, x + fl, y + u * 9f)
-                    }
-                }
-                for ((x, cc) in listOf(w * .22f to 0xFFE0583A.toInt(), w * .32f to 0xFFF2C02E.toInt(), w * .74f to 0xFF3A7DD0.toInt())) { col(tint(.9f, cc, .2f)); tri(x, h * .86f - u * 14f, x - u * 12f, h * .87f, x + u * 12f, h * .87f) }
+                // (no prayer flags or tents: they ran across the cards of the page)
             }
             "jungle0" -> {
                 // a jungle: a waterfall from a green cliff, deep canopy layers, mist and a parrot crossing

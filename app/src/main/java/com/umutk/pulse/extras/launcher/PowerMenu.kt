@@ -69,7 +69,7 @@ internal fun PowerClick(onDone: () -> Unit, modifier: Modifier = Modifier, conte
             },
             onDismissRequest = { open = false },
         ) {
-            Column(Modifier.width(190.dp).background(com.umutk.pulse.T.panel).border(1.dp, com.umutk.pulse.T.sub.copy(alpha = .4f)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.width(190.dp).background(com.umutk.pulse.T.panel.copy(alpha = 1f)).border(1.dp, com.umutk.pulse.T.sub.copy(alpha = .4f)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("sleep" to tr("Sleep", "Uyku"), "lock" to tr("Lock", "Kilitle"), "off" to tr("Shut down", "Kapat"), "restart" to tr("Restart", "Yeniden başlat"), "signout" to tr("Sign out", "Oturumu kapat"))
                     .forEach { (k, label) -> PButton(label, Modifier.fillMaxWidth()) { open = false; onDone(); powerAction(ctx, k) } }
             }

@@ -123,7 +123,7 @@ fun CoverSettings() {
     var date by remember { mutableStateOf(CoverStore.date(ctx)) }
     var battery by remember { mutableStateOf(CoverStore.battery(ctx)) }
     var text by remember { mutableStateOf(CoverStore.text(ctx)) }
-    Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp)
+    // (the page and the switch above already say "Screen cover": no third title here)
     Text(tr("A black cover over the whole screen", "Tüm ekranı kaplayan siyah bir kapak"), color = T.sub, fontSize = 12.sp)
     var adv by remember { mutableStateOf(StandByPrefs.advanced(ctx)) }
     StandBySettings(adv) { adv = it }

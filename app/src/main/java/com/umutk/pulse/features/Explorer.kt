@@ -1003,7 +1003,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val cur = buildList<Triple<String, String, () -> Unit>> {
                     val inTop = dir.path == top.path || dir.path.startsWith(top.path + "/")
                     val base = if (inTop) top.path else ""
-                    add(Triple("d:" + base, if (inTop) top.name else "/", { go(base.ifEmpty { "/" }) }))
+                    add(Triple("d:" + base, if (!inTop) "/" else if (top.path == android.os.Environment.getExternalStorageDirectory().path || top.name == "0") tr("Internal storage", "Dahili depolama") else top.name, { go(base.ifEmpty { "/" }) }))
                     var acc = base
                     dir.path.removePrefix(base).split('/').filter { it.isNotEmpty() }.forEach { n -> acc += "/$n"; val q = acc; add(Triple("d:$q", n, { go(q) })) }
                     arcFile?.let { af ->

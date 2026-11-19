@@ -1367,7 +1367,7 @@ fun DownloadsPage() {
                 // no dimming behind the window: on Windows 11 the page is see-through, the app's own backdrop shows, as on every other page
                 val dialogWindow = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
                 androidx.compose.runtime.SideEffect { dialogWindow?.setDimAmount(0f) }
-                Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
+                Box(Modifier.fillMaxSize().background(T.bg.copy(alpha = 1f))) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                         // the way back, in the look's own style: a Windows button on the Windows looks, the arrow elsewhere
                         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
