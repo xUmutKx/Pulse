@@ -271,6 +271,18 @@ fun KeyboardSettings(back: () -> Unit) {
             }
         }
         KbSection("keyboard", tr("Swipes and keys", "Kaydırma ve tuşlar")) {
+            // the layout kind: letters as on a computer or a phone, an old phone keypad, or the PC one with Esc, Ctrl, arrows and F keys
+            Text(tr("Layout type", "Düzen türü"), color = T.sub, fontSize = 12.sp)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val kind = if (KeyboardPrefs.multiTap) "phone" else if (KeyboardPrefs.arrows) "pc" else "qwerty"
+                listOf("qwerty" to "QWERTY", "phone" to tr("Old phone (T9)", "Eski telefon (T9)"), "pc" to "PC").forEach { (k, n) ->
+                    PChip(kind == k, n) {
+                        KeyboardPrefs.multiTap = k == "phone"; KeyboardPrefs.arrows = k == "pc"
+                        if (k == "pc") KeyboardPrefs.proRow = true
+                        save()
+                    }
+                }
+            }
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
             Switch(tr("Corner swipes", "Köşe kaydırmaları"), tr("Swipe a letter toward a corner for the symbol or key written there (Esc, Tab, Copy ...). Turns swipe typing off", "Harfi köşesine kaydırınca orada yazan sembol ya da tuş çalışır (Esc, Tab, Kopyala ...). Kaydırarak yazmayı kapatır"), KeyboardPrefs.corners) { KeyboardPrefs.corners = it; save() }

@@ -236,7 +236,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val scale = KeyboardPrefs.heightAt(land) / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
     androidx.compose.runtime.SideEffect { if (st.land != land) st.land = land }
     // (the Samsung look: its rows are a little lower than ours, as measured on the real keyboard)
-    val keyH = (61f * scale * (if (th.samsung) .85f else 1f)).dp
+    // the phone keypad has four rows, not five: its keys take the room, and the Old phone look is taller still
+    val keyH = (61f * scale * (if (th.samsung) .85f else 1f) * (if (KeyboardPrefs.multiTap) 1.2f else 1f) * (if (th.id == "retro") 1.1f else 1f)).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
     val pull = remember { Animatable(0f) }
