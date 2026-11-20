@@ -143,6 +143,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var peak: String? = null
     // a letter was typed right behind "word." with no space: the space and a capital are put in when the word ends, unless it is an address
     private var dotFix = false
+    private val siteNames = setOf("google", "youtube", "facebook", "instagram", "twitter", "github", "gmail", "wikipedia", "amazon", "netflix", "whatsapp", "reddit", "linkedin", "yahoo", "bing", "spotify", "twitch", "tiktok", "pinterest", "microsoft", "apple", "discord", "telegram", "hepsiburada", "trendyol", "sahibinden", "yemeksepeti", "ciceksepeti", "gittigidiyor", "mynet", "hurriyet", "milliyet", "sabah", "haberturk", "sozcu", "cnn", "bbc", "ebay", "paypal", "dropbox", "medium", "stackoverflow", "gitlab", "openai", "anthropic", "claude", "chatgpt", "yandex", "outlook", "hotmail", "icloud", "zoom", "steam", "epicgames", "roblox", "minecraft", "xbox", "playstation", "nintendo", "samsung", "huawei", "xiaomi", "turkcell", "vodafone", "turktelekom", "ptt", "edevlet", "meb", "osym", "ais", "ziraat", "isbank", "garanti", "akbank", "yapikredi", "enpara", "papara", "booking", "airbnb", "tripadvisor", "uber", "getir", "n11")
     private val tlds = setOf("com", "net", "org", "edu", "gov", "io", "co", "me", "app", "dev", "info", "biz", "tr", "uk", "de", "fr", "es", "it", "ru", "us", "tv", "xyz", "online", "site", "tech", "store", "ai", "gg", "ly", "to", "cc", "eu", "nl", "pl", "jp", "cn", "br", "in", "au", "ca", "ch", "se", "no", "fi", "dk", "gen", "web", "html", "php")
     private var corrAt = 0L
     private var selStart = 0
@@ -1230,7 +1231,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
             // a full stop behind a word of the dictionary ends a sentence (not in addresses, passwords or numbers): the space and the capital come with the next letter
             val before = word.toString().lowercase(lang.locale)
-            val dotOk = ch == '.' && before.length >= 2 && KeyboardDictionary.isKnown(before) && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace
+            // the names of well-known sites are not sentence ends ("youtube." goes on as "youtube.com")
+            val dotOk = ch == '.' && before.length >= 2 && before !in siteNames && KeyboardDictionary.isKnown(before) && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
@@ -1253,6 +1255,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the field no longer holds the word before the cursor (moved by the app or the user): nothing is replaced, so nothing is lost
         if (c.getTextBeforeCursor(typed.length, 0)?.toString() != typed) {
             c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return false
+        }
+        // a web address typed as "site.com": the full stop behind a known word (google) had started a new sentence (a space and a capital: "google. Com"); when the ending of an address
+        // (com, net, org, com.tr ...) then comes, the space goes and the ending stays small
+        if (!st.plain && !emailField && !st.incognito && typed.lowercase(lang.locale) in tlds) {
+            val bt = c.getTextBeforeCursor(typed.length + 60, 0)?.toString().orEmpty()
+            if (bt.endsWith(". $typed")) {
+                val stem = bt.dropLast(typed.length + 2).takeLastWhile { !it.isWhitespace() }
+                if (stem.length >= 2 && stem.all { it.isLetterOrDigit() || it == '-' || it == '.' }) {
+                    c.beginBatchEdit(); c.finishComposingText(); c.deleteSurroundingText(typed.length + 1, 0); c.commitText(typed.lowercase(lang.locale), 1)
+                    if (tail.isNotEmpty()) c.commitText(tail, 1)
+                    c.endBatchEdit()
+                    word.clear(); target = null; peak = null; lastCorrection = null; punctTyped = false; dotEnd = false; dotFix = false
+                    return true
+                }
+            }
         }
         var out = typed
         // a word that is part of an address (after an "@") is never corrected: "gmail" and "com" stay as typed
