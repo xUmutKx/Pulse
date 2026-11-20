@@ -2535,3 +2535,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Sağ üstteki öneriler klavyenin üstüne taşınsın (varsayılan açık); çok fotoğraf çekilince küçük easter egg
 - YTXTube'dan Müzik kaldırılsın; müzik oynatıcıda ayarlardan açılsın; home görünümü, speed dial kare kapaklı ve başlıksız, yalnız şarkılar (video yok)
 - Files: Samsung Secure Folder'a taşıma (user 150, gerekirse root)
+- (2026-11-20, kullanıcı) Office/PDF: kaleme basınca dokunulan yerde açılan yuvarlak hızlı menü; S Pen algılanınca destek, kalem düğmesiyle/basılı tutunca silgi; PDF metnini Canva gibi doğrudan düzenleme (şu an "Metni düzenle" var); tarayıcıda sayfa kenarı algılama ve elle köşe ile perspektif düzeltme; hızlı panel düğmesi; eski iPhone AssistiveTouch gibi çok amaçlı yüzen çubuk (hızlı panel öğeleri eklenebilir, gizlenebilir, kenara yapışabilir)
