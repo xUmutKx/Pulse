@@ -78,14 +78,15 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
     // XP and 7 boot on black, then show their welcome step on the wallpaper
     var welcome by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        launch { fade.animateTo(1f, tween(200)) }
+        launch { fade.animateTo(1f, tween(120)) }
         // the length setting: short is about half, long about one and a half times
         val m = when (Opt.splashLen) { 0 -> .5f; 2 -> 1.6f; else -> 1f }
         when (th.id) {
-            "xp" -> { delay((1100 * m).toLong()); welcome = true; delay((900 * m).toLong()) }
-            "win7" -> { delay((2800 * m).toLong()); welcome = true; delay((900 * m).toLong()) }
-            "win10" -> delay((1800 * m).toLong())
-            else -> delay((850 * m).toLong())
+            // short, like the opening of any other app (it was one to three and a half seconds): the animation still plays, then the app is there
+            "xp" -> { delay((500 * m).toLong()); welcome = true; delay((350 * m).toLong()) }
+            "win7" -> { delay((800 * m).toLong()); welcome = true; delay((350 * m).toLong()) }
+            "win10" -> delay((650 * m).toLong())
+            else -> delay((350 * m).toLong())
         }
         onDone()
     }

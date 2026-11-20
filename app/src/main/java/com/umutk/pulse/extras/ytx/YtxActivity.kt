@@ -127,6 +127,8 @@ import com.umutk.pulse.extras.ytx.glass.rememberCombinedBackdrop
 import com.umutk.pulse.extras.ytx.glass.rememberLayerBackdrop
 import kotlinx.coroutines.launch
 
+private var splashPlayed = false
+
 class YtxActivity : ComponentActivity() {
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
     internal var playerHolder: PlayerState? = null
@@ -147,7 +149,17 @@ class YtxActivity : ComponentActivity() {
         ) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        setContent { YtxTubeTheme { YtxTubeApp() } }
+        // the opening (a play mark and a line, about half a second) plays when the app starts, not when the window is made again
+        val playSplash = savedInstanceState == null && !splashPlayed
+        setContent {
+            YtxTubeTheme {
+                var splash by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(playSplash) }
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                    YtxTubeApp()
+                    if (splash) YtxSplash { splash = false; splashPlayed = true }
+                }
+            }
+        }
     }
 
     override fun onResume() {
