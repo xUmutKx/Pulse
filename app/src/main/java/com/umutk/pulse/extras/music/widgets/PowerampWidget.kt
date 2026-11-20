@@ -111,14 +111,15 @@ class PowerampWidget : AppWidgetProvider() {
                 style, title, st.current?.artistFor(c).orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
                 st.index, st.queue.size, PlayModes.shuffle != ShuffleKind.OFF, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c), WidgetOpts.look(c),
             )
-            val f = fit(bw, bh)
+            val lay = layoutFor(bw, bh)
+            val f = fit(lay, bw, bh)
             val k = box.shrink
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
                 setImageViewBitmap(R.id.pa_img, bmp)
-                // the transport row sits under the drawn buttons: pad the overlay to the fitted window
+                // the transport row sits under the drawn buttons: pad the overlay to the fitted window (the buttons are spaced evenly between btnL and btnR)
                 setViewPadding(
                     R.id.pa_overlay,
-                    ((f.x + 0.075f * f.w) * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w + 0.075f * f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
+                    ((f.x + lay.btnL * f.scale) * k).toInt(), ((f.y + lay.ovT * f.scale) * k).toInt(), ((bw - f.x - lay.btnR * f.scale) * k).toInt(), ((bh - f.y - lay.ovB * f.scale) * k).toInt(),
                 )
                 // a tap anywhere else opens the player, straight on the now playing page and without an opening animation
                 // straight to the activity, like the music widget (the no-display trampoline is dropped by some launchers); each widget has its own request code
@@ -127,10 +128,11 @@ class PowerampWidget : AppWidgetProvider() {
                     android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
                 // loop and shuffle sit at the left of the counter line, between the text and the seek line
                 // (they follow the text to the left when the cover sits at the right)
-                val mx = if (WidgetOpts.look(c).artRight) 8f else 148f
+                val right = WidgetOpts.look(c).artRight && lay.artRightOk
+                val mx = if (right) 8f else lay.textL - 4f
                 setViewPadding(
                     R.id.pa_mid,
-                    ((f.x + mx * f.scale) * k).toInt(), ((f.y + 100 * f.scale) * k).toInt(), ((bw - f.x - (mx + 78f) * f.scale) * k).toInt(), ((bh - f.y - 148 * f.scale) * k).toInt(),
+                    ((f.x + mx * f.scale) * k).toInt(), ((f.y + lay.marksY * f.scale) * k).toInt(), ((bw - f.x - (mx + lay.marksW) * f.scale) * k).toInt(), ((bh - f.y - (lay.marksY + lay.marksH) * f.scale) * k).toInt(),
                 )
                 setOnClickPendingIntent(R.id.pa_prev, pi(c, A_PREV))
                 setOnClickPendingIntent(R.id.pa_rew, pi(c, A_REW))
@@ -142,10 +144,32 @@ class PowerampWidget : AppWidgetProvider() {
             }
         }
 
-        /** Whole-window fit: the largest scale at which W x H fits the box, centred. (Nothing is kept between two sizes: each box carries its own numbers.) */
-        fun fit(bw: Int, bh: Int): Fit {
-            val s = minOf(bw / W.toFloat(), bh / H.toFloat())
-            val w = (W * s).toInt(); val h = (H * s).toInt()
+        /**
+         * Where everything sits in one window, in the window's own units. The widget picks the layout that suits its shape (so a wide, short widget is a row and a tall one
+         * a column, instead of the standard window floating small in the middle with empty sides): [STD] is the 320 x 200 window, [WIDE] a row, [TALL] a column.
+         */
+        class Lay(
+            val w: Int, val h: Int, val cx: Float, val cy: Float, val half: Float, val textL: Float, val textW: Float, val titleY: Float, val textMaxY: Float, val iy: Float,
+            val seekY: Float, val seekL: Float, val seekR: Float, val btnY: Float, val btnL: Float, val btnR: Float, val ovT: Float, val ovB: Float,
+            val marksY: Float, val marksW: Float, val marksH: Float, val artRightOk: Boolean,
+        ) {
+            /** The centre of button [i] (0..4): the five are spaced evenly between [btnL] and [btnR]. */
+            fun bx(i: Int) = btnL + (i + .5f) * (btnR - btnL) / 5f
+        }
+        val STD = Lay(W, H, 75f, 75f, 63f, 152f, 156f, 12f, 112f, 124f, 146f, 12f, 308f, 174f, 24f, 296f, 148f, 196f, 100f, 78f, 48f, true)
+        val WIDE = Lay(520, 120, 60f, 60f, 50f, 124f, 170f, 10f, 90f, 98f, 112f, 12f, 508f, 60f, 304f, 512f, 34f, 88f, 80f, 78f, 32f, false)
+        val TALL = Lay(240, 360, 120f, 100f, 88f, 14f, 212f, 204f, 292f, 306f, 322f, 14f, 226f, 344f, 12f, 228f, 326f, 358f, 292f, 78f, 28f, false)
+
+        /** The layout for a box of [bw] x [bh] pixels: a row when it is much wider than the standard window, a column when it is nearly square or taller. */
+        fun layoutFor(bw: Int, bh: Int): Lay {
+            val r = bw.toFloat() / bh.coerceAtLeast(1)
+            return if (r > 2.35f) WIDE else if (r < 1.2f) TALL else STD
+        }
+
+        /** Whole-window fit: the largest scale at which the window of [l] fits the box, centred. (Nothing is kept between two sizes: each box carries its own numbers.) */
+        fun fit(l: Lay, bw: Int, bh: Int): Fit {
+            val s = minOf(bw / l.w.toFloat(), bh / l.h.toFloat())
+            val w = (l.w * s).toInt(); val h = (l.h * s).toInt()
             return Fit(s, (bw - w) / 2, (bh - h) / 2, w, h)
         }
 
@@ -190,7 +214,8 @@ class PowerampWidget : AppWidgetProvider() {
         ): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
-            val f = fit(bw, bh)
+            val lay = layoutFor(bw, bh)
+            val f = fit(lay, bw, bh)
             // the corners of the black or starry background (transparent has none to round)
             if (bg != "none") {
                 val r = listOf(0f, 26f, 60f)[corners.coerceIn(0, 2)] * f.scale
@@ -209,7 +234,7 @@ class PowerampWidget : AppWidgetProvider() {
             val rnd = java.util.Random(11)
             p.color = android.graphics.Color.WHITE
             for (n in 0 until (if (bg == "stars") 90 else 0)) {
-                val x = rnd.nextFloat() * W; val y = rnd.nextFloat() * H
+                val x = rnd.nextFloat() * lay.w; val y = rnd.nextFloat() * lay.h
                 p.alpha = 40 + rnd.nextInt(180)
                 cv.drawCircle(x, y, 0.4f + rnd.nextFloat() * 0.9f, p)
             }
@@ -217,10 +242,11 @@ class PowerampWidget : AppWidgetProvider() {
 
             // cover: rounded, centre-cropped to a square; a note disc when the track has none
             // the cover keeps its centre and takes the chosen share of its square
-            val half = 63f * artPct.coerceIn(30, 100) / 100f
-            // (the cover at the left, or at the right with the text at the left)
-            val acx = if (look.artRight) W - 75f else 75f
-            val art = RectF(acx - half, 75f - half, acx + half, 75f + half)
+            val half = lay.half * artPct.coerceIn(30, 100) / 100f
+            // (the cover at the left, or at the right with the text at the left; only the standard window has the cover at the right)
+            val right = look.artRight && lay.artRightOk
+            val acx = if (right) lay.w - lay.cx else lay.cx
+            val art = RectF(acx - half, lay.cy - half, acx + half, lay.cy + half)
             val rad = if (artCircle) half else listOf(0f, 16f, half * .5f)[corners.coerceIn(0, 2)]
             if (artShadow) cv.drawRoundRect(art, rad, rad, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; setShadowLayer(12f, 0f, 5f, 0xB0000000.toInt()) })
             cv.save()
@@ -236,27 +262,27 @@ class PowerampWidget : AppWidgetProvider() {
             }
             cv.restore()
 
-            val x0 = if (look.artRight) 12f else 152f
-            val maxW = W - 152f - 12f
+            val x0 = if (right) 12f else lay.textL
+            val maxW = lay.textW
             // the size of the text and where it sits in its place are the person's choice; a bigger title keeps to one line so the artist stays in the window
             val ts = look.textPct.coerceIn(70, 150) / 100f
             val layAlign = when (look.align) { 1 -> android.text.Layout.Alignment.ALIGN_CENTER; 2 -> android.text.Layout.Alignment.ALIGN_OPPOSITE; else -> android.text.Layout.Alignment.ALIGN_NORMAL }
             val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = look.title; textSize = 21f * ts; typeface = titleFace }
-            val lay = if (android.os.Build.VERSION.SDK_INT >= 23) android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
+            val tl = if (android.os.Build.VERSION.SDK_INT >= 23) android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
                 .setAlignment(layAlign).setMaxLines(if (ts > 1.15f) 1 else 2).setEllipsize(TextUtils.TruncateAt.END).build()
             else @Suppress("DEPRECATION") android.text.StaticLayout(TextUtils.ellipsize(title, tp, maxW * 1.9f, TextUtils.TruncateAt.END), tp, maxW.toInt(), layAlign, 1f, 0f, false)
-            cv.save(); cv.translate(x0, 12f); lay.draw(cv); cv.restore()
-            var y = 12f + lay.height + 17f * ts
+            cv.save(); cv.translate(x0, lay.titleY); tl.draw(cv); cv.restore()
+            var y = lay.titleY + tl.height + 17f * ts
             val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f * ts; typeface = textFace; textAlign = when (look.align) { 1 -> Paint.Align.CENTER; 2 -> Paint.Align.RIGHT; else -> Paint.Align.LEFT } }
             val tx = when (look.align) { 1 -> x0 + maxW / 2f; 2 -> x0 + maxW; else -> x0 }
             // (the lines stay above the marks and the counter)
-            if (y < 112f) cv.drawText(TextUtils.ellipsize(artist, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
+            if (y < lay.textMaxY) cv.drawText(TextUtils.ellipsize(artist, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
             y += 18f * ts
             ap.textSize = 13f * ts
-            if (look.album && y < 112f) cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
+            if (look.album && y < lay.textMaxY) cv.drawText(TextUtils.ellipsize(album, ap, maxW, TextUtils.TruncateAt.END).toString(), tx, y, ap)
 
             // loop, shuffle and the counter, on one line above the buttons
-            val iy = 124f
+            val iy = lay.iy
             // the two marks are a third bigger, and their touch areas (pa_mid, below) a good deal larger
             if (look.marks) {
                 cv.save(); cv.scale(1.38f, 1.38f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
@@ -267,23 +293,23 @@ class PowerampWidget : AppWidgetProvider() {
 
             // thin seek line
             if (look.seek) {
-                p.color = dim; p.alpha = 70; cv.drawRect(12f, 146f, W - 12f, 148f, p); p.alpha = 255
-                p.color = accent; cv.drawRect(12f, 146f, 12f + (W - 24f) * frac, 148f, p)
+                p.color = dim; p.alpha = 70; cv.drawRect(lay.seekL, lay.seekY, lay.seekR, lay.seekY + 2f, p); p.alpha = 255
+                p.color = accent; cv.drawRect(lay.seekL, lay.seekY, lay.seekL + (lay.seekR - lay.seekL) * frac, lay.seekY + 2f, p)
             }
 
             // transport: five buttons on the fifths of the window (the overlay views sit on these)
-            val cy = 174f
+            val cy = lay.btnY
             val c = look.button
             // filled buttons, or only their outlines; every button has the size chosen on the settings page
             p.style = if (look.outline) Paint.Style.STROKE else Paint.Style.FILL
             p.strokeWidth = 2.2f; p.strokeJoin = Paint.Join.ROUND
             val k = look.btnPct / 100f
             fun big(x: Float, scale: Float = 1f, draw: () -> Unit) { cv.save(); cv.scale(k * scale, k * scale, x, cy); draw(); cv.restore() }
-            big(W * 0.16f) { glyphSkip(cv, p, W * 0.16f, cy, c, back = true) }
-            big(W * 0.33f) { glyphSeek(cv, p, W * 0.33f, cy, c, back = true) }
-            big(W * 0.5f, 0.9f) { if (playing) glyphPause(cv, p, W * 0.5f, cy, c) else glyphPlay(cv, p, W * 0.5f, cy, c) }
-            big(W * 0.67f) { glyphSeek(cv, p, W * 0.67f, cy, c, back = false) }
-            big(W * 0.84f) { glyphSkip(cv, p, W * 0.84f, cy, c, back = false) }
+            big(lay.bx(0)) { glyphSkip(cv, p, lay.bx(0), cy, c, back = true) }
+            big(lay.bx(1)) { glyphSeek(cv, p, lay.bx(1), cy, c, back = true) }
+            big(lay.bx(2), 0.9f) { if (playing) glyphPause(cv, p, lay.bx(2), cy, c) else glyphPlay(cv, p, lay.bx(2), cy, c) }
+            big(lay.bx(3)) { glyphSeek(cv, p, lay.bx(3), cy, c, back = false) }
+            big(lay.bx(4)) { glyphSkip(cv, p, lay.bx(4), cy, c, back = false) }
             p.style = Paint.Style.FILL
             return out
         }
