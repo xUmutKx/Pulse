@@ -105,9 +105,19 @@ fun themeWallBitmap(lookId: String): androidx.compose.ui.graphics.ImageBitmap? {
     val packs by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
     return remember(uri, res, packs) {
         runCatching {
-            val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
+            // decoded at its own size: only a picture at least twice the screen's long side is made smaller (a fixed half-size decode left it blurry and
+            // stretched on a tablet in landscape, where the screen is wider than the phone's)
+            val hd = res?.let { r -> com.umutk.pulse.extras.store.HdWalls.file(ctx, r) }
+            val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            if (uri != null) ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { BitmapFactory.decodeStream(it, null, b) }
+            else if (hd != null) BitmapFactory.decodeFile(hd.path, b) else res?.let { r -> BitmapFactory.decodeResource(ctx.resources, r, b) }
+            val dm = ctx.resources.displayMetrics
+            val need = maxOf(dm.widthPixels, dm.heightPixels)
+            var step = 1
+            while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
+            val opts = BitmapFactory.Options().apply { inSampleSize = step }
             if (uri != null) ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { BitmapFactory.decodeStream(it, null, opts) }
-            else res?.let { r -> com.umutk.pulse.extras.store.HdWalls.file(ctx, r)?.let { f -> BitmapFactory.decodeFile(f.path, opts) } ?: BitmapFactory.decodeResource(ctx.resources, r, opts) }
+            else if (hd != null) BitmapFactory.decodeFile(hd.path, opts) else res?.let { r -> BitmapFactory.decodeResource(ctx.resources, r, opts) }
         }.getOrNull()?.asImageBitmap()
     }
 }
