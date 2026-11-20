@@ -375,6 +375,8 @@ fun MusicScreen(
                             verticalArrangement = Arrangement.spacedBy(24.dp),
                         ) {
 
+                            musicForYou(state.recentPlays, state.likedTracks, onOpenQueue) { trackOptionsFor = it }
+
                             if (state.recentPlays.isNotEmpty()) {
                                 item(key = "section_recent_plays") {
                                     MusicSectionHeader(
