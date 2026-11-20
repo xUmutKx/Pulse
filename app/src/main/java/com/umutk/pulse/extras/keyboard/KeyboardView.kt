@@ -1446,6 +1446,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
                     Text(if (q.isEmpty()) tr("Search emoji, kaomoji, symbols", "Emoji, kaomoji, sembol ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
+                // GIF: the same box looks for GIFs (only with a key set)
+                if (KeyboardPrefs.gifKey.isNotBlank()) Box(Modifier.padding(end = 8.dp).height(30.dp).clip(RoundedCornerShape(15.dp)).background(if (st.gifSearch) th.accent else th.special).clickable { st.gifSearch = !st.gifSearch }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                    Text("GIF", color = if (st.gifSearch) th.onAccent else th.text, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                }
             } else if (toneBase != null) {
                 val base = toneBase!!
                 Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -1463,7 +1467,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 }
             }
         }
-        if (q != null) {
+        if (q != null && st.gifSearch && KeyboardPrefs.gifKey.isNotBlank()) {
+            GifStrip(th, act, q)
+            if (!split) KeysPanel(th, st, act, keyH)
+        } else if (q != null) {
             val found = remember(q, all, fams) { EmojiData.search(all, q) + KeyboardSymbols.search(fams, q).map { EmojiItem(it.ch, 11, it.name) } }
             LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
                 items(found) { it2 -> EmojiCell(it2, th, act) }
@@ -1969,5 +1976,33 @@ private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
 private fun QuickPin(st: KbState, th: KbTheme, act: KbActions) {
     Box(Modifier.size(44.dp).clickable { act.quickPin() }, contentAlignment = Alignment.Center) {
         Icon(kbIcon(th, "PushPin"), null, tint = if (st.quickPinned) th.accent else th.sub.copy(alpha = .7f), modifier = Modifier.size(16.dp))
+    }
+}
+
+
+/** A row of GIFs for the search (trending while it is empty); a tap sends one. */
+@Composable
+private fun GifStrip(th: KbTheme, act: KbActions, q: String) {
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var gifs by remember { mutableStateOf(emptyList<KbGif.Gif>()) }
+    var busy by remember { mutableStateOf(false) }
+    LaunchedEffect(q) {
+        delay(350)
+        busy = true
+        gifs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { KbGif.search(q, KeyboardPrefs.gifKey, if (KeyboardPrefs.langList().first() == "tr") "tr_TR" else "en_US") }.getOrDefault(emptyList()) }
+        busy = false
+    }
+    val loader = remember { KbGif.loader(ctx) }
+    Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
+        if (gifs.isEmpty()) Text(if (busy) "…" else tr("No GIFs", "GIF yok"), color = th.sub, fontSize = 14.sp)
+        else androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(4.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 4.dp)) {
+            items(gifs.size) { i ->
+                val g = gifs[i]
+                coil.compose.AsyncImage(g.preview, null, loader, Modifier.fillMaxHeight().width((102f * g.w / g.h.coerceAtLeast(1)).coerceIn(60f, 200f).dp).clip(RoundedCornerShape(8.dp)).background(th.special).clickable {
+                    scope.launch { runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KbGif.fetch(ctx, g) } }.getOrNull()?.let { act.gif(it) } }
+                }, contentScale = ContentScale.Crop)
+            }
+        }
     }
 }

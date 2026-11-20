@@ -116,6 +116,7 @@ dependencies {
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
     compileOnly(files("libs/xposed-stub.jar")) // BlackOut (extras/blackout): the Xposed API classes come from LSPosed / Vector at run time
     implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose

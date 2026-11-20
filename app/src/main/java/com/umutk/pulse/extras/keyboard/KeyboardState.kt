@@ -34,6 +34,8 @@ class KbState {
     var voiceText by mutableStateOf("")
     /** The text typed in the emoji search (the keys type into it instead of the field); null when the search is not open. */
     var emojiQuery by mutableStateOf<String?>(null)
+    /** The emoji search looks for GIFs instead (with a GIF key set). */
+    var gifSearch by mutableStateOf(false)
     var lang by mutableStateOf("en")
     /** Left, middle and right slot of the bar; the middle one is what the space key puts in. */
     var slots by mutableStateOf(listOf("", "", ""))
@@ -131,6 +133,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 
 /** What the keys do. The service implements it; the settings page draws the keyboard with an empty one. */
 interface KbActions {
+    /** A GIF file goes into the field (or the clipboard when the field takes no pictures). */
+    fun gif(f: java.io.File) {}
     /** Quick auth: a code is typed into the field. */
     fun authPick(code: String) {}
     /** The password manager: a tap fills what the field in front asks for (the password in a password box, the user name elsewhere), [other] the one it does not. */

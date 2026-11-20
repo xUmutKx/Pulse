@@ -270,6 +270,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
+    override fun gif(f: java.io.File) { pasteVideo(f, "image/gif") }
+
     override fun authPick(code: String) {
         currentInputConnection?.commitText(code, 1)
         st.panel = "keys"
