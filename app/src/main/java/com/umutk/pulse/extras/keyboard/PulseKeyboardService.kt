@@ -2752,7 +2752,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && !KeyboardDictionary.isBanned(it) }
         val list0 = when {
             // the addresses used most come first (the list is kept most recent first); all of them scroll on the bar
-            tok.isEmpty() -> saved.take(8)
+            tok.isEmpty() -> saved.take(2)
             // the continuation of an address: saved addresses first, then the domains after the "@"
             '@' in tok -> {
                 val local = tok.substringBefore('@')
@@ -2765,7 +2765,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 (mine.take(2) + dom.take(8)).distinct()
             }
             // the first letters of an address typed before ("umut"): in an e-mail field its saved addresses that begin so are offered whole, a tap writes one
-            emailField -> saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }.take(6)
+            emailField -> saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }.take(2)
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }

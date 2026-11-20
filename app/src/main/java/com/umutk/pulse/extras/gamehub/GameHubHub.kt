@@ -341,6 +341,19 @@ private fun freeMemory(c: Context) {
 }
 
 /** Opens the game itself (its launch activity). */
+/** A short notification when a game starts from Game Hub: its name and icon, gone after a few seconds (a quiet one: no sound, no pop-up). */
+private fun launchNote(c: Context, pkg: String) {
+    if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
+    val nm = c.getSystemService(android.app.NotificationManager::class.java)
+    if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("pulse_gamehub", "Game Hub", android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+    val pm = c.packageManager
+    val name = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+    val icon = runCatching { pm.getApplicationIcon(pkg).toBitmap(96, 96) }.getOrNull()
+    nm.notify(4120, androidx.core.app.NotificationCompat.Builder(c, "pulse_gamehub").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(icon)
+        .setContentTitle(name).setContentText(tr("Started from Game Hub", "Game Hub'dan başlatıldı")).setAutoCancel(true).setTimeoutAfter(8000)
+        .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW).build())
+}
+
 internal fun openGame(c: Context, pkg: String) {
     runCatching { prepareGame(c, pkg) }
     val pm = c.packageManager
@@ -353,7 +366,7 @@ internal fun openGame(c: Context, pkg: String) {
         c.startActivity(android.content.Intent(intent).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     }.getOrDefault(false)
-    if (started) return
+    if (started) { runCatching { launchNote(c, pkg) }; return }
     val out = Privilege.run("monkey -p $pkg -c android.intent.category.LAUNCHER 1")
     val ok = out.code >= 0 && !Regex("(?i)aborted|error|no activities|exception").containsMatchIn(out.text)
     if (ok) return
