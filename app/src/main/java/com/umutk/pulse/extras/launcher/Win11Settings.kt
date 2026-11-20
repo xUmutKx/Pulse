@@ -57,7 +57,7 @@ internal fun Win11SettingsHome(open: (String) -> Unit, startGroup: String = "") 
     // Mica: the window's body is see-through for Settings and the page is tinted, so the desktop shows through it
     val deskWin = LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
-    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .36f else 1f))) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .3f else 1f))) {
         val wide = maxWidth >= 600.dp
         val pageOf: @Composable (WGroup) -> Unit = { g -> Win11Page(g, open) { detail = it } }
         if (wide) {
@@ -118,7 +118,7 @@ private fun Win11Profile() {
 
 @Composable
 private fun Win11Search(q: String, onChange: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
         // the field draws its own magnifier (a second one beside it was a double icon)
         com.umutk.pulse.PField(q, onChange, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth())
     }
@@ -128,7 +128,7 @@ private fun Win11Search(q: String, onChange: (String) -> Unit) {
 private fun Win11NavRow(g: WGroup, selected: Boolean, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(8.dp))
-            .background(if (selected) T.panel.copy(alpha = .5f) else androidx.compose.ui.graphics.Color.Transparent)
+            .background(if (selected) T.panel.copy(alpha = .26f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { onClick() }.padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -146,7 +146,7 @@ private fun Win11Page(g: WGroup, open: (String) -> Unit, onDetail: (WItem) -> Un
         Text(tr(g.en, g.tr), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 14.dp))
         if (g.id == "personalization") Win11Colors()
         if (g.id == "system") Win11DeviceCard()
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .08f), RoundedCornerShape(8.dp))) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .08f), RoundedCornerShape(8.dp))) {
             g.items.forEachIndexed { i, it ->
                 Win11Row(it, open, onDetail)
                 if (i < g.items.lastIndex) Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(T.sub.copy(alpha = .12f)))
@@ -159,7 +159,7 @@ private fun Win11Page(g: WGroup, open: (String) -> Unit, onDetail: (WItem) -> Un
 /** The device card on top of System: what the phone is, as Windows shows the PC (name, model, Android version). */
 @Composable
 private fun Win11DeviceCard() {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).background(T.accent.copy(alpha = .2f)), contentAlignment = Alignment.Center) { PIcon("phone", T.accent, 32.dp) }
         Spacer(Modifier.width(14.dp))
         Column {
@@ -177,7 +177,7 @@ private val SWATCHES = listOf(0xFFFFB900, 0xFFFF8C00, 0xFFF7630C, 0xFFCA5010, 0x
 @Composable
 private fun Win11Colors() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // the preview: a small window in the accent colour on the desktop picture
         Row(Modifier.fillMaxWidth().height(96.dp).clip(RoundedCornerShape(8.dp)).background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color(0xFF101820), androidx.compose.ui.graphics.Color(0xFF1B2735)))).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(140.dp).fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(androidx.compose.ui.graphics.Color(0xFF2B2B2B)).padding(8.dp)) {
@@ -213,7 +213,7 @@ private fun Win11Results(q: String, open: (String) -> Unit, onDetail: (WItem) ->
     val hits = WIN11_SETTINGS.flatMap { it.items }.filter { tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
     Column(Modifier.fillMaxWidth()) {
         Text(tr("Results", "Sonuçlar"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f))) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f))) {
             if (hits.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
             hits.forEachIndexed { i, it ->
                 Win11Row(it, open, onDetail)

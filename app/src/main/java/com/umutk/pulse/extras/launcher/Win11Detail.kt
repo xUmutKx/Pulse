@@ -65,7 +65,7 @@ internal fun Win11Detail(item: WItem, onBack: () -> Unit) {
         }
         Text(tr(item.enDesc, item.trDesc), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 12.dp))
         val shape = RoundedCornerShape(8.dp)
-        if (rows.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(shape).background(T.panel.copy(alpha = .5f)).border(1.dp, Color.White.copy(alpha = .08f), shape)) {
+        if (rows.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape)) {
             rows.forEachIndexed { i, r ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(r.label, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -95,7 +95,7 @@ private fun Box1() { Spacer(Modifier.fillMaxWidth().height(1.dp).padding(start =
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(T.panel.copy(alpha = .5f)).border(1.dp, Color.White.copy(alpha = .08f), shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, color = T.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         content()
     }
