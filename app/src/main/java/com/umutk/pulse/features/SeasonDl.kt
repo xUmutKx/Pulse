@@ -43,6 +43,9 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -856,9 +859,8 @@ object SeasonDl {
                                         val looked = ArrayList<Pair<Ep, List<Pick>>>()
                                         for (chunk in list.chunked(3)) {
                                             note = tr("Finding streams ${looked.size + 1}/${list.size}…", "Yayınlar aranıyor ${looked.size + 1}/${list.size}…")
-                                            looked += kotlinx.coroutines.coroutineScope {
-                                                chunk.map { ep -> kotlinx.coroutines.async(Dispatchers.IO) { ep to (runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()) } }
-                                                    .let { d -> kotlinx.coroutines.awaitAll(*d.toTypedArray()) }
+                                            looked += coroutineScope {
+                                                chunk.map { ep -> async(Dispatchers.IO) { ep to (runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()) } }.awaitAll()
                                             }
                                         }
                                         for ((ep, all) in looked) {
