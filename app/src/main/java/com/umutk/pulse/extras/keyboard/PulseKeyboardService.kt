@@ -2099,6 +2099,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 st.panel = "dict"; st.dictQuery = term; st.dictText = ""
                 if (term.length >= 2) { st.dictBusy = true; scope.launch { val r = withContext(Dispatchers.IO) { KbDict.lookup(term, lang.code) }; st.dictText = r.ifEmpty { tr("Nothing found for \"$term\"", "\"$term\" için bir şey bulunamadı") }; st.dictBusy = false } }
             }
+            // holding the emoji key: the GIF page of the emoji panel
+            "gif" -> { finishWord("", false); st.emojiQuery = null; st.gifSearch = false; st.emojiTab = 12; st.panel = "emoji" }
             "stickers" -> st.panel = if (st.panel == "stickers") "keys" else "stickers"
             // the grammar check: the selected text, else the paragraph before the cursor, put right (spaces, repeated words, capitals, apostrophes)
             "grammar" -> {

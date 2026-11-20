@@ -151,7 +151,14 @@ import androidx.compose.material.icons.sharp.VisibilityOff as SVisibilityOff
 import androidx.compose.material.icons.sharp.KeyboardCapslock as SKeyboardCapslock
 
 /** The keyboard's icons in the icon family of its theme: filled (Windows 7, XP), sharp (Windows 10, 95), rounded (Material) or outlined (AMOLED, Windows 11, custom). */
-fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = when (if (filled) "filled" else th.icons) {
+fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = when (name) {
+    // the pin and the bolt exist in one drawing for every family (the outlined, sharp and filled ones had none, and fell back to an arrow)
+    "PushPin" -> ThumbTack
+    "Bolt" -> Icons.Rounded.RBolt
+    else -> kbIconFamily(th, name, filled)
+}
+
+private fun kbIconFamily(th: KbTheme, name: String, filled: Boolean): ImageVector = when (if (filled) "filled" else th.icons) {
     "filled" -> when (name) {
         "ArrowBack" -> Icons.Filled.FArrowBack
         "ArrowDownward" -> Icons.Filled.FArrowDownward

@@ -34,6 +34,9 @@ import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Gif
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Spellcheck
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.Calculate
@@ -669,7 +672,7 @@ private val emojiTabIcons get() = listOf(Icons.Rounded.AccessTime, Icons.Rounded
     Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
 
 /** The order of the emoji page's tabs (ids: 0 recent, 1..9 the Unicode groups, 10 kaomoji, 11 symbols and presets); the pages follow it. */
-private val EMOJI_ORDER = listOf(0, 1, 11, 2, 3, 10, 4, 5, 6, 7, 8, 9)
+private val EMOJI_ORDER = listOf(0, 1, 11, 2, 3, 10, 4, 5, 6, 7, 8, 9, 12)
 
 /** The bar above the emoji page: a back button, then the categories (recent, faces, people, animals, food, travel, sport, objects, symbols, flags, kaomoji, signs). */
 @Composable
@@ -683,6 +686,10 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
             // recent, faces, then the symbols and presets beside the smiley, people, animals, the kaomoji between animals and food, the rest
             EMOJI_ORDER.forEach { i ->
                 if (i == 10) Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
+                else if (i == 12) Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 12 }, contentAlignment = Alignment.Center) {
+                    Text("GIF", color = if (st.emojiTab == 12) th.text else th.sub, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    if (st.emojiTab == 12) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                }
                 else if (i == 11) Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
                 else Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = i }, contentAlignment = Alignment.Center) {
                     Icon(emojiTabIcons[i], null, tint = if (i == st.emojiTab) th.text else th.sub, modifier = Modifier.size(24.dp))
@@ -743,7 +750,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "gif" -> Icons.Rounded.Gif; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -756,8 +763,20 @@ internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
 private fun holdOf(k: KeyKind): String = when (k) {
     KeyKind.COMMA -> KeyboardPrefs.commaHold
     KeyKind.PERIOD -> KeyboardPrefs.periodHold
-    KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> KeyboardPrefs.bottomHold
+    // the emoji key: holding it opens the GIFs (when no other action is chosen for it), and a small GIF mark sits on it
+    KeyKind.EMOJI -> KeyboardPrefs.bottomHold.let { if (it == "none") "gif" else it }
+    KeyKind.MENU, KeyKind.LANG -> KeyboardPrefs.bottomHold
     else -> "none"
+}
+
+/** The icon of what the letter [ch] does with the Ctrl or Win that waits (copy, paste, lock ...); null for the others (Alt gives a character, written). */
+private fun chordIcon(st: KbState, ch: Char): ImageVector? {
+    val c = ch.lowercaseChar()
+    if (st.win > 0 && st.ctrl == 0) return when (c) { 'd' -> Icons.Rounded.Home; 'l' -> Icons.Rounded.Lock; 'a' -> Icons.Rounded.Tune; 'n' -> Icons.Rounded.Notifications; else -> null }
+    if (st.ctrl > 0 && st.alt == 0 && st.win == 0) return when (c) {
+        'a' -> Icons.Rounded.SelectAll; 'c' -> Icons.Rounded.ContentCopy; 'x' -> Icons.Rounded.ContentCut; 'v' -> Icons.Rounded.ContentPaste; 'y' -> Icons.Rounded.Redo; 'z' -> Icons.Rounded.Undo; else -> null
+    }
+    return null
 }
 
 /** What the letter [ch] does with the Ctrl, Alt or Win that waits: a short name, or the character Alt gives (null: nothing special). */
@@ -1320,7 +1339,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     }
                     // Ctrl, Alt or Win waiting (or held): each letter says what that chord will do or type (Win+L: lock, Alt+S: ß)
                     if (k.kind == KeyKind.CHAR && !small && k.label.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0)) chordHint(st, k.label[0])?.let { h ->
-                        Text(h, color = th.accent, fontSize = if (h.length > 2) 9.sp else 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp))
+                        val ic = chordIcon(st, k.label[0])
+                        if (ic != null) Icon(ic, null, tint = th.accent, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(15.dp))
+                        else Text(h, color = th.accent, fontSize = if (h.length > 2) 9.sp else 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
                     if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
@@ -1530,13 +1551,9 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 }
             } else {
                 // the search box on top, like the phone's own emoji page; the category bar sits at the bottom
-                Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.emojiQuery = "" }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.gifSearch = st.emojiTab == 12; st.emojiQuery = "" }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(20.dp))
-                    Text(tr("Search emojis", "Emoji ara"), color = th.sub, fontSize = 16.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
-                }
-                // GIF search: its own button at the right of the search box (opens the search on the GIFs)
-                Box(Modifier.padding(end = 6.dp).height(36.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.gifSearch = true; st.emojiQuery = "" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("GIF", color = th.accent, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text(if (st.emojiTab == 12) tr("Search GIFs", "GIF ara") else tr("Search emojis", "Emoji ara"), color = th.sub, fontSize = 16.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }
@@ -1550,13 +1567,14 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
             if (!split) KeysPanel(th, st, act, keyH)
         } else {
-            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = EMOJI_ORDER.indexOf(tab).coerceAtLeast(0)) { 12 }
+            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = EMOJI_ORDER.indexOf(tab).coerceAtLeast(0)) { EMOJI_ORDER.size }
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
             LaunchedEffect(tab) { val p = EMOJI_ORDER.indexOf(tab); if (p >= 0 && pager.settledPage != p) pager.animateScrollToPage(p) }
             LaunchedEffect(pager.settledPage) { st.emojiTab = EMOJI_ORDER[pager.settledPage] }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { pg ->
                 val page = EMOJI_ORDER[pg]
                 if (page == 11) { SymbolPage(th, act, st, fams, g, sub) { sub = it }; return@HorizontalPager }
+                if (page == 12) { GifGrid(th, act); return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
@@ -1804,12 +1822,12 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // the row's actions: Fluent glyphs (the same set as the rest of Pulse), in a 42 dp touch target each
-                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("pin", if (m.pinned) th.accent else th.text, 22.dp) }
-                if (m.image == null) Box(Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("bolt", th.text, 22.dp) }
-                Box(Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("check", th.text, 22.dp) }
+                // the row's actions: the keyboard's own icon family (line icons in the Material and AMOLED themes), in a 42 dp touch target each
+                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "PushPin"), null, tint = if (m.pinned) th.accent else th.text, modifier = Modifier.size(22.dp)) }
+                if (m.image == null) Box(Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Bolt"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+                Box(Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Check"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 // delete this one item (the same as the swipe, but with a button)
-                Box(Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("trash", th.text, 22.dp) }
+                Box(Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Delete"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
             }
@@ -2099,6 +2117,29 @@ private fun QuickPin(st: KbState, th: KbTheme, act: KbActions) {
     }
 }
 
+
+/** The GIF page of the emoji panel: what is trending, three to a row; a tap sends one. The search box above looks for others. */
+@Composable
+private fun GifGrid(th: KbTheme, act: KbActions) {
+    val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var gifs by remember { mutableStateOf(emptyList<KbGif.Gif>()) }
+    var busy by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        gifs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { KbGif.search("", KeyboardPrefs.gifKey, if (KeyboardPrefs.langList().first() == "tr") "tr_TR" else "en_US") }.getOrDefault(emptyList()) }
+        busy = false
+    }
+    val loader = remember { KbGif.loader(ctx) }
+    if (gifs.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(if (busy) "…" else tr("No GIFs (is there a connection?)", "GIF yok (bağlantı var mı?)"), color = th.sub, fontSize = 14.sp) }
+    else LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        items(gifs.size) { i ->
+            val g = gifs[i]
+            coil.compose.AsyncImage(g.preview, null, loader, Modifier.aspectRatio(1f).clip(RoundedCornerShape(8.dp)).background(th.special).clickable {
+                scope.launch { runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KbGif.fetch(ctx, g) } }.getOrNull()?.let { act.gif(it) } }
+            }, contentScale = ContentScale.Crop)
+        }
+    }
+}
 
 /** A row of GIFs for the search (trending while it is empty); a tap sends one. */
 @Composable

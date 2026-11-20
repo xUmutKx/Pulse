@@ -35,7 +35,7 @@ object ExtraKeys {
     /** What a long press on the comma, the period or the key beside ?123 can do (Settings > Keyboard): id and name; "none" keeps the key's own pop-up characters. */
     val hold = listOf(
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
-        "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
+        "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito", "gif" to "GIF",
     )
     const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide"
     const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"

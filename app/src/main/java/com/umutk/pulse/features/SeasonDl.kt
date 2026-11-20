@@ -358,7 +358,12 @@ object SeasonDl {
                 if (u == null) return tr("Watching torrents is not in this build: download it instead, or set a local torrent server", "Torrent'i indirmeden izleme bu sürümde yok: indir ya da yerel torrent sunucusu kullan")
             } catch (e: java.io.IOException) { last = e.message.orEmpty() }
         }
-        return tr("The torrent did not start: ", "Torrent başlamadı: ") + last
+        // the engine could not play it: the magnet link goes to the other apps that take one (Stremio, VLC, a torrent client with streaming)
+        val opened = runCatching {
+            val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(order.first().url))
+            ctx.startActivity(android.content.Intent.createChooser(i, tr("Open with", "Şununla aç")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+        return tr("The torrent did not start: ", "Torrent başlamadı: ") + last + if (opened) "  ·  " + tr("offered to other apps", "diğer uygulamalara sunuldu") else ""
     }
 
     /** The address of a stream: a plain link as it is; a torrent as a magnet link (the file number goes along when the stream names one). */

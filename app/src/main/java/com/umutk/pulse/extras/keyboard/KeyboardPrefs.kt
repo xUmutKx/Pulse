@@ -370,7 +370,7 @@ object KeyboardPrefs {
         if (!p.getBoolean("stickerMenu209", false)) {
             val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
             val tb = toolbarItems.split(',')
-            for (id in listOf("stickers", "grammar")) if (id !in mn && id !in tb) mn.add(id)
+            for (id in listOf("vault", "stickers", "grammar")) if (id !in mn && id !in tb) mn.add(id)
             menuItems = mn.joinToString(",")
             p.edit().putBoolean("stickerMenu209", true).putString("menuItems", menuItems).apply()
         }
