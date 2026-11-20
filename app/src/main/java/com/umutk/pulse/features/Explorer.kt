@@ -494,7 +494,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var showHidden by remember { mutableStateOf(FilesPrefs.hidden) }
     // the plain list shows names only: sizes and dates belong to the Detailed list (the menu switch below turns them on in the plain list too)
     var showSizes by rememberSaveable { mutableStateOf(false) }
-    var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent) }
+    var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent && filePick == null) }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
     var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT).filter { java.io.File(it).exists() }) }
     var undo by remember { mutableStateOf<ExUndo?>(null) }
