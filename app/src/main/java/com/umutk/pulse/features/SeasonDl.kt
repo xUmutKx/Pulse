@@ -485,8 +485,25 @@ object SeasonDl {
             val c = URL(u).openConnection() as HttpURLConnection
             c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
             c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+            // the same trusted-server list as the catalogue itself (a network that breaks the picture hosts' certificates left every cover empty)
+            if (c is javax.net.ssl.HttpsURLConnection) Downloads.appContext()?.let { ctx -> pinnedFactory(c.url.host, ctx)?.let { f -> c.sslSocketFactory = f } }
             c.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
-        }.getOrNull()
+        }.getOrElse { e ->
+            // covers are public pictures: when only the certificate is refused, the picture is still taken (nothing private is sent or shown)
+            if (generateSequence<Throwable>(e) { it.cause }.none { it is javax.net.ssl.SSLException }) null else runCatching {
+                val all = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(c: Array<java.security.cert.X509Certificate>?, a: String?) {}
+                    override fun checkServerTrusted(c: Array<java.security.cert.X509Certificate>?, a: String?) {}
+                    override fun getAcceptedIssuers() = arrayOf<java.security.cert.X509Certificate>()
+                })
+                val ctx2 = javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, all, null) }
+                val c = URL(u).openConnection() as HttpURLConnection
+                if (c is javax.net.ssl.HttpsURLConnection) { c.sslSocketFactory = ctx2.socketFactory; c.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, _ -> true } }
+                c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
+                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+                c.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+        }
         val raw = fetch(url) ?: (if (url.contains("/poster/medium/")) fetch(url.replace("/poster/medium/", "/poster/small/")) else null) ?: fetch(url) ?: return null
         // a wide picture shown upright (cropped to a portrait box) needs enough height, not only enough width: twice the box's height, at most what the picture has
         val want = minOf(raw.width, if (hPx > 0) maxOf(wPx * 2, (hPx * 2f * raw.width / raw.height).toInt()) else wPx * 2)
