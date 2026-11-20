@@ -66,7 +66,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun Win11Flyouts(taskbar: Dp, state: LauncherState?) {
     if (LauncherSession.quickOpen) QuickFlyout(taskbar)
-    if (LauncherSession.searchOpen) SearchFlyout(taskbar, state)
+    if (LauncherSession.w11SearchOpen) SearchFlyout(taskbar, state)
 }
 
 private val FLY_BG = Color(0x7A1B2232)
@@ -145,7 +145,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     val setList = remember { listOf("Wi-Fi" to Settings.ACTION_WIFI_SETTINGS, "Bluetooth" to Settings.ACTION_BLUETOOTH_SETTINGS, "Display" to Settings.ACTION_DISPLAY_SETTINGS, "Sound" to Settings.ACTION_SOUND_SETTINGS,
         "Battery" to Intent.ACTION_POWER_USAGE_SUMMARY, "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Apps" to Settings.ACTION_APPLICATION_SETTINGS, "Location" to Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Accessibility" to Settings.ACTION_ACCESSIBILITY_SETTINGS, "Date & time" to Settings.ACTION_DATE_SETTINGS) }
     val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.first.contains(q.trim(), true) } }
-    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.searchOpen = false }) {
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
         val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().padding(bottom = taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
         AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -168,7 +168,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 if (kind == 0 || kind == 1) {
                     Text(tr("Apps", "Uygulamalar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                     apps.forEach { a ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.searchOpen = false; state?.open(a) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; state?.open(a) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             LaunchAppPicture(a, 28.dp, Color(0x33FFFFFF), Color.White)
                             Text(a.label, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
                         }
@@ -177,14 +177,14 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 if (kind == 0 || kind == 2) {
                     Text(tr("Settings", "Ayarlar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                     sets.forEach { (n, act) ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.searchOpen = false; runCatching { ctx.startActivity(Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; runCatching { ctx.startActivity(Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Glyph("settings", Color.White, 20.dp)
                             Text(n, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
                         }
                     }
                 }
                 if (q.isNotBlank() && (kind == 0 || kind == 3)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable {
-                    LauncherSession.searchOpen = false
+                    LauncherSession.w11SearchOpen = false
                     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(q.trim()))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Glyph("search", Color.White, 20.dp)

@@ -111,7 +111,7 @@ class Win11LauncherLook : LauncherLook {
                     StartGlyph(fg)
                     if (open) Indicator(accent, Modifier.align(Alignment.BottomCenter))
                 }
-                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.searchOpen = !LauncherSession.searchOpen; LauncherSession.quickOpen = false; LauncherSession.clockOpen = false }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.w11SearchOpen = !LauncherSession.w11SearchOpen; LauncherSession.quickOpen = false; LauncherSession.clockOpen = false }, contentAlignment = Alignment.Center) {
                     Glyph("search", fg, 20.dp)
                 }
                 state.dock.forEach { app ->
@@ -123,7 +123,7 @@ class Win11LauncherLook : LauncherLook {
             }
             // the tray: the connection, the sound and the battery in one button that opens the quick settings (tiles, volume), then the clock, as in Windows 11
             Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.clip(shape).clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.searchOpen = false }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.clip(shape).clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Glyph("wifi", fg, 16.dp); Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
                 }
                 TaskbarClock(fg, Modifier)
