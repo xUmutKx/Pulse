@@ -1495,8 +1495,12 @@ private fun androidx.compose.foundation.layout.BoxScope.PressFx(th: KbTheme, st:
             st.bursts.removeAll { now - it.t0 > dur }
         }
     }
-    Canvas(Modifier.matchParentSize()) {
-        with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, b.rect, ((now - b.t0) / dur).coerceIn(0f, 1f), KeyboardEffects.fxTint(KeyboardPrefs.fxColor, th.accent, b.t0.toInt()), b.t0.toInt()) } }
+    // the keys' places are taken in the window's coordinates: they are brought into this layer's own (the same in the keyboard, moved and scaled in the settings' preview)
+    var coords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    Canvas(Modifier.matchParentSize().onGloballyPositioned { coords = it }) {
+        val c = coords
+        fun local(r: Rect): Rect = if (c == null || !c.isAttached) r else { val root = c.findRootCoordinates(); Rect(c.localPositionOf(root, r.topLeft), c.localPositionOf(root, r.bottomRight)) }
+        with(KeyboardEffects) { st.bursts.forEach { b -> drawPress(kind, local(b.rect), ((now - b.t0) / dur).coerceIn(0f, 1f), KeyboardEffects.fxTint(KeyboardPrefs.fxColor, th.accent, b.t0.toInt()), b.t0.toInt()) } }
     }
 }
 

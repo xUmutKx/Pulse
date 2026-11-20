@@ -86,6 +86,15 @@ fun KeyboardSettings(back: () -> Unit) {
     st.dark = dark
 
     val acts = remember { PreviewKbActions(st) }
+    // the picked press effect plays on a few keys of the preview by itself, so it is seen without typing
+    LaunchedEffect(KeyboardPrefs.pressFx, KeyboardPrefs.fxColor) {
+        if (KeyboardPrefs.pressFx <= 0) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        repeat(4) {
+            st.letterRects.values.randomOrNull()?.let { r -> if (st.bursts.size > 4) st.bursts.removeAt(0); st.bursts.add(KbBurst(r, System.nanoTime() / 1_000_000)) }
+            kotlinx.coroutines.delay(380)
+        }
+    }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var rev by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf<String?>(null) }
