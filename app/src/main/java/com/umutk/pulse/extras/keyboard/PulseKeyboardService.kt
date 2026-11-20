@@ -830,6 +830,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val primary = KeyboardPrefs.langList().first()
         if (primary != seenPrimary) { seenPrimary = primary; st.lang = primary }
         if (st.lang !in KeyboardPrefs.langList()) st.lang = primary
+        // per-app language (a setting): the language last used in this app comes back
+        if (KeyboardPrefs.perAppLang) info.packageName?.let { pk -> getSharedPreferences("pulse_kb_perapp", MODE_PRIVATE).getString(pk, null)?.takeIf { it in KeyboardPrefs.langList() }?.let { saved -> if (saved != st.lang) { st.lang = saved; scope.launch(Dispatchers.IO) { KeyboardDictionary.load(this@PulseKeyboardService, saved) } } } }
         st.dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
@@ -1685,6 +1687,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         st.lang = l[(l.indexOf(st.lang) + 1).mod(l.size)]
         scope.launch(Dispatchers.IO) { KeyboardDictionary.load(this@PulseKeyboardService, st.lang); withContext(Dispatchers.Main) { updateSuggestions() } }
+        if (KeyboardPrefs.perAppLang) currentInputEditorInfo?.packageName?.let { pk -> getSharedPreferences("pulse_kb_perapp", MODE_PRIVATE).edit().putString(pk, st.lang).apply() }
     }
 
     // ---- autofill inside the bar (Android 11+): the password manager's suggestions, drawn by the system -----------------------------------------------
@@ -2051,6 +2054,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "incognito" -> st.incognito = !st.incognito
             "autocorrect" -> { KeyboardPrefs.autocorrect = !KeyboardPrefs.autocorrect; KeyboardPrefs.save(this) }
             "aifix" -> { st.panel = "keys"; aiFix() }
+            // media controls (WM Keyboard's idea): the music or video playing in any app
+            "media" -> { val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager; listOf(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.ACTION_UP).forEach { a -> am.dispatchMediaKeyEvent(android.view.KeyEvent(a, android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) } }
+            "mediaNext" -> { val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager; listOf(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.ACTION_UP).forEach { a -> am.dispatchMediaKeyEvent(android.view.KeyEvent(a, android.view.KeyEvent.KEYCODE_MEDIA_NEXT)) } }
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"
