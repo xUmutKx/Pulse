@@ -86,11 +86,33 @@ fun Modifier.tvFocusRing(
         }
 }
 
+/**
+ * A tap target. With a [pressedScale] of 1 (the cards and rows of the lists) it is a plain click with the haptic tick: no spring, no press tracking, nothing
+ * that runs per card while the list scrolls (every card had three of them, each with its own animation and collector). Below 1 it springs down while pressed.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.pressable(
     enabled: Boolean = true,
     pressedScale: Float = 0.94f,
     onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+): Modifier = if (pressedScale < 1f) springPressable(enabled, pressedScale, onLongClick, onClick) else composed {
+    val view = LocalView.current
+    if (!enabled) return@composed this
+    (if (TvMode.isTv) this.tvFocusRing() else this)
+        .combinedClickable(
+            interactionSource = null,
+            indication = null,
+            onLongClick = onLongClick?.let { long -> { view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); long() } },
+            onClick = { view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); onClick() },
+        )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.springPressable(
+    enabled: Boolean,
+    pressedScale: Float,
+    onLongClick: (() -> Unit)?,
     onClick: () -> Unit,
 ): Modifier = composed {
     val view = LocalView.current

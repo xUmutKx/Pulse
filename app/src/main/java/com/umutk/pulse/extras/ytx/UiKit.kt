@@ -354,7 +354,7 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifi
         modifier = modifier
             .fillMaxWidth()
             .prefetchOnPress(video.id)
-            .pressable(pressedScale = 0.98f, onLongClick = { menu(video) }, onClick = onClick)
+            .pressable(pressedScale = 1f, onLongClick = { menu(video) }, onClick = onClick)
             .padding(bottom = 16.dp),
     ) {
         Box(Modifier.fillMaxWidth()) {
@@ -374,7 +374,7 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifi
             verticalAlignment = Alignment.Top,
         ) {
             val openChannel = LocalChannelOpener.current
-            Box(Modifier.pressable(enabled = video.channelUrl != null) { video.channelUrl?.let(openChannel) }) {
+            Box(Modifier.pressable(enabled = video.channelUrl != null, pressedScale = 1f) { video.channelUrl?.let(openChannel) }) {
                 ChannelAvatar(video.feedAvatar(), video.channel, size = 36)
             }
             Spacer(Modifier.width(12.dp))
@@ -400,7 +400,7 @@ fun VideoCard(video: VideoItem, onClick: () -> Unit, modifier: Modifier = Modifi
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .pressable(onClick = { menu(video) }),
+                    .pressable(pressedScale = 1f, onClick = { menu(video) }),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -423,7 +423,7 @@ fun VideoRow(video: VideoItem, onClick: () -> Unit, trailing: (@Composable () ->
         modifier = Modifier
             .fillMaxWidth()
             .prefetchOnPress(video.id)
-            .pressable(pressedScale = 0.97f, onLongClick = { menu(video) }, onClick = onClick)
+            .pressable(pressedScale = 1f, onLongClick = { menu(video) }, onClick = onClick)
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
