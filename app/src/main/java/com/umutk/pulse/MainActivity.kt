@@ -405,6 +405,13 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
                 }
                 Box(Modifier.weight(1f)) { if (sub.isNotEmpty()) SubScreen(sub) { sub = "" } else com.umutk.pulse.features.FilesPage() }
             }
+            // the Office Assistant keeps the old Windows looks company in Files too (as in Office and on the desktop)
+            if (com.umutk.pulse.features.FilesLook.theme in setOf("win95", "xp")) {
+                androidx.compose.runtime.LaunchedEffect(Unit) { ClippyPrefs.load(ctx) }
+                if (ClippyPrefs.on) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    ClippyView(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 6.dp))
+                }
+            }
             com.umutk.pulse.features.FilesInstall.file?.let { f ->
                 com.umutk.pulse.features.InstallWindow(f, com.umutk.pulse.features.FilesLook.theme) { com.umutk.pulse.features.FilesInstall.file = null }
             }
