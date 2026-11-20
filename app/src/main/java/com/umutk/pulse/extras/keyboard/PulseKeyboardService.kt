@@ -227,7 +227,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 ?: uri?.let { u -> runCatching { contentResolver.openInputStream(u)?.use { ins -> String(ins.readBytes().let { b -> if (b.size > 2_000_000) b.copyOf(2_000_000) else b }) } }.getOrNull() })?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
-            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 1; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -1933,7 +1933,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // a word being typed is kept as it is, then the copied text follows it
             if (word.isNotEmpty()) finishWord("", false)
             currentInputConnection?.commitText(qc, 1)
-            // pasted twice, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
+            // pasted once, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
             quickLeft--
             if (quickLeft <= 0 && !quickPinned) quickClip = null
             afterText(); return
