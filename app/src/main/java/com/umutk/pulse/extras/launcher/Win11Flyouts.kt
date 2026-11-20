@@ -76,6 +76,7 @@ fun Win11Flyouts(taskbar: Dp, state: LauncherState?) {
 private val FLY_BG = Color(0x7A1B2232)
 private val FLY_EDGE = Color(0x40FFFFFF)
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun QuickFlyout(taskbar: Dp) {
     val ctx = LocalContext.current

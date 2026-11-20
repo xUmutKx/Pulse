@@ -201,7 +201,7 @@ fun MoreWallpapersStrip(lookId: String, onPick: (File) -> Unit) {
     var tick by remember { mutableStateOf(0) }
     val files = remember(tick, lookId) { MoreWalls.files(ctx, lookId) }
     Column(Modifier.fillMaxWidth()) {
-        InlinePackRow(id, title, auto = true) { tick++ }
+        InlinePackRow(id, title, auto = true, onInstalled = { tick++ })
         if (files.isNotEmpty()) {
             Text(title, color = T.sub, fontSize = 12.sp)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -235,7 +235,7 @@ fun WinampSkinSettings() {
     LaunchedEffect(tick) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile; the other skins are a download, here where they are used
     Column(Modifier.fillMaxWidth()) {
-        com.umutk.pulse.extras.store.InlinePackRow("skins-more", tr("More Winamp skins", "Daha fazla Winamp teması"), auto = true) { tick++ }
+        com.umutk.pulse.extras.store.InlinePackRow("skins-more", tr("More Winamp skins", "Daha fazla Winamp teması"), auto = true, onInstalled = { tick++ })
         SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
     }
 }
