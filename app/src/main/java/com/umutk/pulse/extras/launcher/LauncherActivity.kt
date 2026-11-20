@@ -321,7 +321,7 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                             onDragCancel = { drag = null },
                         )
                     },
-                        ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).tapOnly({ open(app) }, if (LauncherPrefs.lockLayout) ({ LauncherSession.pressAt = origin + androidx.compose.ui.geometry.Offset(40f * d, 40f * d); state.longPress(app) }) else null)) }
+                        ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).tapOnly({ open(app) }, if (LauncherPrefs.lockLayout) ({ LauncherSession.pressAt = origin + androidx.compose.ui.geometry.Offset(40f * d, 40f * d); state.longPress(app) }) else null)); ShortcutArrow(app, iconDp, Modifier.align(Alignment.TopCenter)) }
         }
     }
 }
@@ -598,4 +598,22 @@ internal fun openLink(ctx: Context, path: String) {
         com.umutk.pulse.features.ExNav.lastHere = f.path
         runCatching { ctx.startActivity(Intent().setClassName(ctx, "com.umutk.pulse.FilesActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f)
+}
+
+/** The small arrow in the corner of a shortcut on the Windows desktops (an app of the phone, not one of the desktop's own items), as Windows draws it. */
+@Composable
+private fun ShortcutArrow(app: LaunchApp, iconDp: Int, modifier: Modifier) {
+    if (app.icon == null || app.pkg.startsWith("pulse:") || com.umutk.pulse.T.id !in setOf("win95", "xp", "win7", "win10", "win11")) return
+    val s = (iconDp * .34f).coerceAtLeast(12f)
+    Box(modifier.offset(x = (-iconDp / 2f + s / 2f).dp, y = (iconDp - s).dp).size(s.dp).background(Color.White).border(.5.dp, Color(0xFF7A7A7A)), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.size((s * .78f).dp)) {
+            val w = size.width
+            val p = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * .18f, w * .92f); cubicTo(w * .18f, w * .45f, w * .42f, w * .34f, w * .62f, w * .34f)
+                lineTo(w * .62f, w * .14f); lineTo(w * .95f, w * .46f); lineTo(w * .62f, w * .78f); lineTo(w * .62f, w * .58f)
+                cubicTo(w * .45f, w * .58f, w * .3f, w * .66f, w * .18f, w * .92f); close()
+            }
+            drawPath(p, Color(0xFF1E5BC6))
+        }
+    }
 }
