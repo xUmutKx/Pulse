@@ -177,6 +177,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -632,11 +633,12 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
                             st.shotThumb?.let { Box(contentAlignment = Alignment.Center) {
                                 // a stack of pictures: two sheets peek out behind the first, and a number says how many
+                                // the sheets behind are the same picture, turned a little each way like a pile that was dropped; the top one is the real picture, whole
                                 if (st.shotCount > 1) {
-                                    Box(Modifier.offset(6.dp, (-5).dp).height(34.dp).width(48.dp).clip(RoundedCornerShape(5.dp)).background(th.sub.copy(alpha = .45f)))
-                                    Box(Modifier.offset(3.dp, (-2).dp).height(36.dp).width(52.dp).clip(RoundedCornerShape(5.dp)).background(th.sub.copy(alpha = .7f)))
+                                    Image(it, null, Modifier.height(36.dp).widthIn(max = 54.dp).rotate(-11f).offset((-3).dp, (-1).dp).clip(RoundedCornerShape(5.dp)).border(1.dp, th.bg, RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop, alpha = .75f)
+                                    if (st.shotCount > 2) Image(it, null, Modifier.height(36.dp).widthIn(max = 54.dp).rotate(9f).offset(4.dp, (-2).dp).clip(RoundedCornerShape(5.dp)).border(1.dp, th.bg, RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop, alpha = .85f)
                                 }
-                                Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit)
+                                Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).rotate(if (st.shotCount > 1) -3f else 0f).clip(RoundedCornerShape(5.dp)).then(if (st.shotCount > 1) Modifier.border(1.dp, th.bg, RoundedCornerShape(5.dp)) else Modifier), contentScale = ContentScale.Fit)
                                 if (st.shotCount > 1) Text("${st.shotCount}", color = th.onAccent, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                     modifier = Modifier.align(Alignment.BottomEnd).background(th.accent, CircleShape).padding(horizontal = 5.dp, vertical = 1.dp))
                                 // a video: a small black disc with a white play mark in the middle, seen on a white picture too
@@ -1852,7 +1854,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // the row's actions: the keyboard's own icon family (line icons in the Material and AMOLED themes), in a 42 dp touch target each
-                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "PushPin"), null, tint = if (m.pinned) th.accent else th.text, modifier = Modifier.size(22.dp)) }
+                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "PushPin"), null, tint = if (m.pinned) th.accent else th.text, modifier = Modifier.size(22.dp).rotate(45f)) }
                 if (m.image == null) Box(Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Bolt"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 Box(Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Check"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 // delete this one item (the same as the swipe, but with a button)
@@ -1868,7 +1870,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                     .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })) {
                     if (it2.image != null) ClipThumb(it2.image, Modifier.fillMaxWidth(), full = true)
                     else Text(it2.text.take(400), color = th.text, fontSize = 14.sp, maxLines = if (KeyboardPrefs.clipLayout == "photos") 8 else 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(10.dp))
-                    if (it2.pinned) Icon(kbIcon(th, "PushPin"), null, tint = th.accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(14.dp))
+                    if (it2.pinned) Icon(kbIcon(th, "PushPin"), null, tint = th.accent, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(14.dp).rotate(45f))
                 }
             }
             if (KeyboardPrefs.clipLayout == "photos") androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
@@ -1903,7 +1905,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                         .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
                         .padding(horizontal = 10.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
-                            Icon(kbIcon(th, "PushPin"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                            Icon(kbIcon(th, "PushPin"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp).rotate(45f))
                         }
                         if (it2.image != null) ClipThumb(it2.image) else Text(it2.text.take(240), color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))

@@ -594,8 +594,7 @@ private fun openPulseFile(ctx: android.content.Context, path: String) {
 private fun androidx.compose.foundation.lazy.LazyListScope.pulseItems(list: List<PulseDl>, ctx: android.content.Context) {
     item(key = "pulseTop") {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PillButton("Series and movies", { openPulseApp(ctx, true) })
-            PillButton("All downloads", { openPulseApp(ctx, false) })
+            PillButton("Series and movies", { openSeriesPage(ctx) })
         }
     }
     if (list.isEmpty()) item(key = "pulseEmpty") {
