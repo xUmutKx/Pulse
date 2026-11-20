@@ -117,6 +117,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
+    // The code editor (Files and Notes, extras/code): Sora Editor (LGPL-2.1) with TextMate grammars (the VS Code ones, as in Xed-Editor, GPL-3.0): highlighting for about forty languages
+    implementation("io.github.rosemoe:editor:0.24.4")
+    implementation("io.github.rosemoe:language-textmate:0.24.4")
     compileOnly(files("libs/xposed-stub.jar")) // BlackOut (extras/blackout): the Xposed API classes come from LSPosed / Vector at run time
     implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose

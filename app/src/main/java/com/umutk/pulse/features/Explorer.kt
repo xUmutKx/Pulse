@@ -465,6 +465,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // an HTML page shown in the app
     var htmlView by remember { mutableStateOf<File?>(null) }
     var binView by remember { mutableStateOf<File?>(null) }
+    // the code editor (extras/code): a code file opens in it, and any text file can be opened in it from its menu
+    var codeView by remember { mutableStateOf<File?>(null) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
@@ -649,6 +651,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (!exOpenInGallery(ctx, f)) com.umutk.pulse.imgOpen(ctx, f)
             return
         }
+        // a code file: the code editor (colours by language, folding, search); other text goes to the text editor as before
+        if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
         // a file of no known type always asks how to open it (with or without an extension)
         if (f.extension.isEmpty() || fileMime(f) == "*/*") { openAsAsk = f; return }
@@ -1117,6 +1121,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     val groups = listOf(
                         buildList<Triple<String, String, () -> Unit>> {
                             add(Triple("Open", "view", { if (f.isDirectory) go(f.path) else openFile(f) }))
+                            if (!f.isDirectory && f.length() <= 6_000_000L && (com.umutk.pulse.ofIsText(f) || com.umutk.pulse.extras.code.PulseCode.detect(f.name) != null)) add(Triple("Code editor", "code", { recents = exAddRecent(ctx, f); codeView = f }))
                             if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
                         },
                         buildList<Triple<String, String, () -> Unit>> {
@@ -1372,6 +1377,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     ExMiniPlayer()
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
     binView?.let { b -> ExBinViewer(b) { binView = null } }
+    codeView?.let { c -> com.umutk.pulse.extras.code.CodeEditorDialog(c) { codeView = null } }
     arcInfo?.let { p ->
         val af = arcFile
         val all = arcAll.orEmpty()
@@ -1784,7 +1790,7 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
     "share" to Icons.Filled.Share, "openWith" to Icons.Filled.OpenWith, "zip" to Icons.Filled.FolderZip,
     "link" to Icons.Filled.Link, "save" to Icons.Filled.Save, "edit" to Icons.Filled.Edit,
     "delete" to Icons.Filled.Delete, "document" to Icons.Filled.Description, "cut" to Icons.Outlined.ContentCut,
-    "search" to Icons.Filled.Search, "filter" to Icons.Filled.FilterList, "back" to Icons.Filled.ArrowBack, "close" to Icons.Filled.Close, "openFolder" to Icons.Filled.FolderOpen,
+    "search" to Icons.Filled.Search, "code" to Icons.Outlined.Code, "filter" to Icons.Filled.FilterList, "back" to Icons.Filled.ArrowBack, "close" to Icons.Filled.Close, "openFolder" to Icons.Filled.FolderOpen,
 )
 
 /** Win11 file menu: one distinct Fluent glyph per action. */
@@ -1795,7 +1801,7 @@ private val EX_FLUENT = mapOf(
     "ext" to "document", "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
     "eyeOn" to "view", "eyeOff" to "view", "sizes" to "disk", "recent" to "history", "emptyFolder" to "folder", "bigFile" to "disk",
     "dupes" to "copy", "undo" to "paste", "home" to "folder", "share" to "download", "openWith" to "run", "zip" to "extract",
-    "filter" to "details", "link" to "copy", "save" to "rename", "edit" to "rename",
+    "filter" to "details", "link" to "copy", "save" to "rename", "edit" to "rename", "code" to "code",
 )
 
 /** Recent files and bookmarks: one path per line under [key]. */
