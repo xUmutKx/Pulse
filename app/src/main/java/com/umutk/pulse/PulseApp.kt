@@ -16,6 +16,12 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // Android lets only one process use a WebView data folder: a second process that opens a WebView while another holds it crashes ("Using WebView from more than one
+        // process at once", seen when Game Hub opened while YTXTube ran). Every extra process gets a data folder of its own; the main process keeps the default one.
+        if (android.os.Build.VERSION.SDK_INT >= 28) runCatching {
+            val pn = Application.getProcessName()
+            if (pn != packageName) android.webkit.WebView.setDataDirectorySuffix(pn.substringAfter(':').ifBlank { "x" })
+        }
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
         CrashSaver.install(this)
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
