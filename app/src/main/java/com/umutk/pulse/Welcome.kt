@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd14" to (tr("Code is an app of its own (AMOLED, Run for pages), Files can move a file to Secure Folder, the keyboard's calculator answers on the bar and its Dictionary reads TDK, online songs have covers in the notification and go on with a mix, tablets get bigger icons and right click.",
+        "Kod artık ayrı bir uygulama (AMOLED, sayfalar için Çalıştır), Dosyalar Güvenli Klasör'e taşıyabiliyor, klavyenin hesap makinesi sonucu çubukta veriyor ve Sözlük TDK'yı okuyor, çevrimiçi şarkıların bildiriminde kapak var ve bir mix ile devam ediyor, tabletlerde daha büyük ikonlar ve sağ tık.")),
     "kbd13" to (tr("Keyboard: backspace takes only the space after a dot, file names like test.py stay joined, command words only in terminals, a waiting file shows its name. Shuffle beside Play, square online covers, ruled process list.",
         "Klavye: silme noktadan sonraki boşluğu siler, test.py gibi adlar bitişik kalır, komut önerileri yalnız terminalde, bekleyen dosyanın adı görünür. Karıştır Çal'ın yanında, kare çevrimiçi kapaklar, çizgili işlem listesi.")),
     "kbd12" to (tr("Covers for YouTube Music and Spotify songs, Spotify login in the music page, Game Hub's Look setting reachable again, the YTXTube opening back, and no stray key when the keyboard comes up.",

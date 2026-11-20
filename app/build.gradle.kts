@@ -13,8 +13,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 864
-        versionName = "2.0.13"
+        versionCode = 865
+        versionName = "2.0.14"
         // the processors in the APK: 64-bit only by default (a 32-bit phone gets its own APK, -PpulseAbi=armeabi-v7a, built as the "32bit" variant of the workflow;
         // the Play bundle holds both, Play hands each phone its own half). x86_64 is left out: it is for emulators and Chromebooks, and was 4 MB of the APK
         ndk { abiFilters += ((project.findProperty("pulseAbi") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: listOf("arm64-v8a")) }
