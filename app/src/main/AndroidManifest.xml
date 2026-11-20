@@ -979,6 +979,9 @@
         <service android:name="com.umutk.pulse.extras.relay.RelayService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="local network file transfer, listens for paired devices" />
         </service>
+        <service android:name="com.umutk.pulse.features.TermService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a terminal shell session the user opened that keeps running in the background" />
+        </service>
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>

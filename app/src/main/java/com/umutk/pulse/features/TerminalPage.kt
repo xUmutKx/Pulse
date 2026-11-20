@@ -133,7 +133,11 @@ fun TerminalPage() {
     val home = remember { ctx.filesDir.absolutePath }
     var cmd by remember { mutableStateOf("") }
     val scroll = rememberScrollState()
-    LaunchedEffect(Unit) { if (!TermSession.alive) TermSession.start(home, false) }
+    LaunchedEffect(Unit) {
+        if (!TermSession.alive) TermSession.start(home, false)
+        // the session goes on in the background, with its notification and wake lock
+        runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, android.content.Intent(ctx, TermService::class.java)) }
+    }
     LaunchedEffect(TermSession.text.length) { scroll.animateScrollTo(scroll.maxValue) }
     val fg = Color(0xFFE6E6E6); val green = Color(0xFF3DDC84)
     var hi by remember { mutableStateOf(-1) }
@@ -188,4 +192,30 @@ fun TerminalPage() {
             Text("\u2191", color = fg, fontSize = 18.sp, modifier = Modifier.clickable { if (termHistory.isNotEmpty()) { hi = (hi + 1).coerceAtMost(termHistory.lastIndex); cmd = termHistory[hi] } }.padding(8.dp))
         }
     }
+}
+
+/**
+ * Keeps the terminal's shell running while Pulse is in the background, as Termux does: a notification says a session is open (with a Stop button) and a partial wake lock keeps
+ * the processor awake for it. It ends with the shell (or at Stop), and the lock goes with it.
+ */
+class TermService : android.app.Service() {
+    private var wl: android.os.PowerManager.WakeLock? = null
+    private val h = android.os.Handler(android.os.Looper.getMainLooper())
+    private val check: Runnable = object : Runnable { override fun run() { if (!TermSession.alive) stopSelf() else h.postDelayed(this, 5000) } }
+    override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
+    override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
+        if (i?.action == "stop") { TermSession.stop(); stopSelf(); return START_NOT_STICKY }
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("terminal", "Terminal", android.app.NotificationManager.IMPORTANCE_LOW))
+        val stop = android.app.PendingIntent.getService(this, 0, android.content.Intent(this, TermService::class.java).setAction("stop"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = androidx.core.app.NotificationCompat.Builder(this, "terminal").setSmallIcon(android.R.drawable.ic_menu_edit)
+            .setContentTitle(com.umutk.pulse.tr("Terminal session open", "Terminal oturumu açık")).setContentText(com.umutk.pulse.tr("The shell keeps running in the background", "Kabuk arka planda çalışmaya devam ediyor"))
+            .setOngoing(true).addAction(0, com.umutk.pulse.tr("Stop", "Durdur"), stop).build()
+        if (android.os.Build.VERSION.SDK_INT >= 34) androidx.core.app.ServiceCompat.startForeground(this, 7301, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        else startForeground(7301, n)
+        if (wl == null) wl = (getSystemService(POWER_SERVICE) as android.os.PowerManager).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "pulse:terminal").apply { setReferenceCounted(false); acquire() }
+        h.removeCallbacks(check); h.postDelayed(check, 5000)
+        return START_NOT_STICKY
+    }
+    override fun onDestroy() { h.removeCallbacks(check); runCatching { wl?.release() }; wl = null; super.onDestroy() }
 }
