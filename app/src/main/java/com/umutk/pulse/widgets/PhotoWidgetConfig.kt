@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,10 +53,11 @@ class PhotoWidgetConfig : ComponentActivity() {
                 var crop by remember { mutableStateOf(p.getBoolean("c$id", true)) }
                 var radius by remember { mutableFloatStateOf(p.getFloat("r$id", .18f)) }
                 var border by remember { mutableStateOf(p.getBoolean("b$id", false)) }
+                var frame by remember { mutableStateOf(p.getString("f$id", "none") ?: "none") }
                 var version by remember { mutableIntStateOf(0) }
                 val pick = rememberLauncherForActivityResult(PulsePick.OpenDocument()) { u -> if (u != null && PhotoWidget.adopt(this@PhotoWidgetConfig, id, u)) version++ }
                 val photo = remember(version) { runCatching { BitmapFactory.decodeFile(java.io.File(filesDir, "photo_widget/$id.src").path) }.getOrNull() }
-                val shown = remember(photo, crop, radius, border) { PhotoWidget.render(photo, crop, radius, border).asImageBitmap() }
+                val shown = remember(photo, crop, radius, border, frame) { PhotoWidget.render(photo, crop, radius, border, frame).asImageBitmap() }
                 Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(shown, null, Modifier.size(220.dp))
                     TextButton({ pick.launch(arrayOf("image/*")) }) { Text(if (photo == null) tr("Choose a photo", "Fotoğraf seç") else tr("Change the photo", "Fotoğrafı değiştir")) }
@@ -66,11 +68,18 @@ class PhotoWidgetConfig : ComponentActivity() {
                     Text(tr("Corners", "Köşeler"), Modifier.fillMaxWidth(), color = Color.White)
                     Slider(radius, { radius = it })
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Border", "Çerçeve"), Modifier.weight(1f), color = Color.White)
+                        Text(tr("Border line", "Kenar çizgisi"), Modifier.weight(1f), color = Color.White)
                         Switch(border, { border = it })
                     }
+                    // the frame: none (the photo alone on an empty place) or a Polaroid print, wood, gold, a black mat
+                    Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PhotoWidget.FRAMES.forEach { f ->
+                            val label = when (f) { "polaroid" -> "Polaroid"; "wood" -> tr("Wood", "Ahşap"); "gold" -> tr("Gold", "Altın"); "mat" -> tr("Mat", "Paspartu"); else -> tr("No frame", "Çerçevesiz") }
+                            TextButton({ frame = f }) { Text(if (frame == f) "● $label" else label, color = Color.White) }
+                        }
+                    }
                     TextButton({
-                        p.edit().putBoolean("c$id", crop).putFloat("r$id", radius).putBoolean("b$id", border).apply()
+                        p.edit().putBoolean("c$id", crop).putFloat("r$id", radius).putBoolean("b$id", border).putString("f$id", frame).apply()
                         PhotoWidget.refresh(this@PhotoWidgetConfig, id)
                         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
                         finish()
