@@ -117,7 +117,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /** One tile of the Toolkit: its English and Turkish label, icon and the screen it opens. */
-private class Tool(val label: String, val trLabel: String, val icon: String, val wide: Boolean = false, val body: @Composable () -> Unit)
+private class Tool(val label: String, val trLabel: String, val icon: String, val wide: Boolean = false, val flow: Boolean = false, val body: @Composable () -> Unit)
 
 /** The tool a Quick Settings tile asked for ("toolkit:<tool>"); ToolkitPage opens it and clears this. */
 object ToolkitOpen { var tool by mutableStateOf("") }
@@ -144,7 +144,7 @@ private val tools = listOf(
     Tool("Stopwatch", "Kronometre", "stopwatch") { StopwatchTool() },
     Tool("Timer", "Zamanlayıcı", "timer") { TimerTool() },
     Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
-    Tool("DNS and TTL", "DNS ve TTL", "globe") { BypassTool() },
+    Tool("DNS and TTL", "DNS ve TTL", "globe", flow = true) { BypassTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
     Tool("Finder", "Bulucu", "search") { FinderTool() },
     Tool("Screen rotation", "Ekran yönü", "rotate") { RotationTool() },
@@ -227,23 +227,22 @@ fun ToolkitPage() {
     // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
         val t = allTools[open]
-        // the window grows out of the middle and fades in when it opens
-        val enter = remember { androidx.compose.animation.core.Animatable(0f) }
-        LaunchedEffect(open) { enter.animateTo(1f, androidx.compose.animation.core.tween(220)) }
-        androidx.compose.ui.window.Dialog(onDismissRequest = { open = -1 }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-            Column(
-                (if (t.wide) Modifier.fillMaxWidth(.98f).fillMaxHeight(.94f) else Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp))
-                    .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
-                    .clip(RoundedCornerShape(T.radius)).background(T.panel.copy(alpha = .92f))
-                    .boundedHeight().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                PHead(tr(t.label, t.trLabel))
-                // the window scrolls, so a tool is measured with no height limit; a tool that has a scrolling page of its own (graphicsLayer + verticalScroll) crashed on that, so it gets a limit
-                // (a Column, not a Box: a tool puts several cards one after the other, and in a Box they were drawn on top of each other)
-                Column(Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .8f).dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { t.body() }
-            }
-        }
+        // the look's own dialog box (title bar or title, Close button, the dimmed page behind it); the tool is its body
+        com.umutk.pulse.WinAlert(
+            onDismissRequest = { open = -1 },
+            title = { Text(tr(t.label, t.trLabel)) },
+            text = {
+                Column(Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .72f).dp).verticalScroll(rememberScrollState())) {
+                    // a tool is measured with a height limit (one with a scrolling page of its own crashed without it); a long one (flow) lays out in the dialog's own scroll
+                    // (a Column, not a Box: a tool puts several cards one after the other)
+                    Column(
+                        (if (t.flow) Modifier else Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .72f).dp)),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) { t.body() }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton({ open = -1 }) { Text(tr("Close", "Kapat")) } },
+        )
     }
     Column(Modifier.fillMaxSize().boundedHeight().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(tr("Toolkit", "Araç kutusu"), guide = "toolkit")

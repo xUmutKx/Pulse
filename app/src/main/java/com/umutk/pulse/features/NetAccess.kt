@@ -190,20 +190,34 @@ fun NetAccessCard() {
 
 @Composable
 private fun NetAppsDialog(onDismiss: () -> Unit) {
+    WinAlert(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Access per app", "Uygulama başına erişim"), color = T.text) },
+        text = { NetAppsList(560.dp) },
+        confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
+    )
+}
+
+/**
+ * The apps with a Wi-Fi switch and a mobile-data switch each (lit: the app may use that network; slashed: it is cut off), with a search box above. A change is saved at once.
+ * Used in the Access per app window and in the Toolkit's DNS and TTL.
+ */
+@Composable
+fun NetAppsList(maxHeight: androidx.compose.ui.unit.Dp = 420.dp) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val apps = remember {
         val pm = ctx.packageManager
         pm.getInstalledApplications(0).filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
-            .sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
+            .map { it to pm.getApplicationLabel(it).toString() }.sortedBy { it.second.lowercase() }
     }
-    WinAlert(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("Access per app", "Uygulama başına erişim"), color = T.text) },
-        text = {
-            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
-                if (Privilege.mode == Privilege.Mode.None) Text(tr("Needs root or Shizuku.", "Root ya da Shizuku gerekir."), color = T.sub, fontSize = 12.sp)
-                apps.forEach { ai ->
+    var q by remember { mutableStateOf("") }
+    val shown = remember(q) { val t = q.trim(); if (t.isEmpty()) apps else apps.filter { it.second.contains(t, true) || it.first.packageName.contains(t, true) } }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        com.umutk.pulse.PField(q, { q = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth())
+        Column(Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState())) {
+            if (Privilege.mode == Privilege.Mode.None) Text(tr("Needs root or Shizuku.", "Root ya da Shizuku gerekir."), color = T.sub, fontSize = 12.sp)
+            shown.forEach { (ai, label) ->
                     val pkg = ai.packageName
                     var wifi by remember(pkg) { mutableStateOf(NetPolicy.wifiBlocked(ctx, pkg)) }
                     var mobile by remember(pkg) { mutableStateOf(NetPolicy.mobileBlocked(ctx, pkg)) }
@@ -216,7 +230,7 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
                             icon?.let { Image(it, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)), contentScale = ContentScale.Fit) }
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = if (wifi || mobile) T.text.copy(alpha = .55f) else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(label, color = if (wifi || mobile) T.text.copy(alpha = .55f) else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         // the two icons are the buttons: lit when the app may use that network, grey when it is cut off
                         Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).clickable { val was = wifi; wifi = !wifi; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, mobile)) { wifi = was; netFail(ctx) } } }.semantics { contentDescription = "Wi-Fi" }, contentAlignment = Alignment.Center) {
                             PIcon("wifi", if (!wifi) T.accent else T.sub.copy(alpha = .35f), 26.dp)
@@ -228,10 +242,8 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
-            }
-        },
-        confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
-    )
+        }
+    }
 }
 
 /** A red slash over an icon: the app is cut off from this network. */

@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import androidx.compose.foundation.horizontalScroll
+
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
@@ -40,7 +42,7 @@ fun BypassTool() {
     PCard {
         Text(tr("Encrypted DNS", "Şifreli DNS"), color = T.text, fontSize = 15.sp)
         Text(tr("Now", "Şimdi") + ": " + (if (cur.first == "hostname") cur.second else cur.first), color = T.sub, fontSize = 12.sp)
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
             DNS_HOSTS.forEach { (n, h) ->
                 PChip(cur.first == "hostname" && cur.second == h, n) {
                     scope.launch {
@@ -56,6 +58,12 @@ fun BypassTool() {
     }
     // the system's Private DNS (Auto, Off or Manual) lives here too, with the encrypted DNS above: the old separate DNS tile is this
     DnsSettings()
+    // the apps, each with a Wi-Fi and a mobile-data switch, and a search box
+    PCard {
+        Text(tr("Access per app", "Uygulama başına erişim"), color = com.umutk.pulse.Look.accent, fontSize = 15.sp)
+        Text(tr("Cut an app off from Wi-Fi or from mobile data (needs root or Shizuku)", "Bir uygulamayı Wi-Fi'den ya da mobil veriden kes (root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
+        NetAppsList(360.dp)
+    }
     TtlCard()
 }
 
