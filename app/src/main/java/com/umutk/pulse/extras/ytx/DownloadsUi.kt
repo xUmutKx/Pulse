@@ -242,6 +242,20 @@ fun DownloadsScreen(
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
     ) { top ->
         LazyColumn(contentPadding = contentPadding.withTop(top)) {
+            // Series and movies (the season downloader and the play buttons) stays one tap away, at the top of the downloads
+            item(key = "series") {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .clickable { openSeriesPage(ctx) }.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, null, Modifier.size(28.dp), MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                }
+            }
             item(key = "sections") {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),

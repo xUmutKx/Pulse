@@ -269,7 +269,7 @@ enum class Tab(val defaultLabel: String, val icon: ImageVector, val selectedIcon
     Home("Home", Icons.Outlined.Home, Icons.Rounded.Home),
     Music("Music", Icons.Outlined.MusicNote, Icons.Rounded.MusicNote),
     Shorts("Shorts", Icons.Outlined.PlayCircle, Icons.Rounded.PlayCircle),
-    Downloads("Watch", Icons.Outlined.PlayCircle, Icons.Rounded.PlayCircle),
+    Downloads("Downloads", Icons.Outlined.Download, Icons.Rounded.Download),
     Library("Library", Icons.Outlined.VideoLibrary, Icons.Rounded.VideoLibrary);
 
     val label: String
@@ -278,7 +278,7 @@ enum class Tab(val defaultLabel: String, val icon: ImageVector, val selectedIcon
             Music -> I18n.t("tab_music", defaultLabel)
             Shorts -> I18n.t("tab_shorts", defaultLabel)
             Library -> I18n.t("tab_library", defaultLabel)
-            Downloads -> if (com.umutk.pulse.tr("a","b") == "b") "İzle" else defaultLabel
+            Downloads -> if (com.umutk.pulse.tr("a","b") == "b") "İndirilenler" else defaultLabel
         }
 }
 
@@ -704,8 +704,12 @@ fun YtxTubeApp() {
                     onSignIn = { requestSignIn() }, onAccount = { openSettings = true },
                     scrollToTop = scrollToTop[Tab.Library] ?: 0,
                 )
-                Tab.Downloads -> WatchScreen(
+                Tab.Downloads -> DownloadsScreen(
                     contentPadding,
+                    onOpen = player::open,
+                    onOpenMusic = player::openMusic,
+                    onBrowse = { tab = Tab.Home },
+                    onBrowseMusic = { tab = Tab.Music },
                     onSearch = { openSearch = true },
                     onAccount = { openSettings = true },
                     scrollToTop = scrollToTop[Tab.Downloads] ?: 0,
