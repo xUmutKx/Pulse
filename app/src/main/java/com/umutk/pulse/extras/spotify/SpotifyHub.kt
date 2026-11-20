@@ -89,7 +89,9 @@ internal fun LoginPage(onClose: () -> Unit) {
         PField(id, { id = it }, tr("Client ID", "İstemci kimliği"), Modifier.fillMaxWidth())
         PButton(tr("Log in", "Giriş yap"), Modifier.fillMaxWidth(), icon = null) {
             SpotifyAuth.error = null
-            SpotifyAuth.setClientId(ctx, id); SpotifyAuth.login(ctx)
+            // the sign-in needs your own Client ID (from developer.spotify.com): without one Spotify answers INVALID_CLIENT, so nothing is sent
+            if (id.isBlank() || id.contains("YOUR_SPOTIFY")) SpotifyAuth.error = tr("Enter your Spotify Client ID first: make an app at developer.spotify.com and add " + SpotifyAuth.REDIRECT + " as its redirect address.", "Önce Spotify Client ID'ni yaz: developer.spotify.com'da bir uygulama aç ve yönlendirme adresi olarak " + SpotifyAuth.REDIRECT + " ekle.")
+            else { SpotifyAuth.setClientId(ctx, id.trim()); SpotifyAuth.login(ctx) }
         }
         SpotifyAuth.error?.let { Text(it, color = T.sub, fontSize = 13.sp) }
         Text(SpotifyAuth.REDIRECT, color = T.sub, fontSize = 12.sp)
