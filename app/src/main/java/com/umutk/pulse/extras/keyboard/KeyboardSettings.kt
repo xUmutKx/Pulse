@@ -139,6 +139,8 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // themes
+        // search the settings: the sections open and only the matching switches show
+        PField(KbFind.q, { KbFind.q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
         KbSection("palette", tr("Theme", "Tema")) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyboardThemes.ids.forEach { id -> ThemeTile(id, dark, KeyboardPrefs.theme == id) { KeyboardPrefs.theme = id; save() } }
@@ -883,16 +885,20 @@ private fun OrientPreview(land: Boolean, dark: Boolean) {
 }
 
 /** A card of the settings that opens and closes from its header (icon, title, chevron). */
+/** The text of the settings search (WM Keyboard's settings search): sections open and only the switches that match show. */
+private object KbFind { var q by androidx.compose.runtime.mutableStateOf("") }
+
 @Composable
 private fun KbSection(icon: String, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     var open by androidx.compose.runtime.saveable.rememberSaveable(title) { androidx.compose.runtime.mutableStateOf(false) }
+    val searching = KbFind.q.isNotBlank()
     PCard(Modifier.padding(vertical = 5.dp)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(icon, T.accent, 22.dp)
             Text(title, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-            PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (open) 90f else 0f })
+            PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (open || searching) 90f else 0f })
         }
-        if (open) content()
+        if (open || searching) content()
     }
 }
 
@@ -903,6 +909,8 @@ private fun Title(text: String) {
 
 @Composable
 private fun Switch(title: String, sub: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    val q = KbFind.q.trim()
+    if (q.isNotEmpty() && !title.contains(q, true) && !sub.contains(q, true)) return
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(end = 8.dp)) {
             Text(title, color = T.text, fontSize = 15.sp)
