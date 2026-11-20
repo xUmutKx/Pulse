@@ -499,11 +499,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if ((shotItem != null || shotVideo != null) && !shotPinned) {
             val left = shotLeftMs()
             if (left > 500L) shotExpiry.postDelayed(shotExpire, left)
-            else { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; updateSuggestions() }
+            else { shotItem = null; shotVideo = null; shotGroup = emptyList(); st.shotCount = 0; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; updateSuggestions() }
         }
     }
     /** a video just downloaded, waiting in the same slot (its picture with a play mark): it is not kept in the clipboard, it is pasted from where it is */
     private var shotVideo: java.io.File? = null
+    /** The pictures of one kind taken together (the newest first): the chip of the bar is a stack and one tap sends them all. */
+    private var shotGroup: List<java.io.File> = emptyList()
     private var shotVideoMime = "video/mp4"
     private val videosTaken = LinkedHashSet<Long>()
     private var shotPinned = false
@@ -520,12 +522,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * The new screenshots, camera photos and downloaded pictures: only those made in the last moments, each of them once. The newest waits in the right slot of the bar and is
      * pasted from where it is, like a video: nothing of it goes into the clipboard (its history stays for what the person copied).
      */
-    private suspend fun checkShot() {
+    private suspend fun checkShot(fromStart: Boolean = false) {
         if (st.incognito) return
         val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_IMAGES else android.Manifest.permission.READ_EXTERNAL_STORAGE
         if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
         if (!shotLock.tryLock()) return
         var newest: Triple<Long, Long, String>? = null
+        val batchPaths = ArrayList<String>()
         try {
             val sp = getSharedPreferences("pulse_kb_shots", MODE_PRIVATE)
             if (shotsTaken.isEmpty()) sp.getString("ids", "").orEmpty().split(',').mapNotNull { it.toLongOrNull() }.forEach { shotsTaken += it }
@@ -552,7 +555,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                             // a picture just downloaded (the Download folder) is offered the same way
                             val down = path.contains("/download", true)
                             // only what is new: a picture made in the last moments, never the older ones of the gallery
-                            if (shot && age <= 45 || cam && age <= 30 || down && age <= 45) out += Triple(c.getLong(0), age, path)
+                            // (when the keyboard comes up, e.g. back from the camera or from the recent apps, a wider look: a photo made in the last quarter of an hour)
+                            if (shot && age <= (if (fromStart) 180 else 45) || cam && age <= (if (fromStart) 900 else 30) || down && age <= (if (fromStart) 180 else 45)) out += Triple(c.getLong(0), age, path)
                         }
                     }
                     out
@@ -564,14 +568,20 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val f = java.io.File(t.third)
                 if (!f.isFile || f.length() <= 0) continue
                 shotsTaken += t.first
+                batchPaths += t.third
                 if (newest == null || t.second < newest!!.second) newest = t
             }
             while (shotsTaken.size > 40) shotsTaken.remove(shotsTaken.first())
             sp.edit().putString("ids", shotsTaken.joinToString(",")).apply()
         } finally { shotLock.unlock() }
         val hit = newest ?: return
-        if (hit.second > 40) return
+        if (hit.second > (if (fromStart) 900 else 40)) return
         val file = java.io.File(hit.third)
+        // pictures of the same kind taken together wait as one stack: one tap sends them all
+        fun kind(p: String) = if (p.contains("/dcim/", true) || p.contains("/camera/", true)) 1 else if (p.contains("/download", true)) 2 else 0
+        val same = batchPaths.filter { kind(it) == kind(hit.third) }.map { java.io.File(it) }.filter { it.isFile && it.length() > 0 }
+        shotGroup = (same + shotGroup.filter { f -> f.isFile && kind(f.path) == kind(hit.third) && same.none { it.path == f.path } }).take(12)
+        st.shotCount = shotGroup.size
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
         // the newest copy wins the slot: a screenshot takes it from a copied text
         quickClip = null; shotItem = null; shotVideo = file; shotVideoMime = mime; st.shotVideo = false; shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
@@ -855,7 +865,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { KeyboardPrefs.saverOn = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode }
         if (!restarting) runCatching { takeClip(true) }
         // a screenshot or download made a moment before the keyboard came up is offered too
-        if (!restarting) scope.launch { runCatching { checkShot() } }
+        scope.launch { runCatching { checkShot(fromStart = true) } }
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
         st.hardware = hardwareAttached()
@@ -1852,8 +1862,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
             val v = shotVideo
-            if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
-            if (!shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
+            val grp = shotGroup
+            if (v != null && grp.size > 1) {
+                // a stack: every picture goes into the field, one after the other
+                val items = grp.toList()
+                scope.launch {
+                    for (f in items) {
+                        pasteVideo(f, java.net.URLConnection.guessContentTypeFromName(f.name) ?: "image/jpeg")
+                        delay(450)
+                    }
+                }
+                shotGroup = emptyList(); st.shotCount = 0
+            } else if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
+            if (!shotPinned) { shotItem = null; shotVideo = null; shotGroup = emptyList(); st.shotCount = 0; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
         }
         // the one-time code of a notification: typed as it is (no space after it), then gone
         if (i == 2 && st.slots.getOrNull(2)?.startsWith("\u0001🔑") == true) {

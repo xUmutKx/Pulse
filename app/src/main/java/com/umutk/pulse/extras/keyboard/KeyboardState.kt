@@ -88,6 +88,8 @@ class KbState {
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     /** the picture in the right slot is a video's (a small play mark is drawn on it) */
     var shotVideo by mutableStateOf(false)
+    /** How many pictures wait together in the bar's slot (a stack when more than one). */
+    var shotCount by mutableStateOf(0)
     /** A file just downloaded (not a picture or video) waiting in the right slot: its extension, shown on a small page. */
     var shotFile by mutableStateOf("")
     /** The picture of the file offered by the letters being typed (a photo, or the first page / cover / frame of the file), when there is one. */

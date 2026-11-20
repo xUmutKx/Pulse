@@ -107,6 +107,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -628,7 +629,14 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
                             st.shotThumb?.let { Box(contentAlignment = Alignment.Center) {
+                                // a stack of pictures: two sheets peek out behind the first, and a number says how many
+                                if (st.shotCount > 1) {
+                                    Box(Modifier.offset(6.dp, (-5).dp).height(34.dp).width(48.dp).clip(RoundedCornerShape(5.dp)).background(th.sub.copy(alpha = .45f)))
+                                    Box(Modifier.offset(3.dp, (-2).dp).height(36.dp).width(52.dp).clip(RoundedCornerShape(5.dp)).background(th.sub.copy(alpha = .7f)))
+                                }
                                 Image(it, null, Modifier.height(38.dp).widthIn(max = 58.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Fit)
+                                if (st.shotCount > 1) Text("${st.shotCount}", color = th.onAccent, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.BottomEnd).background(th.accent, CircleShape).padding(horizontal = 5.dp, vertical = 1.dp))
                                 // a video: a small black disc with a white play mark in the middle, seen on a white picture too
                                 if (st.shotVideo) Canvas(Modifier.size(16.dp)) {
                                     drawCircle(Color.Black.copy(alpha = .78f))
