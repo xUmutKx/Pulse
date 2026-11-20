@@ -75,7 +75,8 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     // Pulse's process never runs LauncherActivity, so read the stored values before showing or saving them
     remember(ctx) { LauncherPrefs.load(ctx) }
     var cat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startCat) }
-    BackHandler { if (cat.isNotEmpty()) cat = "" else back() }
+    // opened for one category (from Windows 11 Settings): back leaves the page, it does not show the list of categories
+    BackHandler { if (cat.isNotEmpty() && startCat.isEmpty()) cat = "" else back() }
     var pickLook by remember { mutableStateOf(false) }
     var pickDock by remember { mutableStateOf(false) }
     var pickPack by remember { mutableStateOf(false) }
@@ -97,7 +98,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { if (cat.isNotEmpty()) cat = "" else back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { if (cat.isNotEmpty() && startCat.isEmpty()) cat = "" else back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(if (cat.isEmpty()) tr("Launcher", "Ana ekran") else LAUNCHER_CATS.first { it.key == cat }.let { tr(it.en, it.trName) }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         }
         // to try the launcher as it is: starts its own screen (the home screen itself is only ever the default home app)
