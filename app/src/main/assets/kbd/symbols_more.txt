@@ -1,847 +1,151 @@
 #Patterns
-##Dividers
-┈┈┈ ♡ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ♥ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ❀ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ✿ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ❁ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ★ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ☆ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ✦ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ✧ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ☾ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ☽ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ⋆ ┈┈┈	pattern preset dividers decoration copy paste
-┈┈┈ ❖ ┈┈┈	pattern preset dividers decoration copy paste
-─── ♡ ───	pattern preset dividers decoration copy paste
-─── ♥ ───	pattern preset dividers decoration copy paste
-─── ❀ ───	pattern preset dividers decoration copy paste
-─── ✿ ───	pattern preset dividers decoration copy paste
-─── ❁ ───	pattern preset dividers decoration copy paste
-─── ★ ───	pattern preset dividers decoration copy paste
-─── ☆ ───	pattern preset dividers decoration copy paste
-─── ✦ ───	pattern preset dividers decoration copy paste
-─── ✧ ───	pattern preset dividers decoration copy paste
-─── ☾ ───	pattern preset dividers decoration copy paste
-─── ☽ ───	pattern preset dividers decoration copy paste
-─── ⋆ ───	pattern preset dividers decoration copy paste
-─── ❖ ───	pattern preset dividers decoration copy paste
-─── ✩ ───	pattern preset dividers decoration copy paste
-═══ ♥ ═══	pattern preset dividers decoration copy paste
-═══ ❀ ═══	pattern preset dividers decoration copy paste
-═══ ❁ ═══	pattern preset dividers decoration copy paste
-═══ ★ ═══	pattern preset dividers decoration copy paste
-═══ ☆ ═══	pattern preset dividers decoration copy paste
-═══ ✧ ═══	pattern preset dividers decoration copy paste
-═══ ☾ ═══	pattern preset dividers decoration copy paste
-═══ ☽ ═══	pattern preset dividers decoration copy paste
-═══ ⋆ ═══	pattern preset dividers decoration copy paste
-═══ ❖ ═══	pattern preset dividers decoration copy paste
-═══ ✩ ═══	pattern preset dividers decoration copy paste
-～～～ ♡ ～～～	pattern preset dividers decoration copy paste
-～～～ ♥ ～～～	pattern preset dividers decoration copy paste
-～～～ ❀ ～～～	pattern preset dividers decoration copy paste
-～～～ ✿ ～～～	pattern preset dividers decoration copy paste
-～～～ ❁ ～～～	pattern preset dividers decoration copy paste
-～～～ ★ ～～～	pattern preset dividers decoration copy paste
-～～～ ☆ ～～～	pattern preset dividers decoration copy paste
-～～～ ✦ ～～～	pattern preset dividers decoration copy paste
-～～～ ✧ ～～～	pattern preset dividers decoration copy paste
-～～～ ☾ ～～～	pattern preset dividers decoration copy paste
-～～～ ☽ ～～～	pattern preset dividers decoration copy paste
-～～～ ⋆ ～～～	pattern preset dividers decoration copy paste
-～～～ ❖ ～～～	pattern preset dividers decoration copy paste
-～～～ ✩ ～～～	pattern preset dividers decoration copy paste
-⋆˚⋆ ♡ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ♥ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ❀ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ✿ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ❁ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ★ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ☆ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ✦ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ✧ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ☾ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ☽ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ⋆ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ❖ ⋆˚⋆	pattern preset dividers decoration copy paste
-⋆˚⋆ ✩ ⋆˚⋆	pattern preset dividers decoration copy paste
-˖°˖ ♡ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ♥ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ❀ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ✿ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ❁ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ★ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ☆ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ✦ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ✧ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ☾ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ☽ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ⋆ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ❖ ˖°˖	pattern preset dividers decoration copy paste
-˖°˖ ✩ ˖°˖	pattern preset dividers decoration copy paste
-˚₊˚ ♡ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ♥ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ❀ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ✿ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ❁ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ★ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ☆ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ✦ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ✧ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ☾ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ☽ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ⋆ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ❖ ˚₊˚	pattern preset dividers decoration copy paste
-˚₊˚ ✩ ˚₊˚	pattern preset dividers decoration copy paste
-﹏﹏﹏ ♥ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ❀ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ✿ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ❁ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ★ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ☆ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ✦ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ✧ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ☾ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ☽ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ⋆ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ❖ ﹏﹏﹏	pattern preset dividers decoration copy paste
-﹏﹏﹏ ✩ ﹏﹏﹏	pattern preset dividers decoration copy paste
-⋰⋱⋰ ♡ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ♥ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ❀ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ✿ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ❁ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ★ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ☆ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ✦ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ✧ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ☾ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ☽ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ⋆ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ❖ ⋰⋱⋰	pattern preset dividers decoration copy paste
-⋰⋱⋰ ✩ ⋰⋱⋰	pattern preset dividers decoration copy paste
-··· ♡ ···	pattern preset dividers decoration copy paste
-··· ♥ ···	pattern preset dividers decoration copy paste
-··· ❀ ···	pattern preset dividers decoration copy paste
-··· ✿ ···	pattern preset dividers decoration copy paste
-··· ❁ ···	pattern preset dividers decoration copy paste
-··· ★ ···	pattern preset dividers decoration copy paste
-··· ☆ ···	pattern preset dividers decoration copy paste
-··· ✦ ···	pattern preset dividers decoration copy paste
-··· ✧ ···	pattern preset dividers decoration copy paste
-··· ☾ ···	pattern preset dividers decoration copy paste
-··· ☽ ···	pattern preset dividers decoration copy paste
-··· ⋆ ···	pattern preset dividers decoration copy paste
-··· ❖ ···	pattern preset dividers decoration copy paste
-··· ✩ ···	pattern preset dividers decoration copy paste
-┄┄┄ ♡ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ♥ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ❀ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ✿ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ❁ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ★ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ☆ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ✦ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ✧ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ☾ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ☽ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ⋆ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ❖ ┄┄┄	pattern preset dividers decoration copy paste
-┄┄┄ ✩ ┄┄┄	pattern preset dividers decoration copy paste
-╌╌╌ ♡ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ♥ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ❀ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ✿ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ❁ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ★ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ☆ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ✦ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ✧ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ☾ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ☽ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ⋆ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ❖ ╌╌╌	pattern preset dividers decoration copy paste
-╌╌╌ ✩ ╌╌╌	pattern preset dividers decoration copy paste
-‥‥‥ ♡ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ♥ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ❀ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ✿ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ❁ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ★ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ☆ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ✦ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ✧ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ☾ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ☽ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ⋆ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ❖ ‥‥‥	pattern preset dividers decoration copy paste
-‥‥‥ ✩ ‥‥‥	pattern preset dividers decoration copy paste
-﹋﹋﹋ ♡ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ♥ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ❀ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ✿ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ❁ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ★ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ☆ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ✦ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ✧ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ☾ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ☽ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ⋆ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ❖ ﹋﹋﹋	pattern preset dividers decoration copy paste
-﹋﹋﹋ ✩ ﹋﹋﹋	pattern preset dividers decoration copy paste
-⁓⁓⁓ ♡ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ♥ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ❀ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ✿ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ❁ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ★ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ☆ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ✦ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ✧ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ☾ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ☽ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ⋆ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ❖ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⁓⁓⁓ ✩ ⁓⁓⁓	pattern preset dividers decoration copy paste
-⌇⌇⌇ ♡ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ♥ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ❀ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ✿ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ❁ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ★ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ☆ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ✦ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ✧ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ☾ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ☽ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ⋆ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ❖ ⌇⌇⌇	pattern preset dividers decoration copy paste
-⌇⌇⌇ ✩ ⌇⌇⌇	pattern preset dividers decoration copy paste
-∿∿∿ ♡ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ♥ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ❀ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ✿ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ❁ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ★ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ☆ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ✦ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ✧ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ☾ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ☽ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ⋆ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ❖ ∿∿∿	pattern preset dividers decoration copy paste
-∿∿∿ ✩ ∿∿∿	pattern preset dividers decoration copy paste
-〰〰〰 ♡ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ♥ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ❀ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ✿ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ❁ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ★ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ☆ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ✦ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ✧ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ☾ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ☽ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ⋆ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ❖ 〰〰〰	pattern preset dividers decoration copy paste
-〰〰〰 ✩ 〰〰〰	pattern preset dividers decoration copy paste
-⋯⋯⋯ ♡ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ♥ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ❀ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ✿ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ❁ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ★ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ☆ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ✦ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ✧ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ☾ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ☽ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ⋆ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ❖ ⋯⋯⋯	pattern preset dividers decoration copy paste
-⋯⋯⋯ ✩ ⋯⋯⋯	pattern preset dividers decoration copy paste
-▁▂▃ ♡ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ♥ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ❀ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ✿ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ❁ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ★ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ☆ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ✦ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ✧ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ☾ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ☽ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ⋆ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ❖ ▁▂▃	pattern preset dividers decoration copy paste
-▁▂▃ ✩ ▁▂▃	pattern preset dividers decoration copy paste
-##Frames
-『 ♡ 』	pattern preset frames decoration copy paste
-『 ♥ 』	pattern preset frames decoration copy paste
-『 ✿ 』	pattern preset frames decoration copy paste
-『 ★ 』	pattern preset frames decoration copy paste
-『 ☆ 』	pattern preset frames decoration copy paste
-『 ✦ 』	pattern preset frames decoration copy paste
-『 ✧ 』	pattern preset frames decoration copy paste
-｢ ♡ ｣	pattern preset frames decoration copy paste
-｢ ♥ ｣	pattern preset frames decoration copy paste
-｢ ❀ ｣	pattern preset frames decoration copy paste
-｢ ✿ ｣	pattern preset frames decoration copy paste
-｢ ❁ ｣	pattern preset frames decoration copy paste
-｢ ★ ｣	pattern preset frames decoration copy paste
-｢ ☆ ｣	pattern preset frames decoration copy paste
-｢ ✦ ｣	pattern preset frames decoration copy paste
-｢ ✧ ｣	pattern preset frames decoration copy paste
-｢ ☾ ｣	pattern preset frames decoration copy paste
-﹝ ♥ ﹞	pattern preset frames decoration copy paste
-﹝ ❀ ﹞	pattern preset frames decoration copy paste
-﹝ ❁ ﹞	pattern preset frames decoration copy paste
-﹝ ★ ﹞	pattern preset frames decoration copy paste
-﹝ ☆ ﹞	pattern preset frames decoration copy paste
-﹝ ✧ ﹞	pattern preset frames decoration copy paste
-﹝ ☾ ﹞	pattern preset frames decoration copy paste
-⟦ ♡ ⟧	pattern preset frames decoration copy paste
-⟦ ♥ ⟧	pattern preset frames decoration copy paste
-⟦ ❀ ⟧	pattern preset frames decoration copy paste
-⟦ ✿ ⟧	pattern preset frames decoration copy paste
-⟦ ❁ ⟧	pattern preset frames decoration copy paste
-⟦ ★ ⟧	pattern preset frames decoration copy paste
-⟦ ☆ ⟧	pattern preset frames decoration copy paste
-⟦ ✦ ⟧	pattern preset frames decoration copy paste
-⟦ ✧ ⟧	pattern preset frames decoration copy paste
-⟦ ☾ ⟧	pattern preset frames decoration copy paste
-⟪ ♡ ⟫	pattern preset frames decoration copy paste
-⟪ ♥ ⟫	pattern preset frames decoration copy paste
-⟪ ❀ ⟫	pattern preset frames decoration copy paste
-⟪ ✿ ⟫	pattern preset frames decoration copy paste
-⟪ ❁ ⟫	pattern preset frames decoration copy paste
-⟪ ★ ⟫	pattern preset frames decoration copy paste
-⟪ ☆ ⟫	pattern preset frames decoration copy paste
-⟪ ✦ ⟫	pattern preset frames decoration copy paste
-⟪ ✧ ⟫	pattern preset frames decoration copy paste
-⟪ ☾ ⟫	pattern preset frames decoration copy paste
-⸨ ♡ ⸩	pattern preset frames decoration copy paste
-⸨ ♥ ⸩	pattern preset frames decoration copy paste
-⸨ ❀ ⸩	pattern preset frames decoration copy paste
-⸨ ✿ ⸩	pattern preset frames decoration copy paste
-⸨ ❁ ⸩	pattern preset frames decoration copy paste
-⸨ ★ ⸩	pattern preset frames decoration copy paste
-⸨ ☆ ⸩	pattern preset frames decoration copy paste
-⸨ ✦ ⸩	pattern preset frames decoration copy paste
-⸨ ✧ ⸩	pattern preset frames decoration copy paste
-⸨ ☾ ⸩	pattern preset frames decoration copy paste
-〔 ♡ 〕	pattern preset frames decoration copy paste
-〔 ♥ 〕	pattern preset frames decoration copy paste
-〔 ❀ 〕	pattern preset frames decoration copy paste
-〔 ✿ 〕	pattern preset frames decoration copy paste
-〔 ❁ 〕	pattern preset frames decoration copy paste
-〔 ★ 〕	pattern preset frames decoration copy paste
-〔 ☆ 〕	pattern preset frames decoration copy paste
-〔 ✦ 〕	pattern preset frames decoration copy paste
-〔 ✧ 〕	pattern preset frames decoration copy paste
-〔 ☾ 〕	pattern preset frames decoration copy paste
-【 ♡ 】	pattern preset frames decoration copy paste
-【 ♥ 】	pattern preset frames decoration copy paste
-【 ❀ 】	pattern preset frames decoration copy paste
-【 ✿ 】	pattern preset frames decoration copy paste
-【 ❁ 】	pattern preset frames decoration copy paste
-【 ☆ 】	pattern preset frames decoration copy paste
-【 ✦ 】	pattern preset frames decoration copy paste
-【 ☾ 】	pattern preset frames decoration copy paste
-〖 ♡ 〗	pattern preset frames decoration copy paste
-〖 ♥ 〗	pattern preset frames decoration copy paste
-〖 ❀ 〗	pattern preset frames decoration copy paste
-〖 ✿ 〗	pattern preset frames decoration copy paste
-〖 ❁ 〗	pattern preset frames decoration copy paste
-〖 ★ 〗	pattern preset frames decoration copy paste
-〖 ☆ 〗	pattern preset frames decoration copy paste
-〖 ✦ 〗	pattern preset frames decoration copy paste
-〖 ✧ 〗	pattern preset frames decoration copy paste
-〖 ☾ 〗	pattern preset frames decoration copy paste
-⦅ ♡ ⦆	pattern preset frames decoration copy paste
-⦅ ♥ ⦆	pattern preset frames decoration copy paste
-⦅ ❀ ⦆	pattern preset frames decoration copy paste
-⦅ ✿ ⦆	pattern preset frames decoration copy paste
-⦅ ❁ ⦆	pattern preset frames decoration copy paste
-⦅ ★ ⦆	pattern preset frames decoration copy paste
-⦅ ☆ ⦆	pattern preset frames decoration copy paste
-⦅ ✦ ⦆	pattern preset frames decoration copy paste
-⦅ ✧ ⦆	pattern preset frames decoration copy paste
-⦅ ☾ ⦆	pattern preset frames decoration copy paste
-⌈ ♡ ⌋	pattern preset frames decoration copy paste
-⌈ ♥ ⌋	pattern preset frames decoration copy paste
-⌈ ❀ ⌋	pattern preset frames decoration copy paste
-⌈ ✿ ⌋	pattern preset frames decoration copy paste
-⌈ ❁ ⌋	pattern preset frames decoration copy paste
-⌈ ★ ⌋	pattern preset frames decoration copy paste
-⌈ ☆ ⌋	pattern preset frames decoration copy paste
-⌈ ✦ ⌋	pattern preset frames decoration copy paste
-⌈ ✧ ⌋	pattern preset frames decoration copy paste
-⌈ ☾ ⌋	pattern preset frames decoration copy paste
-╭ ♡ ╯	pattern preset frames decoration copy paste
-╭ ♥ ╯	pattern preset frames decoration copy paste
-╭ ❀ ╯	pattern preset frames decoration copy paste
-╭ ✿ ╯	pattern preset frames decoration copy paste
-╭ ❁ ╯	pattern preset frames decoration copy paste
-╭ ★ ╯	pattern preset frames decoration copy paste
-╭ ☆ ╯	pattern preset frames decoration copy paste
-╭ ✦ ╯	pattern preset frames decoration copy paste
-╭ ✧ ╯	pattern preset frames decoration copy paste
-╭ ☾ ╯	pattern preset frames decoration copy paste
-◜ ♡ ◝	pattern preset frames decoration copy paste
-◜ ♥ ◝	pattern preset frames decoration copy paste
-◜ ❀ ◝	pattern preset frames decoration copy paste
-◜ ✿ ◝	pattern preset frames decoration copy paste
-◜ ❁ ◝	pattern preset frames decoration copy paste
-◜ ★ ◝	pattern preset frames decoration copy paste
-◜ ☆ ◝	pattern preset frames decoration copy paste
-◜ ✦ ◝	pattern preset frames decoration copy paste
-◜ ✧ ◝	pattern preset frames decoration copy paste
-◜ ☾ ◝	pattern preset frames decoration copy paste
-⊰ ♡ ⊱	pattern preset frames decoration copy paste
-⊰ ♥ ⊱	pattern preset frames decoration copy paste
-⊰ ❀ ⊱	pattern preset frames decoration copy paste
-⊰ ✿ ⊱	pattern preset frames decoration copy paste
-⊰ ❁ ⊱	pattern preset frames decoration copy paste
-⊰ ★ ⊱	pattern preset frames decoration copy paste
-⊰ ☆ ⊱	pattern preset frames decoration copy paste
-⊰ ✦ ⊱	pattern preset frames decoration copy paste
-⊰ ✧ ⊱	pattern preset frames decoration copy paste
-⊰ ☾ ⊱	pattern preset frames decoration copy paste
-༺ ♡ ༻	pattern preset frames decoration copy paste
-༺ ♥ ༻	pattern preset frames decoration copy paste
-༺ ❀ ༻	pattern preset frames decoration copy paste
-༺ ✿ ༻	pattern preset frames decoration copy paste
-༺ ❁ ༻	pattern preset frames decoration copy paste
-༺ ☆ ༻	pattern preset frames decoration copy paste
-༺ ✦ ༻	pattern preset frames decoration copy paste
-༺ ☾ ༻	pattern preset frames decoration copy paste
-❮ ♡ ❯	pattern preset frames decoration copy paste
-❮ ♥ ❯	pattern preset frames decoration copy paste
-❮ ❀ ❯	pattern preset frames decoration copy paste
-❮ ✿ ❯	pattern preset frames decoration copy paste
-❮ ❁ ❯	pattern preset frames decoration copy paste
-❮ ★ ❯	pattern preset frames decoration copy paste
-❮ ☆ ❯	pattern preset frames decoration copy paste
-❮ ✦ ❯	pattern preset frames decoration copy paste
-❮ ✧ ❯	pattern preset frames decoration copy paste
-❮ ☾ ❯	pattern preset frames decoration copy paste
-⎡ ♡ ⎦	pattern preset frames decoration copy paste
-⎡ ♥ ⎦	pattern preset frames decoration copy paste
-⎡ ❀ ⎦	pattern preset frames decoration copy paste
-⎡ ✿ ⎦	pattern preset frames decoration copy paste
-⎡ ❁ ⎦	pattern preset frames decoration copy paste
-⎡ ★ ⎦	pattern preset frames decoration copy paste
-⎡ ☆ ⎦	pattern preset frames decoration copy paste
-⎡ ✦ ⎦	pattern preset frames decoration copy paste
-⎡ ✧ ⎦	pattern preset frames decoration copy paste
-⎡ ☾ ⎦	pattern preset frames decoration copy paste
-⌜ ♡ ⌟	pattern preset frames decoration copy paste
-⌜ ♥ ⌟	pattern preset frames decoration copy paste
-⌜ ❀ ⌟	pattern preset frames decoration copy paste
-⌜ ✿ ⌟	pattern preset frames decoration copy paste
-⌜ ❁ ⌟	pattern preset frames decoration copy paste
-⌜ ★ ⌟	pattern preset frames decoration copy paste
-⌜ ☆ ⌟	pattern preset frames decoration copy paste
-⌜ ✦ ⌟	pattern preset frames decoration copy paste
-⌜ ✧ ⌟	pattern preset frames decoration copy paste
-⌜ ☾ ⌟	pattern preset frames decoration copy paste
-##Chains
-♡ ⋆ ♡ ⋆ ♡ ⋆	pattern preset chains decoration copy paste
-♡ ⋆ ♡ ⋆ ♡ ⋆ ♡	pattern preset chains decoration copy paste
-♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆	pattern preset chains decoration copy paste
-♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆ ♡	pattern preset chains decoration copy paste
-♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆	pattern preset chains decoration copy paste
-♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆ ♡	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧ ✦	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧	pattern preset chains decoration copy paste
-✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆ ❀	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆ ❀	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆	pattern preset chains decoration copy paste
-❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆ ❀ ☆ ❀	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆ ☾	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆ ☾	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆	pattern preset chains decoration copy paste
-☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆ ☾ ⋆ ☾	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡ ♪	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡ ♪	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡	pattern preset chains decoration copy paste
-♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡ ♪ ♡ ♪	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁ ✿	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁ ✿	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁	pattern preset chains decoration copy paste
-✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁ ✿ ❁ ✿	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩ ★	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩ ★ ✩	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩ ★ ✩ ★	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩ ★ ✩ ★ ✩	pattern preset chains decoration copy paste
-★ ✩ ★ ✩ ★ ✩ ★ ✩ ★ ✩ ★	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈ ❖	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈ ❖	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈	pattern preset chains decoration copy paste
-❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈ ❖ ◈ ❖	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖	pattern preset chains decoration copy paste
-⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆ ˖ ⋆	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚ ♡	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚ ♡	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚	pattern preset chains decoration copy paste
-♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚ ♡ ˚ ♡	pattern preset chains decoration copy paste
-##Wings and crowns
-ʚ ♥ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ❀ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ✿ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ❁ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ★ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ☆ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ✦ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ✧ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ☾ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ☽ ɞ	pattern preset wings and crowns decoration copy paste
-ʚ ⋆ ɞ	pattern preset wings and crowns decoration copy paste
-⟡ ♥ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ❀ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ✿ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ❁ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ★ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ☆ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ✦ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ✧ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ☾ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ☽ ⟡	pattern preset wings and crowns decoration copy paste
-⟡ ⋆ ⟡	pattern preset wings and crowns decoration copy paste
-ꕥ ♡ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ♥ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ❀ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ✿ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ❁ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ★ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ☆ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ✦ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ✧ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ☾ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ☽ ꕥ	pattern preset wings and crowns decoration copy paste
-ꕥ ⋆ ꕥ	pattern preset wings and crowns decoration copy paste
-୨ ♡ ୧	pattern preset wings and crowns decoration copy paste
-୨ ♥ ୧	pattern preset wings and crowns decoration copy paste
-୨ ❀ ୧	pattern preset wings and crowns decoration copy paste
-୨ ✿ ୧	pattern preset wings and crowns decoration copy paste
-୨ ❁ ୧	pattern preset wings and crowns decoration copy paste
-୨ ★ ୧	pattern preset wings and crowns decoration copy paste
-୨ ☆ ୧	pattern preset wings and crowns decoration copy paste
-୨ ✦ ୧	pattern preset wings and crowns decoration copy paste
-୨ ✧ ୧	pattern preset wings and crowns decoration copy paste
-୨ ☾ ୧	pattern preset wings and crowns decoration copy paste
-୨ ☽ ୧	pattern preset wings and crowns decoration copy paste
-୨ ⋆ ୧	pattern preset wings and crowns decoration copy paste
-⊹ ♡ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ♥ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ❀ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ✿ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ❁ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ★ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ☆ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ✦ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ✧ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ☾ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ☽ ⊹	pattern preset wings and crowns decoration copy paste
-⊹ ⋆ ⊹	pattern preset wings and crowns decoration copy paste
-✧｡ ♡ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ♥ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ❀ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ✿ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ❁ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ★ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ☆ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ✦ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ✧ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ☾ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ☽ ｡✧	pattern preset wings and crowns decoration copy paste
-✧｡ ⋆ ｡✧	pattern preset wings and crowns decoration copy paste
-˚ʚ ♡ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ♥ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ❀ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ✿ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ❁ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ★ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ☆ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ✦ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ✧ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ☾ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ☽ ɞ˚	pattern preset wings and crowns decoration copy paste
-˚ʚ ⋆ ɞ˚	pattern preset wings and crowns decoration copy paste
-༄ ♡ ༄	pattern preset wings and crowns decoration copy paste
-༄ ♥ ༄	pattern preset wings and crowns decoration copy paste
-༄ ❀ ༄	pattern preset wings and crowns decoration copy paste
-༄ ✿ ༄	pattern preset wings and crowns decoration copy paste
-༄ ❁ ༄	pattern preset wings and crowns decoration copy paste
-༄ ★ ༄	pattern preset wings and crowns decoration copy paste
-༄ ☆ ༄	pattern preset wings and crowns decoration copy paste
-༄ ✦ ༄	pattern preset wings and crowns decoration copy paste
-༄ ✧ ༄	pattern preset wings and crowns decoration copy paste
-༄ ☾ ༄	pattern preset wings and crowns decoration copy paste
-༄ ☽ ༄	pattern preset wings and crowns decoration copy paste
-༄ ⋆ ༄	pattern preset wings and crowns decoration copy paste
-𓆩 ♡ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ♥ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ❀ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ✿ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ❁ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ★ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ☆ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ✦ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ✧ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ☾ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ☽ 𓆪	pattern preset wings and crowns decoration copy paste
-𓆩 ⋆ 𓆪	pattern preset wings and crowns decoration copy paste
-⌒ ♡ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ♥ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ❀ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ✿ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ❁ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ★ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ☆ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ✦ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ✧ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ☾ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ☽ ⌒	pattern preset wings and crowns decoration copy paste
-⌒ ⋆ ⌒	pattern preset wings and crowns decoration copy paste
-♔ ♡ ♔	pattern preset wings and crowns decoration copy paste
-♔ ♥ ♔	pattern preset wings and crowns decoration copy paste
-♔ ❀ ♔	pattern preset wings and crowns decoration copy paste
-♔ ✿ ♔	pattern preset wings and crowns decoration copy paste
-♔ ❁ ♔	pattern preset wings and crowns decoration copy paste
-♔ ★ ♔	pattern preset wings and crowns decoration copy paste
-♔ ☆ ♔	pattern preset wings and crowns decoration copy paste
-♔ ✦ ♔	pattern preset wings and crowns decoration copy paste
-♔ ✧ ♔	pattern preset wings and crowns decoration copy paste
-♔ ☾ ♔	pattern preset wings and crowns decoration copy paste
-♔ ☽ ♔	pattern preset wings and crowns decoration copy paste
-♔ ⋆ ♔	pattern preset wings and crowns decoration copy paste
-♕ ♡ ♕	pattern preset wings and crowns decoration copy paste
-♕ ♥ ♕	pattern preset wings and crowns decoration copy paste
-♕ ❀ ♕	pattern preset wings and crowns decoration copy paste
-♕ ✿ ♕	pattern preset wings and crowns decoration copy paste
-♕ ❁ ♕	pattern preset wings and crowns decoration copy paste
-♕ ★ ♕	pattern preset wings and crowns decoration copy paste
-♕ ☆ ♕	pattern preset wings and crowns decoration copy paste
-♕ ✦ ♕	pattern preset wings and crowns decoration copy paste
-♕ ✧ ♕	pattern preset wings and crowns decoration copy paste
-♕ ☾ ♕	pattern preset wings and crowns decoration copy paste
-♕ ☽ ♕	pattern preset wings and crowns decoration copy paste
-♕ ⋆ ♕	pattern preset wings and crowns decoration copy paste
-⚜ ♡ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ♥ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ❀ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ✿ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ❁ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ★ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ☆ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ✦ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ✧ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ☾ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ☽ ⚜	pattern preset wings and crowns decoration copy paste
-⚜ ⋆ ⚜	pattern preset wings and crowns decoration copy paste
-☙ ♡ ❧	pattern preset wings and crowns decoration copy paste
-☙ ♥ ❧	pattern preset wings and crowns decoration copy paste
-☙ ❀ ❧	pattern preset wings and crowns decoration copy paste
-☙ ✿ ❧	pattern preset wings and crowns decoration copy paste
-☙ ❁ ❧	pattern preset wings and crowns decoration copy paste
-☙ ★ ❧	pattern preset wings and crowns decoration copy paste
-☙ ☆ ❧	pattern preset wings and crowns decoration copy paste
-☙ ✦ ❧	pattern preset wings and crowns decoration copy paste
-☙ ✧ ❧	pattern preset wings and crowns decoration copy paste
-☙ ☾ ❧	pattern preset wings and crowns decoration copy paste
-☙ ☽ ❧	pattern preset wings and crowns decoration copy paste
-☙ ⋆ ❧	pattern preset wings and crowns decoration copy paste
-❦ ♡ ❦	pattern preset wings and crowns decoration copy paste
-❦ ♥ ❦	pattern preset wings and crowns decoration copy paste
-❦ ❀ ❦	pattern preset wings and crowns decoration copy paste
-❦ ✿ ❦	pattern preset wings and crowns decoration copy paste
-❦ ❁ ❦	pattern preset wings and crowns decoration copy paste
-❦ ★ ❦	pattern preset wings and crowns decoration copy paste
-❦ ☆ ❦	pattern preset wings and crowns decoration copy paste
-❦ ✦ ❦	pattern preset wings and crowns decoration copy paste
-❦ ✧ ❦	pattern preset wings and crowns decoration copy paste
-❦ ☾ ❦	pattern preset wings and crowns decoration copy paste
-❦ ☽ ❦	pattern preset wings and crowns decoration copy paste
-❦ ⋆ ❦	pattern preset wings and crowns decoration copy paste
-⁂ ♡ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ♥ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ❀ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ✿ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ❁ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ★ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ☆ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ✦ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ✧ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ☾ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ☽ ⁂	pattern preset wings and crowns decoration copy paste
-⁂ ⋆ ⁂	pattern preset wings and crowns decoration copy paste
-☘ ♡ ☘	pattern preset wings and crowns decoration copy paste
-☘ ♥ ☘	pattern preset wings and crowns decoration copy paste
-☘ ❀ ☘	pattern preset wings and crowns decoration copy paste
-☘ ✿ ☘	pattern preset wings and crowns decoration copy paste
-☘ ❁ ☘	pattern preset wings and crowns decoration copy paste
-☘ ★ ☘	pattern preset wings and crowns decoration copy paste
-☘ ☆ ☘	pattern preset wings and crowns decoration copy paste
-☘ ✦ ☘	pattern preset wings and crowns decoration copy paste
-☘ ✧ ☘	pattern preset wings and crowns decoration copy paste
-☘ ☾ ☘	pattern preset wings and crowns decoration copy paste
-☘ ☽ ☘	pattern preset wings and crowns decoration copy paste
-☘ ⋆ ☘	pattern preset wings and crowns decoration copy paste
-✾ ♡ ✾	pattern preset wings and crowns decoration copy paste
-✾ ♥ ✾	pattern preset wings and crowns decoration copy paste
-✾ ❀ ✾	pattern preset wings and crowns decoration copy paste
-✾ ✿ ✾	pattern preset wings and crowns decoration copy paste
-✾ ❁ ✾	pattern preset wings and crowns decoration copy paste
-✾ ★ ✾	pattern preset wings and crowns decoration copy paste
-✾ ☆ ✾	pattern preset wings and crowns decoration copy paste
-✾ ✦ ✾	pattern preset wings and crowns decoration copy paste
-✾ ✧ ✾	pattern preset wings and crowns decoration copy paste
-✾ ☾ ✾	pattern preset wings and crowns decoration copy paste
-✾ ☽ ✾	pattern preset wings and crowns decoration copy paste
-✾ ⋆ ✾	pattern preset wings and crowns decoration copy paste
-##Sparkle borders
-⁺ ˚ ⋆ ♡ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ♥ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ❀ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ✿ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ❁ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ★ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ☆ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ✦ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ✧ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ☾ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ☽ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-⁺ ˚ ⋆ ⋆ ⋆ ˚ ⁺	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ♡ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ♥ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ❀ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ✿ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ❁ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ★ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ☆ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ✦ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ✧ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ☾ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ☽ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-˖ ࣪ ⋆ ࣪ ˖	pattern preset sparkle borders decoration copy paste
-｡ﾟ ♡ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ♥ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ❀ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ✿ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ❁ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ★ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ☆ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ✦ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ✧ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ☾ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ☽ ﾟ｡	pattern preset sparkle borders decoration copy paste
-｡ﾟ ⋆ ﾟ｡	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ♡ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ♥ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ❀ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ✿ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ❁ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ★ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ☆ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ✦ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ✧ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ☾ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ☽ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-ﾟ｡ ₊ ⋆ ₊ ｡ﾟ	pattern preset sparkle borders decoration copy paste
-⋆｡ ♡ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ♥ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ❀ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ✿ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ❁ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ★ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ☆ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ✦ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ✧ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ☾ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ☽ ｡⋆	pattern preset sparkle borders decoration copy paste
-⋆｡ ⋆ ｡⋆	pattern preset sparkle borders decoration copy paste
-° ˖ ♡ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ♥ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ❀ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ✿ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ❁ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ★ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ☆ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ✦ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ✧ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ☾ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ☽ ˖ °	pattern preset sparkle borders decoration copy paste
-° ˖ ⋆ ˖ °	pattern preset sparkle borders decoration copy paste
-˚ ༘ ♡ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ♥ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ❀ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ✿ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ❁ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ★ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ☆ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ✦ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ✧ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ☾ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ☽ ༘ ˚	pattern preset sparkle borders decoration copy paste
-˚ ༘ ⋆ ༘ ˚	pattern preset sparkle borders decoration copy paste
-｡˚ ♡ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ♥ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ❀ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ✿ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ❁ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ★ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ☆ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ✦ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ✧ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ☾ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ☽ ˚｡	pattern preset sparkle borders decoration copy paste
-｡˚ ⋆ ˚｡	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ♡ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ♥ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ❀ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ✿ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ❁ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ★ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ☆ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ✦ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ✧ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ☾ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ☽ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-☆ﾟ.* ⋆ *.ﾟ☆	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ♡ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ♥ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ❀ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ✿ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ❁ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ★ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ☆ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ✦ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ✧ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ☽ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
-･ﾟ✧ ⋆ ✧ﾟ･	pattern preset sparkle borders decoration copy paste
+##Sparkles
+▬▬▬▬▬▬▬▬▬▬୨୧ ┈┈┈┈┈┈┈┈ ୨୧	pattern preset sparkles decoration copy paste
+─── ⋆⋅☆⋅⋆ ───	pattern preset sparkles decoration copy paste
+══════════ ⋆★⋆ ══════════	pattern preset sparkles decoration copy paste
+┈┈・୨ ✦ ୧・┈┈	pattern preset sparkles decoration copy paste
+⋆ ˚｡⋆୨୧˚ ˚୨୧⋆｡˚ ⋆	pattern preset sparkles decoration copy paste
+✧ ▬▭▬ ✦ ▬▭▬ ✧	pattern preset sparkles decoration copy paste
+☾ ⋆*･ﾟ:⋆*･ﾟ ✧ ⋆*･ﾟ:⋆*･ﾟ ☽	pattern preset sparkles decoration copy paste
+─── ･ ｡ﾟ☆: *.☽ .* :☆ﾟ. ───	pattern preset sparkles decoration copy paste
+⋆｡°✩ ⋆⁺｡˚⋆˙‧₊✩₊‧˙⋆˚｡⁺⋆ ✩°｡⋆	pattern preset sparkles decoration copy paste
+⋆⁺₊⋆ ☀︎ ⋆⁺₊⋆ ☁︎ ⋆⁺₊⋆	pattern preset sparkles decoration copy paste
+┈┈┈ ୨୧ ┈┈┈	pattern preset sparkles decoration copy paste
+═══ ୨୧ ═══	pattern preset sparkles decoration copy paste
+─── ୨୧ ───	pattern preset sparkles decoration copy paste
+▬▬▬ ୨୧ ▬▬▬	pattern preset sparkles decoration copy paste
+⋆⋅☆⋅⋆ ── ⋆⋅☆⋅⋆	pattern preset sparkles decoration copy paste
+✧.* ──────────── ✧.*	pattern preset sparkles decoration copy paste
+˚₊· ͟͟͞͞➳❥ ────────	pattern preset sparkles decoration copy paste
+⋆｡˚ ꕥ ˚｡⋆	pattern preset sparkles decoration copy paste
+────────── ୨୧ ──────────	pattern preset sparkles decoration copy paste
+══════════ ୨୧ ══════════	pattern preset sparkles decoration copy paste
+┈┈┈┈┈┈┈┈┈┈ ୨୧ ┈┈┈┈┈┈┈┈┈┈	pattern preset sparkles decoration copy paste
+┄┄┄┄┄┄┄┄┄┄ ୨୧ ┄┄┄┄┄┄┄┄┄┄	pattern preset sparkles decoration copy paste
+▬▬▬▬▬▬▬▬▬▬ ୨୧ ▬▬▬▬▬▬▬▬▬▬▶︎ •၊၊||၊|။||||။‌‌‌‌‌၊|• 0:10 ᡕᠵデᡁ᠊╾━	pattern preset sparkles decoration copy paste
+##Kaomoji
+(っ◔◡◔)っ ✦	pattern preset kaomoji decoration copy paste
+ʕ •ᴥ•ʔ ✧･ﾟ:*	pattern preset kaomoji decoration copy paste
+(づ｡◕‿‿◕｡)づ ✩	pattern preset kaomoji decoration copy paste
+ᕙ(⇀‸↼‶)ᕗ ⚒	pattern preset kaomoji decoration copy paste
+(˶ᵔ ᵕ ᵔ˶) ✿	pattern preset kaomoji decoration copy paste
+( •̀ ω •́ )✧ ↯	pattern preset kaomoji decoration copy paste
+(╥﹏╥) ｡°✩	pattern preset kaomoji decoration copy paste
+(ง •̀_•́)ง ⚔	pattern preset kaomoji decoration copy paste
+(¬‿¬ ) ✦	pattern preset kaomoji decoration copy paste
+┬─┬ ノ( ゜-゜ノ)	pattern preset kaomoji decoration copy paste
+(╯°□°）╯︵ ┻━┻	pattern preset kaomoji decoration copy paste
+(｡•̀ᴗ-)✧	pattern preset kaomoji decoration copy paste
+(´｡• ᵕ •｡`)	pattern preset kaomoji decoration copy paste
+(*/ω＼*)	pattern preset kaomoji decoration copy paste
+(o^▽^o)	pattern preset kaomoji decoration copy paste
+(☆▽☆)	pattern preset kaomoji decoration copy paste
+(✯◡✯)	pattern preset kaomoji decoration copy paste
+(✧ω✧)	pattern preset kaomoji decoration copy paste
+(๑˃ᴗ˂)ﻭ	pattern preset kaomoji decoration copy paste
+(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧	pattern preset kaomoji decoration copy paste
+✧･ﾟ: *✧･ﾟ:* (◕‿◕) *:･ﾟ✧*:･ﾟ✧	pattern preset kaomoji decoration copy paste
+(づ￣ ³￣)づ	pattern preset kaomoji decoration copy paste
+(つ≧▽≦)つ	pattern preset kaomoji decoration copy paste
+(；′⌒`)	pattern preset kaomoji decoration copy paste
+(｡•́︿•̀｡)	pattern preset kaomoji decoration copy paste
+(︶︹︶)	pattern preset kaomoji decoration copy paste
+(¬_¬ )	pattern preset kaomoji decoration copy paste
+(ಠ_ಠ)	pattern preset kaomoji decoration copy paste
+(눈_눈)	pattern preset kaomoji decoration copy paste
+(ง'̀-'́)ง	pattern preset kaomoji decoration copy paste
+ᕦ(ò_óˇ)ᕤ	pattern preset kaomoji decoration copy paste
+¯\_(ツ)_/¯	pattern preset kaomoji decoration copy paste
+##Boxes
+╭── ⋅ ⋅ ── ✩ ── ⋅ ⋅ ──╮	pattern preset boxes decoration copy paste
+╰── ⋅ ⋅ ── ✩ ── ⋅ ⋅ ──╯	pattern preset boxes decoration copy paste
+╔═════ ∘◦ ✾ ◦∘ ═════╗	pattern preset boxes decoration copy paste
+╚═════ ∘◦ ✾ ◦∘ ═════╝	pattern preset boxes decoration copy paste
+╭───────── ⋆⋅☆⋅⋆ ─────────╮	pattern preset boxes decoration copy paste
+╰───────── ⋆⋅☆⋅⋆ ─────────╯	pattern preset boxes decoration copy paste
+╭┈─────── ೄྀ࿐ ˊˎ-	pattern preset boxes decoration copy paste
+╰┈─────── ೄྀ࿐ ˊˎ-	pattern preset boxes decoration copy paste
+╔.★. .═════════════╗	pattern preset boxes decoration copy paste
+╚═════════════. .★.╝	pattern preset boxes decoration copy paste
+╭──〔 𓆣 〕──╮	pattern preset boxes decoration copy paste
+╰──〔 𓆣 〕──╯	pattern preset boxes decoration copy paste
+╭━━━━━━━━━━━━━━━━━╮	pattern preset boxes decoration copy paste
+╰━━━━━━━━━━━━━━━━━╯	pattern preset boxes decoration copy paste
+┌─────────────────┐	pattern preset boxes decoration copy paste
+└─────────────────┘	pattern preset boxes decoration copy paste
+┏━━━━━━━━━━━━━━━━━┓	pattern preset boxes decoration copy paste
+┗━━━━━━━━━━━━━━━━━┛	pattern preset boxes decoration copy paste
+╔═════════════════╗	pattern preset boxes decoration copy paste
+╚═════════════════╝	pattern preset boxes decoration copy paste
+╭┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╮	pattern preset boxes decoration copy paste
+╰┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄╯	pattern preset boxes decoration copy paste
+(っ˘̩╭╮˘̩)っ	pattern preset boxes decoration copy paste
+┏━━━━━°❀•°:🎀:°•❀°━━━━━┓	pattern preset boxes decoration copy paste
+┗━━━━━°❀•°:🎀:°•❀°━━━━━┛	pattern preset boxes decoration copy paste
+╭─━━━━━━━━━━─╮	pattern preset boxes decoration copy paste
+╰─━━━━━━━━━━─╯	pattern preset boxes decoration copy paste
+╭─══════════─╮	pattern preset boxes decoration copy paste
+╭─┈┈┈┈┈┈┈┈┈┈─╮	pattern preset boxes decoration copy paste
+╭─┄┄┄┄┄┄┄┄┄┄─╮	pattern preset boxes decoration copy paste
+╭─┅┅┅┅┅┅┅┅┅┅─╮	pattern preset boxes decoration copy paste
+╭─▬▬▬▬▬▬▬▬▬▬─╮	pattern preset boxes decoration copy paste
+╭─░░░░░░░░░░─╮	pattern preset boxes decoration copy paste
+╭─▒▒▒▒▒▒▒▒▒▒─╮	pattern preset boxes decoration copy paste
+╭─▓▓▓▓▓▓▓▓▓▓─╮	pattern preset boxes decoration copy paste
+╭─██████████─╮	pattern preset boxes decoration copy paste
+##Lines
+▬▬▬▬▬▬▬▬▬▬▬▬▬	pattern preset lines decoration copy paste
+┈┈┈┈┈┈┈┈┈┈┈┈┈	pattern preset lines decoration copy paste
+━━━━━━━━━━━━━	pattern preset lines decoration copy paste
+═════════════	pattern preset lines decoration copy paste
+┄┄┄┄┄┄┄┄┄┄┄┄┄	pattern preset lines decoration copy paste
+┅┅┅┅┅┅┅┅┅┅┅┅┅	pattern preset lines decoration copy paste
+##Ancient
+𓆣 ⋆｡°✩ 𓂀 ✩°｡⋆ 𓆣	pattern preset ancient decoration copy paste
+𓇼 ⋆.˚ 𓆉 𓆝 𓆡⋆.˚ 𓇼	pattern preset ancient decoration copy paste
+𓆸 ┈┈┈┈┈┈┈ 𓆸	pattern preset ancient decoration copy paste
+𓃠 ⋆｡˚ 𓃰 ˚｡⋆ 𓃭	pattern preset ancient decoration copy paste
+𓅓 ･ﾟ: *✧ 𓆙 ✧*:･ﾟ 𓅓	pattern preset ancient decoration copy paste
+𓋹 ── ⋆⋅◈⋅⋆ ── 𓋹	pattern preset ancient decoration copy paste
+⋆.ೃ࿔*:･ 𓆦 ･:*࿔.ೃ⋆	pattern preset ancient decoration copy paste
+𓈖 𓈗 𓈘 𓆟 𓈖 𓈗 𓈘	pattern preset ancient decoration copy paste
+𓂀 ─── 𓆣 ─── 𓂀	pattern preset ancient decoration copy paste
+𐇐 ── 𐇑 ── 𐇒 ── 𐇓	pattern preset ancient decoration copy paste
+𔐀 ━━━━ 𔑃 ━━━━ 𔒆	pattern preset ancient decoration copy paste
+𓃗 ──── 𓃘 ──── 𓃙	pattern preset ancient decoration copy paste
+𓆉 ⋆｡˚ 𓇼 ˚｡⋆ 𓆉	pattern preset ancient decoration copy paste
+𓆡 ⋆.˚ 𓈗 ⋆.˚ 𓆢	pattern preset ancient decoration copy paste
+𓉐 ═══════ 𓉔 ═══════ 𓉐	pattern preset ancient decoration copy paste
+𓊝 〜〜〜〜 𓊞 〜〜〜〜 𓊝	pattern preset ancient decoration copy paste
+𓌔 ── 𓌕 ── 𓌖	pattern preset ancient decoration copy paste
+𓍱 ┈┈┈┈ 𓍲 ┈┈┈┈ 𓍱	pattern preset ancient decoration copy paste
+𓎛 ── 𓎞 ── 𓎡	pattern preset ancient decoration copy paste
+𓏤 𓏥 𓏦 𓏧 𓏨	pattern preset ancient decoration copy paste
+##Mixed
+◈ ━━━━━━━━ ⸙ ━━━━━━━━ ◈	pattern preset mixed decoration copy paste
+┆ ⌗ ┆ ⌂ ┆ ∿ ┆ ⇅ ┆	pattern preset mixed decoration copy paste
+⛨ ━━━━━━ ⌘ ━━━━━━ ⛨	pattern preset mixed decoration copy paste
+┈┈┈┈․° ☣ °․┈┈┈┈	pattern preset mixed decoration copy paste
+⌖ ─────── ◈ ─────── ⌖	pattern preset mixed decoration copy paste
+┈┈┈┈ ⚚ ┈┈┈┈	pattern preset mixed decoration copy paste
+⏻ ─── ⎓ ─── ⛨	pattern preset mixed decoration copy paste
+┈┈ ✁ ┈┈┈┈┈┈┈┈┈┈	pattern preset mixed decoration copy paste
+✎ ┈┈┈┈┈┈┈┈┈┈┈┈	pattern preset mixed decoration copy paste
+⌫ ──── ↻ ──── ⇪	pattern preset mixed decoration copy paste
+▦ ─── ↯ ─── ◷	pattern preset mixed decoration copy paste
+⌨ ─── ◎ ─── ⌂	pattern preset mixed decoration copy paste
+ˏˋ°•*⁀➷ ────────	pattern preset mixed decoration copy paste
+ೃ⁀➷ ──────────	pattern preset mixed decoration copy paste
+ׂׂૢ་༘࿐ ──────────	pattern preset mixed decoration copy paste
+𑁍 ─────── 𑁍	pattern preset mixed decoration copy paste
+⛟ ┈┈┈┈┈┈┈ ⛟	pattern preset mixed decoration copy paste
+⛟ ═══ ⛕ ═══ ⛟	pattern preset mixed decoration copy paste
+♩ ♪ ♫ ♬ ♭ ♮ ♯	pattern preset mixed decoration copy paste
+───※ ·❆· ※───	pattern preset mixed decoration copy paste
+░░▒▒▓▓██ ◈ ██▓▓▒▒░░	pattern preset mixed decoration copy paste
+▸ ▹ ► ▻ ◈ ◅ ◄ ◃ ◂	pattern preset mixed decoration copy paste
+◢ ◣ ◤ ◥ ◈ ◢ ◣ ◤ ◥	pattern preset mixed decoration copy paste
+◰ ◱ ◲ ◳ ◈ ◰ ◱ ◲ ◳	pattern preset mixed decoration copy paste
 #Special
 ##System and keys
 ⌂	house special system and keys

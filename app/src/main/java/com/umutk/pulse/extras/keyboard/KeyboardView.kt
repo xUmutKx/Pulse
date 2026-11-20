@@ -1609,9 +1609,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     items(list) { it2 -> EmojiCell(it2, th, act, tones = page != 0 && page != 10, onTones = { e -> toneBase = e }) }
                 }
             }
-            Row(Modifier.fillMaxWidth().height(keyH * .7f), verticalAlignment = Alignment.CenterVertically) {
+            // the bottom row sits a notch higher (the thumb reaches it), with a space bar between "abc" and the delete key
+            Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).height(keyH * .8f), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("abc", color = th.text, fontSize = 17.sp) }
-                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                Box(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 5.dp).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.space() })
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
             }
         }
