@@ -265,7 +265,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         // lyrics are looked up only while a notification or the lyrics widget shows them
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
         // the separate lyrics notification: the line with its neighbours, replaced as the song moves
-        if (LiveLyrics.separate(ctx) && st.isPlaying && st.current != null) {
+        // it stays while the song is paused, and goes when the player is closed (no current track)
+        if (LiveLyrics.separate(ctx) && st.current != null) {
             val res = LiveLyrics.resultFor(ctx, st.current!!)
             val pos = engine.positionMs + AHEAD_MS
             val trio = LiveLyrics.lineAt(res, pos)
