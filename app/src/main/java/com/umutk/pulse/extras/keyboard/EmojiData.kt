@@ -67,9 +67,105 @@ object EmojiData {
     fun forWord(word: String): String? = wordIndex?.get(word.lowercase(Locale.ROOT))
 
     /** The items whose words contain every word of [query]. */
+    /** Semantic emoji search (as in WM Keyboard): the words are matched whole, by their start, by their Turkish stem, by a near spelling and by meaning
+     *  (groups of words that mean the same thing, Turkish and English), and the best matches come first. */
     fun search(all: List<EmojiItem>, query: String, max: Int = 150): List<EmojiItem> {
         val q = norm(query).split(' ').filter { it.isNotEmpty() }
         if (q.isEmpty()) return emptyList()
-        return all.asSequence().filter { it.kw.isNotEmpty() && q.all { w -> it.kw.contains(w) } }.take(max).toList()
+        // the fast path: every word is in the keywords as it is
+        val plain = all.asSequence().filter { it.kw.isNotEmpty() && q.all { w -> it.kw.contains(w) } }.take(max).toList()
+        if (plain.size >= 12) return plain
+        val wants = q.map { w -> listOf(w, stem(w)).distinct() + (meaning[w] ?: meaning[stem(w)] ?: emptyList()) }
+        val scored = all.mapNotNull { e ->
+            if (e.kw.isEmpty()) return@mapNotNull null
+            val toks = e.kw.split(';', ' ').filter { it.isNotEmpty() }
+            var total = 0f
+            for ((i, alts) in wants.withIndex()) {
+                var best = 0f
+                for (t in toks) {
+                    for ((j, a) in alts.withIndex()) {
+                        val sc = when {
+                            t == a -> if (j == 0) 3f else if (j == 1) 2.5f else 2f
+                            a.length >= 3 && t.startsWith(a) -> if (j == 0) 2f else 1.5f
+                            a.length >= 5 && t.length >= 5 && near(t, a) -> 1f
+                            else -> 0f
+                        }
+                        if (sc > best) best = sc
+                    }
+                }
+                if (best == 0f) return@mapNotNull null
+                total += best
+                if (i > 6) break
+            }
+            e to (total - toks.size * .01f)
+        }
+        val seen = plain.toMutableSet()
+        return (plain + scored.sortedByDescending { it.second }.map { it.first }.filter { seen.add(it) }).take(max)
+    }
+
+    private val sufs = listOf("lerimiz", "larımız", "leri", "ları", "ler", "lar", "lik", "lık", "luk", "lük", "siz", "sız", "suz", "süz", "li", "lı", "lu", "lü", "cik", "cık", "im", "ım", "in", "ın", "de", "da", "te", "ta", "yi", "yı", "i", "ı", "u", "ü", "s", "ing", "ed", "es").map { norm(it) }.distinct().sortedByDescending { it.length }
+    private fun stem(w: String): String { for (s in sufs) if (w.length - s.length >= 3 && w.endsWith(s)) return w.dropLast(s.length); return w }
+    /** One letter changed, added or left out. */
+    private fun near(a: String, b: String): Boolean {
+        if (kotlin.math.abs(a.length - b.length) > 1) return false
+        var i = 0; var j = 0; var d = 0
+        while (i < a.length && j < b.length) {
+            if (a[i] == b[j]) { i++; j++; continue }
+            if (++d > 1) return false
+            when { a.length > b.length -> i++; a.length < b.length -> j++; else -> { i++; j++ } }
+        }
+        return d + (a.length - i) + (b.length - j) <= 1
+    }
+
+    /** Words that mean the same thing (each word of a group finds the others). */
+    private val meaning: Map<String, List<String>> by lazy {
+        val groups = listOf(
+            "sad üzgün mutsuz hüzün ağla cry tear gözyaşı upset kırgın unhappy depressed",
+            "happy mutlu sevinç neşe joy glad smile gülümse güldü gül",
+            "laugh kahkaha lol haha gül komik funny joke şaka",
+            "love aşk sevgi seviyorum heart kalp romance romantik sevgili kiss öpücük",
+            "angry kızgın sinirli öfke mad rage hırs furious",
+            "scared korku korkmuş fear afraid panik dehşet horror",
+            "tired yorgun uykulu sleepy sleep uyku bitkin exhausted",
+            "sick hasta ill grip ateş fever virus mikrop",
+            "food yemek yiyecek eat acıktım hungry aç meal",
+            "drink içecek içmek thirsty susadım",
+            "coffee kahve çay tea cup fincan",
+            "beer bira alcohol alkol şarap wine cheers şerefe",
+            "party parti kutlama celebrate celebration tebrik congrats doğumgünü birthday",
+            "money para cash nakit zengin rich dolar euro lira bank banka",
+            "work iş çalış office ofis job meslek",
+            "school okul ders lesson study çalış sınav exam book kitap",
+            "car araba oto vehicle araç drive sür",
+            "travel seyahat tatil holiday vacation trip yolculuk uçak plane",
+            "home ev house yuva",
+            "weather hava güneş sun yağmur rain kar snow bulut cloud",
+            "cold soğuk üşüdüm freezing buz ice",
+            "hot sıcak heat ateş fire yanıyor",
+            "music müzik şarkı song melody dinle listen",
+            "sport spor futbol football soccer basketbol ball top maç match",
+            "win kazan galibiyet trophy kupa victory zafer champion şampiyon",
+            "ok tamam okay peki onay agree yes evet",
+            "no hayır yok reddet refuse cross çarpı",
+            "thanks teşekkür sağol thank grateful minnettar",
+            "sorry özür pardon affet",
+            "cat kedi kitten pisi",
+            "dog köpek puppy kuçu",
+            "baby bebek çocuk child kid",
+            "night gece moon ay yıldız star",
+            "morning sabah günaydın sunrise",
+            "think düşün hmm thinking düşünce idea fikir",
+            "strong güçlü kas muscle power",
+            "cool havalı süper super awesome harika mükemmel perfect",
+            "phone telefon mobil call ara",
+            "time zaman saat clock watch",
+            "gift hediye present paket",
+            "flower çiçek gül rose bahar spring",
+            "christmas yılbaşı noel santa",
+            "ghost hayalet halloween cadı witch",
+        )
+        val m = HashMap<String, List<String>>()
+        groups.forEach { g -> val ws = g.split(' ').map { norm(it) }.filter { it.isNotEmpty() }; ws.forEach { w -> m[w] = (m[w].orEmpty() + ws.filter { it != w }).distinct() } }
+        m
     }
 }
