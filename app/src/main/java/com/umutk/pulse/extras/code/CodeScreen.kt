@@ -72,9 +72,10 @@ class CodeHandle {
 
 /** The editor view itself: Sora Editor with the TextMate grammar of [lang], in the colours of the look. */
 @Composable
-fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boolean, wrap: Boolean, textSp: Float, modifier: Modifier = Modifier, onText: ((String) -> Unit)? = null) {
-    val dark = T.bg.luminance() < .5f
-    val bg = T.bg.toArgb()
+fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boolean, wrap: Boolean, textSp: Float, modifier: Modifier = Modifier, bgOverride: androidx.compose.ui.graphics.Color? = null, onText: ((String) -> Unit)? = null) {
+    val ground = bgOverride ?: T.bg
+    val dark = ground.luminance() < .5f
+    val bg = ground.toArgb()
     // the view is made once: what it calls on a change must be the latest
     val onTextNow by androidx.compose.runtime.rememberUpdatedState(onText)
     AndroidView(modifier = modifier, factory = { c ->
@@ -166,7 +167,10 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     var editing by remember(src) { mutableStateOf(startEditing) }
     var wrap by remember { mutableStateOf(prefs.getBoolean("wrap", false)) }
     var size by remember { mutableStateOf(prefs.getFloat("size", 13f)) }
-    var tools by remember { mutableStateOf(false) }
+    // the tools are always in view (no ⋮ to open them); the ground is AMOLED black by default, the look's colour on request
+    val tools = true
+    var amoled by remember { mutableStateOf(prefs.getBoolean("amoled", true)) }
+    var runHtml by remember { mutableStateOf<String?>(null) }
     var find by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var replace by remember { mutableStateOf("") }
@@ -201,7 +205,8 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     }
 
     Dialog(onDismissRequest = { close() }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        val ground = if (amoled) androidx.compose.ui.graphics.Color.Black else T.bg
+        Column(Modifier.fillMaxSize().background(ground).statusBarsPadding().navigationBarsPadding().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
@@ -217,7 +222,8 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                     h.ed?.let { ed -> h.quiet { PulseCode.unfoldAll(ed, h.folds) } }
                     editing = true
                 }
-                TopIcon("more", accent = tools) { tools = !tools }
+                // a page (html, svg, markdown shown as html) runs: it opens in a window as a browser shows it
+                if ((lang?.label ?: "").lowercase().let { it.contains("html") || it.contains("svg") } || src.name.substringAfterLast('.').lowercase() in setOf("html", "htm", "svg")) TopIcon("play") { runHtml = h.ed?.text?.toString() ?: text }
             }
             if (confirm) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Save the changes?", "Değişiklikler kaydedilsin mi?"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -227,6 +233,7 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
             }
             if (tools) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PChip(wrap, tr("Wrap", "Satır kaydır")) { wrap = !wrap; prefs.edit().putBoolean("wrap", wrap).apply() }
+                PChip(amoled, tr("AMOLED black", "AMOLED siyah")) { amoled = !amoled; prefs.edit().putBoolean("amoled", amoled).apply() }
                 if (!editing) {
                     PChip(false, tr("Fold block", "Bloğu kapat")) { h.ed?.let { ed -> h.quiet { if (!PulseCode.foldAtCursor(ed, h.folds)) note = tr("No block here", "Burada blok yok") } } }
                     PChip(false, tr("Fold all", "Hepsini kapat")) { h.ed?.let { ed -> h.quiet { PulseCode.foldAll(ed, h.folds) } } }
@@ -253,9 +260,28 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val t = text
                 if (t == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, modifier = Modifier.align(Alignment.Center))
-                else CodePane(h, t, lang, editing, wrap, size, Modifier.fillMaxSize())
+                else CodePane(h, t, lang, editing, wrap, size, Modifier.fillMaxSize(), bgOverride = ground)
             }
             if (editing) SymbolBar(h)
+        }
+    }
+    // the page run: shown as a browser shows it, with its scripts (it may load what it links to from the internet)
+    runHtml?.let { html ->
+        Dialog(onDismissRequest = { runHtml = null }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).statusBarsPadding().navigationBarsPadding()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TopIcon("back") { runHtml = null }
+                    Text(src.name, color = androidx.compose.ui.graphics.Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                }
+                AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
+                    android.webkit.WebView(c).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        webViewClient = android.webkit.WebViewClient()
+                        loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null)
+                    }
+                })
+            }
         }
     }
 }

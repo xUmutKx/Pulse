@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -197,6 +198,7 @@ object AppPlace {
         App("ContactsLauncher", "Contacts", "Kişiler", "person", Icons.Outlined.Person) { c, _ -> launchExtra(c, "com.umutk.pulse.ContactsActivity") },
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
+        App("CodeLauncher", "Code", "Kod", "code", Icons.Outlined.Code) { c, _ -> launchExtra(c, TOOL, "code") },
         App("ClockLauncher", "Clock", "Saat", "clock", Icons.Outlined.AccessTime) { c, _ -> launchExtra(c, TOOL, "clock") },
         App("EbookLauncher", "Books", "Kitaplar", "book", Icons.Outlined.MenuBook) { c, _ -> launchExtra(c, TOOL, "ebook") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },

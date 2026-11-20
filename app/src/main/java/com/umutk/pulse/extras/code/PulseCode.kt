@@ -82,7 +82,7 @@ object PulseCode {
         .mapNotNull { byExt[it] }.distinctBy { it.scope }
 
     /** The extensions that open in the code editor from Files by a tap (HTML opens as a page there; the menu offers its code). */
-    val tapExts: Set<String> = byExt.keys - setOf("html", "htm", "xhtml", "svg", "md", "markdown", "log", "r", "s", "el", "pp", "mdx") + setOf("gradle")
+    val tapExts: Set<String> = byExt.keys - setOf("xhtml", "svg", "markdown", "log", "r", "s", "el", "pp", "mdx") + setOf("gradle")
 
     /** The language of a file: its name, its extension, then its first lines (a #! line, <!doctype, <?xml, a JSON start). Null: no language known. */
     fun detect(name: String, head: String = ""): Lang? {

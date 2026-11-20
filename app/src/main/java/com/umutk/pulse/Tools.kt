@@ -144,6 +144,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "browser" -> com.umutk.pulse.extras.browser.BrowserHub(back)
         id == "office" -> { androidx.activity.compose.BackHandler { back() }; OfficePage() }
         id == "calculator" -> com.umutk.pulse.extras.calculator.CalculatorHub(back)
+        id == "code" -> com.umutk.pulse.extras.code.CodeHome(back)
         id == "localsend" -> com.umutk.pulse.extras.share.ShareHub(back)
         id == "palette" -> com.umutk.pulse.extras.palette.PaletteHub(back)
         id == "blackout" -> com.umutk.pulse.extras.blackout.BlackOutHub(back)

@@ -253,6 +253,7 @@ open class ExtraToolActivity : ComponentActivity() {
             "browser" -> "launch_browser" to tr("Browser", "Tarayıcı")
             "office" -> "launch_office" to "Office"
             "calculator" -> "launch_calc" to tr("Calculator", "Hesap makinesi")
+            "code" -> "launch_code" to tr("Code", "Kod")
             "clock" -> "launch_clock" to tr("Clock", "Saat")
             "tempmail" -> "launch_tempmail" to "TempMail"
             "ebook" -> "launch_books" to tr("Books", "Kitaplar")
@@ -291,6 +292,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("OfficeLauncher") -> "office"
             n.endsWith("CalculatorLauncher") -> "calculator"
+            n.endsWith("CodeLauncher") -> "code"
             n.endsWith("ClockLauncher") -> "clock"
             n.endsWith("TempMailLauncher") -> "tempmail"
             n.endsWith("EbookLauncher") -> "ebook"
