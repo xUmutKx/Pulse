@@ -270,12 +270,19 @@ object NavSettings {
     private const val PREFS = "appearance"
     var showShorts by androidx.compose.runtime.mutableStateOf(false)
         private set
-    fun init(context: android.content.Context) { showShorts = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean("nav_shorts", false) }
+    /** The Music tab: off by default (music is the music player's job); it can be turned on in the settings. */
+    var showMusic by androidx.compose.runtime.mutableStateOf(false)
+        private set
+    fun init(context: android.content.Context) {
+        val p = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        showShorts = p.getBoolean("nav_shorts", false); showMusic = p.getBoolean("nav_music", false)
+    }
+    fun updateShowMusic(context: android.content.Context, on: Boolean) { showMusic = on; context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean("nav_music", on).apply() }
     fun updateShowShorts(context: android.content.Context, on: Boolean) { showShorts = on; context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean("nav_shorts", on).apply() }
 }
 
 /** The tabs of the bottom bar. */
-fun navTabs(): List<Tab> = Tab.entries.filter { it != Tab.Shorts || NavSettings.showShorts }
+fun navTabs(): List<Tab> = Tab.entries.filter { (it != Tab.Shorts || NavSettings.showShorts) && (it != Tab.Music || NavSettings.showMusic) }
 
 enum class Tab(val defaultLabel: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     Home("Home", Icons.Outlined.Home, Icons.Rounded.Home),

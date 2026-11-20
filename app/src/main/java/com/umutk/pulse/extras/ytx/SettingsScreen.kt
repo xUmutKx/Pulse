@@ -773,6 +773,12 @@ private fun AppearanceThemeContent(context: Context) {
             checked = NavSettings.showShorts,
             onCheckedChange = { NavSettings.updateShowShorts(navCtx, it) },
         )
+        SettingsSwitchRow(
+            title = com.umutk.pulse.tr("Music in the bottom bar", "Alt çubukta Müzik"),
+            subtitle = com.umutk.pulse.tr("Songs are played in Pulse's music player; this brings YouTube Music's tab back here", "Şarkılar Pulse'un müzik oynatıcısında çalar; bu, YouTube Music sekmesini buraya geri getirir"),
+            checked = NavSettings.showMusic,
+            onCheckedChange = { NavSettings.updateShowMusic(navCtx, it) },
+        )
 
         HorizontalDivider(color = c.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
 
