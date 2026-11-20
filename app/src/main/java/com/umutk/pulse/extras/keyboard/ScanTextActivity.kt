@@ -37,10 +37,10 @@ class ScanTextActivity : ComponentActivity() {
                     val bmp = BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = s })
                     val deg = when (ExifInterface(f.path).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
                     val up: Bitmap? = if (bmp != null && deg != 0f) Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(deg) }, true) else bmp
-                    up?.let { Ocr.read(it) }
+                    up?.let { Ocr.read(this@ScanTextActivity, it) }
                 }.getOrNull().also { f.delete() }
             }
-            if (text.isNullOrBlank()) Toast.makeText(this@ScanTextActivity, tr("No text found in the photo", "Fotoğrafta yazı bulunamadı"), Toast.LENGTH_LONG).show()
+            if (text.isNullOrBlank()) Toast.makeText(this@ScanTextActivity, tr("No text found in the photo (without the Play build, Pulse AI needs a vision model)", "Fotoğrafta yazı bulunamadı (Play sürümü dışında Pulse AI'da görüntü modeli gerekir)"), Toast.LENGTH_LONG).show()
             else {
                 (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("scan", text.trim()))
                 Toast.makeText(this@ScanTextActivity, tr("Text copied: tap it in the keyboard's bar", "Yazı kopyalandı: klavye çubuğundan dokun"), Toast.LENGTH_LONG).show()
@@ -51,9 +51,6 @@ class ScanTextActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!Ocr.available) {
-            Toast.makeText(this, tr("Reading a photo is in the Play build", "Fotoğraf okuma Play sürümünde var"), Toast.LENGTH_LONG).show(); finish(); return
-        }
         val uri = runCatching {
             val f = File(getExternalFilesDir(null) ?: error("no storage"), "scan-text-${System.currentTimeMillis()}.jpg")
             shot = f

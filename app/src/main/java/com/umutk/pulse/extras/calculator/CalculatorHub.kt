@@ -84,16 +84,15 @@ fun CalculatorHub(back: () -> Unit) {
                     // the camera stores an upright photo sideways with a tag: it is turned upright first
                     val deg = when (android.media.ExifInterface(f.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
                     val up = if (bmp != null && deg != 0f) android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true) else bmp
-                    up?.let { com.umutk.pulse.ai.Ocr.read(it) }
+                    up?.let { com.umutk.pulse.ai.Ocr.read(ctx, it) }
                 }.getOrNull().also { f.delete() }
             }
             val sum = text?.let { com.umutk.pulse.ai.OcrMath.extract(it) }
-            if (sum == null) scanNote = tr("No sum found in the photo", "Fotoğrafta işlem bulunamadı")
+            if (sum == null) scanNote = tr("No sum found in the photo (without the Play build, Pulse AI needs a vision model)", "Fotoğrafta işlem bulunamadı (Play sürümü dışında Pulse AI'da görüntü modeli gerekir)")
             else { e = sum; done = false; err = false; scanNote = "" }
         }
     }
     fun scan() {
-        if (!com.umutk.pulse.ai.Ocr.available) { scanNote = tr("Reading a photo is in the Play build", "Fotoğraf okuma Play sürümünde var"); return }
         val uri = runCatching {
             val f = java.io.File(ctx.getExternalFilesDir(null) ?: error("no storage"), "calc-${System.currentTimeMillis()}.jpg")
             shot = f

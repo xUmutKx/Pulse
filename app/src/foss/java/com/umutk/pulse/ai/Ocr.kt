@@ -1,10 +1,10 @@
 package com.umutk.pulse.ai
 
+import android.content.Context
 import android.graphics.Bitmap
+import com.umutk.pulse.extras.ai.AiOcr
 
-/** The FOSS build carries no text-reading model (the Play build has one): reading a picture gives nothing here. */
+/** The FOSS build has no text-reading model of its own: Pulse AI's vision model (the full build, when one is chosen in the Models tab) reads the picture instead. */
 object Ocr {
-    const val available = false
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun read(bmp: Bitmap): String? = null
+    suspend fun read(c: Context, bmp: Bitmap): String? = AiOcr.read(c, bmp)
 }
