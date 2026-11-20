@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd15" to (tr("Pulse's icon is black again, the process list has lines between its columns.",
+        "Pulse'un ikonu yine siyah, işlem listesinde sütunlar arasında çizgiler var.")),
     "kbd14" to (tr("Code is an app of its own (AMOLED, Run for pages), Files can move a file to Secure Folder, the keyboard's calculator answers on the bar and its Dictionary reads TDK, online songs have covers in the notification and go on with a mix, tablets get bigger icons and right click.",
         "Kod artık ayrı bir uygulama (AMOLED, sayfalar için Çalıştır), Dosyalar Güvenli Klasör'e taşıyabiliyor, klavyenin hesap makinesi sonucu çubukta veriyor ve Sözlük TDK'yı okuyor, çevrimiçi şarkıların bildiriminde kapak var ve bir mix ile devam ediyor, tabletlerde daha büyük ikonlar ve sağ tık.")),
     "kbd13" to (tr("Keyboard: backspace takes only the space after a dot, file names like test.py stay joined, command words only in terminals, a waiting file shows its name. Shuffle beside Play, square online covers, ruled process list.",
