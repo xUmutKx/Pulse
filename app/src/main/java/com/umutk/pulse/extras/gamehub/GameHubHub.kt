@@ -964,7 +964,7 @@ fun GameHubHub(onBack: () -> Unit) {
     // Game Hub is the shelf: its old pages (the welcome page, the old settings page with its side menu, the other looks) are not opened any more;
     // everything they held is in the shelf's own settings
     val boxOn = webShelfOk && ghLook == "boxshelf"
-    if (webShelfOk) { if (theme != "shelf") theme = "shelf"; if (boxOn) { if (page != 1) page = 1; if (filter != 0) filter = 0 } else if (page == 0) page = 1 }
+    if (webShelfOk) { if (theme != "shelf") theme = "shelf"; if (boxOn) { if (page == 0) page = 1; if (page == 1 && filter != 0) filter = 0 } else if (page == 0) page = 1 }
     ModalNavigationDrawer(
         drawerState = drawer,
         // the shelf's own swipes (between the games, turning a case) are not taken by the side menu
