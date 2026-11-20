@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.*
 import com.umutk.pulse.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -331,7 +332,7 @@ fun DetailsPage() {
         AccessNeededCard(tr("Details", "Ayrıntılar"), tr("Showing this app's own processes only.", "Yalnızca bu uygulamanın kendi işlemleri gösteriliyor."), Modifier.padding(bottom = 6.dp))
         if (list.isEmpty()) Center(tr("No processes could be read", "İşlemler okunamadı"))
         else LazyColumn(Modifier.fillMaxSize()) {
-            items(shown.take(400), key = { it.pid }) { p ->
+            itemsIndexed(shown.take(400), key = { i, p -> if (p.pid > 0) p.pid else -(i + 1) }) { _, p ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(p.name, Modifier.width(150.dp), color = T.text, fontSize = 12.sp, maxLines = 1, fontFamily = mono)
                     Row(Modifier.weight(1f).horizontalScroll(hs)) {

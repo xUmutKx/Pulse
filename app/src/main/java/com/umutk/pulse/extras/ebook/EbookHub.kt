@@ -1787,7 +1787,7 @@ private fun ColumnScope.CategoryBooks(th: Theme, ctx: Context, topic: String, on
         verticalItemSpacing = 14.dp, horizontalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = PaddingValues(top = 14.dp, bottom = 120.dp), modifier = Modifier.weight(1f).fillMaxWidth(),
     ) {
-        items(books, key = { it.title + it.author }) { f ->
+        itemsIndexed(books, key = { i, it -> "$i|" + it.title + it.author }) { _, f ->
             val pic by produceState<ImageBitmap?>(null, f.cover) { value = f.cover?.let { u -> withContext(Dispatchers.IO) { BookFind.image(u)?.asImageBitmap() } } }
             val shown = pic
             val ratio = shown?.let { (it.width.toFloat() / it.height).coerceIn(.55f, 1.1f) } ?: .68f

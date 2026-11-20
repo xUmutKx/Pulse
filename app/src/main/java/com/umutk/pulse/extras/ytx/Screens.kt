@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -1045,7 +1046,7 @@ fun SearchScreen(
                     )
                 } else {
                     LazyColumn(contentPadding = contentPadding) {
-                        items(matchingHistory, key = { "hist-$it" }) { query ->
+                        itemsIndexed(matchingHistory, key = { i, it -> "hist-$i-$it" }) { _, query ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1081,7 +1082,7 @@ fun SearchScreen(
                                 }
                             }
                         }
-                        items(nonHistorySuggestions, key = { "sug-$it" }) { suggestion ->
+                        itemsIndexed(nonHistorySuggestions, key = { i, it -> "sug-$i-$it" }) { _, suggestion ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1153,7 +1154,7 @@ fun SearchScreen(
                                 }
                             }
                         }
-                        items(history, key = { "hist-$it" }) { query ->
+                        itemsIndexed(history, key = { i, it -> "hist-$i-$it" }) { _, query ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

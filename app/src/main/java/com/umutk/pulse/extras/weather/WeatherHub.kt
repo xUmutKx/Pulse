@@ -261,7 +261,7 @@ fun WeatherHub(onBack: () -> Unit) {
         }
         if (searching) {
             item { PField(query, { query = it }, tr("City", "Şehir"), Modifier.fillMaxWidth(), onDone = { search() }) }
-            items(hits, key = { it.lat.toString() + it.lon }) { h ->
+            itemsIndexed(hits, key = { i, it -> "$i|" + it.lat.toString() + it.lon }) { _, h ->
                 Row(
                     Modifier.fillMaxWidth().clickable {
                         searching = false; hits = emptyList()
@@ -285,7 +285,7 @@ fun WeatherHub(onBack: () -> Unit) {
                         PIcon("compass", if (on) T.accent else fg, 16.dp); Spacer(Modifier.width(6.dp)); Text(tr("My location", "Konumum"), color = if (on) T.accent else fg, fontSize = 14.sp)
                     }
                 }
-                items(cities, key = { it.lat.toString() + it.lon }) { c ->
+                itemsIndexed(cities, key = { i, it -> "$i|" + it.lat.toString() + it.lon }) { _, c ->
                     val on = place?.let { !it.device && it.lat == c.lat && it.lon == c.lon } == true
                     Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(if (on) T.accent.copy(alpha = .22f) else WxTheme.panel).clickable { load(c) }.padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(c.name.substringBefore(','), color = if (on) T.accent else fg, fontSize = 14.sp, maxLines = 1)
@@ -671,7 +671,7 @@ private fun AddPlacePage(fg: Color, sub: Color, bg: Brush, onBack: () -> Unit, o
             item { PField(q, { q = it }, tr("City", "Şehir"), Modifier.fillMaxWidth().focusRequester(focus)) }
             if (busy) item { Text("…", color = sub, fontSize = 14.sp) }
             if (note.isNotEmpty() && !busy) item { Text(note, color = sub, fontSize = 14.sp) }
-            items(hits, key = { it.lat.toString() + it.lon }) { h ->
+            itemsIndexed(hits, key = { i, it -> "$i|" + it.lat.toString() + it.lon }) { _, h ->
                 Row(Modifier.fillMaxWidth().clickable { onPick(h) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("globe", fg, 20.dp)
                     Spacer(Modifier.width(12.dp))

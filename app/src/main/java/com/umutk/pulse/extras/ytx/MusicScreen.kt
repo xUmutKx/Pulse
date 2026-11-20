@@ -423,7 +423,7 @@ fun MusicScreen(
                             }
 
 
-                            items(state.shelves, key = { "shelf_" + it.title }) { shelf ->
+                            itemsIndexed(state.shelves, key = { i, it -> "shelf_$i|" + it.title }) { _, shelf ->
                                 val directTracks = remember(shelf) {
                                     shelf.items
                                         .filter { it.videoId != null && it.browseId.isNullOrEmpty() && it.playlistId.isNullOrEmpty() }
@@ -440,7 +440,7 @@ fun MusicScreen(
                                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                                         modifier = Modifier.padding(top = 10.dp),
                                     ) {
-                                        items(shelf.items, key = { "item_" + (it.videoId ?: it.browseId ?: it.title) }) { item ->
+                                        itemsIndexed(shelf.items, key = { i, it -> "item_$i|" + (it.videoId ?: it.browseId ?: it.title) }) { _, item ->
                                             MusicShelfCard(
                                                 item = item,
                                                 onPlay = {

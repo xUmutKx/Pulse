@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -203,7 +204,7 @@ fun ProcessesPage() {
                             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text, net[g.uid], sizes[g.uid], if (own && usage) (fg[g.key] ?: 0L) else null) }
                         }
                     }
-                    if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
+                    if (many && isOpen) itemsIndexed(g.rows.sortedByDescending { it.p.rssMb }, key = { i, r -> if (r.p.pid > 0) "p${r.p.pid}" else "p0-$i" }) { _, r ->
                         val on = r.p.pid > 0 && sel == r.p.pid
                         Row(Modifier.fillMaxWidth().height(36.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (r.p.pid > 0) sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {

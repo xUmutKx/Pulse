@@ -3,6 +3,7 @@ package com.umutk.pulse.features
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,7 +92,7 @@ fun ProcessListScreen(onBack: () -> Unit) {
             Center(tr("No processes could be read", "İşlemler okunamadı"))
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
-                items(rows, key = { it.proc.pid }) { r ->
+                itemsIndexed(rows, key = { i, r -> if (r.proc.pid > 0) r.proc.pid else -(i + 1) }) { _, r ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(r.label, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
