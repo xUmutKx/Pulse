@@ -882,6 +882,8 @@ fun GameHubHub(onBack: () -> Unit) {
     LaunchedEffect(ShelfAsk.add.value) { if (ShelfAsk.add.value) { ShelfAsk.add.value = false; addOpen = true } }
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
+    // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
+    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "cdrack") ?: "cdrack") }
     val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
     var setupOpen by remember { mutableStateOf(firstUse) }
@@ -961,11 +963,12 @@ fun GameHubHub(onBack: () -> Unit) {
 
     // Game Hub is the shelf: its old pages (the welcome page, the old settings page with its side menu, the other looks) are not opened any more;
     // everything they held is in the shelf's own settings
-    if (webShelfOk) { if (theme != "shelf") theme = "shelf"; if (page != 1) page = 1; if (filter != 0) filter = 0 }
+    val boxOn = webShelfOk && ghLook == "boxshelf"
+    if (webShelfOk) { if (theme != "shelf") theme = "shelf"; if (boxOn) { if (page != 1) page = 1; if (filter != 0) filter = 0 } else if (page == 0) page = 1 }
     ModalNavigationDrawer(
         drawerState = drawer,
         // the shelf's own swipes (between the games, turning a case) are not taken by the side menu
-        gesturesEnabled = !(page == 1 && theme == "shelf" && (webShelfOk || (nativeShelf && NativeShelf.AVAILABLE))) || drawer.isOpen,
+        gesturesEnabled = !(page == 1 && theme == "shelf" && ghLook == "boxshelf" && (webShelfOk || (nativeShelf && NativeShelf.AVAILABLE))) || drawer.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = pal.card, drawerContentColor = pal.text) {
                 Text("Game Hub", color = pal.text, fontSize = 20.sp, modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 12.dp))
@@ -983,7 +986,7 @@ fun GameHubHub(onBack: () -> Unit) {
         },
     ) {
         Column(Modifier.fillMaxSize().hubGround(theme, pal)) {
-            if (!(page == 1 && theme == "shelf" && webShelfOk)) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!(page == 1 && theme == "shelf" && boxOn)) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { FluentIcon("menu", pal.text, 24.dp) }
                 Text(
                     when (page) { 0 -> tr("Home", "Ana sayfa"); 2 -> tr("Settings", "Ayarlar"); else -> when (filter) { 1 -> tr("Installed", "Yüklü"); 2 -> tr("Hidden", "Gizli"); else -> tr("Library", "Kütüphane") } },
@@ -1055,7 +1058,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
-                    } } else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
+                    } } else if (ghLook == "cdrack") CdRack(
+                        sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
+                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
+                    ) else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
@@ -1087,7 +1093,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         items(sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoLine(g, usage, sizes)) { profile = g } }
                     }
                     // Boxshelf's own screen has its own sort and search: Game Hub's bar and search are for the other shelves
-                    val webShelf = theme == "shelf" && webShelfOk
+                    val webShelf = theme == "shelf" && boxOn
                     // the sort row, like the library bar of a store: name, play time, size
                     if (!webShelf) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
@@ -1124,6 +1130,12 @@ fun GameHubHub(onBack: () -> Unit) {
                     // the key is typed in memory and saved when the typing is done (or the page is left): no write on every key
                     DisposableEffect(Unit) { onDispose { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() } }
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
+                    Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("cdrack" to tr("CD rack (default)", "CD rafı (varsayılan)"), "boxshelf" to tr("Boxshelf 3D", "Boxshelf 3B")).forEach { (k, label) ->
+                            Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
+                        }
+                    }
                     Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->

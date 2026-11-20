@@ -369,6 +369,11 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Highlight a corrected word", "Düzeltilen kelimeyi vurgula"), tr("The phone's own blue highlight flashes on the word that was just corrected", "Az önce düzeltilen kelimede telefonun kendi mavi vurgusu yanıp söner"), KeyboardPrefs.fixFlash) { KeyboardPrefs.fixFlash = it; save() }
             Switch(tr("Grey behind a corrected word", "Düzeltilen kelimenin arkası gri"), tr("A soft grey behind the word for a moment", "Kelimenin arkası bir an açık gri olur"), KeyboardPrefs.fixSelect) { KeyboardPrefs.fixSelect = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
+            // after an automatic correction the person can undo it; how many undos make the keyboard leave that word alone for good
+            Text(tr("Leave a word alone after I undo its correction", "Düzeltmesini geri alınca kelimeyi bırak") + ": ${KeyboardPrefs.undoToKeep}×", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1 to tr("1 time", "1 kez"), 2 to tr("2 times (default)", "2 kez (varsayılan)")).forEach { (n, label) -> PChip(KeyboardPrefs.undoToKeep == n, label) { KeyboardPrefs.undoToKeep = n; save() } }
+            }
             Switch(tr("Neural correction", "Sinir ağı düzeltmesi"), tr("Corrections are weighed by the sentence, on the phone", "Düzeltmeler cümleye göre tartılır, telefonda"), KeyboardPrefs.neural) { KeyboardPrefs.neural = it; save() }
             Text("${tr("Strength", "Güç")}: " + listOf(tr("Modest", "Ölçülü"), tr("Normal", "Normal"), tr("Aggressive", "Sert"), tr("Very aggressive", "Çok sert"))[KeyboardPrefs.autoLevel.coerceIn(0, 3)], color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider(KeyboardPrefs.autoLevel / 3f, { KeyboardPrefs.autoLevel = (it * 3).roundToInt() }, 0f..1f, onDone = { save() })

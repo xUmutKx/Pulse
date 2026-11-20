@@ -223,6 +223,50 @@ private fun Racks(games: List<GameRow>, hidden: Set<String>, pal: Pal, onOpen: (
 }
 
 /**
+ * The CD rack: the games as jewel cases (the cover under a clear lid, the hinge down the left, a gloss over it) with the disc sliding out at the right, three to a rail
+ * of the rack; a tap opens the case, as on the shelf. The game's name is written under it.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun CdRack(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    var inspect by remember { mutableStateOf<GameRow?>(null) }
+    val rows = games.chunked(3)
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 56.dp, bottom = 90.dp)) {
+        itemsIndexed(rows) { _, row ->
+            Column(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
+                    row.forEach { g ->
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.fillMaxWidth().aspectRatio(1f).combinedClickable(onClick = { inspect = g }, onLongClick = { onDetails(g) })) {
+                                // the disc, half out of the case at the right
+                                Canvas(Modifier.fillMaxSize()) {
+                                    val r = size.minDimension * .46f
+                                    val c = androidx.compose.ui.geometry.Offset(size.width - r - 2f, size.height / 2f)
+                                    drawCircle(Brush.sweepGradient(listOf(Color(0xFFE9EDF2), Color(0xFF9FB3C8), Color(0xFFF7F7F7), Color(0xFFB8C4D0), Color(0xFFE9EDF2)), c), r, c)
+                                    drawCircle(Color(0xFF1A1A1A), r * .28f, c); drawCircle(Color(0xFFDDE3EA), r * .12f, c)
+                                }
+                                // the jewel case: the cover, the hinge, the clear lid's gloss and its edge
+                                Box(Modifier.fillMaxHeight().fillMaxWidth(.86f).clip(RoundedCornerShape(3.dp)).background(Color(0xFF111111)).border(1.dp, Color.White.copy(alpha = .28f), RoundedCornerShape(3.dp))) {
+                                    Box(Modifier.fillMaxSize().padding(start = 9.dp, top = 2.dp, bottom = 2.dp, end = 2.dp)) { GameCover(g.pkg, pal, wide = false, title = g.name) }
+                                    Box(Modifier.fillMaxHeight().width(9.dp).background(Brush.horizontalGradient(listOf(Color(0xCC000000), Color(0x33FFFFFF), Color(0x00000000)))))
+                                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent, Color.Transparent, Color.White.copy(alpha = .08f)))))
+                                    if (g.pkg in hidden) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
+                                }
+                            }
+                            Text(g.name, color = pal.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+                // the rail of the rack
+                Box(Modifier.fillMaxWidth().padding(top = 2.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(Brush.verticalGradient(listOf(Color(0xFF3A3F46), Color(0xFF15181C)))))
+            }
+        }
+    }
+    inspect?.let { g -> CaseInspect(g, pal, onClose = { inspect = null }, onPlay = { onPlay(g) }, onDetails = { inspect = null; onDetails(g) }) }
+}
+
+/**
  * The case in your hands: drag to turn it (the back shows after half a turn), Open swings the lid on its spine edge to show the tray, the manual
  * on the inside of the lid and the disc; Take the disc out lifts it and lets it spin. Play starts the game.
  */

@@ -195,7 +195,7 @@ object KeyboardDictionary {
         runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
         // the slips the owner's typing showed (typed -> fixed), the corrections the owner undid, and the words the owner types as they are: bundled, so a new install has them too
         runCatching { c.assets.open("kbd/habits_user_add.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos.putIfAbsent(p[0], p[1]) } } }
-        runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
+        runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], (p[1].toIntOrNull() ?: 1).coerceAtLeast(9)) } } }
         // the letters the owner presses for others (typed, meant), counted from their slips: each such swap costs a fifth of a neighbour key
         runCatching { c.assets.open("kbd/confusion_user.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 2) confusion.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
         // and the ones learned on this phone since (from the suggestions tapped and the words blocked)
@@ -668,6 +668,8 @@ object KeyboardDictionary {
     fun isRejected(typed: String, corrected: String) = (rejects["$typed>$corrected"] ?: 0) > 0
 
     /** The word was taken back from ANY correction once: it is never corrected again, to this word or to another (the pair alone let a second target, or a swap, bring it back). */
+    /** The correction of [typed] was undone at least [n] times (to anything): it is left as typed from then on. The bundled ones count as always. */
+    fun rejectedAtLeast(typed: String, n: Int): Boolean { val pre = typed.lowercase(Locale.ROOT) + ">"; return rejects.entries.any { it.key.startsWith(pre) && it.value >= n } }
     fun rejectedAny(typed: String): Boolean { val pre = typed.lowercase(Locale.ROOT) + ">"; return rejects.keys.any { it.startsWith(pre) } }
 
     /** How many times, in all, a correction was taken back (by any way: the undo, a backspace into the word, a retyped word). */
@@ -683,7 +685,7 @@ object KeyboardDictionary {
         rejects[k] = n
         // the correction was undone: a learned slip that made it is forgotten
         if (typos[typed.lowercase(Locale.ROOT)] == corrected.lowercase(Locale.ROOT)) { typos.remove(typed.lowercase(Locale.ROOT)); runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) } }
-        if (n >= 2) learnWord(typed, 3)
+        if (n >= KeyboardPrefs.undoToKeep) learnWord(typed, 3)
         runCatching { File(c.filesDir, "kbd_rejects.txt").writeText(rejects.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
 

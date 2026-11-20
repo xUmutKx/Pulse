@@ -1358,7 +1358,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.learnWord(typed, 4)
             }
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && !KeyboardDictionary.rejectedAny(typed.lowercase(lang.locale))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && !KeyboardDictionary.rejectedAtLeast(typed.lowercase(lang.locale), KeyboardPrefs.undoToKeep)) out = t
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
             out = typed.replaceFirstChar { it.titlecase(lang.locale) }
@@ -1484,7 +1484,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 runCatching { if (pending != null) pending.get(3, java.util.concurrent.TimeUnit.SECONDS) else KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
             } ?: return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
-            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.rejectedAny(lo)) return@launch
+            if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.rejectedAtLeast(lo, KeyboardPrefs.undoToKeep)) return@launch
             val key = typed + tail
             // the word is mended where it stands, at once: while the next word is being typed too (its letters, still open, are put back behind the mended word
             // as the open word), or when the next word is closed. Only when something else is going on (a selection, another edit) does it wait a moment.
@@ -3200,7 +3200,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (lower[i] == lower[i + 1]) null else {
                 val w = lower.substring(0, i) + lower[i + 1] + lower[i] + lower.substring(i + 2)
                 val s = codes.maxOf { KeyboardDictionary.baseScore(it, w) }
-                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 1) KeyboardDictionary.Cand(w, s, .6f) else null
+                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < KeyboardPrefs.undoToKeep) KeyboardDictionary.Cand(w, s, .6f) else null
             }
         }.maxByOrNull { it.score }
         // two words that run together (a key typed for the space among them) are split before any other mending
