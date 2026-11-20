@@ -1282,6 +1282,16 @@ private fun GeneralModificationContent(context: Context) {
 
         HorizontalDivider(color = c.onSurface.copy(alpha = 0.08f))
 
+        // the see-through glass look of the bars and sheets: off by default (solid Material surfaces are the lightest); the glass is here for whoever wants it
+        SettingsSwitchRow(
+            title = I18n.t("liquid_glass", "Liquid Glass"),
+            subtitle = if (GlassSettings.enabled) I18n.t("liquid_glass_sub_on", "Frosted, see-through surfaces with depth and blur") else I18n.t("liquid_glass_sub_off", "Using solid Material surfaces with no transparency"),
+            checked = GlassSettings.enabled,
+            onCheckedChange = { GlassSettings.updateEnabled(it) },
+        )
+
+        HorizontalDivider(color = c.onSurface.copy(alpha = 0.08f))
+
         SettingsSwitchRow(
             title = I18n.t("video_gestures", "Video gestures"),
             subtitle = I18n.t("video_gestures_sub", "Swipe vertically on the left for brightness, right for volume"),

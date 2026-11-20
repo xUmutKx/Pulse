@@ -27,6 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -60,13 +63,41 @@ fun NotificationSettingsSection() {
         SwitchRow(tr("Pause on unplug", "Çıkarınca duraklat"), unplug) { unplug = it; MusicSettings.setPauseOnUnplug(c, it) }
         NotifPreview(ids)
         val rest = NotifBtn.values().filter { it.id !in ids }
+        // the buttons in their order: a long press on a row lifts it, and it is dragged to its place (the arrows still work)
+        var dragId by remember { mutableStateOf<String?>(null) }
+        var dragY by remember { mutableStateOf(0f) }
+        val rowPx = with(androidx.compose.ui.platform.LocalDensity.current) { 46.dp.toPx() }
+        val idsNow by androidx.compose.runtime.rememberUpdatedState(ids)
         ids.mapNotNull { NotifBtn.of(it) }.forEachIndexed { i, b ->
-            Row(Modifier.fillMaxWidth().alpha(if (i < NotifBtn.MAX) 1f else .4f), verticalAlignment = Alignment.CenterVertically) {
-                Icon(painterResource(b.icon), null, tint = T.text, modifier = Modifier.size(22.dp))
-                Text(b.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
-                Arrow(R.drawable.ic_notif_up, i > 0) { save(ids.toMutableList().also { it.add(i - 1, it.removeAt(i)) }) }
-                Arrow(R.drawable.ic_notif_down, i < ids.lastIndex) { save(ids.toMutableList().also { it.add(i + 1, it.removeAt(i)) }) }
-                PSwitch(true, { save(ids - b.id) })
+            androidx.compose.runtime.key(b.id) {
+                val lifted = dragId == b.id
+                Row(
+                    Modifier.fillMaxWidth().height(46.dp).alpha(if (i < NotifBtn.MAX) 1f else .4f)
+                        .graphicsLayer { translationY = if (lifted) dragY else 0f; scaleX = if (lifted) 1.02f else 1f; scaleY = if (lifted) 1.02f else 1f }
+                        .zIndex(if (lifted) 1f else 0f)
+                        .background(if (lifted) T.text.copy(alpha = .12f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(10.dp))
+                        .pointerInput(b.id) {
+                            androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress(
+                                onDragStart = { dragId = b.id; dragY = 0f },
+                                onDragEnd = { dragId = null; dragY = 0f },
+                                onDragCancel = { dragId = null; dragY = 0f },
+                            ) { change, drag ->
+                                change.consume()
+                                dragY += drag.y
+                                val cur = idsNow.indexOf(b.id)
+                                // past half a row: it swaps with the neighbour and the finger keeps its place under it
+                                if (dragY > rowPx / 2 && cur < idsNow.lastIndex) { save(idsNow.toMutableList().also { it.add(cur + 1, it.removeAt(cur)) }); dragY -= rowPx }
+                                else if (dragY < -rowPx / 2 && cur > 0) { save(idsNow.toMutableList().also { it.add(cur - 1, it.removeAt(cur)) }); dragY += rowPx }
+                            }
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(painterResource(b.icon), null, tint = T.text, modifier = Modifier.size(22.dp))
+                    Text(b.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                    Arrow(R.drawable.ic_notif_up, i > 0) { save(ids.toMutableList().also { it.add(i - 1, it.removeAt(i)) }) }
+                    Arrow(R.drawable.ic_notif_down, i < ids.lastIndex) { save(ids.toMutableList().also { it.add(i + 1, it.removeAt(i)) }) }
+                    PSwitch(true, { save(ids - b.id) })
+                }
             }
         }
         rest.forEach { b ->
