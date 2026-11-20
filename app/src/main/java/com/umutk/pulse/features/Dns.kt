@@ -199,20 +199,6 @@ fun DnsSettings() {
             reload()
         }
     }
-    PCard {
-        Text("Private DNS", color = Look.accent, fontSize = 15.sp)
-        Text("Now: $now", color = T.sub, fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PChip(pick == "auto", "Auto") { pick = "auto"; apply("opportunistic") }
-            PChip(pick == "off", "Off") { pick = "off"; apply("off") }
-            PChip(pick == "manual", "Manual") { pick = "manual" }
-        }
-        if (pick == "manual") {
-            PField(field, { field = it.trim() }, "dns.example.com")
-            PButton("Apply") { apply("hostname", field) }
-        }
-        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-    }
     // a DNS of its own for Wi-Fi and for mobile data
     var perNet by remember { mutableStateOf(DnsPerNet.on(ctx)) }
     PCard {
@@ -227,6 +213,20 @@ fun DnsSettings() {
             NetDnsBlock(true, tr("Wi-Fi", "Wi-Fi"))
             NetDnsBlock(false, tr("Mobile data", "Mobil veri"))
         }
+    }
+    PCard {
+        Text("Private DNS", color = Look.accent, fontSize = 15.sp)
+        Text("Now: $now", color = T.sub, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PChip(pick == "auto", "Auto") { pick = "auto"; apply("opportunistic") }
+            PChip(pick == "off", "Off") { pick = "off"; apply("off") }
+            PChip(pick == "manual", "Manual") { pick = "manual" }
+        }
+        if (pick == "manual") {
+            PField(field, { field = it.trim() }, "dns.example.com")
+            PButton("Apply") { apply("hostname", field) }
+        }
+        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
     }
 }
 
