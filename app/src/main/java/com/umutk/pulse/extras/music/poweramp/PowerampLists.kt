@@ -310,22 +310,10 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.Star, Color(0xFFD9A05B), Lib.Favs to tr("Favourites", "Favoriler")),
                     Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
                     Triple(Icons.Rounded.Insights, Color(0xFFC0609A), Lib.Recap to tr("Music recap", "Müzik özeti")),
+                    // the online services are rows like the others, at the end of the list
+                    Triple(Icons.Rounded.PlayArrow, Color(0xFFFF0033), Lib.Online(0) to "YouTube Music"),
+                    Triple(Icons.Rounded.GraphicEq, Color(0xFF1DB954), Lib.Online(1) to "Spotify"),
                 )
-                // the online services in a container of their own above the local library: YouTube Music and Spotify side by side
-                item {
-                    Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(Triple(0, "YouTube Music", Color(0xFFFF0033)), Triple(1, "Spotify", Color(0xFF1DB954))).forEach { (t, name, col) ->
-                            Row(Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(18.dp))
-                                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(col.copy(alpha = .55f), col.copy(alpha = .18f))))
-                                .clickable { node = Lib.Online(t) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(col), contentAlignment = Alignment.Center) {
-                                    Icon(if (t == 0) Icons.Rounded.PlayArrow else Icons.Rounded.GraphicEq, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                                }
-                                Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp))
-                            }
-                        }
-                    }
-                }
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
             // the suggestions and the mix maker open from the list: two taps, and the library list itself stays light
@@ -538,19 +526,18 @@ private fun SongList(itemsIn: List<IndexedValue<Track>>, current: Track?, style:
             if (q.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = style.textDim, modifier = Modifier.size(20.dp).clickable { q = "" })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            // the buttons on the left, the number of songs at the right end
+            // Play on the left, Shuffle in the middle, the number of songs and the view button at the right edge
             headerExtra()
+            // (a page with its play and shuffle floating over the cover has no pair here)
+            if (!hidePlay) ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
+            Spacer(Modifier.weight(1f))
+            if (!hidePlay) ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            Spacer(Modifier.weight(1f))
+            Text("${items.size}", color = style.textDim, fontSize = 13.sp)
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
                 // the picture says the layout: a list for one column, 2 x 2 or 3 x 3 squares for the grids (no number)
                 ViewModeGlyph(cols, style.accent, Modifier.size(22.dp))
             }
-            // (a page with its play and shuffle floating over the cover has no pair here)
-            if (!hidePlay) {
-                ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
-                ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
-            }
-            Spacer(Modifier.weight(1f))
-            Text("${items.size}", color = style.textDim, fontSize = 13.sp)
         }
         }
     }
