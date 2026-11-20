@@ -818,24 +818,37 @@ object SeasonDl {
                                 if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return }
                                 save(ctx, addon, mb.toFloat()); busy = true
                                 scope.launch {
-                                    var skipped = 0; var over = 0
-                                    val picks = ArrayList<Triple<String, String, List<String>>>()
-                                    val name = clean(sel.name)
-                                    list.forEachIndexed { i, ep ->
-                                        note = tr("Finding streams ${i + 1}/${list.size}…", "Yayınlar aranıyor ${i + 1}/${list.size}…")
-                                        // the stream already found for the list is used; else it is looked for now
-                                        // the whole list is read, so the streams to fall back on go along with the one taken
-                                        val all = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()
-                                        val pick = found[ep.id] ?: bestOf(all, limit())
-                                        if (pick == null) skipped++ else { if (pick.over) over++; picks.add(Triple(pick.url, "%s S%02dE%02d".format(name, ep.season, ep.episode), alternatives(all, pick, limit()))) }
-                                    }
-                                    note = tr("Starting…", "Başlıyor…")
-                                    start(picks)
-                                    busy = false
-                                    if (note == tr("Starting…", "Başlıyor…") && picks.isEmpty() && why.isNotEmpty()) note = why
-                                    else if (note == tr("Starting…", "Başlıyor…")) note = tr("${picks.size} started (up to $mb MB each)", "${picks.size} başladı (her biri en çok $mb MB)") +
-                                        (if (over > 0) tr(", $over over the limit (the smallest there was)", ", $over sınırın üstünde (bulunan en küçük)") else "") +
-                                        (if (skipped > 0) tr(", $skipped without a stream", ", $skipped için yayın yok") else "")
+                                    // whatever goes wrong, the button must come back (a stuck "busy" made the whole season button do nothing from then on) and the person must read why
+                                    try {
+                                        var skipped = 0; var over = 0
+                                        val picks = ArrayList<Triple<String, String, List<String>>>()
+                                        val name = clean(sel.name)
+                                        // the streams of the episodes are asked three at a time (one after the other, a season took minutes before anything started)
+                                        val looked = ArrayList<Pair<Ep, List<Pick>>>()
+                                        for (chunk in list.chunked(3)) {
+                                            note = tr("Finding streams ${looked.size + 1}/${list.size}…", "Yayınlar aranıyor ${looked.size + 1}/${list.size}…")
+                                            looked += kotlinx.coroutines.coroutineScope {
+                                                chunk.map { ep -> kotlinx.coroutines.async(Dispatchers.IO) { ep to (runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()) } }
+                                                    .let { d -> kotlinx.coroutines.awaitAll(*d.toTypedArray()) }
+                                            }
+                                        }
+                                        for ((ep, all) in looked) {
+                                            // the stream already found for the list is used; else the best of the whole list (the rest go along as streams to fall back on)
+                                            val pick = found[ep.id] ?: bestOf(all, limit())
+                                            if (pick == null) skipped++ else { if (pick.over) over++; picks.add(Triple(pick.url, "%s S%02dE%02d".format(name, ep.season, ep.episode), alternatives(all, pick, limit()))) }
+                                        }
+                                        note = tr("Starting…", "Başlıyor…")
+                                        start(picks)
+                                        note = when {
+                                            picks.isEmpty() -> why.ifEmpty { tr("No stream was found for these episodes (check the add-on link)", "Bu bölümler için yayın bulunamadı (eklenti bağlantısını kontrol et)") }
+                                            else -> tr("${picks.size} started (up to $mb MB each): see them in Downloads", "${picks.size} başladı (her biri en çok $mb MB): İndirilenler'de görebilirsin") +
+                                                (if (over > 0) tr(", $over over the limit (the smallest there was)", ", $over sınırın üstünde (bulunan en küçük)") else "") +
+                                                (if (skipped > 0) tr(", $skipped without a stream", ", $skipped için yayın yok") else "")
+                                        }
+                                    } catch (e: Throwable) {
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        note = tr("Could not start: ", "Başlatılamadı: ") + (e.message ?: e.javaClass.simpleName)
+                                    } finally { busy = false }
                                 }
                             }
                             /** The size of the stream that would be taken is looked up for every episode of the season, three at a time, and shown on its row. */

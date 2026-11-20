@@ -303,6 +303,13 @@ object Downloads {
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
         val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod), synchronized(t.alts) { t.alts.joinToString(" ") }) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+        // a copy of the list for YTXTube's Downloads page (it runs in its own process and cannot read this list): name, state, bytes done, total, speed, path, error
+        runCatching {
+            val lines = tasks.value.filter { !it.quiet }.joinToString("\n") { t ->
+                listOf(t.file.name, t.state.value.name, t.done.value, t.total.value, t.speed.value, t.file.path, t.error.value.take(80)).joinToString("\t") { it.toString().replace(Regex("[\\t\\r\\n]"), " ") }
+            }
+            val tmp = File(c.filesDir, "dl_snapshot.tsv.tmp"); tmp.writeText(lines); tmp.renameTo(File(c.filesDir, "dl_snapshot.tsv"))
+        }
     }
 
     fun setLocalServer(ctx: Context, v: String) {

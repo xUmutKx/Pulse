@@ -202,6 +202,8 @@ open class MainActivity : ComponentActivity() {
         if (i?.action == com.umutk.pulse.extras.watchdog.QuickTileContract.ACTION_RESUME) { resumeLastPlayed(); return }
         i?.getStringExtra("start")?.let { com.umutk.pulse.widgets.WidgetOpen.page = it }
         // YTXTube's "Series and movies" card: the downloads page with the Series and movies page open
+        // YTXTube's Downloads page, "All downloads": the downloads page of Pulse
+        if (i?.getBooleanExtra("downloads", false) == true) com.umutk.pulse.features.Downloads.wanted = true
         if (i?.getBooleanExtra("series", false) == true) { com.umutk.pulse.features.Downloads.wanted = true; com.umutk.pulse.features.SeasonDl.pageOpen = true }
         // a long-pressed Quick Settings tile: open the page of that tile instead of the app info screen
         if (i?.action == android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES)

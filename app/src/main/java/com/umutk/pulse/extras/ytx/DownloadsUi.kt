@@ -233,6 +233,10 @@ fun DownloadsScreen(
     val videos = tasks.filter { it.height > 0 }
     val music = tasks.filter { it.height == 0 }
     val shown = if (section == 0) videos else music
+    // the downloads of the Pulse app itself (series and movies, files, torrents): read from a copy its download manager keeps, refreshed while this page is open
+    val ctx = LocalContext.current
+    var pulse by remember { mutableStateOf(emptyList<PulseDl>()) }
+    LaunchedEffect(Unit) { while (true) { pulse = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { readPulseDownloads(ctx) }; kotlinx.coroutines.delay(2000) } }
     CollapsingHeaderLayout(
         resetKey = scrollToTop to listOf(tasks.size, tasks.count { it.status == DownloadStatus.Complete }),
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
@@ -245,9 +249,11 @@ fun DownloadsScreen(
                 ) {
                     DownloadSectionPill("Videos", videos.size, section == 0) { section = 0 }
                     DownloadSectionPill("Music", music.size, section == 1) { section = 1 }
+                    DownloadSectionPill("Pulse", pulse.size, section == 2) { section = 2 }
                 }
             }
-            if (shown.isEmpty()) {
+            if (section == 2) pulseItems(pulse, ctx)
+            else if (shown.isEmpty()) {
                 item(key = "empty") {
                     Box(Modifier.fillMaxWidth().padding(top = 28.dp)) {
                         EmptyState(
@@ -512,6 +518,68 @@ fun WatchScreen(contentPadding: PaddingValues, onSearch: () -> Unit, onAccount: 
                         Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/** One download of the Pulse app's own manager, as it was last written to the copy (see Downloads.persist). */
+private class PulseDl(val name: String, val state: String, val done: Long, val total: Long, val speed: Long, val path: String, val error: String)
+
+private fun readPulseDownloads(ctx: android.content.Context): List<PulseDl> = runCatching {
+    java.io.File(ctx.filesDir, "dl_snapshot.tsv").readLines().mapNotNull { l ->
+        val c = l.split('\t')
+        if (c.size < 6) null else PulseDl(c[0], c[1], c[2].toLongOrNull() ?: 0L, c[3].toLongOrNull() ?: -1L, c[4].toLongOrNull() ?: 0L, c[5], c.getOrNull(6).orEmpty())
+    }.asReversed()
+}.getOrDefault(emptyList())
+
+private fun openPulseApp(ctx: android.content.Context, series: Boolean) {
+    runCatching {
+        ctx.startActivity(android.content.Intent(ctx, Class.forName("com.umutk.pulse.MainActivity")).putExtra(if (series) "series" else "downloads", true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP))
+    }
+}
+
+private fun openPulseFile(ctx: android.content.Context, path: String) {
+    runCatching {
+        val f = java.io.File(path)
+        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+        val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: "*/*"
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.onFailure { Toast.makeText(ctx, "Could not open the file", Toast.LENGTH_SHORT).show() }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.pulseItems(list: List<PulseDl>, ctx: android.content.Context) {
+    item(key = "pulseTop") {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PillButton("Series and movies", { openPulseApp(ctx, true) })
+            PillButton("All downloads", { openPulseApp(ctx, false) })
+        }
+    }
+    if (list.isEmpty()) item(key = "pulseEmpty") {
+        Box(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+            EmptyState(icon = Icons.Rounded.Download, title = "Nothing downloaded in Pulse yet", body = "Series, movies and files you download in the Pulse app (a whole season at once from Series and movies) show here as they go.")
+        }
+    } else items(list.size, key = { "p-" + it + list[it].path }) { i ->
+        val d = list[i]
+        val c = MaterialTheme.colorScheme
+        val done = d.state == "DONE"
+        Column(Modifier.fillMaxWidth().pressable(enabled = done, pressedScale = 0.985f) { openPulseFile(ctx, d.path) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text(d.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(3.dp))
+            val pct = if (d.total > 0) (d.done * 100 / d.total).toInt() else -1
+            Text(
+                when (d.state) {
+                    "DONE" -> "Downloaded  ·  " + formatBytes(d.total.coerceAtLeast(d.done))
+                    "PAUSED" -> "Paused" + (if (pct >= 0) "  ·  $pct%" else "")
+                    "FAILED" -> "Failed" + (if (d.error.isNotBlank() && d.error != "interrupted") "  ·  " + d.error else "")
+                    else -> "Downloading" + (if (pct >= 0) "  ·  $pct%" else "  ·  " + formatBytes(d.done)) + (if (d.speed > 0) "  ·  " + formatBytes(d.speed) + "/s" else "")
+                },
+                color = if (d.state == "FAILED") c.error else c.onSurfaceVariant, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            if (d.state == "RUNNING") {
+                Spacer(Modifier.height(6.dp))
+                if (pct >= 0) LinearProgressIndicator(progress = { pct / 100f }, Modifier.fillMaxWidth()) else LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         }
     }
