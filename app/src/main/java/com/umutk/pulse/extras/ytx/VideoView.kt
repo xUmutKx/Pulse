@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -533,10 +534,10 @@ fun VideoContent(
                 )
             }
         }
-        // the tall black stage of the cinema view: the buttons and the bar sit on the picture's own frame (the black above and below only takes touches)
+        // the tall black stage of the cinema view: the buttons sit at the top and the bottom of the screen and the bar at its foot (the picture stays in the middle, free)
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val tallStage = maxHeight > maxWidth * 1.2f
-        Box(if (tallStage) Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(state.videoAspect.coerceIn(0.5f, 2.4f)) else Modifier.fillMaxSize()) {
+        Box(if (tallStage) Modifier.fillMaxSize().systemBarsPadding().padding(vertical = 8.dp) else Modifier.fillMaxSize()) {
         if (!scrubbing) {
             SeekBurstPill(burstSide, burstSeconds, burstTaps, burstActive, fullscreen)
         }
