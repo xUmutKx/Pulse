@@ -72,6 +72,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "tempgraph" -> TempGraphScreen(back)
         id == "battery" -> BatteryHealthScreen(back)
         id == "health" -> HealthScreen(back)
+        id == "qr" -> { com.umutk.pulse.features.QrPage(back) }
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
         // the App lock page: opened from the More menu and the Extra apps group (it had no route, so it showed a blank screen)
         id == "applock" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AppLockPage() }

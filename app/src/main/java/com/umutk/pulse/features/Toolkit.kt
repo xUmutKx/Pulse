@@ -117,7 +117,7 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /** One tile of the Toolkit: its English and Turkish label, icon and the screen it opens. */
-private class Tool(val label: String, val trLabel: String, val icon: String, val wide: Boolean = false, val flow: Boolean = false, val body: @Composable () -> Unit)
+private class Tool(val label: String, val trLabel: String, val icon: String, val wide: Boolean = false, val flow: Boolean = false, val action: ((Context) -> Unit)? = null, val body: @Composable () -> Unit = {})
 
 /** The tool a Quick Settings tile asked for ("toolkit:<tool>"); ToolkitPage opens it and clears this. */
 object ToolkitOpen { var tool by mutableStateOf("") }
@@ -143,6 +143,7 @@ private val tools = listOf(
     Tool("Sound mode", "Ses modu", "vibrate") { SoundModeTool() },
     Tool("Stopwatch", "Kronometre", "stopwatch") { StopwatchTool() },
     Tool("Timer", "Zamanlayıcı", "timer") { TimerTool() },
+    Tool("QR reader", "QR okuyucu", "gridView", action = { startQrReader(it) }),
     Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
     Tool("DNS and TTL", "DNS ve TTL", "globe", flow = true) { BypassTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
@@ -222,7 +223,8 @@ private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: (
 @Composable
 fun ToolkitPage() {
     var open by rememberSaveable { mutableStateOf(-1) }
-    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = if (ToolkitOpen.tool == "wifi") allTools.indexOfFirst { it.label == "DNS and TTL" } else allTools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
+    val ctx0 = LocalContext.current
+    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { if (ToolkitOpen.tool == "qr") { startQrReader(ctx0); open = -1 } else open = if (ToolkitOpen.tool == "wifi") allTools.indexOfFirst { it.label == "DNS and TTL" } else allTools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
     com.umutk.pulse.InnerBackStep(open >= 0) { open = -1 }
     // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
@@ -252,7 +254,7 @@ fun ToolkitPage() {
                 val side = (3 - row.size) / 2f
                 if (row.size < 3) Spacer(Modifier.weight(side))
                 row.forEachIndexed { c, t ->
-                    ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = r * 3 + c }
+                    ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { if (t.action != null) t.action.invoke(ctx0) else open = r * 3 + c }
                 }
                 if (row.size < 3) Spacer(Modifier.weight(side))
             }

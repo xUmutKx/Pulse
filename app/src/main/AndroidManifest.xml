@@ -1190,6 +1190,10 @@
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
+        <service android:name="com.umutk.pulse.features.QrTile" android:exported="true" android:label="QR reader" android:icon="@drawable/ic_qs_qr"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
         <service android:name="com.umutk.pulse.features.FloatingTimerTile" android:exported="true" android:label="Floating timer" android:icon="@drawable/ic_qs_timer"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
