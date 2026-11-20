@@ -25,23 +25,29 @@ object KbDict {
         val raw = get("https://en.wiktionary.org/api/rest_v1/page/definition/" + URLEncoder.encode(term, "UTF-8").replace("+", "%20")) ?: return ""
         val o = runCatching { JSONObject(raw) }.getOrNull() ?: return ""
         val out = StringBuilder()
-        // the keyboard's language first, then English
-        for (code in listOf(if (langName == "tr") "tr" else "en", "en", "tr").distinct()) {
+        // the keyboard's language first, then the other: both are shown together, not only the first that has an entry
+        for (code in listOf(if (langName == "tr") "tr" else "en", if (langName == "tr") "en" else "tr")) {
             val arr = o.optJSONArray(code) ?: continue
             for (i in 0 until arr.length()) {
                 val e = arr.getJSONObject(i)
                 val defs = e.optJSONArray("definitions") ?: continue
-                out.append(e.optString("partOfSpeech")).append(" (").append(e.optString("language")).append(")\n")
+                out.append(pos(e.optString("partOfSpeech"))).append(" (").append(langTr(e.optString("language"))).append(")\n")
                 var n = 0
                 for (j in 0 until defs.length()) {
                     val d = plain(defs.getJSONObject(j).optString("definition"))
                     if (d.isNotBlank() && n < 4) { out.append("  ${++n}. ").append(d).append('\n') }
                 }
             }
-            if (out.isNotEmpty()) break
+            if (out.isNotEmpty()) out.append('\n')
         }
         return out.toString().trim()
     }
+
+    private val posTr = mapOf("noun" to "isim", "verb" to "fiil", "adjective" to "sıfat", "adverb" to "zarf", "pronoun" to "zamir", "preposition" to "edat", "conjunction" to "bağlaç",
+        "interjection" to "ünlem", "numeral" to "sayı", "article" to "tanım", "particle" to "parçacık", "determiner" to "belirleyici", "proper noun" to "özel isim", "prefix" to "önek",
+        "suffix" to "sonek", "phrase" to "deyim", "postposition" to "ilgeç", "symbol" to "simge", "abbreviation" to "kısaltma", "contraction" to "birleşik kısaltma", "letter" to "harf")
+    private fun pos(p: String): String = com.umutk.pulse.tr(p.replaceFirstChar { it.uppercase() }, (posTr[p.lowercase()] ?: p).replaceFirstChar { it.uppercase() })
+    private fun langTr(l: String): String = com.umutk.pulse.tr(l, when (l) { "Turkish" -> "Türkçe"; "English" -> "İngilizce"; "German" -> "Almanca"; "French" -> "Fransızca"; "Arabic" -> "Arapça"; "Persian" -> "Farsça"; "Azerbaijani" -> "Azerbaycan Türkçesi"; "Ottoman Turkish" -> "Osmanlı Türkçesi"; else -> l })
 
     private fun wikipedia(term: String, lang: String): String {
         val t = URLEncoder.encode(term.replace(' ', '_'), "UTF-8")
@@ -49,7 +55,7 @@ object KbDict {
             val raw = get("https://$l.wikipedia.org/api/rest_v1/page/summary/$t") ?: continue
             val o = runCatching { JSONObject(raw) }.getOrNull() ?: continue
             val ex = o.optString("extract")
-            if (ex.isNotBlank() && o.optString("type") != "disambiguation") return "Wikipedia (${l.uppercase()})\n$ex"
+            if (ex.isNotBlank() && o.optString("type") != "disambiguation") return com.umutk.pulse.tr("Wikipedia", "Vikipedi") + " (${l.uppercase()})\n$ex"
         }
         return ""
     }
