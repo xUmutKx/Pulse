@@ -739,6 +739,20 @@ private fun holdOf(k: KeyKind): String = when (k) {
     else -> "none"
 }
 
+/** The name of what holding [key] does, for its bubble (null: nothing, or its own pop-up characters). */
+private fun holdName(key: KbKey, st: KbState): String? {
+    val id = when (key.kind) {
+        KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> holdOf(key.kind).takeIf { it != "none" }
+        KeyKind.CHAR -> if ((st.numpad || st.forceLayout == "numpad") && key.label in listOf("1", "2", "3")) when (key.label) { "1" -> "clip"; "2" -> "auth"; else -> "vault" } else null
+        else -> null
+    } ?: return null
+    return cornerName(id)
+}
+
+/** A key of the key bar or a menu tile by its name (Esc, Tab, Copy, Clipboard ...). */
+private fun cornerName(id: String): String =
+    ExtraKeys.byId(id)?.label ?: (ExtraKeys.menu + ExtraKeys.toolbar).firstOrNull { it.first == id }?.second ?: when (id) { "voice" -> tr("Voice", "Ses"); else -> id }
+
 private fun runHold(a: KbActions, id: String) = when (id) { "emoji" -> a.emojiPanel(); "voice" -> a.voice(); "lang" -> a.lang(); else -> a.menu(id) }
 
 /** The small icon at the top of a key whose long press runs an action. */
@@ -1036,6 +1050,10 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     a.feedback()
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
                     if (big && KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, key.label)
+                    // a key whose hold does something (the comma's voice, the key beside ?123, the pad's 1-2-3): its bubble names what holding it will do
+                    holdName(key, st)?.let { st.preview = KbPreview(rect, key.label, listOf(it), 0) }
+                    // a corner swipe shows the symbol (or the key) it will type while the finger is still down
+                    var hinting = false
                     var long = false
                     // a key whose long press runs an action (the comma's voice typing): the pop-up characters never open for it
                     var held = false
@@ -1108,6 +1126,14 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 segAng = ang; pathLen += seg.getDistance(); lastPt = curRoot
                                 maxOut = maxOf(maxOut, (curRoot - startRoot).getDistance())
                             }
+                        }
+                        if (!long && !glide && cornersOn() && cornerNow && st.page == 0 && !c.changedToUp()) {
+                            val cn = KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx())
+                            if (cn != null) {
+                                val show = if (cn.length > 1 && cn.startsWith("@")) cornerName(cn.drop(1)) else cn
+                                if (!hinting || st.preview?.alts?.firstOrNull() != show) st.preview = KbPreview(rect, key.label, listOf(show), 0)
+                                hinting = true
+                            } else if (hinting) { hinting = false; st.preview = if (big && KeyboardPrefs.keyPopups) KbPreview(rect, key.label) else null }
                         }
                         if (c.changedToUp() || !c.pressed) {
                             if (st.swiped) { st.preview = null; break }
@@ -1393,12 +1419,14 @@ private fun Preview(th: KbTheme, st: KbState) {
         }
     } else {
         // many entries (accents and element symbols) share the width of the keyboard
-        val w = minOf(with(dens) { POPUP_W.dp.toPx() }, st.rootW * .96f / p.alts.size)
+        // one word (what a hold or a corner swipe will do: "Clipboard", "Esc"): the bubble is as wide as the word
+        val w = if (p.alts.size == 1 && p.alts[0].length > 2) with(dens) { (p.alts[0].length * 9f + 24f).coerceAtMost(220f).dp.toPx() }
+            else minOf(with(dens) { POPUP_W.dp.toPx() }, st.rootW * .96f / p.alts.size)
         val left = popupLeft(p.rect, p.alts.size, st.rootW, w); val y = (p.rect.top - p.rect.height * 1.15f - 2f).coerceAtLeast(0f)
         Row(Modifier.offset { IntOffset(left.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.height(with(dens) { (p.rect.height * 1.15f).toDp() }).clip(shape).background(th.popup, shape)) {
             p.alts.forEachIndexed { i, s ->
                 Box(Modifier.width(with(dens) { w.toDp() }).fillMaxSize().background(if (i == p.sel) th.accent else Color.Transparent), contentAlignment = Alignment.Center) {
-                    Text(s, color = if (i == p.sel) th.onAccent else th.text, fontSize = if (w >= with(dens) { 40.dp.toPx() } || s.length == 1 && w >= with(dens) { 26.dp.toPx() }) 22.sp else 15.sp, maxLines = 1)
+                    Text(s, color = if (i == p.sel) th.onAccent else th.text, fontSize = if (s.length > 2) 15.sp else if (w >= with(dens) { 40.dp.toPx() } || s.length == 1 && w >= with(dens) { 26.dp.toPx() }) 22.sp else 15.sp, maxLines = 1)
                 }
             }
         }
