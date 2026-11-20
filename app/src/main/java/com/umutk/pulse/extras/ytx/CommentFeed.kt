@@ -119,18 +119,6 @@ object ChannelNames {
 
     private val asked = ConcurrentHashMap.newKeySet<String>()
     private val gate = Semaphore(4)
-    // the avatars found are handed to the screen together, a moment apart: each one put into [known] alone redrew every card of the feed (twenty channels, twenty full redraws
-    // while the first videos were still being looked at, which is where the feed stuttered)
-    private val pending = ConcurrentHashMap<String, String>()
-    private val flushing = java.util.concurrent.atomic.AtomicBoolean(false)
-    private fun flushLater(scope: CoroutineScope) {
-        if (!flushing.compareAndSet(false, true)) return
-        scope.launch {
-            try { kotlinx.coroutines.delay(700) } finally { flushing.set(false) }
-            val m = HashMap(pending); pending.clear()
-            if (m.isNotEmpty()) known.putAll(m)
-        }
-    }
     private val TITLE = Regex("<title>([^<]*)</title>")
     private const val HEAD_BYTES = 4096L
 
@@ -179,6 +167,18 @@ object ChannelAvatars {
     val known = mutableStateMapOf<String, String>()
     private val asked = ConcurrentHashMap.newKeySet<String>()
     private val gate = Semaphore(4)
+    // the avatars found are handed to the screen together, a moment apart: each one put into [known] alone redrew every card of the feed (twenty channels, twenty full redraws
+    // while the first videos were still being looked at, which is where the feed stuttered)
+    private val pending = ConcurrentHashMap<String, String>()
+    private val flushing = java.util.concurrent.atomic.AtomicBoolean(false)
+    private fun flushLater(scope: CoroutineScope) {
+        if (!flushing.compareAndSet(false, true)) return
+        scope.launch {
+            try { kotlinx.coroutines.delay(700) } finally { flushing.set(false) }
+            val m = HashMap(pending); pending.clear()
+            if (m.isNotEmpty()) known.putAll(m)
+        }
+    }
 
     fun resolve(scope: CoroutineScope, videos: List<VideoItem>, seed: Map<String, String?> = emptyMap()) {
         seed.forEach { (id, url) -> url?.let { known[id] = normalizeChannelAvatarUrl(it) } }

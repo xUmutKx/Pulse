@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
@@ -77,7 +78,7 @@ fun NotificationSettingsSection() {
                         .zIndex(if (lifted) 1f else 0f)
                         .background(if (lifted) T.text.copy(alpha = .12f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(10.dp))
                         .pointerInput(b.id) {
-                            androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress(
+                            detectDragGesturesAfterLongPress(
                                 onDragStart = { dragId = b.id; dragY = 0f },
                                 onDragEnd = { dragId = null; dragY = 0f },
                                 onDragCancel = { dragId = null; dragY = 0f },
