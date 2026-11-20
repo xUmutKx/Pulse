@@ -1685,7 +1685,8 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
             if (st == DlState.PAUSED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("play", T.text, 22.dp) }
             if (st == DlState.FAILED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("download", T.text, 22.dp) }
             var pick by remember { mutableStateOf(false) }
-            Box(Modifier.padding(start = 8.dp).clickable { pick = true }) { PIcon("folder", T.sub, 22.dp) }
+            // a tap opens this download's own folder in the file app; held, the folder new downloads go to can be changed
+            Box(Modifier.padding(start = 8.dp).combinedClickable(onLongClick = { pick = true }, onClick = { Downloads.openFolder(ctx, t.file.parentFile ?: File(Downloads.dirPath)) })) { PIcon("folder", T.sub, 22.dp) }
             if (pick) FolderPicker(File(Downloads.dirPath)) { pick = false }
             Spacer(Modifier.width(12.dp))
             var confirmDel by remember { mutableStateOf(false) }

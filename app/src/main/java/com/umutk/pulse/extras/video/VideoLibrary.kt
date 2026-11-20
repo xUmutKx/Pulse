@@ -300,7 +300,7 @@ class VideoPrefs(ctx: Context) {
     // library
     var showHidden by bool(g, "show_hidden", false)
     /** videos shorter than this many seconds are not listed */
-    var minDur by int(g, "min_dur", 0)
+    var minDur by int(g, "min_dur", 3)
     var recentMax by int(g, "recent_max", 40)
     /** 0 folders, 1 all files, 2 tree */
     var browse by int(g, "browse", 0)

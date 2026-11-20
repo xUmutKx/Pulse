@@ -229,7 +229,7 @@ fun VideoHub(onBack: () -> Unit) {
     val tree = browse == 2
     val hidden = prefs.hidden
     val incl = prefs.include
-    val all = videos.orEmpty().filter { (prefs.showHidden || fk(it) !in hidden) && it.durMs >= prefs.minDur * 1000L && (incl.isEmpty() || fk(it) in incl) }
+    val all = videos.orEmpty().filter { (prefs.showHidden || fk(it) !in hidden) && (it.durMs == 0L || it.durMs >= prefs.minDur * 1000L) && (incl.isEmpty() || fk(it) in incl) }
     val vOrder = videoOrder(prefs)
     val q = search?.trim().orEmpty()
     val cur = at ?: if (tree) "" else null
