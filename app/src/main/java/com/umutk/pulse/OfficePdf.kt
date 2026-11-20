@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -164,7 +165,7 @@ class OfPdf(private val file: File) {
                         } else if (a.pts.isNotEmpty()) {
                             val gs = com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState()
                             if (a.kind == 1) { gs.strokingAlphaConstant = 90f / 255f; cs.setGraphicsStateParameters(gs) }
-                            cs.setStrokingColor(col[0], col[1], col[2]); cs.setLineWidth(W * (if (a.kind == 1) .035f else .004f)); cs.setLineCapStyle(1); cs.setLineJoinStyle(1)
+                            cs.setStrokingColor(col[0], col[1], col[2]); cs.setLineWidth(W * (if (a.kind == 1) .035f else .004f) * a.size); cs.setLineCapStyle(1); cs.setLineJoinStyle(1)
                             fun px(o: androidx.compose.ui.geometry.Offset) = floatArrayOf(box.lowerLeftX + o.x * W, box.lowerLeftY + H - o.y * H)
                             val f0 = px(a.pts[0]); cs.moveTo(f0[0], f0[1])
                             if (a.pts.size == 1) cs.lineTo(f0[0] + 1f, f0[1]) else for (k in 1 until a.pts.size) { val q = px(a.pts[k]); cs.lineTo(q[0], q[1]) }
@@ -317,7 +318,10 @@ private fun pageColors(b: Bitmap, x0: Float, y0: Float, x1: Float, y1: Float): P
 }
 
 /** One mark on a page; points are 0..1 of the page width / height. kind 0 pen, 1 highlighter, 2 text, 3 text on a white patch (edit text). */
-class PAnn(val page: Int, val kind: Int, val pts: List<Offset>, val color: Int, val text: String = "", val bg: Int = 0)
+class PAnn(val page: Int, val kind: Int, val pts: List<Offset>, val color: Int, val text: String = "", val bg: Int = 0, val size: Float = 1f)
+
+/** The thickness of the pen and the highlighter (1 is the old line), set in the pen's panel. */
+object PdfPen { var size by androidx.compose.runtime.mutableFloatStateOf(1f) }
 
 /** Box of a text mark in pixels (kind 3 paints it white first, hiding the original text under it). */
 private fun annBounds(a: PAnn, w: Float, h: Float, pt: android.graphics.Paint): android.graphics.RectF {
@@ -353,7 +357,7 @@ private fun drawAnn(cv: android.graphics.Canvas, a: PAnn, w: Float, h: Float, pt
         return
     }
     pt.style = android.graphics.Paint.Style.STROKE; pt.strokeCap = android.graphics.Paint.Cap.ROUND; pt.strokeJoin = android.graphics.Paint.Join.ROUND
-    pt.strokeWidth = w * (if (a.kind == 1) .035f else .004f)
+    pt.strokeWidth = w * (if (a.kind == 1) .035f else .004f) * a.size
     if (a.kind == 1) pt.alpha = 90
     val path = android.graphics.Path()
     a.pts.forEachIndexed { i, o -> if (i == 0) path.moveTo(o.x * w, o.y * h) else path.lineTo(o.x * w, o.y * h) }
@@ -388,7 +392,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     val anns = remember { mutableStateListOf<PAnn>() }
     var tool by remember { mutableIntStateOf(0) } // 1 pen, 2 highlighter, 3 text
     var ci by remember { mutableIntStateOf(0) }
-    val cols = intArrayOf(0xFFD32F2F.toInt(), 0xFFFFEB3B.toInt(), 0xFF1976D2.toInt(), 0xFF388E3C.toInt(), 0xFF000000.toInt())
+    // the quick colours of the pen, two rows of four as in Notes: black first (the default), then red, blue, green, yellow, orange, purple and white
+    val cols = intArrayOf(0xFF000000.toInt(), 0xFFD32F2F.toInt(), 0xFF1976D2.toInt(), 0xFF388E3C.toInt(), 0xFFFFEB3B.toInt(), 0xFFFF9800.toInt(), 0xFF8E24AA.toInt(), 0xFFFFFFFF.toInt())
     var textAt by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }; var editing by remember { mutableStateOf<PAnn?>(null) }; var textVal by remember { mutableStateOf("") }
     var jump by remember { mutableStateOf(false) }; var jumpText by remember { mutableStateOf("") }
     var sel by remember { mutableStateOf<PSel?>(null) }
@@ -460,9 +465,9 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Find", "Bul"), "View", Icons.Outlined.Search, on = findOn, cap = tr("Search", "Ara"), png = "search") { findOn = !findOn },
         OAct(tr("Dark pages", "Koyu sayfalar"), "View", Icons.Outlined.DarkMode, on = OfficePrefs.darkPdf, cap = tr("Display", "Görünüm")) { OfficePrefs.setDarkPdf(ctx, !OfficePrefs.darkPdf) },
         OAct(tr("Pen", "Kalem"), "Edit", Icons.Outlined.Edit, on = tool == 1, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 1) 0 else 1 },
-        OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci > 1) ci = 1 },
+        OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci == 0) ci = 4 },
         OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3, cap = tr("Text", "Yazı")) { tool = if (tool == 3) 0 else 3 },
-        OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4, cap = tr("Text", "Yazı")) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = cols.size - 1 },
+        OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4, cap = tr("Text", "Yazı")) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = 0 },
         OAct(tr("Colour", "Renk"), "Edit", Icons.Outlined.Palette, cap = tr("Colour", "Renk")) { ci = (ci + 1) % cols.size },
         OAct(tr("Select text", "Metin seç"), "Edit", Icons.Outlined.Create, on = tool == 5, cap = tr("Text", "Yazı")) { tool = if (tool == 5) 0 else 5 },
         OAct(tr("Copy text", "Metni kopyala"), "Edit", Icons.Outlined.ContentCopy, enabled = sel != null, cap = tr("Text", "Yazı")) { copySel() },
@@ -492,6 +497,21 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     )
     CompositionLocalProvider(LocalOfRibbon provides ofCaptionRibbons(theme, acts)) { PdfChrome(theme, doc.name, acts, "${tr("Page", "Sayfa")} ${list.firstVisibleItemIndex + 1} / ${p.count}   ${(zoom * 100).toInt()}%", doc.close) {
       Column(Modifier.fillMaxSize()) {
+        // the pen's panel while the pen or the highlighter is on: the eight quick colours in two rows and the thickness
+        if (tool == 1 || tool == 2) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                cols.toList().chunked(4).forEachIndexed { r, row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        row.forEachIndexed { k, c -> val idx = r * 4 + k
+                            Box(Modifier.size(26.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(c))
+                                .border(if (ci == idx) 3.dp else 1.dp, if (ci == idx) Color(0xFF2B7DE9) else Color.Gray, androidx.compose.foundation.shape.CircleShape).clickable { ci = idx })
+                        }
+                    }
+                }
+            }
+            androidx.compose.material3.Slider(PdfPen.size, { PdfPen.size = it }, valueRange = .4f..4f, modifier = Modifier.weight(1f).padding(start = 14.dp))
+            Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) { Box(Modifier.size((4f * PdfPen.size).dp.coerceAtLeast(2.dp)).clip(androidx.compose.foundation.shape.CircleShape).background(Color(cols[ci]).copy(alpha = if (tool == 2) .4f else 1f))) }
+        }
         if (findOn) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             PField(query, { query = it }, tr("Find", "Bul"), Modifier.weight(1f), onDone = { gotoHit(curHit + 1) })
             val busy = scanned < p.count && query.isNotBlank()
@@ -604,9 +624,9 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
                     onDrag = { ch, _ -> val k = wordAt(words, ch.position.x / size.width, ch.position.y / size.height); if (k >= 0 && selStart >= 0) onSel(PSel(i, selStart, k)) },
                     onDragEnd = { }, onDragCancel = { })
                 else if (tool != 0) detectDragGestures(
-                    onDragStart = { o -> cur = PAnn(i, toolNow - 1, listOf(Offset(o.x / size.width, o.y / size.height)), colNow) },
+                    onDragStart = { o -> cur = PAnn(i, toolNow - 1, listOf(Offset(o.x / size.width, o.y / size.height)), colNow, size = PdfPen.size) },
                     onDragEnd = { cur?.let(onAdd); cur = null }, onDragCancel = { cur = null },
-                    onDrag = { ch, _ -> cur?.let { c -> cur = PAnn(c.page, c.kind, c.pts + Offset(ch.position.x / size.width, ch.position.y / size.height), c.color) } })
+                    onDrag = { ch, _ -> cur?.let { c -> cur = PAnn(c.page, c.kind, c.pts + Offset(ch.position.x / size.width, ch.position.y / size.height), c.color, size = c.size) } })
             }) {
             drawIntoCanvas { cv -> (anns + listOfNotNull(cur)).forEach { drawAnn(cv.nativeCanvas, it, size.width, size.height, paint, dark) } }
             // the words found by the search: yellow, the one in view orange
