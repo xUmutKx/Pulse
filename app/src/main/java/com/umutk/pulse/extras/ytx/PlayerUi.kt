@@ -211,6 +211,10 @@ fun PlayerScreen(
     var listH by remember { mutableStateOf(1) }
     var downY by remember { mutableStateOf(0f) }
     var cinemaAcc by remember { mutableStateOf(0f) }
+    // predictive: the page darkens while it is pulled down, then the cinema view fades in (and the page fades back in when it closes)
+    var pullDim by remember { mutableStateOf(0f) }
+    val viewFade = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(cinema) { pullDim = 0f; viewFade.snapTo(0f); viewFade.animateTo(1f, androidx.compose.animation.core.tween(260)) }
     val pageConn = remember(morph) {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
             private fun lower() = downY > listH * 0.35f
@@ -218,13 +222,13 @@ fun PlayerScreen(
                 if (lower()) androidx.compose.ui.geometry.Offset.Zero else morph.nestedScroll.onPreScroll(available, source)
             override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
                 if (!lower()) return morph.nestedScroll.onPostScroll(consumed, available, source)
-                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput && available.y > 0f) { cinemaAcc += available.y; return androidx.compose.ui.geometry.Offset(0f, available.y) }
+                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput && available.y > 0f) { cinemaAcc += available.y; pullDim = (cinemaAcc / 220f).coerceIn(0f, 1f) * .7f; return androidx.compose.ui.geometry.Offset(0f, available.y) }
                 return androidx.compose.ui.geometry.Offset.Zero
             }
             override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
                 if (!lower()) return morph.nestedScroll.onPreFling(available)
                 if (cinemaAcc > 140f) { cinema = true; cinemaAcc = 0f; return available }
-                cinemaAcc = 0f
+                cinemaAcc = 0f; pullDim = 0f
                 return androidx.compose.ui.unit.Velocity.Zero
             }
         }
@@ -406,11 +410,12 @@ fun PlayerScreen(
                 }
             }
         } else if (cinema && state.expanded) {
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color.Black).graphicsLayer { alpha = viewFade.value }, contentAlignment = Alignment.Center) {
             Box(Modifier.zIndex(2f).fillMaxSize()) { VideoStage(state, morph, onCollapse, onFullscreen, interactive, fill = true) }
         }
         } else {
-        Column(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().graphicsLayer { alpha = viewFade.value }) {
             Spacer(Modifier.height(top))
 
 
@@ -456,6 +461,9 @@ fun PlayerScreen(
                     }
                 }
             }
+        }
+        // the page darkens as it is pulled toward the cinema view
+        if (pullDim > 0f) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = pullDim)))
         }
 
 

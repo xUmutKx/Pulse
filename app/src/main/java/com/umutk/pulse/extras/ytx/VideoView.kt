@@ -533,6 +533,10 @@ fun VideoContent(
                 )
             }
         }
+        // the tall black stage of the cinema view: the buttons and the bar sit on the picture's own frame (the black above and below only takes touches)
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val tallStage = maxHeight > maxWidth * 1.2f
+        Box(if (tallStage) Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(state.videoAspect.coerceIn(0.5f, 2.4f)) else Modifier.fillMaxSize()) {
         if (!scrubbing) {
             SeekBurstPill(burstSide, burstSeconds, burstTaps, burstActive, fullscreen)
         }
@@ -843,6 +847,8 @@ fun VideoContent(
                     fontWeight = FontWeight.Bold,
                 )
             }
+        }
+        }
         }
     }
 }

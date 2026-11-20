@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 object SponsorBlock {
     enum class Category(val key: String, val label: String, val color: Color, val defaultAction: Action) {
         Sponsor("sponsor", "Sponsor", Color(0xFF00D400), Action.Auto),
-        SelfPromo("selfpromo", "Self-promotion", Color(0xFFFFFF00), Action.Button),
+        SelfPromo("selfpromo", "Self-promotion", Color(0xFFFFFF00), Action.Auto),
         Interaction("interaction", "Like and subscribe reminder", Color(0xFFCC00FF), Action.Button),
         Intro("intro", "Intro", Color(0xFF00FFFF), Action.Mark),
         Outro("outro", "Outro and credits", Color(0xFF0202ED), Action.Mark),
