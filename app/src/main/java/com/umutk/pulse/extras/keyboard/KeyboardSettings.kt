@@ -967,15 +967,24 @@ private fun Switch(title: String, sub: String, on: Boolean, onChange: (Boolean) 
     }
 }
 
-/** A little picture of a theme: its background and three rows of keys. */
+/** A picture of a theme as the keyboard really draws it: its ground and three rows of lettered keys, the shift and delete keys in its special colour, the accent on the action key. */
 @Composable
 private fun ThemeTile(id: String, dark: Boolean, picked: Boolean, onClick: () -> Unit) {
     val th = KeyboardThemes.of(id, dark)
-    Column(Modifier.width(92.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(8.dp)).background(th.bg).border(if (picked) 2.dp else 1.dp, if (picked) T.text else T.sub.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(3) { r ->
-                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    repeat(if (r == 1) 8 else 9) { i -> Box(Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape((th.radius / 3).dp)).background(if (r == 2 && i == 8) th.accent else th.key)) }
+    val rows = listOf("qwertyuiop", "asdfghjkl", "⇧zxcvbnm⌫")
+    Column(Modifier.width(150.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().height(92.dp).clip(RoundedCornerShape(8.dp)).background(th.bg).border(if (picked) 2.dp else 1.dp, if (picked) T.text else T.sub.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            rows.forEachIndexed { r, keys ->
+                Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = if (r == 1) 6.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    keys.forEachIndexed { i, ch ->
+                        val special = ch == '⇧' || ch == '⌫'
+                        val action = r == 2 && i == keys.lastIndex
+                        Box(Modifier.weight(if (special) 1.4f else 1f).fillMaxSize().clip(RoundedCornerShape((th.radius / 3).dp))
+                            .background(if (action) th.accent else if (special) th.special else th.key), contentAlignment = Alignment.Center) {
+                            Text(ch.toString(), color = if (action) th.onAccent else if (special) th.specialText else th.text, fontSize = 8.sp, maxLines = 1)
+                        }
+                    }
                 }
             }
         }
