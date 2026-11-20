@@ -497,7 +497,7 @@ object SeasonDl {
 
     /** A picture of the catalogue, loaded as it is shown; while it is not there (or there is none) the box shows [label], so a missing picture never leaves a hole. */
     @Composable
-    private fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
+    fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
         val src = sharp(url)
         val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
         val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {

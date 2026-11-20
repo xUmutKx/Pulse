@@ -630,6 +630,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                     // the copied item and the photo in the right slot get a wider place to tap
                     val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else 1f
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
+                        if ((st.previewText != null || st.previewShot) && i == 2) SlotPreview(st, th)
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
@@ -2227,4 +2228,33 @@ private fun emojiTh(th: KbTheme): KbTheme {
     if (id == "same" || id == th.id) return th
     val dark = androidx.compose.foundation.isSystemInDarkTheme()
     return remember(id, dark, KeyboardPrefs.keyRadius, KeyboardPrefs.keyIcons) { KeyboardThemes.of(id, dark).tuned() }
+}
+
+
+/** The preview of the copied item held in the bar's right slot: the whole text (scrolls), the picture large, a video with a small playing animation. */
+@Composable
+private fun SlotPreview(st: KeyboardState, th: KeyboardTheme) {
+    val close = { st.previewText = null; st.previewShot = false }
+    androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter, offset = androidx.compose.ui.unit.IntOffset(0, -150), onDismissRequest = close, properties = androidx.compose.ui.window.PopupProperties(focusable = false, clippingEnabled = false)) {
+        Box(Modifier.padding(8.dp).widthIn(max = 340.dp).clip(RoundedCornerShape(16.dp)).background(th.bg).border(1.dp, th.text.copy(alpha = .18f), RoundedCornerShape(16.dp)).clickable { close() }.padding(10.dp), contentAlignment = Alignment.Center) {
+            val txt = st.previewText
+            if (txt != null) Text(txt, color = th.text, fontSize = 14.sp, maxLines = 14, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()))
+            else st.shotThumb?.let { bmp ->
+                Box(contentAlignment = Alignment.Center) {
+                    Image(bmp, null, Modifier.heightIn(max = 260.dp).widthIn(max = 320.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Fit)
+                    if (st.shotVideo) {
+                        // a video: the play disc breathes and a bar sweeps along the bottom, so it reads as moving
+                        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "pv")
+                        val k by t.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(1800, easing = androidx.compose.animation.core.LinearEasing)), label = "pvk")
+                        Canvas(Modifier.size(44.dp)) {
+                            drawCircle(Color.Black.copy(alpha = .72f), radius = size.minDimension / 2f * (0.9f + 0.1f * kotlin.math.sin(k * 6.2832f)))
+                            val r = size.minDimension / 2f
+                            drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(r * .78f, r * .58f); lineTo(r * 1.42f, r); lineTo(r * .78f, r * 1.42f); close() }, Color.White)
+                        }
+                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = .25f))) { Box(Modifier.fillMaxWidth(k).height(3.dp).background(th.accent)) }
+                    }
+                }
+            }
+        }
+    }
 }

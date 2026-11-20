@@ -69,6 +69,9 @@ class KbState {
     var preview by mutableStateOf<KbPreview?>(null)
     /** The suggestion slot (0..2) asked "never suggest this again", waiting for the second tap; -1 none. */
     var banAsk by mutableStateOf(-1)
+    /** Held on the bar's right slot: the copied text in full (or the picture / video bigger) in a preview above the bar. */
+    var previewText by mutableStateOf<String?>(null)
+    var previewShot by mutableStateOf(false)
     var clips by mutableStateOf(listOf<String>())
     /** The kept clipboard: texts and pictures, pinned first. */
     var clipItems by mutableStateOf(listOf<ClipItem>())

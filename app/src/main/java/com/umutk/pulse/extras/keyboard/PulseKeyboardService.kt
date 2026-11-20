@@ -1821,6 +1821,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
+        // the copied item in the right slot: held, a preview opens above the bar (the text in full, the picture bigger, the video playing)
+        val sl = st.slots.getOrNull(i).orEmpty()
+        if (sl.startsWith("\u0002")) { st.previewShot = true; return }
+        if (sl.startsWith("\u0001") && !sl.startsWith("\u0001🔑")) { quickClip?.let { st.previewText = it; return } }
         // the address in the left slot of an empty box: held, all the saved addresses come up on the bar to pick from
         if (i == 0 && word.isEmpty() && '@' in w && emailRe.matches(w)) {
             val all = emailsSaved().filter { !KeyboardDictionary.isBanned(it) }.take(8)
