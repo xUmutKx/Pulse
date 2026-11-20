@@ -138,6 +138,7 @@ fun SettingsScreen(
     var cacheMessage by remember { mutableStateOf<String?>(null) }
     var activeFloatingSection by remember { mutableStateOf<SettingsFloatingSection?>(null) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
+    var showTaste by remember { mutableStateOf(false) }
     var checkingUpdate by remember { mutableStateOf(false) }
     var updateFeedback by remember { mutableStateOf<String?>(null) }
 
@@ -148,6 +149,7 @@ fun SettingsScreen(
         label = "settingsBlur",
     )
 
+    if (showTaste) { YourTasteScreen(onBack = { showTaste = false }, contentPadding = contentPadding); return }
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -199,6 +201,16 @@ fun SettingsScreen(
                         title = I18n.t("general_modification", "General Modification"),
                         subtitle = I18n.t("general_modification_sub", "Font, gestures, quality & downloads"),
                         onClick = { activeFloatingSection = SettingsFloatingSection.GENERAL_MODS },
+                    )
+                }
+
+                SettingsSectionHeader(com.umutk.pulse.tr("Recommendations", "Öneriler"))
+                SettingsCard {
+                    SettingsRow(
+                        icon = Icons.Rounded.Tune,
+                        title = com.umutk.pulse.tr("Your taste", "Zevkin"),
+                        subtitle = com.umutk.pulse.tr("What the feed learned about you, on this phone only", "Akışın senin hakkında öğrendikleri, yalnızca bu telefonda"),
+                        onClick = { showTaste = true },
                     )
                 }
 

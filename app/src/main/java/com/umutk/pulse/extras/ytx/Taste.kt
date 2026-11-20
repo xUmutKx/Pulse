@@ -30,16 +30,16 @@ object Taste {
 
     private fun key(v: VideoItem) = v.channelUrl ?: v.channel
 
-    fun ok(v: VideoItem): Boolean { load(); return v.id !in hiddenVideos && key(v) !in hiddenChannels }
+    fun ok(v: VideoItem): Boolean { load(); return v.id !in hiddenVideos && key(v) !in hiddenChannels && !Neuro.isBlocked(v) }
 
-    fun notInterested(v: VideoItem) { load(); hiddenVideos = hiddenVideos + v.id; scores[key(v)] = (scores[key(v)] ?: 0) - 3; save() }
-    fun hideChannel(v: VideoItem) { load(); hiddenChannels = hiddenChannels + key(v); save() }
+    fun notInterested(v: VideoItem) { load(); Neuro.learn(v, -2f); hiddenVideos = hiddenVideos + v.id; scores[key(v)] = (scores[key(v)] ?: 0) - 3; save() }
+    fun hideChannel(v: VideoItem) { load(); Neuro.learn(v, -3f); hiddenChannels = hiddenChannels + key(v); save() }
 
     /** A video was opened: its channel weighs a little more. */
-    fun watched(v: VideoItem) { load(); scores[key(v)] = ((scores[key(v)] ?: 0) + 1).coerceAtMost(50); save() }
+    fun watched(v: VideoItem) { load(); Neuro.learn(v, 1f); scores[key(v)] = ((scores[key(v)] ?: 0) + 1).coerceAtMost(50); save() }
 
     /** The home feed in the person's order: hidden ones out, the channels they watch first. */
-    fun rank(list: List<VideoItem>): List<VideoItem> { load(); return list.filter(::ok).sortedByDescending { (scores[key(it)] ?: 0).coerceIn(-10, 10) / 3 } }
+    fun rank(list: List<VideoItem>): List<VideoItem> { load(); return Neuro.rank(list.filter(::ok)) }
 
     private fun save() {
         rev++

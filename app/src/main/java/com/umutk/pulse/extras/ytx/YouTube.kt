@@ -195,6 +195,7 @@ object YouTube {
     }
 
     suspend fun search(query: String): List<VideoItem> = withContext(Dispatchers.IO) {
+        runCatching { Neuro.searched(query) }
         val handler = service.searchQHFactory.fromQuery(query, listOf(YoutubeSearchQueryHandlerFactory.VIDEOS), "")
         SearchInfo.getInfo(service, handler).relatedItems
             .filterIsInstance<StreamInfoItem>()
