@@ -260,6 +260,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     }
 
     private var lastPlayedAt = 0L
+    /** The song whose line the lock screen shows. */
+    private var lockFor: String? = null
 
     private suspend fun tick() {
         if (LiveLyrics.floating(ctx) && !MiniLyrics.running && com.umutk.pulse.Compat.canOverlay(ctx)) MiniLyrics.start(ctx)
@@ -293,8 +295,10 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             val cl = LiveLyrics.currentLine(res, pos)
             val sung = if (cl != null && cl.words.isNotEmpty() && LiveLyrics.wordSync(ctx)) LiveLyrics.sungChars(cl, pos) else -1
             // a gap between two lines keeps the last one on screen instead of blinking the window out
-            if (lines != null && lines.second.isNotBlank()) LockLyricsOverlay.show(ctx, lines.second, lines.third, sung)
-        } else LockLyricsOverlay.hide(ctx)
+            if (lines != null && lines.second.isNotBlank()) { LockLyricsOverlay.show(ctx, lines.second, lines.third, sung); lockFor = cur.path }
+            // a new song: the line of the one before is taken off at once instead of staying until the new song's first line is sung
+            else if (lockFor != cur.path) { LockLyricsOverlay.hide(ctx); lockFor = null }
+        } else { LockLyricsOverlay.hide(ctx); lockFor = null }
         var line = if (wanted && st.isPlaying) {
             st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs + AHEAD_MS) }?.second?.takeIf { it.isNotBlank() }
         } else null

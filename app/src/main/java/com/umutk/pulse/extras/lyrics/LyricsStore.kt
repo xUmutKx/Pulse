@@ -78,9 +78,16 @@ private fun sha(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByt
 
 /** "Artist - Title" names are split; otherwise the artist is unknown. */
 fun guessArtistTitle(t: Track): Pair<String, String> {
-    val n = t.title?.takeIf { it.isNotBlank() } ?: t.path.substringAfterLast('/').substringBeforeLast('.')
+    val online = t.path.startsWith("http")
+    var n = t.title?.takeIf { it.isNotBlank() } ?: t.path.substringAfterLast('/').substringBeforeLast('.')
+    // a song from YouTube Music or Spotify: the video words in its title ("(Official Video)", "[HD]", "Lyrics") are not part of the song's name
+    if (online) n = n.replace(Regex("""\s*[\(\[][^\)\]]*(official|video|audio|lyric|lyrics|hd|4k|remaster|klip|clip|visualizer)[^\)\]]*[\)\]]""", RegexOption.IGNORE_CASE), "").trim()
     val i = n.indexOf(" - ")
-    return if (i > 0) n.substring(0, i).trim() to n.substring(i + 3).trim() else "" to n.trim()
+    if (i > 0) return n.substring(0, i).trim() to n.substring(i + 3).trim()
+    // the artist the song carries (its tag, or the channel of an online song without "Official", "- Topic", "VEVO") when the title has none
+    val a = t.artist?.trim()?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", true) }
+        ?.replace(Regex("""(?i)\s*(- topic|official|vevo)$"""), "")?.replace(Regex("""(?i)\s*official\s*$"""), "")?.trim()
+    return (if (online || t.path.isNotEmpty()) a.orEmpty() else "") to n.trim()
 }
 
 /** lyrics.ovh, plain text only: https://api.lyrics.ovh/v1/artist/title. Null when not found. */
