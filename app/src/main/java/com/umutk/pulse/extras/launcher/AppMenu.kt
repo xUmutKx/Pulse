@@ -8,6 +8,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -157,10 +158,22 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
                 } else moreSet.forEach { a -> ActionRow(a.icon, label(a), sk.text) { go(a) } }
             }
         } else {
-            acts.forEach { a ->
-                if (fluent) FluentRow(a, label(a), sk?.text ?: w.text) { go(a) } else ActionRow(a.icon, label(a), w.text) { go(a) }
+            // the actions as icons, five to a row (a long press names the icon): a short menu in place of a long list
+            val ink = sk?.text ?: w.text
+            val items = acts.map { a -> Triple(a, label(a), { go(a) }) } + (if (inFolder) listOf(Triple(null as MenuAct?, tr("Remove from folder", "Klasörden çıkar"), { LauncherFolders.remove(ctx, app.pkg); onDismiss() })) else emptyList())
+            items.chunked(5).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    row.forEach { (a, name, act) ->
+                        Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .combinedClickable(onLongClick = { android.widget.Toast.makeText(ctx, name, android.widget.Toast.LENGTH_SHORT).show() }, onClick = act), contentAlignment = Alignment.Center) {
+                            val tint = if (a?.danger == true) Color(0xFFD13438) else ink
+                            if (a == null) PIcon("close", tint, 22.dp)
+                            else if (fluent) FluentIcon(if (a.key == "pin" && pinned) "pin" else a.icon, tint, 22.dp) else PIcon(a.icon, tint, 22.dp)
+                        }
+                    }
+                    repeat(5 - row.size) { Spacer(Modifier.size(44.dp)) }
+                }
             }
-            if (inFolder) ActionRow("close", tr("Remove from folder", "Klasörden çıkar"), w.text) { LauncherFolders.remove(ctx, app.pkg); onDismiss() }
         }
         // (arranging the menu is in the launcher settings, Context menu: no row for it here)
     }
