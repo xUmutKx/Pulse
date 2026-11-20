@@ -2536,3 +2536,15 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - YTXTube'dan Müzik kaldırılsın; müzik oynatıcıda ayarlardan açılsın; home görünümü, speed dial kare kapaklı ve başlıksız, yalnız şarkılar (video yok)
 - Files: Samsung Secure Folder'a taşıma (user 150, gerekirse root)
 - (2026-11-20, kullanıcı) Office/PDF: kaleme basınca dokunulan yerde açılan yuvarlak hızlı menü; S Pen algılanınca destek, kalem düğmesiyle/basılı tutunca silgi; PDF metnini Canva gibi doğrudan düzenleme (şu an "Metni düzenle" var); tarayıcıda sayfa kenarı algılama ve elle köşe ile perspektif düzeltme; hızlı panel düğmesi; eski iPhone AssistiveTouch gibi çok amaçlı yüzen çubuk (hızlı panel öğeleri eklenebilir, gizlenebilir, kenara yapışabilir)
+
+## 2026-11-20 (uzun mesaj #2) — sırayla yapılacaklar (Windows 11 ekran görüntüleriyle)
+1. Windows ayarları/Denetim Masası görünümü (yeşil accent #4CC417, saydamlık efektleri, tema önizleme başlığı, beyaz Denetim Masası + accent pencere çerçevesi) — Fluent, kategorili
+2. Yatay modda sanal fare; Başlat menüsü gerçek Windows 11 yapısında; ikinci Başlat menüsü: sağda Telefon arkadaşı paneli
+3. [YAPILDI] Arama / Başlat / Wi-Fi-ses-pil / saat ayrı paneller
+4. Mini kayıt defteri (regedit): Settings.System/Global/Secure, ADB/Shizuku/root, SetEdit gibi
+5. Yedekleme: klavye teması, boyutu, açık tuş satırları
+6. Pulse dosya seçici: seçilen klasörü doğrudan aç (Recents değil)
+7. Güvenli Klasöre taşı: dosya kayboluyor → güvenli yöntem
+8. Dosya 3 nokta menüsü: 2 satır x 5 ikon (Open yok; 2. satır: Info, Shortcut, Bookmark, Share, Open with), basılı tutunca etiket
+9. Klavye panosu: basılı tutup öğeyi genişlet; seçili metinde yerinde düzenleme; semboller mevcut kategorilere dağıtılsın + kaydırma animasyonu; e-posta 2 öneri / kelime 3 öneri; çalışmayan tuşlar kalksın (Dict, hesap makinesi, uygulama notları kalsın); SMS OTP 5-6 hane önerisi; SMS'siz Lite sürüm
+10. YTX: bağlantılara tıklanmıyor; Diziler ve Filmler posterleri; her videonun 3 noktasında "Müzik olarak aç"; Spotify OAuth (INVALID_CLIENT) + Aran404/SpotAPI; mini oynatıcıdan normale geçince video sol sütunda kalıyor; mini oynatıcıya kaydırmak kolay olsun; video/öneri bölme oranı ayarı (varsayılan %35/%65); tam ekran oynatıcı: yukarı kaydırınca kanal adı solda, Abone ol sağda, altta öneriler; üstte durum çubuğu ve beyaz ilerleme çubuğu gizli; öngörülü animasyon; PiP altyazı; izlerken indirebildiği kadar önbelleğe al, ekran kapalıyken de devam; tam ekranda sağ-sol ölü bölge; oynat tuşuna menü (Flow kodu); oynatma listelerinde arama; Game Hub oyun açılışında bildirim
