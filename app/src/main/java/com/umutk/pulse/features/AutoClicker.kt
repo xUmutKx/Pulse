@@ -312,7 +312,9 @@ class AutoClickTile : TileService() {
         }
     }
     override fun onClick() {
-        val s = AutoClickService.instance
+        var s = AutoClickService.instance
+        // listed but "Not working": put it back at once (when Pulse can write the setting), so the tap works the first time
+        if (s == null && Thread { runCatching { A11yRepair.run(this) } }.also { it.start() }.let { it.join(2500); true }) { Thread.sleep(600); s = AutoClickService.instance }
         if (s == null) {
             val i = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (android.os.Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE))
