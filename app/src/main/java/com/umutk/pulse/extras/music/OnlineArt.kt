@@ -19,6 +19,8 @@ object OnlineArt {
 
     fun put(path: String, thumb: String?) { if (!thumb.isNullOrBlank()) urls[path] = thumb }
 
+    fun has(path: String) = urls.containsKey(path)
+
     fun isOnline(path: String) = path.startsWith("http://") || path.startsWith("https://")
 
     /** The cover of the stream [path] (blocking: call off the main thread), or null when none was remembered or it could not be fetched. */

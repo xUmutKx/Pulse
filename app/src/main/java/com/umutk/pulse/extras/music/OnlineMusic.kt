@@ -65,9 +65,20 @@ object OnlineMusic {
         val first = withContext(Dispatchers.IO) { idOf(ctx, h)?.let { streamUrl(it) } } ?: return false
         val engine = MusicPlayerEngine.get(ctx)
         withContext(Dispatchers.Main) { engine.playQueue(listOf(track(h, first)), 0) }
-        for (n in list.drop(index + 1).take(15)) {
+        val rest = list.drop(index + 1).take(15)
+        for (n in rest) {
             val u = withContext(Dispatchers.IO) { idOf(ctx, n)?.let { streamUrl(it) } } ?: continue
             withContext(Dispatchers.Main) { engine.addToQueue(track(n, u)) }
+        }
+        // the list runs out soon: the queue goes on with songs like the one that was picked (a mix of its artist, as YouTube Music's radio), none twice
+        if (rest.size < 8) {
+            val seen = (list.map { it.title.lowercase() }).toMutableSet()
+            val more = runCatching { youtube(ctx, "${h.artist} ${h.title} radio mix") + youtube(ctx, "${h.artist} songs") }.getOrDefault(emptyList())
+                .filter { seen.add(it.title.lowercase()) }.take(12)
+            for (n in more) {
+                val u = withContext(Dispatchers.IO) { idOf(ctx, n)?.let { streamUrl(it) } } ?: continue
+                withContext(Dispatchers.Main) { engine.addToQueue(track(n, u)) }
+            }
         }
         return true
     }

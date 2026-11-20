@@ -29,7 +29,13 @@ class NotifArt(private val ctx: Context) : BitmapLoader {
     override fun loadBitmapFromMetadata(metadata: MediaMetadata): ListenableFuture<Bitmap>? {
         val path = metadata.extras?.getString(KEY_PATH)
         // an internet radio station has no cover: a drawn radio picture instead of the grey placeholder
-        if (path != null && path.startsWith("http")) return SettableFuture.create<Bitmap>().also { it.set(GeneratedArt.make(GeneratedArt.Kind.RADIO)) }
+        // a song from YouTube Music or Spotify (a stream link with a remembered cover) shows its own cover, fetched off the main thread
+        if (path != null && path.startsWith("http")) {
+            if (!com.umutk.pulse.extras.music.OnlineArt.has(path)) return SettableFuture.create<Bitmap>().also { it.set(GeneratedArt.make(GeneratedArt.Kind.RADIO)) }
+            val f = SettableFuture.create<Bitmap>()
+            Thread { f.set(runCatching { com.umutk.pulse.extras.music.OnlineArt.load(ctx, path)?.asAndroidBitmap() }.getOrNull() ?: GeneratedArt.make(GeneratedArt.Kind.RADIO)) }.start()
+            return f
+        }
         if (path == null) return base.loadBitmapFromMetadata(metadata)
         val f = SettableFuture.create<Bitmap>()
         Thread {
