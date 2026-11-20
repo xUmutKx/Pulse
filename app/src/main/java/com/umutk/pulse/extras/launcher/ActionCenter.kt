@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.BatterySaver
+import androidx.compose.material.icons.outlined.FiberManualRecord
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.Cast
@@ -111,6 +112,8 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane, ::airOn),
     QTile(Icons.Outlined.CameraAlt, "Camera", "Kamera", { c -> runCatching { c.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
+    // Pulse's own screen recorder, in a window of the launcher (or its own screen when windows are off)
+    QTile(Icons.Outlined.FiberManualRecord, "Screen recorder", "Ekran kaydı", { c -> openDesktopItem(c, "pulse:x:screenrec", "win11") }),
     QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
     QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", state = { ActionCenter.torch }, run = { c ->
         runCatching {

@@ -83,7 +83,7 @@ private fun QuickFlyout(taskbar: Dp) {
     val hi = launcherAccent()
     val shape = RoundedCornerShape(8.dp)
     var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    val names = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular") }
+    val names = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder") }
     val tiles = remember { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
     val ons = remember(rev) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
     val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
