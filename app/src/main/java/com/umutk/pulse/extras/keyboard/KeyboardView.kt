@@ -551,8 +551,8 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
         },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!samBar) BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
-        if (st.toolbar || samBar) {
+        if (!samBar && (KeyboardPrefs.barTools || st.panel != "keys")) BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
+        if ((st.toolbar && KeyboardPrefs.barTools) || samBar) {
             // the icons share the width evenly; only when they would be smaller than a finger's reach does the row scroll
             val shown = if (th.samsung) listOf("aifix", "emoji", "translate", "clip", "settings") else KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
             BoxWithConstraints(Modifier.weight(1f)) {
