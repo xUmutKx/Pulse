@@ -220,6 +220,8 @@ fun FeedList(
     filterScrollKey: Any? = null,
 
     channelAvatarSeed: Map<String, String?> = emptyMap(),
+    /** Compact rows (a small picture at the left) instead of the big cards: the playlist page. */
+    compact: Boolean = false,
 ) {
     val c = MaterialTheme.colorScheme
     // "not interested": the video (or its channel) leaves the list at once
@@ -244,7 +246,8 @@ fun FeedList(
         header()
         // one kind of row, no item animation: the list reuses its rows as it scrolls and nothing is measured twice
         items(listVideos, key = { it.id }, contentType = { "video" }) { video ->
-            VideoCard(
+            if (compact) Box(Modifier.padding(horizontal = 16.dp)) { VideoRow(video, onClick = { onOpen(video) }) }
+            else VideoCard(
                 video,
                 onClick = { onOpen(video) },
             )

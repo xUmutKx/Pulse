@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +75,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -336,6 +338,8 @@ fun SubscriptionsScreen(
         }
     }
     LaunchedEffect(scrollToTop) { selectedChannelId = null }
+    var refreshedAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(lib.subscriptions.generation) { refreshedAt = System.currentTimeMillis() }
     LaunchedEffect(selectedChannelId) {
         activeSubFilter = SubFilter.Videos
         channelCommunityPosts = emptyList()
@@ -369,6 +373,7 @@ fun SubscriptionsScreen(
             Column(Modifier.fillMaxWidth()) {
                 ScreenHeader(title = I18n.t("subscriptions", "Subscriptions")) { HeaderActions(onSearch, onAccount) }
                 if (signedIn && lib.channels.isNotEmpty()) {
+                    Text("Quick access", color = c.onSurface, fontSize = 17.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 4.dp))
                     SubscriptionsChannelStrip(
                         channels = lib.channels,
                         selectedId = selectedChannelId,
@@ -379,6 +384,9 @@ fun SubscriptionsScreen(
                         selected = activeSubFilter,
                         onSelect = { activeSubFilter = it },
                     )
+                    // when the feed was last fetched
+                    val mins = ((System.currentTimeMillis() - refreshedAt) / 60_000L).toInt()
+                    Text("Last refreshed " + (if (mins < 1) "now" else if (mins < 60) "$mins min ago" else "${mins / 60} hr ago"), color = c.onSurfaceVariant, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 4.dp))
                 }
             }
         },
@@ -790,16 +798,34 @@ fun PlaylistScreen(
             val body = if (playlist.id == "DL") "Downloaded videos will appear here." else "Videos you add to this playlist will show up here."
             Box(Modifier.padding(top = top)) { EmptyState(icon, title, body) }
         } else {
-            FeedList(feed, contentPadding.withTop(top), onOpen, indicatorTop = top, channelAvatarSeed = avatarSeed, header = {
-                // the playlist's cover on top, its size, and play all / shuffle
+            FeedList(feed, contentPadding.withTop(top), onOpen, indicatorTop = top, channelAvatarSeed = avatarSeed, compact = true, header = {
+                // the playlist's cover on top, its title and size, play all / shuffle, and the share button
                 if (feed.videos.isNotEmpty()) item(key = "pl_head") {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        coil.compose.AsyncImage(feed.videos.first().thumbnail, null, Modifier.fillMaxWidth(.8f).aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                        Text(playlist.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
-                        Text("${feed.videos.size}${if (feed.hasMore) "+" else ""} videos", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            androidx.compose.material3.Button(onClick = { onPlayAll(feed.videos, false) }) { Icon(Icons.Rounded.PlayArrow, null); Text(" Play all") }
-                            androidx.compose.material3.OutlinedButton(onClick = { onPlayAll(feed.videos, true) }) { Icon(Icons.Rounded.Shuffle, null); Text(" Shuffle") }
+                    val c = MaterialTheme.colorScheme
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val total = feed.videos.sumOf { it.durationSec }
+                    val len = (total / 3600).let { h -> val m = (total % 3600) / 60; if (h > 0) "$h hr $m min" else "$m min" }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        coil.compose.AsyncImage(feed.videos.first().thumbnail, null, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(28.dp)).background(c.surfaceContainerHighest), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        Text(playlist.title, fontWeight = FontWeight.Medium, fontSize = 26.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 18.dp))
+                        Text(
+                            listOfNotNull(feed.videos.first().channel.ifBlank { null }, "${feed.videos.size}${if (feed.hasMore) "+" else ""} videos", if (total > 0) len else null).joinToString(" · "),
+                            fontSize = 15.sp, color = c.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp, topEnd = 6.dp, bottomEnd = 6.dp)).background(c.onSurface).pressable { onPlayAll(feed.videos, false) }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.PlayArrow, null, tint = c.surface)
+                                Text("  Play all", color = c.surface, fontSize = 17.sp)
+                            }
+                            Row(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 28.dp, bottomEnd = 28.dp)).background(c.surfaceContainerHighest).pressable { onPlayAll(feed.videos, true) }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Shuffle, null, tint = c.onSurface)
+                                Text("  Shuffle", color = c.onSurface, fontSize = 17.sp)
+                            }
+                        }
+                        if (playlist.id != "DL") Row(Modifier.padding(top = 10.dp)) {
+                            Box(Modifier.size(48.dp).clip(CircleShape).pressable {
+                                runCatching { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, "https://www.youtube.com/playlist?list=${playlist.id}"), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                            }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, "Share", tint = c.onSurface) }
                         }
                     }
                 }

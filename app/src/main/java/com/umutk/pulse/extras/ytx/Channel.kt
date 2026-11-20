@@ -62,6 +62,7 @@ import org.schabi.newpipe.extractor.Page
 val LocalChannelOpener = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 enum class ChannelTab(val label: String) {
+    Home("Home"),
     Videos("Videos"),
     Shorts("Shorts"),
     Live("Live"),
@@ -81,7 +82,7 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
         private set
     var subscribed by mutableStateOf<Boolean?>(null)
         private set
-    var activeTab by mutableStateOf(ChannelTab.Videos)
+    var activeTab by mutableStateOf(ChannelTab.Home)
         private set
     var liveVideos by mutableStateOf<List<VideoItem>>(emptyList())
         private set
@@ -119,7 +120,7 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
             ChannelTab.Live -> if (liveVideos.isEmpty() && !liveLoading) loadLive()
             ChannelTab.Community -> if (communityPosts.isEmpty() && !communityLoading) loadCommunity()
             ChannelTab.Playlists -> if (playlists.isEmpty() && !playlistsLoading) loadPlaylists()
-            ChannelTab.Videos -> {}
+            ChannelTab.Videos, ChannelTab.Home -> {}
         }
     }
 
@@ -262,60 +263,20 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
 
 @Composable
 fun ChannelTabStrip(selected: ChannelTab, onSelect: (ChannelTab) -> Unit, modifier: Modifier = Modifier) {
-    val isDark = isDarkTheme()
-    val isAmoled = ThemeSettings.mode == "amoled"
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        ChannelTab.entries.forEach { tab ->
-            val isSelected = tab == selected
-            val background by animateColorAsState(
-                targetValue = when {
-                    isSelected -> if (isDark || isAmoled) Color.White else Color.Black
-                    isAmoled -> Color(0xFF161616)
-                    isDark -> Color(0xFF272727)
-                    else -> Color(0xFFE5E5E5)
-                },
-                animationSpec = tween(220, easing = Motion.Emphasized),
-                label = "channelTabBackground",
-            )
-            val foreground by animateColorAsState(
-                targetValue = when {
-                    isSelected -> if (isDark || isAmoled) Color.Black else Color.White
-                    isDark || isAmoled -> Color.White
-                    else -> Color(0xFF0F0F0F)
-                },
-                animationSpec = tween(180, easing = Motion.Emphasized),
-                label = "channelTabForeground",
-            )
-            val scale by animateFloatAsState(
-                targetValue = if (isSelected) 1f else 0.94f,
-                animationSpec = spring(dampingRatio = 0.7f, stiffness = 700f),
-                label = "channelTabScale",
-            )
-            Box(
-                modifier = Modifier
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(background)
-                    .pressable(pressedScale = 0.94f) { onSelect(tab) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    tab.label,
-                    color = foreground,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    softWrap = false,
-                )
+    val c = MaterialTheme.colorScheme
+    // Material tabs: the text, and a line under the one that is open
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            ChannelTab.entries.forEach { tab ->
+                val on = tab == selected
+                Column(Modifier.pressable(pressedScale = .97f) { onSelect(tab) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tab.label, color = if (on) c.onSurface else c.onSurfaceVariant, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1, softWrap = false, modifier = Modifier.padding(horizontal = 26.dp, vertical = 14.dp))
+                    Box(Modifier.height(3.dp).fillMaxWidth().background(if (on) c.onSurface else Color.Transparent, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)))
+                }
             }
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(c.outlineVariant.copy(alpha = .5f)))
     }
 }
 
@@ -338,6 +299,7 @@ fun ChannelScreen(
         if (!nearEnd) return@LaunchedEffect
         when (state.activeTab) {
             ChannelTab.Videos -> if (state.videos.isNotEmpty()) state.loadMore()
+            ChannelTab.Home -> {}
             ChannelTab.Shorts -> if (state.shorts.isNotEmpty()) state.loadMoreShorts()
             else -> {}
         }
@@ -378,24 +340,17 @@ fun ChannelScreen(
                             Thumbnail(d.banner, Modifier.fillMaxWidth().aspectRatio(5.6f), radius = 12)
                             Spacer(Modifier.height(16.dp))
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            ChannelAvatar(d.avatar, d.name, size = 76)
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                ChannelNameWithBadge(d.name, verified = d.verified, maxLines = 2)
-                                d.handle?.let { handle ->
-                                    Spacer(Modifier.height(2.dp))
-                                    Text("@$handle", color = c.onSurfaceVariant, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                channelStatLine(d.subscribers, d.videoCount).takeIf { it.isNotBlank() }?.let { stats ->
-                                    Text(stats, color = c.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                }
-                            }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            ChannelAvatar(d.avatar, d.name, size = 108)
+                            Spacer(Modifier.weight(1f))
+                            state.subscribed?.let { subscribed -> Box(Modifier.width(210.dp)) { ChannelSubscribeButton(subscribed) { state.toggleSubscribe(onMessage) } } }
                         }
-                        state.subscribed?.let { subscribed ->
-                            Spacer(Modifier.height(14.dp))
-                            ChannelSubscribeButton(subscribed) { state.toggleSubscribe(onMessage) }
-                        }
+                        Spacer(Modifier.height(10.dp))
+                        ChannelNameWithBadge(d.name, verified = d.verified, maxLines = 2, fontSize = 30.sp)
+                        Text(
+                            listOfNotNull(d.handle?.let { "@$it" }, channelStatLine(d.subscribers, d.videoCount).takeIf { it.isNotBlank() }).joinToString("   "),
+                            color = c.onSurfaceVariant, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
+                        )
                         if (d.description.isNotBlank()) {
                             Spacer(Modifier.height(12.dp))
                             Text(d.description, color = c.onSurfaceVariant, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -407,6 +362,22 @@ fun ChannelScreen(
                     ChannelTabStrip(selected = state.activeTab, onSelect = { state.selectTab(it) })
                 }
                 when (state.activeTab) {
+                    ChannelTab.Home -> {
+                        // the newest video big, then the videos under it
+                        val first = state.videos.firstOrNull()
+                        if (first == null) item(key = "home_wait") {
+                            Box(Modifier.fillMaxWidth().padding(48.dp), Alignment.Center) { CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(32.dp)) }
+                        } else {
+                            item(key = "home_feature") { VideoCard(first, onClick = { onOpen(first) }) }
+                            item(key = "home_videos_title") { Text("Videos", color = c.onSurface, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) }
+                            items(state.videos.drop(1).take(12), key = { "home_" + it.id }) { video -> Box(Modifier.padding(horizontal = 16.dp)) { VideoRow(video, onClick = { onOpen(video) }) } }
+                            item(key = "home_more") {
+                                Box(Modifier.fillMaxWidth().padding(16.dp), Alignment.Center) {
+                                    Text("All videos", color = c.primary, fontSize = 16.sp, modifier = Modifier.pressable { state.selectTab(ChannelTab.Videos) }.padding(12.dp))
+                                }
+                            }
+                        }
+                    }
                     ChannelTab.Videos -> {
                         if (state.sorts.size > 1) item(key = "sorts") {
                             ChoiceChips(state.sorts.map { it.first }, state.sortIndex, { state.sortBy(it) })
