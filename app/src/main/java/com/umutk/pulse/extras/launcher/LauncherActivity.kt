@@ -546,7 +546,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                 com.umutk.pulse.ClippyView(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = (if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp) + 6.dp))
             }
         }
-        if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
+        if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp, state)
         // Windows 10 Mobile looks: the action center comes down from the top edge
         if (look.id.startsWith("winphone")) Box(Modifier.fillMaxSize()) {
             ActionCenterHandle(Modifier.align(Alignment.TopStart))

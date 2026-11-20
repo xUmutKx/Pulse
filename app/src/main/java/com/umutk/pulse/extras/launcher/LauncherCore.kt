@@ -94,6 +94,9 @@ object LauncherSession {
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
+    /** Windows 11: the quick settings flyout (the connection / sound / battery button of the tray) and the search flyout (the search button of the taskbar). */
+    var quickOpen by mutableStateOf(false)
+    var searchOpen by mutableStateOf(false)
     /** MSN (Messages) was opened: it keeps a little icon in the Windows 7 tray, as if it ran in the background. */
     var msnTray by mutableStateOf(false)
     /** The hidden-icons flyout of the Windows 7 tray (the arrow pointing up) is open. */

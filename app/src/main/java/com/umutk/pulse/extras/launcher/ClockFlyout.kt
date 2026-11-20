@@ -34,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +70,8 @@ private fun flyLook(id: String) = when (id) {
  * area is empty: Pulse's launcher has no notifications of its own). A tap outside closes it.
  */
 @Composable
-fun ClockFlyout(lookId: String, taskbar: Dp) {
+fun ClockFlyout(lookId: String, taskbar: Dp, state: LauncherState? = null) {
+    if (lookId == "win11") { Win11Flyouts(taskbar, state) }
     if (!LauncherSession.clockOpen) return
     ClockFlyoutBody(lookId, taskbar)
 }
@@ -89,7 +91,7 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
     val acrylic = lookId == "win11" || LauncherPrefs.blurAll
     val shape = RoundedCornerShape(look.corner)
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-        if (look.tiles) {
+        if (look.tiles && lookId != "win11") {
             tiles.chunked(4).forEachIndexed { r, row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEachIndexed { c, t ->
@@ -107,9 +109,36 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
             Spacer(Modifier.height(10.dp))
             Text(tr("No new notifications", "Yeni bildirim yok"), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
         }
+        if (lookId == "win11") {
+            // the notification card: its title, the do-not-disturb switch and what is there (Pulse's launcher has no notifications of its own)
+            val dnd = QUICK.firstOrNull { it.en == "Quiet hours" }
+            val dndOn = remember(rev, now / 2000L) { runCatching { dnd?.state?.invoke(ctx) == true }.getOrDefault(false) }
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Notifications", "Bildirimler"), color = look.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                if (dnd != null) Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(if (dndOn) look.hi else Color(0x33FFFFFF)).clickable { dnd.run(ctx); scope.launch { delay(500); rev++ } }, contentAlignment = Alignment.Center) {
+                    Icon(dnd.icon, null, tint = if (dndOn) Color.White else look.ink, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(tr("No new notifications", "Yeni bildirim yok"), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(Modifier.height(8.dp))
+        }
         Text(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(now)), color = look.ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
         Text(SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(Date(now)), color = look.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
         MonthGrid(cal, look)
+        // the focus bar: minutes to focus (30 by default) and a button that starts the session with do-not-disturb on
+        if (lookId == "win11") {
+            var mins by remember { mutableStateOf(30) }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(30.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x33FFFFFF)).clickable { mins = (mins - 5).coerceAtLeast(5) }, contentAlignment = Alignment.Center) { Text("−", color = look.ink, fontSize = 18.sp) }
+                Text("$mins " + tr("min", "dk"), color = look.ink, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
+                Box(Modifier.size(30.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x33FFFFFF)).clickable { mins = (mins + 5).coerceAtMost(240) }, contentAlignment = Alignment.Center) { Text("+", color = look.ink, fontSize = 18.sp) }
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(look.hi).clickable {
+                    QUICK.firstOrNull { it.en == "Quiet hours" }?.let { q -> if (runCatching { q.state?.invoke(ctx) == true }.getOrDefault(false).not()) q.run(ctx) }
+                    scope.launch { delay(mins * 60_000L); QUICK.firstOrNull { it.en == "Quiet hours" }?.let { q -> if (runCatching { q.state?.invoke(ctx) == true }.getOrDefault(false)) q.run(ctx) } }
+                }.padding(horizontal = 14.dp, vertical = 7.dp)) { Text("▶ " + tr("Focus", "Odaklanma"), color = Color.White, fontSize = 13.sp) }
+            }
+        }
     }
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.clockOpen = false }) {
         // the panel never grows past the free room above the taskbar and the status bar: what does not fit scrolls
