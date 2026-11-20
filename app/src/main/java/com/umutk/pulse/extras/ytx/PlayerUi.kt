@@ -2044,13 +2044,13 @@ private fun VideoDetailsBlock(
             }
         }
         if (descriptionOpen && details != null) {
-            Text(
+            LinkText(
                 details.description,
                 modifier = Modifier.padding(top = 10.dp),
                 color = c.onSurfaceVariant,
+                linkColor = c.primary,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
             )
         }
         Spacer(Modifier.height(16.dp))
