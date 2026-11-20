@@ -3153,7 +3153,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun numberOffers(): List<String> {
         if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || emailField) return emptyList()
         val d = digitsBefore(currentInputConnection ?: return emptyList())
-        if (d.length < 2) return emptyList()
+        if (d.length < 3) return emptyList()
         return numbersKept().filter { it.value >= 2 && it.key.startsWith(d) && it.key.length > d.length && !KeyboardDictionary.isBanned(it.key) }
             .byValueDesc().take(3).map { it.key }
     }
