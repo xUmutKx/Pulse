@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 fun Win11Flyouts(taskbar: Dp, state: LauncherState?) {
     if (LauncherSession.quickOpen) QuickFlyout(taskbar)
     if (LauncherSession.w11SearchOpen) SearchFlyout(taskbar, state)
+    if (LauncherSession.runOpen) RunBox(taskbar)
 }
 
 private val FLY_BG = Color(0x7A1B2232)
@@ -83,7 +84,7 @@ private fun QuickFlyout(taskbar: Dp) {
     val hi = launcherAccent()
     val shape = RoundedCornerShape(8.dp)
     var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    val names = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder") }
+    val names = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder", "Motion cues", "Floating timer", "Auto clicker") }
     val tiles = remember { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
     val ons = remember(rev) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
     val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -236,5 +237,52 @@ internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
         Spacer(Modifier.weight(1f))
         Text(tr("Recent", "En son"), color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Text(tr("Recent mobile activity shows here.", "Son mobil etkinlikler burada görünür."), color = fg.copy(alpha = .6f), fontSize = 12.sp)
+    }
+}
+
+
+/** The Run box: a command typed in it opens the matching Windows tool of Pulse (cmd and terminal, regedit, taskmgr, control, settings, notepad, calc, explorer, paint ...). */
+@Composable
+private fun RunBox(taskbar: Dp) {
+    val ctx = LocalContext.current
+    var text by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(8.dp)
+    fun close() { LauncherSession.runOpen = false }
+    fun go() {
+        val c = text.trim().lowercase().removeSuffix(".exe").removeSuffix(".msc")
+        val id = when (c) {
+            "cmd", "powershell", "pwsh", "terminal", "wt", "command", "conhost" -> "pulse:cmd"
+            "taskmgr", "task manager", "perfmon", "resmon" -> "pulse:taskmgr"
+            "control", "control panel", "appwiz.cpl", "main.cpl" -> "pulse:settings"
+            "settings", "ms-settings:", "ms-settings", "winver", "msinfo32" -> "pulse:winsettings"
+            "explorer", "files", ".", "this pc", "shell:mycomputer" -> "pulse:files"
+            "notepad", "wordpad" -> "pulse:x:win:notepad"
+            "calc", "calculator" -> "pulse:x:calculator"
+            "mspaint", "paint" -> "pulse:paint"
+            else -> null
+        }
+        when {
+            c == "regedit" || c == "regedt32" -> { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }
+            id != null -> { close(); openDesktopItem(ctx, id, "win11") }
+            else -> error = true
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color(0x66000000)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { close() }, contentAlignment = Alignment.BottomStart) {
+        Column(Modifier.padding(start = 12.dp, bottom = taskbar + 10.dp).widthIn(max = 380.dp).fillMaxWidth(.94f).clip(shape).background(Color(0xF2202530)).border(1.dp, Color(0x33FFFFFF), shape)
+            .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {}.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Glyph("run", Color.White, 20.dp); Text("  " + tr("Run", "Çalıştır"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+            Text(tr("Type the name of a program, folder or tool, and it will open.", "Bir programın, klasörün veya aracın adını yaz, açılsın."), color = Color(0xB3FFFFFF), fontSize = 12.sp)
+            androidx.compose.foundation.text.BasicTextField(text, { text = it; error = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go, autoCorrect = false),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { go() }),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Color(0x26FFFFFF)).padding(horizontal = 10.dp, vertical = 9.dp))
+            if (error) Text(tr("Windows cannot find '$text'. Make sure you typed the name correctly.", "'$text' bulunamadı. Adı doğru yazdığından emin ol."), color = Color(0xFFFFB4AB), fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End)) {
+                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0x33FFFFFF)).clickable { close() }.padding(horizontal = 16.dp, vertical = 7.dp)) { Text(tr("Cancel", "İptal"), color = Color.White, fontSize = 13.sp) }
+                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(launcherAccent()).clickable { go() }.padding(horizontal = 20.dp, vertical = 7.dp)) { Text("OK", color = Color.White, fontSize = 13.sp) }
+            }
+        }
     }
 }

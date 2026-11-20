@@ -26,6 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.BatterySaver
 import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.outlined.BlurCircular
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.Cast
@@ -114,6 +117,13 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
     // Pulse's own screen recorder, in a window of the launcher (or its own screen when windows are off)
     QTile(Icons.Outlined.FiberManualRecord, "Screen recorder", "Ekran kaydı", { c -> openDesktopItem(c, "pulse:x:screenrec", "win11") }),
+    // Pulse's own tiles of the phone's quick settings, here too: they work at once (no settings page)
+    QTile(Icons.Outlined.BlurCircular, "Motion cues", "Hareket noktaları", { c -> com.umutk.pulse.MotionCueService.toggle(c) }, { com.umutk.pulse.MotionCueService.running }),
+    QTile(Icons.Outlined.HourglassEmpty, "Floating timer", "Yüzen zamanlayıcı", { c -> if (com.umutk.pulse.features.FloatingTimer.showing) com.umutk.pulse.features.FloatingTimer.hide(c) else com.umutk.pulse.features.FloatingTimer.show(c) }, { com.umutk.pulse.features.FloatingTimer.showing }),
+    QTile(Icons.Outlined.TouchApp, "Auto clicker", "Otomatik tıklayıcı", { c ->
+        val sv = com.umutk.pulse.features.AutoClickService.instance
+        if (sv != null) sv.tileToggle() else runCatching { c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }, { com.umutk.pulse.features.AutoClickService.instance != null && com.umutk.pulse.features.AutoClick.running }),
     QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
     QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", state = { ActionCenter.torch }, run = { c ->
         runCatching {

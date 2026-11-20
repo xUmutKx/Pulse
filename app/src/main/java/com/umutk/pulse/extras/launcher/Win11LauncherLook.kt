@@ -263,9 +263,10 @@ class Win11LauncherLook : LauncherLook {
                     }
                     // the quick folders beside the power button: Settings, File Explorer, Documents, Downloads
                     val ctxF = androidx.compose.ui.platform.LocalContext.current
-                    listOf("settings" to "pulse:winsettings", "folder" to "pulse:files", "details" to "view:Documents", "download" to "view:Download").forEach { (ic, id) ->
+                    listOf("settings" to "pulse:winsettings", "folder" to "pulse:files", "run" to "run:", "details" to "view:Documents", "download" to "view:Download").forEach { (ic, id) ->
                         Box(Modifier.size(36.dp).clip(shape).clickable {
                             onClose()
+                            if (id == "run:") { LauncherSession.runOpen = true; return@clickable }
                             if (id.startsWith("view:")) {
                                 val dir = android.os.Environment.getExternalStoragePublicDirectory(if (id.endsWith("Documents")) android.os.Environment.DIRECTORY_DOCUMENTS else android.os.Environment.DIRECTORY_DOWNLOADS).path
                                 if (LauncherPrefs.windowedApps) DesktopWindows.open("view:$dir", id.removePrefix("view:")) else openDesktopItem(ctxF, "pulse:files", "win11")

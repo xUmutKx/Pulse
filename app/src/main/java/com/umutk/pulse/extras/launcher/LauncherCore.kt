@@ -99,6 +99,8 @@ object LauncherSession {
     var w11SearchOpen by mutableStateOf(false)
     /** MSN (Messages) was opened: it keeps a little icon in the Windows 7 tray, as if it ran in the background. */
     var msnTray by mutableStateOf(false)
+    /** The Run box (Win+R of Windows): type a command (cmd, regedit, taskmgr, control, notepad ...) and it opens. */
+    var runOpen by mutableStateOf(false)
     /** The hidden-icons flyout of the Windows 7 tray (the arrow pointing up) is open. */
     var trayOpen by mutableStateOf(false)
     /** The Windows Phone glance page (behind the Windows button) is open. */
