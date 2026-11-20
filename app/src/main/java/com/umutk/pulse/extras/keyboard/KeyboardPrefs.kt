@@ -129,6 +129,8 @@ object KeyboardPrefs {
     var corners by mutableStateOf(false)
     /** The small symbols drawn on the corners of the keys (with corner swipes on). */
     var cornerHints by mutableStateOf(true)
+    /** Corner swipes on the number keys (a preset of KeyCorners.NUM_PRESETS; "off" by default). Independent of the letters' corners, so swipe typing stays on. */
+    var numCorners by mutableStateOf("off")
     /** A circle drawn on a letter types it in capital; a swipe out and back types its first long-press character. */
     var circleGestures by mutableStateOf(false)
     /** The phone keypad: letters by pressing a digit key again and again. */
@@ -330,7 +332,9 @@ object KeyboardPrefs {
             toolbarItems = tb.joinToString(",")
             p.edit().putBoolean("menuClean12", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
         }
-        voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
+        // the password manager (passwords) has its place in the ⋮ menu, once (it was only on the 3 key of the number pad)
+        if (!p.getBoolean("vaultMenu14", false)) { val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList(); if ("vault" !in mn) mn.add(minOf(mn.indexOf("clip") + 1, mn.size).coerceAtLeast(0), "vault"); menuItems = mn.joinToString(","); p.edit().putBoolean("vaultMenu14", true).putString("menuItems", menuItems).apply() }
+        numCorners = p.getString("numCorners", "off") ?: "off"; voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
         if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
@@ -345,7 +349,7 @@ object KeyboardPrefs {
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
-            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace)
+            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putString("numCorners", numCorners).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("rememberNumbers", rememberNumbers).putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("corners", corners).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)

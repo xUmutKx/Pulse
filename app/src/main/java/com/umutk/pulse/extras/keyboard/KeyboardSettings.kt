@@ -230,6 +230,17 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(10.dp))
+            // corner swipes on the number keys: a preset says what a swipe toward each corner types (off by default; the small marks show it)
+            Title(tr("Corner swipes on the keys", "Tuşlarda köşe kaydırması"))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KeyCorners.NUM_PRESETS.forEach { pr ->
+                    val on = KeyboardPrefs.numCorners == pr
+                    Box(Modifier.clip(RoundedCornerShape(12.dp)).background(if (on) T.accent else T.sub.copy(alpha = .12f)).clickable { KeyboardPrefs.numCorners = pr; save() }.padding(horizontal = 14.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                        Text(when (pr) { "phone" -> tr("Old phone letters", "Eski telefon harfleri"); "edit" -> tr("Edit functions", "Düzenleme işlevleri"); "symbols" -> tr("Symbols", "Semboller"); "math" -> tr("Maths", "Matematik"); else -> tr("Off", "Kapalı") }, color = if (on) T.bg else T.text, fontSize = 14.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
             // the preview: the bottom row of the number pad as it will look
             Title(tr("Preview", "Önizleme"))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

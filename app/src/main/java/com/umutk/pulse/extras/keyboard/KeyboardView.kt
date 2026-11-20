@@ -710,7 +710,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -994,6 +994,10 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     LaunchedEffect(k.kind) { down = false }
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
     val isLetterNow by rememberUpdatedState(isLetter)
+    // a key whose corners can be swiped: a letter (its own switch), or a number / symbol key with a preset chosen
+    val cornerKey = isLetter || (k.kind == KeyKind.CHAR && k.label.length == 1 && !k.label[0].isLetter() && KeyboardPrefs.numCorners != "off" && KeyCorners.of(k.label) != null)
+    val cornerNow by rememberUpdatedState(cornerKey)
+    fun cornersOn() = if (isLetterNow) KeyboardPrefs.corners else KeyboardPrefs.numCorners != "off"
     val view = androidx.compose.ui.platform.LocalView.current
     val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
         else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
@@ -1097,7 +1101,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             if (st.swiped) { st.preview = null; break }
                             val up = (startRoot.y - curRoot.y)
                             // corner swipes: the symbol or key written on the corner the key was swiped toward
-                            val corner = if (KeyboardPrefs.corners && isLetterNow && st.page == 0 && !long) KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx()) else null
+                            val corner = if (cornersOn() && cornerNow && st.page == 0 && !long) KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx()) else null
                             // a circle drawn on the letter: its capital; out and back again: its first long-press character
                             val gesture = if (KeyboardPrefs.circleGestures && isLetterNow && st.page == 0 && !long) when {
                                 abs(turned) >= 300.0 && pathLen > 50.dp.toPx() -> KeyboardLayouts.lang(st.lang).let { l -> key.label.uppercase(l.locale) }
@@ -1141,7 +1145,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         val dx = c.position.x - startX
                         when {
                             // corner swipes: the pop-up shows what a release here would type
-                            KeyboardPrefs.corners && isLetterNow && st.page == 0 && !long -> {
+                            cornersOn() && cornerNow && st.page == 0 && !long -> {
                                 val t = KeyCorners.pick(key.label, curRoot - startRoot, 22.dp.toPx())
                                 if (KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, if (t != null) KeyCorners.show(t) else key.label)
                             }
@@ -1223,7 +1227,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 }
                 else -> {
                     // corner swipes: the small labels on the corners say what a swipe toward them gives
-                    if (KeyboardPrefs.corners && KeyboardPrefs.cornerHints && isLetter && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
+                    if (((isLetter && KeyboardPrefs.corners) || (!isLetter && cornerKey)) && KeyboardPrefs.cornerHints && st.page == 0 && !small) KeyCorners.of(k.label)?.let { cc ->
                         val ink = th.text.copy(alpha = .6f)
                         if (cc.nw.isNotEmpty()) Text(KeyCorners.glyph(cc.nw) ?: KeyCorners.show(cc.nw), color = ink, fontSize = if (KeyCorners.glyph(cc.nw) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.nw) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.TopStart).padding(top = 2.dp, start = 4.dp))
                         if (cc.ne.isNotEmpty()) Text(KeyCorners.glyph(cc.ne) ?: KeyCorners.show(cc.ne), color = ink, fontSize = if (KeyCorners.glyph(cc.ne) != null) 11.sp else 9.sp, fontFamily = if (KeyCorners.glyph(cc.ne) != null) kbIconFont else null, maxLines = 1, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp))

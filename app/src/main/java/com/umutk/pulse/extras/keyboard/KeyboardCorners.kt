@@ -45,9 +45,48 @@ object KeyCorners {
         'n' to KeyCorner(ne = ":", sw = ";"),
         'm' to KeyCorner(ne = "\"", sw = "'"),
     )
-    private val names = mapOf("esc" to "Esc", "tab" to "Tab", "selectAll" to "All", "cut" to "Cut", "copy" to "Copy", "paste" to "Paste")
+    private val names = mapOf("esc" to "Esc", "tab" to "Tab", "selectAll" to "All", "cut" to "Cut", "copy" to "Copy", "paste" to "Paste", "undo" to "Undo", "home" to "Home", "end" to "End")
 
-    fun of(label: String): KeyCorner? = if (label.length == 1) map[label[0].lowercaseChar()] else null
+    fun of(label: String): KeyCorner? =
+        if (label.length != 1) null
+        else if (label[0].isLetter()) map[label[0].lowercaseChar()]
+        // the number and symbol keys (the number pad, the number row): what the chosen preset writes on them
+        else numPad(KeyboardPrefs.numCorners)[label[0]]
+
+    /** Presets for the number keys, in the way of the letters' corners: swipe a key toward a corner to type what is written there. "off" writes nothing. */
+    val NUM_PRESETS = listOf("off", "phone", "edit", "symbols", "math")
+    fun presetName(p: String) = when (p) { "phone" -> "Old phone letters"; "edit" -> "Edit functions"; "symbols" -> "Symbols"; "math" -> "Maths"; else -> "Off" }
+
+    private val numCache = HashMap<String, Map<Char, KeyCorner>>()
+    private fun numPad(p: String): Map<Char, KeyCorner> = numCache.getOrPut(p) {
+        when (p) {
+            // the letters of an old phone's keys, one swipe each: 2 = a b c, 3 = d e f ... (no repeated pressing)
+            "phone" -> mapOf(
+                '2' to KeyCorner(nw = "a", n = "b", ne = "c"), '3' to KeyCorner(nw = "d", n = "e", ne = "f"),
+                '4' to KeyCorner(nw = "g", n = "h", ne = "i"), '5' to KeyCorner(nw = "j", n = "k", ne = "l"),
+                '6' to KeyCorner(nw = "m", n = "n", ne = "o"), '7' to KeyCorner(nw = "p", n = "q", ne = "r", e = "s"),
+                '8' to KeyCorner(nw = "t", n = "u", ne = "v"), '9' to KeyCorner(nw = "w", n = "x", ne = "y", e = "z"),
+                '1' to KeyCorner(n = ".", ne = ",", nw = "@"), '0' to KeyCorner(n = "+", nw = "-", ne = "_"),
+            )
+            // the functions of the key bar: copy, paste ... on the digits
+            "edit" -> mapOf(
+                '1' to KeyCorner(n = "@selectAll"), '2' to KeyCorner(n = "@copy"), '3' to KeyCorner(n = "@cut"),
+                '4' to KeyCorner(n = "@paste"), '5' to KeyCorner(n = "@undo"), '6' to KeyCorner(n = "@tab"),
+                '7' to KeyCorner(n = "@home"), '8' to KeyCorner(n = "@end"), '9' to KeyCorner(n = "@esc"),
+            )
+            "symbols" -> mapOf(
+                '1' to KeyCorner(ne = "@", se = "!"), '2' to KeyCorner(ne = "#", se = "\""), '3' to KeyCorner(ne = "\$", se = "%"),
+                '4' to KeyCorner(ne = "&", se = "'"), '5' to KeyCorner(ne = "(", se = ")"), '6' to KeyCorner(ne = "-", se = "_"),
+                '7' to KeyCorner(ne = "/", se = "\\"), '8' to KeyCorner(ne = "=", se = "~"), '9' to KeyCorner(ne = "[", se = "]"),
+                '0' to KeyCorner(ne = "{", se = "}"),
+            )
+            "math" -> mapOf(
+                '1' to KeyCorner(n = "+"), '2' to KeyCorner(n = "-"), '3' to KeyCorner(n = "*"), '4' to KeyCorner(n = "/"), '5' to KeyCorner(n = "="),
+                '6' to KeyCorner(n = "."), '7' to KeyCorner(n = ","), '8' to KeyCorner(n = "("), '9' to KeyCorner(n = ")"), '0' to KeyCorner(n = "%", e = "^"),
+            )
+            else -> emptyMap()
+        }
+    }
 
     /** What a swipe from [label]'s key by [d] (pixels) lands on: the nearest direction that has a symbol (within 55 degrees), or null when it is too short or nothing is there. */
     fun pick(label: String, d: Offset, min: Float): String? {
