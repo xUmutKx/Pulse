@@ -45,14 +45,16 @@ internal fun Win11SettingsHome(open: (String) -> Unit) {
     var q by remember { mutableStateOf("") }
     var sel by remember { mutableStateOf(0) }
     var inGroup by remember { mutableStateOf(false) }
+    // a setting that is a page of the phone's own settings gets a page of its own here first (what it says now, the controls Pulse can work)
+    var detail by remember { mutableStateOf<WItem?>(null) }
     val groups = WIN11_SETTINGS
     val accent = T.accent
     // Mica: the window's body is see-through for Settings and the page is tinted, so the desktop shows through it
     val deskWin = LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
-    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .5f else 1f))) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .36f else 1f))) {
         val wide = maxWidth >= 600.dp
-        val pageOf: @Composable (WGroup) -> Unit = { g -> Win11Page(g, open) }
+        val pageOf: @Composable (WGroup) -> Unit = { g -> Win11Page(g, open) { detail = it } }
         if (wide) {
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.width(260.dp).fillMaxHeight().padding(start = 12.dp, top = 14.dp, end = 8.dp, bottom = 10.dp)) {
@@ -62,17 +64,18 @@ internal fun Win11SettingsHome(open: (String) -> Unit) {
                     Spacer(Modifier.height(10.dp))
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                         groups.forEachIndexed { i, g ->
-                            Win11NavRow(g, i == sel && q.isBlank(), accent) { sel = i; q = "" }
+                            Win11NavRow(g, i == sel && q.isBlank(), accent) { sel = i; q = ""; detail = null }
                         }
                     }
                 }
                 Column(Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, top = 18.dp, end = 18.dp)) {
-                    if (q.isNotBlank()) Win11Results(q, open) else pageOf(groups[sel])
+                    if (detail != null) Win11Detail(detail!!) { detail = null } else if (q.isNotBlank()) Win11Results(q, open) { detail = it } else pageOf(groups[sel])
                 }
             }
         } else {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                if (inGroup && q.isBlank()) {
+                if (detail != null) Win11Detail(detail!!) { detail = null }
+                else if (inGroup && q.isBlank()) {
                     Row(Modifier.fillMaxWidth().clickable { inGroup = false }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("←", color = T.text, fontSize = 20.sp)
                         Spacer(Modifier.width(10.dp))
@@ -84,7 +87,7 @@ internal fun Win11SettingsHome(open: (String) -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     Win11Search(q) { q = it }
                     Spacer(Modifier.height(10.dp))
-                    if (q.isNotBlank()) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { Win11Results(q, open) }
+                    if (q.isNotBlank()) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { Win11Results(q, open) { detail = it } }
                     else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         groups.forEachIndexed { i, g -> Win11NavRow(g, false, accent) { sel = i; inGroup = true } }
                     }
@@ -110,7 +113,7 @@ private fun Win11Profile() {
 
 @Composable
 private fun Win11Search(q: String, onChange: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon("search", T.sub, 16.dp)
         Spacer(Modifier.width(8.dp))
         com.umutk.pulse.PField(q, onChange, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth())
@@ -121,7 +124,7 @@ private fun Win11Search(q: String, onChange: (String) -> Unit) {
 private fun Win11NavRow(g: WGroup, selected: Boolean, accent: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(8.dp))
-            .background(if (selected) T.panel.copy(alpha = .72f) else androidx.compose.ui.graphics.Color.Transparent)
+            .background(if (selected) T.panel.copy(alpha = .5f) else androidx.compose.ui.graphics.Color.Transparent)
             .clickable { onClick() }.padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -134,14 +137,14 @@ private fun Win11NavRow(g: WGroup, selected: Boolean, accent: androidx.compose.u
 }
 
 @Composable
-private fun Win11Page(g: WGroup, open: (String) -> Unit) {
+private fun Win11Page(g: WGroup, open: (String) -> Unit, onDetail: (WItem) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Text(tr(g.en, g.tr), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 14.dp))
         if (g.id == "personalization") Win11Colors()
         if (g.id == "system") Win11DeviceCard()
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .08f), RoundedCornerShape(8.dp))) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .08f), RoundedCornerShape(8.dp))) {
             g.items.forEachIndexed { i, it ->
-                Win11Row(it, open)
+                Win11Row(it, open, onDetail)
                 if (i < g.items.lastIndex) Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(T.sub.copy(alpha = .12f)))
             }
         }
@@ -152,7 +155,7 @@ private fun Win11Page(g: WGroup, open: (String) -> Unit) {
 /** The device card on top of System: what the phone is, as Windows shows the PC (name, model, Android version). */
 @Composable
 private fun Win11DeviceCard() {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).background(T.accent.copy(alpha = .2f)), contentAlignment = Alignment.Center) { PIcon("phone", T.accent, 32.dp) }
         Spacer(Modifier.width(14.dp))
         Column {
@@ -170,7 +173,7 @@ private val SWATCHES = listOf(0xFFFFB900, 0xFFFF8C00, 0xFFF7630C, 0xFFCA5010, 0x
 @Composable
 private fun Win11Colors() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // the preview: a small window in the accent colour on the desktop picture
         Row(Modifier.fillMaxWidth().height(96.dp).clip(RoundedCornerShape(8.dp)).background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color(0xFF101820), androidx.compose.ui.graphics.Color(0xFF1B2735)))).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(140.dp).fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(androidx.compose.ui.graphics.Color(0xFF2B2B2B)).padding(8.dp)) {
@@ -202,14 +205,14 @@ private fun Win11Colors() {
 }
 
 @Composable
-private fun Win11Results(q: String, open: (String) -> Unit) {
+private fun Win11Results(q: String, open: (String) -> Unit, onDetail: (WItem) -> Unit) {
     val hits = WIN11_SETTINGS.flatMap { it.items }.filter { tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
     Column(Modifier.fillMaxWidth()) {
         Text(tr("Results", "Sonuçlar"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .72f))) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f))) {
             if (hits.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
             hits.forEachIndexed { i, it ->
-                Win11Row(it, open)
+                Win11Row(it, open, onDetail)
                 if (i < hits.lastIndex) Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(T.sub.copy(alpha = .12f)))
             }
         }
@@ -217,9 +220,9 @@ private fun Win11Results(q: String, open: (String) -> Unit) {
 }
 
 @Composable
-private fun Win11Row(it: WItem, open: (String) -> Unit) {
+private fun Win11Row(it: WItem, open: (String) -> Unit, onDetail: (WItem) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    Row(Modifier.fillMaxWidth().clickable { openWItem(ctx, it.route, open) }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clickable { if (it.route.startsWith("intent:")) onDetail(it) else openWItem(ctx, it.route, open) }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon(it.icon, T.accent, 22.dp)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
