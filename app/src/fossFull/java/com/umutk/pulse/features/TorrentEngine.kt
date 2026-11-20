@@ -141,6 +141,14 @@ object TorrentEngine {
     @Volatile private var startedAt = 0L
     fun sessionAgeMs(): Long = if (startedAt == 0L) 0L else System.currentTimeMillis() - startedAt
 
+    /** Lets the session go (every torrent in it with it): the next torrent starts a new one, on whatever network the app is bound to by then (mobile data when Wi-Fi gave no peers). */
+    fun resetSession() {
+        synchronized(lock) { uses.clear() }
+        runCatching { session?.stop() }
+        session = null
+        startedAt = 0L
+    }
+
     private fun sm(): SessionManager = session ?: SessionManager().also {
         val sp = SettingsPack()
         sp.setString(settings_pack.string_types.dht_bootstrap_nodes.swigValue(),

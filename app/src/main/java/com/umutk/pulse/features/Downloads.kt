@@ -224,6 +224,10 @@ object Downloads {
     var autoSwitch by mutableStateOf(true)
     /** On a Wi-Fi that blocks torrents (a school, a hotel), the torrents go over mobile data while they run (the rest of the phone keeps the Wi-Fi). */
     var torrentCell by mutableStateOf(false)
+    /** Automatic network for torrents (on at first): on Wi-Fi that gives no peers (no DHT nodes a minute after the engine started, or a sign-in page / no internet) the torrents go over mobile data by themselves; [torrentCell] forces it always. */
+    var torrentAuto by mutableStateOf(true)
+    /** Set when this Wi-Fi was seen to give no peers: the torrents use mobile data until the network changes. */
+    @Volatile var wifiTorrentBad = false
     /** Magnet links, and Stremio's local links that become magnets: off by default, they start only when this is on. */
     var magnetLinks by mutableStateOf(false)
     /** The address of a local torrent server (Stremio's, or another app's that serves torrents the same way): empty = the torrent engine in Pulse; Series and movies sends its torrents there when set. */
@@ -249,6 +253,7 @@ object Downloads {
         keepFiles = p.getBoolean("dlKeepFiles", false)
         autoSwitch = p.getBoolean("dlAutoSwitch", true)
         torrentCell = p.getBoolean("dlTorrentCell", false)
+        torrentAuto = p.getBoolean("dlTorrentAuto", true)
         magnetLinks = p.getBoolean("dlMagnet", false)
         localServer = p.getString("dlLocalServer", "") ?: ""
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
@@ -292,7 +297,7 @@ object Downloads {
         runCatching {
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
                 override fun onCapabilitiesChanged(n: Network, caps: NetworkCapabilities) { online.value = ok(caps) }
-                override fun onLost(n: Network) { online.value = false }
+                override fun onLost(n: Network) { online.value = false; wifiTorrentBad = false }
             })
         }
     }
@@ -322,10 +327,20 @@ object Downloads {
         ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlMagnet", v).apply()
     }
 
+    fun setTorrentAuto(ctx: Context, v: Boolean) {
+        torrentAuto = v; if (!v) wifiTorrentBad = false
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlTorrentAuto", v).apply()
+    }
+
     fun setTorrentCell(ctx: Context, v: Boolean) {
         torrentCell = v
         ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlTorrentCell", v).apply()
     }
+
+    fun onWifi(ctx: Context): Boolean = runCatching {
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+    }.getOrDefault(false)
 
     /** The Wi-Fi the phone is on asks for a sign-in page first (a captive portal) or has no working internet: nothing reaches the torrent peers through it. */
     fun wifiBlocked(ctx: Context): Boolean = runCatching {
@@ -339,19 +354,20 @@ object Downloads {
     private var cellUsers = 0
 
     /** While a torrent runs with [torrentCell] on and the phone is on Wi-Fi: the app's connections go over mobile data. Undone by [releaseCell]. */
-    @Synchronized fun holdCell(ctx: Context) {
-        if (!torrentCell) return
+    @Synchronized fun holdCell(ctx: Context, force: Boolean = false): Boolean {
+        if (!torrentCell && !force) return false
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val on = cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
-        if (!on) return
+        if (!on) return false
         cellUsers++
-        if (cellCb != null) return
+        if (cellCb != null) return true
         val cb = object : android.net.ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: android.net.Network) { runCatching { cm.bindProcessToNetwork(network) } }
             override fun onLost(network: android.net.Network) { runCatching { cm.bindProcessToNetwork(null) } }
         }
         cellCb = cb
         runCatching { cm.requestNetwork(android.net.NetworkRequest.Builder().addTransportType(android.net.NetworkCapabilities.TRANSPORT_CELLULAR).addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET).build(), cb) }
+        return true
     }
 
     @Synchronized fun releaseCell(ctx: Context) {
@@ -779,8 +795,12 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
     var switchNow = false
     // a torrent that crawls (under 40 KB/s for a whole minute) while little of it is here also gives way to the next stream
     var winT = 0L; var winD = 0L
-    Downloads.holdCell(c)
-    val blocked = Downloads.wifiBlocked(c) && !Downloads.torrentCell
+    // the network is chosen by itself (the setting "automatic", on at first): a Wi-Fi with a sign-in page or no internet, or one that was seen to give no peers, sends the torrent over mobile data
+    val auto = Downloads.torrentAuto && !Downloads.torrentCell
+    if (auto && Downloads.wifiBlocked(c)) Downloads.wifiTorrentBad = true
+    val held = Downloads.holdCell(c, force = auto && Downloads.wifiTorrentBad)
+    var cellRestart = false
+    val blocked = Downloads.wifiBlocked(c) && !Downloads.torrentCell && !held
     val got = try { TorrentEngine.download(c, url, torrent, Downloads.torrentWork(c), { cancelled || paused || switchNow },
         { name ->
             // the file's own name (or the chosen name with its extension), while nothing is written yet
@@ -800,6 +820,8 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             done.value = d
             error.value = when { t <= 0 && blocked -> "this Wi-Fi blocks torrents (sign-in page or no internet): use mobile data"; t <= 0 -> "finding peers ($p)  ·  DHT ${TorrentEngine.dhtNodes()}"; p == 0 && d < t -> "no peers yet"; else -> "" }
             val nowT = System.currentTimeMillis()
+            // a minute on a Wi-Fi where the engine found no DHT nodes and no file list: the Wi-Fi gives no way out (many block it); the torrents are started again over mobile data
+            if (auto && !held && t <= 0 && p == 0 && nowT - began > 60_000L && TorrentEngine.sessionAgeMs() > 60_000L && TorrentEngine.dhtNodes() < 3 && Downloads.onWifi(c)) { cellRestart = true; switchNow = true }
             // nobody to download from for a while (see the patience below): the next stream of the episode is tried
             // (the file list of a magnet link takes time: the DHT of a young session has to find its nodes first, then the peers, then they send the list; 10 seconds gave up on almost every torrent before it began)
             val patience = when {
@@ -817,7 +839,13 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
                 }
             }
         },
-    ) } finally { Downloads.releaseCell(c) }
+    ) } finally { if (held) Downloads.releaseCell(c) }
+    if (got == null && cellRestart && !cancelled && !paused) {
+        Downloads.wifiTorrentBad = true
+        TorrentEngine.resetSession()
+        error.value = "Wi-Fi gives no peers: trying mobile data"
+        throw IOException("Wi-Fi gives no peers: trying mobile data")
+    }
     if (got == null) { if (switchNow && !cancelled && !paused) throw SwitchStream(); return false }
     file.delete()
     if (!got.renameTo(file)) { got.copyTo(file, overwrite = true); got.delete() }

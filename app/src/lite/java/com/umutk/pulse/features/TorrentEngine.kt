@@ -8,6 +8,7 @@ import java.io.IOException
 object TorrentEngine {
     val available: Boolean get() = false
     fun dhtNodes(): Long = 0L
+    fun resetSession() {}
     fun sessionAgeMs(): Long = 0L
     @Suppress("UNUSED_PARAMETER")
     fun ready(ctx: Context): Boolean = false

@@ -234,6 +234,14 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }
+            // the network of the torrents is chosen by itself: a Wi-Fi that gives no peers (or asks for a sign-in page) sends them over mobile data
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentAuto(ctx, !Downloads.torrentAuto) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Choose the network for torrents by itself", "Torrentlerin ağını kendisi seçsin"), color = T.text, fontSize = 15.sp)
+                    Text(tr("Wi-Fi first; when it gives no peers for a minute, mobile data", "Önce Wi-Fi; bir dakika kimse bulamazsa mobil veri"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.torrentAuto, { Downloads.setTorrentAuto(ctx, it) })
+            }
             // a Wi-Fi that blocks torrents (school, hotel, sign-in page): they run over mobile data while the rest of the phone stays on the Wi-Fi
             Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentCell(ctx, !Downloads.torrentCell) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
