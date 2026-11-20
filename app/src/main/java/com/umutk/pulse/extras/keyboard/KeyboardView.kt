@@ -412,12 +412,13 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "emoji" -> if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) {
                 // a wide screen shows two pages side by side: the emoji (or symbols, or text and art) on the left, the keys on the right
                 // the keys are rows that stack in a column of their own (a Box would lay them on top of each other, and only the last row would show)
-                val emoji: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Box(Modifier.weight(1f)) { EmojiPanel(th, st, act, keyH, split = true) } }
+                val eth = emojiTh(th)
+                val emoji: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Box(Modifier.weight(1f).background(eth.bg)) { EmojiPanel(eth, st, act, keyH, split = true) } }
                 val keys: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Column(Modifier.weight(1f)) { KeysPanel(th, st, act, keyH) } }
                 Row(Modifier.fillMaxWidth().background(th.bg)) {
                     if (KeyboardPrefs.emojiRight) { keys(); emoji() } else { emoji(); keys() }
                 }
-            } else Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
+            } else { val eth = emojiTh(th); Box(Modifier.fillMaxWidth().background(eth.bg)) { EmojiPanel(eth, st, act, keyH) } }
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> { if (st.numpad) NumPanelClose(th, st); ClipPanel(th, st, act, keyH) }
             "gamepad" -> GamepadPanel(th, act)
@@ -547,7 +548,7 @@ private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
-    if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
+    if (st.panel == "emoji" && st.emojiQuery == null) { val eth = emojiTh(th); Box(Modifier.background(eth.bg)) { EmojiTopBar(eth, st, act) }; return }
     // the Samsung look: while there is nothing to suggest the bar holds its round tool buttons (the smart fix, emoji, translate, clipboard, settings, more)
     val samBar = th.samsung && st.panel == "keys" && st.inline.isEmpty() && st.slots.none { it.isNotEmpty() }
     // a field that takes suggestions keeps its bar at full height while nothing is suggested (a word the dictionary does not know): the bar used to shrink to a thin handle and
@@ -2183,4 +2184,13 @@ private fun GifStrip(th: KbTheme, act: KbActions, q: String) {
             }
         }
     }
+}
+
+/** The emoji board's own look (Settings > Theme): another of the keyboard's themes, or the keyboard's own. */
+@Composable
+private fun emojiTh(th: KbTheme): KbTheme {
+    val id = KeyboardPrefs.emojiTheme
+    if (id == "same" || id == th.id) return th
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    return remember(id, dark, KeyboardPrefs.keyRadius, KeyboardPrefs.keyIcons) { KeyboardThemes.of(id, dark).tuned() }
 }

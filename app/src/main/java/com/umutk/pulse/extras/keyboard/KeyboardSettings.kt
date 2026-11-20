@@ -152,6 +152,12 @@ fun KeyboardSettings(back: () -> Unit) {
                     PChip(KeyboardPrefs.keyRadius == r, n) { KeyboardPrefs.keyRadius = r; save() }
                 }
             }
+            Text(tr("Emoji board look", "Emoji tahtası görünümü"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                (listOf("same") + KeyboardThemes.ids.filter { it != "custom" }).forEach { id ->
+                    PChip(KeyboardPrefs.emojiTheme == id, if (id == "same") tr("Same", "Aynı") else KeyboardThemes.name(id)) { KeyboardPrefs.emojiTheme = id; save() }
+                }
+            }
             Text(tr("Icons", "Simgeler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("theme" to tr("Theme", "Tema"), "outlined" to tr("Outlined", "Çizgi"), "filled" to tr("Filled", "Dolu"), "rounded" to tr("Rounded", "Yuvarlak"), "sharp" to tr("Sharp", "Keskin")).forEach { (k, n) ->
