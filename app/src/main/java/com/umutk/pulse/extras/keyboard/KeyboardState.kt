@@ -9,6 +9,9 @@ import androidx.compose.ui.geometry.Rect
 
 /** What the keyboard window shows: the keys, the bar above them and the pop-ups. The service fills it, the view draws it. */
 class KbState {
+    /** An easter egg running now ("roll", "rainbow", "flip"), with a counter so the same one can run again. */
+    var egg by mutableStateOf("")
+    var eggN by mutableStateOf(0)
     /** the key-press effects being drawn (KeyboardPrefs.pressFx) */
     val bursts = androidx.compose.runtime.mutableStateListOf<KbBurst>()
     /** Speech typing is listening right now (the comma key shows it). */

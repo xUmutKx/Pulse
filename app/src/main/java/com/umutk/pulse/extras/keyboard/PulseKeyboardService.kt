@@ -1365,6 +1365,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (correct && out != typed && !out.equals(typed, true)) { hybridCount(true); recentFixed[typed.lowercase(lang.locale)] = SystemClock.uptimeMillis(); if (recentFixed.size > 40) recentFixed.remove(recentFixed.keys.first()) }
         // abbreviations and formulas typed in small letters get their capitals back (tbmm -> TBMM, tubitak -> TÜBİTAK, h2o -> H2O)
         if (correct && !inAddr && !st.plain && !st.incognito && !urlNow()) KeyboardDictionary.abbrFix(typed)?.let { out = it }
+        // easter eggs: a few made-up words make the keyboard do a trick (the word itself is typed as it is)
+        when (typed.lowercase(java.util.Locale.ROOT)) { "dobarrelroll", "barrelroll" -> "roll"; "pulserainbow" -> "rainbow"; "pulseflip" -> "flip"; "pulseparty" -> "party"; else -> null }?.let { st.egg = it; st.eggN++; out = typed }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }

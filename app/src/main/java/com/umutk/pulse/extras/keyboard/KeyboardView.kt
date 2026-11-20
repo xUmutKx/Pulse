@@ -247,6 +247,16 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         return
     }
     var rootH by remember { mutableStateOf(0f) }
+    // easter eggs (typed words, see PulseKeyboardService): a barrel roll, a flip, a rainbow wash
+    val eggSpin = remember { Animatable(0f) }
+    var eggRainbow by remember { mutableStateOf(false) }
+    LaunchedEffect(st.eggN) {
+        when (st.egg) {
+            "roll" -> { eggSpin.snapTo(0f); eggSpin.animateTo(360f, androidx.compose.animation.core.tween(1100, easing = androidx.compose.animation.core.FastOutSlowInEasing)); eggSpin.snapTo(0f) }
+            "flip" -> { eggSpin.animateTo(180f, androidx.compose.animation.core.tween(500)); kotlinx.coroutines.delay(2500); eggSpin.animateTo(0f, androidx.compose.animation.core.tween(500)) }
+            "rainbow", "party" -> { eggRainbow = true; if (st.egg == "party") { eggSpin.animateTo(8f, androidx.compose.animation.core.tween(120)); repeat(6) { eggSpin.animateTo(if (it % 2 == 0) -8f else 8f, androidx.compose.animation.core.tween(160)) }; eggSpin.animateTo(0f, androidx.compose.animation.core.tween(120)) }; kotlinx.coroutines.delay(5000); eggRainbow = false }
+        }
+    }
     // the floating keyboard: its own height, and the handle's place in the window (the drag is read on the window, which stays still)
     val float = KeyboardPrefs.floatNow && !LocalOverlayKb.current
     var kbH by remember { mutableStateOf(0f) }
@@ -255,7 +265,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     var handleRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
-    Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFxNow))
+    Box(modifier.fillMaxWidth().graphicsLayer { rotationZ = eggSpin.value }.then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFxNow))
         .then(if (!float && KeyboardPrefs.rgbNow == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
         .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float, barPx) {
         // the floating keyboard moves by its handle: the finger is followed on the window (which stays still), so the drag is smooth wherever the keyboard goes
@@ -307,7 +317,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     }) {
         // the picture behind the keys (Settings > Effects), under a black layer of the chosen strength
         KbPicture(KeyboardPrefs.bgPath, KeyboardPrefs.bgDim)
-        if (KeyboardPrefs.boardFxNow == 7) RgbWash()
+        if (KeyboardPrefs.boardFxNow == 7 || eggRainbow) RgbWash()
         Column(
             (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
                 .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
