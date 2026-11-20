@@ -141,6 +141,8 @@ class Win11LauncherLook : LauncherLook {
         val shape = RoundedCornerShape(8.dp)
         var query by remember { mutableStateOf("") }
         var allPage by remember { mutableStateOf(false) }
+        // a category folder opened from the Start page (Games, Media ...): its apps fill the menu until the back arrow
+        var groupOpen by remember { mutableStateOf<StartGroup?>(null) }
         // two layouts: the upright phone gets a tall panel of four columns, a turned phone a wide, low one of six (as the desktop's Start menu)
         val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val cols = if (land) 6 else 4
@@ -190,16 +192,16 @@ class Win11LauncherLook : LauncherLook {
                 }
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (query.isNotBlank() || allPage) {
+                    if (query.isNotBlank() || allPage || groupOpen != null) {
                         // searching gives one flat grid; the all-apps page has its group headings
                         Column(Modifier.fillMaxSize()) {
                             if (query.isNotBlank()) ContactResults(query, fg, fg.copy(alpha = .65f))
                             if (query.isBlank()) Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(32.dp).clip(shape).clickable { allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
-                                Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                                Box(Modifier.size(32.dp).clip(shape).clickable { if (groupOpen != null) groupOpen = null else allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
+                                Text(groupOpen?.let { tr(it.en, it.tr) } ?: tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
                             }
                             LazyVerticalGrid(GridCells.Fixed(cols), Modifier.fillMaxWidth().weight(1f)) {
-                                if (query.isBlank()) groupedApps(all).forEach { (g, apps) ->
+                                if (query.isBlank()) groupedApps(all).filter { groupOpen == null || it.first == groupOpen }.forEach { (g, apps) ->
                                     item(span = { GridItemSpan(cols) }) { Win11Heading(tr(g.en, g.tr), fg) }
                                     items(apps, key = { it.pkg }) { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.fillMaxWidth().clip(shape).appTap(state, app) { launch(app) }) }
                                 } else items(all, key = { it.pkg }) { app ->
@@ -220,6 +222,17 @@ class Win11LauncherLook : LauncherLook {
                             Row(Modifier.fillMaxWidth()) {
                                 row.forEach { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.weight(1f).clip(shape).appTap(state, app) { launch(app) }) }
                                 repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                        // the apps sorted into folders by their category (Games, Media, Communication ...): a tap opens the folder
+                        val folders = groupedApps(all).filter { it.first != StartGroup.OTHER || it.second.size > 1 }
+                        if (folders.isNotEmpty()) {
+                            Win11Heading(tr("Folders", "Klasörler"), fg)
+                            folders.chunked(cols).forEach { row ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    row.forEach { (g, apps) -> GroupFolder(g, apps, state.iconDp, fg, tileC, Modifier.weight(1f).clip(shape).clickable { groupOpen = g }) }
+                                    repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
                             }
                         }
                         if (recent.isEmpty()) {
@@ -280,6 +293,20 @@ class Win11LauncherLook : LauncherLook {
                 style = TextStyle(shadow = Shadow(Color(0x99000000), Offset(0f, 1f), 4f)), modifier = Modifier.padding(top = 4.dp),
             )
         }
+    }
+}
+
+/** A category folder of the Start menu: a rounded square with the first four apps of the group as small icons, the group's name under it. */
+@Composable
+private fun GroupFolder(g: StartGroup, apps: List<LaunchApp>, iconDp: Int, fg: Color, tile: Color, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(iconDp.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(fg.copy(alpha = .14f)).padding(4.dp)) {
+            val mini = (iconDp - 8) / 2
+            Column(verticalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxSize()) {
+                apps.take(4).chunked(2).forEach { r -> Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) { r.forEach { LaunchAppPicture(it, (mini - 2).dp, tile, fg) } } }
+            }
+        }
+        Text(tr(g.en, g.tr), color = fg, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

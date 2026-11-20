@@ -148,7 +148,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
         "Battery" to Intent.ACTION_POWER_USAGE_SUMMARY, "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Apps" to Settings.ACTION_APPLICATION_SETTINGS, "Location" to Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Accessibility" to Settings.ACTION_ACCESSIBILITY_SETTINGS, "Date & time" to Settings.ACTION_DATE_SETTINGS) }
     val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.first.contains(q.trim(), true) } }
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
-        val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().padding(bottom = taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
+        val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().padding(top = 28.dp, bottom = taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
         AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // the search pill with the accent line under it
