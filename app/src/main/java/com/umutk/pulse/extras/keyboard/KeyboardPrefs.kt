@@ -208,7 +208,7 @@ object KeyboardPrefs {
     val floatNow: Boolean get() = floating || floatSession
     var floatX by mutableStateOf(.5f)
     /** Floating: the size of the keyboard, 0.55 (small) to 1 (full); the grip at the right end of the handle changes it. */
-    var floatScale by mutableStateOf(1f)
+    var floatScale by mutableStateOf(.76f)
     /** Floating: how far the keyboard is lifted off its place at the bottom, 0 (down) to 1 (up to the middle of the screen). */
     var floatY by mutableStateOf(0f)
     private var appCtx: Context? = null
@@ -273,7 +273,7 @@ object KeyboardPrefs {
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
-        suggestions = p.getBoolean("suggestions", suggestions); barTools = p.getBoolean("barTools", barTools); emojiTheme = p.getString("emojiTheme", "same") ?: "same"; floatScale = p.getFloat("floatScale", 1f).coerceIn(.55f, 1f); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect2", true); pauseFix = p.getBoolean("pauseFix", false) && p.getBoolean("pauseOff13", false)
+        suggestions = p.getBoolean("suggestions", suggestions); barTools = p.getBoolean("barTools", barTools); emojiTheme = p.getString("emojiTheme", "same") ?: "same"; floatScale = p.getFloat("floatScale", .76f).coerceIn(.55f, 1f); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect2", true); pauseFix = p.getBoolean("pauseFix", false) && p.getBoolean("pauseOff13", false)
         undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); undoToKeep = p.getInt("undoToKeep", 2).coerceIn(1, 2); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill); neural = p.getBoolean("neural", neural); smooth = p.getBoolean("smooth", false); cornerHints = p.getBoolean("cornerHints", true); circleGestures = p.getBoolean("circleGestures", false); multiTap = p.getBoolean("multiTap", false); fileSuggest = p.getBoolean("fileSuggest", true); spacePic = p.getString("spacePic", "") ?: ""; spaceWalker = p.getString("spaceWalker", "") ?: ""; spaceWalkerPic = p.getString("spaceWalkerPic", "") ?: ""; spaceFlip = p.getBoolean("spaceFlip", false); capColors = parseInts(p.getString("capColors", "") ?: ""); capPics = parseStrs(p.getString("capPics", "") ?: "")
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
