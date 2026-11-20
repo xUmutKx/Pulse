@@ -7,6 +7,8 @@ import java.io.IOException
 /** The Google Play build has no torrent engine (the free-software build has it): the same names, nothing behind them. */
 object TorrentEngine {
     val available: Boolean get() = false
+    fun dhtNodes(): Long = 0L
+    fun sessionAgeMs(): Long = 0L
     @Suppress("UNUSED_PARAMETER")
     fun ready(ctx: Context): Boolean = false
     val fetching = kotlinx.coroutines.flow.MutableStateFlow(false)

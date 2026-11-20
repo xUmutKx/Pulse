@@ -7,6 +7,8 @@ import java.io.IOException
 /** The lite build has no torrent engine (it is in the free-software full build): the same names, nothing behind them. */
 object TorrentEngine {
     val available: Boolean get() = false
+    fun dhtNodes(): Long = 0L
+    fun sessionAgeMs(): Long = 0L
     @Suppress("UNUSED_PARAMETER")
     fun ready(ctx: Context): Boolean = false
     val fetching = kotlinx.coroutines.flow.MutableStateFlow(false)

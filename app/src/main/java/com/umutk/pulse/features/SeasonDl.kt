@@ -226,11 +226,11 @@ object SeasonDl {
         var key by remember { mutableStateOf(tmdbKey(ctx)) }
         var note by remember { mutableStateOf("") }
         Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // a torrent nobody shares gives way to another stream of the episode after 10 seconds
+            // a torrent nobody shares gives way to another stream of the episode after a while (45 to 75 seconds without its file list, 20 to 25 with it)
             Row(Modifier.fillMaxWidth().clickable { Downloads.setAutoSwitch(ctx, !Downloads.autoSwitch) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Try another stream when nobody shares", "Kimse paylaşmıyorsa başka yayını dene"), color = T.text, fontSize = 15.sp)
-                    Text(tr("After 10 seconds without anyone to download from, the next stream of the episode starts: from a quarter to nearly twice the size you typed, the bigger ones first, never under 200 MB", "Kimseden indirilemeden 10 saniye geçerse bölümün sıradaki yayını başlar: yazdığın boyutun dörtte biri ile neredeyse iki katı arası, büyükler önce, 200 MB altına asla inmeden"), color = T.sub, fontSize = 12.sp)
+                    Text(tr("When a torrent shows no one to download from for a while (about a minute, longer right after the engine starts), the next stream of the episode starts: from a quarter to nearly twice the size you typed, the bigger ones first, never under 200 MB", "Bir torrent bir süre (yaklaşık bir dakika, motor yeni açıldıysa daha uzun) kimseden indirilemezse bölümün sıradaki yayını başlar: yazdığın boyutun dörtte biri ile neredeyse iki katı arası, büyükler önce, 200 MB altına asla inmeden"), color = T.sub, fontSize = 12.sp)
                 }
                 com.umutk.pulse.PSwitch(Downloads.autoSwitch, { Downloads.setAutoSwitch(ctx, it) })
             }

@@ -798,10 +798,15 @@ private suspend fun DlTask.transferTorrent(torrent: ByteArray?): Boolean {
             // while the file list is on its way, or no peer is sending yet, the row says so (instead of a still "0 MB")
             if (t > 0) total.value = t
             done.value = d
-            error.value = when { t <= 0 && blocked -> "this Wi-Fi blocks torrents (sign-in page or no internet): use mobile data"; t <= 0 -> "finding peers ($p)"; p == 0 && d < t -> "no peers yet"; else -> "" }
+            error.value = when { t <= 0 && blocked -> "this Wi-Fi blocks torrents (sign-in page or no internet): use mobile data"; t <= 0 -> "finding peers ($p)  ·  DHT ${TorrentEngine.dhtNodes()}"; p == 0 && d < t -> "no peers yet"; else -> "" }
             val nowT = System.currentTimeMillis()
-            // nobody to download from for 10 seconds (20 when peers are connected and the file list is here): the next stream of the episode is tried
-            val patience = if (t > 0 && p > 0) 20_000L else 10_000L
+            // nobody to download from for a while (see the patience below): the next stream of the episode is tried
+            // (the file list of a magnet link takes time: the DHT of a young session has to find its nodes first, then the peers, then they send the list; 10 seconds gave up on almost every torrent before it began)
+            val patience = when {
+                t <= 0 -> if (TorrentEngine.dhtNodes() < 8 || TorrentEngine.sessionAgeMs() < 60_000L) 75_000L else 45_000L
+                p > 0 -> 25_000L
+                else -> 20_000L
+            }
             if (Downloads.autoSwitch && d == 0L && alts.isNotEmpty() && nowT - began > patience) switchNow = true
             if (t > 0) {
                 if (winT == 0L) { winT = nowT; winD = d }

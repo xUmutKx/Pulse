@@ -136,6 +136,11 @@ object TorrentEngine {
     }
 
     @Synchronized
+    /** How many DHT nodes the session knows now, and how long it has been running (a young session has not found its peers yet): for the patience of a download and its status line. */
+    fun dhtNodes(): Long = runCatching { session?.dhtNodes() ?: 0L }.getOrDefault(0L)
+    @Volatile private var startedAt = 0L
+    fun sessionAgeMs(): Long = if (startedAt == 0L) 0L else System.currentTimeMillis() - startedAt
+
     private fun sm(): SessionManager = session ?: SessionManager().also {
         val sp = SettingsPack()
         sp.setString(settings_pack.string_types.dht_bootstrap_nodes.swigValue(),
@@ -157,6 +162,7 @@ object TorrentEngine {
         val p = SessionParams(sp)
         p.setPosixDiskIO() // plain file writes: memory-mapped files misbehave on the phone's shared storage
         it.start(p)
+        startedAt = System.currentTimeMillis()
         session = it
     }
 
@@ -242,6 +248,8 @@ object TorrentEngine {
                 if (st.hasMetadata()) break
                 if (stop()) return@withContext null
                 onProgress(0, 0, st.numPeers())
+                // every 15 seconds without the file list the trackers and the DHT are asked again (a first ask made before the DHT was up finds nobody)
+                if (waited > 0 && waited % 15_000 < 300) runCatching { h.forceReannounce(); h.forceDHTAnnounce() }
                 if (waited > 180_000) throw IOException("no peers answered for this torrent")
                 delay(300); waited += 300
             }
