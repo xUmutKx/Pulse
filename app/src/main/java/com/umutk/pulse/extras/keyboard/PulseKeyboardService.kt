@@ -1114,6 +1114,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         commaSpace = false
+        // the calculator (a setting, off by default): "12*5=" is answered right after the sign
+        if (s == "=" && KeyboardPrefs.calcEquals && !st.plain && word.isEmpty()) {
+            val before = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+            val r = KbCalc.tail(before)?.let { KbCalc.eval(it) }
+            if (r != null) { c.commitText("= " + KbCalc.format(r), 1); punctTyped = true; afterText(); return }
+        }
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
