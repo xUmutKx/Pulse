@@ -19,6 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.PButton
 import com.umutk.pulse.Shell
@@ -70,9 +74,25 @@ internal fun PowerClick(onDone: () -> Unit, modifier: Modifier = Modifier, conte
             },
             onDismissRequest = { open = false },
         ) {
-            Column(Modifier.width(190.dp).background(com.umutk.pulse.T.panel.copy(alpha = 1f)).border(1.dp, com.umutk.pulse.T.sub.copy(alpha = .4f)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf("sleep" to tr("Sleep", "Uyku"), "lock" to tr("Lock", "Kilitle"), "off" to tr("Shut down", "Kapat"), "restart" to tr("Restart", "Yeniden başlat"), "signout" to tr("Sign out", "Oturumu kapat"))
-                    .forEach { (k, label) -> PButton(label, Modifier.fillMaxWidth()) { open = false; onDone(); powerAction(ctx, k) } }
+            // the panel grows out of the button and fades in (it does not just appear); each way out is a row with its icon, as in Windows;
+            // on Windows 11 the panel is see-through (Mica-like) with round corners, the older Windows stay opaque and square
+            val t = com.umutk.pulse.T
+            val w11 = t.id == "win11"
+            val grow = remember { androidx.compose.animation.core.Animatable(0f) }
+            androidx.compose.runtime.LaunchedEffect(Unit) { grow.animateTo(1f, androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+            val shape = androidx.compose.foundation.shape.RoundedCornerShape(if (w11) 8.dp else 0.dp)
+            Column(Modifier.width(200.dp)
+                .graphicsLayer { alpha = grow.value; scaleY = .85f + .15f * grow.value; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 1f) }
+                .clip(shape).background(t.panel.copy(alpha = if (w11) .80f else 1f)).border(1.dp, t.sub.copy(alpha = if (w11) .25f else .4f), shape).padding(4.dp)) {
+                listOf("sleep" to tr("Sleep", "Uyku"), "lock" to tr("Lock", "Kilitle"), "power" to tr("Shut down", "Kapat"), "restart" to tr("Restart", "Yeniden başlat"), "signout" to tr("Sign out", "Oturumu kapat"))
+                    .forEach { (k, label) ->
+                        Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(if (w11) 5.dp else 0.dp))
+                            .clickable { open = false; onDone(); powerAction(ctx, if (k == "power") "off" else k) }.padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            com.umutk.pulse.PIcon(k, t.text, 18.dp)
+                            Text(label, color = t.text, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
             }
         }
     }
