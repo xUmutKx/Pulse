@@ -148,18 +148,25 @@ fun WindowsSettingsHome() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val all = WIN11_SETTINGS.flatMap { g -> g.items.map { g to it } }
     val shown = all.filter { (_, it) -> q.isBlank() || tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
-        Text(tr("Settings", "Ayarlar"), color = T.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+    // Windows 10: one flat palette for the whole window (dark: near black with grey tiles; light: pale grey with white tiles), so the window never shows a white page behind dark tiles
+    val w10 = T.id == "win10" || T.id == "win10black"
+    val dark = T.dark || T.id == "win10black"
+    val pageBg = if (!w10) androidx.compose.ui.graphics.Color.Transparent else if (dark) androidx.compose.ui.graphics.Color(0xFF1A1A1A) else androidx.compose.ui.graphics.Color(0xFFF0F0F0)
+    val tileBg = if (!w10) T.panel else if (dark) androidx.compose.ui.graphics.Color(0xFF2B2B2B) else androidx.compose.ui.graphics.Color.White
+    val ink = if (!w10) T.text else if (dark) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1B1B1B)
+    val sub = if (!w10) T.sub else if (dark) androidx.compose.ui.graphics.Color(0xFFB0B0B0) else androidx.compose.ui.graphics.Color(0xFF5E5E5E)
+    Column(Modifier.fillMaxSize().background(pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Text(tr("Settings", "Ayarlar"), color = ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
         com.umutk.pulse.PField(q, { q = it }, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth().padding(vertical = 10.dp))
         shown.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (_, it) ->
-                    Row(Modifier.weight(1f).background(T.panel).clickable { openWItem(ctx, it.route, open) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).background(tileBg).clickable { openWItem(ctx, it.route, open) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon(it.icon, T.accent, 32.dp)
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(tr(it.en, it.tr), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
-                            Text(tr(it.enDesc, it.trDesc), color = T.sub, fontSize = 11.sp, maxLines = 2)
+                            Text(tr(it.en, it.tr), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+                            Text(tr(it.enDesc, it.trDesc), color = sub, fontSize = 11.sp, maxLines = 2)
                         }
                     }
                 }
