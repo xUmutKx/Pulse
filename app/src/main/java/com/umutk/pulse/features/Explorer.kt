@@ -1168,18 +1168,34 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     val w = LocalWindowLook.current
                     ThemedMenu(menuOf == f, { menuOf = null }) {
                         val st = com.umutk.pulse.LocalMenuStyle.current
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                            quick.forEach { (label, key, act) ->
-                                Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { menuOf = null; act() }, contentAlignment = Alignment.Center) {
-                                    ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
+                        // two rows of five icons: the work on the file, then its details and ways out; a long press names the icon
+                        val row1 = quick.filter { it.first != "Paste" }.take(5)
+                        val byLabel = groups.flatten().associateBy { it.first }
+                        val row2 = listOfNotNull(
+                            byLabel["Properties"]?.let { Triple("Info", it.second, it.third) },
+                            byLabel["Create shortcut"]?.let { Triple("Shortcut", it.second, it.third) },
+                            (byLabel["Add bookmark"] ?: byLabel["Remove bookmark"])?.let { Triple("Bookmark", it.second, it.third) },
+                            byLabel["Share"],
+                            byLabel["Open with"],
+                        )
+                        @Composable fun iconRow(items: List<Triple<String, String, () -> Unit>>) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                items.forEach { (label, key, act) ->
+                                    Box(Modifier.size(42.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                        .combinedClickable(onLongClick = { android.widget.Toast.makeText(ctx, label, android.widget.Toast.LENGTH_SHORT).show() }, onClick = { menuOf = null; act() }), contentAlignment = Alignment.Center) {
+                                        ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
+                                    }
                                 }
                             }
                         }
-                        groups.forEach { g ->
+                        iconRow(row1)
+                        Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
+                        iconRow(row2)
+                        // what is left (the code editor, Save as, Copy path, Secure Folder) stays as a short list under the icons; Open and Open with are the icons above and a tap on the file
+                        val rest = groups.flatten().filter { it.first in setOf("Code editor", "Save as", "Copy path", "Move to Secure Folder") }
+                        if (rest.isNotEmpty()) {
                             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
-                            g.forEach { (label, key, act) ->
-                                ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, st.sub, 18.dp) })
-                            }
+                            rest.forEach { (label, key, act) -> ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, st.sub, 18.dp) }) }
                         }
                     }
                     // every archive job in one place: compress, and for an archive open / extract / add / info, for a split file join the parts
