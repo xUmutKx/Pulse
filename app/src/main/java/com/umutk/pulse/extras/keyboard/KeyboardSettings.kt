@@ -971,7 +971,8 @@ private fun Switch(title: String, sub: String, on: Boolean, onChange: (Boolean) 
 @Composable
 private fun ThemeTile(id: String, dark: Boolean, picked: Boolean, onClick: () -> Unit) {
     val th = KeyboardThemes.of(id, dark)
-    val rows = listOf("qwertyuiop", "asdfghjkl", "⇧zxcvbnm⌫")
+    // the Turkish Q keyboard when the app speaks Turkish, the English one otherwise
+    val rows = if (tr("en", "tr") == "tr") listOf("qwertyuıopğü", "asdfghjklşi", "⇧zxcvbnmöç⌫") else listOf("qwertyuiop", "asdfghjkl", "⇧zxcvbnm⌫")
     Column(Modifier.width(150.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.fillMaxWidth().height(92.dp).clip(RoundedCornerShape(8.dp)).background(th.bg).border(if (picked) 2.dp else 1.dp, if (picked) T.text else T.sub.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp)) {
