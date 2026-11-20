@@ -39,7 +39,7 @@ object Lyrics {
         withContext(Dispatchers.IO) {
             val app = ctx.applicationContext
             // the phone first: the tag, a lyrics file named like the song, then any lyrics file that carries the song's title; the net comes after
-            val local = localPath?.let { readEdit(app, it) } ?: (localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: localPath?.let { LyricsStore(app).load(it, artist, title)?.let { r -> toResult(r, "saved") } }
+            val local = localPath?.let { readEdit(app, it) } ?: (localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: LyricsStore(app).load(localPath, artist, title)?.let { r -> toResult(r, "saved") }
             if (local != null) {
                 // lyrics with the times of lines only get their words' times in the background, for the next time the song is played
                 if (localPath != null) upgradeInBackground(app, localPath, local, title, artist, durationMs)
@@ -73,6 +73,8 @@ object Lyrics {
             val r = toResult(rec.first, rec.second) ?: return@withContext null
             // the found lyrics are kept with the song, not in the app's data or cache
             localPath?.takeIf { !it.contains("://") }?.let { keep(it, r) }
+            // and a copy by artist and title in the app, so the song (a stream, a content address, a folder that cannot be written) is never searched for again
+            runCatching { LyricsStore(app).save(rec.first, null) }
             r
         }
 

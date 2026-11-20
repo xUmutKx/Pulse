@@ -106,6 +106,8 @@ object LiveLyrics {
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
     @Volatile var notifLine: String? = null
+    /** How many characters of [notifLine] are already sung (the words lit as they come), -1 when the lyrics have no word times. */
+    @Volatile var notifSung: Int = -1
 
     /** The current line whenever a notification or the lyrics widget asks for it; read by [com.umutk.pulse.widgets.music.LyricsWidget]. */
     @Volatile var currentLine: String? = null
@@ -293,9 +295,15 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         if (line == null && wanted && st.isPlaying && st.current?.path == lastLineTrack) line = lastLineText
         if (line != null) { lastLineText = line; lastLineTrack = st.current?.path }
         else if (st.current?.path != lastLineTrack) { lastLineText = null; lastLineTrack = st.current?.path }
-        if (line != LiveLyrics.currentLine) {
+        // the words of the line in the notification are lit as they are sung (when the lyrics have word times): the card is drawn again at each word
+        val sungNow = if (line != null && LiveLyrics.notification(ctx) && LiveLyrics.wordSync(ctx) && st.isPlaying) {
+            st.current?.let { c0 -> LiveLyrics.currentLine(LiveLyrics.resultFor(ctx, c0), engine.positionMs + AHEAD_MS) }?.takeIf { it.words.isNotEmpty() }?.let { LiveLyrics.sungChars(it, engine.positionMs + AHEAD_MS) } ?: -1
+        } else -1
+        if (line != LiveLyrics.currentLine || sungNow != LiveLyrics.notifSung) {
             LiveLyrics.currentLine = line
-            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { LiveLyrics.collapsed(ctx, it) } else null
+            // the words sung are in bold letters and the rest plain (as in the separate lyrics notification); without word times the whole line is bold
+            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { ln -> if (sungNow >= 0) LiveLyrics.collapsed(ctx, ln.take(sungNow.coerceAtMost(ln.length))) + ln.drop(sungNow) else LiveLyrics.collapsed(ctx, ln) } else null
+            LiveLyrics.notifSung = sungNow
             changed()
         }
     }
