@@ -8,7 +8,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /** Frees the picture caches when no Pulse screen is in front. Services (Motion cues, overlays, alerts) are not touched. */
-class PulseApp : Application(), androidx.work.Configuration.Provider {
+class PulseApp : Application(), androidx.work.Configuration.Provider, coil.ImageLoaderFactory {
+    /**
+     * Every picture of the app (covers, artist photos, thumbnails of YTXTube and YouTube Music) is fetched once and kept on the disk until the cache is cleared,
+     * whatever the server says about keeping it (its headers asked for a new download each time, so an artist page loaded its pictures again on every visit).
+     * Each process keeps its own folder (the disk cache cannot be shared between processes).
+     */
+    override fun newImageLoader(): coil.ImageLoader {
+        val proc = runCatching { if (android.os.Build.VERSION.SDK_INT >= 28) getProcessName() else packageName }.getOrDefault(packageName).substringAfter(':', "main")
+        return coil.ImageLoader.Builder(this)
+            .respectCacheHeaders(false)
+            .memoryCache { coil.memory.MemoryCache.Builder(this).maxSizePercent(0.15).build() }
+            .diskCache { coil.disk.DiskCache.Builder().directory(cacheDir.resolve("images_$proc")).maxSizeBytes(300L * 1024 * 1024).build() }
+            .crossfade(true)
+            .build()
+    }
+
     // WorkManager starts itself, in every process of the app, from this configuration: the launcher, Files and the other windows run in their own processes, where the
     // start-up provider did not start it, and the first use of it (the music player's lyrics work, for one) crashed with "WorkManager is not initialized properly"
     override val workManagerConfiguration: androidx.work.Configuration
