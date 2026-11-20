@@ -88,6 +88,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.drag
@@ -237,7 +238,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     androidx.compose.runtime.SideEffect { if (st.land != land) st.land = land }
     // (the Samsung look: its rows are a little lower than ours, as measured on the real keyboard)
     // the phone keypad has four rows, not five: its keys take the room, and the Old phone look is taller still
-    val keyH = (61f * scale * (if (th.samsung) .85f else 1f) * (if (KeyboardPrefs.multiTap) 1.2f else 1f) * (if (th.id == "retro") 1.1f else 1f)).dp
+    val keyH = (61f * scale * (if (th.samsung) .85f else 1f) * (if (KeyboardPrefs.multiTap) 1.2f else 1f) * (if (th.id == "retro") 1.1f else 1f) * (if (KeyboardPrefs.floatNow && !LocalOverlayKb.current) KeyboardPrefs.floatScale else 1f)).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
     val pull = remember { Animatable(0f) }
@@ -272,6 +273,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     // the bar that stays when the keyboard slides down out of the window
     val barPx = with(LocalDensity.current) { kbBarHeight().toPx() }
     var handleRect by remember { mutableStateOf<Rect?>(null) }
+    var gripRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
     Box(modifier.fillMaxWidth().graphicsLayer { rotationZ = eggSpin.value }.then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFxNow))
@@ -282,7 +284,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
             val hr = handleRect
-            if (hr == null || !hr.contains(d.position)) return@awaitEachGesture
+            if (hr == null || !hr.contains(d.position) || gripRect?.contains(d.position) == true) return@awaitEachGesture
             d.consume()
             var last = d.position
             var moved = 0f
@@ -297,8 +299,9 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 // down: the keyboard may slide out until only its top bar is left in the window; up: to the top
                 val minY = -((kbH - barPx) / (rootH - kbH).coerceAtLeast(1f)).coerceAtLeast(0f)
                 KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(minY, 1f)
+                val free = (1f - .92f * KeyboardPrefs.floatScale)
                 // the keyboard is 92 percent wide: its free room is the other 8, from the left edge to the right one
-                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .08f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * free).coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
             KeyboardPrefs.saveFloat()
             // a tap on the handle (no drag): the line turns into an X; a tap on the X closes the keyboard. A drag only moves it (and puts the X back to a line),
@@ -328,8 +331,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         KbPicture(KeyboardPrefs.bgPath, KeyboardPrefs.bgDim)
         if (KeyboardPrefs.boardFxNow == 7 || eggRainbow) RgbWash()
         Column(
-            (if (float) Modifier.fillMaxWidth(.92f).align(Alignment.BottomStart)
-                .offset { IntOffset((st.rootW * .08f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
+            (if (float) Modifier.fillMaxWidth(.92f * KeyboardPrefs.floatScale).align(Alignment.BottomStart)
+                .offset { IntOffset((st.rootW * (1f - .92f * KeyboardPrefs.floatScale) * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
                 .onSizeChanged { kbH = it.height.toFloat() }
                 .onGloballyPositioned { c ->
                     // the keyboard's place tells the system which part of the window takes touches; the rest of the window belongs to the app
@@ -358,6 +361,19 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                             rotate(45f * sgn * x, c) {
                                 drawLine(col, androidx.compose.ui.geometry.Offset(c.x - len / 2, c.y), androidx.compose.ui.geometry.Offset(c.x + len / 2, c.y), w, StrokeCap.Round)
                             }
+                        }
+                    }
+                    // the resize grip at the right end of the handle: dragging it makes the keyboard smaller or bigger
+                    Box(Modifier.align(Alignment.CenterEnd).size(34.dp).onGloballyPositioned { gripRect = it.boundsInRoot() }.pointerInput(Unit) {
+                        detectDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, d ->
+                            c.consume()
+                            val full = (st.rootW * .92f).coerceAtLeast(1f)
+                            KeyboardPrefs.floatScale = (KeyboardPrefs.floatScale + d.x / full).coerceIn(.55f, 1f)
+                        }
+                    }, contentAlignment = Alignment.Center) {
+                        Canvas(Modifier.size(14.dp)) {
+                            val w = size.width
+                            listOf(.35f, .7f, 1f).forEach { f -> drawLine(th.sub.copy(alpha = .8f), androidx.compose.ui.geometry.Offset(w, w * (1f - f)), androidx.compose.ui.geometry.Offset(w * (1f - f), w), 2.dp.toPx(), StrokeCap.Round) }
                         }
                     }
                 }
