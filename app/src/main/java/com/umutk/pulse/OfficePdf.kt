@@ -392,6 +392,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     val anns = remember { mutableStateListOf<PAnn>() }
     var tool by remember { mutableIntStateOf(0) } // 1 pen, 2 highlighter, 3 text
     var ci by remember { mutableIntStateOf(0) }
+    // the PDF tools (merge, split, pages, compress ...) open over the viewer
+    var pdfTools by remember { mutableStateOf(false) }
     // the quick colours of the pen, two rows of four as in Notes: black first (the default), then red, blue, green, yellow, orange, purple and white
     val cols = intArrayOf(0xFF000000.toInt(), 0xFFD32F2F.toInt(), 0xFF1976D2.toInt(), 0xFF388E3C.toInt(), 0xFFFFEB3B.toInt(), 0xFFFF9800.toInt(), 0xFF8E24AA.toInt(), 0xFFFFFFFF.toInt())
     var textAt by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }; var editing by remember { mutableStateOf<PAnn?>(null) }; var textVal by remember { mutableStateOf("") }
@@ -464,6 +466,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Last", "Son"), "View", Icons.Outlined.LastPage, cap = tr("Pages", "Sayfalar"), enabled = here < p.count - 1) { goto(p.count - 1) },
         OAct(tr("Find", "Bul"), "View", Icons.Outlined.Search, on = findOn, cap = tr("Search", "Ara"), png = "search") { findOn = !findOn },
         OAct(tr("Dark pages", "Koyu sayfalar"), "View", Icons.Outlined.DarkMode, on = OfficePrefs.darkPdf, cap = tr("Display", "Görünüm")) { OfficePrefs.setDarkPdf(ctx, !OfficePrefs.darkPdf) },
+        OAct(tr("PDF tools", "PDF araçları"), "File", Icons.Outlined.Build, cap = tr("Tools", "Araçlar")) { pdfTools = true },
         OAct(tr("Pen", "Kalem"), "Edit", Icons.Outlined.Edit, on = tool == 1, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 1) 0 else 1 },
         OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci == 0) ci = 4 },
         OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3, cap = tr("Text", "Yazı")) { tool = if (tool == 3) 0 else 3 },
@@ -497,6 +500,9 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     )
     CompositionLocalProvider(LocalOfRibbon provides ofCaptionRibbons(theme, acts)) { PdfChrome(theme, doc.name, acts, "${tr("Page", "Sayfa")} ${list.firstVisibleItemIndex + 1} / ${p.count}   ${(zoom * 100).toInt()}%", doc.close) {
       Column(Modifier.fillMaxSize()) {
+        if (pdfTools) androidx.compose.ui.window.Dialog(onDismissRequest = { pdfTools = false }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.T.bg)) { PdfToolsPage { pdfTools = false } }
+        }
         // the pen's panel while the pen or the highlighter is on: the eight quick colours in two rows and the thickness
         if (tool == 1 || tool == 2) Row(Modifier.fillMaxWidth().background(theme.pal.ribbonBg).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
