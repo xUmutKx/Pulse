@@ -1820,6 +1820,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
+        // the address in the left slot of an empty box: held, all the saved addresses come up on the bar to pick from
+        if (i == 0 && word.isEmpty() && '@' in w && emailRe.matches(w)) {
+            val all = emailsSaved().filter { !KeyboardDictionary.isBanned(it) }.take(8)
+            if (all.size > 1) { slotWords = (all + listOf("", "", "")).take(maxOf(3, all.size)).toTypedArray(); st.slots = slotWords.toList(); st.emailBar = true; return }
+        }
         // the quoted word is what was typed: held, it is saved as a right word (never "corrected" again)
         if (w.startsWith("\"") || (w.isEmpty() && i == 0 && st.slots.getOrNull(0)?.startsWith("\"") == true)) {
             val typed = if (word.isNotEmpty()) word.toString() else lastCorrection?.original.orEmpty()
@@ -2921,6 +2926,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
             if (tb.isEmpty() || tb.trimEnd(' ').let { it.isEmpty() || it.last() in ".!?\n" }) {
                 val starts = (if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet", "Bir", "Ve") else listOf("I", "The", "Hello", "A", "And")).filter { !KeyboardDictionary.isBanned(it) }.take(3).let { s -> s + List(3 - s.size) { "" } }
+                // an empty box of any kind: the left slot holds the address used most (a tap writes it, a long press shows the others), the middle and right the sentence words
+                val mail = if (tb.isEmpty() && !st.plain) getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').firstOrNull { it.isNotBlank() && '@' in it && !KeyboardDictionary.isBanned(it) } else null
+                if (mail != null) { slotWords = arrayOf(mail, starts[0], starts[1]); st.slots = listOf(mail, starts[0], starts[1]); target = null; showClipSlot(); return }
                 slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }

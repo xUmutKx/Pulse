@@ -178,6 +178,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1617,8 +1618,12 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             // the bottom row sits a notch higher (the thumb reaches it), with a space bar between "abc" and the delete key
             Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).height(keyH * .8f), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("abc", color = th.text, fontSize = 17.sp) }
-                Box(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 5.dp).fillMaxHeight().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.space() })
-                Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
+                // the space bar is there but unseen until it is pressed; the delete key stands higher, its foot level with the top of the space bar
+                val spaceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                val spaceDown by spaceSrc.collectIsPressedAsState()
+                Box(Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 5.dp).fillMaxHeight().clip(RoundedCornerShape(10.dp))
+                    .background(if (spaceDown) th.special else Color.Transparent).clickable(spaceSrc, null) { act.space() })
+                Box(Modifier.width(56.dp).fillMaxHeight().offset(y = -(keyH * .4f)).clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
             }
         }
     }
