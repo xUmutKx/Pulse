@@ -54,10 +54,11 @@ class PhotoWidgetConfig : ComponentActivity() {
                 var radius by remember { mutableFloatStateOf(p.getFloat("r$id", .18f)) }
                 var border by remember { mutableStateOf(p.getBoolean("b$id", false)) }
                 var frame by remember { mutableStateOf(p.getString("f$id", "none") ?: "none") }
+                var shape by remember { mutableStateOf(p.getString("s$id", "square") ?: "square") }
                 var version by remember { mutableIntStateOf(0) }
                 val pick = rememberLauncherForActivityResult(PulsePick.OpenDocument()) { u -> if (u != null && PhotoWidget.adopt(this@PhotoWidgetConfig, id, u)) version++ }
                 val photo = remember(version) { runCatching { BitmapFactory.decodeFile(java.io.File(filesDir, "photo_widget/$id.src").path) }.getOrNull() }
-                val shown = remember(photo, crop, radius, border, frame) { PhotoWidget.render(photo, crop, radius, border, frame).asImageBitmap() }
+                val shown = remember(photo, crop, radius, border, frame, shape) { PhotoWidget.render(photo, crop, radius, border, frame, shape).asImageBitmap() }
                 Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(shown, null, Modifier.size(220.dp))
                     TextButton({ pick.launch(arrayOf("image/*")) }) { Text(if (photo == null) tr("Choose a photo", "Fotoğraf seç") else tr("Change the photo", "Fotoğrafı değiştir")) }
@@ -71,6 +72,13 @@ class PhotoWidgetConfig : ComponentActivity() {
                         Text(tr("Border line", "Kenar çizgisi"), Modifier.weight(1f), color = Color.White)
                         Switch(border, { border = it })
                     }
+                    // the shape: a square (the default), a landscape or a portrait rectangle
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PhotoWidget.SHAPES.forEach { (k, _) ->
+                            val label = when (k) { "wide" -> tr("Landscape", "Yatay"); "tall" -> tr("Portrait", "Dikey"); else -> tr("Square", "Kare") }
+                            TextButton({ shape = k }) { Text(if (shape == k) "● $label" else label, color = Color.White) }
+                        }
+                    }
                     // the frame: none (the photo alone on an empty place) or a Polaroid print, wood, gold, a black mat
                     Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PhotoWidget.FRAMES.forEach { f ->
@@ -79,7 +87,7 @@ class PhotoWidgetConfig : ComponentActivity() {
                         }
                     }
                     TextButton({
-                        p.edit().putBoolean("c$id", crop).putFloat("r$id", radius).putBoolean("b$id", border).putString("f$id", frame).apply()
+                        p.edit().putBoolean("c$id", crop).putFloat("r$id", radius).putBoolean("b$id", border).putString("f$id", frame).putString("s$id", shape).apply()
                         PhotoWidget.refresh(this@PhotoWidgetConfig, id)
                         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
                         finish()
