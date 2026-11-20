@@ -37,7 +37,13 @@ fun WindowsCursor(enabled: Boolean, content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize().pointerInput(enabled) {
         if (!enabled) return@pointerInput
         awaitEachGesture {
-            val d = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); pos = d.position; held = true; tick++
+            val d = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            // a real mouse (or a pen) has the system's own pointer: the drawn arrow is only for a finger, so two arrows never show
+            if (d.type != androidx.compose.ui.input.pointer.PointerType.Touch) {
+                while (true) { val ev = awaitPointerEvent(PointerEventPass.Initial); if (ev.changes.none { it.pressed }) break }
+                return@awaitEachGesture
+            }
+            pos = d.position; held = true; tick++
             // the arrow goes with the finger while it is down (a drag of an icon, a window, a scroll)
             while (true) {
                 val ev = awaitPointerEvent(PointerEventPass.Initial)
