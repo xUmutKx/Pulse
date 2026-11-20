@@ -312,7 +312,9 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         // the camera opened (the swipe from the lock screen, or the camera app): the cover and the lock screen lyrics close, they must not stay over the viewfinder
         if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val p = event.packageName?.toString().orEmpty(); val k = event.className?.toString().orEmpty()
-            if (p != packageName && (p.contains("camera", true) || k.contains("camera", true))) {
+            // the lock screen itself has a camera shortcut (a window or view with "camera" in its name, drawn the moment the screen wakes): that is not the camera opening
+            val sys = p.contains("systemui", true) || p.contains("keyguard", true) || p.contains("lockscreen", true) || p.contains("launcher", true)
+            if (p != packageName && !sys && (p.contains("camera", true) || k.contains("camera", true))) {
                 com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)
                 if (StandBy.showing) StandBy.hide(this)
             }
