@@ -393,7 +393,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val ws = sentence.split(Regex("[^\\p{L}']+")).filter { it.length >= 3 }.let { if (word.isNotEmpty()) it.dropLast(1) else it }.takeLast(6)
         val votes = HashMap<String, Int>()
         ws.forEach { w -> val low = w.lowercase(lang.locale); val hits = langs.filter { KeyboardDictionary.isWord(it, low) }; if (hits.size == 1) votes[hits[0]] = (votes[hits[0]] ?: 0) + 1 }
-        val sorted = votes.entries.sortedByDescending { it.value }
+        val sorted = votes.byValueDesc()
         val top = sorted.firstOrNull(); val second = sorted.getOrNull(1)?.value ?: 0
         ctxLang = if (top != null && top.value >= 2 && top.value >= 2 * second) top.key else null
     }
@@ -3006,7 +3006,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private fun termSuggestions() {
         val t = termWord.toString()
-        val hist = termSeen.entries.sortedByDescending { it.value }.map { it.key }
+        val hist = termSeen.byValueDesc().map { it.key }
         val pool = (hist + TERM_CMDS).distinct()
         val out = if (t.isEmpty()) (if (termLineStart) (hist.filter { it in TERM_CMDS } + listOf("ls", "cd", "git", "pkg")).distinct().take(3) else hist.take(3))
             else pool.filter { it.startsWith(t) && it != t }.take(3)
@@ -3108,7 +3108,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val all = numbersKept().toMutableMap()
         all[n] = (all[n] ?: 0) + 1
         // 20 numbers at most: the least used go
-        KbNumbers.save(this, all.entries.sortedByDescending { it.value }.take(20).associate { it.key to it.value })
+        KbNumbers.save(this, all.byValueDesc().take(20).associate { it.key to it.value })
     }
 
     /** The saved numbers that continue the digits typed: typed twice at least (or added by hand in the settings), the most used first. */
@@ -3117,7 +3117,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val d = digitsBefore(currentInputConnection ?: return emptyList())
         if (d.length < 2) return emptyList()
         return numbersKept().filter { it.value >= 2 && it.key.startsWith(d) && it.key.length > d.length && !KeyboardDictionary.isBanned(it.key) }
-            .entries.sortedByDescending { it.value }.take(3).map { it.key }
+            .byValueDesc().take(3).map { it.key }
     }
 
     /** For a bar that would stay empty: the last words you wrote (a few of them), the most common words of the language filling what is missing (capital at the start when shift is on). */
@@ -3176,7 +3176,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val ranked = if (lm0 == null || pool.size <= 3) pool else runCatching {
                 val t0 = System.nanoTime()
                 val stt = NeuralLm.state(lm0, nnLang0, (ctxText ?: lmCtx).let { if (lm0.cased()) it else it.lowercase(loc) })
-                val r = pool.withIndex().sortedByDescending { (i, w) -> lm0.score(stt, w) + (pool.size - i) * .15f }.map { it.value }
+                val r = pool.withIndex().toList().sortedByKeyOnce { (i, w) -> lm0.score(stt, w) + (pool.size - i) * .15f }.map { it.value }
                 NeuralLm.took((System.nanoTime() - t0) / 1_000_000L)
                 r
             }.getOrDefault(pool)
@@ -3190,7 +3190,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val codes = dictCodes(code)
         // candidates come from the sentence's language; a word that is valid in any language of the keyboard is still left alone (valid below)
         val candCodes = if (ctxLang != null) codes.take(1) else codes
-        val comp = candCodes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
+        val comp = candCodes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByKeyOnce { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
         // a learned slip never turns a real word into a rarer one ("tak" into something else because both were typed once): it must lead to a clearly likelier word
         val learned = KeyboardDictionary.typoFix(this, lower)?.takeIf { l ->
@@ -3208,7 +3208,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the words the touches point to (a letter on a key's edge could have been the next key's)
         val touchC = if (!fast && tc != null && lower.length >= 3) candCodes.flatMap { KeyboardDictionary.touchCands(it, lower, tc, 4) } else emptyList()
         val corr = if (!fast && lower.length >= 2) (nearAll.filter { it.cost <= limit } + touchC + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
-            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
+            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByKeyOnce { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         // tested on 100 000 of the author's own chat lines (a Python copy of this rule): a correction needs a cost of .8 at most (one neighbouring key, an accent, a swap)
@@ -3290,7 +3290,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a blocked word is never the correction, whichever of the ways found it
         val fix = (swapFix ?: split ?: if (lm != null) (learned?.takeIf { it != lower }?.let { KeyboardDictionary.Cand(it, 40f, 0f) } ?: nnFix) else fix0)?.takeIf { !KeyboardDictionary.isBanned(it.word) }
         val others = (comp.map { it.word } + corr.map { it.word } + nnScore.keys).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
-            .let { o -> if (nnScore.isEmpty()) o else o.sortedByDescending { nnScore[it] ?: -1e9f } }
+            .let { o -> if (nnScore.isEmpty()) o else o.sortedByKeyOnce { nnScore[it] ?: -1e9f } }
         // a word nothing is near (a slip the rule cannot reach): the bar is not left empty. A wider look for near words, and two words run together ("kşabye": "kısa bye")
         val others2 = if (!fast && fix == null && others.size < 2 && lower.length >= 3 && !stretched && !keepCase) {
             val wide = candCodes.flatMap { KeyboardDictionary.correct(it, lower, limit + 1.6f, tc) }.filter { it.word != lower && !KeyboardDictionary.isBanned(it.word) }
@@ -3347,3 +3347,9 @@ private val TERM_CMDS = listOf("ls", "cd", "cp", "mv", "rm", "mkdir", "rmdir", "
     "sed", "awk", "sort", "uniq", "wc", "tar", "zip", "unzip", "gzip", "curl", "wget", "ssh", "scp", "rsync", "ping", "ps", "top", "htop", "kill", "killall", "clear", "exit", "history", "which", "man", "env",
     "export", "source", "git", "git status", "pkg", "apt", "pip", "python", "python3", "node", "npm", "cargo", "rustup", "rustc", "gradle", "gradlew", "adb", "rish", "termux-setup-storage", "termux-open",
     "termux-clipboard-get", "termux-clipboard-set", "sudo", "su", "tmux", "make", "cmake", "java", "ffmpeg", "yt-dlp", "storage", "sdcard", "Download")
+
+/**
+ * Sorts by a score read once for each item. sortedByDescending asks for the score at every comparison, and a score that is read from the learning tables (which another thread
+ * updates while the keyboard works) can change between two comparisons: the sort then stops with "Comparison method violates its general contract".
+ */
+private fun <T> List<T>.sortedByKeyOnce(key: (T) -> Float): List<T> = map { it to key(it).let { k -> if (k.isNaN()) -1e9f else k } }.sortedByDescending { it.second }.map { it.first }

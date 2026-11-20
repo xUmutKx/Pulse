@@ -236,7 +236,7 @@ object KeyboardDictionary {
         runCatching {
             File(c.filesDir, "kbd_keys.txt").writeText(keyCounts.entries.joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })
-            File(c.filesDir, "kbd_user.txt").writeText(user.entries.sortedByDescending { it.value }.take(8000).joinToString("\n") { "${it.key} ${it.value}" })
+            File(c.filesDir, "kbd_user.txt").writeText(user.byValueDesc().take(8000).joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_forms.txt").writeText(forms.entries.take(2000).joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_pairs.txt").writeText(pairs.entries.flatMap { (a, m) -> m.entries.map { Triple(a, it.key, it.value) } }.sortedByDescending { it.third }.take(8000).joinToString("\n") { "${it.first} ${it.second} ${it.third}" })
         }
@@ -807,10 +807,10 @@ object KeyboardDictionary {
         val lang = d(code)
         val out = ArrayList<String>()
         // what the person wrote after these two words, then after the last one, then the words they write most; only then the language's own pairs
-        if (!prev.isNullOrEmpty() && !prev2.isNullOrEmpty()) pairs[prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
-        if (!prev.isNullOrEmpty()) pairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
+        if (!prev.isNullOrEmpty() && !prev2.isNullOrEmpty()) pairs[prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)]?.byValueDesc()?.forEach { if (out.size < n && it.key !in out) out += it.key }
+        if (!prev.isNullOrEmpty()) pairs[prev.lowercase(Locale.ROOT)]?.byValueDesc()?.forEach { if (out.size < n && it.key !in out) out += it.key }
         user.entries.filter { it.value >= 3 && it.key.length >= 2 }.sortedByDescending { it.value }.take(6).forEach { if (out.size < n && it.key !in out) out += it.key }
-        if (!prev.isNullOrEmpty() && out.size < n) basePairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
+        if (!prev.isNullOrEmpty() && out.size < n) basePairs[prev.lowercase(Locale.ROOT)]?.byValueDesc()?.forEach { if (out.size < n && it.key !in out) out += it.key }
         val seed = if (lang == "tr") listOf("bir", "bu", "ben", "ve", "ne", "çok") else listOf("I", "the", "you", "it", "to", "a")
         seed.forEach { if (out.size < n && it !in out) out += it }
         return out.filter { !isBanned(it) }
@@ -987,3 +987,7 @@ object KeyboardDictionary {
         return prev[m]
     }
 }
+
+/** The entries of a map that other threads update, copied before they are sorted by value (a value that changes during the sort made it stop with "Comparison method violates its general contract"). */
+internal fun <K, V : Comparable<V>> Map<K, V>.byValueDesc(): List<Map.Entry<K, V>> =
+    entries.map { java.util.AbstractMap.SimpleEntry(it.key, it.value) as Map.Entry<K, V> }.sortedByDescending { it.value }
