@@ -210,6 +210,20 @@ fun Win11Explorer() {
                                 repeat((quickCols - rowQ.size).coerceAtLeast(0)) { Box(Modifier.weight(1f)) }
                             }
                         }
+                        // Devices and drives, as Windows shows them: the phone's storage with its bar of used space and what is free
+                        Text(tr("Devices and drives", "Aygıtlar ve sürücüler"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
+                        val st = remember(root.path) { runCatching { android.os.StatFs(root.path).let { it.totalBytes to it.availableBytes } }.getOrDefault(0L to 0L) }
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(pane).clickable { go(root) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PIcon(if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) "tablet" else "phone", T.accent, 30.dp)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(tr("Internal storage (C:)", "Dahili depolama (C:)"), color = T.text, fontSize = 12.sp, maxLines = 1)
+                                val used = if (st.first > 0) 1f - st.second.toFloat() / st.first else 0f
+                                Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(10.dp).background(T.text.copy(alpha = .12f))) {
+                                    Box(Modifier.fillMaxHeight().fillMaxWidth(used.coerceIn(0f, 1f)).background(if (used > .9f) Color(0xFFDA3B01) else Color(0xFF26A0DA)))
+                                }
+                                Text(tr("%s free of %s", "%s / %s boş").format(android.text.format.Formatter.formatShortFileSize(androidx.compose.ui.platform.LocalContext.current, st.second), android.text.format.Formatter.formatShortFileSize(androidx.compose.ui.platform.LocalContext.current, st.first)), color = T.sub, fontSize = 11.sp)
+                            }
+                        }
                         Text(tr("All files", "Tüm dosyalar"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                     }
                     items(shown, key = { it.path }) { f ->
