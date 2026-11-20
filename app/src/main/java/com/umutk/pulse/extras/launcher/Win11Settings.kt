@@ -146,6 +146,8 @@ private fun Win11Page(g: WGroup, open: (String) -> Unit, onDetail: (WItem) -> Un
         Text(tr(g.en, g.tr), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 14.dp))
         if (g.id == "personalization") Win11Colors()
         if (g.id == "system") Win11DeviceCard()
+        if (g.id == "network") Win11NetCard()
+        if (g.id == "bluetooth") Win11BtCards()
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .26f)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .08f), RoundedCornerShape(8.dp))) {
             g.items.forEachIndexed { i, it ->
                 Win11Row(it, open, onDetail)

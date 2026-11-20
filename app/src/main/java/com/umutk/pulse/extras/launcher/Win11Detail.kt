@@ -179,3 +179,66 @@ private fun rowsFor(ctx: Context, item: WItem): List<DRow> {
         }
     }.getOrDefault(emptyList())
 }
+
+/** The top of Network & internet: whether the phone is connected, as the card at the top of that page in Windows. */
+@Composable
+internal fun Win11NetCard() {
+    val ctx = LocalContext.current
+    val (title, sub) = remember {
+        runCatching {
+            val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            when {
+                caps == null -> tr("Not connected", "Bağlı değil") to tr("You are not connected to any network", "Hiçbir ağa bağlı değilsiniz")
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi" to tr("Connected", "Bağlı")
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> tr("Mobile network", "Mobil ağ") to tr("Connected", "Bağlı")
+                else -> tr("Connected", "Bağlı") to ""
+            }
+        }.getOrDefault(tr("Not connected", "Bağlı değil") to "")
+    }
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon("globe", T.accent, 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 13.sp)
+        }
+    }
+}
+
+/** The top of Bluetooth & devices: the paired devices as cards and a card to add one. */
+@SuppressLint("MissingPermission")
+@Composable
+internal fun Win11BtCards() {
+    val ctx = LocalContext.current
+    val devices = remember { runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter?.bondedDevices?.map { (it.name ?: it.address) to it.bluetoothClass?.majorDeviceClass }.orEmpty() }.getOrDefault(emptyList()) }
+    val shape = RoundedCornerShape(8.dp)
+    val cards: List<Pair<String, Int?>> = devices.map { it.first to it.second } + listOf("" to -1)
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        cards.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (name, cls) ->
+                    val add = cls == -1
+                    Column(Modifier.weight(1f).height(104.dp).clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape)
+                        .clickable { runCatching { ctx.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        // the kind of device picks the picture: audio (headphones), phone, computer, peripheral (controller / keyboard), else a plain device
+                        val icon = when {
+                            add -> "add"
+                            cls == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO -> "voice"
+                            cls == android.bluetooth.BluetoothClass.Device.Major.PHONE -> "phone"
+                            cls == android.bluetooth.BluetoothClass.Device.Major.COMPUTER -> "cpu"
+                            cls == android.bluetooth.BluetoothClass.Device.Major.PERIPHERAL -> "pointer"
+                            else -> "sensors"
+                        }
+                        PIcon(icon, T.accent, 30.dp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(if (add) tr("Add device", "Cihaz ekle") else name, color = T.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        if (!add) Text(tr("Paired", "Eşleşmiş"), color = T.sub, fontSize = 11.sp)
+                    }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
