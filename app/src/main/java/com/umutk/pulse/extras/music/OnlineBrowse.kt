@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
  * the Spotify playlists and liked songs of the signed-in account. Every song plays through YouTube Music in YTXTube (Spotify only lets its own app play).
  */
 @Composable
-fun OnlineBrowse(startTab: Int = 0, onBack: () -> Unit) {
+fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Unit) {
     BackHandler { onBack() }
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -64,7 +64,8 @@ fun OnlineBrowse(startTab: Int = 0, onBack: () -> Unit) {
         delay(600)
         show("“$query”") { if (tab == 0) OnlineMusic.youtube(ctx, query) else OnlineMusic.spotify(ctx, query) }
     }
-    Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 14.dp)) {
+    // inside the library (embedded) the page takes its place and look: no window background or insets of its own
+    Column(Modifier.fillMaxSize().then(if (embedded) Modifier else Modifier.background(T.bg).statusBarsPadding().navigationBarsPadding()).padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             listOf("YouTube Music", "Spotify").forEachIndexed { i, n ->
@@ -105,8 +106,9 @@ fun OnlineBrowse(startTab: Int = 0, onBack: () -> Unit) {
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }
         LazyColumn(Modifier.weight(1f)) {
-            items(shown) { h ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { OnlineMusic.play(ctx, h) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            items(shown.size) { i ->
+                val h = shown[i]
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { if (!OnlineMusic.playHere(ctx, shown, i)) OnlineMusic.play(ctx, h) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     coil.compose.AsyncImage(h.thumb, null, Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(T.panel), contentScale = ContentScale.Crop)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(h.title, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

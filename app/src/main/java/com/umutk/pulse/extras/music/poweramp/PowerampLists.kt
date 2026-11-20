@@ -272,7 +272,7 @@ fun LibraryScreen(
         Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
-        is Lib.Online -> { val t = (node as Lib.Online).tab; Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.music.OnlineBrowse(t) { node = Lib.Root } }; return@LibraryScreen }
+        is Lib.Online -> { val t = (node as Lib.Online).tab; Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.music.OnlineBrowse(t, embedded = true) { node = Lib.Root } }; return@LibraryScreen }
         else -> Unit
     }
     Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
@@ -801,8 +801,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
             else itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) } }
             if (online.isNotEmpty() && (kind == 0 || kind == 1)) {
                 item { Text(tr("Online", "Çevrimiçi"), color = style.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp, top = 10.dp, bottom = 4.dp)) }
-                itemsIndexed(online) { _, h ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { com.umutk.pulse.extras.music.OnlineMusic.play(ctx, h) } }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                itemsIndexed(online) { oi, h ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { if (!com.umutk.pulse.extras.music.OnlineMusic.playHere(ctx, online, oi)) com.umutk.pulse.extras.music.OnlineMusic.play(ctx, h) } }.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(style.chip)) { coil.compose.AsyncImage(h.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
                         Column(Modifier.weight(1f).padding(start = 12.dp)) {
                             Text(h.title, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
