@@ -178,7 +178,7 @@ fun rememberLevels(n: Int = 24): State<List<Float>> {
         var last = 0L
         while (true) {
             androidx.compose.runtime.withFrameNanos { t ->
-                if (t - last >= 16_000_000L) {
+                if (t - last >= 33_000_000L) {
                     last = t
                     val src = MusicLevels.snapshot()
                     state.value = List(n) { i ->
