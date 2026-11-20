@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
@@ -102,6 +103,7 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
     var playlists by mutableStateOf<List<PlaylistRef>>(emptyList())
         private set
     var playlistsLoading by mutableStateOf(false)
+    var plQuery by mutableStateOf("")
         private set
     /** The orders the channel offers for its videos (Latest, Popular, Oldest) and the one shown. */
     var sorts by mutableStateOf<List<Pair<String, String>>>(emptyList())
@@ -467,7 +469,17 @@ fun ChannelScreen(
                         } else if (state.playlists.isEmpty()) {
                             item { EmptyState(Icons.Rounded.CloudOff, "No playlists", "This channel has no public playlists.") }
                         } else {
-                            items(state.playlists, key = { "pl-" + it.id }) { pl -> PlaylistRow(pl, Modifier.animateItem()) { openPlaylist(pl) } }
+                            item(key = "plSearch") {
+                                androidx.compose.material3.OutlinedTextField(
+                                    value = state.plQuery, onValueChange = { state.plQuery = it },
+                                    singleLine = true,
+                                    leadingIcon = { androidx.compose.material3.Icon(Icons.Rounded.Search, null) },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                )
+                            }
+                            val shown = state.playlists.filter { state.plQuery.isBlank() || it.title.contains(state.plQuery.trim(), ignoreCase = true) }
+                            items(shown, key = { "pl-" + it.id }) { pl -> PlaylistRow(pl, Modifier.animateItem()) { openPlaylist(pl) } }
                         }
                     }
                     ChannelTab.Community -> {

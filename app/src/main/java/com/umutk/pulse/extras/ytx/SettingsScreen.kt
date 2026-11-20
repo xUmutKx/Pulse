@@ -779,6 +779,13 @@ private fun AppearanceThemeContent(context: Context) {
             checked = NavSettings.showMusic,
             onCheckedChange = { NavSettings.updateShowMusic(navCtx, it) },
         )
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Text(com.umutk.pulse.tr("Video / videos split", "Video / video listesi oranı") + "  " + NavSettings.splitPct + " / " + (100 - NavSettings.splitPct), fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            androidx.compose.material3.Slider(
+                value = NavSettings.splitPct.toFloat(), onValueChange = { NavSettings.updateSplit(navCtx, it.toInt()) },
+                valueRange = 25f..70f, steps = 8,
+            )
+        }
 
         HorizontalDivider(color = c.onSurface.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 4.dp))
 

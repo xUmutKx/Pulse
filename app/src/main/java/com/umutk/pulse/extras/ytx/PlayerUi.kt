@@ -370,7 +370,7 @@ fun PlayerScreen(
             Row(Modifier.fillMaxSize()) {
                 Column(
                     Modifier
-                        .weight(0.60f)
+                        .weight(NavSettings.splitPct / 100f)
                         .fillMaxHeight()
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -385,7 +385,7 @@ fun PlayerScreen(
                 }
                 Column(
                     Modifier
-                        .weight(0.40f)
+                        .weight(1f - NavSettings.splitPct / 100f)
                         .fillMaxHeight()
                 ) {
                     Spacer(Modifier.height(top))
