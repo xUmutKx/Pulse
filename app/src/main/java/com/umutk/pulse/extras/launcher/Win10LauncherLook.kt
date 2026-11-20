@@ -111,7 +111,7 @@ class Win10LauncherLook(
             BarButton(46.dp, hover(), onClick = { LauncherSession.startOpen = true }) {
                 Canvas(Modifier.size(16.dp)) { startLogo(fg) }
             }
-            BarButton(46.dp, hover(), onClick = { LauncherSession.startOpen = true }) {
+            BarButton(46.dp, hover(), onClick = { LauncherSession.w11SearchOpen = !LauncherSession.w11SearchOpen; LauncherSession.quickOpen = false; LauncherSession.clockOpen = false }) {
                 Canvas(Modifier.size(16.dp)) { searchIcon(fg) }
             }
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
@@ -122,9 +122,13 @@ class Win10LauncherLook(
                 }
                 TaskbarWindows("10", fg, 40.dp)
             }
-            Box(Modifier.width(46.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { Canvas(Modifier.size(16.dp)) { wifiIcon(fg) } }
-            Box(Modifier.width(46.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { Canvas(Modifier.size(16.dp)) { speakerIcon(fg) } }
-            Box(Modifier.fillMaxHeight().padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+            // the connection, the sound and the battery in one button that opens the quick settings, as in Windows 11
+            Row(Modifier.fillMaxHeight().clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 10.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Canvas(Modifier.size(16.dp)) { wifiIcon(fg) }
+                Canvas(Modifier.size(16.dp)) { speakerIcon(fg) }
+                Glyph("battery", fg, 16.dp)
+            }
+            Box(Modifier.fillMaxHeight().clickable { LauncherSession.clockOpen = !LauncherSession.clockOpen; LauncherSession.quickOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                 Text("$time\n$date", color = fg, fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.End)
             }
             // show-desktop strip: a thin divider at the far end, as on Windows

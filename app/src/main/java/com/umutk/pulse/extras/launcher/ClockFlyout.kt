@@ -71,7 +71,7 @@ private fun flyLook(id: String) = when (id) {
  */
 @Composable
 fun ClockFlyout(lookId: String, taskbar: Dp, state: LauncherState? = null) {
-    if (lookId == "win11") { Win11Flyouts(taskbar, state) }
+    if (lookId == "win11" || lookId == "win10" || lookId == "win10black") { Win11Flyouts(taskbar, state) }
     if (!LauncherSession.clockOpen) return
     ClockFlyoutBody(lookId, taskbar)
 }
