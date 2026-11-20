@@ -85,9 +85,9 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
             if (!ytIn) Text(tr("Sign in to YouTube in YTXTube to see your own songs here.", "Kendi şarkıların burada görünsün diye YTXTube'da YouTube'a giriş yap."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             if (ytLists.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(ytLists) { pl ->
-                    Column(Modifier.width(96.dp).clickable { show(pl.title) { OnlineMusic.ytPlaylist(ctx, pl.id) } }) {
-                        coil.compose.AsyncImage(pl.thumbnail, null, Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).background(T.panel), contentScale = ContentScale.Crop)
-                        Text(pl.title, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // a speed dial: the square cover alone, no title under it
+                    Box(Modifier.size(104.dp).clip(RoundedCornerShape(14.dp)).background(T.panel).clickable { show(pl.title) { OnlineMusic.ytPlaylist(ctx, pl.id) } }) {
+                        coil.compose.AsyncImage(pl.thumbnail, pl.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     }
                 }
             }
