@@ -37,6 +37,8 @@ android {
         create("full") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "true") }
         create("lite") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false") }
     }
+    // -PnoSms: the lite app without any SMS/MMS permission or receiver (src/nosms overlays the lite manifest)
+    if (project.hasProperty("noSms")) sourceSets.getByName("lite").manifest.srcFile("src/nosms/AndroidManifest.xml")
     buildTypes {
         release {
             ndk { debugSymbolLevel = "SYMBOL_TABLE" } // native symbols in the bundle: no "missing symbols" warning in Play

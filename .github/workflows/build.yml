@@ -23,7 +23,7 @@ jobs:
       - id: p
         run: |
           V='["full"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","32bit","play","watch"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","nosms","32bit","play","watch"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
@@ -121,6 +121,10 @@ jobs:
               # the same app without Pulse AI: no native code to build, so it is the quick one
               G assembleFossLiteRelease -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
               cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-lite.apk" ;;
+            nosms)
+              # the lite app without any SMS/MMS permission (no Play Protect warning)
+              G assembleFossLiteRelease -PnoSms -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
+              cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-nosms.apk" ;;
             32bit)
               # the APK for the old 32-bit phones (armeabi-v7a): the lite app, since Pulse AI's engines are 64-bit only
               G assembleFossLiteRelease -PpulseAbi=armeabi-v7a -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
@@ -178,6 +182,7 @@ jobs:
           # the full APK first (an older app's updater takes the first one it finds), then the lite one
           ASSETS=("files/Pulse-$VER.apk" "files/Pulse-$VER-lite.apk")
           # the Google Play bundle when it was built (it is only for the Play Console, not for installing)
+          [ -f "files/Pulse-$VER-nosms.apk" ] && ASSETS+=("files/Pulse-$VER-nosms.apk")
           [ -f "files/Pulse-$VER-32bit.apk" ] && ASSETS+=("files/Pulse-$VER-32bit.apk")
           [ -f "files/Pulse-$VER-play.aab" ] && ASSETS+=("files/Pulse-$VER-play.aab")
           [ -f "files/PulseWatch.apk" ] && ASSETS+=("files/PulseWatch.apk")
