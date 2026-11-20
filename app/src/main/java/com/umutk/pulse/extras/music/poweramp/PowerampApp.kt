@@ -181,6 +181,13 @@ fun PowerampApp(
         // each page can keep or drop the blurred cover (Settings > Art background); a page left out is plain black
         val pageKey = tab?.name?.lowercase() ?: "now"
         // "Blended" (Settings > Look): the cover edge to edge at the top, fading into its own blurred copy that fills the screen (the now-playing page only)
+        // blended page pulled down: the screen it came from lies UNDER the sheet (it was drawn over the cover before, so the rows ran across the cover),
+        // blurred and dim while the sheet still covers most of it, clearing as the sheet is pulled further
+        val blendedPull = PowerampPrefs.blended(ctx) && cover != null && tab == null && pullShown > 0f
+        if (blendedPull) Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }
+            .blur(((1f - pullShown / 600f).coerceIn(0f, 1f) * 16f).dp)) {
+            Box(Modifier.weight(1f)) { tabBody(lastTab ?: PowerampTab.LIBRARY) }
+        }
         if (PowerampPrefs.blended(ctx)) cover?.let { cv ->
             val now = tab == null
             // the cover layers move with the page when it is pulled (the cover is part of the page, not a fixed wallpaper behind it)
@@ -207,7 +214,7 @@ fun PowerampApp(
             Box(Modifier.weight(1f)) {
                 // while the now playing page is pulled down, the screen it came from shows underneath
                 // it fades in as the page is pulled (no pop), and the hand-over after the pull needs no second fade of the same screen
-                if (tab == null && pullShown > 0f) Box(Modifier.graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }) {
+                if (tab == null && pullShown > 0f && !blendedPull) Box(Modifier.graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }) {
                     tabBody(lastTab ?: PowerampTab.LIBRARY)
                 }
                 Crossfade(tab, animationSpec = androidx.compose.animation.core.tween(if (pullShown > 0f) 0 else 300), label = "poweramp-tab") { t ->
