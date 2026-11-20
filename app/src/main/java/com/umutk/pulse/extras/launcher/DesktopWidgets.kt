@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.launcher
 import android.appwidget.AppWidgetManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -67,6 +68,8 @@ fun DesktopWidgetLayer() {
         val gridCols = if (land) LauncherPrefs.deskColsLand else LauncherPrefs.deskColsPort
         val gridRows = if (land) LauncherPrefs.deskRowsLand else LauncherPrefs.deskRowsPort
         val cell: Pair<Float, Float>? = if (LauncherPrefs.snapWidgets) (maxWidth.value / gridCols.coerceAtLeast(1)) to (maxHeight.value / gridRows.coerceAtLeast(1)) else null
+        // a widget is being edited: a tap anywhere outside it ends the editing (no need to find the check mark)
+        if (WidgetEdit.id != null) Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { WidgetEdit.id = null } })
         placedWidgets().forEachIndexed { i, w ->
             val info = mgr.getAppWidgetInfo(w.id) ?: return@forEachIndexed
             key(w.id) { DesktopWidget(w, i, info, cell) }
