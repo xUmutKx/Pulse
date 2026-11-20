@@ -62,17 +62,18 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     // the higher-quality pictures of the look come by themselves, no question asked
     androidx.compose.runtime.LaunchedEffect(lookId) { com.umutk.pulse.extras.store.HdWalls.packFor(lookId)?.let { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, it.first) } }
     val bmp = remember(res, packs, LauncherPrefs.wallFile) {
-        res?.let { r ->
-            // a file chosen in "more wallpapers" wins over the stock picture
-            val hd = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile } ?: com.umutk.pulse.extras.store.HdWalls.file(ctx, r)
+        // a picture of the person's own (Look > Custom wallpaper) or a file chosen in "more wallpapers" wins over the stock picture, and shows on a look that has no stock one too
+        val own = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile }
+        if (res == null && own == null) null else {
+            val hd = own ?: res?.let { com.umutk.pulse.extras.store.HdWalls.file(ctx, it) }
             val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            if (hd != null) BitmapFactory.decodeFile(hd.path, b) else BitmapFactory.decodeResource(ctx.resources, r, b)
+            if (hd != null) BitmapFactory.decodeFile(hd.path, b) else BitmapFactory.decodeResource(ctx.resources, res!!, b)
             val dm = ctx.resources.displayMetrics
             val need = maxOf(dm.widthPixels, dm.heightPixels)
             var step = 1
             while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
             val o = BitmapFactory.Options().apply { inSampleSize = step }
-            (if (hd != null) BitmapFactory.decodeFile(hd.path, o) else BitmapFactory.decodeResource(ctx.resources, r, o))?.asImageBitmap()
+            (if (hd != null) BitmapFactory.decodeFile(hd.path, o) else BitmapFactory.decodeResource(ctx.resources, res!!, o))?.asImageBitmap()
         }
     }
     Box(modifier.fillMaxSize()) {

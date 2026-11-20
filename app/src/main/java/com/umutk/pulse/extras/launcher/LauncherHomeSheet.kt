@@ -93,7 +93,7 @@ fun HomeSheet() {
             else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
         }
         ActionRow("light", tr("Display settings", "Ekran ayarları"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
-        ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+        ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).putExtra("cat", "look")) }
         // paste what was cut or copied in a file window or on a file of the desktop: into the Desktop folder, each file also put on the desktop
         if (FileClip.files.isNotEmpty()) ActionRow("paste", tr("Paste", "Yapıştır"), w.text) {
             HomeSheetState.sheet = false

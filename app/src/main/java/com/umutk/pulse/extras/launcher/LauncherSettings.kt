@@ -134,6 +134,19 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             ValueRow("image", tr("Wallpaper", "Duvar kağıdı"), if (walls.isEmpty()) "-" else "${(LauncherPrefs.wallIndex(cur.id) + 1).coerceAtMost(walls.size)}/${walls.size}") {
                 if (walls.isNotEmpty()) pickWall = true
             }
+            // a picture of the person's own, for every look (also those with no stock wallpaper)
+            val pickOwn = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) Thread {
+                    runCatching {
+                        val out = java.io.File(ctx.filesDir, "launcher_custom_wall_" + System.currentTimeMillis() + ".img")
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { o -> i.copyTo(o) } }
+                        ctx.filesDir.listFiles { f -> f.name.startsWith("launcher_custom_wall_") && f != out }?.forEach { it.delete() }
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { LauncherPrefs.wallFile = out.path; save() }
+                    }
+                }.start()
+            }
+            ValueRow("image", tr("Custom wallpaper", "Kendi duvar kağıdın"), if (LauncherPrefs.wallFile.isNotEmpty()) tr("On", "Açık") else "") { pickOwn.launch("image/*") }
+            if (LauncherPrefs.wallFile.isNotEmpty()) ValueRow("close", tr("Use the look's own wallpaper", "Görünümün kendi duvar kağıdını kullan"), "") { LauncherPrefs.wallFile = ""; save() }
             ValueRow("image", tr("Set as phone wallpaper", "Telefon duvar kağıdı yap"), "") {
                 val id = cur.id
                 // full-size decode is slow: off the main thread, the result is reported on it
