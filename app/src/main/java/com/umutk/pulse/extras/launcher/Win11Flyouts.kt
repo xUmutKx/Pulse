@@ -8,6 +8,7 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,7 +102,11 @@ private fun QuickFlyout(taskbar: Dp) {
                         row.forEachIndexed { c, t ->
                             val on = ons.getOrNull(r * 3 + c) == true
                             Column(Modifier.weight(1f).aspectRatio(1.5f).clip(RoundedCornerShape(4.dp)).background(if (on) hi else Color(0x33FFFFFF))
-                                .clickable { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }.padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                                // a tap works the tile; held, the tile's own page of Pulse's Settings opens in the launcher (the phone's page only for a tile Pulse has no page for)
+                                .combinedClickable(onClick = { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }, onLongClick = {
+                                    val page = when (t.en) { "Wi-Fi" -> "Wi-Fi"; "Bluetooth" -> "Bluetooth"; "Airplane mode" -> "Airplane mode"; "Cellular" -> "Mobile network"; "Mobile hotspot" -> "Mobile hotspot"; "VPN" -> "VPN"; "Battery saver" -> "Power & battery"; "Quiet hours" -> "Focus"; else -> null }
+                                    if (page != null) { SettingsJump.item = page; LauncherSession.quickOpen = false; openDesktopItem(ctx, "pulse:winsettings", "win11") } else t.run(ctx)
+                                }).padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                                 Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Text(tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }

@@ -133,10 +133,22 @@ private fun ClockFlyoutBody(lookId: String, taskbar: Dp) {
                 Text("$mins " + tr("min", "dk"), color = look.ink, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp))
                 Box(Modifier.size(30.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x33FFFFFF)).clickable { mins = (mins + 5).coerceAtMost(240) }, contentAlignment = Alignment.Center) { Text("+", color = look.ink, fontSize = 18.sp) }
                 Spacer(Modifier.weight(1f))
+                // a focus session is Pulse's own timer (work period of the minutes set); do-not-disturb goes on with it when Pulse may switch it
+                val pom = com.umutk.pulse.features.PomodoroClock
+                val running = pom.running(ctx) && pom.phase(ctx) == 0
+                val left = if (running) pom.remaining(ctx) / 1000 else 0L
                 Box(Modifier.clip(RoundedCornerShape(6.dp)).background(look.hi).clickable {
-                    QUICK.firstOrNull { it.en == "Quiet hours" }?.let { q -> if (runCatching { q.state?.invoke(ctx) == true }.getOrDefault(false).not()) q.run(ctx) }
-                    scope.launch { delay(mins * 60_000L); QUICK.firstOrNull { it.en == "Quiet hours" }?.let { q -> if (runCatching { q.state?.invoke(ctx) == true }.getOrDefault(false)) q.run(ctx) } }
-                }.padding(horizontal = 14.dp, vertical = 7.dp)) { Text("▶ " + tr("Focus", "Odaklanma"), color = Color.White, fontSize = 13.sp) }
+                    if (running) { pom.reset(ctx); pom.setOn(ctx, false) }
+                    else {
+                        pom.setLength(ctx, 0, mins * 60_000L); pom.reset(ctx); pom.setOn(ctx, true); pom.start(ctx)
+                        QUICK.firstOrNull { it.en == "Quiet hours" }?.let { q -> if (runCatching { q.state?.invoke(ctx) == true }.getOrDefault(false).not()) q.run(ctx) }
+                    }
+                }.padding(horizontal = 14.dp, vertical = 7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Glyph(if (running) "stop" else "play", Color.White, 14.dp)
+                        Text("  " + if (running) "%d:%02d".format(left / 60, left % 60) else tr("Focus", "Odaklanma"), color = Color.White, fontSize = 13.sp)
+                    }
+                }
             }
         }
     }

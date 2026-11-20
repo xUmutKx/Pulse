@@ -36,6 +36,9 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 
+/** A setting to open at once when the Settings window comes up (the quick settings tiles, held): the English name of its row. */
+object SettingsJump { var item by mutableStateOf<String?>(null) }
+
 /**
  * Settings in the look of Windows 11: a sidebar of the groups on a wide screen (one page at a time on a phone), a search box, and each
  * group's settings as rounded rows with an icon, a title, a line of description and a chevron.
@@ -47,6 +50,8 @@ internal fun Win11SettingsHome(open: (String) -> Unit, startGroup: String = "") 
     var inGroup by remember { mutableStateOf(startGroup.isNotEmpty()) }
     // a setting that is a page of the phone's own settings gets a page of its own here first (what it says now, the controls Pulse can work)
     var detail by remember { mutableStateOf<WItem?>(null) }
+    val jump = SettingsJump.item
+    androidx.compose.runtime.LaunchedEffect(jump) { if (jump != null) { WIN11_SETTINGS.flatMap { it.items }.firstOrNull { it.en == jump }?.let { detail = it }; SettingsJump.item = null } }
     val groups = WIN11_SETTINGS
     val accent = T.accent
     // Mica: the window's body is see-through for Settings and the page is tinted, so the desktop shows through it
