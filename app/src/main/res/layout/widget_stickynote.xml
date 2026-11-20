@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- a sticky note: the coloured square fills the widget; the text is cut to the first lines -->
+<!-- a sticky note: a coloured square tilted a little, as a paper note stuck on a screen (it is not set dead straight); the text is cut to the first lines -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="6dp">
-    <TextView
-        android:id="@+id/text"
+    android:padding="7dp">
+    <FrameLayout
+        android:id="@+id/note"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:ellipsize="end"
-        android:maxLines="12"
-        android:textColor="#FF222222"
-        android:textSize="12sp" />
+        android:rotation="-2.5"
+        android:elevation="3dp"
+        android:padding="7dp">
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:ellipsize="end"
+            android:maxLines="12"
+            android:textColor="#FF222222"
+            android:textSize="12sp" />
+    </FrameLayout>
 </FrameLayout>

@@ -17,6 +17,7 @@ object StickyStore {
     val colors = longArrayOf(0xFFFFF59DL, 0xFF9ED8FFL, 0xFFB9F6A7L, 0xFFFFB3D9L, 0xFFD9D9D9L)
 
     fun argb(color: Int): Int = colors[color.coerceIn(0, colors.lastIndex)].toInt()
+    val count: Int get() = colors.size
 
     private fun prefs(c: Context) = c.getSharedPreferences("sticky_notes", Context.MODE_PRIVATE)
 

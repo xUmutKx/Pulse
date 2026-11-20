@@ -896,6 +896,8 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quick" />
         </receiver>
         <!-- sticky note editor, opened by a tap on a sticky note widget (its own look store, see StickyNoteActivity) -->
+        <!-- the sticky note written on in place: the note card over the home screen where its widget is -->
+        <activity android:name="com.umutk.pulse.extras.stickynote.StickyQuickActivity" android:exported="false" android:theme="@style/Theme.Pulse.Floating" android:excludeFromRecents="true" android:taskAffinity="" android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.umutk.pulse.extras.stickynote.StickyNoteActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:windowSoftInputMode="adjustResize" />
         <!-- sticky notes: one note per widget; a tap opens the editor (StickyNoteActivity) -->
         <receiver android:name="com.umutk.pulse.widgets.StickyNoteWidget" android:label="Pulse · Sticky note" android:exported="false">
