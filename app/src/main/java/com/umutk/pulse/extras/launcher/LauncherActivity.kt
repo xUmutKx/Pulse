@@ -64,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.zIndex
@@ -287,6 +288,18 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                 Modifier.offset(x.dp, y.dp).width(boxW.dp).zIndex(if (drag != null) 2f else 0f).onGloballyPositioned { origin = it.positionInRoot() }
                     // a little smaller and a touch see-through while it is carried
                     .graphicsLayer { val k = if (drag != null) .9f else 1f; scaleX = k; scaleY = k; alpha = if (drag != null) .85f else 1f }
+                    // a mouse's right button opens the icon's menu at once, as on a computer (the long press stays for the finger)
+                    .pointerInput(app.pkg) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                if (e.type == androidx.compose.ui.input.pointer.PointerEventType.Press && e.buttons.isSecondaryPressed) {
+                                    e.changes.forEach { it.consume() }
+                                    LauncherSession.pressAt = origin + (e.changes.firstOrNull()?.position ?: androidx.compose.ui.geometry.Offset.Zero); state.longPress(app)
+                                }
+                            }
+                        }
+                    }
                     .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg], col, row, cellW, cellH, inset) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
                             onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW + inset), free?.get(1) ?: (row * cellH)) },
