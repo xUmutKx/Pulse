@@ -854,6 +854,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // (an editor that declares no input type at all, a custom text box of an app, is treated the same way: its keys are plain, but the bar opens with the usual words)
         val nTerm = info.inputType == 0
         st.terminal = nTerm
+        // the command words (ls, cd, git ...) only in a real terminal (Termux and the like) or Pulse's own code editor; any other app's box with no input type gets the usual words
+        termApp = nTerm && info.packageName.orEmpty().let { p -> p.startsWith("com.termux") || p == packageName || "terminal" in p.lowercase() || "ssh" in p.lowercase() || p.startsWith("jackpal") }
         val changed = nAuto != noAuto || nPlain != st.plain || nEmail != emailField || nUri != uriField || nName != nameField
         noAuto = nAuto; st.plain = nPlain; emailField = nEmail; uriField = nUri; nameField = nName
         passwordField = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
@@ -2876,7 +2878,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (currentInputConnection == null || (currentInputEditorInfo?.inputType == 0 && !st.terminal)) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         if (st.trans) scheduleTrans()
         // a terminal (Termux): no word is open and nothing is mended, but the bar offers the commands and the words typed there before
-        if (st.terminal && st.plain && KeyboardPrefs.suggestions) { termSuggestions(); return }
+        if (st.terminal && termApp && st.plain && KeyboardPrefs.suggestions) { termSuggestions(); return }
         if (runCatching { loginSuggestions() }.getOrDefault(false)) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
@@ -3009,6 +3011,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         termSeen.merge(w, 1, Int::plus)
         if (termSeen.size > 400) termSeen.remove(termSeen.keys.first())
     }
+
+    /** The field is a terminal (or the code editor): the bar offers commands. */
+    private var termApp = false
 
     private fun termSuggestions() {
         val t = termWord.toString()

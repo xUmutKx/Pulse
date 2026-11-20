@@ -35,6 +35,12 @@ object OnlineArt {
                 c.disconnect()
             }
         }
-        return runCatching { BitmapFactory.decodeFile(f.path)?.asImageBitmap() }.getOrNull()
+        // a video picture (16:9, often with black bars) is cut to the square in its middle, so the cover fills its square with no empty sides
+        return runCatching {
+            val b = BitmapFactory.decodeFile(f.path) ?: return@runCatching null
+            val side = minOf(b.width, b.height)
+            val sq = if (b.width == b.height) b else android.graphics.Bitmap.createBitmap(b, (b.width - side) / 2, (b.height - side) / 2, side, side)
+            sq.asImageBitmap()
+        }.getOrNull()
     }
 }

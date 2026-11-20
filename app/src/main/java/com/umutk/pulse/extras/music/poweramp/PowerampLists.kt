@@ -526,11 +526,10 @@ private fun SongList(itemsIn: List<IndexedValue<Track>>, current: Track?, style:
             if (q.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = style.textDim, modifier = Modifier.size(20.dp).clickable { q = "" })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Play on the left, Shuffle in the middle, the number of songs and the view button at the right edge
+            // Play and Shuffle side by side on the left, the number of songs and the view button at the right edge
             headerExtra()
             // (a page with its play and shuffle floating over the cover has no pair here)
             if (!hidePlay) ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
-            Spacer(Modifier.weight(1f))
             if (!hidePlay) ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
             Spacer(Modifier.weight(1f))
             Text("${items.size}", color = style.textDim, fontSize = 13.sp)
