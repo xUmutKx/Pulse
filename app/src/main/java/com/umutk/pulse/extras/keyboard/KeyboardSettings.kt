@@ -191,6 +191,7 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             Text(tr("The chosen language shows its keys; both languages correct and suggest together. A language without a word list downloads one.", "Seçili dilin tuşları görünür; iki dil birlikte düzeltir ve öneri verir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            LayoutsBlock(save)
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
             Switch(tr("Key bar", "Tuş çubuğu"), tr("Fn (F1 to F12), Shift, arrows, Home, End, Page up and down, Esc, Tab, select all, copy, paste", "Fn (F1-F12), Shift, oklar, Home, End, Page up ve down, Esc, Tab, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Text(tr("Key beside ?123", "?123 yanındaki tuş"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
@@ -1181,4 +1182,65 @@ private fun CapChip(label: String, selected: Boolean, color: Int?, wide: Boolean
     Box(Modifier.size(width = if (wide) 84.dp else 26.dp, height = 30.dp).clip(sh).background(color?.let { Color(it) } ?: T.text.copy(alpha = .08f)).border(if (selected) 2.dp else 1.dp, if (selected) T.accent else T.text.copy(alpha = .15f), sh).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Text(if (label.length == 1) label else label.take(3), color = if (color != null && Color(color).luminance() > .55f) Color.Black else T.text, fontSize = if (label.length == 1) 13.sp else 10.sp, maxLines = 1)
     }
+}
+
+/** The person's own letter layouts: pick one, make a new one, edit, import a layout file, share one. */
+@Composable
+private fun LayoutsBlock(save: () -> Unit) {
+    val ctx = LocalContext.current
+    var rev by remember { mutableStateOf(0) }
+    val base = KeyboardPrefs.langList().first()
+    val list = remember(rev, KeyboardPrefs.layoutRev) { KbCustomLayouts.all(ctx).filter { it.base == base } }
+    val active = remember(rev, KeyboardPrefs.layoutRev) { KbCustomLayouts.activeId(ctx, base) }
+    var editId by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
+        if (uri != null) {
+            val t = runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }.getOrNull().orEmpty()
+            val l = KbCustomLayouts.parse(t, uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "Layout")
+            if (l == null) note = tr("No letter rows found in that file", "Dosyada harf satırı bulunamadı")
+            else { KbCustomLayouts.save(ctx, null, l.name, l.base, l.rows); note = tr("Imported: ", "İçe aktarıldı: ") + l.name; rev++; save() }
+        }
+    }
+    Text(tr("Letter layout", "Harf düzeni"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PChip(active == null, tr("Standard", "Standart")) { KbCustomLayouts.use(ctx, base, null); rev++; save() }
+        list.forEach { l -> PChip(active == l.id, l.name) { KbCustomLayouts.use(ctx, base, l.id); rev++; save() } }
+        PChip(false, "+ " + tr("New", "Yeni")) { editId = null; name = ""; text = KeyboardLayouts.lang(base).rows.joinToString("\n"); editing = true }
+        PChip(false, tr("Import", "İçe aktar")) { pick.launch(arrayOf("text/*", "application/octet-stream")) }
+    }
+    val cur = list.firstOrNull { it.id == active }
+    if (cur != null && !editing) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PChip(false, tr("Edit", "Düzenle")) { editId = cur.id; name = cur.name; text = cur.rows.joinToString("\n"); editing = true }
+        PChip(false, tr("Share", "Paylaş")) {
+            runCatching { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, KbCustomLayouts.export(cur)), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+        PChip(false, tr("Delete", "Sil")) { KbCustomLayouts.delete(ctx, cur.id); rev++; save() }
+    }
+    if (editing) {
+        PField(name, { name = it }, tr("Layout name", "Düzen adı"), Modifier.fillMaxWidth())
+        PField(text, { text = it }, tr("One row of letters per line", "Her satıra bir harf sırası"), Modifier.fillMaxWidth())
+        // the keys as they will look
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+            text.lines().filter { it.isNotBlank() }.take(5).forEach { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    KbCustomLayouts.keysOf(r).take(14).forEach { k ->
+                        Box(Modifier.weight(1f).height(26.dp).clip(RoundedCornerShape(5.dp)).background(T.text.copy(alpha = .12f)), contentAlignment = Alignment.Center) { Text(k, color = T.text, fontSize = 12.sp) }
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Save", "Kaydet"), compact = true) {
+                val rows = text.lines().filter { it.isNotBlank() }
+                if (rows.isEmpty() || rows.any { KbCustomLayouts.keysOf(it).size > 14 }) note = tr("Up to 14 keys a row, at least one row", "Satır başına en çok 14 tuş, en az bir satır")
+                else { KbCustomLayouts.save(ctx, editId, name, base, rows); editing = false; note = ""; rev++; save() }
+            }
+            PButton(tr("Cancel", "Vazgeç"), compact = true) { editing = false; note = "" }
+        }
+    }
+    if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
 }

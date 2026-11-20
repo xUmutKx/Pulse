@@ -86,6 +86,8 @@ object KeyboardPrefs {
     var suggestions by mutableStateOf(true)
     /** The tool-bar button at the left of the suggestion bar (it opens the row of tool icons); off hides it and the icons. */
     var barTools by mutableStateOf(true)
+    /** Counts changes of the person's own letter layouts, so the keys are drawn again. */
+    var layoutRev by mutableStateOf(0)
     /** The look of the emoji board: "same" (the keyboard's own) or the id of one of the keyboard themes. */
     var emojiTheme by mutableStateOf("same")
     var autocorrect by mutableStateOf(true)
@@ -261,6 +263,7 @@ object KeyboardPrefs {
     fun load(c: Context) {
         if (loaded) return
         loaded = true
+        runCatching { KbCustomLayouts.all(c) }
         val p = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         // once: the extra keys (arrows, Ctrl, ...) sit under the space row from now on
         if (p.getInt("ver", 0) < 2) p.edit().putBoolean("proRow", true).putBoolean("proBottom", true).putInt("ver", 2).apply()

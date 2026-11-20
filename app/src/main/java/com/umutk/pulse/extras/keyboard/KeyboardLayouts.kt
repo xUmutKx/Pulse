@@ -32,7 +32,12 @@ object KeyboardLayouts {
     /** The word list a layout uses: both Turkish layouts share one. */
     fun dict(code: String) = if (code == "trf") "tr" else code
 
-    fun lang(code: String): Lang = all.firstOrNull { it.code == code } ?: en
+    fun lang(code: String): Lang {
+        val b = all.firstOrNull { it.code == code } ?: en
+        // a layout of the person's own, switched on for this language: its rows, the language's own long presses and capitals
+        val rows = KbCustomLayouts.rowsFor(b.code)?.map { r -> r.filter { c -> !c.isWhitespace() } } ?: return b
+        return Lang(b.code, b.name, rows, b.locale, b.alts)
+    }
 
     /** The letter rows of [code] as keys; [upper] gives capital letters. Without the number row the top letters carry their digit on long press. */
     fun letterRows(code: String, upper: Boolean, digitsOnPress: Boolean): List<List<KbKey>> {

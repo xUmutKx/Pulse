@@ -862,7 +862,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val digits = !numRow && KeyboardPrefs.longPressSymbols
     val langs = KeyboardPrefs.langList()
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
-    val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
+    val rows = run { KeyboardPrefs.layoutRev; KeyboardLayouts.letterRows(lang.code, up, digits) }
     val n1 = rows[0].size.toFloat()
     // the direction keyboard: nine swipe keys (letters page only; the symbol pages stay the ordinary ones)
     if (KeyboardPrefs.dirLayout && st.page == 0) { ThumbPanel(th, st, act, keyH); return }
