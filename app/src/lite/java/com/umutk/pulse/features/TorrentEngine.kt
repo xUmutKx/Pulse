@@ -17,4 +17,8 @@ object TorrentEngine {
         throw IOException("this build has no torrent engine (it is in the free-software full build)")
     @Suppress("UNUSED_PARAMETER")
     fun done(file: File) {}
+    /** Plays a torrent while it downloads (the free-software full build): not here. */
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun stream(ctx: Context, magnet: String, onStatus: (String) -> Unit): String? = null
+    fun stopStream() {}
 }

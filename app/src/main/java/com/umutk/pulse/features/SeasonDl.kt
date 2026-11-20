@@ -326,6 +326,30 @@ object SeasonDl {
         }.isSuccess
     }
 
+    /**
+     * Plays the best of [all] at once: a plain link (or the local server's) straight in the player; a torrent through the engine's own small server on the phone, which hands the
+     * player the file as its pieces arrive (the first pieces are fetched before it opens). [onStatus] tells the progress. Returns what to show ("" when the player opened).
+     */
+    suspend fun playBest(ctx: Context, all: List<Pick>, limit: Long, onStatus: (String) -> Unit): String {
+        if (all.isEmpty()) return tr("No stream found", "Yayın bulunamadı")
+        val direct = all.filter { it.url.startsWith("http") }.sortedByDescending { maxOf(it.seeds, 0) }.firstOrNull()
+        if (direct != null && watch(ctx, direct.url)) return ""
+        val torrents = all.filter { it.url.startsWith("magnet:") }
+        if (torrents.isEmpty()) return tr("Could not open the stream", "Yayın açılamadı")
+        if (!TorrentEngine.available) return tr("This phone cannot run the torrent engine (64-bit only): set a local torrent server, or use an add-on with direct links", "Bu telefon torrent motorunu çalıştıramıyor (yalnız 64 bit): yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
+        // the best shared ones first, then the ones near the size wanted; if one does not start, the next is tried
+        val order = (torrents.sortedByDescending { it.seeds } .take(3) + ranked(torrents, limit).take(2)).distinctBy { it.url }
+        var last = ""
+        for (t in order) {
+            try {
+                val u = TorrentEngine.stream(ctx, t.url, onStatus)
+                if (u != null && watch(ctx, u)) return ""
+                if (u == null) return tr("Watching torrents is not in this build: download it instead, or set a local torrent server", "Torrent'i indirmeden izleme bu sürümde yok: indir ya da yerel torrent sunucusu kullan")
+            } catch (e: java.io.IOException) { last = e.message.orEmpty() }
+        }
+        return tr("The torrent did not start: ", "Torrent başlamadı: ") + last
+    }
+
     /** The address of a stream: a plain link as it is; a torrent as a magnet link (the file number goes along when the stream names one). */
     private fun streamUrl(s: JSONObject): String? {
         s.optString("url").takeIf { it.startsWith("http") }?.let { return it }
@@ -793,10 +817,7 @@ object SeasonDl {
                             busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
                             scope.launch {
                                 val all = runCatching { streams(addon, Ep(sel.id, 0, 0, ""), "movie") }.getOrDefault(emptyList())
-                                // a stream that plays straight away (a plain link or the local server) first; the best-seeded one of those
-                                val direct = all.filter { it.url.startsWith("http") }.sortedByDescending { maxOf(it.seeds, 0) }.firstOrNull()
-                                note = if (direct != null && watch(ctx, direct.url)) "" else if (all.isEmpty()) tr("No stream found", "Yayın bulunamadı") else tr("These streams are torrents: set a local torrent server or an add-on with direct links to watch at once", "Bu yayınlar torrent: hemen izlemek için yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
-                                busy = false
+                                try { note = playBest(ctx, all, limit()) { note = it } } catch (e: Throwable) { if (e is kotlinx.coroutines.CancellationException) throw e; note = e.message.orEmpty() } finally { busy = false }
                             }
                         }
                         if (movies) PButton(tr("Download the movie (up to ${mb} MB)", "Filmi indir (en çok ${mb} MB)"), Modifier.fillMaxWidth()) {
@@ -904,8 +925,7 @@ object SeasonDl {
                                                 note = tr("Finding the stream…", "Yayın aranıyor…")
                                                 scope.launch {
                                                     val all = runCatching { streams(addon, ep) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()
-                                                    val direct = all.filter { it.url.startsWith("http") }.sortedByDescending { maxOf(it.seeds, 0) }.firstOrNull()
-                                                    note = if (direct != null && watch(ctx, direct.url)) "" else if (all.isEmpty()) tr("No stream found", "Yayın bulunamadı") else tr("These streams are torrents: set a local torrent server or an add-on with direct links to watch at once", "Bu yayınlar torrent: hemen izlemek için yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
+                                                    note = try { playBest(ctx, all, limit()) { note = it } } catch (e: Throwable) { if (e is kotlinx.coroutines.CancellationException) throw e; e.message.orEmpty() }
                                                 }
                                             }.padding(6.dp)) { PIcon("play", T.accent, 20.dp) }
                                             androidx.compose.foundation.layout.Box(Modifier.clickable { grab(listOf(ep)) }.padding(6.dp)) { PIcon("download", T.text, 20.dp) }

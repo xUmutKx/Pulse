@@ -287,4 +287,149 @@ object TorrentEngine {
         val busy = synchronized(lock) { uses.values.any { it.dir == dir } }
         if (!busy) runCatching { dir.deleteRecursively() }
     }
+
+    // ---- watching while it downloads -------------------------------------------------------------------------------------------------------------------
+
+    /** The torrent being watched: its handle, and the small web server on this phone that gives the player the file's bytes as the pieces arrive. */
+    private class Live(val hash: String, val use: Use, val server: java.net.ServerSocket, val pick: Int) { @Volatile var closed = false }
+    @Volatile private var live: Live? = null
+
+    /**
+     * Starts the wanted file of [magnet] and returns an address on this phone (http://127.0.0.1:…) that Pulse's video player can open at once: it answers the player's
+     * range requests from the torrent, asking for the pieces it needs next first (so it plays while the rest still comes, and a jump forward fetches that part). It returns when the
+     * first pieces and the last one (a video's index may be there) are in. [onStatus] gets what is going on (engine, peers, buffering). Null when nothing could be started.
+     * Only one torrent is watched at a time: the one before it is let go.
+     */
+    suspend fun stream(ctx: Context, magnet: String, onStatus: (String) -> Unit): String? = withContext(Dispatchers.IO) {
+        stopStream()
+        if (!ready(ctx)) { onStatus(com.umutk.pulse.tr("Getting the torrent engine (6 MB)…", "Torrent motoru indiriliyor (6 MB)…")); if (!fetch(ctx)) throw IOException("the torrent engine could not be downloaded") }
+        System.setProperty("libtorrent4j.jni.path", libFile(ctx).absolutePath)
+        refreshTrackers(ctx)
+        val s = try { sm() } catch (e: Throwable) { throw IOException("the torrent engine could not start: ${e.message ?: e.javaClass.simpleName}") }
+        val idx = magnetParam(magnet, "pulse_idx")?.toIntOrNull() ?: -1
+        val hash = hashOf(magnet) ?: throw IOException("this magnet link could not be read")
+        val dir = File(Downloads.torrentWork(ctx), ".torrent-$hash").also { it.mkdirs() }
+        val sha = AddTorrentParams.parseMagnetUri(magnet).infoHashes.best
+        val use = synchronized(lock) {
+            (uses[hash]?.takeIf { it.h.isValid } ?: run {
+                for (i in 0 until 50) { if (s.find(sha)?.isValid != true) break; Thread.sleep(100) }
+                val p = AddTorrentParams.parseMagnetUri(withTrackers(ctx, magnet))
+                p.savePath = dir.absolutePath
+                val err = org.libtorrent4j.swig.error_code()
+                val th = s.swig().add_torrent(p.swig(), err)
+                if (err.value() != 0 || th == null || !th.is_valid) throw IOException("the torrent could not be added" + (if (err.value() != 0) ": " + err.message() else ""))
+                Use(TorrentHandle(th), dir).also { uses[hash] = it }
+            }).also { it.users++ }
+        }
+        val h = use.h
+        var pick = -1
+        var server: java.net.ServerSocket? = null
+        try {
+            var waited = 0
+            while (true) {
+                if (!h.isValid) throw IOException("the torrent left the session")
+                val st = h.status(true)
+                if (st.hasMetadata()) break
+                onStatus(com.umutk.pulse.tr("Finding peers… (${st.numPeers()})", "Kaynak aranıyor… (${st.numPeers()})"))
+                if (waited > 150_000) throw IOException("no peers answered for this torrent")
+                delay(400); waited += 400
+            }
+            val ti = h.torrentFile() ?: throw IOException("the torrent has no file list")
+            val fs = ti.files()
+            pick = pickFile(ti, idx)
+            val size = fs.fileSize(pick); val off = fs.fileOffset(pick); val pl = ti.pieceLength()
+            synchronized(lock) { use.wanted.add(pick); use.apply(ti.numFiles()) }
+            h.resume()
+            val firstP = (off / pl).toInt(); val lastP = ((off + size - 1) / pl).toInt()
+            for (k in 0 until 6) if (firstP + k <= lastP) h.setPieceDeadline(firstP + k, 800 + k * 600)
+            h.setPieceDeadline(lastP, 1500)
+            waited = 0
+            while (true) {
+                if (!h.isValid) throw IOException("the torrent left the session")
+                val need = (firstP..minOf(firstP + 1, lastP)).toList() + lastP
+                if (need.all { h.havePiece(it) }) break
+                val st = h.status(true)
+                onStatus(com.umutk.pulse.tr("Buffering… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} peers  ·  ${st.downloadPayloadRate() / 1024} KB/s", "Hazırlanıyor… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} kaynak  ·  ${st.downloadPayloadRate() / 1024} KB/s"))
+                if (waited > 240_000) throw IOException("the peers sent no data")
+                delay(500); waited += 500
+            }
+            val path = File(dir, fs.filePath(pick))
+            val ss = java.net.ServerSocket(0, 8, java.net.InetAddress.getByName("127.0.0.1")); server = ss
+            val me = Live(hash, use, ss, pick)
+            live = me
+            val ext = path.extension.lowercase().ifEmpty { "mp4" }
+            val mime = when (ext) { "mkv" -> "video/x-matroska"; "webm" -> "video/webm"; "avi" -> "video/x-msvideo"; "mov" -> "video/quicktime"; else -> "video/mp4" }
+            kotlin.concurrent.thread(isDaemon = true, name = "torrent-stream") {
+                while (!me.closed) {
+                    val c = try { ss.accept() } catch (e: Throwable) { break }
+                    kotlin.concurrent.thread(isDaemon = true, name = "torrent-stream-conn") { runCatching { serveRange(c, me, h, path, off, size, pl, lastP, mime) } }
+                }
+            }
+            "http://127.0.0.1:${ss.localPort}/stream.$ext"
+        } catch (e: Throwable) {
+            runCatching { server?.close() }
+            synchronized(lock) {
+                use.users--; use.wanted.remove(if (pick >= 0) pick else idx)
+                if (use.users <= 0) { uses.remove(hash); runCatching { s.remove(h) } }
+            }
+            throw e
+        }
+    }
+
+    /** Ends the watched torrent: its server closes, and the torrent leaves the session when no download wants it either (what was fetched stays for a later go). */
+    fun stopStream() {
+        val me = live ?: return
+        live = null
+        me.closed = true
+        runCatching { me.server.close() }
+        synchronized(lock) {
+            me.use.users--; me.use.wanted.remove(me.pick)
+            if (me.use.users <= 0) { uses.remove(me.hash); runCatching { session?.remove(me.use.h) } }
+            else if (me.use.h.isValid && me.use.h.status(true).hasMetadata()) runCatching { me.use.apply(me.use.h.torrentFile().numFiles()) }
+        }
+    }
+
+    /** One request of the player: the bytes of the range asked for, each piece waited for (and asked for first) before it is read from the torrent's folder. */
+    private fun serveRange(c: java.net.Socket, me: Live, h: TorrentHandle, path: File, off: Long, size: Long, pl: Int, lastP: Int, mime: String) {
+        c.use { sock ->
+            val rd = sock.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+            val req = rd.readLine() ?: return
+            var from = 0L; var to = size - 1; var ranged = false
+            while (true) {
+                val l = rd.readLine() ?: break
+                if (l.isEmpty()) break
+                if (l.startsWith("range:", true)) {
+                    val m = Regex("bytes=(\\d*)-(\\d*)").find(l) ?: continue
+                    val a = m.groupValues[1]; val b = m.groupValues[2]
+                    ranged = true
+                    if (a.isEmpty()) { from = (size - (b.toLongOrNull() ?: 0L)).coerceAtLeast(0L) } else { from = a.toLong(); if (b.isNotEmpty()) to = b.toLong().coerceAtMost(size - 1) }
+                }
+            }
+            if (from >= size || from > to) { sock.getOutputStream().write("HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */$size\r\nConnection: close\r\n\r\n".toByteArray()); return }
+            val out = sock.getOutputStream()
+            val head = StringBuilder()
+            head.append(if (ranged) "HTTP/1.1 206 Partial Content\r\n" else "HTTP/1.1 200 OK\r\n")
+            head.append("Content-Type: $mime\r\nAccept-Ranges: bytes\r\nContent-Length: ${to - from + 1}\r\nConnection: close\r\n")
+            if (ranged) head.append("Content-Range: bytes $from-$to/$size\r\n")
+            head.append("\r\n")
+            out.write(head.toString().toByteArray())
+            if (req.startsWith("HEAD")) return
+            val buf = ByteArray(128 * 1024)
+            var pos = from
+            var askedFrom = -1
+            java.io.RandomAccessFile(path, "r").use { raf ->
+                while (pos <= to && !me.closed && h.isValid) {
+                    val len = minOf(buf.size.toLong(), to - pos + 1).toInt()
+                    val p0 = ((off + pos) / pl).toInt(); val p1 = ((off + pos + len - 1) / pl).toInt()
+                    // the pieces from here on are asked for first (the ones right ahead most urgently)
+                    if (p0 != askedFrom) { askedFrom = p0; for (k in 0 until 6) if (p0 + k <= lastP) runCatching { h.setPieceDeadline(p0 + k, 400 + k * 500) } }
+                    while ((p0..p1).any { !h.havePiece(it) }) { if (me.closed || !h.isValid) return; Thread.sleep(120) }
+                    raf.seek(pos)
+                    val n = raf.read(buf, 0, len)
+                    if (n <= 0) { Thread.sleep(120); continue }
+                    out.write(buf, 0, n); pos += n
+                }
+            }
+        }
+    }
 }
