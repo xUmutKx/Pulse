@@ -104,7 +104,6 @@ class ChannelState(val url: String, private val scope: CoroutineScope) {
         private set
     var playlistsLoading by mutableStateOf(false)
     var plQuery by mutableStateOf("")
-        private set
     /** The orders the channel offers for its videos (Latest, Popular, Oldest) and the one shown. */
     var sorts by mutableStateOf<List<Pair<String, String>>>(emptyList())
         private set
