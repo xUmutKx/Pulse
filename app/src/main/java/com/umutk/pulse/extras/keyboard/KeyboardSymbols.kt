@@ -55,7 +55,12 @@ object KeyboardSymbols {
                 close()
             }
         }
-        val res = out.values.toList()
+        // the signs this phone's fonts cannot draw are left out (they showed as empty cells); the presets are whole texts and stay as they are
+        val paint = android.graphics.Paint()
+        val res = out.values.map { f ->
+            if (f.id == "Patterns" || android.os.Build.VERSION.SDK_INT < 23) f
+            else Family(f.id, f.en, f.tr, f.subs.map { (n, l) -> n to l.filter { paint.hasGlyph(it.ch) } }.filter { it.second.isNotEmpty() })
+        }.filter { it.subs.isNotEmpty() }
         cache = res
         return res
     }

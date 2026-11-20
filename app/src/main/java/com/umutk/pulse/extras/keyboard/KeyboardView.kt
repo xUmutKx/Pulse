@@ -1601,7 +1601,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
             LaunchedEffect(tab) { val p = EMOJI_ORDER.indexOf(tab); if (p >= 0 && pager.settledPage != p) pager.animateScrollToPage(p) }
             LaunchedEffect(pager.settledPage) { st.emojiTab = EMOJI_ORDER[pager.settledPage] }
-            androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { pg ->
+            androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f), userScrollEnabled = EMOJI_ORDER[pager.settledPage] != 11) { pg ->
                 val page = EMOJI_ORDER[pg]
                 if (page == 11) { SymbolPage(th, act, st, fams, g, sub) { sub = it }; return@HorizontalPager }
                 if (page == 12) { GifGrid(th, act); return@HorizontalPager }
@@ -1740,7 +1740,15 @@ private fun AsciiArtCell(text: String, th: KbTheme, modifier: Modifier, onCopy: 
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)
-    Column(Modifier.fillMaxSize()) {
+    val subsAll = fam?.subs.orEmpty()
+    // a swipe sideways moves between the sub-categories of this family only (it does not leave for the neighbouring top category)
+    Column(Modifier.fillMaxSize().pointerInput(g, sub, subsAll.size) {
+        var dx = 0f
+        detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragCancel = { dx = 0f }, onDragEnd = {
+            if (kotlin.math.abs(dx) > 90f) onSub((sub + if (dx < 0) 1 else -1).coerceIn(0, (subsAll.size - 1).coerceAtLeast(0)))
+            dx = 0f
+        }) { _, d -> dx += d }
+    }) {
         val subs = fam?.subs.orEmpty()
         if (subs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             subs.forEachIndexed { i, (name, _) ->
