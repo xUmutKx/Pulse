@@ -53,6 +53,8 @@ object Neuro {
         + "official video music lyrics audio full part episode hd 4k live ft feat bir ve bu için ile da de ne mi mı çok daha gibi olan en ama veya ya "
         + "resmi video klip şarkı sözleri sözlü bölüm").split(' ').toHashSet()
 
+    private val splitter = Regex("[^\\p{L}\\p{Nd}]+")
+
     private fun load() {
         if (loaded) return
         val sp = p() ?: return
@@ -103,7 +105,7 @@ object Neuro {
     // ───────── words ─────────
     /** The topic words of a title: lower case, no filler words, no numbers alone. */
     fun words(title: String): List<String> =
-        title.lowercase().split(Regex("[^\\p{L}\\p{Nd}]+")).filter { it.length >= 3 && it !in stop && !it.all(Char::isDigit) }.distinct()
+        title.lowercase().split(splitter).filter { it.length >= 3 && it !in stop && !it.all(Char::isDigit) }.distinct()
 
     private fun chKey(v: VideoItem) = (v.channelUrl ?: v.channel).trim()
 
