@@ -347,7 +347,7 @@ object TorrentEngine {
                 val st = h.status(true)
                 if (st.hasMetadata()) break
                 onStatus(com.umutk.pulse.tr("Finding peers… (${st.numPeers()})", "Kaynak aranıyor… (${st.numPeers()})"))
-                if (waited > 150_000) throw IOException("no peers answered for this torrent")
+                if (waited > 45_000) throw IOException("no peers answered for this torrent")
                 delay(400); waited += 400
             }
             val ti = h.torrentFile() ?: throw IOException("the torrent has no file list")
@@ -366,7 +366,9 @@ object TorrentEngine {
                 if (need.all { h.havePiece(it) }) break
                 val st = h.status(true)
                 onStatus(com.umutk.pulse.tr("Buffering… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} peers  ·  ${st.downloadPayloadRate() / 1024} KB/s", "Hazırlanıyor… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} kaynak  ·  ${st.downloadPayloadRate() / 1024} KB/s"))
-                if (waited > 240_000) throw IOException("the peers sent no data")
+                // a start that crawls (a few percent after half a minute) is dropped so the next, better shared torrent is tried
+                if (waited > 30_000 && st.downloadPayloadRate() < 30 * 1024 && need.none { h.havePiece(it) }) throw IOException("too slow to start")
+                if (waited > 90_000) throw IOException("the peers sent no data")
                 delay(500); waited += 500
             }
             val path = File(dir, fs.filePath(pick))

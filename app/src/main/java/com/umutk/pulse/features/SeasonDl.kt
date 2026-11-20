@@ -352,7 +352,8 @@ object SeasonDl {
         if (torrents.isEmpty()) return tr("Could not open the stream", "Yayın açılamadı")
         if (!TorrentEngine.available) return tr("This phone cannot run the torrent engine (64-bit only): set a local torrent server, or use an add-on with direct links", "Bu telefon torrent motorunu çalıştıramıyor (yalnız 64 bit): yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
         // the best shared ones first, then the ones near the size wanted; if one does not start, the next is tried
-        val order = (torrents.sortedByDescending { it.seeds } .take(3) + ranked(torrents, limit).take(2)).distinctBy { it.url }
+        // the best shared first, whatever the size (a well seeded 3 GB file starts at once; a 700 MB one with few peers never does)
+        val order = torrents.sortedByDescending { it.seeds }.take(6).distinctBy { it.url }
         var last = ""
         for (t in order) {
             try {

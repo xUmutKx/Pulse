@@ -624,7 +624,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
                 val plainLen = st.slots.map { if (it.startsWith("\u0001") || it.startsWith("\u0002")) 0 else it.length }
-                val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
+                val crowded = false && st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
                 st.slots.forEachIndexed { i, s0 ->
                     val s = if (crowded && i == 2) "" else s0
                     // the copied item and the photo in the right slot get a wider place to tap
