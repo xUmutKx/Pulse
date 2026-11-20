@@ -61,7 +61,9 @@ fun LyricsEditor(res: LyricsResult, positionMs: Long, onSave: (LyricsResult) -> 
         val out = if (synced) lines.sortedBy { if (it.timeMs < 0) Long.MAX_VALUE else it.timeMs } else lines.toList()
         onSave(LyricsResult(out.filter { it.text.isNotBlank() || it.timeMs >= 0 }, synced, res.source))
     }
-    Column(modifier.background(T.bg)) {
+    // on the Blended look the blurred cover shows behind the editor too, not a black sheet
+    val blended = com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(androidx.compose.ui.platform.LocalContext.current)
+    Column(modifier.background(if (blended) Color.Transparent else T.bg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { PIcon("close", T.text, 22.dp) }
             Text(tr("Edit lyrics", "Sözleri düzenle"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))

@@ -311,8 +311,9 @@ class AlarmAudioService : Service() {
             val maxStreamVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
             previousStreamVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
 
+            // a forced full volume (the awake check ringing again) no longer jumps there at once: it rises step by step from the level that was set
             val targetStreamVolume = if (forceMaxVolume) {
-                maxStreamVolume
+                (previousStreamVolume ?: 1).coerceIn(1, maxStreamVolume)
             } else {
                 (maxStreamVolume * targetNormalizedVolume)
                     .roundToInt()
@@ -322,6 +323,16 @@ class AlarmAudioService : Service() {
                 am.setStreamVolume(AudioManager.STREAM_ALARM, targetStreamVolume, 0)
             } catch (se: SecurityException) {
                 Log.w(TAG, "Unable to change STREAM_ALARM volume due to DND policy", se)
+            }
+            if (forceMaxVolume && targetStreamVolume < maxStreamVolume) {
+                serviceScope.launch {
+                    var v = targetStreamVolume
+                    while (v < maxStreamVolume) {
+                        kotlinx.coroutines.delay(2500)
+                        v++
+                        try { am.setStreamVolume(AudioManager.STREAM_ALARM, v, 0) } catch (_: SecurityException) { break }
+                    }
+                }
             }
 
             val focusReq = AudioFocusRequest
@@ -356,6 +367,7 @@ class AlarmAudioService : Service() {
                     setDataSource(applicationContext, fallback)
                 }
                 isLooping = true
+                // (the player itself stays at full; the system's alarm volume is what rises)
                 setVolume(targetNormalizedVolume, targetNormalizedVolume)
                 prepare()
                 start()
