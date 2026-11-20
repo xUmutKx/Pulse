@@ -346,12 +346,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25BA " + shownCur, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         // the same line as before: nothing to do, unless the notification was swiped away (checked every few seconds), then it comes back
         val now = android.os.SystemClock.uptimeMillis()
-        if (text == noteText) {
-            if (now - lastCheck < 3000) return
-            lastCheck = now
-            if (nm.activeNotifications.any { it.id == 4106 }) return
-        }
-        lastCheck = now
+        // swiped away by the person: it stays away for the rest of this song (it used to come back every few seconds)
+        if (dismissedFor == t.path) return
+        if (text == noteText && now - lastCheck < 3000) return
+        // posted a while ago and no longer there: it was swiped away
+        if (noteText != null && now - postedAt > 1500 && nm.activeNotifications.none { it.id == 4106 }) { dismissedFor = t.path; noteText = null; return }
+        if (text == noteText) { lastCheck = now; return }
+        lastCheck = now; postedAt = now
         noteText = text
         // the whole current line is also set in a real bold style, which covers the letters the Unicode bold cannot (ç ş ğ ı ...) on phones that keep spans
         val bold = android.text.SpannableStringBuilder(text).also { sp ->
@@ -363,19 +364,25 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val boldLen2 = if (sung >= 0) LiveLyrics.collapsed(ctx, trio.second.take(k)).length else collapsedCur.length
         val boldLine = android.text.SpannableString(collapsedCur).also { if (boldLen2 > 0) it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, boldLen2, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
         // low importance: the lyric line sits in the shade and never pops up over the screen (the channel is new, the old one kept its pop-up setting)
-        if (android.os.Build.VERSION.SDK_INT >= 26) { nm.deleteNotificationChannel("pulse_lyrics"); nm.deleteNotificationChannel("pulse_lyrics2") }
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics3", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit
+        // the least importance: no icon in the status bar, the lines show only in the opened shade (the channel is new: an old one keeps its importance)
+        if (android.os.Build.VERSION.SDK_INT >= 26 && !channelMade) { channelMade = true; listOf("pulse_lyrics", "pulse_lyrics2", "pulse_lyrics3").forEach { nm.deleteNotificationChannel(it) } }
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics4", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_MIN).apply { setSound(null, null); enableVibration(false) }) else Unit
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "lyrics").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
-        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics3").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
+        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics4").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
-            .setOngoing(true).setOnlyAlertOnce(true).setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
             // on the lock screen a tap cannot open Pulse (it would ask for the unlock and the screen locks again), so the line has no tap target there
             .setContentIntent(if (lockedNow()) null else open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
             // public: the lock screen shows the lines, not only "notification hidden"
             .setVisibility(if (LiveLyrics.lockScreen(ctx)) androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC else androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE).build())
     }
+
+    /** The song whose lyrics notification was swiped away (it is not put back until the next song). */
+    private var dismissedFor: String? = null
+    private var channelMade = false
+    private var postedAt = 0L
 
     private fun clearNote() { if (noteText != null) { noteText = null; nm.cancel(4106) } }
 
