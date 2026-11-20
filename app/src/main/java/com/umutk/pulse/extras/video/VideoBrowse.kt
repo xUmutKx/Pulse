@@ -281,18 +281,18 @@ fun VideoHub(onBack: () -> Unit) {
                     SkinBtn(sk, { selMenu = true }) { com.umutk.pulse.extras.ui.TIcon("more", sk.topFg, 24.dp, sk.icons) }
                     DropdownMenu(selMenu, { selMenu = false }, containerColor = Color(0xF2101010)) {
                         val one = chosen.singleOrNull()
-                        val items = buildList<Pair<String, () -> Unit>> {
-                            add(tr("Select all", "Hepsini seç") to { sel = sel + list.map { it.key } + folders.flatMap { f -> f.vids.map { it.key } } })
+                        val items = buildList<Triple<String, String, () -> Unit>> {
+                            add(Triple(tr("Select all", "Hepsini seç"), "selectAll", { sel = sel + list.map { it.key } + folders.flatMap { f -> f.vids.map { it.key } } }))
                             if (one != null) {
-                                add(tr("Play", "Oynat") to { act(0, one) })
-                                add(tr("Info", "Bilgi") to { act(1, one) })
-                                add(tr("Share", "Paylaş") to { act(2, one) })
-                                add(tr("Rename", "Yeniden adlandır") to { act(3, one) })
+                                add(Triple(tr("Play", "Oynat"), "play", { act(0, one) }))
+                                add(Triple(tr("Info", "Bilgi"), "info", { act(1, one) }))
+                                add(Triple(tr("Share", "Paylaş"), "share", { act(2, one) }))
+                                add(Triple(tr("Rename", "Yeniden adlandır"), "rename", { act(3, one) }))
                             }
-                            add(tr("Hide folder", "Klasörü gizle") to { prefs.hidden = prefs.hidden + chosen.map { fk(it) }; sel = emptySet(); rev++ })
-                            add(tr("Mark unplayed", "Oynanmadı say") to { chosen.forEach { prefs.forget(it.key) }; sel = emptySet(); rev++ })
+                            add(Triple(tr("Hide folder", "Klasörü gizle"), "eyeOff", { prefs.hidden = prefs.hidden + chosen.map { fk(it) }; sel = emptySet(); rev++ }))
+                            add(Triple(tr("Mark unplayed", "Oynanmadı say"), "history", { chosen.forEach { prefs.forget(it.key) }; sel = emptySet(); rev++ }))
                         }
-                        items.forEach { (n, f) -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, onClick = { selMenu = false; f() }) }
+                        items.forEach { (n, k, f) -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, leadingIcon = { com.umutk.pulse.PIcon(k, Color.White, 20.dp) }, onClick = { selMenu = false; f() }) }
                     }
                 }
             } else {
@@ -429,7 +429,8 @@ private fun MoreMenu(sk: VSkin, size: androidx.compose.ui.unit.Dp, icon: android
     Box {
         SkinBtn(sk, { open = true }, size) { com.umutk.pulse.extras.ui.TIcon("more", sk.sub, icon, sk.icons) }
         DropdownMenu(open, { open = false }, containerColor = Color(0xF2101010)) {
-            videoActs().forEachIndexed { i, n -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, onClick = { open = false; onAct(i) }) }
+            val keys = listOf("play", "info", "share", "rename", "delete", "eyeOff", "history")
+            videoActs().forEachIndexed { i, n -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, leadingIcon = { com.umutk.pulse.PIcon(keys[i], Color.White, 20.dp) }, onClick = { open = false; onAct(i) }) }
         }
     }
 }
