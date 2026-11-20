@@ -10,6 +10,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -106,15 +110,42 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
         onDispose { host.stopListening() }
     }
     if (placed.isEmpty()) return
+    // a widget held for a moment gets its controls: take it off, move it left or right, done
+    var editId by remember { mutableStateOf<Int?>(null) }
+    fun move(id: Int, by: Int) {
+        val l = LauncherPrefs.widgets.toMutableList()
+        val i = l.indexOfFirst { it.startsWith("$id|") }
+        val j = i + by
+        if (i < 0 || j !in l.indices) return
+        val t = l[i]; l[i] = l[j]; l[j] = t
+        LauncherPrefs.widgets = l; LauncherPrefs.save(ctx)
+    }
     Row(modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp)) {
         placedWidgets().forEach { w ->
             val info = mgr.getAppWidgetInfo(w.id) ?: return@forEach
             key(w.id) {
-                AndroidView(
-                    factory = { c -> host.createView(c, w.id, info) },
-                    update = { it.setAppWidget(w.id, info) },
-                    modifier = Modifier.width(info.minWidth.coerceAtLeast(40).dp).height(info.minHeight.coerceAtLeast(40).dp).padding(end = 8.dp),
-                )
+                Box(Modifier.padding(end = 8.dp)
+                    // the press is only watched (the widget still gets its touches); held without lifting it is the long press
+                    .pointerInput(w.id) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val up = kotlinx.coroutines.withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) }
+                            if (up == null) editId = w.id
+                        }
+                    }) {
+                    AndroidView(
+                        factory = { c -> host.createView(c, w.id, info) },
+                        update = { it.setAppWidget(w.id, info) },
+                        modifier = Modifier.width(info.minWidth.coerceAtLeast(40).dp).height(info.minHeight.coerceAtLeast(40).dp),
+                    )
+                    if (editId == w.id) Row(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .62f)).clickable { editId = null }, horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        @Composable fun dot(icon: String, go: () -> Unit) = Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color.White.copy(alpha = .18f)).clickable(onClick = go), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon(icon, androidx.compose.ui.graphics.Color.White, 20.dp) }
+                        dot("back") { move(w.id, -1) }
+                        dot("close") { editId = null; removeWidget(ctx, w.id) }
+                        dot("check") { editId = null }
+                        dot("forward") { move(w.id, 1) }
+                    }
+                }
             }
         }
     }
