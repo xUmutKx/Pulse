@@ -400,6 +400,15 @@ object KeyboardPrefs {
             menuItems = mn.joinToString(",")
             p.edit().putBoolean("scanMenu209", true).putString("menuItems", menuItems).apply()
         }
+        // once: the Calculator, Convert, Stickers and Grammar tiles leave the menu (they can be put back in the settings) and Notes joins it
+        if (!p.getBoolean("trimMenu2011", false)) {
+            val drop = setOf("calc", "convert", "stickers", "grammar")
+            val mn = menuItems.split(',').filter { it.isNotBlank() && it !in drop }.toMutableList()
+            if ("notes" !in mn) mn.add(minOf(mn.indexOf("dict") + 1, mn.size).coerceAtLeast(0), "notes")
+            menuItems = mn.joinToString(",")
+            toolbarItems = toolbarItems.split(',').filter { it.isNotBlank() && it !in drop }.joinToString(",")
+            p.edit().putBoolean("trimMenu2011", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
+        }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again

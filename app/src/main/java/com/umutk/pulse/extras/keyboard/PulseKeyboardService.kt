@@ -1859,6 +1859,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** The answer of the sum before the cursor, offered in the middle slot (written as it stands when tapped). */
+    private var ratesAsked = 0L
+    /** "35$", "20 eur", "£8": the amount in lira (and "500 tl" in dollars), offered in the middle of the bar; a tap writes it after the amount. The rates are the calculator's (kept on the phone, refreshed every few hours). */
+    private fun currencyAnswer(before: String): String? {
+        val m = Regex("""(?:^|[\s(])([0-9]+(?:[.,][0-9]{1,2})?)\s?(\$|€|£|usd|eur|gbp|dolar|euro|tl|₺|try)$""", RegexOption.IGNORE_CASE).find(before)
+        val (num, sym) = if (m != null) m.groupValues[1] to m.groupValues[2] else {
+            val m2 = Regex("""(?:^|[\s(])(\$|€|£)\s?([0-9]+(?:[.,][0-9]{1,2})?)$""").find(before) ?: return null
+            m2.groupValues[2] to m2.groupValues[1]
+        }
+        val v = num.replace(',', '.').toDoubleOrNull() ?: return null
+        val from = when (sym.lowercase()) { "$", "usd", "dolar" -> "USD"; "€", "eur", "euro" -> "EUR"; "£", "gbp" -> "GBP"; else -> "TRY" }
+        val to = if (from == "TRY") "USD" else "TRY"
+        if (com.umutk.pulse.extras.calculator.Rates.updated == 0L) com.umutk.pulse.extras.calculator.Rates.load(this)
+        if (System.currentTimeMillis() - com.umutk.pulse.extras.calculator.Rates.updated > 6 * 3600_000L && System.currentTimeMillis() - ratesAsked > 600_000L) { ratesAsked = System.currentTimeMillis(); scope.launch { if (com.umutk.pulse.extras.calculator.Rates.refresh(this@PulseKeyboardService)) updateSuggestions() } }
+        val r = com.umutk.pulse.extras.calculator.Rates.rates; val a = r[from] ?: return null; val b = r[to] ?: return null
+        val out = v / a * b
+        val txt = java.math.BigDecimal(out).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        return " ≈ $txt " + if (to == "TRY") "TL" else to
+    }
+
     private var calcText: String? = null
 
     override fun slot(i: Int) {
@@ -2156,6 +2175,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             // holding the emoji key: the GIF page of the emoji panel
             "gif" -> { finishWord("", false); st.emojiQuery = null; st.gifSearch = false; st.emojiTab = 12; st.panel = "emoji" }
+            "notes" -> runCatching { startActivity(android.content.Intent().setClassName(this, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "notes").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
             "stickers" -> st.panel = if (st.panel == "stickers") "keys" else "stickers"
             // the grammar check: the selected text, else the paragraph before the cursor, put right (spaces, repeated words, capitals, apostrophes)
             "grammar" -> {
@@ -2921,7 +2941,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         calcText = null
         if (!st.plain) runCatching {
             val bt = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty()
-            val ans = KbCalc.answerFor(bt)
+            val ans = KbCalc.answerFor(bt) ?: currencyAnswer(bt)
             if (ans != null) { calcText = ans; slotWords = arrayOf("", "", ""); st.slots = listOf("", ans.trim(), ""); target = null; return }
         }
         detectLang()
