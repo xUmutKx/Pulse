@@ -883,7 +883,7 @@ fun GameHubHub(onBack: () -> Unit) {
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
-    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "cdrack") ?: "cdrack") }
+    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "boxshelf") ?: "boxshelf") }
     val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
     var setupOpen by remember { mutableStateOf(firstUse) }
@@ -1132,7 +1132,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("cdrack" to tr("CD rack (default)", "CD rafı (varsayılan)"), "boxshelf" to tr("Boxshelf 3D", "Boxshelf 3B")).forEach { (k, label) ->
+                        listOf("cdrack" to tr("CD rack", "CD rafı"), "boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)")).forEach { (k, label) ->
                             Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
                         }
                     }
