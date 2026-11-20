@@ -76,6 +76,10 @@ class KbState {
     var authCodes by mutableStateOf(listOf<Pair<String, String>>())
     /** The password manager panel: what is searched for, and the logins shown (name, user name, true when it fits the app in front). */
     var vaultQuery by mutableStateOf("")
+    /** The Dictionary panel: the word, what was found for it, and whether the search is running. */
+    var dictQuery by mutableStateOf("")
+    var dictText by mutableStateOf("")
+    var dictBusy by mutableStateOf(false)
     var vaultRows by mutableStateOf(listOf<Triple<String, String, Boolean>>())
     /** The period (seconds) of each code above, in the same order. */
     var authPeriods by mutableStateOf(listOf<Int>())

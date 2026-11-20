@@ -34,6 +34,8 @@ import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.KeyboardTab
@@ -398,6 +400,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "gamepad" -> GamepadPanel(th, act)
             "auth" -> { if (st.numpad) NumPanelClose(th, st); AuthPanel(th, st, act, keyH) }
             "vault" -> VaultPanel(th, st, act, keyH)
+            "dict" -> DictPanel(th, st, act, keyH)
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -736,7 +739,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -1992,6 +1995,26 @@ private fun VaultPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     if (fits) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent))
                 }
             }
+        }
+        KeysPanel(th, st, act, keyH)
+    }
+}
+
+/** The Dictionary panel: the meanings of the word (Wiktionary) and its Wikipedia summary; Insert puts them in the text. */
+@Composable
+private fun DictPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    Column(Modifier.fillMaxWidth().background(th.menu)) {
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.MenuBook, null, tint = th.accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(st.dictQuery.ifEmpty { tr("Dictionary", "Sözlük") }, color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (st.dictText.isNotEmpty()) Text(tr("Insert", "Ekle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.menu("dictInsert") }.padding(8.dp))
+            Text(tr("Close", "Kapat"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { st.panel = "keys" }.padding(8.dp))
+        }
+        Box(Modifier.fillMaxWidth().height(keyH * 1.9f).padding(horizontal = 14.dp)) {
+            if (st.dictBusy) Text("…", color = th.sub, fontSize = 16.sp)
+            else if (st.dictText.isEmpty()) Text(tr("Select a word, or put the cursor after it, then open Dictionary", "Bir kelime seç ya da imleci sonuna koy, sonra Sözlük'ü aç"), color = th.sub, fontSize = 13.sp)
+            else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { Text(st.dictText, color = th.text, fontSize = 14.sp, lineHeight = 19.sp) }
         }
         KeysPanel(th, st, act, keyH)
     }

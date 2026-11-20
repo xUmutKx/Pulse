@@ -19,6 +19,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.umutk.pulse.features.StandByOwner
 import kotlinx.coroutines.CoroutineScope
+import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -2088,6 +2089,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "auth" -> if (st.panel == "auth") st.panel = "keys" else openAuth()
             "vault" -> if (st.panel == "vault") st.panel = "keys" else openAuth { showVault() }
+            // the Dictionary: the selected word, else the word before the cursor; its meanings and Wikipedia summary come from the net
+            "dict" -> {
+                val c = currentInputConnection
+                val sel = c?.getSelectedText(0)?.toString()?.trim().orEmpty()
+                val before = c?.getTextBeforeCursor(40, 0)?.toString().orEmpty()
+                val term = sel.ifEmpty { (before.trimEnd().takeLastWhile { it.isLetter() || it == '\'' || it == '-' }) }
+                st.panel = "dict"; st.dictQuery = term; st.dictText = ""
+                if (term.length >= 2) { st.dictBusy = true; scope.launch { val r = withContext(Dispatchers.IO) { KbDict.lookup(term, lang.code) }; st.dictText = r.ifEmpty { tr("Nothing found for \"$term\"", "\"$term\" için bir şey bulunamadı") }; st.dictBusy = false } }
+            }
+            "dictInsert" -> { currentInputConnection?.commitText(st.dictText.lineSequence().firstOrNull { it.trimStart().startsWith("1.") }?.trim()?.removePrefix("1.")?.trim() ?: st.dictText.lineSequence().drop(1).firstOrNull().orEmpty(), 1); st.panel = "keys" }
+            // the calculator and the converter: the selected expression, or the one right before the cursor; the answer goes in after it ("12*5" -> "12*5 = 60")
+            "calc", "convert" -> {
+                st.panel = "keys"
+                val c = currentInputConnection ?: return
+                finishWord("", false)
+                val before = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+                val ans = if (id == "calc") (KbCalc.tail(before)?.let { KbCalc.eval(it) }?.let { KbCalc.format(it) }) else KbUnits.tail(before)
+                if (ans != null) c.commitText(" = $ans", 1)
+                else android.widget.Toast.makeText(this, if (id == "calc") tr("Type a sum first, such as 12*5", "Önce bir işlem yaz, örn. 12*5") else tr("Type a unit first, such as 10 km to mi", "Önce bir birim yaz, örn. 10 km to mi"), android.widget.Toast.LENGTH_SHORT).show()
+            }
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched

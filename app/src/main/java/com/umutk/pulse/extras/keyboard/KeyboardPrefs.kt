@@ -94,7 +94,7 @@ object KeyboardPrefs {
     /** Speech typing with the Whisper model of Pulse AI (on the phone) instead of the phone's recogniser. */
     var voiceWhisper by mutableStateOf(false)
     /** Hybrid correction: WM Keyboard's rules (no acronyms, no codes, held-down letters, a missed space) over Pulse's own correction. Off: as before. */
-    var hybridFix by mutableStateOf(false)
+    var hybridFix by mutableStateOf(true)
     var undoOnBackspace by mutableStateOf(true)
     var quickPrediction by mutableStateOf(false)
     var quickPinBtn by mutableStateOf(true)
@@ -357,6 +357,15 @@ object KeyboardPrefs {
         }
         // the password manager (passwords) has its place in the ⋮ menu, once (it was only on the 3 key of the number pad)
         if (!p.getBoolean("vaultMenu14", false)) { val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList(); if ("vault" !in mn) mn.add(minOf(mn.indexOf("clip") + 1, mn.size).coerceAtLeast(0), "vault"); menuItems = mn.joinToString(","); p.edit().putBoolean("vaultMenu14", true).putString("menuItems", menuItems).apply() }
+        // once: the Dictionary, Calculator and Convert tiles join the menu (they are tools of WM Keyboard); the hybrid correction (WM Keyboard's engine beside Pulse's) is on from now on
+        if (!p.getBoolean("dictMenu209", false)) {
+            val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            val tb = toolbarItems.split(',')
+            for (id in listOf("dict", "calc", "convert")) if (id !in mn && id !in tb) mn.add(id)
+            menuItems = mn.joinToString(",")
+            hybridFix = true
+            p.edit().putBoolean("dictMenu209", true).putString("menuItems", menuItems).putBoolean("hybridFix", true).apply()
+        }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again

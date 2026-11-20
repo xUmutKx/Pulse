@@ -5,6 +5,7 @@ import com.umutk.pulse.subtitleCompat
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -101,6 +102,18 @@ object DnsPerNet {
 
     private var cb: android.net.ConnectivityManager.NetworkCallback? = null
     private var last = ""
+    /** What was written last and when: a Manual DNS that makes the network lose its internet within a minute (the server is blocked there, eduroam and many school or work networks) is dropped for that network. */
+    private var lastMode = ""
+    private var lastAt = 0L
+    private var manualFailed = false
+
+    /** The Wi-Fi has no password (open, or open with encryption): a Private DNS often cannot be reached through its sign-in. Android 12 and later tell the kind of security. */
+    private fun openWifi(c: Context): Boolean = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 31) return@runCatching false
+        val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val info = cm.getNetworkCapabilities(cm.activeNetwork)?.transportInfo as? android.net.wifi.WifiInfo ?: return@runCatching false
+        info.currentSecurityType == android.net.wifi.WifiInfo.SECURITY_TYPE_OPEN || info.currentSecurityType == android.net.wifi.WifiInfo.SECURITY_TYPE_OWE
+    }.getOrDefault(false)
 
     /** The network asks for a sign-in page, or has no working internet (a Private DNS would stop the sign-in page from opening). */
     private fun portal(c: Context): Boolean = runCatching {
@@ -123,6 +136,8 @@ object DnsPerNet {
         val port = portal(c)
         // a change of the network, or of whether it asks for a sign-in, is a new case
         if (k.isEmpty() || (!force && (k + port) == last)) return
+        // a Manual DNS written a moment ago and the network has lost its internet since: that server cannot be reached here, the network keeps Auto until it changes
+        if (lastMode == "hostname" && port && SystemClock.elapsedRealtime() - lastAt < 90_000L) manualFailed = true
         last = k + port
         val wifi = k == "wifi"
         val m = mode(c, wifi)
@@ -130,9 +145,10 @@ object DnsPerNet {
         Thread {
             val (mode, host) = when {
                 m == "off" -> "off" to ""
-                m == "auto" || (m == "manual" && port && portalAuto(c, wifi)) -> "opportunistic" to ""
+                m == "auto" || (m == "manual" && manualFailed) || (m == "manual" && portalAuto(c, wifi) && (port || (wifi && openWifi(c)))) -> "opportunistic" to ""
                 else -> "hostname" to host(c, wifi)
             }
+            lastMode = mode; lastAt = SystemClock.elapsedRealtime()
             val now = Dns.current(c)
             if (now.first == mode && (mode != "hostname" || now.second == host)) return@Thread
             Dns.write(c, mode, host)
@@ -145,7 +161,7 @@ object DnsPerNet {
         val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val n = object : android.net.ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: android.net.Network, caps: android.net.NetworkCapabilities) { applyNow(app, force = false) }
-            override fun onLost(network: android.net.Network) { last = "" }
+            override fun onLost(network: android.net.Network) { last = ""; manualFailed = false; lastMode = "" }
         }
         cb = n
         runCatching { cm.registerDefaultNetworkCallback(n) }
@@ -242,8 +258,8 @@ private fun NetDnsBlock(wifi: Boolean, label: String) {
             if (field.isNotEmpty() && !Dns.validHost(field)) Text(tr("Not a host name", "Geçerli bir ad değil"), color = T.sub, fontSize = 12.sp)
             Row(Modifier.fillMaxWidth().clickable { portal = !portal; DnsPerNet.setPortalAuto(ctx, wifi, portal) }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(tr("Auto while a sign-in page is asked", "Giriş sayfası istenirken Auto"), color = T.text, fontSize = 14.sp)
-                    Text(tr("A Manual DNS would stop the sign-in page of a hotel or school Wi-Fi from opening", "Manuel DNS otel ya da okul Wi-Fi'sinin giriş sayfasını açmaz"), color = T.sub, fontSize = 12.sp)
+                    Text(tr("Auto on open Wi-Fi and while a sign-in page is asked", "Şifresiz Wi-Fi'de ve giriş sayfası istenirken Auto"), color = T.text, fontSize = 14.sp)
+                    Text(tr("A Manual DNS would stop the sign-in page of a hotel or school Wi-Fi from opening. A network that loses its internet after a Manual DNS (the server is blocked there) is put back to Auto by itself", "Manuel DNS otel ya da okul Wi-Fi'sinin giriş sayfasını açmaz. Manuel DNS'ten sonra interneti kesilen ağ (sunucu orada engelli) kendiliğinden Auto'ya döner"), color = T.sub, fontSize = 12.sp)
                 }
                 com.umutk.pulse.PSwitch(portal, { portal = it; DnsPerNet.setPortalAuto(ctx, wifi, it) })
             }
