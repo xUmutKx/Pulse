@@ -145,7 +145,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // a letter was typed right behind "word." with no space: the space and a capital are put in when the word ends, unless it is an address
     private var dotFix = false
     private val siteNames = setOf("google", "youtube", "facebook", "instagram", "twitter", "github", "gmail", "wikipedia", "amazon", "netflix", "whatsapp", "reddit", "linkedin", "yahoo", "bing", "spotify", "twitch", "tiktok", "pinterest", "microsoft", "apple", "discord", "telegram", "hepsiburada", "trendyol", "sahibinden", "yemeksepeti", "ciceksepeti", "gittigidiyor", "mynet", "hurriyet", "milliyet", "sabah", "haberturk", "sozcu", "cnn", "bbc", "ebay", "paypal", "dropbox", "medium", "stackoverflow", "gitlab", "openai", "anthropic", "claude", "chatgpt", "yandex", "outlook", "hotmail", "icloud", "zoom", "steam", "epicgames", "roblox", "minecraft", "xbox", "playstation", "nintendo", "samsung", "huawei", "xiaomi", "turkcell", "vodafone", "turktelekom", "ptt", "edevlet", "meb", "osym", "ais", "ziraat", "isbank", "garanti", "akbank", "yapikredi", "enpara", "papara", "booking", "airbnb", "tripadvisor", "uber", "getir", "n11")
-    private val tlds = setOf("com", "net", "org", "edu", "gov", "io", "co", "me", "app", "dev", "info", "biz", "tr", "uk", "de", "fr", "es", "it", "ru", "us", "tv", "xyz", "online", "site", "tech", "store", "ai", "gg", "ly", "to", "cc", "eu", "nl", "pl", "jp", "cn", "br", "in", "au", "ca", "ch", "se", "no", "fi", "dk", "gen", "web", "html", "php")
+    private val tlds = setOf("com", "net", "org", "edu", "gov", "io", "co", "me", "app", "dev", "info", "biz", "tr", "uk", "de", "fr", "es", "it", "ru", "us", "tv", "xyz", "online", "site", "tech", "store", "ai", "gg", "ly", "to", "cc", "eu", "nl", "pl", "jp", "cn", "br", "in", "au", "ca", "ch", "se", "no", "fi", "dk", "gen", "web", "html", "php", "py", "kt", "js", "ts", "txt", "md", "json", "xml", "css", "java", "cpp", "sh", "yml", "csv", "pdf", "png", "jpg", "zip", "apk", "exe", "mp3", "mp4", "doc", "docx", "xls", "xlsx", "gz", "tar", "rs", "go", "rb", "sql", "log", "ini", "cfg", "bat", "svg", "gif", "webp", "ttf", "iso")
     private var corrAt = 0L
     private var selStart = 0
     private var selEnd = 0
@@ -1725,7 +1725,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 updateCaps(); updateSuggestions(); return
             }
         }
-        if (commaSpace && tb.length >= 2 && tb.last() == ' ' && tb[tb.length - 2] in ",;:!?." && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
+        if (commaSpace && tb.length >= 2 && tb.last() == ' ' && tb[tb.length - 2] in ",;:!?." && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(1, 0); dotEnd = false; dotFix = false; punctTyped = false }
         else if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
         prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
