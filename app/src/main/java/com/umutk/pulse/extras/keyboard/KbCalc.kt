@@ -5,6 +5,30 @@ object KbCalc {
     /** The sum at the end of [before] (a number, then operators and numbers), or null. */
     fun tail(before: String): String? = Regex("""([0-9(][0-9.,()\s]*(?:[-+*/x×÷^%]\s*[0-9.,()]+[0-9.,()\s]*)+)$""").find(before)?.groupValues?.get(1)?.trim()
 
+    private const val SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+    /** Powers written in small raised digits ("2⁶") read as "2^6". */
+    fun norm(t: String): String {
+        val b = StringBuilder(); var inSup = false
+        for (ch in t) {
+            val k = SUP.indexOf(ch)
+            if (k >= 0 || (ch == '⁻')) { if (!inSup) b.append('^'); inSup = true; b.append(if (k >= 0) ('0' + k) else '-') }
+            else { inSup = false; b.append(ch) }
+        }
+        return b.toString()
+    }
+
+    /** The answer for the sum at the end of [before], written the way the sum is: "12*5" gets "=60", "12 * 5" gets " = 60"; null when there is none. */
+    fun answerFor(before: String): String? {
+        val nb = norm(before)
+        if (nb.trimEnd().endsWith("=")) return null
+        val ex = tail(nb) ?: return null
+        // a date or a phone number ("2024-11-20", "0532-123") is not a sum: a minus alone counts only with spaces round it
+        if (ex.none { it in "+*/x×÷^%" } && !ex.contains(" - ")) return null
+        val v = eval(ex) ?: return null
+        val r = format(v)
+        return if (' ' in ex) (if (before.endsWith(" ")) "= " else " = ") + r else "=" + r
+    }
+
     private class P(val s: String) {
         var i = 0
         fun peek() = if (i < s.length) s[i] else '\u0000'

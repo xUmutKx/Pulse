@@ -1187,8 +1187,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the calculator (a setting, off by default): "12*5=" is answered right after the sign
         if (s == "=" && KeyboardPrefs.calcEquals && !st.plain && word.isEmpty()) {
             val before = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
-            val r = KbCalc.tail(before)?.let { KbCalc.eval(it) }
-            if (r != null) { c.commitText("= " + KbCalc.format(r), 1); punctTyped = true; afterText(); return }
+            // written the way the sum is: "12*5" -> "12*5=60", "12 * 5" -> "12 * 5 = 60"; small raised digits are powers ("2⁶=" -> "=64")
+            val ans = KbCalc.answerFor(before)
+            if (ans != null) { c.commitText(ans, 1); punctTyped = true; afterText(); return }
             // units: "10 km to mi=" -> "= 6.2137 mi"
             KbUnits.tail(before)?.let { u -> c.commitText("= $u", 1); punctTyped = true; afterText(); return }
         }
@@ -1853,8 +1854,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         updateSuggestions()
     }
 
+    /** The answer of the sum before the cursor, offered in the middle slot (written as it stands when tapped). */
+    private var calcText: String? = null
+
     override fun slot(i: Int) {
         st.banAsk = -1
+        calcText?.let { a -> if (i == 1 && st.slots.getOrNull(1) == a.trim()) { finishWord("", false); currentInputConnection?.commitText(a, 1); calcText = null; afterText(); return } }
         // a terminal: the word in the slot takes the place of the letters typed so far (the terminal gets them as ordinary keys) and a space follows
         if (st.terminal && st.plain && KeyboardPrefs.suggestions) {
             val w = slotWords.getOrNull(i).orEmpty()
@@ -2169,6 +2174,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val before = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
                 val ans = if (id == "calc") (KbCalc.tail(before)?.let { KbCalc.eval(it) }?.let { KbCalc.format(it) }) else KbUnits.tail(before)
                 if (ans != null) c.commitText(" = $ans", 1)
+                // nothing to work out yet: the numbers and signs page opens, and the answer of what is typed there comes up on the bar by itself
+                else if (id == "calc") st.page = 1
                 else android.widget.Toast.makeText(this, if (id == "calc") tr("Type a sum first, such as 12*5", "Önce bir işlem yaz, örn. 12*5") else tr("Type a unit first, such as 10 km to mi", "Önce bir birim yaz, örn. 10 km to mi"), android.widget.Toast.LENGTH_SHORT).show()
             }
             // the camera's text: a small window takes the photo, reads it on the phone and puts the text on the clipboard (the bar offers it)
@@ -2776,7 +2783,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun showClipSlot() {
         // a screenshot that was just taken takes the right slot for two minutes
         if ((shotItem != null || shotVideo != null) && !shotPinned && shotLeftMs() <= 0L) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }
-        if ((shotItem != null || shotVideo != null) && word.isEmpty() && !emailField && !st.plain) {
+        // it stays at the right while a word is typed too (no space needed): until it is pasted once or its time runs out
+        if ((shotItem != null || shotVideo != null) && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
             return
@@ -2905,6 +2913,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             slotWords = (numOffered + listOf("", "", "")).take(maxOf(3, numOffered.size)).toTypedArray(); st.slots = slotWords.toList(); st.emailBar = true; return
         } else if (st.emailBar && !emailField && !atTokenNow()) st.emailBar = false
         if (!KeyboardPrefs.suggestions || (st.plain && !st.terminal) || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        // a sum before the cursor ("12*5", "2⁶+1"): its answer is offered in the middle of the bar at once, no "=" needed; a tap writes it the way the sum is written
+        calcText = null
+        if (!st.plain) runCatching {
+            val bt = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+            val ans = KbCalc.answerFor(bt)
+            if (ans != null) { calcText = ans; slotWords = arrayOf("", "", ""); st.slots = listOf("", ans.trim(), ""); target = null; return }
+        }
         detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the text before the word, for the neural model (the word itself is the open one at the end)
