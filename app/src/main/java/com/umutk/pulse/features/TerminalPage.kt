@@ -147,10 +147,21 @@ fun TerminalPage() {
         if (c == "clear") { TermSession.text = ""; cmd = ""; return }
         TermSession.send(c); cmd = ""
     }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 10.dp, vertical = 8.dp)) {
+    // Windows 11: the terminal window is see-through (the desktop shows behind the text), as Settings is
+    val deskWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current
+    val glass = deskWin != null && com.umutk.pulse.T.id == "win11"
+    androidx.compose.runtime.DisposableEffect(deskWin, glass) { if (glass) deskWin?.glass = true; onDispose { if (glass) deskWin?.glass = false } }
+    var size by remember { mutableStateOf(12) }
+    val cm = remember { ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager }
+    Column(Modifier.fillMaxSize().background(if (glass) Color.Black.copy(alpha = .5f) else Color.Black).padding(horizontal = 10.dp, vertical = 8.dp)) {
         // the window's title line and its few buttons
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("pulse@phone" + if (TermSession.asRoot) " (root)" else "", color = green, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f), maxLines = 1)
+            // copy the whole output, paste into the command line, and the text size (the output itself can be selected by holding a word)
+            Text("copy", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { cm.setPrimaryClip(android.content.ClipData.newPlainText("terminal", TermSession.shown)); android.widget.Toast.makeText(ctx, "Copied", android.widget.Toast.LENGTH_SHORT).show() }.padding(4.dp))
+            Text("paste", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { cmd += cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty().replace('\n', ' ') }.padding(4.dp))
+            Text("A-", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { size = (size - 1).coerceAtLeast(8) }.padding(4.dp))
+            Text("A+", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { size = (size + 1).coerceAtMost(24) }.padding(4.dp))
             Text("^C", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.interrupt() }.padding(4.dp))
             Text("clear", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.text = "" }.padding(4.dp))
             if (Shell.root == true) Text(if (TermSession.asRoot) "sh" else "su", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot) }.padding(4.dp))
@@ -159,7 +170,9 @@ fun TerminalPage() {
             // the colour codes are worked out once per output, not on every frame (up to 60,000 characters)
             val shownText = TermSession.shown
             val coloured = remember(shownText) { ansi(shownText, fg) }
-            Text(coloured, color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(coloured, color = fg, fontSize = size.sp, fontFamily = FontFamily.Monospace, lineHeight = (size + 3).sp)
+            }
         }
         Text(TermSession.cwd, color = Color(0xFF729FCF), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
