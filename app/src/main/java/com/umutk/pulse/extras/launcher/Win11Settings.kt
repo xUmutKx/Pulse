@@ -233,6 +233,35 @@ private fun Win11Row(it: WItem, open: (String) -> Unit, onDetail: (WItem) -> Uni
             Text(tr(it.en, it.tr), color = T.text, fontSize = 15.sp, maxLines = 1)
             Text(tr(it.enDesc, it.trDesc), color = T.sub, fontSize = 12.sp, maxLines = 1)
         }
+        // the rows that are a switch in Windows show their state, On or Off, and the switch (Android lets only the system change these, so a tap on it opens the system's own small panel)
+        val en = it.en
+        val on = wState(ctx, en)
+        if (on != null) {
+            Text(if (on) tr("On", "Açık") else tr("Off", "Kapalı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(end = 8.dp))
+            com.umutk.pulse.PSwitch(on, { _ -> wToggle(ctx, en) })
+            Spacer(Modifier.width(8.dp))
+        }
         Text("›", color = T.sub, fontSize = 20.sp)
     }
+}
+
+/** Whether the switch-like setting [en] is on now; null for a row with no switch. */
+private fun wState(ctx: android.content.Context, en: String): Boolean? = runCatching {
+    when (en) {
+        "Wi-Fi" -> (ctx.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled
+        "Bluetooth" -> (ctx.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter?.isEnabled
+        "Airplane mode" -> android.provider.Settings.Global.getInt(ctx.contentResolver, android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+        else -> null
+    }
+}.getOrNull()
+
+/** The system's own small panel (or page) to change the setting [en]: apps may not switch these themselves. */
+private fun wToggle(ctx: android.content.Context, en: String) {
+    val i = when (en) {
+        "Wi-Fi" -> if (android.os.Build.VERSION.SDK_INT >= 29) android.content.Intent(android.provider.Settings.Panel.ACTION_WIFI) else android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+        "Bluetooth" -> android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+        "Airplane mode" -> android.content.Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+        else -> return
+    }
+    runCatching { ctx.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
