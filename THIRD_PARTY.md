@@ -62,3 +62,7 @@ The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from 
 
 - **Unexpected Keyboard icon font** (`app/src/main/res/font/kb_special.ttf`, `special_font.ttf` of https://github.com/Julow/Unexpected-Keyboard): GPL-3.0; its glyphs come from IcoMoon-Free and Font Awesome Free (CC BY 4.0), Material Design Icons (Apache 2.0 / OFL) and Roboto/DejaVu (Apache 2.0 / free). Used for the function symbols on the corners of the keyboard's keys.
 - **libadb-android** 3.1.1 (https://github.com/MuntashirAkon/libadb-android): GPL-3.0-or-later OR Apache-2.0. The watch manager's ADB client.
+
+## Code editor (Files and Notes, extras/code)
+- Sora Editor (https://github.com/Rosemoe/sora-editor), LGPL-2.1, with its TextMate language module (tm4e, joni, jcodings, snakeyaml-engine).
+- The TextMate grammars and the two editor themes in `app/src/main/assets/textmate` are taken from Xed-Editor (https://github.com/Xed-Editor/Xed-Editor, GPL-3.0); the grammars come from VS Code and its extensions (MIT and similar licences, see each folder).
