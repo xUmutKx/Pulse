@@ -195,6 +195,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 if (it) (ctx as? android.app.Activity)?.let { a -> androidx.core.app.ActivityCompat.requestPermissions(a, arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.CALL_PHONE), 7301) }
             }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock gadget", "Masaüstü saat gadget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
+            if (cur.id == "win11") SwitchLine("palette", tr("Start button in the accent colour", "Başlat düğmesi vurgu renginde"), LauncherPrefs.startLogoAccent) { LauncherPrefs.startLogoAccent = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }

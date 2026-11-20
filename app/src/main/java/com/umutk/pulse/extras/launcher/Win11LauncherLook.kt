@@ -338,7 +338,8 @@ private fun Indicator(color: Color, modifier: Modifier) {
 /** Start button: four plain squares in a 2x2 Path (no Microsoft mark). */
 @Composable
 private fun StartGlyph(@Suppress("UNUSED_PARAMETER") color: Color) {
-    // the Windows 11 logo: four panes in the accent of the launcher (the blue of the system at first), light at the top and deeper at the bottom
+    // the Windows 11 mark in its own blue; the four panes in the launcher's accent colour when that is chosen (Look > Start button in the accent colour)
+    if (!LauncherPrefs.startLogoAccent) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.umutk.pulse.R.drawable.win11_start_logo), null, Modifier.size(22.dp)); return }
     Canvas(Modifier.size(22.dp)) {
         val gap = size.minDimension * .09f
         val q = (size.minDimension - gap) / 2f

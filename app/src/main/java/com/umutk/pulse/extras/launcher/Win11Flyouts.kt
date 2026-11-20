@@ -218,7 +218,8 @@ internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         listOf(
-            Triple("chat", tr("Messages", "Mesajlar")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("sms:")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+            // Pulse's own Messages (SMS) opens as a window on the desktop, not in another app
+            Triple("chat", tr("Messages", "Mesajlar")) { openDesktopItem(ctx, "pulse:x:messages", "win11") },
             Triple("phone", tr("Calls", "Aramalar")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
             Triple("share", tr("Send files", "Dosyaları gönder")) { openDesktopItem(ctx, "pulse:x:localsend", "win11") },
         ).forEach { (ic, label, act) ->
