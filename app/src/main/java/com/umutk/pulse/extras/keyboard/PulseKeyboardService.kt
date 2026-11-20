@@ -1109,6 +1109,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val e = event ?: return super.onKeyDown(keyCode, event)
+        // Ctrl + Shift + Esc (a real keyboard): the Task Manager of Pulse, as on Windows
+        if (keyCode == KeyEvent.KEYCODE_ESCAPE && e.isCtrlPressed && e.isShiftPressed) { openTaskManager(); return true }
         // a key from a real keyboard: one is attached, whatever the configuration said (its letters then go through the keyboard's own typing: suggestions and automatic correction)
         if (!st.hardware && e.device?.let { d -> !d.isVirtual && d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC } == true) st.hardware = true
         if (st.hardware && hardwareKey(keyCode, e)) return true
@@ -2576,10 +2578,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         afterText()
     }
 
+    /** Pulse's Task Manager (the Processes page), over whatever is on the screen. */
+    private fun openTaskManager() {
+        runCatching { startActivity(Intent(this, com.umutk.pulse.MainActivity::class.java).putExtra("start", "processes").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
+    }
+
     override fun extraKey(id: String) {
         val d = ExtraKeys.byId(id) ?: return
         finishWord("", false); lastGlide = null; lastWasSpace = false
         when (id) {
+            // Ctrl + Shift + Esc on the key bar: the Task Manager (the keyboard used to close at that chord)
+            "esc" -> if (st.ctrl > 0 && st.shiftMod > 0) { openTaskManager(); useModifiers(); st.ctrl = 0; st.shiftMod = 0 } else if (d.code != 0) sendKey(d.code)
             "ctrl" -> st.ctrl = (st.ctrl + 1) % 3
             "alt" -> st.alt = (st.alt + 1) % 3
             "win" -> st.win = (st.win + 1) % 3
