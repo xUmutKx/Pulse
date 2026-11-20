@@ -1153,7 +1153,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                     val o = com.umutk.pulse.extras.blackout.Privilege.run(script)
                                     // a failed run removes the half copy and nothing else
                                     if (o.code != 0) com.umutk.pulse.extras.blackout.Privilege.run("rm -f " + q(dest))
-                                    android.os.Handler(android.os.Looper.getMainLooper()).post { note = if (o.code == 0) "Moved to Secure Folder: $rel" else "Not moved (Secure Folder needs root, or Shizuku with access); the file is where it was" }
+                                    // the gallery and the other media lists still hold the file's old row: scanning the path that is gone removes it
+                                    if (o.code == 0) runCatching { android.media.MediaScannerConnection.scanFile(ctx, arrayOf(f.path), null, null) }
+                                    android.os.Handler(android.os.Looper.getMainLooper()).post { if (o.code == 0) refresh++; note = if (o.code == 0) "Moved to Secure Folder: $rel" else "Not moved (Secure Folder needs root, or Shizuku with access); the file is where it was" }
                                 }.start()
                             }))
                         },
@@ -1177,13 +1179,19 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             (byLabel["Add bookmark"] ?: byLabel["Remove bookmark"])?.let { Triple("Bookmark", it.second, it.third) },
                             byLabel["Share"],
                             byLabel["Open with"],
-                        )
+                            byLabel["Move to Secure Folder"]?.let { Triple("Secure", it.second, it.third) },
+                        ).take(5)
                         @Composable fun iconRow(items: List<Triple<String, String, () -> Unit>>) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                                 items.forEach { (label, key, act) ->
                                     Box(Modifier.size(42.dp).clip(androidx.compose.foundation.shape.CircleShape)
                                         .combinedClickable(onLongClick = { android.widget.Toast.makeText(ctx, label, android.widget.Toast.LENGTH_SHORT).show() }, onClick = { menuOf = null; act() }), contentAlignment = Alignment.Center) {
-                                        ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
+                                        if (label == "Secure") Box(contentAlignment = Alignment.Center) {
+                                            // a padlock with an arrow going in: the file moves into the Secure Folder
+                                            ExIcon("lock", st.ink, 18.dp)
+                                            Box(Modifier.align(Alignment.BottomEnd)) { ExIcon("forward", Look.accent, 11.dp) }
+                                        }
+                                        else ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
                                     }
                                 }
                             }
@@ -1192,7 +1200,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
                         iconRow(row2)
                         // what is left (the code editor, Save as, Copy path, Secure Folder) stays as a short list under the icons; Open and Open with are the icons above and a tap on the file
-                        val rest = groups.flatten().filter { it.first in setOf("Code editor", "Save as", "Copy path", "Move to Secure Folder") }
+                        val rest = groups.flatten().filter { it.first in setOf("Code editor", "Save as", "Copy path") }
                         if (rest.isNotEmpty()) {
                             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
                             rest.forEach { (label, key, act) -> ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, st.sub, 18.dp) }) }
