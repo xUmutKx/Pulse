@@ -722,6 +722,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // statistics: what the keyboard has learned and where the fingers land
+        KbSection("speed", tr("Speed test", "Hız testi")) { KbSpeedTest() }
         KbSection("tune", tr("Statistics", "İstatistik")) {
             remember { KeyboardDictionary.ensureUser(ctx) }
             val st2 = remember(learned, rev) { KeyboardDictionary.stats().toMap() }
