@@ -52,7 +52,7 @@ fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled:
     var module by remember(rid) { mutableStateOf(StoreCatalog.load(ctx).firstOrNull { it.id == rid }) }
     // the list is asked for when this pack is not in the saved one yet (a manifest older than the pack)
     LaunchedEffect(rid) {
-        if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == rid } }
+        if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == rid } ?: HdWalls.fallback(rid) }
     }
     // [auto]: the first time the pack is wanted it is asked once ("Download it?"); when yes it comes by itself (the row shows how far it is), when no the row keeps its button
     if (auto) PackAsk(id, title)
@@ -118,6 +118,18 @@ object HdWalls {
         val name = runCatching { c.resources.getResourceEntryName(resId) }.getOrNull() ?: return null
         val pack = FAMILIES.firstOrNull { name.startsWith(it.second) }?.first ?: return null
         return File(StoreInstaller.dataDir(c, pack), "files/$name.webp").takeIf { it.isFile }
+    }
+
+    /** The HD wallpaper packs as the app knows them, so the download button shows even when the list from GitHub could not be read (offline, an old saved list). */
+    fun fallback(id: String): ExtraModule? {
+        val (en, tr, size, sha) = when (id) {
+            "wallpapers-hd-win11" -> listOf("Windows 11 wallpapers in 4K", "Windows 11 duvar kağıtları 4K", "4142368", "3b0eadc412da8bb799d53e4f5ecc931a5057d11b25b6cc6758a488498d0f4f00")
+            "wallpapers-hd-win10" -> listOf("Windows 10 wallpapers in 1920 x 1200", "Windows 10 duvar kağıtları 1920 x 1200", "1330482", "d7d3747983bbe70e6cb67b81d185198ef69f05b89b09a65e923af451a28e4130")
+            "wallpapers-hd-win7" -> listOf("Windows 7 wallpapers in 1920 x 1200", "Windows 7 duvar kağıtları 1920 x 1200", "2170762", "9bfc2dae8d801c1100d64d9f2999d472edaa4597582d48c376e0df6a4b0c4c2d")
+            else -> return null
+        }
+        return ExtraModule(id, en, tr, "veri", "gorsel", size.toLong(), "1.0.0", "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/packs/$id.zip", sha, null, null, null, null,
+            "LicenseRef-Microsoft-default-wallpapers", null, null, en, tr, 120L, "2026-11-17T00:00:00Z")
     }
 
     /** The pack of a look and what it is called, or null for a look without one. */
