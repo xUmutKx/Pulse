@@ -1295,7 +1295,7 @@ internal fun kbDecode(path: String, max: Int): android.graphics.Bitmap? {
 /** What is behind the space bar: a picture (dimmed) and a small figure (an emoji) walking from one end to the other. Nothing in smooth mode. */
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.SpaceDeco() {
-    if (KeyboardPrefs.smooth) return
+    if (KeyboardPrefs.calm) return
     val pic = KeyboardPrefs.spacePic
     if (pic.isNotEmpty()) {
         val img by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, pic) {

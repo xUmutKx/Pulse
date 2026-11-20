@@ -814,6 +814,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        runCatching { KeyboardPrefs.saverOn = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode }
         if (!restarting) runCatching { takeClip(true) }
         // a screenshot or download made a moment before the keyboard came up is offered too
         if (!restarting) scope.launch { runCatching { checkShot() } }
@@ -1110,6 +1111,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.panel == "vault") { if (s.all { ch -> ch.isLetterOrDigit() || ch in "@.-_ " }) { st.vaultQuery += s; refreshVault() }; return }
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (st.artOn) { st.artIn += s; return }
+        // another digit set (a setting): the digit keys type its digits
+        if (s.length == 1 && s[0] in '0'..'9' && KeyboardPrefs.numerals != "latin" && !st.plain && !st.numpad) { finishWord("", false); c.commitText(KbNumerals.map(s, KeyboardPrefs.numerals), 1); afterText(); return }
         if (s.length == 1) termKey(s[0])
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
@@ -1119,6 +1122,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val before = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
             val r = KbCalc.tail(before)?.let { KbCalc.eval(it) }
             if (r != null) { c.commitText("= " + KbCalc.format(r), 1); punctTyped = true; afterText(); return }
+            // units: "10 km to mi=" -> "= 6.2137 mi"
+            KbUnits.tail(before)?.let { u -> c.commitText("= $u", 1); punctTyped = true; afterText(); return }
         }
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
@@ -1787,6 +1792,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val v = shotVideo
             if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
             if (!shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
+        }
+        // the one-time code of a notification: typed as it is (no space after it), then gone
+        if (i == 2 && st.slots.getOrNull(2)?.startsWith("\u0001🔑") == true) {
+            val otp = slotWords.getOrNull(2).orEmpty()
+            if (otp.isNotEmpty()) { finishWord("", false); currentInputConnection?.commitText(otp, 1); KbOtp.code = null; afterText() }
+            return
         }
         if (i == 2 && qc != null && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             // a word being typed is kept as it is, then the copied text follows it
@@ -2609,6 +2620,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if ((shotItem != null || shotVideo != null) && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
             st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
+            return
+        }
+        // a one-time code that just came in a notification (a setting): it waits at the right, a tap types it
+        if (KeyboardPrefs.otpOn && word.isEmpty()) KbOtp.fresh()?.let { otp ->
+            slotWords = arrayOf(slotWords[0], slotWords[1], otp)
+            st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0001🔑 $otp")
             return
         }
         val q = quickClip ?: return

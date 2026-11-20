@@ -110,7 +110,11 @@ object NotifHist {
 
 /** Declared in the manifest. Receives every posted notification; the logic lives in [NotifHist]. */
 class NotifHistListener : NotificationListenerService() {
-    override fun onNotificationPosted(sbn: StatusBarNotification) { NotifHist.onPosted(this, sbn); com.umutk.pulse.extras.launcher.LauncherBadges.update(this) }
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+        NotifHist.onPosted(this, sbn); com.umutk.pulse.extras.launcher.LauncherBadges.update(this)
+        // a one-time code in a new message goes to the keyboard's bar (its own setting decides)
+        runCatching { val e = sbn.notification.extras; com.umutk.pulse.extras.keyboard.KbOtp.onNotification(this, sbn.packageName, (e.getCharSequence("android.title")?.toString().orEmpty() + " " + e.getCharSequence("android.text")?.toString().orEmpty() + " " + e.getCharSequence("android.bigText")?.toString().orEmpty())) }
+    }
     override fun onNotificationRemoved(sbn: StatusBarNotification) = com.umutk.pulse.extras.launcher.LauncherBadges.update(this)
     override fun onListenerConnected() = com.umutk.pulse.extras.launcher.LauncherBadges.update(this)
 }
