@@ -193,6 +193,7 @@ class Win11LauncherLook : LauncherLook {
                     if (query.isNotBlank() || allPage) {
                         // searching gives one flat grid; the all-apps page has its group headings
                         Column(Modifier.fillMaxSize()) {
+                            if (query.isNotBlank()) ContactResults(query, fg, fg.copy(alpha = .65f))
                             if (query.isBlank()) Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(32.dp).clip(shape).clickable { allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))

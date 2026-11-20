@@ -144,6 +144,8 @@ class MaterialLauncherLook(
                 return@Column
             }
             LazyColumn(Modifier.fillMaxSize()) {
+                // the people of the contacts that match, with a call button (a setting, off by default)
+                if (query.isNotBlank()) item(key = "contacts") { ContactResults(query, fg, sub(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) }
                 items(sections, key = { it.first }) { (label, apps) ->
                     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(pill()).padding(horizontal = 8.dp, vertical = 12.dp)) {
                         Text(label, color = sub(), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 12.dp, bottom = 4.dp))

@@ -157,6 +157,8 @@ object LauncherPrefs {
     var snapIcons by mutableStateOf(true)
     /** true (the default): a widget's place and size follow the same grid; false: it is put and sized wherever the finger leaves it. */
     var snapWidgets by mutableStateOf(true)
+    /** The search of the start menu also finds people of the contacts, with a button that calls them at once (off by default). */
+    var searchContacts by mutableStateOf(false)
     /** The launcher's own accent colour (the Windows 11 look): off, it follows the look; on, [accentArgb]. Not Pulse's accent: the launcher keeps its own. */
     // the launcher's own accent is on by default, in Windows blue (not the app's accent)
     var accentOn by mutableStateOf(true)
@@ -225,7 +227,7 @@ object LauncherPrefs {
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
-        snapIcons = p.getProperty("snapIcons3") != "false"; snapWidgets = p.getProperty("snapWidgets") != "false"; fillGaps = p.getProperty("fillGaps") == "true"
+        snapIcons = p.getProperty("snapIcons3") != "false"; snapWidgets = p.getProperty("snapWidgets") != "false"; searchContacts = p.getProperty("searchContacts") == "true"; fillGaps = p.getProperty("fillGaps") == "true"
         accentOn = p.getProperty("accentOn")?.let { it == "true" } ?: true; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
         // a tablet has far more room: its grid starts finer (turned 16 x 8, upright 6 x 12), so an icon can sit between two others; a phone keeps 4 x 8 and 8 x 4
         val tab = c.resources.configuration.smallestScreenWidthDp >= 600
@@ -289,7 +291,7 @@ object LauncherPrefs {
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
-        p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("snapWidgets", snapWidgets.toString()); p.setProperty("fillGaps", fillGaps.toString())
+        p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("snapWidgets", snapWidgets.toString()); p.setProperty("searchContacts", searchContacts.toString()); p.setProperty("fillGaps", fillGaps.toString())
         p.setProperty("accentOn", accentOn.toString()); p.setProperty("accentArgb", accentArgb.toString())
         p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
         p.setProperty("glassStyle", glassStyle); p.setProperty("matTone", matTone.toString()); p.setProperty("matClear", matClear.toString()); p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
