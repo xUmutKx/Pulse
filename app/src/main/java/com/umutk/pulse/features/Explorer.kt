@@ -1128,6 +1128,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             add(Triple("Share", "share", { shareSheet = listOf(f) }))
                             if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
                             add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
+                            // Samsung's Secure Folder (the user 150): the file goes to the same folder there, as Samsung's own Files does (root or Shizuku)
+                            if (f.path.startsWith("/storage/emulated/0/")) add(Triple("Move to Secure Folder", "lock", {
+                                val rel = f.path.removePrefix("/storage/emulated/0/")
+                                val dest = "/data/media/150/$rel"
+                                note = "Moving to Secure Folder…"
+                                Thread {
+                                    val q = { x: String -> "'" + x.replace("'", "'\\''") + "'" }
+                                    val o = com.umutk.pulse.extras.blackout.Privilege.run("mkdir -p " + q(dest.substringBeforeLast('/')) + " && mv " + q(f.path) + " " + q(dest) + " && chown -R media_rw:media_rw " + q(dest))
+                                    android.os.Handler(android.os.Looper.getMainLooper()).post { note = if (o.code == 0) "Moved to Secure Folder" else "Secure Folder needs root (or Shizuku with access)" }
+                                }.start()
+                            }))
                         },
                         buildList<Triple<String, String, () -> Unit>> {
                             if (f.isDirectory) {
@@ -1788,7 +1799,7 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
     "recent" to Icons.Filled.History, "emptyFolder" to Icons.Filled.FolderOff, "bigFile" to Icons.Filled.SdStorage,
     "dupes" to Icons.Filled.FileCopy, "undo" to Icons.Filled.Undo, "home" to Icons.Filled.Home,
     "share" to Icons.Filled.Share, "openWith" to Icons.Filled.OpenWith, "zip" to Icons.Filled.FolderZip,
-    "link" to Icons.Filled.Link, "save" to Icons.Filled.Save, "edit" to Icons.Filled.Edit,
+    "link" to Icons.Filled.Link, "lock" to Icons.Filled.Lock, "save" to Icons.Filled.Save, "edit" to Icons.Filled.Edit,
     "delete" to Icons.Filled.Delete, "document" to Icons.Filled.Description, "cut" to Icons.Outlined.ContentCut,
     "search" to Icons.Filled.Search, "code" to Icons.Outlined.Code, "filter" to Icons.Filled.FilterList, "back" to Icons.Filled.ArrowBack, "close" to Icons.Filled.Close, "openFolder" to Icons.Filled.FolderOpen,
 )
