@@ -416,9 +416,42 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    // Works before unlock (as WM Keyboard does): until the first unlock the phone's own storage is locked, so the keyboard reads a copy of its settings kept in the
+    // device storage; once unlocked it uses its normal data and refreshes that copy.
+    private fun locked() = android.os.Build.VERSION.SDK_INT >= 24 && runCatching { !(getSystemService(Context.USER_SERVICE) as android.os.UserManager).isUserUnlocked }.getOrDefault(false)
+    private val deCtx by lazy { if (android.os.Build.VERSION.SDK_INT >= 24) createDeviceProtectedStorageContext() else this }
+    override fun getSharedPreferences(name: String?, mode: Int): android.content.SharedPreferences =
+        if (locked()) deCtx.getSharedPreferences(name, mode) else super.getSharedPreferences(name, mode)
+    override fun getFilesDir(): java.io.File = if (locked()) deCtx.filesDir else super.getFilesDir()
+    private fun mirrorPrefs() {
+        if (android.os.Build.VERSION.SDK_INT < 24 || locked()) return
+        runCatching {
+            for (name in listOf(KeyboardPrefs.FILE, "pulse_keyboard")) {
+                val ed = deCtx.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear()
+                for ((k, v) in super.getSharedPreferences(name, Context.MODE_PRIVATE).all) when (v) {
+                    is Boolean -> ed.putBoolean(k, v); is Int -> ed.putInt(k, v); is Long -> ed.putLong(k, v); is Float -> ed.putFloat(k, v)
+                    is String -> ed.putString(k, v); is Set<*> -> ed.putStringSet(k, v.map { it.toString() }.toSet())
+                }
+                ed.apply()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         live = this
+        mirrorPrefs()
+        // started before the unlock: at the unlock the learned words and the normal settings are read again
+        if (locked()) runCatching {
+            registerReceiver(object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: Context, i: Intent) {
+                    runCatching { unregisterReceiver(this) }
+                    KeyboardPrefs.loaded = false; KeyboardPrefs.load(this@PulseKeyboardService)
+                    runCatching { KeyboardDictionary.reloadUser(this@PulseKeyboardService) }
+                    mirrorPrefs()
+                }
+            }, android.content.IntentFilter(Intent.ACTION_USER_UNLOCKED))
+        }
         runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).registerInputDeviceListener(deviceListener, null) }
         KeyboardPrefs.load(this)
         // the tile's floating keyboard lasts across restarts of the keyboard until the tile is tapped again
@@ -905,6 +938,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
     override fun onWindowHidden() {
         super.onWindowHidden(); backToKeys(); st.floatArmed = false
+        mirrorPrefs()
         // the touch area is asked again at once: a hidden keyboard takes no touches
         runCatching { window.window?.decorView?.requestLayout() }
     }

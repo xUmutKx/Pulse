@@ -16,6 +16,8 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // before the first unlock only the keyboard runs (its data comes from the device storage, see PulseKeyboardService): the rest waits for the unlock
+        if (android.os.Build.VERSION.SDK_INT >= 24 && runCatching { !(getSystemService(USER_SERVICE) as android.os.UserManager).isUserUnlocked }.getOrDefault(false)) return
         // Android lets only one process use a WebView data folder: a second process that opens a WebView while another holds it crashes ("Using WebView from more than one
         // process at once", seen when Game Hub opened while YTXTube ran). Every extra process gets a data folder of its own; the main process keeps the default one.
         if (android.os.Build.VERSION.SDK_INT >= 28) runCatching {
