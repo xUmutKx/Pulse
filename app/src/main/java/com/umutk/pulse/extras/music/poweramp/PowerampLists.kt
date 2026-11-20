@@ -143,6 +143,8 @@ private sealed interface Lib {
     object Suggestions : Lib
     object MixMaker : Lib
     object Radio : Lib
+    /** YouTube Music (0) or Spotify (1), opened from their cards at the top of the library. */
+    class Online(val tab: Int) : Lib
     /** 0 most played, 1 recently played, 2 last added */
     class Quick(val kind: Int) : Lib
     object Playlists : Lib
@@ -253,6 +255,7 @@ fun LibraryScreen(
         Lib.WhiteNoise -> tr("White noise", "Beyaz gürültü")
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
         Lib.Radio -> tr("Radio", "Radyo")
+        is Lib.Online -> if (n.tab == 0) "YouTube Music" else "Spotify"
         Lib.Suggestions -> tr("Recommendations", "Öneriler")
         Lib.MixMaker -> tr("Mix maker", "Mix yapıcı")
         Lib.Playlists -> tr("Playlists", "Çalma listeleri")
@@ -269,6 +272,7 @@ fun LibraryScreen(
         Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
+        is Lib.Online -> { val t = (node as Lib.Online).tab; Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.music.OnlineBrowse(t) { node = Lib.Root } }; return@LibraryScreen }
         else -> Unit
     }
     Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
@@ -307,6 +311,21 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
                     Triple(Icons.Rounded.Insights, Color(0xFFC0609A), Lib.Recap to tr("Music recap", "Müzik özeti")),
                 )
+                // the online services in a container of their own above the local library: YouTube Music and Spotify side by side
+                item {
+                    Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        listOf(Triple(0, "YouTube Music", Color(0xFFFF0033)), Triple(1, "Spotify", Color(0xFF1DB954))).forEach { (t, name, col) ->
+                            Row(Modifier.weight(1f).height(64.dp).clip(RoundedCornerShape(18.dp))
+                                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(col.copy(alpha = .55f), col.copy(alpha = .18f))))
+                                .clickable { node = Lib.Online(t) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(col), contentAlignment = Alignment.Center) {
+                                    Icon(if (t == 0) Icons.Rounded.PlayArrow else Icons.Rounded.GraphicEq, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                                }
+                                Text(name, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp))
+                            }
+                        }
+                    }
+                }
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
             // the suggestions and the mix maker open from the list: two taps, and the library list itself stays light
@@ -356,7 +375,7 @@ fun LibraryScreen(
                 )
                 itemsIndexed(hidden) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
-            Lib.WhiteNoise, Lib.AllSounds, Lib.Radio -> Unit // shown above
+            Lib.WhiteNoise, Lib.AllSounds, Lib.Radio, is Lib.Online -> Unit // shown above
             Lib.Playlists -> PlaylistsPage(queue, style, onOpenFile = { node = Lib.M3u(it.path, it.name) }, onOpen = { node = Lib.Playlist(it) })
             is Lib.M3u -> {
                 val l by androidx.compose.runtime.produceState(emptyList<Track>(), n.path) {

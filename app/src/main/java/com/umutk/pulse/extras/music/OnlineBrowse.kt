@@ -33,11 +33,11 @@ import kotlinx.coroutines.launch
  * the Spotify playlists and liked songs of the signed-in account. Every song plays through YouTube Music in YTXTube (Spotify only lets its own app play).
  */
 @Composable
-fun OnlineBrowse(onBack: () -> Unit) {
+fun OnlineBrowse(startTab: Int = 0, onBack: () -> Unit) {
     BackHandler { onBack() }
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var tab by remember { mutableIntStateOf(0) }           // 0 YouTube Music, 1 Spotify
+    var tab by remember { mutableIntStateOf(startTab) }           // 0 YouTube Music, 1 Spotify
     var query by remember { mutableStateOf("") }
     var list by remember { mutableStateOf<List<OnlineMusic.Hit>>(emptyList()) }
     var title by remember { mutableStateOf("") }

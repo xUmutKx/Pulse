@@ -238,10 +238,14 @@ private fun MusicHubBody(onBack: () -> Unit) {
         // the settings are a full-screen page of their own (a dialog without the usual width limit), not a panel inside the player
         if (settingsOpen) androidx.compose.ui.window.Dialog(onDismissRequest = { settingsOpen = false; rev++ },
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            val ink = T.text
             var inCat by remember { mutableStateOf(false) }
+            // Poweramp with "Blended" on: the settings page sits on the song's blurred cover too (dimmed, so the text reads)
+            val blendSet = look == MusicLook.POWERAMP && cover != null && com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(ctx)
+            val ink = if (blendSet) Color.White else T.text
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+            if (blendSet) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(48.dp).alpha(.5f), contentScale = ContentScale.Crop) }
             // with the art background on, the menu sits on a half-transparent dark layer so its white text reads over the cover
-            Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxSize().background(if (blendSet) Color.Black.copy(alpha = .35f) else T.bg).statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
                 if (!inCat) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
@@ -296,6 +300,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     },
                 )
                 Spacer(Modifier.height(24.dp))
+            }
             }
         }
     }
