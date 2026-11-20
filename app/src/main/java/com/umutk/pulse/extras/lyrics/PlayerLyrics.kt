@@ -126,6 +126,8 @@ fun PlayerLyrics(
             object : NestedScrollConnection {
                 override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                     if (source == NestedScrollSource.UserInput) pull = if (consumed.y != 0f || available.y < 0f) 0f else pull + available.y
+                    // already at the first line and pulled down again: the lyrics close at once, no fling needed
+                    if (pull > 110f) { pull = 0f; onDismiss() }
                     return Offset.Zero
                 }
                 override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { if (pull > 180f) onDismiss(); pull = 0f; return Velocity.Zero }
@@ -143,7 +145,7 @@ fun PlayerLyrics(
             // the Blended look: the lyrics lie on the blurred cover, darkened so the words read, instead of on plain black
             if (art != null && com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blended(ctx)) {
                 androidx.compose.foundation.Image(art, null, Modifier.fillMaxSize().blur(com.umutk.pulse.extras.music.poweramp.PowerampPrefs.blendBlur(ctx).dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .48f)))
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .62f)))
             }
             val (busy, res0) = state
             val res = edited ?: res0

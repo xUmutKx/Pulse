@@ -70,7 +70,7 @@ import kotlinx.coroutines.delay
 fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier, mark: String = "", onDark: Boolean = false) {
     // on the dark sheet the lines are white (the look's own greys vanish on black); elsewhere the look's colours
     val hi = if (onDark) Color.White else MaterialTheme.colorScheme.primary
-    val lo = if (onDark) Color.White.copy(alpha = .72f) else T.sub
+    val lo = if (onDark) Color.White.copy(alpha = .58f) else T.sub
     val state = rememberLazyListState()
     // the setting's size for lines with their times (4 below what it was), 4 below that for lines without times (8 below what it was); always bold
     val base = com.umutk.pulse.extras.music.MusicSettings.lyricsFont(androidx.compose.ui.platform.LocalContext.current).coerceIn(12, 30) + (if (result.synced) 0 else -4)
@@ -100,7 +100,7 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
                 val scale by androidx.compose.animation.core.animateFloatAsState(if (on) 1.1f else 1f, androidx.compose.animation.core.tween(300), label = "lyScale")
                 val tone by androidx.compose.animation.animateColorAsState(if (on) hi else lo, androidx.compose.animation.core.tween(300), label = "lyTone")
                 val dist = if (cur < 0) 0 else kotlin.math.abs(i - cur)
-                val fade by androidx.compose.animation.core.animateFloatAsState(if (cur < 0 || on) 1f else (1f - .13f * dist).coerceAtLeast(.35f), androidx.compose.animation.core.tween(300), label = "lyFade")
+                val fade by androidx.compose.animation.core.animateFloatAsState(if (cur < 0 || on) 1f else (1f - .13f * dist).coerceAtLeast(.85f), androidx.compose.animation.core.tween(300), label = "lyFade")
                 // the longest word sets the largest size that still fits (a bold letter is about .64 of its size wide)
                 val longest = l.text.split(' ').maxOf { it.length }.coerceAtLeast(1)
                 val fs = minOf(base.toFloat(), avail / (longest * 0.64f * 1.1f)).coerceAtLeast(12f)
@@ -121,6 +121,8 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
                         fontSize = fs.sp,
                         lineHeight = (fs * 1.3f).sp,
                         fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Bold,
+                        // a soft dark edge: the words stay readable on a light or busy cover
+                        style = if (onDark) androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = .7f), androidx.compose.ui.geometry.Offset(0f, 2f), 8f)) else androidx.compose.ui.text.TextStyle.Default,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(0.9f)
                             .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
