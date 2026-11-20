@@ -127,10 +127,11 @@ fun PlayerLyrics(
                 override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                     if (source == NestedScrollSource.UserInput) pull = if (consumed.y != 0f || available.y < 0f) 0f else pull + available.y
                     // already at the first line and pulled down again: the lyrics close at once, no fling needed
-                    if (pull > 110f) { pull = 0f; onDismiss() }
+                    if (pull > 70f) { pull = 0f; onDismiss() }
                     return Offset.Zero
                 }
-                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { if (pull > 180f) onDismiss(); pull = 0f; return Velocity.Zero }
+                // a flick down that the lines could not take (they were already at the first line) closes them too, however short the drag was
+                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { if (pull > 40f || available.y > 900f) onDismiss(); pull = 0f; return Velocity.Zero }
             }
         }
         fun toggle(i: Int) {
