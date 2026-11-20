@@ -159,7 +159,7 @@ fun YourTasteScreen(onBack: () -> Unit, contentPadding: PaddingValues = PaddingV
                         Text(tr("Pause learning", "Öğrenmeyi duraklat"), color = c.onSurface, fontSize = 17.sp)
                         Text(tr("Nothing new is remembered; what is known still orders the feed", "Yeni bir şey hatırlanmaz; bilinenler akışı sıralamaya devam eder"), color = c.onSurfaceVariant, fontSize = 13.sp)
                     }
-                    Switch(Neuro.paused, { Neuro.setPaused(it) })
+                    Switch(Neuro.paused, { Neuro.pauseLearning(it) })
                 }
                 Spacer(Modifier.height(10.dp))
                 if (!confirmReset) Text(tr("Reset taste", "Zevki sıfırla"), color = c.error, fontSize = 16.sp, modifier = Modifier.clickable { confirmReset = true }.padding(vertical = 8.dp))

@@ -245,7 +245,7 @@ object Neuro {
     fun block(topic: String) { load(); topics.remove(topic); blocked.add(topic.lowercase()); save() }
     fun unblock(topic: String) { load(); blocked.remove(topic); save() }
     fun forgetChannel(key: String) { load(); channels.remove(key); save() }
-    fun setPaused(v: Boolean) { load(); paused = v; save() }
+    fun pauseLearning(v: Boolean) { load(); paused = v; save() }
     fun reset() {
         load()
         topics.clear(); channels.clear(); interactions = 0; profile = floatArrayOf(.5f, .5f, .5f, 0f); lastPersona = ""; stability = 0
