@@ -105,7 +105,7 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
 /** The picture of a taskbar button: the picture of the app's own entry, else one by the kind of page it shows. */
 internal fun taskbarIconKey(route: String): String =
     desktopItems().firstOrNull { it.pkg == "pulse:x:$route" }?.iconKey ?: when {
-        route == "page:device" -> "phone"; route == "page:filestabs" || route.startsWith("view:") -> "folder"
+        route == "page:device" -> (if (android.content.res.Resources.getSystem().configuration.smallestScreenWidthDp >= 600) "tablet" else "phone"); route == "page:filestabs" || route.startsWith("view:") -> "folder"
         route == "controlpanel" || route == "winsettings" -> "settings"; route == "page:processes" || route == "page:performance" || route == "page:taskmgr" -> "performance"
         route == "paint" -> "palette"; route == "win:gallery" -> "image"; route.startsWith("win:fun:") -> "chat"
         else -> "gridView"

@@ -173,7 +173,7 @@ private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95
 
 /** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint, the command prompt and the Task Manager. Drawn through the look's own icon set. */
 internal fun desktopItems(): List<LaunchApp> = listOf(
-    LaunchApp(tr("This PC", "Bu bilgisayar"), "pulse:pc", null, iconKey = "phone"),
+    LaunchApp(tr("This PC", "Bu bilgisayar"), "pulse:pc", null, iconKey = if (android.content.res.Resources.getSystem().configuration.smallestScreenWidthDp >= 600) "tablet" else "phone"),
     LaunchApp(tr("Recycle Bin", "Geri Dönüşüm Kutusu"), "pulse:recycle", null, iconKey = "recycle"),
     LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
     LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),

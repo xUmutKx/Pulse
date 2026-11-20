@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -82,6 +83,8 @@ private fun material(k: String): ImageVector = when (k) {
 @Composable
 fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
+    // a tablet: the device is drawn lying on its side (wide), in the icon of each look
+    if (k0 == "tablet") { PIcon("phone", tint, size, modifier.graphicsLayer { rotationZ = 90f; scaleY = 1.15f }); return }
     // App lock: the Windows 11 / One UI / ColorOS / classic packs have their own padlock; the tile with a padlock is for the vector looks
     val k = if (k0 == "applock" && T.id in setOf("win11", "oneui", "coloros", "win95", "xp", "win7")) "lock" else k0
     // Material / AMOLED use the flat line icon (mat_office.xml below); the other looks keep their own Office logo

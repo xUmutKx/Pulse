@@ -188,7 +188,7 @@ fun Win11Explorer() {
                         tr("Pictures", "Resimler") to Environment.DIRECTORY_PICTURES, tr("Music", "Müzik") to Environment.DIRECTORY_MUSIC, tr("Videos", "Videolar") to Environment.DIRECTORY_MOVIES, "DCIM" to Environment.DIRECTORY_DCIM,
                     ).forEach { (l, n) -> val f = File(root, n); if (f.exists()) W11Nav("folder", l, dir.path == f.path) { go(f) } }
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(line))
-                    W11Nav("phone", tr("This PC", "Bu bilgisayar"), false) { go(root) }
+                    W11Nav(if (android.content.res.Resources.getSystem().configuration.smallestScreenWidthDp >= 600) "tablet" else "phone", tr("This PC", "Bu bilgisayar"), false) { go(root) }
                 }
                 if (wide) Box(Modifier.width(1.dp).fillMaxHeight().background(line))
                 LazyColumn(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 8.dp)) {
