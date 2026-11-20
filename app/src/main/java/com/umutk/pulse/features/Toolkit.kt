@@ -153,7 +153,6 @@ private val tools = listOf(
     Tool("Motion cues", "Hareket noktaları", "motion") { MotionCueTool() },
     Tool("Power menu", "Güç menüsü", "power") { PowerMenuTool() },
     Tool("Dink", "Dink", "dink") { Dink() },
-    Tool("DNS", "DNS", "wifi") { DnsSettings() },
     Tool("Screen cover", "Ekran kapağı", "lock") { CoverTool() },
     Tool("Floating timer", "Yüzen sayaç", "pin") { FloatingTimerTool() },
     Tool("Big text", "Büyük yazı", "document") { BigTextTool() },
@@ -223,7 +222,7 @@ private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: (
 @Composable
 fun ToolkitPage() {
     var open by rememberSaveable { mutableStateOf(-1) }
-    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = allTools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
+    LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = if (ToolkitOpen.tool == "wifi") allTools.indexOfFirst { it.label == "DNS and TTL" } else allTools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
     com.umutk.pulse.InnerBackStep(open >= 0) { open = -1 }
     // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
@@ -235,13 +234,14 @@ fun ToolkitPage() {
             Column(
                 (if (t.wide) Modifier.fillMaxWidth(.98f).fillMaxHeight(.94f) else Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp))
                     .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
-                    .clip(RoundedCornerShape(T.radius)).background(T.panel)
+                    .clip(RoundedCornerShape(T.radius)).background(T.panel.copy(alpha = .92f))
                     .boundedHeight().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 PHead(tr(t.label, t.trLabel))
                 // the window scrolls, so a tool is measured with no height limit; a tool that has a scrolling page of its own (graphicsLayer + verticalScroll) crashed on that, so it gets a limit
-                Box(Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .8f).dp)) { t.body() }
+                // (a Column, not a Box: a tool puts several cards one after the other, and in a Box they were drawn on top of each other)
+                Column(Modifier.heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .8f).dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { t.body() }
             }
         }
     }

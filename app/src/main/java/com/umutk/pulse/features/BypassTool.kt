@@ -54,6 +54,8 @@ fun BypassTool() {
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
         Text(tr("Beats blocks that work on the site name (DNS). Blocks that read the traffic (DPI) are not beaten by it.", "Site adı (DNS) üzerinden yapılan engelleri aşar. Trafiği okuyan engelleri (DPI) aşamaz."), color = T.sub, fontSize = 12.sp)
     }
+    // the system's Private DNS (Auto, Off or Manual) lives here too, with the encrypted DNS above: the old separate DNS tile is this
+    DnsSettings()
     TtlCard()
 }
 

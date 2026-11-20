@@ -610,9 +610,14 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                                     }, Color.White)
                                 }
                             } }
-                            // a file: a small page with its kind written on it
-                            if (st.shotThumb == null && !st.shotVideo && st.shotFile.isNotEmpty()) Box(Modifier.size(width = 30.dp, height = 36.dp).clip(RoundedCornerShape(topStart = 3.dp, topEnd = 9.dp, bottomStart = 3.dp, bottomEnd = 3.dp)).background(th.accent.copy(alpha = .22f)), contentAlignment = Alignment.BottomCenter) {
-                                Text(st.shotFile, color = th.text, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
+                            // a file: a small black tile with the colour and glyph of its kind (the same as in Files); the letters of its kind when the kind has none
+                            if (st.shotThumb == null && !st.shotVideo && st.shotFile.isNotEmpty()) {
+                                val badge = com.umutk.pulse.features.exBadgeOf(st.shotFile)
+                                val tint = badge?.first ?: th.sub
+                                Box(Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).background(Color.Black).border(1.dp, tint.copy(alpha = .6f), RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                                    if (badge != null) Icon(badge.second, null, tint = tint, modifier = Modifier.size(18.dp))
+                                    else Text(st.shotFile.take(3), color = tint, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                                }
                             }
                             // a video with no picture of its own: the play mark alone, a little bigger
                             if (st.shotThumb == null && st.shotVideo) Canvas(Modifier.size(26.dp)) {
@@ -624,9 +629,18 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                             }
                         }
                         else if (s.startsWith("\u0003")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                            // a file named by what is being typed: a small page icon and its name
-                            Icon(kbIcon(th, "ContentCopy"), null, tint = th.accent, modifier = Modifier.size(18.dp))
-                            Text(s.drop(1), color = th.sub, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
+                            // a file named by what is being typed: its picture when it has one (a photo, a page, a cover), else a small tile of its kind (the colour and glyph of Files), and its name
+                            val fname = s.drop(1)
+                            val badge = com.umutk.pulse.features.exBadgeOf(fname.substringAfterLast('.', ""))
+                            val tint = badge?.first ?: th.sub
+                            val thumb = st.fileThumb
+                            if (thumb != null) Box(Modifier.size(30.dp).clip(RoundedCornerShape(7.dp)).border(1.dp, tint.copy(alpha = .55f), RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                                Image(thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } else Box(Modifier.size(28.dp).clip(RoundedCornerShape(7.dp)).background(Color.Black).border(1.dp, tint.copy(alpha = .6f), RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                                if (badge != null) Icon(badge.second, null, tint = tint, modifier = Modifier.size(17.dp))
+                                else Text(fname.substringAfterLast('.', "").take(3).uppercase(), color = tint, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                            }
+                            Text(fname, color = th.sub, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
                         }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))

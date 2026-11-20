@@ -2958,9 +2958,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             if (word.toString() != typed || hit == null) { if (hit == null) fileHit = null; return@launch }
             fileHit = hit
+            st.fileThumb = null
             val s = st.slots.toMutableList(); if (s.size > 2) { s[2] = "\u0003" + hit.name; st.slots = s }
             val w = slotWords.copyOf(); if (w.size > 2) { w[2] = ""; slotWords = w }
+            // its picture follows a moment later (a photo, the first page of a document, a song's cover, a frame of a video)
+            val th = runCatching { fileThumbOf(hit) }.getOrNull()
+            if (fileHit == hit) st.fileThumb = th
         }
+    }
+
+    /** A small picture of [f] for the bar: the photo itself, or what Files shows for it (a page, a cover, a frame). Null when there is none. */
+    private suspend fun fileThumbOf(f: java.io.File): androidx.compose.ui.graphics.ImageBitmap? = withContext(Dispatchers.IO) {
+        val ext = f.extension.lowercase()
+        val bmp = if (ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")) {
+            val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(f.path, o)
+            var k = 1; while (o.outWidth / (k * 2) >= 160 && o.outHeight / (k * 2) >= 160) k *= 2
+            android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = k })
+        } else if (com.umutk.pulse.features.FilePreviews.supports(ext)) com.umutk.pulse.features.FilePreviews.load(this@PulseKeyboardService, f) else null
+        bmp?.let { b -> val sc = 96f / maxOf(b.width, b.height); (if (sc < 1f) android.graphics.Bitmap.createScaledBitmap(b, (b.width * sc).toInt().coerceAtLeast(1), (b.height * sc).toInt().coerceAtLeast(1), true) else b).asImageBitmap() }
     }
 
     private fun withPersonal(typed: String) {

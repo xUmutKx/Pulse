@@ -117,6 +117,9 @@ fun exPreview(f: File): ImageBitmap? {
 
 private class Badge(val color: Color, val glyph: ImageVector)
 
+/** The colour and glyph of a file type (the same as the badges of Files), for other places that show files (the keyboard's file suggestion). Null for a type with none. */
+fun exBadgeOf(ext: String): Pair<Color, ImageVector>? = badgeOf(File("x." + ext.lowercase()))?.let { it.color to it.glyph }
+
 private fun badgeOf(f: File): Badge? {
     if (f.isDirectory) return null
     return when (f.extension.lowercase()) {
