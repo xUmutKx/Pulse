@@ -280,7 +280,7 @@ fun DownloadsScreen(
                 ) {
                     DownloadSectionPill("Videos", videos.size, section == 0) { section = 0 }
                     DownloadSectionPill("Music", music.size, section == 1) { section = 1 }
-                    DownloadSectionPill("Pulse", pulse.size, section == 2) { section = 2 }
+                    DownloadSectionPill(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), pulse.size, section == 2) { section = 2 }
                 }
             }
             if (section == 2) pulseItems(pulse, ctx)
@@ -563,6 +563,8 @@ private fun readPulseDownloads(ctx: android.content.Context): List<PulseDl> = ru
         val c = l.split('\t')
         if (c.size < 6) null else PulseDl(c[0], c[1], c[2].toLongOrNull() ?: 0L, c[3].toLongOrNull() ?: -1L, c[4].toLongOrNull() ?: 0L, c[5], c.getOrNull(6).orEmpty())
     }.asReversed()
+        // only series and films (video files): the other downloads of the Pulse app (files, apps, archives) stay in that app
+        .filter { it.path.substringAfterLast('.', "").lowercase() in setOf("mkv", "mp4", "avi", "webm", "mov", "m4v", "ts", "wmv", "flv") }
 }.getOrDefault(emptyList())
 
 /** Opens the Series and movies page on [s]. */
@@ -576,12 +578,6 @@ private fun openSeriesShow(ctx: android.content.Context, s: com.umutk.pulse.feat
     }
 }
 
-private fun openPulseApp(ctx: android.content.Context, series: Boolean) {
-    runCatching {
-        ctx.startActivity(android.content.Intent(ctx, Class.forName("com.umutk.pulse.MainActivity")).putExtra(if (series) "series" else "downloads", true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP))
-    }
-}
-
 private fun openPulseFile(ctx: android.content.Context, path: String) {
     runCatching {
         val f = java.io.File(path)
@@ -592,14 +588,9 @@ private fun openPulseFile(ctx: android.content.Context, path: String) {
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.pulseItems(list: List<PulseDl>, ctx: android.content.Context) {
-    item(key = "pulseTop") {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PillButton("Series and movies", { openSeriesPage(ctx) })
-        }
-    }
     if (list.isEmpty()) item(key = "pulseEmpty") {
         Box(Modifier.fillMaxWidth().padding(top = 20.dp)) {
-            EmptyState(icon = Icons.Rounded.Download, title = "Nothing downloaded in Pulse yet", body = "Series, movies and files you download in the Pulse app (a whole season at once from Series and movies) show here as they go.")
+            EmptyState(icon = Icons.Rounded.Download, title = com.umutk.pulse.tr("No series or movies yet", "Henüz dizi veya film yok"), body = com.umutk.pulse.tr("Series and movies you download (a whole season at once from Series and movies) show here as they go.", "İndirdiğiniz diziler ve filmler (bir sezon tek seferde) indikçe burada görünür."))
         }
     } else items(list.size, key = { "p-" + it + list[it].path }) { i ->
         val d = list[i]
