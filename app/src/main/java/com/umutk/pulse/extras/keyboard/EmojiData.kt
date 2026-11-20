@@ -75,7 +75,7 @@ object EmojiData {
         // the fast path: every word is in the keywords as it is
         val plain = all.asSequence().filter { it.kw.isNotEmpty() && q.all { w -> it.kw.contains(w) } }.take(max).toList()
         if (plain.size >= 12) return plain
-        val wants = q.map { w -> listOf(w, stem(w)).distinct() + (meaning[w] ?: meaning[stem(w)] ?: emptyList()) }
+        val wants = q.map { w -> listOf(w, stem(w)) + (meaning[w] ?: meaning[stem(w)] ?: emptyList()) }
         val scored = all.mapNotNull { e ->
             if (e.kw.isEmpty()) return@mapNotNull null
             val toks = e.kw.split(';', ' ').filter { it.isNotEmpty() }
