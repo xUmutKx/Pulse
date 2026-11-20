@@ -150,7 +150,7 @@ class YtxActivity : ComponentActivity() {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         // the opening (a play mark and a line, about half a second) plays when the app starts, not when the window is made again
-        val playSplash = false
+        val playSplash = savedInstanceState == null && !splashPlayed
         setContent {
             YtxTubeTheme {
                 var splash by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(playSplash) }

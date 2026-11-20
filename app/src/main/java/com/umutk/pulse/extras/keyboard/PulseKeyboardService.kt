@@ -867,7 +867,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (restarting) syncKind(attribute)
     }
 
+    /** When the keyboard came up: a key hit in the first moments is the finger that swiped it up (or the one still on the screen), not typing. */
+    private var shownAt = 0L
+
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
+        if (!restarting) shownAt = android.os.SystemClock.uptimeMillis()
         runCatching { KeyboardPrefs.saverOn = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode }
         if (!restarting) runCatching { takeClip(true) }
         // a screenshot or download made a moment before the keyboard came up is offered too
@@ -1160,6 +1164,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun type(s: String) {
+        // the keyboard has only just come up: a key under the finger that swiped it up (a number key's corner, say) is not typed
+        if (android.os.SystemClock.uptimeMillis() - shownAt < 350L && st.panel == "keys") return
         endFlash()
         st.keyTick++
         val c = currentInputConnection ?: return

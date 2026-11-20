@@ -67,7 +67,7 @@ fun trackArt(ctx: Context, track: Track): ImageBitmap? {
     ArtCache.map.get(key)?.let { return it }
     if (synchronized(ArtCache.none) { key in ArtCache.none }) return null
     // a cover the user picked or one found online wins over the embedded picture; both are saved on disk, so they survive a restart
-    val bmp = PowerampCovers.savedSmall(ctx, key) ?: embeddedArt(ctx, key) ?: CoverFetch.find(ctx, track)
+    val bmp = if (OnlineArt.isOnline(key)) OnlineArt.load(ctx, key) ?: CoverFetch.find(ctx, track) else PowerampCovers.savedSmall(ctx, key) ?: embeddedArt(ctx, key) ?: CoverFetch.find(ctx, track)
     // a skipped lookup on the main thread is not remembered as "no cover"
     if (bmp != null) ArtCache.map.put(key, bmp) else if (Looper.myLooper() != Looper.getMainLooper()) synchronized(ArtCache.none) { ArtCache.none += key }
     return bmp

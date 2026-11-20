@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd12" to (tr("Covers for YouTube Music and Spotify songs, Spotify login in the music page, Game Hub's Look setting reachable again, the YTXTube opening back, and no stray key when the keyboard comes up.",
+        "YouTube Music ve Spotify şarkılarında kapaklar, müzik sayfasında Spotify girişi, Game Hub görünüm ayarı yine erişilebilir, YTXTube açılışı geri, klavye açılırken yanlışlıkla tuş yazılmıyor.")),
     "kbd11" to (tr("Lyrics notification only for a song that was played, keyboard tools (Dictionary, Calculator, Convert) back in the menu, Pulse AI finds models already on the phone, a crash fix in the keyboard's suggestions.",
         "Söz bildirimi yalnız çalınmış şarkıda, klavye araçları (Sözlük, Hesap makinesi, Çevirici) menüde geri, Pulse AI telefondaki hazır modelleri buluyor, klavye önerilerinde çökme düzeltmesi.")),
     "kbd10" to (tr("Keyboard: a very long text no longer freezes it, a Special signs family with 25 groups in Symbols, a higher emoji bottom row with a space bar. The lyrics notification stays while the song is paused and goes when the player closes.",

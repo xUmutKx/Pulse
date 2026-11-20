@@ -64,14 +64,13 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
         delay(600)
         show("“$query”") { if (tab == 0) OnlineMusic.youtube(ctx, query) else OnlineMusic.spotify(ctx, query) }
     }
+    // Spotify needs its sign-in first: the login page itself opens here (not a note pointing at the settings)
+    LaunchedEffect(Unit) { com.umutk.pulse.extras.spotify.SpotifyAuth.restore(ctx) }
+    if (tab == 1 && !com.umutk.pulse.extras.spotify.SpotifyAuth.loggedIn) { com.umutk.pulse.extras.spotify.LoginPage(onBack); return }
     // inside the library (embedded) the page takes its place and look: no window background or insets of its own
     Column(Modifier.fillMaxSize().then(if (embedded) Modifier else Modifier.background(T.bg).statusBarsPadding().navigationBarsPadding()).padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-            listOf("YouTube Music", "Spotify").forEachIndexed { i, n ->
-                Text(n, color = if (tab == i) Look.accent else T.sub, fontSize = 16.sp, fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { tab = i }.padding(horizontal = 12.dp, vertical = 8.dp))
-            }
         }
         BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 16.sp), cursorBrush = SolidColor(Look.accent),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(T.panel).padding(horizontal = 16.dp, vertical = 12.dp),

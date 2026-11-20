@@ -81,7 +81,7 @@ object SpotifyHub {
 }
 
 @Composable
-private fun LoginPage(onClose: () -> Unit) {
+internal fun LoginPage(onClose: () -> Unit) {
     val ctx = LocalContext.current
     var id by remember { mutableStateOf(if (SpotifyAuth.hasClientId(ctx)) SpotifyAuth.clientId(ctx) else "") }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

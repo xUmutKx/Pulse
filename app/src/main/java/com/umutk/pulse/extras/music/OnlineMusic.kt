@@ -53,7 +53,7 @@ object OnlineMusic {
     /** The YouTube Music id of [h]: its own, or (a Spotify song) the best match of its title and artist. */
     private suspend fun idOf(ctx: Context, h: Hit): String? = h.ytId ?: youtube(ctx, "${h.artist} ${h.title}").firstOrNull()?.ytId
 
-    private fun track(h: Hit, url: String) = Track(path = url, title = h.title, artist = h.artist)
+    private fun track(h: Hit, url: String): Track { OnlineArt.put(url, h.thumb); return Track(path = url, title = h.title, artist = h.artist) }
 
     /**
      * Plays [list] from [index] in the music player itself (its engine, its queue, its notification, whichever look is on): nothing else opens.

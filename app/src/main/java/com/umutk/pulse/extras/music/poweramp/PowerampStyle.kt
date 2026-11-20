@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.umutk.pulse.extras.music.OnlineArt
 import com.umutk.pulse.extras.music.Track
 
 enum class PowerampBackdrop { BLACK, BLURRED_ART, SOLID }
@@ -78,7 +79,7 @@ fun formatMs(ms: Int): String {
 fun Track.displayName(): String = title ?: path.substringAfterLast('/').substringBeforeLast('.')
 
 /** Name of the folder that holds the file, shown as the folder chip. */
-fun Track.folderName(): String = path.substringBeforeLast('/', "").substringAfterLast('/')
+fun Track.folderName(): String = if (OnlineArt.isOnline(path)) "" else path.substringBeforeLast('/', "").substringAfterLast('/')
 
 /**
  * The artist: the tag, or, when the tag is blank, the part of the file name before " - " ("Artist - Title.mp3").
