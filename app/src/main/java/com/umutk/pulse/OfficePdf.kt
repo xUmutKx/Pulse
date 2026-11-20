@@ -271,6 +271,19 @@ fun smartInvert(b: Bitmap) {
             else for (k in members) img[k] = true
         }
     }
+    // blocks that are dark already (a dark box, a dark band of the page): their ground goes to black and their light text stays as it is, not turned light
+    val darkBlk = BooleanArray(bw * bh)
+    for (by in 0 until bh) for (bx in 0 until bw) {
+        var dk = 0; var n = 0
+        for (y in by * bs until minOf(h, by * bs + bs) step 2) for (x in bx * bs until minOf(w, bx * bs + bs) step 2) {
+            val c = px[y * w + x]; val l = ((c shr 16 and 255) * 77 + (c shr 8 and 255) * 151 + (c and 255) * 28) shr 8
+            if (l < 90) dk++; n++
+        }
+        darkBlk[by * bw + bx] = n > 0 && dk * 10 >= n * 7
+    }
+    // only a dark area, not the thick stroke of a big letter: the block and the blocks round it are all dark
+    val darkArea = BooleanArray(bw * bh) { k -> val x = k % bw; val y = k / bw
+        darkBlk[k] && (x == 0 || darkBlk[k - 1]) && (x == bw - 1 || darkBlk[k + 1]) && (y == 0 || darkBlk[k - bw]) && (y == bh - 1 || darkBlk[k + bw]) }
     val src = img.copyOf() // close one-block holes inside photos
     for (by in 1 until bh - 1) for (bx in 1 until bw - 1) if (!src[by * bw + bx]) {
         val k = by * bw + bx
@@ -292,7 +305,10 @@ fun smartInvert(b: Bitmap) {
             }
             val c = px[y * w + x]; val r = c shr 16 and 255; val g = c shr 8 and 255; val bl = c and 255
             val l = (r * 77 + g * 151 + bl * 28) shr 8
+            if (!isImg && darkArea[by * bw + bx]) { if (l < 90) px[y * w + x] = (c and 0xFF000000.toInt()); continue }
             val l2 = PAPER_LUT[l.coerceIn(0, 255)] // dark ink -> light, paper (and every light grey) -> black
+            // a ground that comes out dark is pure black (no tint of its old colour left), as an AMOLED page
+            if (!isImg && l2 < 48) { px[y * w + x] = (c and 0xFF000000.toInt()); continue }
             val d = l2 - l
             var nr = (r + d).coerceIn(0, 255); var ng = (g + d).coerceIn(0, 255); var nb = (bl + d).coerceIn(0, 255)
             if (keep > 0) { nr = (nr * (3 - keep) + r * keep) / 3; ng = (ng * (3 - keep) + g * keep) / 3; nb = (nb * (3 - keep) + bl * keep) / 3 }
