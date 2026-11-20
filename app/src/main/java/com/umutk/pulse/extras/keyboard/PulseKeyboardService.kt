@@ -711,6 +711,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onEvaluateFullscreenMode() = false
 
+    /**
+     * A request for the cursor's place that asks the field for as little text as it can: a plain request made the field hand over its WHOLE text across the process
+     * border (in a very long document that took seconds and a lot of memory, and the keyboard stopped answering).
+     */
+    private fun smallExtract() = android.view.inputmethod.ExtractedTextRequest().apply { hintMaxChars = 1; hintMaxLines = 1 }
+
     private var kbRoot: View? = null
     /** The floating keyboard's tall window was laid out (until a normal keyboard is shown again). */
     private var floatWasUp = false
@@ -1532,7 +1538,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (!KeyboardPrefs.fixFlash || KeyboardPrefs.fixSelect) return
         runCatching {
             val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
-                ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return
+                ?: c.getExtractedText(smallExtract(), 0)?.let { it.startOffset + it.selectionStart } ?: return
             val at = end - after - new.length
             if (at >= 0) c.commitCorrection(android.view.inputmethod.CorrectionInfo(at, old, new))
         }
@@ -1573,7 +1579,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val before = c.getTextBeforeCursor(word.length + tail.length, 0)?.toString() ?: return@post
                 if (before != word + tail) return@post
                 val end = (if (android.os.Build.VERSION.SDK_INT >= 31) c.getSurroundingText(1, 0, 0)?.let { it.offset + it.selectionStart } else null)
-                    ?: c.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.let { it.startOffset + it.selectionStart } ?: return@post
+                    ?: c.getExtractedText(smallExtract(), 0)?.let { it.startOffset + it.selectionStart } ?: return@post
                 val ws = end - tail.length - word.length
                 if (ws < 0) return@post
                 // a short, soft grey behind the word (the field's selection was a long, bright blue): the word is put back with a light background for a moment

@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Gif
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Spellcheck
+import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.Calculate
@@ -1622,7 +1623,7 @@ private fun familyIcon(id: String): ImageVector = when (id) {
     "Cute" -> Icons.Rounded.EmojiEmotions; "Moon and sky" -> Icons.Rounded.NightsStay; "Lines" -> Icons.Rounded.HorizontalRule; "Brackets" -> Icons.Rounded.DataArray
     "Arrows" -> Icons.Rounded.NorthEast; "Shapes" -> Icons.Rounded.Category; "Music" -> Icons.Rounded.MusicNote; "Symbols" -> Icons.Rounded.EmojiSymbols
     "Numbers" -> Icons.Rounded.Pin; "Punctuation" -> Icons.Rounded.FormatQuote; "Currency" -> Icons.Rounded.AttachMoney; "Math" -> Icons.Rounded.Functions
-    "Cuneiform" -> Icons.Rounded.Edit; "Hieroglyphs" -> Icons.Rounded.Visibility
+    "Cuneiform" -> Icons.Rounded.Edit; "Hieroglyphs" -> Icons.Rounded.Visibility; "Special" -> Icons.Rounded.Stars
     else -> Icons.Rounded.Apps
 }
 

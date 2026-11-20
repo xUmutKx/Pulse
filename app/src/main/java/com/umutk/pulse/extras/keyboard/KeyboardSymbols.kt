@@ -13,40 +13,51 @@ object KeyboardSymbols {
     }
 
     private val names = mapOf(
-        "Patterns" to ("Presets" to "Presetler"),
+        "Patterns" to ("Presets" to "Presetler"), "Special" to ("Special signs" to "Özel işaretler"),
         "Flowers" to ("Flowers" to "Çiçekler"), "Hearts" to ("Hearts" to "Kalpler"), "Stars" to ("Stars" to "Yıldızlar"), "Moon and sky" to ("Moon and sky" to "Ay ve gökyüzü"),
         "Lines" to ("Lines" to "Çizgiler"), "Brackets" to ("Brackets" to "Parantezler"), "Cute" to ("Cute" to "Süs"), "Arrows" to ("Arrows" to "Oklar"), "Math" to ("Math" to "Matematik"), "Shapes" to ("Shapes" to "Şekiller"),
         "Symbols" to ("Symbols" to "Semboller"), "Punctuation" to ("Punctuation" to "Noktalama"), "Currency" to ("Currency" to "Para"), "Numbers" to ("Numbers" to "Sayılar"),
         "Music" to ("Music" to "Müzik"), "Braille" to ("Braille" to "Braille"), "Cuneiform" to ("Cuneiform" to "Çivi yazısı"), "Hieroglyphs" to ("Hieroglyphs" to "Hiyeroglif"),
     )
-    private val subNames = mapOf("Cute faces" to "Tatlı yüzler", "Hearts and ribbons" to "Kalp ve kurdele", "Classics" to "Klasikler", "Lines" to "Çizgiler", "Wings" to "Kanatlar", "Brackets" to "Parantezler", "Long" to "Uzunlar", "Text and art" to "Yazı ve sanat")
+    private val subNames = mapOf("System and keys" to "Sistem ve tuşlar", "Security and warnings" to "Güvenlik ve uyarı", "Direction and flow" to "Yön ve akış", "Grids and frames" to "Izgara ve çerçeve", "Documents and badges" to "Belge ve rozetler", "Alchemy" to "Simya", "Egyptian hieroglyphs" to "Mısır hiyeroglifleri", "Aegean objects" to "Ege nesneleri", "Phaistos disc" to "Phaistos diski", "Anatolian hieroglyphs" to "Anadolu hiyeroglifleri", "Bamum" to "Bamum", "Vai" to "Vai", "Yi" to "Yi", "Linear B" to "Lineer B", "Cuneiform signs" to "Çivi yazısı işaretleri", "Old Italic, Phoenician, Coptic" to "Eski İtalik, Fenike, Kıpti", "Canadian syllabics" to "Kanada yerli yazısı", "Tifinagh" to "Tifinagh", "South Arabian" to "Güney Arabistan", "Brahmi" to "Brahmi", "Ethiopic" to "Etiyopya", "Cherokee" to "Çeroki", "Targets and lines" to "Hedef ve çizgiler", "Punctuation ornaments" to "Noktalama süsleri", "Map and route" to "Harita ve rota", "Dividers" to "Ayraçlar", "Frames" to "Çerçeveler", "Chains" to "Zincirler", "Wings and crowns" to "Kanat ve taçlar", "Sparkle borders" to "Parıltılı kenarlar", "Cute faces" to "Tatlı yüzler", "Hearts and ribbons" to "Kalp ve kurdele", "Classics" to "Klasikler", "Lines" to "Çizgiler", "Wings" to "Kanatlar", "Brackets" to "Parantezler", "Long" to "Uzunlar", "Text and art" to "Yazı ve sanat")
 
     /** The name of a sub-category in the app's language (the Unicode block names stay English). */
     fun subName(en: String): String = com.umutk.pulse.tr(en, subNames[en] ?: en)
 
     @Volatile private var cache: List<Family>? = null
 
-    /** Reads the file once; call off the main thread. */
+    /** Reads the files once (the Unicode families, then the extra file: the special signs and more presets, which join the families of the same name); call off the main thread. */
     fun load(c: Context): List<Family> {
         cache?.let { return it }
-        val out = ArrayList<Family>()
-        var id = ""; var subs = ArrayList<Pair<String, List<Sign>>>(); var subName = ""; var list = ArrayList<Sign>()
-        fun closeSub() { if (list.isNotEmpty()) subs += subName to list; list = ArrayList() }
-        fun close() { closeSub(); if (id.isNotEmpty()) { val n = names[id] ?: (id to id); out += Family(id, n.first, n.second, subs) }; subs = ArrayList() }
+        val out = LinkedHashMap<String, Family>()
         runCatching {
-            c.assets.open("kbd/symbols.txt").bufferedReader().useLines { lines ->
-                lines.forEach { l ->
-                    when {
-                        l.startsWith("##") -> { closeSub(); subName = l.substring(2) }
-                        l.startsWith("#") -> { close(); id = l.substring(1); subName = "" }
-                        else -> { val t = l.indexOf('\t'); if (t > 0) list += Sign(l.substring(0, t), l.substring(t + 1)) }
+            for (file in listOf("kbd/symbols.txt", "kbd/symbols_more.txt")) {
+                var id = ""; var subs = ArrayList<Pair<String, List<Sign>>>(); var subName = ""; var list = ArrayList<Sign>()
+                fun closeSub() { if (list.isNotEmpty()) subs += subName to list; list = ArrayList() }
+                fun close() {
+                    closeSub()
+                    if (id.isNotEmpty()) {
+                        val n = names[id] ?: (id to id)
+                        val old = out[id]
+                        out[id] = if (old == null) Family(id, n.first, n.second, subs) else Family(id, n.first, n.second, old.subs + subs)
+                    }
+                    subs = ArrayList()
+                }
+                c.assets.open(file).bufferedReader().useLines { lines ->
+                    lines.forEach { l ->
+                        when {
+                            l.startsWith("##") -> { closeSub(); subName = l.substring(2) }
+                            l.startsWith("#") -> { close(); id = l.substring(1); subName = "" }
+                            else -> { val t = l.indexOf('\t'); if (t > 0) list += Sign(l.substring(0, t), l.substring(t + 1)) }
+                        }
                     }
                 }
+                close()
             }
-            close()
         }
-        cache = out
-        return out
+        val res = out.values.toList()
+        cache = res
+        return res
     }
 
     /** The signs whose Unicode name has every word of [q] (English), first 120. */
