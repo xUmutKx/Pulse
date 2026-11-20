@@ -1026,6 +1026,8 @@
             </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
+        <!-- "Open as Music" of YTXTube's videos: the song plays in the music player (main process) -->
+        <receiver android:name="com.umutk.pulse.extras.music.OpenAsMusicReceiver" android:exported="false" />
         <!-- the colour picker: an eyedropper over the screen and a picker, from its quick settings tile -->
         <activity android:name="com.umutk.pulse.extras.colorpick.ColorPickActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" />
         <service android:name="com.umutk.pulse.extras.colorpick.ColorPickTile" android:exported="true" android:label="Colour picker" android:icon="@drawable/ic_qs_colorpick"
