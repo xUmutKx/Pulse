@@ -2496,7 +2496,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val evs = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(charArrayOf(ch.lowercaseChar())) ?: return false
         val shifted = ch.isUpperCase() || st.shift > 0
-        evs.filter { it.keyCode !in setOf(59, 60, 57, 58, 113, 114, 117, 118) }.forEach { e -> sendKey(e.keyCode, if (shifted) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0) }
+        // the key once: the map gives a DOWN and an UP event per key, and sending the key for each of them typed it twice (Alt+S wrote the ß of the Alt and then a plain s,
+        // because the one-shot Alt was already used up by the first press)
+        evs.filter { it.action == KeyEvent.ACTION_DOWN && it.keyCode !in setOf(59, 60, 57, 58, 113, 114, 117, 118) }.map { it.keyCode }.distinct()
+            .forEach { code -> sendKey(code, if (shifted) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0) }
         if (st.shift == 1) st.shift = 0
         return true
     }

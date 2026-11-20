@@ -739,6 +739,22 @@ private fun holdOf(k: KeyKind): String = when (k) {
     else -> "none"
 }
 
+/** What the letter [ch] does with the Ctrl, Alt or Win that waits: a short name, or the character Alt gives (null: nothing special). */
+private fun chordHint(st: KbState, ch: Char): String? {
+    val c = ch.lowercaseChar()
+    if (st.win > 0 && st.ctrl == 0) when (c) { 'd' -> return tr("Home", "Ana ekran"); 'l' -> return tr("Lock", "Kilit"); 'a' -> return tr("Quick", "Hızlı"); 'n' -> return tr("Notif.", "Bildirim") }
+    if (st.ctrl > 0 && st.alt == 0 && st.win == 0) when (c) {
+        'a' -> return tr("All", "Hepsi"); 'c' -> return tr("Copy", "Kopya"); 'x' -> return tr("Cut", "Kes"); 'v' -> return tr("Paste", "Yapıştır"); 'y' -> return tr("Redo", "İleri"); 'z' -> return tr("Undo", "Geri al")
+    }
+    if (st.alt > 0 && st.ctrl == 0 && st.win == 0) {
+        // the character the key gives with Alt (Alt+S: ß)
+        val code = android.view.KeyCharacterMap.load(android.view.KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(charArrayOf(c))?.firstOrNull()?.keyCode ?: return null
+        val u = android.view.KeyCharacterMap.load(android.view.KeyCharacterMap.VIRTUAL_KEYBOARD).get(code, android.view.KeyEvent.META_ALT_ON)
+        if (u > 32 && u.toChar() != c) return u.toChar().toString()
+    }
+    return null
+}
+
 /** The name of what holding [key] does, for its bubble (null: nothing, or its own pop-up characters). */
 private fun holdName(key: KbKey, st: KbState): String? {
     val id = when (key.kind) {
@@ -1280,6 +1296,10 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     if (k.kind == KeyKind.CHAR && (st.numpad || st.forceLayout == "numpad") && (k.label == "1" || k.label == "2" || k.label == "3")) {
                         val hint = when (k.label) { "1" -> kbIcon(th, "ContentPaste"); "2" -> Icons.Rounded.Lock; else -> Icons.Rounded.Key }
                         Icon(hint, null, tint = th.text.copy(alpha = .45f), modifier = Modifier.align(Alignment.BottomStart).padding(start = 7.dp, bottom = 5.dp).size(13.dp))
+                    }
+                    // Ctrl, Alt or Win waiting (or held): each letter says what that chord will do or type (Win+L: lock, Alt+S: ß)
+                    if (k.kind == KeyKind.CHAR && !small && k.label.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0)) chordHint(st, k.label[0])?.let { h ->
+                        Text(h, color = th.accent, fontSize = if (h.length > 2) 9.sp else 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
                     if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
