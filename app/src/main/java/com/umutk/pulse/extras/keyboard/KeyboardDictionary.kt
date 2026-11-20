@@ -106,6 +106,7 @@ object KeyboardDictionary {
         }
         if (lang == "en") runCatching { c.assets.open("kbd/proper_en.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNamesEn += it.trim().lowercase(Locale.ENGLISH) } } }
         if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) it.trim().lowercase(Locale("tr", "TR")).let { n -> if (n !in commonNames) properNouns += n } } } }
+        loadAbbr(c)
         if (!userLoaded) loadUser(c)
         // a capital learned earlier for an ordinary word (Güzel) is dropped: the word is written as typed
         commonNames.forEach { forms.remove(it) }
@@ -431,6 +432,24 @@ object KeyboardDictionary {
     }
 
     fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
+
+    // ---- abbreviations and chemical names (assets/kbd/abbr.txt): a light knowledge that keeps them from being "corrected", and gives the capitals back ----
+    private val abbr = ConcurrentHashMap<String, String>()
+    private val abbrWords = ConcurrentHashMap.newKeySet<String>()
+    private fun abbrKey(w: String) = w.map { when (it) { 'İ', 'I', 'ı' -> 'i'; 'Ü', 'ü' -> 'u'; 'Ö', 'ö' -> 'o'; 'Ş', 'ş' -> 's'; 'Ç', 'ç' -> 'c'; 'Ğ', 'ğ' -> 'g'; else -> it.lowercaseChar() } }.joinToString("")
+    private fun loadAbbr(c: Context) {
+        if (abbr.isNotEmpty()) return
+        runCatching { c.assets.open("kbd/abbr.txt").bufferedReader().useLines { ls -> ls.forEach { l -> val w = l.trim(); if (w.isNotEmpty()) { abbr[abbrKey(w)] = w; if (w.none { it.isUpperCase() }) abbrWords += w.lowercase(Locale("tr", "TR")) } } } }
+    }
+    /** The way an abbreviation or a formula is written (TBMM, TÜBİTAK, NaCl, H2O) when [typed] is it typed in small letters; null for anything else (and for ordinary words that look like one: ram, pin). */
+    fun abbrFix(typed: String): String? {
+        if (typed.length < 3) return null
+        val canon = abbr[abbrKey(typed)] ?: return null
+        if (canon == typed || canon.none { it.isUpperCase() }) return null
+        val l = typed.lowercase(Locale.ROOT)
+        val real = (lexes["tr"]?.index?.containsKey(l) == true) || (lexes["en"]?.index?.containsKey(l) == true)
+        return if (real) null else canon
+    }
     /** The word list's own score of [w] (ln of its count), 0 when the list does not have it; what the person typed does not count here. */
     fun lexScore(code: String, w: String): Float { val lx = lexes[d(code)] ?: return 0f; return lx.index[w.lowercase(Locale.ROOT)]?.let { lx.score[it] } ?: 0f }
 
@@ -448,7 +467,7 @@ object KeyboardDictionary {
         val l = w.lowercase(Locale.ROOT)
         // a word the person blocked is a slip of theirs, never a word: it is corrected like any other typo
         if (l in banned) return false
-        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l))
+        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l)) || l in abbrWords
     }
 
     private fun score(code: String, w: String): Float {

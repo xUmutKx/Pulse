@@ -333,6 +333,14 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Switch(tr("Quick auth: fingerprint first", "Hızlı kimlik: önce parmak izi"), tr("Off: the codes show at once", "Kapalı: kodlar hemen görünür"), KeyboardPrefs.authLock) { KeyboardPrefs.authLock = it; save() }
             Switch(tr("Offline voice typing (Whisper)", "Çevrimdışı sesle yazma (Whisper)"), tr("Uses the speech model of Pulse AI on the phone; press the microphone again to stop. Off: the phone's own recogniser", "Pulse AI'nin ses modelini telefonda kullanır; durdurmak için mikrofona tekrar bas. Kapalı: telefonun kendi tanıyıcısı"), KeyboardPrefs.voiceWhisper) { KeyboardPrefs.voiceWhisper = it; save() }
+            if (KeyboardPrefs.voiceWhisper && com.umutk.pulse.extras.ai.aiSupported && !com.umutk.pulse.extras.ai.Transcriber.ready(ctx)) {
+                // no speech model yet: one tap fetches the small Whisper model (60 MB, in Pulse's own downloader; it shows on the Downloads page)
+                val m = com.umutk.pulse.extras.ai.SPEECH_MODELS[0]
+                val pr by androidx.compose.runtime.produceState(-1f, ctx) { while (true) { value = com.umutk.pulse.extras.ai.Store.progress(ctx, m); kotlinx.coroutines.delay(800) } }
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.sub.copy(alpha = .12f)).clickable { if (pr < 0f) { com.umutk.pulse.extras.ai.Store.download(ctx, m); com.umutk.pulse.extras.ai.Store.setActive(ctx, "speech", m.id) } }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (pr < 0f) tr("Get the speech model (Whisper base, 60 MB)", "Ses modelini indir (Whisper base, 60 MB)") else tr("Downloading the speech model: ${(pr * 100).toInt()}%", "Ses modeli iniyor: %${(pr * 100).toInt()}"), color = T.text, fontSize = 14.sp)
+                }
+            }
             Switch(tr("Hybrid correction", "Hibrit düzeltme"), tr("Adds WM Keyboard's rules: acronyms and codes are left alone, a held-down letter (helllo) and a missed space (twowords) are mended", "WM Keyboard'ın kurallarını ekler: kısaltmalara ve kodlara dokunmaz, basılı kalan harfi (merhabaaa) ve unutulan boşluğu (ikikelime) düzeltir"), KeyboardPrefs.hybridFix) { KeyboardPrefs.hybridFix = it; save() }
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Correct when typing pauses", "Yazarken durunca düzelt"), tr("A word that can only be a slip is mended without a space (so a message sent with the app's own button is corrected too)", "Ancak hata olabilecek kelime boşluk olmadan düzeltilir (uygulamanın kendi gönder tuşuyla da düzeltilmiş gider)"), KeyboardPrefs.pauseFix) { KeyboardPrefs.pauseFix = it; save() }
