@@ -624,11 +624,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     BackHandler(enabled = !settings) {
         if (locked) return@BackHandler
-        // a video that plays goes on in a small window (the floating one, else picture in picture) instead of stopping when Back is pressed
+        // a video that plays goes on in a small window (the system's picture in picture, else the floating one) instead of stopping when Back is pressed
         if (prefs.backMini && playing && !inPip) {
-            if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
             val pp = pipParams()
             if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) return@BackHandler
+            if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
         }
         onBack()
     }
@@ -927,7 +927,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 dlg = null
                 when (key) {
                     // the video goes to the mini window above other apps and this screen closes; the window keeps playing
-                    "mini" -> if (FloatingVideo.show(ctx, player, vsize)) onBack()
+                    "mini" -> {
+                        val pp = pipParams()
+                        if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) Unit
+                        else if (FloatingVideo.show(ctx, player, vsize)) onBack()
+                    }
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
                     "bg" -> { bg = !bg; prefs.bg = bg }
                     "eq" -> dlg = "eq"
