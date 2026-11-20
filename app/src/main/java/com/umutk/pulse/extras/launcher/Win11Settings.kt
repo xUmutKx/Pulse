@@ -119,8 +119,7 @@ private fun Win11Profile() {
 @Composable
 private fun Win11Search(q: String, onChange: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel.copy(alpha = .5f)).padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon("search", T.sub, 16.dp)
-        Spacer(Modifier.width(8.dp))
+        // the field draws its own magnifier (a second one beside it was a double icon)
         com.umutk.pulse.PField(q, onChange, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth())
     }
 }

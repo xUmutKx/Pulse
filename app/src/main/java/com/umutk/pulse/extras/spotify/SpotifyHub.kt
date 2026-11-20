@@ -86,11 +86,13 @@ internal fun LoginPage(onClose: () -> Unit) {
     var id by remember { mutableStateOf(if (SpotifyAuth.hasClientId(ctx)) SpotifyAuth.clientId(ctx) else "") }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         IconButton(onClick = onClose) { PIcon("back", T.text, 22.dp) }
-        PField(id, { id = it }, tr("Client ID", "İstemci kimliği"), Modifier.fillMaxWidth())
+        // a build that carries Pulse's own Spotify app logs in with one press; the field is only for a build without one
+        if (!SpotifyAuth.hasBuiltInId()) PField(id, { id = it }, tr("Client ID", "İstemci kimliği"), Modifier.fillMaxWidth())
         PButton(tr("Log in", "Giriş yap"), Modifier.fillMaxWidth(), icon = null) {
             SpotifyAuth.error = null
             // the sign-in needs your own Client ID (from developer.spotify.com): without one Spotify answers INVALID_CLIENT, so nothing is sent
-            if (id.isBlank() || id.contains("YOUR_SPOTIFY")) SpotifyAuth.error = tr("Enter your Spotify Client ID first: make an app at developer.spotify.com and add " + SpotifyAuth.REDIRECT + " as its redirect address.", "Önce Spotify Client ID'ni yaz: developer.spotify.com'da bir uygulama aç ve yönlendirme adresi olarak " + SpotifyAuth.REDIRECT + " ekle.")
+            if (SpotifyAuth.hasBuiltInId()) { SpotifyAuth.setClientId(ctx, ""); SpotifyAuth.login(ctx) }
+            else if (id.isBlank() || id.contains("YOUR_SPOTIFY")) SpotifyAuth.error = tr("Enter your Spotify Client ID first: make an app at developer.spotify.com and add " + SpotifyAuth.REDIRECT + " as its redirect address.", "Önce Spotify Client ID'ni yaz: developer.spotify.com'da bir uygulama aç ve yönlendirme adresi olarak " + SpotifyAuth.REDIRECT + " ekle.")
             else { SpotifyAuth.setClientId(ctx, id.trim()); SpotifyAuth.login(ctx) }
         }
         SpotifyAuth.error?.let { Text(it, color = T.sub, fontSize = 13.sp) }

@@ -15,6 +15,8 @@ android {
         targetSdk = 34
         versionCode = 866
         versionName = "2.0.15"
+        // the Spotify app of Pulse (developer.spotify.com, redirect pulse-spotify://callback): its Client ID is public (PKCE sign-in has no secret); given with -PspotifyClientId=... or the SPOTIFY_CLIENT_ID variable of the build, so the person only presses Log in
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"" + (((project.findProperty("spotifyClientId") as String?) ?: System.getenv("SPOTIFY_CLIENT_ID"))?.trim()?.filter { it.isLetterOrDigit() }.orEmpty().ifEmpty { "YOUR_SPOTIFY_CLIENT_ID" }) + "\"")
         // the processors in the APK: 64-bit only by default (a 32-bit phone gets its own APK, -PpulseAbi=armeabi-v7a, built as the "32bit" variant of the workflow;
         // the Play bundle holds both, Play hands each phone its own half). x86_64 is left out: it is for emulators and Chromebooks, and was 4 MB of the APK
         ndk { abiFilters += ((project.findProperty("pulseAbi") as String?)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: listOf("arm64-v8a")) }

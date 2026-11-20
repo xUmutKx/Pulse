@@ -13,6 +13,9 @@ on:
         default: false
 permissions:
   contents: write
+env:
+  # the Client ID of Pulse's Spotify app (a repository variable, not a secret: a PKCE client id is public)
+  SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
 jobs:
   # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes the full one (Pulse AI inside), the lite one (without it) and the Google Play bundle
   plan:
