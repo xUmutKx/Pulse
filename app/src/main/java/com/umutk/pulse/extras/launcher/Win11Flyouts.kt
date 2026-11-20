@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -193,5 +194,40 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 if (q.isNotBlank()) ContactResults(q, Color.White, Color(0xAAFFFFFF))
             }
         }
+    }
+}
+
+/**
+ * The phone companion of the Start menu (its second layout): the phone and its battery, Wi-Fi and Bluetooth, Messages, Calls, Send files and a place for the recent phone activity,
+ * docked on the right of the menu like Phone Link in Windows 11.
+ */
+@Composable
+internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val shape = RoundedCornerShape(8.dp)
+    val bat = remember { ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }
+    val pct = remember { bat?.let { (it.getIntExtra("level", 0) * 100 / it.getIntExtra("scale", 100).coerceAtLeast(1)) } ?: 0 }
+    Column(Modifier.width(220.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.align(Alignment.CenterHorizontally).size(width = 52.dp, height = 92.dp).clip(RoundedCornerShape(10.dp)).background(launcherAccent().copy(alpha = .85f)))
+        Text(android.os.Build.MODEL, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Row(Modifier.align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Glyph("battery", fg, 16.dp); Text("$pct%", color = fg, fontSize = 12.sp)
+            QUICK.firstOrNull { it.en == "Wi-Fi" }?.let { t -> Icon(t.icon, null, tint = fg, modifier = Modifier.size(18.dp).clickable { t.run(ctx) }) }
+            QUICK.firstOrNull { it.en == "Bluetooth" }?.let { t -> Icon(t.icon, null, tint = fg, modifier = Modifier.size(18.dp).clickable { t.run(ctx) }) }
+        }
+        Spacer(Modifier.height(10.dp))
+        listOf(
+            Triple("chat", tr("Messages", "Mesajlar")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("sms:")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+            Triple("phone", tr("Calls", "Aramalar")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+            Triple("share", tr("Send files", "Dosyaları gönder")) { openDesktopItem(ctx, "pulse:x:localsend", "win11") },
+        ).forEach { (ic, label, act) ->
+            Row(Modifier.fillMaxWidth().clip(shape).clickable { onClose(); act() }.padding(horizontal = 8.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                Glyph(ic, fg, 18.dp)
+                Text(label, color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Text(tr("Recent", "En son"), color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Recent mobile activity shows here.", "Son mobil etkinlikler burada görünür."), color = fg.copy(alpha = .6f), fontSize = 12.sp)
     }
 }

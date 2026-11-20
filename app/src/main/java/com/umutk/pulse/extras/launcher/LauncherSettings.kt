@@ -164,6 +164,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 }
             }
             SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
+            SwitchLine("phone", tr("Start menu: phone panel on the right", "Başlat menüsü: sağda telefon paneli"), LauncherPrefs.phonePanel) { LauncherPrefs.phonePanel = it; save() }
             SwitchLine("contacts", tr("Search finds contacts (tap to call)", "Arama kişileri de bulur (dokununca arar)"), LauncherPrefs.searchContacts) {
                 LauncherPrefs.searchContacts = it; save()
                 // the contacts (and the phone, for calling at once) are asked for when it is turned on

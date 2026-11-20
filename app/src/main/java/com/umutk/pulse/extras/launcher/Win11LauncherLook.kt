@@ -155,14 +155,14 @@ class Win11LauncherLook : LauncherLook {
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     // the width limit comes first: after fillMaxWidth it is ignored and the menu fills the whole turned screen
-                    .widthIn(max = if (land) 560.dp else 640.dp)
+                    .widthIn(max = if (land || LauncherPrefs.phonePanel) 820.dp else 640.dp)
                     .fillMaxWidth()
                     .fillMaxHeight(if (land) .9f else .78f)
                     .shadow(24.dp, shape, clip = false)
                     .border(1.dp, Color(0x33FFFFFF), shape)
                     .clickable(enabled = false) {},
                 shape, 30.dp,
-            ) { Column(Modifier.fillMaxSize().padding(16.dp)) {
+            ) { Row(Modifier.fillMaxSize()) { Column(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) {
                 Box(
                     Modifier.fillMaxWidth().height(40.dp).clip(shape).background(field())
                         .drawBehind { drawRect(accent, Offset(0f, size.height - 2.dp.toPx()), Size(size.width, 2.dp.toPx())) }
@@ -246,10 +246,24 @@ class Win11LauncherLook : LauncherLook {
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).clip(shape).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fg.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Glyph("person", fg, 16.dp) }
-                        Text(tr("This PC", "Bu bilgisayar"), color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                        Text(android.os.Build.MODEL, color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                    }
+                    // the quick folders beside the power button: Settings, File Explorer, Documents, Downloads
+                    val ctxF = androidx.compose.ui.platform.LocalContext.current
+                    listOf("settings" to "pulse:winsettings", "folder" to "pulse:files", "details" to "view:Documents", "download" to "view:Download").forEach { (ic, id) ->
+                        Box(Modifier.size(36.dp).clip(shape).clickable {
+                            onClose()
+                            if (id.startsWith("view:")) {
+                                val dir = android.os.Environment.getExternalStoragePublicDirectory(if (id.endsWith("Documents")) android.os.Environment.DIRECTORY_DOCUMENTS else android.os.Environment.DIRECTORY_DOWNLOADS).path
+                                if (LauncherPrefs.windowedApps) DesktopWindows.open("view:$dir", id.removePrefix("view:")) else openDesktopItem(ctxF, "pulse:files", "win11")
+                            } else openDesktopItem(ctxF, id, "win11")
+                        }, contentAlignment = Alignment.Center) { Glyph(ic, fg, 18.dp) }
                     }
                     PowerClick(onClose, Modifier.size(36.dp).clip(shape)) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
                 }
+            }
+            // the phone companion docked on the right of the menu (a wide or turned screen): the phone's state, messages, calls and files, as in Windows 11's Start with Phone Link
+            if (land || LauncherPrefs.phonePanel) PhoneCompanionPanel(fg, onClose)
             }
             }
         }
