@@ -102,6 +102,7 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
  * The menu of one app (a long press, or a right click): in Windows 11 it is the new compact menu, a row of icons on top (open, pin, rename, share, uninstall) and the rest as rows with
  * Fluent icons, the less common ones behind "Show more options"; the other looks list every action as rows. Which actions there are, and in what order, is the user's to set.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current

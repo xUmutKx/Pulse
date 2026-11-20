@@ -2233,7 +2233,7 @@ private fun emojiTh(th: KbTheme): KbTheme {
 
 /** The preview of the copied item held in the bar's right slot: the whole text (scrolls), the picture large, a video with a small playing animation. */
 @Composable
-private fun SlotPreview(st: KeyboardState, th: KeyboardTheme) {
+private fun SlotPreview(st: KbState, th: KbTheme) {
     val close = { st.previewText = null; st.previewShot = false }
     androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter, offset = androidx.compose.ui.unit.IntOffset(0, -150), onDismissRequest = close, properties = androidx.compose.ui.window.PopupProperties(focusable = false, clippingEnabled = false)) {
         Box(Modifier.padding(8.dp).widthIn(max = 340.dp).clip(RoundedCornerShape(16.dp)).background(th.bg).border(1.dp, th.text.copy(alpha = .18f), RoundedCornerShape(16.dp)).clickable { close() }.padding(10.dp), contentAlignment = Alignment.Center) {

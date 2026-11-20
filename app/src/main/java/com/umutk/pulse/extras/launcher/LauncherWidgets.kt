@@ -129,7 +129,7 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
                     .pointerInput(w.id) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                            val up = kotlinx.coroutines.withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) }
+                            val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) }
                             if (up == null) editId = w.id
                         }
                     }) {
