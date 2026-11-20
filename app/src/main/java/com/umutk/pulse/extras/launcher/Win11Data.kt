@@ -58,7 +58,7 @@ internal val WIN11_SETTINGS: List<WGroup> = listOf(
         w("apps", "Installed apps", "Yüklü uygulamalar", "Manage and uninstall apps", "Uygulamaları yönet ve kaldır", "page:apps"),
         w("apkPackage", "Advanced app settings", "Gelişmiş uygulama ayarları", "Where apps come from, special access", "Uygulamaların kaynağı, özel erişim", a(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)),
         w("apps", "Default apps", "Varsayılan uygulamalar", "Browser, phone, files and links", "Tarayıcı, telefon, dosyalar ve bağlantılar", a(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)),
-        w("globe", "Apps for websites", "Web siteleri için uygulamalar", "Links that open in an app", "Bir uygulamada açılan bağlantılar", a(Settings.ACTION_MANAGE_DOMAIN_URLS)),
+        w("globe", "Apps for websites", "Web siteleri için uygulamalar", "Links that open in an app", "Bir uygulamada açılan bağlantılar", a("android.settings.MANAGE_DOMAIN_URLS")),
         w("startup", "Startup", "Başlangıç", "Apps that start with the phone", "Telefonla başlayan uygulamalar", "page:startup"),
         w("services", "Services", "Hizmetler", "Services that run in the background", "Arka planda çalışan hizmetler", "page:services"),
     )),
@@ -96,7 +96,7 @@ internal val WIN11_SETTINGS: List<WGroup> = listOf(
         w("heart", "Device health", "Aygıt sağlığı", "Battery wear and health checks", "Pil aşınması ve sağlık kontrolleri", "health"),
     )),
     WGroup("update", "download", "Windows Update", "Windows Update", listOf(
-        w("download", "Check for updates", "Güncellemeleri denetle", "System update and Pulse update", "Sistem güncellemesi ve Pulse güncellemesi", a(Settings.ACTION_SYSTEM_UPDATE_SETTINGS)),
+        w("download", "Check for updates", "Güncellemeleri denetle", "System update and Pulse update", "Sistem güncellemesi ve Pulse güncellemesi", a("android.settings.SYSTEM_UPDATE_SETTINGS")),
         w("history", "Update history", "Güncelleştirme geçmişi", "What was installed", "Neler yüklendi", a(Settings.ACTION_DEVICE_INFO_SETTINGS)),
         w("apps", "Pulse extras", "Pulse ek uygulamalar", "Store of extra apps and their updates", "Ek uygulamaların mağazası ve güncellemeleri", "page:extrastore"),
     )),
