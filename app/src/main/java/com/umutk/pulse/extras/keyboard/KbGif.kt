@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-/** GIF search (as in WM Keyboard), through Tenor with the user's own key (Settings > Keyboard > Typing). Nothing is asked for without a key. */
+/** GIF search (as in WM Keyboard), through Tenor: its API with the user's own key (Settings > Keyboard > Typing), or its search page without one. */
 object KbGif {
     class Gif(val preview: String, val full: String, val w: Int, val h: Int)
 
@@ -17,9 +17,21 @@ object KbGif {
         return c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }.also { c.disconnect() }
     }
 
-    /** Trending GIFs for an empty [q]. Blocking. */
+    /** Without a key: Tenor's own search page is read (the GIFs it lists, in its order). Blocking. */
+    private fun keyless(q: String): List<Gif> {
+        val slug = q.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.joinToString("-") { URLEncoder.encode(it, "UTF-8") }.ifEmpty { "trending" }
+        val c = URL("https://tenor.com/search/$slug-gifs").openConnection() as HttpURLConnection
+        c.connectTimeout = 8000; c.readTimeout = 10000
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36")
+        val html = c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }.also { c.disconnect() }
+        // AAAAM is Tenor's small GIF (a few hundred kB): the preview and the one sent
+        return Regex("https://media\\.tenor\\.com/[A-Za-z0-9_-]+AAAAM/[A-Za-z0-9_%.-]+\\.gif").findAll(html).map { it.value }.distinct().take(40)
+            .map { Gif(it, it, 1, 1) }.toList()
+    }
+
+    /** Trending GIFs for an empty [q]. With the user's Tenor key the API is used, without one Tenor's search page. Blocking. */
     fun search(q: String, key: String, lang: String): List<Gif> {
-        if (key.isBlank()) return emptyList()
+        if (key.isBlank()) return keyless(q)
         val k = URLEncoder.encode(key.trim(), "UTF-8")
         val base = if (q.isBlank()) "https://tenor.googleapis.com/v2/featured?" else "https://tenor.googleapis.com/v2/search?q=${URLEncoder.encode(q, "UTF-8")}&"
         val o = JSONObject(get(base + "key=$k&client_key=pulse_keyboard&limit=30&contentfilter=medium&media_filter=tinygif,gif&locale=$lang"))

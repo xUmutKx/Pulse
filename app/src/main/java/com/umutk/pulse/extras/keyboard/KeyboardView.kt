@@ -1446,8 +1446,8 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
                     Text(if (q.isEmpty()) tr("Search emoji, kaomoji, symbols", "Emoji, kaomoji, sembol ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
-                // GIF: the same box looks for GIFs (only with a key set)
-                if (KeyboardPrefs.gifKey.isNotBlank()) Box(Modifier.padding(end = 8.dp).height(30.dp).clip(RoundedCornerShape(15.dp)).background(if (st.gifSearch) th.accent else th.special).clickable { st.gifSearch = !st.gifSearch }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                // GIF: the same box looks for GIFs (Tenor; a key in the settings is optional)
+                Box(Modifier.padding(end = 8.dp).height(30.dp).clip(RoundedCornerShape(15.dp)).background(if (st.gifSearch) th.accent else th.special).clickable { st.gifSearch = !st.gifSearch }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
                     Text("GIF", color = if (st.gifSearch) th.onAccent else th.text, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 }
             } else if (toneBase != null) {
@@ -1467,7 +1467,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 }
             }
         }
-        if (q != null && st.gifSearch && KeyboardPrefs.gifKey.isNotBlank()) {
+        if (q != null && st.gifSearch) {
             GifStrip(th, act, q)
             if (!split) KeysPanel(th, st, act, keyH)
         } else if (q != null) {
