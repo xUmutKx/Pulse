@@ -366,6 +366,14 @@ object KeyboardPrefs {
             hybridFix = true
             p.edit().putBoolean("dictMenu209", true).putString("menuItems", menuItems).putBoolean("hybridFix", true).apply()
         }
+        // once more: the Stickers and Grammar tiles join the menu
+        if (!p.getBoolean("stickerMenu209", false)) {
+            val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            val tb = toolbarItems.split(',')
+            for (id in listOf("stickers", "grammar")) if (id !in mn && id !in tb) mn.add(id)
+            menuItems = mn.joinToString(",")
+            p.edit().putBoolean("stickerMenu209", true).putString("menuItems", menuItems).apply()
+        }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again

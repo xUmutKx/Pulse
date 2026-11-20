@@ -34,6 +34,8 @@ import androidx.compose.material.icons.rounded.Functions
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Spellcheck
+import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -104,6 +106,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -401,6 +404,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "auth" -> { if (st.numpad) NumPanelClose(th, st); AuthPanel(th, st, act, keyH) }
             "vault" -> VaultPanel(th, st, act, keyH)
             "dict" -> DictPanel(th, st, act, keyH)
+            "stickers" -> StickerPanel(th, st, act, keyH)
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -739,7 +743,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -1506,7 +1510,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
         Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             if (q != null) {
                 // search: the box takes the place of the tabs; the keys below type into it
-                Box(Modifier.size(40.dp).clickable { st.emojiQuery = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+                Box(Modifier.size(40.dp).clickable { st.emojiQuery = null; st.gifSearch = false }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 Row(Modifier.weight(1f).height(32.dp).padding(end = 8.dp).clip(RoundedCornerShape(16.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
                     Text(if (q.isEmpty()) tr("Search emoji, kaomoji, symbols", "Emoji, kaomoji, sembol ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
@@ -1529,6 +1533,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.emojiQuery = "" }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(20.dp))
                     Text(tr("Search emojis", "Emoji ara"), color = th.sub, fontSize = 16.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                }
+                // GIF search: its own button at the right of the search box (opens the search on the GIFs)
+                Box(Modifier.padding(end = 6.dp).height(36.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.gifSearch = true; st.emojiQuery = "" }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("GIF", color = th.accent, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 }
             }
         }
@@ -1993,6 +2001,33 @@ private fun VaultPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                         if (user.isNotEmpty()) Text(user, color = th.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (fits) Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(th.accent))
+                }
+            }
+        }
+        KeysPanel(th, st, act, keyH)
+    }
+}
+
+/** Your own stickers: the pictures in Download/Pulse/Stickers (and Pictures/Stickers), a tap sends one as a picture. */
+@Composable
+private fun StickerPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val ctx = LocalContext.current
+    val files by androidx.compose.runtime.produceState(emptyList<java.io.File>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KbStickers.files(ctx) } }
+    Column(Modifier.fillMaxWidth().background(th.menu)) {
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.StickyNote2, null, tint = th.accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(tr("Stickers", "Çıkartmalar") + " · ${files.size}", color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(tr("Close", "Kapat"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { st.panel = "keys" }.padding(8.dp))
+        }
+        if (files.isEmpty()) Box(Modifier.fillMaxWidth().height(keyH * 1.9f).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+            Text(tr("Put pictures (png, webp, gif) in Download/Pulse/Stickers", "Resimleri (png, webp, gif) Download/Pulse/Stickers klasörüne koy"), color = th.sub, fontSize = 13.sp)
+        } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Adaptive(64.dp), Modifier.fillMaxWidth().height(keyH * 1.9f)) {
+            items(files.size) { i ->
+                val f = files[i]
+                val bmp by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, f.path) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KbStickers.thumb(f) } }
+                Box(Modifier.padding(3.dp).aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(th.key).clickable { act.sticker(f) }, contentAlignment = Alignment.Center) {
+                    bmp?.let { Image(it, null, Modifier.fillMaxSize().padding(4.dp), contentScale = ContentScale.Fit) }
                 }
             }
         }

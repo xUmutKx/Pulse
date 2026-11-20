@@ -273,6 +273,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
     override fun gif(f: java.io.File) { pasteVideo(f, "image/gif") }
+    override fun sticker(f: java.io.File) { pasteVideo(f, java.net.URLConnection.guessContentTypeFromName(f.name) ?: "image/png") }
 
     override fun authPick(code: String) {
         currentInputConnection?.commitText(code, 1)
@@ -2097,6 +2098,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val term = sel.ifEmpty { (before.trimEnd().takeLastWhile { it.isLetter() || it == '\'' || it == '-' }) }
                 st.panel = "dict"; st.dictQuery = term; st.dictText = ""
                 if (term.length >= 2) { st.dictBusy = true; scope.launch { val r = withContext(Dispatchers.IO) { KbDict.lookup(term, lang.code) }; st.dictText = r.ifEmpty { tr("Nothing found for \"$term\"", "\"$term\" için bir şey bulunamadı") }; st.dictBusy = false } }
+            }
+            "stickers" -> st.panel = if (st.panel == "stickers") "keys" else "stickers"
+            // the grammar check: the selected text, else the paragraph before the cursor, put right (spaces, repeated words, capitals, apostrophes)
+            "grammar" -> {
+                st.panel = "keys"
+                val c = currentInputConnection ?: return
+                finishWord("", false)
+                val sel = c.getSelectedText(0)?.toString().orEmpty()
+                val before = if (sel.isEmpty()) c.getTextBeforeCursor(400, 0)?.toString().orEmpty().substringAfterLast('\n') else ""
+                val src = sel.ifEmpty { before }
+                val fixed = KbGrammar.fix(src, lang.code)
+                if (fixed == src) android.widget.Toast.makeText(this, tr("No problems found", "Sorun bulunamadı"), android.widget.Toast.LENGTH_SHORT).show()
+                else { if (sel.isEmpty()) c.deleteSurroundingText(src.length, 0); c.commitText(fixed, 1); android.widget.Toast.makeText(this, tr("Fixed", "Düzeltildi"), android.widget.Toast.LENGTH_SHORT).show() }
             }
             "dictInsert" -> { currentInputConnection?.commitText(st.dictText.lineSequence().firstOrNull { it.trimStart().startsWith("1.") }?.trim()?.removePrefix("1.")?.trim() ?: st.dictText.lineSequence().drop(1).firstOrNull().orEmpty(), 1); st.panel = "keys" }
             // the calculator and the converter: the selected expression, or the one right before the cursor; the answer goes in after it ("12*5" -> "12*5 = 60")

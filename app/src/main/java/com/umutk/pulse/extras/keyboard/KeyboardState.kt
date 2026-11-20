@@ -141,6 +141,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 interface KbActions {
     /** A GIF file goes into the field (or the clipboard when the field takes no pictures). */
     fun gif(f: java.io.File) {}
+    /** One of your own stickers goes into the field as a picture. */
+    fun sticker(f: java.io.File) {}
     /** Quick auth: a code is typed into the field. */
     fun authPick(code: String) {}
     /** The password manager: a tap fills what the field in front asks for (the password in a password box, the user name elsewhere), [other] the one it does not. */
