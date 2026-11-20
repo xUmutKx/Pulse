@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
@@ -328,7 +329,24 @@ fun ChannelScreen(
             d == null -> Box(Modifier.fillMaxWidth().padding(top = top + 60.dp), Alignment.Center) {
                 CircularProgressIndicator(color = c.primary, strokeWidth = 4.dp, modifier = Modifier.size(36.dp))
             }
-            else -> LazyColumn(state = list, contentPadding = contentPadding.withTop(top)) {
+            else -> LazyColumn(
+                state = list, contentPadding = contentPadding.withTop(top),
+                // a swipe sideways moves to the next / previous tab (Home, Videos, Shorts, Live ...)
+                modifier = Modifier.pointerInput(state.activeTab) {
+                    var dx = 0f
+                    androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                        onDragStart = { dx = 0f },
+                        onDragCancel = { dx = 0f },
+                        onDragEnd = {
+                            if (kotlin.math.abs(dx) > 110f) {
+                                val tabs = ChannelTab.entries
+                                tabs.getOrNull(tabs.indexOf(state.activeTab) + if (dx < 0) 1 else -1)?.let { state.selectTab(it) }
+                            }
+                            dx = 0f
+                        },
+                    ) { _, d -> dx += d }
+                },
+            ) {
                 item(key = "header") {
                     AnimatedVisibility(
                         visible = true,
