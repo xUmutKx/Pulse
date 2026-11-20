@@ -138,6 +138,12 @@ object KeyboardPrefs {
     fun otpCodes(c: Context): Boolean = c.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("otpCodes", false)
     /** The digit set the digit keys type (latin by default). */
     var numerals by mutableStateOf("latin")
+    /** The gap of the split keys, in tenths of a key (20 = two keys, as before). */
+    var splitGap by mutableStateOf(20)
+    /** Key corners over the theme's (-1 = the theme's own). */
+    var keyRadius by mutableStateOf(-1)
+    /** Icon family over the theme's: theme, filled, sharp, rounded, outlined. */
+    var keyIcons by mutableStateOf("theme")
     /** Power saving: while the phone's battery saver is on, the keyboard drops its animations and effects (on by default would change it, so off). */
     var powerSave by mutableStateOf(false)
     /** Each app gets back the language last used in it (off by default). */
@@ -349,7 +355,7 @@ object KeyboardPrefs {
         }
         // the password manager (passwords) has its place in the ⋮ menu, once (it was only on the 3 key of the number pad)
         if (!p.getBoolean("vaultMenu14", false)) { val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList(); if ("vault" !in mn) mn.add(minOf(mn.indexOf("clip") + 1, mn.size).coerceAtLeast(0), "vault"); menuItems = mn.joinToString(","); p.edit().putBoolean("vaultMenu14", true).putString("menuItems", menuItems).apply() }
-        numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
+        numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
         if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
@@ -364,7 +370,7 @@ object KeyboardPrefs {
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
-            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putString("numCorners", numCorners).putBoolean("calcEquals", calcEquals).putBoolean("otpCodes", otpOn).putString("numerals", numerals).putBoolean("powerSave", powerSave).putBoolean("perAppLang", perAppLang).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace)
+            .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putString("numCorners", numCorners).putBoolean("calcEquals", calcEquals).putBoolean("otpCodes", otpOn).putString("numerals", numerals).putInt("splitGap", splitGap).putInt("keyRadius", keyRadius).putString("keyIcons", keyIcons).putBoolean("powerSave", powerSave).putBoolean("perAppLang", perAppLang).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("rememberNumbers", rememberNumbers).putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("corners", corners).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)

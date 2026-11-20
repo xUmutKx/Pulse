@@ -14,6 +14,13 @@ class KbTheme(
 ) {
     /** The Samsung look: its own bottom row (!#1, comma, the space bar with the language, period, the action key in the accent colour), the number row, round toolbar buttons. */
     val samsung: Boolean get() = id == "samsung"
+
+    /** The user's own key corners and icon family over the theme's (both off by default: the theme stays as it is). */
+    fun tuned(): KbTheme {
+        val r = KeyboardPrefs.keyRadius; val ic = KeyboardPrefs.keyIcons
+        if (r < 0 && ic == "theme") return this
+        return KbTheme(id, bg, key, text, special, specialText, accent, onAccent, menu, popup, sub, if (r < 0) radius else r, bevel, border, if (ic == "theme") icons else ic)
+    }
 }
 
 object KeyboardThemes {

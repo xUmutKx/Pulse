@@ -213,7 +213,7 @@ val LocalOverlayKb = androidx.compose.runtime.compositionLocalOf { false }
 
 @Composable
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
-    val th = KeyboardThemes.of(themeId, st.dark)
+    val th = KeyboardThemes.of(themeId, st.dark).tuned()
     val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgbNow > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween((14000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
     androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue) { KeyboardViewBody(th, st, act, modifier) }
 }
@@ -794,7 +794,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         // split keys (for a tablet): a gap in the middle of each row, so both thumbs reach their half
         // the keys are split only when the "Split keys" setting is on, tablet or phone: so the screen matches the setting (joined by default)
-        val gapW = if (KeyboardPrefs.split) 2f else 0f
+        val gapW = if (KeyboardPrefs.split) KeyboardPrefs.splitGap / 10f else 0f
         Row(Modifier.fillMaxWidth()) { rows[0].forEachIndexed { i, k -> if (gapW > 0 && i == rows[0].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) } }
         Row(Modifier.fillMaxWidth()) {
             val sp = (n1 - rows[1].size) / 2f

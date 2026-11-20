@@ -145,6 +145,19 @@ fun KeyboardSettings(back: () -> Unit) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyboardThemes.ids.forEach { id -> ThemeTile(id, dark, KeyboardPrefs.theme == id) { KeyboardPrefs.theme = id; save() } }
             }
+            // key shape and icon family over the theme (the theme's own by default)
+            Text(tr("Key corners", "Tuş köşeleri") + ": " + (if (KeyboardPrefs.keyRadius < 0) tr("Theme", "Tema") else "${KeyboardPrefs.keyRadius}"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(-1 to tr("Theme", "Tema"), 0 to tr("Square", "Kare"), 4 to tr("Soft", "Yumuşak"), 10 to tr("Round", "Yuvarlak"), 24 to tr("Pill", "Hap")).forEach { (r, n) ->
+                    PChip(KeyboardPrefs.keyRadius == r, n) { KeyboardPrefs.keyRadius = r; save() }
+                }
+            }
+            Text(tr("Icons", "Simgeler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("theme" to tr("Theme", "Tema"), "outlined" to tr("Outlined", "Çizgi"), "filled" to tr("Filled", "Dolu"), "rounded" to tr("Rounded", "Yuvarlak"), "sharp" to tr("Sharp", "Keskin")).forEach { (k, n) ->
+                    PChip(KeyboardPrefs.keyIcons == k, n) { KeyboardPrefs.keyIcons = k; save() }
+                }
+            }
             if (KeyboardPrefs.theme == "custom") {
                 ColorEditor(tr("Background", "Arka plan"), KeyboardPrefs.cBg) { KeyboardPrefs.cBg = it; save() }
                 ColorEditor(tr("Keys", "Tuşlar"), KeyboardPrefs.cKey) { KeyboardPrefs.cKey = it; save() }
@@ -199,6 +212,10 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
+            if (KeyboardPrefs.split) {
+                Text("${tr("Gap", "Boşluk")}: ${KeyboardPrefs.splitGap / 10f}", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.splitGap - 5) / 45f, { KeyboardPrefs.splitGap = 5 + (it * 45).roundToInt() }, 0f..1f, onDone = { save() })
+            }
             Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A keyboard you move anywhere on the screen by the handle on top", "Üstteki tutamakla ekranın her yerine taşınan klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
