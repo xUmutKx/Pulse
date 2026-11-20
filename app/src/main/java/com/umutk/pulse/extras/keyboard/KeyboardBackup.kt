@@ -28,7 +28,28 @@ object KeyboardBackup {
     }
 
     /** Writes the backup to [uri]; returns how many files went in. Blocking: call off the main thread. */
-    fun export(c: Context, uri: Uri): Int = c.contentResolver.openOutputStream(uri)?.use { write(c, it) } ?: 0
+    fun export(c: Context, uri: Uri, password: String = ""): Int = c.contentResolver.openOutputStream(uri)?.use { out ->
+        if (password.isEmpty()) write(c, out)
+        else { val buf = java.io.ByteArrayOutputStream(); val n = write(c, buf); out.write(seal(buf.toByteArray(), password)); n }
+    } ?: 0
+
+    // Encrypted backups (as in WM Keyboard): AES-256-GCM, the key from the password with PBKDF2 (120k rounds, a random salt)
+    private val MAGIC = "PKBE1".toByteArray()
+    private fun key(pw: String, salt: ByteArray): javax.crypto.spec.SecretKeySpec {
+        val f = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        val k = f.generateSecret(javax.crypto.spec.PBEKeySpec(pw.toCharArray(), salt, 120_000, 256)).encoded
+        return javax.crypto.spec.SecretKeySpec(k, "AES")
+    }
+    private fun seal(data: ByteArray, pw: String): ByteArray {
+        val rnd = java.security.SecureRandom(); val salt = ByteArray(16).also { rnd.nextBytes(it) }; val iv = ByteArray(12).also { rnd.nextBytes(it) }
+        val ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply { init(javax.crypto.Cipher.ENCRYPT_MODE, key(pw, salt), javax.crypto.spec.GCMParameterSpec(128, iv)) }
+        return MAGIC + salt + iv + ci.doFinal(data)
+    }
+    private fun open(data: ByteArray, pw: String): ByteArray? = runCatching {
+        val salt = data.copyOfRange(MAGIC.size, MAGIC.size + 16); val iv = data.copyOfRange(MAGIC.size + 16, MAGIC.size + 28)
+        val ci = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply { init(javax.crypto.Cipher.DECRYPT_MODE, key(pw, salt), javax.crypto.spec.GCMParameterSpec(128, iv)) }
+        ci.doFinal(data, MAGIC.size + 28, data.size - MAGIC.size - 28)
+    }.getOrNull()
 
     /** Writes the backup to [out] (closes it); returns how many files went in. */
     fun write(c: Context, out: java.io.OutputStream): Int {
@@ -46,9 +67,12 @@ object KeyboardBackup {
     }
 
     /** Reads a backup made by [export]; returns how many files came back, or -1 when [uri] is not one. Blocking: call off the main thread. */
-    fun import(c: Context, uri: Uri): Int {
+    fun import(c: Context, uri: Uri, password: String = ""): Int {
         var n = 0; var ok = false
-        c.contentResolver.openInputStream(uri)?.use { raw ->
+        var bytes = c.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return -1
+        // an encrypted backup: -2 when the password is missing or wrong
+        if (bytes.size > MAGIC.size + 28 && bytes.copyOfRange(0, MAGIC.size).contentEquals(MAGIC)) bytes = open(bytes, password) ?: return -2
+        bytes.inputStream().use { raw ->
             ZipInputStream(raw.buffered()).use { z ->
                 var e = z.nextEntry
                 while (e != null) {

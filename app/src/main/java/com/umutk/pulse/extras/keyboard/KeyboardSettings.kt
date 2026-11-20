@@ -94,14 +94,14 @@ fun KeyboardSettings(back: () -> Unit) {
     var dataNote by remember { mutableStateOf("") }
     val exportData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
-            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.export(ctx, uri) }.getOrDefault(-1) }
+            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.export(ctx, uri, KbBackupPw.pw) }.getOrDefault(-1) }
             dataNote = if (n >= 0) tr("Saved ($n files)", "Kaydedildi ($n dosya)") else tr("Could not save", "Kaydedilemedi")
         }
     }
     val importData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
-            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.import(ctx, uri) }.getOrDefault(-1) }
-            dataNote = if (n >= 0) tr("Loaded ($n files)", "Yüklendi ($n dosya)") else tr("This is not a keyboard backup", "Bu bir klavye yedeği değil")
+            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.import(ctx, uri, KbBackupPw.pw) }.getOrDefault(-1) }
+            dataNote = if (n == -2) tr("Wrong or missing password", "Şifre yanlış ya da boş") else if (n >= 0) tr("Loaded ($n files)", "Yüklendi ($n dosya)") else tr("This is not a keyboard backup", "Bu bir klavye yedeği değil")
             learned = KeyboardDictionary.learnedCount(); rev++
         }
     }
@@ -841,7 +841,8 @@ fun KeyboardSettings(back: () -> Unit) {
                 PButton(tr("Forget words", "Kelimeleri unut"), compact = true, danger = true) { askForget = true }
                 PButton(tr("Factory settings", "Fabrika ayarları"), compact = true, danger = true) { askReset = true }
             }
-            // everything the keyboard knows about the person in one file, and back
+            // everything the keyboard knows about the person in one file, and back (locked with a password when one is written)
+            PField(KbBackupPw.pw, { KbBackupPw.pw = it }, tr("Backup password (optional)", "Yedek şifresi (isteğe bağlı)"), Modifier.fillMaxWidth().padding(top = 8.dp))
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton(tr("Export data", "Veriyi dışa aktar"), compact = true) { exportData.launch("Pulse-keyboard-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".zip") }
                 PButton(tr("Import data", "Veriyi içe aktar"), compact = true) { importData.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
@@ -904,6 +905,7 @@ private fun OrientPreview(land: Boolean, dark: Boolean) {
 
 /** A card of the settings that opens and closes from its header (icon, title, chevron). */
 /** The text of the settings search (WM Keyboard's settings search): sections open and only the switches that match show. */
+private object KbBackupPw { var pw by androidx.compose.runtime.mutableStateOf("") }
 private object KbFind { var q by androidx.compose.runtime.mutableStateOf("") }
 
 @Composable
