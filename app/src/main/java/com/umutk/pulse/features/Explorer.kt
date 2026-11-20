@@ -1901,7 +1901,9 @@ private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, filt
         EX_FILTERS.chunked(4).forEach { rw -> Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) { rw.forEach { (id, label) ->
             val on = filt == id
             Box(Modifier.size(36.dp).clip(CircleShape).background(if (on) Look.accent.copy(alpha = .2f) else Color.Transparent).clickable { onFilter(id) }, contentAlignment = Alignment.Center) {
-                Icon(EX_FILTER_ICONS[id] ?: Icons.Outlined.FilterList, label, Modifier.size(20.dp), if (on) Look.accent else com.umutk.pulse.LocalMenuStyle.current.sub)
+                // each kind in the colour of its files (the same as the type badges of the list)
+                val kindTint = when (id) { "images" -> exBadgeOf("jpg"); "videos" -> exBadgeOf("mp4"); "audio" -> exBadgeOf("mp3"); "docs" -> exBadgeOf("pdf"); "archives" -> exBadgeOf("zip"); "apks" -> exBadgeOf("apk"); else -> null }?.first
+                Icon(EX_FILTER_ICONS[id] ?: Icons.Outlined.FilterList, label, Modifier.size(20.dp), if (on) Look.accent else kindTint ?: com.umutk.pulse.LocalMenuStyle.current.sub)
             }
         } } }
         // the file extensions and the hidden files switches: icon buttons beside the type filters
