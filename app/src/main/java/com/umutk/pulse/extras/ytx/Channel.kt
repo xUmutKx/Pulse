@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -334,7 +335,7 @@ fun ChannelScreen(
                 // a swipe sideways moves to the next / previous tab (Home, Videos, Shorts, Live ...)
                 modifier = Modifier.pointerInput(state.activeTab) {
                     var dx = 0f
-                    androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                    detectHorizontalDragGestures(
                         onDragStart = { dx = 0f },
                         onDragCancel = { dx = 0f },
                         onDragEnd = {
