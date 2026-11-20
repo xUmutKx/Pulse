@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -58,6 +59,21 @@ fun Modifier.ofPinch(onZoom: (Float) -> Unit): Modifier = pointerInput(Unit) {
             if (e.changes.size > 1) {
                 val z = e.calculateZoom()
                 if (z != 1f) onZoom(z)
+                e.changes.forEach { it.consume() }
+            }
+        } while (e.changes.any { it.pressed })
+    }
+}
+
+/** Two-finger pinch with the point between the fingers: [onZoom] gets the zoom factor of each step and where the fingers are (in this box), so the page can grow around them. */
+fun Modifier.ofPinchAt(onZoom: (Float, Offset) -> Unit): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        do {
+            val e = awaitPointerEvent(PointerEventPass.Initial)
+            if (e.changes.size > 1) {
+                val z = e.calculateZoom()
+                if (z != 1f) onZoom(z, e.calculateCentroid(useCurrent = true))
                 e.changes.forEach { it.consume() }
             }
         } while (e.changes.any { it.pressed })
@@ -361,6 +377,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         return
     }
     val list = rememberLazyListState(); val scope = rememberCoroutineScope()
+    val hScroll = rememberScrollState()
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
     // the page fits the screen with a little space at both sides, and can be made smaller still
     var zoom by remember { mutableFloatStateOf(.94f) }
     var committed by remember { mutableFloatStateOf(.94f) }
@@ -485,14 +503,25 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
             Icon(Icons.Outlined.Close, null, Modifier.size(32.dp).clickable { findOn = false }.padding(4.dp), theme.pal.ink)
         }
         // behind the pages: pure black in the AMOLED look (as the other office apps) and with dark pages, the look's own canvas otherwise (it was see-through)
-        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf || theme.rid == "amoled") Color.Black else theme.pal.canvas).ofPinch { zoom = (zoom * it).coerceIn(.4f, 4f) }) {
-            Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(if (OfficePrefs.darkPdf || theme.rid == "amoled") Color.Black else theme.pal.canvas).ofPinchAt { f, c ->
+            // the page grows around the point between the fingers (it used to grow from the top left): what is under the fingers stays under them
+            val old = zoom; val nz = (old * f).coerceIn(.4f, 4f); val r = nz / old
+            if (r != 1f) {
+                zoom = nz
+                val info = list.layoutInfo.visibleItemsInfo.firstOrNull()
+                val absY = if (info != null) info.index * (info.size + 8 * density) - info.offset + c.y else c.y
+                val absX = hScroll.value + c.x
+                scope.launch { androidx.compose.runtime.withFrameNanos { }; hScroll.scrollBy(absX * (r - 1)); list.scrollBy(absY * (r - 1)) }
+            }
+        }) {
+            Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
                 Box(Modifier.width(maxOf(widthDp, widthDp * zoom)).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-                LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(p.count) { i -> PdfPage(p, i, pagePx, anns.filter { it.page == i }, tool, cols[ci],
+                // the list takes the whole width, so a finger on the empty sides of a small page scrolls it too; each page is centred at its own width
+                LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    items(p.count) { i -> Box(Modifier.width(widthDp * zoom)) { PdfPage(p, i, pagePx, anns.filter { it.page == i }, tool, cols[ci],
                         { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) },
                         sel?.takeIf { it.page == i }, { s -> sel = s },
-                        if (findOn) hits.withIndex().filter { it.value.page == i }.map { it.value to (it.index == curHit) } else emptyList()) }
+                        if (findOn) hits.withIndex().filter { it.value.page == i }.map { it.value to (it.index == curHit) } else emptyList()) } }
                 }
                 }
             }

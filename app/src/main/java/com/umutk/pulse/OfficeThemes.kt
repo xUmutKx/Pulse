@@ -279,7 +279,7 @@ fun ofKindOf(name: String, mime: String? = null): OfKind? {
 @Composable
 fun ofAutoHide(keep: Boolean = false): Pair<Boolean, Modifier> {
     val ctx = LocalContext.current
-    val on = remember { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", true) }
+    val on = remember { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", false) }
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // the top block (ribbon) hides itself in landscape only on a phone, where the screen is short; a tablet has the room and keeps it open
