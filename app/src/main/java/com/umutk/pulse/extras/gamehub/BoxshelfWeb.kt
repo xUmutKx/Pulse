@@ -345,6 +345,8 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 "addHtml" -> { ShelfAsk.addHtml.value = true }
                 "reshuffle" -> { Thread { CaseCover.applyAll(c, loadGames(c).map { it.pkg }, "mix"); ShelfSync.bump() }.start() }
                 "restoreMega" -> { MegaGames.restoreAll(c); ShelfSync.bump() }
+                // the grid button of the shelf: Game Hub goes on to its next view (the CD rack)
+                "nextView" -> { ShelfAsk.look.value = "cdrack" }
             }
         }
     }
@@ -373,7 +375,7 @@ internal object ShelfJs {
 }
 
 /** What the shelf's page asks Game Hub to open (its own dialogs): the list of apps to add a game from. */
-internal object ShelfAsk { val add = androidx.compose.runtime.mutableStateOf(false); val addHtml = androidx.compose.runtime.mutableStateOf(false) }
+internal object ShelfAsk { val add = androidx.compose.runtime.mutableStateOf(false); val addHtml = androidx.compose.runtime.mutableStateOf(false); val look = androidx.compose.runtime.mutableStateOf<String?>(null) }
 
 /** The WebView of the shelf. [onLaunch] starts a game, [onDetails] opens Pulse's page for it. Back goes one step back inside the shelf (Esc), as Boxshelf does. */
 @SuppressLint("SetJavaScriptEnabled")

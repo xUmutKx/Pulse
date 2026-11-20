@@ -227,8 +227,10 @@
       });
       box.classList.add('on'); body.scrollTop = 0;
     }
-    document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('gridBtn'); if (b) { b.hidden = false; b.addEventListener('click', e => { e.stopPropagation(); open(); }); } });
-    window.__pulseOpenGrid = open;
+    document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('gridBtn'); if (b) { b.hidden = false; b.addEventListener('click', e => { e.stopPropagation(); nextView(); }); } });
+    // the grid button goes on to Game Hub's next view (the CD rack, then the classic grid, then back to this shelf); without the app it opens the grid of covers
+    function nextView() { try { if (window.PulseHost && window.PulseHost.ghRun) { window.PulseHost.ghRun('nextView'); return; } } catch (e) {} open(); }
+    window.__pulseOpenGrid = nextView;
     // Back closes it first
     window.__pulseBackGrid = () => { if (box.classList.contains('on')) { close(); return true; } return false; };
   })();

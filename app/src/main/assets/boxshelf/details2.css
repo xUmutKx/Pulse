@@ -283,3 +283,6 @@ html.platform-android #shotView .sv-x{display:grid;place-items:center;position:a
 html.platform-android #shotView .sv-bar{font-size:21px;padding:11px 24px;gap:22px;bottom:max(3.5vh,env(safe-area-inset-bottom,0px));max-width:92vw;white-space:normal;text-align:center}
 html.platform-android #shotView .sv-nav{width:68px;height:68px;margin-top:-34px;font-size:40px}
 @media (orientation:portrait){html.platform-android #shotView .sv-stage{padding:9vh 3vw 14vh}html.platform-android #shotView .sv-nav{display:none}}
+
+/* the cover of the info page is square-cornered, as a game case is (no rounded corners) */
+#app.dv2 .dv-art,#app.dv2 .dv-art *,#app.dv2 .dv-box,#app.dv2 .dv-box *{border-radius:0!important}

@@ -884,6 +884,9 @@ fun GameHubHub(onBack: () -> Unit) {
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
     var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "boxshelf") ?: "boxshelf") }
+    // the views follow one another from the grid button of each: Boxshelf's shelf -> the CD rack -> the classic grid -> Boxshelf's shelf
+    fun setLook(k: String) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply() }
+    LaunchedEffect(ShelfAsk.look.value) { ShelfAsk.look.value?.let { setLook(it); ShelfAsk.look.value = null } }
     val webShelfOk = remember { runCatching { android.webkit.WebView.getCurrentWebViewPackage() != null }.getOrDefault(false) }
     // the setup: by itself the first time Game Hub is ever used (nothing saved yet), and from Settings at any time
     var setupOpen by remember { mutableStateOf(firstUse) }
@@ -992,6 +995,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     when (page) { 0 -> tr("Home", "Ana sayfa"); 2 -> tr("Settings", "Ayarlar"); else -> when (filter) { 1 -> tr("Installed", "Yüklü"); 2 -> tr("Hidden", "Gizli"); else -> tr("Library", "Kütüphane") } },
                     color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
                 )
+                // the view button: the CD rack -> the classic grid -> Boxshelf's shelf (whose own grid button comes back to the CD rack)
+                if (page == 1 && webShelfOk) Box(Modifier.size(44.dp).clickable { setLook(when (ghLook) { "cdrack" -> "classic"; "classic" -> "boxshelf"; else -> "cdrack" }) }, contentAlignment = Alignment.Center) {
+                    FluentIcon("gridView", pal.text, 22.dp)
+                }
             }
             when (page) {
                 0 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
@@ -1061,12 +1068,12 @@ fun GameHubHub(onBack: () -> Unit) {
                     } } else if (ghLook == "cdrack") CdRack(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
-                    ) else if (theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
+                    ) else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onSettings = { go(2) },
-                    ) } else if (theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
+                    ) } else if (ghLook != "classic" && theme == "shelf" && webShelfOk) androidx.compose.runtime.key(caseStyle, ShelfSync.rev.intValue) { BoxshelfWeb(
                         // a phone with a navigation bar: the shelf ends above it (the insets are used up here, so nothing is added twice)
                         // black under the page until it is painted (the screen behind is white, and it showed before the shelf)
                         Modifier.fillMaxSize().background(Color.Black).navigationBarsPadding(),
@@ -1075,7 +1082,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         onDetails = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
                         onExit = { },
                         onSettings = { go(2) },
-                    ) } else if ((theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
+                    ) } else if (ghLook != "classic" && (theme == "shelf" || theme == "shelfc") && viewMode != 1) ShelfView(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
                     ) else if (viewMode == 1) androidx.compose.foundation.lazy.LazyColumn(
@@ -1132,7 +1139,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("cdrack" to tr("CD rack", "CD rafı"), "boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)")).forEach { (k, label) ->
+                        listOf("boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)"), "cdrack" to tr("CD rack", "CD rafı"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
                             Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
                         }
                     }
@@ -1879,7 +1886,7 @@ class GameMenuService : android.app.Service() {
         // do not disturb, the frame counter, the rotation
         val dndOn = { getSystemService(android.app.NotificationManager::class.java).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }
         lateinit var dnd: Tile
-        dnd = tile("notifications", tr("Do not disturb", "Rahatsız etme"), dndOn()) { sh("cmd notification set_dnd ${if (dndOn()) "off" else "on"}") { h.postDelayed({ dnd.set(dnd.cap.text.toString(), dndOn()) }, 300) } }
+        dnd = tile("notifications", "DND", dndOn()) { sh("cmd notification set_dnd ${if (dndOn()) "off" else "on"}") { h.postDelayed({ dnd.set(dnd.cap.text.toString(), dndOn()) }, 300) } }
         lateinit var fpsT: Tile
         fpsT = tile("stopwatch", "FPS", fpsView != null) {
             val on = fpsView == null
