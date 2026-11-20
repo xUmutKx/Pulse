@@ -60,11 +60,33 @@ object KbDict {
         return ""
     }
 
+    /** The meanings of a Turkish word from the Turkish Language Association's dictionary (sozluk.gov.tr, Güncel Türkçe Sözlük), or "". */
+    private fun tdk(term: String): String {
+        val raw = get("https://sozluk.gov.tr/gts?ara=" + URLEncoder.encode(term.lowercase(java.util.Locale("tr")), "UTF-8")) ?: return ""
+        val arr = runCatching { org.json.JSONArray(raw) }.getOrNull() ?: return ""
+        val out = StringBuilder()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val list = o.optJSONArray("anlamlarListesi") ?: continue
+            out.append("TDK · ").append(o.optString("madde")).append('\n')
+            var n = 0
+            for (j in 0 until list.length()) {
+                val a = list.optJSONObject(j) ?: continue
+                val kind = a.optJSONArray("ozelliklerListesi")?.optJSONObject(0)?.optString("tam_adi").orEmpty()
+                val d = plain(a.optString("anlam"))
+                if (d.isNotBlank() && n < 5) out.append("  ${++n}. ").append(if (kind.isNotBlank()) "($kind) " else "").append(d).append('\n')
+            }
+        }
+        return out.toString().trim()
+    }
+
     /** What to show for [term]: the meanings, then the encyclopedia summary; "" when neither knows it. */
     fun lookup(term: String, lang: String): String {
         val t = term.trim()
         if (t.length < 2) return ""
-        val parts = listOf(wiktionary(t.lowercase(), lang).ifEmpty { wiktionary(t, lang) }, wikipedia(t.replaceFirstChar { it.uppercase() }, lang)).filter { it.isNotBlank() }
+        // a Turkish word: the Turkish dictionary's own meanings come first, in Turkish
+        val tr = if (lang == "tr") tdk(t) else ""
+        val parts = listOf(tr, wiktionary(t.lowercase(), lang).ifEmpty { wiktionary(t, lang) }, wikipedia(t.replaceFirstChar { it.uppercase() }, lang)).filter { it.isNotBlank() }
         return parts.joinToString("\n\n")
     }
 }

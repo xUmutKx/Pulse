@@ -2139,7 +2139,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val before = c?.getTextBeforeCursor(40, 0)?.toString().orEmpty()
                 val term = sel.ifEmpty { (before.trimEnd().takeLastWhile { it.isLetter() || it == '\'' || it == '-' }) }
                 st.panel = "dict"; st.dictQuery = term; st.dictText = ""
-                if (term.length >= 2) { st.dictBusy = true; scope.launch { val r = withContext(Dispatchers.IO) { KbDict.lookup(term, lang.code) }; st.dictText = r.ifEmpty { tr("Nothing found for \"$term\"", "\"$term\" için bir şey bulunamadı") }; st.dictBusy = false } }
+                if (term.length >= 2) { st.dictBusy = true; scope.launch { val r = withContext(Dispatchers.IO) {
+                    // a word the dictionary does not know (a typo, "uygulams"): its right form is looked up instead
+                    val fix = if (KeyboardDictionary.isKnown(term.lowercase())) null else runCatching { KeyboardDictionary.correct(lang.code, term.lowercase(), 3f).firstOrNull()?.word }.getOrNull()
+                    (if (fix != null) KbDict.lookup(fix, lang.code).also { if (it.isNotEmpty()) st.dictQuery = fix } else "").ifEmpty { KbDict.lookup(term, lang.code) }
+                }; st.dictText = r.ifEmpty { tr("Nothing found for \"$term\"", "\"$term\" için bir şey bulunamadı") }; st.dictBusy = false } }
             }
             // holding the emoji key: the GIF page of the emoji panel
             "gif" -> { finishWord("", false); st.emojiQuery = null; st.gifSearch = false; st.emojiTab = 12; st.panel = "emoji" }
