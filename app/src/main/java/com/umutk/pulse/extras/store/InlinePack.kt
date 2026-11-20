@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  * Nothing is drawn once the pack is installed (the caller shows what it holds) or while the store's list cannot be read (offline and never opened).
  */
 @Composable
-fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled: () -> Unit = {}) {
+fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled: () -> Unit = {}, ask: Boolean = true) {
     val ctx = LocalContext.current
     // the packs under 1 MB are one download ("small"): the pack asked for is that one
     val rid = SmallPack.real(id)
@@ -55,8 +55,8 @@ fun InlinePackRow(id: String, title: String, auto: Boolean = false, onInstalled:
         if (module == null) { StoreCatalog.refresh(ctx, force = true); module = StoreCatalog.load(ctx).firstOrNull { it.id == rid } ?: HdWalls.fallback(rid) }
     }
     // [auto]: the first time the pack is wanted it is asked once ("Download it?"); when yes it comes by itself (the row shows how far it is), when no the row keeps its button
-    if (auto) PackAsk(id, title)
-    if (auto && PackConsent.state(ctx, rid) == 1) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
+    if (auto && ask) PackAsk(id, title)
+    if (auto && (!ask || PackConsent.state(ctx, rid) == 1)) LaunchedEffect(id) { PackAuto.ensure(ctx, id) }
     val progress by StoreInstaller.progress.collectAsState()
     val errors by StoreInstaller.errors.collectAsState()
     val rev by StoreInstaller.rev.collectAsState()
@@ -145,7 +145,7 @@ object HdWalls {
 @Composable
 fun HdWallpaperRow(lookId: String) {
     val (id, title) = HdWalls.packFor(lookId) ?: return
-    InlinePackRow(id, title, auto = true)
+    InlinePackRow(id, title, auto = true, ask = false)
 }
 
 /**
@@ -167,7 +167,7 @@ object PackAuto {
         scope.launch {
             var m = StoreCatalog.load(app).firstOrNull { it.id == id }
             // the saved list may be older than the pack (or never read): it is asked for once
-            if (m == null) { StoreCatalog.refresh(app, force = true); m = StoreCatalog.load(app).firstOrNull { it.id == id } }
+            if (m == null) { StoreCatalog.refresh(app, force = true); m = StoreCatalog.load(app).firstOrNull { it.id == id } ?: HdWalls.fallback(id) }
             if (m != null && StoreInstaller.state(app, m) != ModuleState.INSTALLED) StoreInstaller.download(app, m)
             else if (m == null) asked.remove(id)   // offline: tried again next time
         }

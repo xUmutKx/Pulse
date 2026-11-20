@@ -59,6 +59,8 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     // the picture is decoded at its own size: only one at least twice as big as the screen is made smaller (the half-size decode it had made a 1280 x 800 picture 640 x 400 and then stretched it over the screen, which is what looked blurry)
     // a downloaded pack of higher-quality wallpapers (4K for Windows 11) takes the place of the small stock picture
     val packs by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
+    // the higher-quality pictures of the look come by themselves, no question asked
+    androidx.compose.runtime.LaunchedEffect(lookId) { com.umutk.pulse.extras.store.HdWalls.packFor(lookId)?.let { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, it.first) } }
     val bmp = remember(res, packs, LauncherPrefs.wallFile) {
         res?.let { r ->
             // a file chosen in "more wallpapers" wins over the stock picture
