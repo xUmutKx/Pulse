@@ -108,7 +108,9 @@ internal fun subTextSp(p: VideoPrefs, pip: Boolean = false): Float = if (pip) p.
 /** Applies every subtitle option to the player's subtitle view. */
 internal fun SubtitleView.applySubPrefs(p: VideoPrefs, pip: Boolean = false) {
     setStyle(subStyle(p))
-    setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, subTextSp(p, pip))
+    // the small window: the text is a share of the window's height, so it stays readable at any PiP size
+    if (pip) setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * p.subSizePip / 12f)
+    else setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, subTextSp(p, pip))
     setApplyEmbeddedStyles(!p.subIgnoreStyle); setApplyEmbeddedFontSizes(false)
     setBottomPaddingFraction(p.subPos.coerceIn(0, 40) / 100f)
     val m = (p.subMargin * resources.displayMetrics.density).toInt()
