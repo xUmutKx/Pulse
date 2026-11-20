@@ -196,6 +196,15 @@ object FilesLaunch {
 val LocalFilePick = androidx.compose.runtime.staticCompositionLocalOf<((File) -> Unit)?> { null }
 /** True when Files is open as another app's file picker: any file can be picked, not only documents. */
 val LocalPickAny = androidx.compose.runtime.staticCompositionLocalOf { false }
+/** The kind of file the asking app wants (all pictures, a PDF ...), or null for any: the other files are greyed out and cannot be picked. */
+val LocalPickMime = androidx.compose.runtime.staticCompositionLocalOf<String?> { null }
+
+/** Whether [f] is of the kind [mime] asks for (any-type and null take everything; a family such as image takes all its members). */
+fun pickMatches(mime: String?, f: File): Boolean {
+    if (mime.isNullOrBlank() || mime == "*/*" || f.isDirectory) return true
+    val m = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: return false
+    return if (mime.endsWith("/*")) m.startsWith(mime.dropLast(1)) else m.equals(mime, true)
+}
 
 /** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. Full screen (Settings > Functions) puts it in its own window with the look's caption buttons. */
 @Composable
@@ -414,6 +423,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var newExt by remember { mutableStateOf("docx") }
     val filePick = LocalFilePick.current
     val pickAny = LocalPickAny.current
+    val pickMime = LocalPickMime.current
     var note by remember { mutableStateOf("") }
     var viewing by remember { mutableStateOf<File?>(null) }
     var propsOf by remember { mutableStateOf<File?>(null) }
@@ -631,7 +641,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val inDeskWindow = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
     // an APK asks first: view its contents, or install it (a tap on other files opens them as before)
     fun openFile(f: File) {
-        if (filePick != null) { if (pickAny || f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
+        if (filePick != null) { if (!pickMatches(pickMime, f)) return; if (pickAny || f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
         if (inDeskWindow && f.isFile && !f.extension.equals("apk", true) && !isArchiveFile(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.extras.launcher.DesktopWindows.open("view:" + f.path, f.name); return }
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
@@ -1176,7 +1186,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                 }
                 }
-                if (grid) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
+                // picking for another app that wants one kind of file: the files of other kinds are greyed out
+                val dimmed = filePick != null && !pickMatches(pickMime, f)
+                if (grid) Box(Modifier.fillMaxWidth().alpha(if (dimmed) .32f else 1f).padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) }), horizontalAlignment = Alignment.CenterHorizontally) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon
@@ -1194,7 +1206,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Box(Modifier.align(Alignment.TopEnd)) { more() }
                 }
                 // the pick pill is thicker than the row's content (4 dp above and below it); the gaps between rows stay small
-                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+                else Row(Modifier.fillMaxWidth().alpha(if (dimmed) .32f else 1f).padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) }), verticalAlignment = Alignment.CenterVertically) {
                     // an app's data folder shows that app's icon; other folders keep the folder icon

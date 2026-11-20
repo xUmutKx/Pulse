@@ -22,6 +22,7 @@ class FilePickActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     com.umutk.pulse.features.LocalFilePick provides { f: File -> deliver(f) },
                     com.umutk.pulse.features.LocalPickAny provides true,
+                    com.umutk.pulse.features.LocalPickMime provides intent?.type,
                 ) { com.umutk.pulse.features.FilesPage() }
             }
         }
