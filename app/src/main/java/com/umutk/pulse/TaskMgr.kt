@@ -61,7 +61,7 @@ private fun heatBg(f: Float): Color {
 
 @Composable
 private fun HeatCell(text: String, f: Float, width: Dp, bold: Boolean = false, ink: Color = T.text) {
-    Box(Modifier.width(width).fillMaxHeight().clipToBounds().background(heatBg(f)), contentAlignment = Alignment.CenterEnd) {
+    Box(Modifier.width(width).fillMaxHeight().clipToBounds().background(heatBg(f)).colRule(T.sub), contentAlignment = Alignment.CenterEnd) {
         Text(text, color = ink, fontSize = if (win95Authentic) 12.sp else 13.sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.padding(end = 8.dp), textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -520,4 +520,9 @@ private object NetTap { var last = 0L }
 /** A thin line under a row of the process list, so the rows stand apart. */
 private fun Modifier.rowRule(c: Color): Modifier = this.drawBehind {
     drawLine(c.copy(alpha = .16f), androidx.compose.ui.geometry.Offset(0f, size.height - .5f), androidx.compose.ui.geometry.Offset(size.width, size.height - .5f), 1f)
+}
+
+/** A thin line at the right edge of a column cell (the columns of the process list stand apart as well as its rows). */
+private fun Modifier.colRule(c: Color): Modifier = this.drawBehind {
+    drawLine(c.copy(alpha = .16f), androidx.compose.ui.geometry.Offset(size.width - .5f, 0f), androidx.compose.ui.geometry.Offset(size.width - .5f, size.height), 1f)
 }
