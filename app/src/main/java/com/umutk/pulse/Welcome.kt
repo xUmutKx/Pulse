@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd11" to (tr("Lyrics notification only for a song that was played, keyboard tools (Dictionary, Calculator, Convert) back in the menu, Pulse AI finds models already on the phone, a crash fix in the keyboard's suggestions.",
+        "Söz bildirimi yalnız çalınmış şarkıda, klavye araçları (Sözlük, Hesap makinesi, Çevirici) menüde geri, Pulse AI telefondaki hazır modelleri buluyor, klavye önerilerinde çökme düzeltmesi.")),
     "kbd10" to (tr("Keyboard: a very long text no longer freezes it, a Special signs family with 25 groups in Symbols, a higher emoji bottom row with a space bar. The lyrics notification stays while the song is paused and goes when the player closes.",
         "Klavye: çok uzun metin artık takılmaya yol açmaz, Semboller'de 25 gruplu Özel işaretler ailesi, boşluk çubuklu daha yüksek emoji alt sırası. Söz bildirimi duraklatınca kalır, oynatıcı kapanınca gider.")),
     "kbd9" to (tr("Keyboard: Dictionary, Calculator, Convert, Stickers and Grammar tiles in the menu, a GIF button by the emoji search, and the hybrid correction on by default. YTXTube's Downloads tab is back and lists the Pulse app's downloads too. Toolkit tools open in the look's dialog box; DNS and TTL has its own DNS for Wi-Fi and mobile data and an app access list. The PDF viewer scrolls on its empty sides and zooms around your fingers; the emoji panel has a GIF page; YTXTube's small window moves elastically.",
