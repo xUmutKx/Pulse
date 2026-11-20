@@ -26,6 +26,8 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
         }
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
         CrashSaver.install(this)
+        // the performance record (a setting, see PerfLog): in every process
+        PerfLog.init(this)
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
         CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
         // the folders Pulse made in Downloads before are moved under Download/Pulse (once the storage permission is there; nothing happens without it)

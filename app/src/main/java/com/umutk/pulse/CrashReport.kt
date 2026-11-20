@@ -132,6 +132,12 @@ fun CrashLogScreen(back: () -> Unit) {
     androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 12.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
         PHead(tr("Crash and freeze log", "Çökme ve donma kaydı"))
+        var logTab by remember { mutableStateOf(0) }
+        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            PChip(logTab == 0, tr("Crashes", "Çökmeler")) { logTab = 0 }
+            PChip(logTab == 1, tr("Performance", "Performans")) { logTab = 1 }
+        }
+        if (logTab == 1) { PerfLogPage(); return@Column }
         androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
             PButton(tr("Refresh", "Yenile")) { rev++ }
             PButton(tr("Share", "Paylaş")) {

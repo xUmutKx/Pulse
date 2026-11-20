@@ -312,6 +312,18 @@ fun ReportSettings() {
             PIcon("chevron", T.sub, 18.dp)
         }
     }
+    // the performance record: why the phone lags (off at first; the log page shows it)
+    PCard {
+        var perf by remember { mutableStateOf(PerfLog.on) }
+        Row(Modifier.fillMaxWidth().clickable { perf = !perf; PerfLog.set(ctx, perf) }, verticalAlignment = Alignment.CenterVertically) {
+            PIcon("bug", T.text, 22.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(tr("Performance log", "Performans kaydı"), color = T.text, fontSize = 15.sp)
+                Text(tr("Records what slows the phone down; read it in the crash and freeze log", "Telefonu yavaşlatanı kaydeder; çökme ve donma kaydında okunur"), color = T.sub, fontSize = 12.sp)
+            }
+            PSwitch(perf, { perf = it; PerfLog.set(ctx, it) })
+        }
+    }
     PCard {
         Text("Share everything (system, battery, memory, storage, display, network, thermal, camera, codecs) as one text.", color = T.text, fontSize = 14.sp)
         PButton(if (busy) "Preparing…" else "Share report") {
