@@ -71,6 +71,16 @@ import kotlin.math.roundToInt
 /** Settings of the Pulse Launcher. Drawn in the look passed in by its host; writes only LauncherPrefs. */
 @Composable
 fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: String = "") {
+    // Windows 11: the list of categories is gone; its pages are the settings of Personalization in the Windows 11 Settings, each opening its own page
+    var picked by remember { mutableStateOf(startCat) }
+    if (T.id == "win11" && picked.isEmpty()) {
+        BackHandler { back() }
+        Win11SettingsHome({ r -> if (r.startsWith("win:lsettings:")) picked = r.removePrefix("win:lsettings:") }, startGroup = "personalization")
+    } else LauncherSettingsPages(back = { if (T.id == "win11" && startCat.isEmpty() && picked.isNotEmpty()) picked = "" else back() }, fromLauncher = fromLauncher, startCat = picked)
+}
+
+@Composable
+private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, startCat: String) {
     val ctx = LocalContext.current
     // Pulse's process never runs LauncherActivity, so read the stored values before showing or saving them
     remember(ctx) { LauncherPrefs.load(ctx) }

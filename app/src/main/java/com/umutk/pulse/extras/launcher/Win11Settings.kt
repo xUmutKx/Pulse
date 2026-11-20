@@ -41,10 +41,10 @@ import com.umutk.pulse.tr
  * group's settings as rounded rows with an icon, a title, a line of description and a chevron.
  */
 @Composable
-internal fun Win11SettingsHome(open: (String) -> Unit) {
+internal fun Win11SettingsHome(open: (String) -> Unit, startGroup: String = "") {
     var q by remember { mutableStateOf("") }
-    var sel by remember { mutableStateOf(0) }
-    var inGroup by remember { mutableStateOf(false) }
+    var sel by remember { mutableStateOf(WIN11_SETTINGS.indexOfFirst { it.id == startGroup }.coerceAtLeast(0)) }
+    var inGroup by remember { mutableStateOf(startGroup.isNotEmpty()) }
     // a setting that is a page of the phone's own settings gets a page of its own here first (what it says now, the controls Pulse can work)
     var detail by remember { mutableStateOf<WItem?>(null) }
     val groups = WIN11_SETTINGS

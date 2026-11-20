@@ -425,6 +425,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val pickAny = LocalPickAny.current
     val pickMime = LocalPickMime.current
     var note by remember { mutableStateOf("") }
+    // a message of an operation goes by itself after five seconds (one that stays, a finished or a stuck job, covered the list)
+    androidx.compose.runtime.LaunchedEffect(note) { if (note.isNotEmpty()) { kotlinx.coroutines.delay(5000); note = "" } }
     var viewing by remember { mutableStateOf<File?>(null) }
     var propsOf by remember { mutableStateOf<File?>(null) }
     var finder by remember { mutableStateOf<String?>(null) }
@@ -664,6 +666,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         // a code file: the code editor (colours by language, folding, search); other text goes to the text editor as before
         if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
+        // plain text of any name or extension (.md, .log, .conf, .env ...): opens in the editor at once
+        if (f.isFile && f.length() in 1..6_000_000L && exLooksText(f)) { recents = exAddRecent(ctx, f); codeView = f; return }
         // a file of no known type always asks how to open it (with or without an extension)
         if (f.extension.isEmpty() || fileMime(f) == "*/*") { openAsAsk = f; return }
         recents = exAddRecent(ctx, f)
@@ -1590,25 +1594,30 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     openAsAsk?.let { f ->
         val mat = T.material
         // Material: quiet tonal rows with soft corners and a plain Cancel text button at the right; the Windows looks keep their own buttons
-        @Composable fun item(label: String, go: () -> Unit) {
-            if (mat) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.text.copy(alpha = .07f)).clickable(onClick = go).padding(horizontal = 16.dp, vertical = 14.dp)) {
-                Text(label, color = T.text, fontSize = 15.sp)
-            } else PButton(label, Modifier.fillMaxWidth(), onClick = go)
+        @Composable fun item(label: String, key: String, go: () -> Unit) {
+            if (mat) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.text.copy(alpha = .07f)).clickable(onClick = go).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                ExIcon(key, T.accent, 20.dp)
+                Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
+            } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ExIcon(key, T.text, 18.dp)
+                PButton(label, Modifier.weight(1f).padding(start = 8.dp), onClick = go)
+            }
         }
         WinAlert(onDismissRequest = { openAsAsk = null }, iconKey = "info",
             title = { Text(tr("Open as", "Şu olarak aç")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(f.name, fontSize = 12.sp, color = T.sub, maxLines = 2, modifier = Modifier.padding(bottom = 4.dp))
-                item(tr("Archive", "Arşiv")) { openAsAsk = null; ArcForce.paths += f.path; arcFile = f; arcCwd = ""; sel = emptySet() }
-                item("HTML") { openAsAsk = null; recents = exAddRecent(ctx, f); htmlView = f }
-                item(tr("Text", "Metin")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
-                item(tr("Image", "Resim")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
+                item(tr("Archive", "Arşiv"), "zip") { openAsAsk = null; ArcForce.paths += f.path; arcFile = f; arcCwd = ""; sel = emptySet() }
+                item("HTML", "globe") { openAsAsk = null; recents = exAddRecent(ctx, f); htmlView = f }
+                item(tr("Code editor", "Kod düzenleyici"), "code") { openAsAsk = null; recents = exAddRecent(ctx, f); codeView = f }
+                item(tr("Text", "Metin"), "document") { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
+                item(tr("Image", "Resim"), "image") { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
                 if (f.extension.lowercase() in EX_VIDEO) {
-                    item(tr("Video player", "Video oynatıcı")) { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInPulseVideo(ctx, f)) note = "Could not open ${f.name}" }
-                    item(tr("Gallery", "Galeri")) { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInGallery(ctx, f)) note = "Could not open ${f.name}" }
+                    item(tr("Video player", "Video oynatıcı"), "video") { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInPulseVideo(ctx, f)) note = "Could not open ${f.name}" }
+                    item(tr("Gallery", "Galeri"), "image") { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInGallery(ctx, f)) note = "Could not open ${f.name}" }
                 }
-                item(tr("Save as…", "Farklı kaydet…")) { openAsAsk = null; saveAsFile = f }
-                item(tr("Another app…", "Başka uygulama…")) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
+                item(tr("Save as…", "Farklı kaydet…"), "save") { openAsAsk = null; saveAsFile = f }
+                item(tr("Another app…", "Başka uygulama…"), "openWith") { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
             } },
             confirmButton = { TextButton({ openAsAsk = null }) { Text(tr("Cancel", "İptal")) } })
     }
@@ -2444,6 +2453,19 @@ private fun binInfo(f: File): List<String> {
     }
     return out
 }
+
+/** The first bytes are valid UTF-8 text with no NUL and no stray control characters. */
+private fun exLooksText(f: File): Boolean = runCatching {
+    f.inputStream().use { i ->
+        val b = ByteArray(4096); val n = i.read(b)
+        if (n <= 0) return@use false
+        if ((0 until n).any { k -> val v = b[k].toInt() and 0xFF; v == 0 || (v < 9) || (v in 14..31 && v != 27) }) return@use false
+        // a cut multi-byte character at the end of the block is not an error
+        val dec = Charsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+        val cut = (0..3).firstOrNull { c -> n - c > 0 && runCatching { dec.reset(); dec.decode(java.nio.ByteBuffer.wrap(b, 0, n - c)); true }.getOrDefault(false) }
+        cut != null
+    }
+}.getOrDefault(false)
 
 private fun exLooksHtml(f: File): Boolean = runCatching {
     f.inputStream().use { i -> val b = ByteArray(600); val n = i.read(b); n > 0 && String(b, 0, n, Charsets.UTF_8).trimStart().lowercase().let { it.startsWith("<!doctype html") || it.startsWith("<html") || it.contains("<head") || it.contains("<body") } }
