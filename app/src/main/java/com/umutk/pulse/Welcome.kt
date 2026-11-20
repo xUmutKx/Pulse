@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "kbd13" to (tr("Keyboard: backspace takes only the space after a dot, file names like test.py stay joined, command words only in terminals, a waiting file shows its name. Shuffle beside Play, square online covers, ruled process list.",
+        "Klavye: silme noktadan sonraki boşluğu siler, test.py gibi adlar bitişik kalır, komut önerileri yalnız terminalde, bekleyen dosyanın adı görünür. Karıştır Çal'ın yanında, kare çevrimiçi kapaklar, çizgili işlem listesi.")),
     "kbd12" to (tr("Covers for YouTube Music and Spotify songs, Spotify login in the music page, Game Hub's Look setting reachable again, the YTXTube opening back, and no stray key when the keyboard comes up.",
         "YouTube Music ve Spotify şarkılarında kapaklar, müzik sayfasında Spotify girişi, Game Hub görünüm ayarı yine erişilebilir, YTXTube açılışı geri, klavye açılırken yanlışlıkla tuş yazılmıyor.")),
     "kbd11" to (tr("Lyrics notification only for a song that was played, keyboard tools (Dictionary, Calculator, Convert) back in the menu, Pulse AI finds models already on the phone, a crash fix in the keyboard's suggestions.",

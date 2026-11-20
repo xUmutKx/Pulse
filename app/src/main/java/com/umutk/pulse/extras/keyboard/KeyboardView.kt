@@ -658,6 +658,9 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                                     if (badge != null) Icon(badge.second, null, tint = tint, modifier = Modifier.size(18.dp))
                                     else Text(st.shotFile.take(3), color = tint, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
                                 }
+                                // its name beside the tile, as much of it as fits (like a row of Files)
+                                if (st.shotFileName.isNotEmpty()) Text(st.shotFileName, color = th.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 6.dp).widthIn(max = 120.dp))
                             }
                             // a video with no picture of its own: the play mark alone, a little bigger
                             if (st.shotThumb == null && st.shotVideo) Canvas(Modifier.size(26.dp)) {

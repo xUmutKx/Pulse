@@ -486,7 +486,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var showSizes by rememberSaveable { mutableStateOf(false) }
     var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent) }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
-    var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT)) }
+    var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT).filter { java.io.File(it).exists() }) }
     var undo by remember { mutableStateOf<ExUndo?>(null) }
     var found by remember { mutableStateOf<List<File>?>(null) }
     // files waiting for the delete confirm box; the box calls deleteNow

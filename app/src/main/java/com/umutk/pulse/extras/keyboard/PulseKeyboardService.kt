@@ -216,7 +216,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (f != null) withContext(Dispatchers.Main) {
                     quickClip = null; shotItem = null; shotVideo = f; shotVideoMime = mime
                     shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
-                    st.shotThumb = null; st.shotVideo = false; st.shotFile = f.extension.uppercase().take(4).ifEmpty { "FILE" }
+                    st.shotThumb = null; st.shotVideo = false; st.shotFile = f.extension.uppercase().take(4).ifEmpty { "FILE" }; st.shotFileName = f.name
                     shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 60_000L)
                     updateSuggestions()
                 }
@@ -674,7 +674,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         while (filesTaken.size > 20) filesTaken.remove(filesTaken.first())
         quickClip = null; shotItem = null; shotVideo = java.io.File(path); shotVideoMime = mime
         shotAt = SystemClock.uptimeMillis(); shotPinned = false; st.quickPinned = false
-        st.shotThumb = null; st.shotVideo = false; st.shotFile = java.io.File(path).extension.uppercase().take(4).ifEmpty { "FILE" }
+        st.shotThumb = null; st.shotVideo = false; st.shotFile = java.io.File(path).extension.uppercase().take(4).ifEmpty { "FILE" }; st.shotFileName = java.io.File(path).name
         shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L)
         updateSuggestions()
     }

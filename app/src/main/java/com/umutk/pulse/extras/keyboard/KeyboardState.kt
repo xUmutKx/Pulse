@@ -92,6 +92,8 @@ class KbState {
     var shotCount by mutableStateOf(0)
     /** A file just downloaded (not a picture or video) waiting in the right slot: its extension, shown on a small page. */
     var shotFile by mutableStateOf("")
+    /** The name of the file waiting in the bar, written beside its tile (as much of it as fits). */
+    var shotFileName by mutableStateOf("")
     /** The picture of the file offered by the letters being typed (a photo, or the first page / cover / frame of the file), when there is one. */
     var fileThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())

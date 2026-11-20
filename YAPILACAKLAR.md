@@ -2518,3 +2518,20 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Win7 Gezgin: büyük mavi geri/ileri topları, çift tıkla aç, geri Bilgisayar sayfasına döner, resim/video/müzik önizlemesi, listelenemeyen klasörde mesaj; pencere başlığına çift dokunma/basılı tutma ile tam ekran-pencere.
 - Tepsi: tek bayrak, ok kutusunda yalnızca gerçekten süren şeyler (müzik, indirme, VPN, Bluetooth, depolama), Denetim Masası > Bildirim Alanı Simgeleri.
 - Gezgin: çift tıklama hatası (eski kapanış nedeniyle klasör hiç açılmıyordu) düzeltildi; arama tüm alt klasörlerde; masaüstü menüsünden Yapışkan not kaldırıldı. derlenmedi
+
+## 2026-11-20 açık kalanlar (kullanıcının uzun listesi, 2.0.13'te yapılmayanlar)
+- Kod editörü ayrı ek uygulama: AMOLED varsayılan, arka plan değişir, sözdizimi renkleri ve dosya ikonları, Files'tan dokununca doğrudan açılsın, ⋮ menü yok, ayrıntılı sürüm görünmüyor, Çalıştır düğmesi (html önizleme)
+- Share: cihazlar birbirini görüyor ama seçince gönderim olmuyor (LocalSend motoruna dokunma kuralı: yalnız ShareHub tarafı)
+- Tablet: Pulse duvar kâğıdı yatayda bulanık ve yakın (dikey görsel kullanılıyor); ikon arası boşluk büyük, ikonlar küçük, yazılar bozuk; kısayol ok işareti; gerçek klavye ve fare (sağ tık, iki imleç); Dosya Gezgini ana ekranına disk görünümü; widget cam arka planı tekrar ediyor; pil tabletinki; telefon yerine yatay geniş cihaz ikonu
+- Klavye emoji sayfası: alt sıradaki boşluk varsayılan görünmez; silme tuşunun alt çizgisi boşluk çubuğunun üst çizgisiyle aynı hizada
+- Android medya bildiriminde kapak yok (radyo ikonu)
+- Klavye öneri çubuğu: solda en çok kullanılan e-posta (kaydırınca diğerleri), orta ve sağda cümle başlangıçları
+- Spotify: "client id invalid" (kullanıcının kendi Client ID'si gerekir); Spotify/YT Music'ten çalınca önerilerle devam; speed dial'a kendi kategori setleri
+- HD duvar kâğıdı paketi indiriliyor ama kullanılmıyor; Pulse duvar kâğıdı bölümünde eski düşük kaliteli olanlar; animasyonlu video arka plan
+- Çevrimiçi şarkıdan çıkınca arka planda ağ açık kalıyor; varsayılan bellek 1 GB, CPU %20 → azalt
+- Varsayılan Pulse ikonu biraz daha açık mavi
+- Windows: Ayarlar'a Win10/11 genel bakış sayfası; This PC kendi sayfamız açılıyor, değiştir; görev çubuğu ikon rengi vurguya göre değişiyor, varsayılan Windows mavisi; Denetim Masası, Ayarlar ve bildirim panelinin arka planı Fluent, pencere gibi açılsın, üstüne gelince ve basılı tutunca animasyonlar (gönderilen Windows 11 ekran görüntüleri)
+- Customize sayfası ayarlara taşınsın; widget düzenleme: freeform varsayılan kapalı, tablet modeline göre ızgara (ör. 8x16) ve önizleme, resme basılı tutunca freeform, boş yere dokununca düzenlemeden çık
+- Sağ üstteki öneriler klavyenin üstüne taşınsın (varsayılan açık); çok fotoğraf çekilince küçük easter egg
+- YTXTube'dan Müzik kaldırılsın; müzik oynatıcıda ayarlardan açılsın; home görünümü, speed dial kare kapaklı ve başlıksız, yalnız şarkılar (video yok)
+- Files: Samsung Secure Folder'a taşıma (user 150, gerekirse root)
