@@ -91,7 +91,18 @@ object Device {
 object Store {
     private fun sp(c: Context) = c.getSharedPreferences("models", Context.MODE_PRIVATE)
     val dir: File get() = com.umutk.pulse.PulseDirs.ai()
-    fun fileOf(m: AiModel) = File(dir, m.file)
+    /** The folders a model may already be in: the current one, the older names of it and the usual download folders. */
+    private fun homes(): List<File> {
+        val root = Environment.getExternalStorageDirectory()
+        return listOf(dir, File(root, "Pulse/Pulse AI"), File(root, "Pulse/AI"), File(root, "Download/Pulse/Pulse AI"), File(root, "Download/Pulse AI"), File(root, "Download/PulseAI"), File(root, "Download/Pulse/AI"), File(root, "Pulse AI"), File(root, "Download"), File(root, "Models"))
+            .distinctBy { it.path }
+    }
+    /** The model's file: where it is saved, or, when it is not there, the copy found in another of the usual folders (so a model put in by hand or by an older version is found). */
+    fun fileOf(m: AiModel): File {
+        val main = File(dir, m.file)
+        if (main.isFile) return main
+        return runCatching { homes().asSequence().map { File(it, m.file) }.firstOrNull { it.isFile && it.length() >= m.bytes * 98 / 100 } }.getOrNull() ?: main
+    }
 
     /**
      * The model downloads run in Pulse's own downloader (the engine of the Downloads page): they go on when the app is closed, show on the
@@ -212,9 +223,9 @@ fun searchHf(q: String, limit: Int = 12): List<AiModel> {
 fun phoneModels(): List<AiModel> {
     if (!Environment.isExternalStorageManager()) return emptyList()
     val root = Environment.getExternalStorageDirectory()
-    val dirs = listOf(Store.dir, File(root, "Download"), File(root, "Documents"), File(root, "Models"), File(root, "Android/media"))
+    val dirs = listOf(Store.dir, File(root, "Pulse"), File(root, "Download"), File(root, "Documents"), File(root, "Models"), File(root, "Android/media"), File(root, "Movies"))
     val seen = HashSet<String>()
-    return dirs.flatMap { d -> d.walkTopDown().maxDepth(3).filter { it.isFile && (it.name.endsWith(".gguf", true) || (it.name.startsWith("ggml-") && it.name.endsWith(".bin"))) }.toList() }
+    return dirs.flatMap { d -> d.walkTopDown().maxDepth(4).filter { it.isFile && (it.name.endsWith(".gguf", true) || (it.name.startsWith("ggml-") && it.name.endsWith(".bin"))) }.toList() }
         .filter { seen.add(it.canonicalPath) && CHAT_MODELS.none { m -> m.file == it.name } && SPEECH_MODELS.none { m -> m.file == it.name } }
         .map { f -> AiModel("file:" + f.path, if (f.name.endsWith(".bin")) "speech" else "chat", f.nameWithoutExtension, f.name, "", f.length(), "?", path = f.path) }
 }
