@@ -8,6 +8,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -76,9 +77,27 @@ object DnsPerNet {
     private fun p(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
     fun on(c: Context) = p(c).getBoolean("dnsPerNet", false)
     fun setOn(c: Context, v: Boolean) { p(c).edit().putBoolean("dnsPerNet", v).apply(); if (v) start(c) else stop(c) }
-    /** "smart" (the default), "keep", "auto", "off" or a host name. Smart: Auto while the network asks for a sign-in page (a captive portal) or has no working internet, else Manual with the host saved in Pulse (dns.google when none). */
-    fun choice(c: Context, wifi: Boolean) = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", "smart") ?: "smart"
-    fun setChoice(c: Context, wifi: Boolean, v: String) { p(c).edit().putString(if (wifi) "dnsWifi" else "dnsCell", v).apply(); applyNow(c) }
+    // Each of the two networks has its own settings: the mode, the host when it is Manual, and whether a sign-in page makes a Manual one Auto for a while.
+    // Wi-Fi starts as Auto, mobile data as Manual (the host saved in Pulse, else dns.google).
+    private fun k(wifi: Boolean, what: String) = (if (wifi) "dnsWifi" else "dnsCell") + what
+    /** "keep" (leave Private DNS alone), "auto", "off" or "manual". */
+    fun mode(c: Context, wifi: Boolean): String {
+        p(c).getString(k(wifi, "Mode"), null)?.let { return it }
+        // what an older version saved: smart, keep, auto, off or a host name
+        val old = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", null)
+        return when (old) { null, "smart" -> if (wifi) "auto" else "manual"; "keep", "auto", "off" -> old; else -> "manual" }
+    }
+    fun host(c: Context, wifi: Boolean): String {
+        p(c).getString(k(wifi, "Host"), null)?.takeIf { Dns.validHost(it) }?.let { return it }
+        val old = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", null)
+        if (old != null && old !in listOf("smart", "keep", "auto", "off") && Dns.validHost(old)) return old
+        return Dns.savedHost(c).takeIf { Dns.validHost(it) } ?: "dns.google"
+    }
+    /** While the network asks for a sign-in page (or has no working internet) a Manual one is Auto, so the page can open. On at first. */
+    fun portalAuto(c: Context, wifi: Boolean) = p(c).getBoolean(k(wifi, "Portal"), true)
+    fun setMode(c: Context, wifi: Boolean, v: String) { p(c).edit().putString(k(wifi, "Mode"), v).apply(); applyNow(c) }
+    fun setHost(c: Context, wifi: Boolean, v: String) { if (Dns.validHost(v)) { p(c).edit().putString(k(wifi, "Host"), v).apply(); applyNow(c) } }
+    fun setPortalAuto(c: Context, wifi: Boolean, v: Boolean) { p(c).edit().putBoolean(k(wifi, "Portal"), v).apply(); applyNow(c) }
 
     private var cb: android.net.ConnectivityManager.NetworkCallback? = null
     private var last = ""
@@ -105,11 +124,15 @@ object DnsPerNet {
         // a change of the network, or of whether it asks for a sign-in, is a new case
         if (k.isEmpty() || (!force && (k + port) == last)) return
         last = k + port
-        var ch = choice(c, k == "wifi")
-        if (ch == "keep") return
-        if (ch == "smart") ch = if (port) "auto" else Dns.savedHost(c).takeIf { Dns.validHost(it) } ?: "dns.google"
+        val wifi = k == "wifi"
+        val m = mode(c, wifi)
+        if (m == "keep") return
         Thread {
-            val (mode, host) = when (ch) { "auto" -> "opportunistic" to ""; "off" -> "off" to ""; else -> "hostname" to ch }
+            val (mode, host) = when {
+                m == "off" -> "off" to ""
+                m == "auto" || (m == "manual" && port && portalAuto(c, wifi)) -> "opportunistic" to ""
+                else -> "hostname" to host(c, wifi)
+            }
             val now = Dns.current(c)
             if (now.first == mode && (mode != "hostname" || now.second == host)) return@Thread
             Dns.write(c, mode, host)
@@ -176,24 +199,53 @@ fun DnsSettings() {
     }
     // a DNS of its own for Wi-Fi and for mobile data
     var perNet by remember { mutableStateOf(DnsPerNet.on(ctx)) }
-    var wifiCh by remember { mutableStateOf(DnsPerNet.choice(ctx, true)) }
-    var cellCh by remember { mutableStateOf(DnsPerNet.choice(ctx, false)) }
     PCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Own DNS for Wi-Fi and mobile data", "Wi-Fi ve mobil veri için ayrı DNS"), color = Look.accent, fontSize = 15.sp)
-                Text(tr("Changes Private DNS by itself when the phone moves between them. Smart: Auto when the network asks for a sign-in page, else Manual (needs root or Shizuku once)", "Telefon ikisi arasında geçince Özel DNS'i kendisi değiştirir. Akıllı: ağ giriş sayfası istiyorsa Auto, yoksa Manuel (bir kez root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
+                Text(tr("Changes Private DNS by itself when the phone moves between them: Wi-Fi starts as Auto, mobile data as Manual (needs root or Shizuku once)", "Telefon ikisi arasında geçince Özel DNS'i kendisi değiştirir: Wi-Fi Auto, mobil veri Manuel başlar (bir kez root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
             }
             com.umutk.pulse.PSwitch(perNet, { perNet = it; DnsPerNet.setOn(ctx, it) })
         }
         if (perNet) {
-            val opts = listOf("smart" to tr("Smart", "Akıllı"), "keep" to tr("Keep", "Dokunma"), "auto" to "Auto", "off" to tr("Off", "Kapalı"), "one.one.one.one" to "Cloudflare", "dns.google" to "Google", "dns.adguard-dns.com" to "AdGuard", "dns.quad9.net" to "Quad9")
-            listOf(true to tr("Wi-Fi", "Wi-Fi"), false to tr("Mobile data", "Mobil veri")).forEach { (wifi, label) ->
-                val cur = if (wifi) wifiCh else cellCh
-                Text(label, color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-                Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    opts.forEach { (v, n) -> PChip(cur == v, n) { if (wifi) wifiCh = v else cellCh = v; DnsPerNet.setChoice(ctx, wifi, v) } }
+            NetDnsBlock(true, tr("Wi-Fi", "Wi-Fi"))
+            NetDnsBlock(false, tr("Mobile data", "Mobil veri"))
+        }
+    }
+}
+
+/** The settings of one network: its mode (Keep, Auto, Off, Manual), the host of a Manual one (a preset or your own), and whether a sign-in page makes it Auto for a while. */
+@Composable
+private fun NetDnsBlock(wifi: Boolean, label: String) {
+    val ctx = LocalContext.current
+    var mode by remember { mutableStateOf(DnsPerNet.mode(ctx, wifi)) }
+    var host by remember { mutableStateOf(DnsPerNet.host(ctx, wifi)) }
+    var field by remember { mutableStateOf(DnsPerNet.host(ctx, wifi)) }
+    var portal by remember { mutableStateOf(DnsPerNet.portalAuto(ctx, wifi)) }
+    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, color = T.text, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("keep" to tr("Keep", "Dokunma"), "auto" to "Auto", "off" to tr("Off", "Kapalı"), "manual" to tr("Manual", "Manuel")).forEach { (v, n) ->
+                PChip(mode == v, n) { mode = v; DnsPerNet.setMode(ctx, wifi, v) }
+            }
+        }
+        if (mode == "manual") {
+            Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("Cloudflare" to "one.one.one.one", "Google" to "dns.google", "AdGuard" to "dns.adguard-dns.com", "Quad9" to "dns.quad9.net").forEach { (n, h) ->
+                    PChip(host == h, n) { host = h; field = h; DnsPerNet.setHost(ctx, wifi, h) }
                 }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                PField(field, { field = it.trim() }, "dns.example.com", Modifier.weight(1f))
+                PButton(tr("Apply", "Uygula"), compact = true) { if (Dns.validHost(field)) { host = field; DnsPerNet.setHost(ctx, wifi, field) } }
+            }
+            if (field.isNotEmpty() && !Dns.validHost(field)) Text(tr("Not a host name", "Geçerli bir ad değil"), color = T.sub, fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth().clickable { portal = !portal; DnsPerNet.setPortalAuto(ctx, wifi, portal) }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Auto while a sign-in page is asked", "Giriş sayfası istenirken Auto"), color = T.text, fontSize = 14.sp)
+                    Text(tr("A Manual DNS would stop the sign-in page of a hotel or school Wi-Fi from opening", "Manuel DNS otel ya da okul Wi-Fi'sinin giriş sayfasını açmaz"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(portal, { portal = it; DnsPerNet.setPortalAuto(ctx, wifi, it) })
             }
         }
     }
