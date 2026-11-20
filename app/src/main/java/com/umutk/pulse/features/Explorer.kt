@@ -1145,8 +1145,15 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                 note = "Moving to Secure Folder…"
                                 Thread {
                                     val q = { x: String -> "'" + x.replace("'", "'\\''") + "'" }
-                                    val o = com.umutk.pulse.extras.blackout.Privilege.run("mkdir -p " + q(dest.substringBeforeLast('/')) + " && mv " + q(f.path) + " " + q(dest) + " && chown -R media_rw:media_rw " + q(dest))
-                                    android.os.Handler(android.os.Looper.getMainLooper()).post { note = if (o.code == 0) "Moved to Secure Folder" else "Secure Folder needs root (or Shizuku with access)" }
+                                    val dir = dest.substringBeforeLast('/')
+                                    // copied first, checked, and only then is the original removed: a failed step leaves the file where it was (it used to be moved at once and could be lost)
+                                    val script = "set -e; mkdir -p " + q(dir) + "; cp -p " + q(f.path) + " " + q(dest) + "; " +
+                                        "[ \"$(stat -c %s " + q(f.path) + ")\" = \"$(stat -c %s " + q(dest) + ")\" ]; " +
+                                        "chown --reference=" + q(dir) + " " + q(dest) + " 2>/dev/null || true; restorecon " + q(dest) + " 2>/dev/null || true; rm " + q(f.path)
+                                    val o = com.umutk.pulse.extras.blackout.Privilege.run(script)
+                                    // a failed run removes the half copy and nothing else
+                                    if (o.code != 0) com.umutk.pulse.extras.blackout.Privilege.run("rm -f " + q(dest))
+                                    android.os.Handler(android.os.Looper.getMainLooper()).post { note = if (o.code == 0) "Moved to Secure Folder: $rel" else "Not moved (Secure Folder needs root, or Shizuku with access); the file is where it was" }
                                 }.start()
                             }))
                         },
