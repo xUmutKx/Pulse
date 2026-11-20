@@ -739,8 +739,9 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     var visMode by remember { mutableIntStateOf(vctx.getSharedPreferences("poweramp_vis", android.content.Context.MODE_PRIVATE).getInt("mode", 0).coerceIn(0, VIS_MODES.lastIndex)) }
     if (big) FullVisualizer(playing, style, visMode, track) { big = false }
     var levels by remember { mutableStateOf(List(n) { 0f }) }
-    LaunchedEffect(playing) {
-        while (playing) {
+    val barsStarted by com.umutk.pulse.extras.music.rememberStarted()
+    LaunchedEffect(playing, barsStarted) {
+        while (playing && barsStarted) {
             val s = MusicLevels.snapshot()
             val prev = levels
             levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, (g + 1) * MusicLevels.BANDS / n).average().toFloat().let { v -> maxOf(v, prev[g] * .82f) } }

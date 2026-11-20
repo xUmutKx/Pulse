@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor.AudioFormat
@@ -152,11 +153,27 @@ object MusicLevels {
     }
 }
 
+
+/** True while the screen is in front (the activity is started): the bars and waves stop drawing when the app is in the background. */
+@Composable
+fun rememberStarted(): State<Boolean> {
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    val s = remember { mutableStateOf(owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) }
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, _ -> s.value = owner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
+        owner.lifecycle.addObserver(o)
+        onDispose { owner.lifecycle.removeObserver(o) }
+    }
+    return s
+}
+
 /** Waveform of [MusicLevels.WAVE] points at about 30 fps while composed; flat at 0.5 when nothing plays. */
 @Composable
 fun rememberWave(): State<List<Float>> {
     val state = remember { mutableStateOf(List(MusicLevels.WAVE) { 0.5f }) }
-    LaunchedEffect(Unit) {
+    val started by rememberStarted()
+    LaunchedEffect(started) {
+        if (!started) return@LaunchedEffect
         var last = 0L
         while (true) {
             androidx.compose.runtime.withFrameNanos { t ->
@@ -174,11 +191,13 @@ fun rememberWave(): State<List<Float>> {
 @Composable
 fun rememberLevels(n: Int = 24): State<List<Float>> {
     val state = remember { mutableStateOf(List(n) { 0f }) }
-    LaunchedEffect(n) {
+    val started by rememberStarted()
+    LaunchedEffect(n, started) {
+        if (!started) return@LaunchedEffect
         var last = 0L
         while (true) {
             androidx.compose.runtime.withFrameNanos { t ->
-                if (t - last >= 33_000_000L) {
+                if (t - last >= 16_000_000L) {
                     last = t
                     val src = MusicLevels.snapshot()
                     state.value = List(n) { i ->
