@@ -76,12 +76,19 @@ object DnsPerNet {
     private fun p(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
     fun on(c: Context) = p(c).getBoolean("dnsPerNet", false)
     fun setOn(c: Context, v: Boolean) { p(c).edit().putBoolean("dnsPerNet", v).apply(); if (v) start(c) else stop(c) }
-    /** "keep", "auto", "off" or a host name. */
-    fun choice(c: Context, wifi: Boolean) = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", "keep") ?: "keep"
+    /** "smart" (the default), "keep", "auto", "off" or a host name. Smart: Auto while the network asks for a sign-in page (a captive portal) or has no working internet, else Manual with the host saved in Pulse (dns.google when none). */
+    fun choice(c: Context, wifi: Boolean) = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", "smart") ?: "smart"
     fun setChoice(c: Context, wifi: Boolean, v: String) { p(c).edit().putString(if (wifi) "dnsWifi" else "dnsCell", v).apply(); applyNow(c) }
 
     private var cb: android.net.ConnectivityManager.NetworkCallback? = null
     private var last = ""
+
+    /** The network asks for a sign-in page, or has no working internet (a Private DNS would stop the sign-in page from opening). */
+    private fun portal(c: Context): Boolean = runCatching {
+        val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val nc = cm.getNetworkCapabilities(cm.activeNetwork) ?: return@runCatching false
+        nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) || !nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }.getOrDefault(false)
 
     /** The kind of the default network now: "wifi", "cell" or "" (none or another kind). */
     private fun kind(c: Context): String = runCatching {
@@ -94,10 +101,13 @@ object DnsPerNet {
     fun applyNow(c: Context, force: Boolean = true) {
         if (!on(c)) return
         val k = kind(c)
-        if (k.isEmpty() || (!force && k == last)) return
-        last = k
-        val ch = choice(c, k == "wifi")
+        val port = portal(c)
+        // a change of the network, or of whether it asks for a sign-in, is a new case
+        if (k.isEmpty() || (!force && (k + port) == last)) return
+        last = k + port
+        var ch = choice(c, k == "wifi")
         if (ch == "keep") return
+        if (ch == "smart") ch = if (port) "auto" else Dns.savedHost(c).takeIf { Dns.validHost(it) } ?: "dns.google"
         Thread {
             val (mode, host) = when (ch) { "auto" -> "opportunistic" to ""; "off" -> "off" to ""; else -> "hostname" to ch }
             val now = Dns.current(c)
@@ -172,12 +182,12 @@ fun DnsSettings() {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Own DNS for Wi-Fi and mobile data", "Wi-Fi ve mobil veri için ayrı DNS"), color = Look.accent, fontSize = 15.sp)
-                Text(tr("Changes Private DNS by itself when the phone moves between them (needs root or Shizuku once)", "Telefon ikisi arasında geçince Özel DNS'i kendisi değiştirir (bir kez root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
+                Text(tr("Changes Private DNS by itself when the phone moves between them. Smart: Auto when the network asks for a sign-in page, else Manual (needs root or Shizuku once)", "Telefon ikisi arasında geçince Özel DNS'i kendisi değiştirir. Akıllı: ağ giriş sayfası istiyorsa Auto, yoksa Manuel (bir kez root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
             }
             com.umutk.pulse.PSwitch(perNet, { perNet = it; DnsPerNet.setOn(ctx, it) })
         }
         if (perNet) {
-            val opts = listOf("keep" to tr("Keep", "Dokunma"), "auto" to "Auto", "off" to tr("Off", "Kapalı"), "one.one.one.one" to "Cloudflare", "dns.google" to "Google", "dns.adguard-dns.com" to "AdGuard", "dns.quad9.net" to "Quad9")
+            val opts = listOf("smart" to tr("Smart", "Akıllı"), "keep" to tr("Keep", "Dokunma"), "auto" to "Auto", "off" to tr("Off", "Kapalı"), "one.one.one.one" to "Cloudflare", "dns.google" to "Google", "dns.adguard-dns.com" to "AdGuard", "dns.quad9.net" to "Quad9")
             listOf(true to tr("Wi-Fi", "Wi-Fi"), false to tr("Mobile data", "Mobil veri")).forEach { (wifi, label) ->
                 val cur = if (wifi) wifiCh else cellCh
                 Text(label, color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
