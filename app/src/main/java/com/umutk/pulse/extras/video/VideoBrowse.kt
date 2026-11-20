@@ -297,6 +297,7 @@ fun VideoHub(onBack: () -> Unit) {
                 }
             } else {
                 SkinBtn(sk, { search = if (search == null) "" else null }) { PIcon("search", sk.topFg, 24.dp) }
+                SkinBtn(sk, { resetUnindexed(); rev++ }) { PIcon("refresh", sk.topFg, 24.dp) }
                 SkinBtn(sk, { optDialog = true }) { PIcon("sort", sk.topFg, 24.dp) }
                 SkinBtn(sk, { pick.launch(arrayOf("video/*")) }) { PIcon("folder", sk.topFg, 24.dp) }
                 SkinBtn(sk, { urlDialog = true }) { PIcon("wifi", sk.topFg, 24.dp) }
@@ -395,7 +396,7 @@ private fun Entry(e: Any, sk: VSkin, p: VideoPrefs, shape: androidx.compose.ui.g
         Column(m) {
             when (e) {
                 is Folder -> {
-                    Text(e.name, color = sk.fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (p.smartNames && e.key != RECENT) smartName(e.name + ".mkv") else e.name, color = sk.fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (e.key != RECENT) Text(e.vids.size.toString(), color = sk.sub, fontSize = 12.sp)
                 }
                 is VideoItem -> {

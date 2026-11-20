@@ -39,13 +39,16 @@ fun queryVideos(ctx: Context): List<VideoItem> {
     val out = ArrayList<VideoItem>()
     val cols = arrayOf(
         V._ID, V.DISPLAY_NAME, V.DURATION, V.BUCKET_DISPLAY_NAME,
-        V.RELATIVE_PATH, V.SIZE, V.DATE_ADDED, V.DATE_MODIFIED, V.WIDTH, V.HEIGHT, V.MIME_TYPE,
+        V.RELATIVE_PATH, V.SIZE, V.DATE_ADDED, V.DATE_MODIFIED, V.WIDTH, V.HEIGHT, V.MIME_TYPE, V.DATA,
     )
+    val gone = ArrayList<String>()
     runCatching {
         ctx.contentResolver.query(V.EXTERNAL_CONTENT_URI, cols, null, null, V.DATE_ADDED + " DESC")?.use { c ->
             while (c.moveToNext()) {
                 // the camera's temporary recordings (temp_2024…, no picture, not playable) are not videos of the person's
                 if (isTempVideo(c.getString(1).orEmpty())) continue
+                // a row whose file is gone (deleted or moved by another app, a finished torrent that was removed): not listed, and the index is told to drop it
+                c.getString(11)?.takeIf { it.isNotEmpty() }?.let { p -> if (!java.io.File(p).exists()) { gone += p; continue } }
                 out += VideoItem(
                     Uri.withAppendedPath(V.EXTERNAL_CONTENT_URI, c.getLong(0).toString()),
                     c.getString(1).orEmpty(), c.getLong(2), c.getString(3).orEmpty(),
@@ -54,6 +57,7 @@ fun queryVideos(ctx: Context): List<VideoItem> {
             }
         }
     }
+    if (gone.isNotEmpty()) runCatching { android.media.MediaScannerConnection.scanFile(ctx, gone.take(200).toTypedArray(), null, null) }
     return out
 }
 
@@ -72,6 +76,9 @@ private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", 
 private var unindexedCache: List<VideoItem>? = null
 
 /** [unindexedVideos] once per run: walking the whole storage on every change of the view froze the browser. */
+/** The next [unindexedOnce] walks the storage again (the refresh button). */
+internal fun resetUnindexed() { unindexedCache = null }
+
 internal fun unindexedOnce(known: List<VideoItem>): List<VideoItem> = unindexedCache ?: unindexedVideos(known).also { unindexedCache = it }
 
 internal fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
