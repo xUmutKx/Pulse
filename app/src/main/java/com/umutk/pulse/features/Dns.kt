@@ -8,9 +8,11 @@ import android.os.Looper
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.Look
@@ -65,6 +67,65 @@ object Dns {
     }
 }
 
+/**
+ * A Private DNS of its own for Wi-Fi and for mobile data (a setting, off at first): when the phone's network changes between the two, the choice made for the new one is written
+ * to Private DNS. A choice is "keep" (the DNS stays as it is), "auto", "off" or a host name. Writing it needs WRITE_SECURE_SETTINGS (granted once through root or Shizuku, as the
+ * DNS tile does); without it nothing is changed. It runs in the main Pulse process while the setting is on.
+ */
+object DnsPerNet {
+    private fun p(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    fun on(c: Context) = p(c).getBoolean("dnsPerNet", false)
+    fun setOn(c: Context, v: Boolean) { p(c).edit().putBoolean("dnsPerNet", v).apply(); if (v) start(c) else stop(c) }
+    /** "keep", "auto", "off" or a host name. */
+    fun choice(c: Context, wifi: Boolean) = p(c).getString(if (wifi) "dnsWifi" else "dnsCell", "keep") ?: "keep"
+    fun setChoice(c: Context, wifi: Boolean, v: String) { p(c).edit().putString(if (wifi) "dnsWifi" else "dnsCell", v).apply(); applyNow(c) }
+
+    private var cb: android.net.ConnectivityManager.NetworkCallback? = null
+    private var last = ""
+
+    /** The kind of the default network now: "wifi", "cell" or "" (none or another kind). */
+    private fun kind(c: Context): String = runCatching {
+        val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val nc = cm.getNetworkCapabilities(cm.activeNetwork)
+        when { nc == null -> ""; nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"; nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> "cell"; else -> "" }
+    }.getOrDefault("")
+
+    /** Writes the choice made for the network the phone is on now (once for each change of network). */
+    fun applyNow(c: Context, force: Boolean = true) {
+        if (!on(c)) return
+        val k = kind(c)
+        if (k.isEmpty() || (!force && k == last)) return
+        last = k
+        val ch = choice(c, k == "wifi")
+        if (ch == "keep") return
+        Thread {
+            val (mode, host) = when (ch) { "auto" -> "opportunistic" to ""; "off" -> "off" to ""; else -> "hostname" to ch }
+            val now = Dns.current(c)
+            if (now.first == mode && (mode != "hostname" || now.second == host)) return@Thread
+            Dns.write(c, mode, host)
+        }.start()
+    }
+
+    fun start(c: Context) {
+        if (!on(c) || cb != null) return
+        val app = c.applicationContext
+        val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val n = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(network: android.net.Network, caps: android.net.NetworkCapabilities) { applyNow(app, force = false) }
+            override fun onLost(network: android.net.Network) { last = "" }
+        }
+        cb = n
+        runCatching { cm.registerDefaultNetworkCallback(n) }
+        applyNow(app)
+    }
+
+    fun stop(c: Context) {
+        val n = cb ?: return
+        cb = null; last = ""
+        runCatching { (c.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).unregisterNetworkCallback(n) }
+    }
+}
+
 /** Settings > General: Private DNS as Auto, Off or Manual (host name + Apply). Shows the current setting when opened. */
 @Composable
 fun DnsSettings() {
@@ -102,6 +163,29 @@ fun DnsSettings() {
             PButton("Apply") { apply("hostname", field) }
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
+    }
+    // a DNS of its own for Wi-Fi and for mobile data
+    var perNet by remember { mutableStateOf(DnsPerNet.on(ctx)) }
+    var wifiCh by remember { mutableStateOf(DnsPerNet.choice(ctx, true)) }
+    var cellCh by remember { mutableStateOf(DnsPerNet.choice(ctx, false)) }
+    PCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Own DNS for Wi-Fi and mobile data", "Wi-Fi ve mobil veri için ayrı DNS"), color = Look.accent, fontSize = 15.sp)
+                Text(tr("Changes Private DNS by itself when the phone moves between them (needs root or Shizuku once)", "Telefon ikisi arasında geçince Özel DNS'i kendisi değiştirir (bir kez root ya da Shizuku gerekir)"), color = T.sub, fontSize = 12.sp)
+            }
+            com.umutk.pulse.PSwitch(perNet, { perNet = it; DnsPerNet.setOn(ctx, it) })
+        }
+        if (perNet) {
+            val opts = listOf("keep" to tr("Keep", "Dokunma"), "auto" to "Auto", "off" to tr("Off", "Kapalı"), "one.one.one.one" to "Cloudflare", "dns.google" to "Google", "dns.adguard-dns.com" to "AdGuard", "dns.quad9.net" to "Quad9")
+            listOf(true to tr("Wi-Fi", "Wi-Fi"), false to tr("Mobile data", "Mobil veri")).forEach { (wifi, label) ->
+                val cur = if (wifi) wifiCh else cellCh
+                Text(label, color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    opts.forEach { (v, n) -> PChip(cur == v, n) { if (wifi) wifiCh = v else cellCh = v; DnsPerNet.setChoice(ctx, wifi, v) } }
+                }
+            }
+        }
     }
 }
 

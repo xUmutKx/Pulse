@@ -28,6 +28,8 @@ class PulseApp : Application(), androidx.work.Configuration.Provider {
         CrashSaver.install(this)
         // the performance record (a setting, see PerfLog): in every process
         PerfLog.init(this)
+        // an own Private DNS for Wi-Fi and for mobile data (a setting): watched in the main process only
+        if (runCatching { Application.getProcessName() == packageName }.getOrDefault(true)) runCatching { com.umutk.pulse.features.DnsPerNet.start(this) }
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
         CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
         // the folders Pulse made in Downloads before are moved under Download/Pulse (once the storage permission is there; nothing happens without it)
