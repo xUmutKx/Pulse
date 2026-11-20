@@ -72,9 +72,11 @@ class CodeHandle {
 
 /** The editor view itself: Sora Editor with the TextMate grammar of [lang], in the colours of the look. */
 @Composable
-fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boolean, wrap: Boolean, textSp: Float, modifier: Modifier = Modifier) {
+fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boolean, wrap: Boolean, textSp: Float, modifier: Modifier = Modifier, onText: ((String) -> Unit)? = null) {
     val dark = T.bg.luminance() < .5f
     val bg = T.bg.toArgb()
+    // the view is made once: what it calls on a change must be the latest
+    val onTextNow by androidx.compose.runtime.rememberUpdatedState(onText)
     AndroidView(modifier = modifier, factory = { c ->
         PulseCode.init(c)
         CodeEditor(c).also { ed ->
@@ -86,7 +88,7 @@ fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boole
             ed.setTabWidth(4)
             ed.setText(text)
             ed.subscribeEvent(ContentChangeEvent::class.java) { e, _ ->
-                if (!h.suppress && e.action != ContentChangeEvent.ACTION_SET_NEW_TEXT) h.dirty = true
+                if (!h.suppress && e.action != ContentChangeEvent.ACTION_SET_NEW_TEXT) { h.dirty = true; onTextNow?.invoke(ed.text.toString()) }
                 h.sync()
             }
             // a tap on a fold marker (in the viewer) opens it again
@@ -136,19 +138,32 @@ private fun TopIcon(name: String, on: Boolean = true, accent: Boolean = false, o
     }
 }
 
-/**
- * The code editor of Files (a tap on a code file, or "Edit as code" in a file's menu): the language is found from the name and the first lines, the code is coloured by its
- * TextMate grammar, blocks fold away (while reading; editing puts them back), there is search and replace, undo and redo, a symbol bar, and it saves to the file.
- */
+/** Where the code of an editor comes from and goes to: a file, or a note. */
+class CodeSource(val name: String, val read: suspend () -> String?, val write: suspend (String) -> Boolean)
+
+/** The code editor of Files for [file] (a tap on a code file, or "Code editor" in a file's menu). */
 @Composable
 fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> Unit) {
+    val src = remember(file) {
+        CodeSource(file.name, { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }, { runCatching { file.writeText(it) }.isSuccess })
+    }
+    CodeEditorHost(src, startEditing, null, null, onClose)
+}
+
+/**
+ * The full code editor: the language is found from the name and the first lines (and can be changed), the code is coloured by its TextMate grammar, blocks fold away
+ * (while reading; editing puts them back), there is search and replace, undo and redo, a symbol bar, and it saves to its [src]. [forced] is a language chosen before
+ * (a note's), [onLang] hears a change of it.
+ */
+@Composable
+fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lang?, onLang: ((PulseCode.Lang) -> Unit)?, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { ctx.getSharedPreferences("pulse_code", 0) }
-    val h = remember(file) { CodeHandle() }
-    var text by remember(file) { mutableStateOf<String?>(null) }
-    var lang by remember(file) { mutableStateOf<PulseCode.Lang?>(null) }
-    var editing by remember(file) { mutableStateOf(startEditing) }
+    val h = remember(src) { CodeHandle() }
+    var text by remember(src) { mutableStateOf<String?>(null) }
+    var lang by remember(src) { mutableStateOf<PulseCode.Lang?>(forced) }
+    var editing by remember(src) { mutableStateOf(startEditing) }
     var wrap by remember { mutableStateOf(prefs.getBoolean("wrap", false)) }
     var size by remember { mutableStateOf(prefs.getFloat("size", 13f)) }
     var tools by remember { mutableStateOf(false) }
@@ -159,19 +174,19 @@ fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> U
     var confirm by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
 
-    LaunchedEffect(file) {
-        val t = withContext(Dispatchers.IO) { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }
+    LaunchedEffect(src) {
+        val t = withContext(Dispatchers.IO) { src.read() }
         text = t ?: ""
         if (t == null) note = tr("Too large to open here", "Burada açılamayacak kadar büyük")
         // a big file is shown without colours (the grammar would take long); the rest by name, then by what the first lines say
-        lang = if (t != null && t.length < 1_500_000) PulseCode.detect(file.name, t.take(400)) else null
+        if (forced == null) lang = if (t != null && t.length < 1_500_000) PulseCode.detect(src.name, t.take(400)) else null
     }
 
     fun save(then: () -> Unit = {}) {
         val ed = h.ed ?: return
         scope.launch {
             val body = ed.text.toString()
-            val ok = withContext(Dispatchers.IO) { runCatching { file.writeText(body) }.isSuccess }
+            val ok = withContext(Dispatchers.IO) { runCatching { src.write(body) }.getOrDefault(false) }
             note = if (ok) tr("Saved", "Kaydedildi") else tr("Could not save", "Kaydedilemedi")
             if (ok) { h.dirty = false; then() }
         }
@@ -190,7 +205,7 @@ fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> U
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                    Text(file.name, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(src.name, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(listOfNotNull(lang?.label, if (h.lines > 0) "${h.lines} " + tr("lines", "satır") else null, if (h.dirty) tr("edited", "değişti") else null).joinToString("  ·  "),
                         color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -219,6 +234,7 @@ fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> U
                 }
                 PChip(false, "A−") { size = (size - 1f).coerceAtLeast(8f); prefs.edit().putFloat("size", size).apply() }
                 PChip(false, "A+") { size = (size + 1f).coerceAtMost(28f); prefs.edit().putFloat("size", size).apply() }
+                PulseCode.common.forEach { l -> PChip(lang?.scope == l.scope, l.label) { lang = l; onLang?.invoke(l) } }
             }
             if (find) Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

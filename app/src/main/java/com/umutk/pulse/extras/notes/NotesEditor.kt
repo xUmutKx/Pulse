@@ -95,6 +95,7 @@ fun NoteEditor(
     val date = remember { SimpleDateFormat("d MMM HH:mm", Locale.getDefault()) }
 
     var preview by remember(note.id) { mutableStateOf(false) }
+    var codeOn by remember(note.id) { mutableStateOf(com.umutk.pulse.extras.code.NoteCodePrefs.get(ctx, note.id) != null) }
     var palette by remember(note.id) { mutableStateOf(false) }
     // the pen: the tool that is on (keyboard: only the text; pen, marker, eraser, lasso: the S Pen draws and a finger scrolls), its settings kept between notes
     var mode by remember(note.id) { mutableStateOf(InkMode.KEYBOARD) }
@@ -274,6 +275,8 @@ fun NoteEditor(
         if (more) Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             NChip(tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
             NChip(if (preview) tr("Edit", "Düzenle") else tr("Preview", "Önizleme"), fg) { preview = !preview }
+            // code mode: the body is a small code editor (coloured by language), with a button that opens the whole editor
+            NChip(tr("Code", "Kod"), if (codeOn) T.accent else fg) { codeOn = !codeOn; com.umutk.pulse.extras.code.NoteCodePrefs.set(ctx, note.id, if (codeOn) "" else null) }
             NChip(tr("Copy", "Kopyala"), fg) { copyNote(ctx, text) }
             NChip(tr("Save as PDF", "PDF olarak kaydet"), fg) { NotesExport.share(ctx, NotesExport.pdf(ctx, note), "application/pdf") }
             NChip(tr("Save as image", "Resim olarak kaydet"), fg) { NotesExport.share(ctx, NotesExport.image(ctx, note), "image/png") }
@@ -331,7 +334,8 @@ fun NoteEditor(
                 NIcon("close", inkSub, tr("Remove reminder", "Hatırlatmayı kaldır")) { onEdit { it.copy(remindAt = 0L) } }
             }
             Spacer(Modifier.height(10.dp))
-            if (preview) NoteBody(note.body, size, ink, T.accent) { changeBody(it) }
+            if (codeOn) com.umutk.pulse.extras.code.NoteCodeBody(note.id, note.body, { changeBody(it) })
+            else if (preview) NoteBody(note.body, size, ink, T.accent) { changeBody(it) }
             else NFieldTV(bodyField, { tv -> bodyField = tv; if (tv.text != note.body) changeBody(tv.text) }, tr("Write here", "Buraya yaz"), ink, inkSub, size, Modifier.fillMaxWidth().heightIn(min = 180.dp))
 
             if (links.isNotEmpty()) {

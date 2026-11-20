@@ -77,6 +77,10 @@ object PulseCode {
         "proguard-rules.pro" to Lang("source.properties", "ProGuard"), "androidmanifest.xml" to Lang("text.xml", "XML"),
     )
 
+    /** The languages offered when the detected one is wrong (a chip row in the editor). */
+    val common: List<Lang> = listOf("py", "html", "js", "ts", "json", "css", "xml", "md", "kt", "java", "cpp", "c", "cs", "go", "rs", "php", "sh", "sql", "yml", "swift", "lua", "rb", "dart", "toml", "ini")
+        .mapNotNull { byExt[it] }.distinctBy { it.scope }
+
     /** The extensions that open in the code editor from Files by a tap (HTML opens as a page there; the menu offers its code). */
     val tapExts: Set<String> = byExt.keys - setOf("html", "htm", "xhtml", "svg", "md", "markdown", "log", "r", "s", "el", "pp", "mdx") + setOf("gradle")
 
