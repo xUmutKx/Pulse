@@ -6,7 +6,7 @@ import android.content.pm.PackageManager
 
 /**
  * The home-screen icons of the extra apps and of Pulse itself, as REAL launcher icons. Each extra app has its line icon (its plain launcher alias)
- * and one Material glass twin for each of six colours ("Glass" + the colour + the alias name: the tool is found by the END of the name, so it is
+ * and one Material glass twin for each of eight colours ("Glass" + the colour + the alias name: the tool is found by the END of the name, so it is
  * the same one). While an app has an icon at all, exactly one of them is switched on. Pulse's own icon is the same with IconDefault and
  * IconGlass<Colour>. The look of each app is its own choice (the icon chooser's Apply); until it is made, a tablet (smallest width 600 dp) gets blue
  * glass and a phone the line icons. Components change one by one with DONT_KILL_APP, off the main thread, and only when their state differs.
@@ -22,7 +22,10 @@ object LauncherGlass {
     class Tone(val id: String, val suffix: String, val argb: Int)
 
     val TONES = listOf(
-        Tone("blue", "", 0xFF3F7BFF.toInt()), Tone("purple", "Purple", 0xFFB388FF.toInt()), Tone("pink", "Pink", 0xFFFF80AB.toInt()),
+        Tone("blue", "", 0xFF3F7BFF.toInt()),
+        // two lighter blues whose glass ground lets the wallpaper through (the C and D of the chooser)
+        Tone("navy", "Navy", 0xFF1E365C.toInt()), Tone("sky", "Sky", 0xFF284674.toInt()),
+        Tone("purple", "Purple", 0xFFB388FF.toInt()), Tone("pink", "Pink", 0xFFFF80AB.toInt()),
         Tone("cyan", "Cyan", 0xFF9DBBED.toInt()), Tone("green", "Green", 0xFFB9F6CA.toInt()), Tone("amber", "Amber", 0xFFFFD180.toInt()),
     )
 
