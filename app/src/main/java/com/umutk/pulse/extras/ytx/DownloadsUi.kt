@@ -609,7 +609,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.pulseItems(list: List
         val c = MaterialTheme.colorScheme
         val done = d.state == "DONE"
         Column(Modifier.fillMaxWidth().pressable(enabled = done, pressedScale = 0.985f) { openPulseFile(ctx, d.path) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text(d.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(com.umutk.pulse.extras.video.smartName(d.name), fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(3.dp))
             val pct = if (d.total > 0) (d.done * 100 / d.total).toInt() else -1
             Text(
