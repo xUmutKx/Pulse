@@ -124,13 +124,13 @@ internal fun SciPane(classic: Boolean) {
         Spacer(Modifier.height(6.dp))
         val round = T.id == "amoled" || T.id == "material"
         if (round) {
-            CalcPad(sci, classic, Modifier.weight(4f)) { press(it) }
+            CalcPad(sci, classic, Modifier.weight(4f), onLong = { k -> if ((k == "(" || k == ")") && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
             Spacer(Modifier.height(4.dp))
             CalcPad(pad, classic, Modifier.weight(4f)) { press(it) }
         } else {
             // Windows looks: the keys are smaller and sit at the bottom, under the display
             Spacer(Modifier.weight(1f))
-            CalcPad(sci, classic) { press(it) }
+            CalcPad(sci, classic, onLong = { k -> if ((k == "(" || k == ")") && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
             Spacer(Modifier.height(4.dp))
             CalcPad(pad, classic) { press(it) }
         }

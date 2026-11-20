@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -66,7 +67,7 @@ fun CalculatorHub(back: () -> Unit) {
     BackHandler { if (showHistory) showHistory = false else if (mode != "standard") mode = "standard" else back() }
 
     // a sum with brackets goes through the scientific parser, the plain ones through the simple one
-    fun ev(x: String): Double? = if ('(' in x || ')' in x) com.umutk.pulse.extras.calculator.Sci.eval(x) else Calc.eval(x)
+    fun ev(x0: String): Double? { val x = com.umutk.pulse.extras.calculator.Sci.tidy(x0); return if ('(' in x || ')' in x) com.umutk.pulse.extras.calculator.Sci.eval(x) else Calc.eval(x) }
     fun num() = e.takeLastWhile { it.isDigit() || it == '.' }
     fun value(): Double? = if (e.isEmpty()) 0.0 else ev(e)
     fun set(v: Double?) { err = v == null; e = v?.let(Calc::show) ?: ""; done = v != null }
@@ -148,7 +149,7 @@ fun CalculatorHub(back: () -> Unit) {
                 Text(preview?.let { "= " + grouped(it) } ?: history.firstOrNull() ?: " ", color = T.sub, fontSize = 20.sp, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                 FitLine(grouped(shown), T.text, 64, Modifier.fillMaxWidth().padding(top = 6.dp))
             }
-            RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "="))) { press(it) }
+            RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "=")), onLong = { k -> if (k == "( )" && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
             Spacer(Modifier.height(48.dp))
             return@Column
         }
@@ -166,7 +167,8 @@ fun CalculatorHub(back: () -> Unit) {
         ) else listOf(
             listOf("MC", "MR", "M+", "M−"), listOf("%", "CE", "C", "⌫"), listOf("1/x", "x²", "√", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("±", "0", ".", "="),
         )
-        CalcPad(rows, classic, Modifier.weight(1f)) { press(it) }
+        // a long press on the bracket key (or any key of the second row's brackets) puts the whole sum in brackets
+        CalcPad(rows, classic, Modifier.weight(1f), onLong = { k -> if (k == "( )" && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
         Spacer(Modifier.height(44.dp))
     }
 }
@@ -174,21 +176,21 @@ fun CalculatorHub(back: () -> Unit) {
 
 /** Round keys in rows, as large as the width allows (but not taller than 84 dp), sitting at the bottom: the room above is the display's. */
 @Composable
-private fun RoundPad(rows: List<List<String>>, onKey: (String) -> Unit) {
+private fun RoundPad(rows: List<List<String>>, onLong: (String) -> Unit = {}, onKey: (String) -> Unit) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = 10.dp
         val cols = rows[0].size
         // never taller than 60% of the room: the display above keeps the rest and the rows do not climb over it
         val side = minOf((maxWidth - gap * (cols - 1)) / cols, 84.dp, ((maxHeight - gap * (rows.size - 1)) / rows.size) * .6f)
         Column(Modifier.align(Alignment.BottomCenter), verticalArrangement = Arrangement.spacedBy(gap)) {
-            rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(side), false) { onKey(k) } } } }
+            rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(side), false, { onLong(k) }) { onKey(k) } } } }
         }
     }
 }
 
 /** A grid of keys that fills the room it is given: every row and every key takes an equal share, in the key style of the look. */
 @Composable
-internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modifier = Modifier, onKey: (String) -> Unit) {
+internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modifier = Modifier, onLong: (String) -> Unit = {}, onKey: (String) -> Unit) {
     val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else if (T.id == "amoled" || T.id == "material") 8.dp else 3.dp
     val round = T.id == "amoled" || T.id == "material"
     if (!round) {
@@ -200,7 +202,7 @@ internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modif
             Column(Modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
                 rows.forEach { row ->
                     Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        row.forEach { k -> CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic) { onKey(k) } }
+                        row.forEach { k -> CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic, { onLong(k) }) { onKey(k) } }
                     }
                 }
             }
@@ -214,7 +216,7 @@ internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modif
                     // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
                     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         val side = minOf(maxWidth, maxHeight)
-                        CalcKey(k, Modifier.size(side), classic) { onKey(k) }
+                        CalcKey(k, Modifier.size(side), classic, { onLong(k) }) { onKey(k) }
                     }
                 }
             }
@@ -253,7 +255,8 @@ private fun CalcMenu(mode: String, onMode: (String) -> Unit, onClose: () -> Unit
 
 /** One key in the look of the window: every Windows look has its own key, Material and AMOLED have round ones. */
 @Composable
-internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onLong: () -> Unit = {}, onClick: () -> Unit) {
     val equals = k == "="
     val digit = k.length == 1 && (k[0].isDigit() || k == "." || k == "±")
     val op = k in setOf("÷", "×", "−", "+")
@@ -300,7 +303,7 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
     Box(
         modifier.fillMaxWidth().graphicsLayer { val sc = 1f - .08f * press; scaleX = sc; scaleY = sc }.clip(shape).background(brush)
             .then(if (id == "win95") Modifier.frame(T, raised = true) else if (border != null) Modifier.border(1.dp, border, shape) else Modifier)
-            .clickable(interactionSource = src, indication = null, onClick = onClick)
+            .combinedClickable(interactionSource = src, indication = null, onLongClick = onLong, onClick = onClick)
             .drawWithContent { drawContent(); if (press > 0f) drawRect(Color.White.copy(alpha = .22f * press)) },
         contentAlignment = Alignment.Center,
     ) { Text(k, color = ink, fontSize = if (mem) 14.sp else if (round) 26.sp else 20.sp, fontWeight = if (digit || id == "xp") FontWeight.SemiBold else FontWeight.Normal) }

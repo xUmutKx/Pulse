@@ -37,10 +37,38 @@ object Sci {
 
     /** The compiled expression, or null when it cannot be read. */
     fun compile(src: String): Fn? = runCatching {
-        val p = Parser(normalize(src).replace('π', 'p').replace("pi", "p").replace(" ", "").replace(',', '.').lowercase())
+        val p = Parser(tidy(normalize(src)).replace('π', 'p').replace("pi", "p").replace(" ", "").replace(',', '.').lowercase())
         val f = p.parseAll()
         Fn(f)
     }.getOrNull()
+
+    /**
+     * An expression with the slips taken out, so a half-typed sum still gives a number instead of an error: an operator with nothing after it (7+) or before it is
+     * ignored, two operators in a row keep the last one (7+*3 is 7*3), empty brackets go, and brackets left open are closed (2*(3+4 is 2*(3+4)).
+     */
+    fun tidy(src: String): String {
+        var t = src.trim()
+        var prev: String
+        do {
+            prev = t
+            t = t.replace(Regex("\\(\\s*\\)"), "")                                   // empty brackets
+                .replace(Regex("([+\\-*/^×÷−])\\s*(?=[*/^×÷])"), "")                  // an operator followed by another one (not a sign): the first is dropped
+                .replace(Regex("\\(\\s*[*/^×÷]+"), "(")                                // an operator right after an opening bracket
+                .replace(Regex("^[*/^×÷%]+"), "")                                        // an operator that starts the line
+        } while (t != prev)
+        // nothing after the last operator: it is ignored (also a dot, or a bracket that opens on nothing)
+        while (t.isNotEmpty() && t.last() in "+-*/^×÷−.(,") t = t.dropLast(1)
+        // brackets: the ones left open are closed, a closing one with no opening is dropped
+        var depth = 0
+        val sb = StringBuilder()
+        for (ch in t) when (ch) {
+            '(' -> { depth++; sb.append(ch) }
+            ')' -> if (depth > 0) { depth--; sb.append(ch) }
+            else -> sb.append(ch)
+        }
+        repeat(depth) { sb.append(')') }
+        return sb.toString()
+    }
 
     private const val SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ˣʸ"
     private const val SUP_TO = "0123456789+-xy"
