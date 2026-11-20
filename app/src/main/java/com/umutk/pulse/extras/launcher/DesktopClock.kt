@@ -87,6 +87,8 @@ fun DesktopClock(lookId: String, modifier: Modifier = Modifier) {
 @Composable
 fun MovableDesktopClock(lookId: String) {
     if (!LauncherPrefs.desktopClock) return
+    // turned: the taskbar already shows the time, so no second clock sits on the desktop
+    if (androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) return
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val d = androidx.compose.ui.platform.LocalDensity.current.density
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {

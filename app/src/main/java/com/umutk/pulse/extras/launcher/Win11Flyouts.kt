@@ -208,7 +208,7 @@ internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val bat = remember { ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }
     val pct = remember { bat?.let { (it.getIntExtra("level", 0) * 100 / it.getIntExtra("scale", 100).coerceAtLeast(1)) } ?: 0 }
-    Column(Modifier.width(220.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.width(190.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.align(Alignment.CenterHorizontally).size(width = 52.dp, height = 92.dp).clip(RoundedCornerShape(10.dp)).background(launcherAccent().copy(alpha = .85f)))
         Text(android.os.Build.MODEL, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))
         Row(Modifier.align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {

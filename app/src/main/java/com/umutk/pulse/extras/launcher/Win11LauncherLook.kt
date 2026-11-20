@@ -155,9 +155,9 @@ class Win11LauncherLook : LauncherLook {
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     // the width limit comes first: after fillMaxWidth it is ignored and the menu fills the whole turned screen
-                    .widthIn(max = if (land || LauncherPrefs.phonePanel) 820.dp else 640.dp)
+                    .widthIn(max = if (land) 720.dp else if (LauncherPrefs.phonePanel) 820.dp else 640.dp)
                     .fillMaxWidth()
-                    .fillMaxHeight(if (land) .9f else .78f)
+                    .fillMaxHeight(if (land) .84f else .78f)
                     .shadow(24.dp, shape, clip = false)
                     .border(1.dp, Color(0x33FFFFFF), shape)
                     .clickable(enabled = false) {},

@@ -89,7 +89,7 @@ internal fun PowerClick(onDone: () -> Unit, modifier: Modifier = Modifier, conte
                         Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(if (w11) 5.dp else 0.dp))
                             .clickable { open = false; onDone(); powerAction(ctx, if (k == "power") "off" else k) }.padding(horizontal = 10.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            com.umutk.pulse.PIcon(k, t.text, 18.dp)
+                            com.umutk.pulse.PIcon(if (k == "restart") "refresh" else k, t.text, 18.dp)
                             Text(label, color = t.text, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
                         }
                     }
