@@ -79,6 +79,7 @@ dependencies {
     }
     implementation("org.tensorflow:tensorflow-lite:2.16.1") // the gallery search names what is in a picture (EfficientNet-Lite0, assets/photoai), on the phone; Apache 2.0
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
+    add("playImplementation", "com.google.mlkit:text-recognition:16.0.1") // reads the text of a photo on the phone (calculator, keyboard scan); the play build only
     add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
     add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
     implementation("androidx.core:core-ktx:1.13.1")

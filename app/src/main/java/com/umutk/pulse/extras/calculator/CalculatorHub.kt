@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.drawWithContent
@@ -63,6 +64,43 @@ fun CalculatorHub(back: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val history = remember { mutableStateListOf<String>() }
     val ops = "+−×÷"
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var scanNote by remember { mutableStateOf("") }
+    var shot by remember { mutableStateOf<java.io.File?>(null) }
+    // a photo of a sum (printed or written): the text is read on the phone and the sum goes to the screen, with its result under it
+    val shoot = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { ok ->
+        val f = shot; shot = null
+        if (f == null) return@rememberLauncherForActivityResult
+        if (!ok) { f.delete(); return@rememberLauncherForActivityResult }
+        scanNote = tr("Reading…", "Okunuyor…")
+        scope.launch {
+            val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeFile(f.path, o)
+                    var s = 1; while (o.outWidth / s > 2400 || o.outHeight / s > 2400) s *= 2
+                    val bmp = android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = s })
+                    // the camera stores an upright photo sideways with a tag: it is turned upright first
+                    val deg = when (android.media.ExifInterface(f.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+                    val up = if (bmp != null && deg != 0f) android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(deg) }, true) else bmp
+                    up?.let { com.umutk.pulse.ai.Ocr.read(it) }
+                }.getOrNull().also { f.delete() }
+            }
+            val sum = text?.let { com.umutk.pulse.ai.OcrMath.extract(it) }
+            if (sum == null) scanNote = tr("No sum found in the photo", "Fotoğrafta işlem bulunamadı")
+            else { e = sum; done = false; err = false; scanNote = "" }
+        }
+    }
+    fun scan() {
+        if (!com.umutk.pulse.ai.Ocr.available) { scanNote = tr("Reading a photo is in the Play build", "Fotoğraf okuma Play sürümünde var"); return }
+        val uri = runCatching {
+            val f = java.io.File(ctx.getExternalFilesDir(null) ?: error("no storage"), "calc-${System.currentTimeMillis()}.jpg")
+            shot = f
+            androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        }.getOrNull() ?: run { scanNote = tr("No storage for the photo", "Fotoğraf için depolama yok"); return }
+        try { shoot.launch(uri) } catch (_: Exception) { shot = null; scanNote = tr("No camera app", "Kamera uygulaması yok") }
+    }
     val classic = T.tabs && T.id != "win10"
     BackHandler { if (showHistory) showHistory = false else if (mode != "standard") mode = "standard" else back() }
 
@@ -120,11 +158,13 @@ fun CalculatorHub(back: () -> Unit) {
             Spacer(Modifier.weight(1f))
             Box(Modifier.size(44.dp).clickable { mode = "convert"; showHistory = false }, contentAlignment = Alignment.Center) { PIcon("scale", T.text, 24.dp) }
             Box(Modifier.size(44.dp).clickable { mode = "scientific"; showHistory = false }, contentAlignment = Alignment.Center) { PIcon("function", T.text, 24.dp) }
+            Box(Modifier.size(44.dp).clickable { scan() }, contentAlignment = Alignment.Center) { PIcon("image", T.text, 24.dp) }
             Box(Modifier.size(44.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
         } else Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(modeTitle(mode), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             if (mode == "standard") Box(Modifier.size(40.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 22.dp) }
+            if (mode == "standard") Box(Modifier.size(40.dp).clickable { scan() }, contentAlignment = Alignment.Center) { PIcon("image", T.text, 22.dp) }
             Box(Modifier.size(40.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
         }
         if (menu) CalcMenu(mode, { mode = it; showHistory = false; menu = false }) { menu = false }
@@ -158,7 +198,7 @@ fun CalculatorHub(back: () -> Unit) {
             Modifier.fillMaxWidth().then(if (classic) Modifier.background(Color.White).frame(T, raised = false) else Modifier).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            Text(preview?.let { "= " + grouped(it) } ?: if (mem != 0.0) "M" else " ", color = if (classic) Color.Black else T.sub, fontSize = 16.sp, maxLines = 1)
+            Text(if (scanNote.isNotEmpty()) scanNote else preview?.let { "= " + grouped(it) } ?: if (mem != 0.0) "M" else " ", color = if (classic) Color.Black else T.sub, fontSize = 16.sp, maxLines = 1)
             FitLine(grouped(shown), if (classic) Color.Black else T.text, 46, Modifier.fillMaxWidth())
         }
         Spacer(Modifier.height(6.dp))

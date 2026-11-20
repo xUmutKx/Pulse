@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Gif
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Spellcheck
+import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.MenuBook
@@ -776,7 +777,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "gif" -> Icons.Rounded.Gif; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "gif" -> Icons.Rounded.Gif; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "scan" -> Icons.Rounded.DocumentScanner; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")

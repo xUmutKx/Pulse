@@ -385,6 +385,13 @@ object KeyboardPrefs {
             menuItems = mn.joinToString(",")
             p.edit().putBoolean("stickerMenu209", true).putString("menuItems", menuItems).apply()
         }
+        // once more: the Scan text tile (the camera's text goes to the clipboard) joins the menu; Settings > Keyboard > menu can take it out
+        if (!p.getBoolean("scanMenu209", false)) {
+            val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            if ("scan" !in mn && "scan" !in toolbarItems.split(',')) mn.add("scan")
+            menuItems = mn.joinToString(",")
+            p.edit().putBoolean("scanMenu209", true).putString("menuItems", menuItems).apply()
+        }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again

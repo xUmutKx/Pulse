@@ -2148,6 +2148,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (ans != null) c.commitText(" = $ans", 1)
                 else android.widget.Toast.makeText(this, if (id == "calc") tr("Type a sum first, such as 12*5", "Önce bir işlem yaz, örn. 12*5") else tr("Type a unit first, such as 10 km to mi", "Önce bir birim yaz, örn. 10 km to mi"), android.widget.Toast.LENGTH_SHORT).show()
             }
+            // the camera's text: a small window takes the photo, reads it on the phone and puts the text on the clipboard (the bar offers it)
+            "scan" -> {
+                st.panel = "keys"
+                runCatching { startActivity(android.content.Intent(this, ScanTextActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched
