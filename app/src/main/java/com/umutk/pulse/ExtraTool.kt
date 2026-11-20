@@ -320,7 +320,18 @@ class KeyboardSettingsActivity : ExtraToolActivity()
  * A page of Pulse opened from YTXTube (Series and movies): it sits in YTXTube's own task (same affinity, no document of its own), so Back returns to YTXTube
  * and the recent apps show one YTXTube card, not a separate Pulse one.
  */
-class YtxSeriesActivity : ExtraToolActivity()
+class YtxSeriesActivity : ExtraToolActivity() {
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        takeShow(intent)
+        super.onCreate(savedInstanceState)
+    }
+    override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent); takeShow(intent) }
+    /** A title chosen in YTXTube's Downloads page: the page opens on its seasons (or its Watch button for a film). */
+    private fun takeShow(i: android.content.Intent?) {
+        val id = i?.getStringExtra("showId") ?: return
+        com.umutk.pulse.features.SeasonDl.pendingShow = com.umutk.pulse.features.SeasonDl.Show(id, i.getStringExtra("showName").orEmpty(), i.getStringExtra("showYear").orEmpty(), i.getStringExtra("showPoster").orEmpty(), i.getStringExtra("showKind") ?: "series")
+    }
+}
 
 /** The tool activity in a see-through window: the launcher's framed Pulse windows (see FramedWindow). */
 class FramedToolActivity : ExtraToolActivity()

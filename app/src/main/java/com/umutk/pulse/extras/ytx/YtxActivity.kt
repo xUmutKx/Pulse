@@ -874,14 +874,27 @@ fun YtxTubeApp() {
                         .padding(start = 16.dp, end = 16.dp, bottom = navTop + MiniGap)
                         .widthIn(max = 200.dp)
                         .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
+                            // the small window moves freely and elastically: it follows the finger (a little past the edges, with resistance), and on release it springs to
+                            // the nearest side of the screen and back inside the top and bottom (it was held rigidly between hard limits)
+                            val minX = -(screenW - cardWidthPx - 32.dp.toPx()); val maxX = 0f
+                            val minY = -(screenH - 240.dp.toPx()); val maxY = 80.dp.toPx()
+                            fun rub(v: Float, lo: Float, hi: Float): Float = if (v < lo) lo + (v - lo) * .35f else if (v > hi) hi + (v - hi) * .35f else v
+                            detectDragGestures(
+                                onDragEnd = {
+                                    scope.launch {
+                                        val tx = if (miniOffsetX < (minX + maxX) / 2f) minX else maxX
+                                        val ty = miniOffsetY.coerceIn(minY, 0f)
+                                        launch { androidx.compose.animation.core.animate(miniOffsetX, tx, animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetX = v } }
+                                        launch { androidx.compose.animation.core.animate(miniOffsetY, ty, animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetY = v } }
+                                    }
+                                },
+                            ) { change, dragAmount ->
                                 change.consume()
-                                val minX = -(screenW - cardWidthPx - 32.dp.toPx())
-                                val maxX = 0f
-                                miniOffsetX = (miniOffsetX + dragAmount.x).coerceIn(minX, maxX)
-                                val minY = -(screenH - 240.dp.toPx())
-                                val maxY = 80.dp.toPx()
-                                miniOffsetY = (miniOffsetY + dragAmount.y).coerceIn(minY, maxY)
+                                // past an edge only part of the finger's move counts, so the window stretches away from it
+                                val dx = if ((miniOffsetX <= minX && dragAmount.x < 0) || (miniOffsetX >= maxX && dragAmount.x > 0)) dragAmount.x * .35f else dragAmount.x
+                                val dy = if ((miniOffsetY <= minY && dragAmount.y < 0) || (miniOffsetY >= maxY && dragAmount.y > 0)) dragAmount.y * .35f else dragAmount.y
+                                miniOffsetX = rub(miniOffsetX + dx, minX - 60.dp.toPx(), maxX + 60.dp.toPx())
+                                miniOffsetY = rub(miniOffsetY + dy, minY - 60.dp.toPx(), maxY + 40.dp.toPx())
                             }
                         }
                         .graphicsLayer {

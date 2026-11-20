@@ -64,6 +64,9 @@ object SeasonDl {
     /** [seeds] is the number of people sharing it when the add-on says it ("👤 12"), -1 when it does not. */
     class Pick(val url: String, val size: Long, val label: String, val over: Boolean = false, val seeds: Int = -1)
 
+    /** A title picked in YTXTube's list (its popular shows): the page opens on it. */
+    var pendingShow by mutableStateOf<Show?>(null)
+
     private const val META = "https://v3-cinemeta.strem.io"
     private fun p(c: Context) = c.getSharedPreferences("season_dl", Context.MODE_PRIVATE)
     fun addon(c: Context) = p(c).getString("addon", "") ?: ""
@@ -666,6 +669,7 @@ object SeasonDl {
                 scope.launch { eps = runCatching { episodes(s) }.getOrDefault(emptyList()); note = if (eps.isEmpty()) tr("No episodes found", "Bölüm bulunamadı") else "" }
             } else note = ""
         }
+        androidx.compose.runtime.LaunchedEffect(pendingShow) { pendingShow?.let { movies = it.kind == "movie"; pick(it); pendingShow = null } }
         /** The server first (the Stremio app is opened if it is not running, when the engine in Pulse is not there), then every pick is added. */
         suspend fun start(picks: List<Triple<String, String, List<String>>>) {
             if (picks.any { it.first.contains(":11470/") } && !ensureServer(ctx)) note = tr("The Stremio app is not running and could not be opened", "Stremio uygulaması çalışmıyor ve açılamadı")

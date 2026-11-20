@@ -236,23 +236,40 @@ fun DownloadsScreen(
     // the downloads of the Pulse app itself (series and movies, files, torrents): read from a copy its download manager keeps, refreshed while this page is open
     val ctx = LocalContext.current
     var pulse by remember { mutableStateOf(emptyList<PulseDl>()) }
+    // what is popular now (Cinemeta, the open catalogue: no add-on needed to see it)
+    var popularSeries by remember { mutableStateOf(emptyList<com.umutk.pulse.features.SeasonDl.Show>()) }
+    var popularMovies by remember { mutableStateOf(emptyList<com.umutk.pulse.features.SeasonDl.Show>()) }
+    LaunchedEffect(Unit) {
+        popularSeries = runCatching { com.umutk.pulse.features.SeasonDl.popular("series") }.getOrDefault(emptyList())
+        popularMovies = runCatching { com.umutk.pulse.features.SeasonDl.popular("movie") }.getOrDefault(emptyList())
+    }
     LaunchedEffect(Unit) { while (true) { pulse = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { readPulseDownloads(ctx) }; kotlinx.coroutines.delay(2000) } }
     CollapsingHeaderLayout(
         resetKey = scrollToTop to listOf(tasks.size, tasks.count { it.status == DownloadStatus.Complete }),
         header = { ScreenHeader(title = "Downloads") { HeaderActions(onSearch, onAccount) } },
     ) { top ->
         LazyColumn(contentPadding = contentPadding.withTop(top)) {
-            // Series and movies (the season downloader and the play buttons) stays one tap away, at the top of the downloads
-            item(key = "series") {
+            // Series and movies, open: what is popular now (series, then films) shows here, a tap opens that title's page (its seasons, or the Watch button of a film)
+            item(key = "seriesHead") {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                        .clickable { openSeriesPage(ctx) }.padding(14.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { openSeriesPage(ctx) },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Rounded.PlayArrow, null, Modifier.size(28.dp), MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Icon(Icons.Rounded.PlayArrow, null, Modifier.size(26.dp), MaterialTheme.colorScheme.primary)
+                    Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+                    Text(com.umutk.pulse.tr("Search", "Ara"), color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+                }
+            }
+            listOf("series" to popularSeries, "movie" to popularMovies).forEach { (kind, list) ->
+                if (list.isNotEmpty()) item(key = "shelf-$kind") {
+                    androidx.compose.foundation.lazy.LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                        items(list.size) { i ->
+                            val sh = list[i]
+                            Column(Modifier.width(100.dp).clickable { openSeriesShow(ctx, sh) }) {
+                                coil.compose.AsyncImage(sh.poster, null, Modifier.size(width = 100.dp, height = 148.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                Text(sh.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -547,6 +564,17 @@ private fun readPulseDownloads(ctx: android.content.Context): List<PulseDl> = ru
         if (c.size < 6) null else PulseDl(c[0], c[1], c[2].toLongOrNull() ?: 0L, c[3].toLongOrNull() ?: -1L, c[4].toLongOrNull() ?: 0L, c[5], c.getOrNull(6).orEmpty())
     }.asReversed()
 }.getOrDefault(emptyList())
+
+/** Opens the Series and movies page on [s]. */
+private fun openSeriesShow(ctx: android.content.Context, s: com.umutk.pulse.features.SeasonDl.Show) {
+    runCatching {
+        val i = android.content.Intent(ctx, com.umutk.pulse.YtxSeriesActivity::class.java).putExtra("route", "series").putExtra("look", "amoled")
+            .putExtra("showId", s.id).putExtra("showName", s.name).putExtra("showYear", s.year).putExtra("showPoster", s.poster).putExtra("showKind", s.kind)
+        var c = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        if (c is android.app.Activity) c.startActivity(i) else { i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK); ctx.startActivity(i) }
+    }
+}
 
 private fun openPulseApp(ctx: android.content.Context, series: Boolean) {
     runCatching {
