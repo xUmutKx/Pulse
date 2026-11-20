@@ -259,6 +259,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         }
     }
 
+    private var lastPlayedAt = 0L
+
     private suspend fun tick() {
         if (LiveLyrics.floating(ctx) && !MiniLyrics.running && com.umutk.pulse.Compat.canOverlay(ctx)) MiniLyrics.start(ctx)
         val st = engine.state.value
@@ -266,7 +268,11 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
         // the separate lyrics notification: the line with its neighbours, replaced as the song moves
         // it stays while the song is paused, and goes when the player is closed (no current track)
-        if (LiveLyrics.separate(ctx) && st.current != null) {
+        // only a song that was really played in this run: a player the watchdog or a resume brought back with its last track, with nothing playing, shows no note;
+        // a paused song keeps it for ten minutes
+        if (st.isPlaying) lastPlayedAt = android.os.SystemClock.elapsedRealtime()
+        val recent = lastPlayedAt != 0L && android.os.SystemClock.elapsedRealtime() - lastPlayedAt < 10 * 60_000L
+        if (LiveLyrics.separate(ctx) && st.current != null && (st.isPlaying || recent)) {
             val res = LiveLyrics.resultFor(ctx, st.current!!)
             val pos = engine.positionMs + AHEAD_MS
             val trio = LiveLyrics.lineAt(res, pos)

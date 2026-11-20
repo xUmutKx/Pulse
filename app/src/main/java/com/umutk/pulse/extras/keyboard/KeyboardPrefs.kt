@@ -377,6 +377,14 @@ object KeyboardPrefs {
             hybridFix = true
             p.edit().putBoolean("dictMenu209", true).putString("menuItems", menuItems).putBoolean("hybridFix", true).apply()
         }
+        // once more (they went missing again after a reset): the Dictionary, Calculator, Convert, Stickers and Grammar tiles are in the menu or in the bar
+        if (!p.getBoolean("toolsBack2010", false)) {
+            val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            val tb = toolbarItems.split(',')
+            for (id in listOf("dict", "calc", "convert", "stickers", "grammar")) if (id !in mn && id !in tb) mn.add(id)
+            menuItems = mn.joinToString(",")
+            p.edit().putBoolean("toolsBack2010", true).putString("menuItems", menuItems).apply()
+        }
         // once more: the Stickers and Grammar tiles join the menu
         if (!p.getBoolean("stickerMenu209", false)) {
             val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
