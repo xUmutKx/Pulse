@@ -208,7 +208,7 @@ class TermService : android.app.Service() {
         val nm = getSystemService(android.app.NotificationManager::class.java)
         if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("terminal", "Terminal", android.app.NotificationManager.IMPORTANCE_LOW))
         val stop = android.app.PendingIntent.getService(this, 0, android.content.Intent(this, TermService::class.java).setAction("stop"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        val n = androidx.core.app.NotificationCompat.Builder(this, "terminal").setSmallIcon(android.R.drawable.ic_menu_edit)
+        val n = androidx.core.app.NotificationCompat.Builder(this, "terminal").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_terminal)
             .setContentTitle(com.umutk.pulse.tr("Terminal session open", "Terminal oturumu açık")).setContentText(com.umutk.pulse.tr("The shell keeps running in the background", "Kabuk arka planda çalışmaya devam ediyor"))
             .setOngoing(true).addAction(0, com.umutk.pulse.tr("Stop", "Durdur"), stop).build()
         if (android.os.Build.VERSION.SDK_INT >= 34) androidx.core.app.ServiceCompat.startForeground(this, 7301, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

@@ -7,3 +7,4 @@
 - Toolkit page: QR reader, Auto clicker and Floating keyboard tiles have placeholder icons; give them proper Fluent colour icons.
 - Camera permission of the QR reader (done: opens the app page after a refusal) - check on the phone.
 - Pulse AI: the folder picker is now Pulse's own; the model still does not run - needs a crash report.
+- Settings > Look: the background (grey / black) turns grey by itself in the background and does not come back; check the background option logic (screenshot Settings page, 17:12).
