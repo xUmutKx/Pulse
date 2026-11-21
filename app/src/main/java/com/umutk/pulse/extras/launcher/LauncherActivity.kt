@@ -80,7 +80,10 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.umutk.pulse.LaunchedVisible
+import com.umutk.pulse.LocalWindowLook
+import com.umutk.pulse.PIcon
 
 /** Pulse Launcher: a HOME app with its own look and layout. Runs in its own process, so Pulse's Look / Cfg / Opt stay untouched. */
 class LauncherActivity : ComponentActivity() {
@@ -332,6 +335,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
 private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<LaunchApp>, iconDp: Int, edge: androidx.compose.ui.unit.Dp, open: (LaunchApp) -> Unit) {
     val ctx = LocalContext.current
     val d = LocalDensity.current.density
+    val w = LocalWindowLook.current
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
         var trashDrag by remember { mutableStateOf(false) }
         var trashHot by remember { mutableStateOf(false) }
@@ -394,9 +398,9 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
         box?.let { r -> Box(Modifier.offset((r.left / d).dp, (r.top / d).dp).size((r.width / d).dp, (r.height / d).dp).background(Color(0x553E8BFF)).border(1.dp, Color(0xCC9CC8FF))) }
         if (trashDrag) Box(Modifier.align(Alignment.BottomEnd).padding(12.dp).size(82.dp, 74.dp)
             .background(Color.Transparent)
-            .border(1.dp, if (trashHot) Look.accent else T.line.copy(alpha = .55f), RoundedCornerShape(8.dp)),
+            .border(1.dp, if (trashHot) w.accent else w.line.copy(alpha = .55f), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center) {
-            PIcon("recycle", if (trashHot) Look.accent else T.text.copy(alpha = .8f), 42.dp)
+            PIcon("recycle", if (trashHot) w.accent else w.text.copy(alpha = .8f), 42.dp)
         }
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)

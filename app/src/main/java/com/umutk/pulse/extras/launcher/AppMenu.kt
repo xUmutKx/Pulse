@@ -98,7 +98,7 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
         "iconreset" -> AppIcons.clear(ctx, pkg)
         "removehome" -> {
             LauncherPrefs.dock = LauncherPrefs.dock - pkg
-            LauncherPrefs.links = LauncherPrefs.links.filterNot { it == "app:$pkg" }
+            LauncherPrefs.links = LauncherPrefs.links.filterNot { link -> link == "app:$pkg" }
             LauncherPrefs.homeHidden = LauncherPrefs.homeHidden + pkg
             LauncherPrefs.folders = LauncherPrefs.folders.mapValues { (_, ids) -> ids.filterNot { it == pkg } }.filterValues { it.isNotEmpty() }
             LauncherPrefs.save(ctx)
