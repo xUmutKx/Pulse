@@ -557,60 +557,35 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
 }
 
 /**
- * The CD rack, drawn for Pulse: the games as jewel cases standing in a rack, all turned the same way in 3D and overlapping down the screen, so the row of covers runs on a slant like the
- * cases in a real rack. The case nearest the middle of the screen steps forward (larger, brighter, turned less); a tap opens the case as on the shelf, a long press its page.
+ * The CD shelf: the games as jewel cases in a rack that runs up the screen on a slant (KMP Odd Scroll's CD Rack by mejdi14, GPL-3.0, see cdshelf/). Flick the rack to move it, tap a case to take it out and
+ * turn it; the case in the slot has Play and a details button under it.
  */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun CdRack3D(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
-    var inspect by remember { mutableStateOf<GameRow?>(null) }
-    val state = androidx.compose.foundation.lazy.rememberLazyListState()
-    val density = androidx.compose.ui.platform.LocalDensity.current.density
-    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-        val caseW = maxWidth * .6f
-        val rowH = caseW * .5f
-        LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 70.dp, bottom = 160.dp)) {
-            itemsIndexed(games, key = { _, g -> g.pkg }) { i, g ->
-                Box(Modifier.fillMaxWidth().height(rowH)) {
-                    Box(
-                        Modifier.align(Alignment.TopStart).requiredSize(caseW, caseW)
-                            .graphicsLayer {
-                                // how far this case is from the middle of the list (-1 above, 0 in the middle, 1 below)
-                                val info = state.layoutInfo
-                                val me = info.visibleItemsInfo.firstOrNull { it.index == i }
-                                val mid = (info.viewportStartOffset + info.viewportEndOffset) / 2f
-                                val f = if (me == null) 1f else ((me.offset + me.size / 2f - mid) / (info.viewportEndOffset - info.viewportStartOffset).coerceAtLeast(1)).coerceIn(-1f, 1f) * 2f
-                                val near = 1f - kotlin.math.abs(f).coerceIn(0f, 1f)
-                                cameraDistance = 14f * density
-                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, .5f)
-                                rotationY = -36f + 20f * near
-                                rotationZ = -4f
-                                val s = .9f + .14f * near
-                                scaleX = s; scaleY = s
-                                translationX = 26f * density * near
-                                alpha = .72f + .28f * near
-                            }
-                            .combinedClickable(onClick = { inspect = g }, onLongClick = { onDetails(g) }),
-                    ) {
-                        // the disc, half out of the case at the right
-                        Canvas(Modifier.fillMaxSize()) {
-                            val r = size.minDimension * .46f
-                            val c = androidx.compose.ui.geometry.Offset(size.width - r - 2f, size.height / 2f)
-                            drawCircle(Brush.sweepGradient(listOf(Color(0xFFE9EDF2), Color(0xFF9FB3C8), Color(0xFFF7F7F7), Color(0xFFB8C4D0), Color(0xFFE9EDF2)), c), r, c)
-                            drawCircle(Color(0xFF1A1A1A), r * .28f, c); drawCircle(Color(0xFFDDE3EA), r * .12f, c)
-                        }
-                        Box(Modifier.fillMaxHeight().fillMaxWidth(.86f).clip(RoundedCornerShape(3.dp)).background(Color(0xFF111111)).border(1.dp, Color.White.copy(alpha = .28f), RoundedCornerShape(3.dp))) {
-                            Box(Modifier.fillMaxSize().padding(start = 12.dp, top = 2.dp, bottom = 2.dp, end = 2.dp)) { GameCover(g.pkg, pal, wide = false, title = g.name) }
-                            // the spine of the case, down the left, then the gloss of the clear lid
-                            Box(Modifier.fillMaxHeight().width(12.dp).background(Brush.horizontalGradient(listOf(Color(0xFF000000), Color(0x55FFFFFF), Color(0x00000000)))))
-                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .24f), Color.Transparent, Color.Transparent, Color.White.copy(alpha = .08f)))))
-                            if (g.pkg in hidden) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
-                        }
-                    }
-                    Text(g.name, color = pal.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(.32f).padding(end = 6.dp))
-                }
+internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ver = GameArt.version.intValue
+    val list = remember(games, hidden) { games.filter { it.pkg !in hidden } }
+    // each game's picture: its cover, else its wide picture, else its icon; read off the main thread
+    val loaded by androidx.compose.runtime.produceState<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList(), list.map { it.pkg }, ver) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            list.mapNotNull { g -> (GameArt.cover(ctx, g.pkg, 600) ?: GameArt.banner(ctx, g.pkg, 600) ?: GameArt.icon(ctx, g.pkg, 256))?.let { g to it } }
+        }
+    }
+    val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
+    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
+        if (loaded.isEmpty()) Text(tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
+        else {
+            com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
+                items = loaded.map { (g, art) -> com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = art, title = g.name, artist = "", cover = art) },
+                modifier = Modifier.fillMaxSize(), background = Color(0xFF0F1014), contentColor = Color(0xFFEDEDF2),
+                inspectLabel = tr("Inspect", "İncele"), backLabel = tr("Back", "Geri"), openLabel = tr("Open", "Aç"), nextLabel = tr("Next", "Sonraki"), exitLabel = tr("Exit", "Çık"),
+                state = state,
+            )
+            val cur = loaded.getOrNull(state.slotted.coerceIn(0, loaded.lastIndex))?.first
+            if (cur != null) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("Play", "Oyna"), color = Color.Black, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onPlay(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
+                Text(tr("Details", "Ayrıntılar"), color = Color.White, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0x44FFFFFF)).clickable { onDetails(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
             }
         }
     }
-    inspect?.let { g -> CaseInspect(g, pal, onClose = { inspect = null }, onPlay = { onPlay(g) }, onDetails = { inspect = null; onDetails(g) }) }
 }

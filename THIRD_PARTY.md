@@ -66,3 +66,6 @@ The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from 
 ## Code editor (Files and Notes, extras/code)
 - Sora Editor (https://github.com/Rosemoe/sora-editor), LGPL-2.1, with its TextMate language module (tm4e, joni, jcodings, snakeyaml-engine).
 - The TextMate grammars and the two editor themes in `app/src/main/assets/textmate` are taken from Xed-Editor (https://github.com/Xed-Editor/Xed-Editor, GPL-3.0); the grammars come from VS Code and its extensions (MIT and similar licences, see each folder).
+
+## Game Hub
+- **KMP Odd Scroll, CD Rack** by mejdi14 (https://github.com/mejdi14/KMPOddScroll), GPL-3.0. The CD shelf look of Game Hub (`app/src/main/java/com/umutk/pulse/extras/gamehub/cdshelf`) is that composable, moved into Pulse (the Kotlin Multiplatform expect/actual of its shader made one Android file). Its shaders are after Ann Nguyen's WebGL jewel case, as its own notes say. Game pictures on the cases are the games' own covers; none of the demo's disc labels or manuals is included.

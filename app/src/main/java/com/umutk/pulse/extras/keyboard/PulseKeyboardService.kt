@@ -494,6 +494,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         if (android.os.Build.VERSION.SDK_INT >= 29) runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, true, shotObserver) }
+        // every other file made anywhere (a zip made in a folder of its own, a document) is looked at the same way
+        runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Files.getContentUri("external"), true, shotObserver) }
     }
 
     // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
@@ -523,7 +525,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var shotAt = 0L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
         // looked at four times, the first one quick (a downloaded file or a screenshot shows in the bar as soon as it is finished); a file that is still being written is taken by a later look
-        override fun onChange(selfChange: Boolean) { scope.launch { delay(250); checkShot(); checkVideo(); checkFile(); delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(5000); checkShot(); checkVideo(); checkFile() } }
+        // one look at a time: a change that comes while the looks of the last one are still going (a zip unpacked sends hundreds of them) starts them over instead of piling up another set, which had made the keyboard heavy
+        private var job: kotlinx.coroutines.Job? = null
+        override fun onChange(selfChange: Boolean) {
+            job?.cancel()
+            job = scope.launch { delay(250); checkShot(); checkVideo(); checkFile(); delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(5000); checkShot(); checkVideo(); checkFile() }
+        }
     }
     /** The pictures already taken in (their numbers in the phone's picture list), so none is taken twice and none is skipped when two come close together. */
     private val shotsTaken = LinkedHashSet<Long>()
@@ -643,7 +650,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     }
                 }
                 out
-            }.getOrNull()
+            }.getOrNull() }
         } ?: return
         val (id, path, mime) = hit
         videosTaken += id
@@ -667,9 +674,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** Any other file just downloaded (a PDF, an archive, a document, an APK) waits in the right slot too, for a chat that takes files. */
     private suspend fun checkFile() {
         if (st.incognito || android.os.Build.VERSION.SDK_INT < 29) return
-        val D = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val hit = withContext(Dispatchers.IO) {
-            runCatching {
+            // the whole file list first (a file made in any folder), the Downloads list when the phone does not show that one
+            listOf(android.provider.MediaStore.Files.getContentUri("external"), android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI).firstNotNullOfOrNull { D -> runCatching {
                 val cols = arrayOf(android.provider.MediaStore.Downloads._ID, android.provider.MediaStore.Downloads.DISPLAY_NAME, android.provider.MediaStore.Downloads.DATE_MODIFIED, android.provider.MediaStore.Downloads.MIME_TYPE, android.provider.MediaStore.Downloads.DATA, android.provider.MediaStore.Downloads.SIZE)
                 val q = android.os.Bundle().apply {
                     putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Downloads.DATE_MODIFIED))
