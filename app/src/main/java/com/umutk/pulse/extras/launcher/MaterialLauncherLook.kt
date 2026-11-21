@@ -1,6 +1,8 @@
 package com.umutk.pulse.extras.launcher
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -121,9 +123,11 @@ class MaterialLauncherLook(
         val fg = fg()
         val edge = LocalLauncherEdge.current
         var query by remember { mutableStateOf("") }
+        // the category bar (a tap keeps one group of apps in view)
+        var catSel by remember { mutableStateOf<String?>(null) }
         val matches = state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) }
         // nothing typed: the apps in their store groups, one tonal card per group; typing: one flat list of matches
-        val sections = if (query.isBlank()) groupedApps(state.apps).map { (g, apps) -> tr(g.en, g.tr) to apps }
+        val sections = if (query.isBlank()) groupedApps(state.apps).map { (g, apps) -> tr(g.en, g.tr) to apps }.filter { catSel == null || it.first == catSel }
             else listOf(tr("Results", "Sonuçlar") to matches)
         Column(modifier.background(bg()).statusBarsPadding().navigationBarsPadding().padding(horizontal = maxOf(16.dp, edge))) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).height(56.dp).clip(CircleShape).background(high()).padding(horizontal = 16.dp),
@@ -168,6 +172,15 @@ class MaterialLauncherLook(
                     LetterBar(az.map { it.first }, sub(), high(), { l -> starts[l]?.let { scope.launch { lst.scrollToItem(it) } } })
                 }
                 return@Column
+            }
+            if (query.isBlank()) {
+                val names = remember(state.apps) { groupedApps(state.apps).map { (g, _) -> tr(g.en, g.tr) } }
+                if (names.size > 1) androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (listOf<String?>(null) + names).forEach { n ->
+                        val on = catSel == n
+                        Text(n ?: tr("All", "Tümü"), color = if (on) bg() else fg, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (on) acc() else high()).clickable { catSel = n }.padding(horizontal = 14.dp, vertical = 8.dp))
+                    }
+                }
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 // the people of the contacts that match, with a call button (a setting, off by default)

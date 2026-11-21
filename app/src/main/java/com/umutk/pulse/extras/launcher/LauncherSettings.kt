@@ -209,6 +209,10 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             if (LauncherPrefs.dailyBackup) ValueRow("history", tr("Bring back the last daily backup", "Son günlük yedeği geri getir"), "") {
                 android.widget.Toast.makeText(ctx, if (LauncherPrefs.restoreDaily(ctx)) tr("Restored", "Geri getirildi") else tr("No backup yet", "Yedek yok"), android.widget.Toast.LENGTH_SHORT).show()
             }
+            ValueRow("gridView", tr("Icon animation when tapped", "Simgeye dokununca animasyon"), LauncherPrefs.iconAnim) {
+                val all = listOf("none", "zoom", "flip", "rotate", "bounce")
+                LauncherPrefs.iconAnim = all[(all.indexOf(LauncherPrefs.iconAnim) + 1) % all.size]; save()
+            }
             ValueRow("search", tr("Web search", "Web araması"), LauncherPrefs.searchEngine) {
                 val all = listOf("google", "duckduckgo", "bing", "brave", "yandex", "startpage")
                 LauncherPrefs.searchEngine = all[(all.indexOf(LauncherPrefs.searchEngine) + 1) % all.size]; save()

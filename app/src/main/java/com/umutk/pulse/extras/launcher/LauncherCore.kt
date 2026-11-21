@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -65,8 +66,20 @@ fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Mo
     // where the finger is in the window, so the long-press menu opens right there like a context menu
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     val view = androidx.compose.ui.platform.LocalView.current
+    // the small show of a tapped icon (a setting): zoom, flip, rotate or bounce
+    val prog = remember { androidx.compose.animation.core.Animatable(0f) }
+    val anim = androidx.compose.runtime.rememberCoroutineScope()
     onGloballyPositioned { origin = it.positionInRoot() }
-        .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
+        .graphicsLayer {
+            val t = prog.value
+            when (LauncherPrefs.iconAnim) {
+                "zoom" -> { val k = 1f + .18f * kotlin.math.sin(Math.PI.toFloat() * t); scaleX = k; scaleY = k }
+                "flip" -> { rotationY = 360f * t; cameraDistance = 12f * density }
+                "rotate" -> rotationZ = 360f * t
+                "bounce" -> translationY = -22f * density * kotlin.math.sin(Math.PI.toFloat() * t)
+            }
+        }
+        .pointerInput(app.pkg) { detectTapGestures(onTap = { if (LauncherPrefs.iconAnim != "none") anim.launch { prog.snapTo(0f); prog.animateTo(1f, androidx.compose.animation.core.tween(300)) }; onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
 }
 
 /** A tap opens the app; a long press asks for its menu only when [menuOnLongPress] (the desktop moves an icon with the long press, and opens the menu when the finger lifts without having moved it). */
