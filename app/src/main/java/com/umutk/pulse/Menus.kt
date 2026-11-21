@@ -159,7 +159,7 @@ object ToolPlace {
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "gridView", Icons.Outlined.Widgets, "extra"),
-        Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "volume", Icons.Outlined.Headphones, "extra"),
+        Tool("buds", "Device manager", "Cihaz yöneticisi", "buds", true, "volume", Icons.Outlined.Headphones, "extra"),
         // the launcher's settings: its Extra apps row (Settings card and the ⋮ Apps group) left with the old "HomeLauncher" alias in 0.10.134 and is back, on by default
         Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "extra"),
     )
@@ -271,7 +271,7 @@ private val WIN11_MENU_KEY = mapOf(
     "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
     "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
     // these two fell through to a "tool_goodlock"/"tool_buds" key with no glyph behind it and drew nothing in Win11
-    "Good Lock" to "gridView", "Buds manager" to "volume", "Launcher" to "gridView", "Ana ekran" to "gridView",
+    "Good Lock" to "gridView", "Device manager" to "volume", "Launcher" to "gridView", "Ana ekran" to "gridView",
 )
 
 /**

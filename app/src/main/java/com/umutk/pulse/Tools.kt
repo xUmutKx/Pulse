@@ -114,7 +114,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
         id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
-        id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
+        id == "buds" -> com.umutk.pulse.extras.buds.DeviceManagerScreen(back)
         id == "clock" -> com.umutk.pulse.extras.lucid.LucidClockScreen(back)
         id == "radio" -> com.umutk.pulse.extras.radio.RadioScreen(back)
         id == "relay" -> com.umutk.pulse.extras.share.ShareHub(back)
