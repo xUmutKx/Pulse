@@ -210,7 +210,7 @@ object KeyboardPrefs {
     val floatNow: Boolean get() = floating || floatSession
     var floatX by mutableStateOf(.5f)
     /** Floating: the size of the keyboard, 0.55 (small) to 1 (full); the grip at the right end of the handle changes it. */
-    var floatScale by mutableStateOf(.76f)
+    var floatScale by mutableStateOf(.88f)
     /** Floating: how far the keyboard is lifted off its place at the bottom, 0 (down) to 1 (up to the middle of the screen). */
     var floatY by mutableStateOf(0f)
     private var appCtx: Context? = null
@@ -408,6 +408,11 @@ object KeyboardPrefs {
             menuItems = mn.joinToString(",")
             toolbarItems = toolbarItems.split(',').filter { it.isNotBlank() && it !in drop }.joinToString(",")
             p.edit().putBoolean("trimMenu2011", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
+        }
+        // once: the floating keyboard is a little wider than before (88 percent of the full size; a size the person set himself stays)
+        if (!p.getBoolean("floatWide2017", false)) {
+            if (kotlin.math.abs(floatScale - .76f) < .001f) floatScale = .88f
+            p.edit().putBoolean("floatWide2017", true).putFloat("floatScale", floatScale).apply()
         }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
