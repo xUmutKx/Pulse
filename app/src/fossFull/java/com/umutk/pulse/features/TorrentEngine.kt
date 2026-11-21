@@ -167,6 +167,14 @@ object TorrentEngine {
         sp.setBoolean(settings_pack.bool_types.announce_to_all_trackers.swigValue(), true)
         sp.setBoolean(settings_pack.bool_types.announce_to_all_tiers.swigValue(), true)
         sp.setBoolean(settings_pack.bool_types.enable_lsd.swigValue(), true)
+        // encrypted connections only (protocol encryption, RC4): a network that blocks BitTorrent by looking at its traffic often lets these through
+        // (enc_policy 0 = forced, enc_level 2 = RC4)
+        if (Downloads.torrentEnc) {
+            sp.setInteger(settings_pack.int_types.out_enc_policy.swigValue(), 0)
+            sp.setInteger(settings_pack.int_types.in_enc_policy.swigValue(), 0)
+            sp.setInteger(settings_pack.int_types.allowed_enc_level.swigValue(), 2)
+            sp.setBoolean(settings_pack.bool_types.prefer_rc4.swigValue(), true)
+        }
         val p = SessionParams(sp)
         p.setPosixDiskIO() // plain file writes: memory-mapped files misbehave on the phone's shared storage
         it.start(p)

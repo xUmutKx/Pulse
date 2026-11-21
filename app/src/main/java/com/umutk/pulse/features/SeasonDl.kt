@@ -248,6 +248,14 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.torrentAuto, { Downloads.setTorrentAuto(ctx, it) })
             }
+            // encrypted torrent connections: for a school or hotel Wi-Fi that blocks torrents by their traffic, with no VPN
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentEnc(ctx, !Downloads.torrentEnc) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Encrypted torrent connections", "Şifreli torrent bağlantıları"), color = T.text, fontSize = 15.sp)
+                    Text(tr("A Wi-Fi that blocks torrents often lets these through; fewer peers can talk this way", "Torrenti engelleyen Wi-Fi çoğu zaman bunlara izin verir; bu yolla konuşabilen eş sayısı azalır"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.torrentEnc, { Downloads.setTorrentEnc(ctx, it) })
+            }
             // a Wi-Fi that blocks torrents (school, hotel, sign-in page): they run over mobile data while the rest of the phone stays on the Wi-Fi
             Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentCell(ctx, !Downloads.torrentCell) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
