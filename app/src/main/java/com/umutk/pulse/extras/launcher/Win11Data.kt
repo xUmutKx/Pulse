@@ -162,11 +162,7 @@ internal val CONTROL_PANEL_8: List<WGroup> = listOf(
     )),
 )
 
-/** Opens an item: a page of the phone's settings (falling back to the main settings when this phone has none), or a Pulse page through [open]. */
-internal fun openWItem(ctx: android.content.Context, route: String, open: (String) -> Unit) {
-    if (route.startsWith("intent:")) {
-        val act = route.removePrefix("intent:")
-        val i = android.content.Intent(act).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (runCatching { ctx.startActivity(i) }.isFailure) runCatching { ctx.startActivity(android.content.Intent(Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-    } else open(route)
+/** Opens an item: a Pulse page through [open]. The phone's own Settings app is never opened; the pages with an `intent:` route are drawn by Win11Detail with controls that work inside Pulse. */
+internal fun openWItem(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context, route: String, open: (String) -> Unit) {
+    if (!route.startsWith("intent:")) open(route)
 }

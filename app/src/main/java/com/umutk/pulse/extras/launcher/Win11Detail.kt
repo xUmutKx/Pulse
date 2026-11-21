@@ -47,7 +47,7 @@ import com.umutk.pulse.tr
 /** One line of a settings page: a label and its value. */
 private class DRow(val label: String, val value: String)
 
-/** The page of one Windows 11 setting inside Pulse: its title, what the phone says about it right now, the controls Pulse can work itself, and a button for the phone's own page when more is needed. */
+/** The page of one Windows 11 setting inside Pulse: its title, what the phone says about it right now, the controls Pulse can work itself, and the controls that really work from inside Pulse. */
 @Composable
 internal fun Win11Detail(item: WItem, onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -80,11 +80,7 @@ internal fun Win11Detail(item: WItem, onBack: () -> Unit) {
             "Display" -> BrightnessSlider(ctx)
         }
         Spacer(Modifier.height(12.dp))
-        val act = item.route.removePrefix("intent:")
-        PButton(tr("Open in the phone's settings", "Telefonun ayarlarında aç")) {
-            val i = Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (runCatching { ctx.startActivity(i) }.isFailure) runCatching { ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        }
+        Win11Controls(ctx, item.route.removePrefix("intent:"))
         Spacer(Modifier.height(16.dp))
     }
 }
@@ -93,7 +89,7 @@ internal fun Win11Detail(item: WItem, onBack: () -> Unit) {
 private fun Box1() { Spacer(Modifier.fillMaxWidth().height(1.dp).padding(start = 14.dp).background(T.sub.copy(alpha = .12f))) }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+internal fun Section(title: String, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, color = T.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)

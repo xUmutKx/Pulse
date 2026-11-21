@@ -73,6 +73,9 @@ fun ControlPanelHome() {
     // the Windows 7 desktop has the Control Panel in its Category view: the big category names, each with its first tasks under it as links
     if (T.id == "win7") { Win7ControlPanel(); return }
     val open = LocalOpenTool.current
+    var wDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WItem?>(null) }
+    val pickW: (WItem) -> Unit = { if (it.route.startsWith("intent:")) wDetail = it else open(it.route) }
+    wDetail?.let { d -> Box(Modifier.fillMaxSize().background(T.bg).padding(14.dp)) { Win11Detail(d) { wDetail = null } }; return }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var view by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var cat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WGroup?>(null) }
@@ -106,8 +109,8 @@ fun ControlPanelHome() {
             val flat = CONTROL_PANEL_8.flatMap { it.items }
             val hits = if (q.isBlank()) emptyList() else flat.filter { tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
             when {
-                q.isNotBlank() -> hits.forEach { it -> CpApplet(it, 1, ink, link) { openWItem(ctx, it.route, open) } }
-                cat != null -> cat!!.items.forEach { it -> CpApplet(it, 1, ink, link) { openWItem(ctx, it.route, open) } }
+                q.isNotBlank() -> hits.forEach { it -> CpApplet(it, 1, ink, link) { pickW(it) } }
+                cat != null -> cat!!.items.forEach { it -> CpApplet(it, 1, ink, link) { pickW(it) } }
                 view == 0 -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
                     // room enough (a turned phone, a wide window): the categories stand in two columns
                     val cols = if (maxWidth >= 560.dp) 2 else 1
@@ -120,7 +123,7 @@ fun ControlPanelHome() {
                                         Spacer(Modifier.width(12.dp))
                                         Column {
                                             Text(tr(g.en, g.tr), color = link, fontSize = 15.sp, modifier = Modifier.clickable { cat = g })
-                                            g.items.take(3).forEach { it -> Text(tr(it.en, it.tr), color = link, fontSize = 12.sp, modifier = Modifier.clickable { openWItem(ctx, it.route, open) }.padding(top = 3.dp)) }
+                                            g.items.take(3).forEach { it -> Text(tr(it.en, it.tr), color = link, fontSize = 12.sp, modifier = Modifier.clickable { pickW(it) }.padding(top = 3.dp)) }
                                         }
                                     }
                                 }
@@ -131,7 +134,7 @@ fun ControlPanelHome() {
                 }
                 else -> flat.chunked(if (view == 1) 3 else 2).forEach { row ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { it -> Box(Modifier.weight(1f)) { CpApplet(it, view, ink, link) { openWItem(ctx, it.route, open) } } }
+                        row.forEach { it -> Box(Modifier.weight(1f)) { CpApplet(it, view, ink, link) { pickW(it) } } }
                         repeat((if (view == 1) 3 else 2) - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
@@ -164,6 +167,9 @@ private fun CpApplet(it: WItem, mode: Int, ink: androidx.compose.ui.graphics.Col
 @Composable
 fun WindowsSettingsHome() {
     val open = LocalOpenTool.current
+    var wDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WItem?>(null) }
+    val pickW: (WItem) -> Unit = { if (it.route.startsWith("intent:")) wDetail = it else open(it.route) }
+    wDetail?.let { d -> Box(Modifier.fillMaxSize().background(T.bg).padding(14.dp)) { Win11Detail(d) { wDetail = null } }; return }
     // Windows 11 has its own Settings: a sidebar, a search box and rounded rows
     if (T.id == "win11") { Win11SettingsHome(open); return }
     var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -183,7 +189,7 @@ fun WindowsSettingsHome() {
         shown.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (_, it) ->
-                    Row(Modifier.weight(1f).background(tileBg).clickable { openWItem(ctx, it.route, open) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).background(tileBg).clickable { pickW(it) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon(it.icon, T.accent, 32.dp)
                         Spacer(Modifier.width(12.dp))
                         Column {
