@@ -943,9 +943,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val d = android.view.InputDevice.getDevice(id) ?: return@any false
                 val pad = (d.sources and android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD ||
                     (d.sources and android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
-                !d.isVirtual && !pad && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
+                // (a keyboard cover of a tablet, joined by contacts, can be reported as "virtual" with an id above zero: only the phone's own virtual keyboard, id below zero, is left out)
+                (!d.isVirtual || d.id > 0) && !pad && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
                     d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
-            }
+            } ||
+                // the system itself says a keyboard with letter keys is out (not hidden)
+                (resources.configuration.keyboard == android.content.res.Configuration.KEYBOARD_QWERTY && resources.configuration.hardKeyboardHidden == android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO)
         }.getOrDefault(resources.configuration.keyboard == android.content.res.Configuration.KEYBOARD_QWERTY)
     }
 
