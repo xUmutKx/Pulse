@@ -1,6 +1,8 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
-<p align="center"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></p>
+<p align="center"><a href="docs/media/Pulse-long.mp4"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></a></p>
+
+<p align="center"><b>▶ Videos:</b> <a href="docs/media/Pulse-long.mp4">Tour (landscape, ~1:40)</a> · <a href="docs/media/Pulse-short.mp4">Short (vertical, ~35 s)</a></p>
 
 ### Pulse
 
