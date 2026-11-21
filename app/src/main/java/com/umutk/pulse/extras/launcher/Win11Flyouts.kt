@@ -86,7 +86,8 @@ private fun QuickFlyout(taskbar: Dp) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val none = remember { MutableInteractionSource() }
-    val hi = launcherAccent()
+    // the lit tiles and the sliders take the accent a notch darker, as Windows does for its filled controls: a bright accent (pink, green) is not glaring on them
+    val hi = launcherAccent().let { c -> androidx.compose.ui.graphics.Color(c.red * .82f, c.green * .82f, c.blue * .82f, 1f) }
     val shape = RoundedCornerShape(8.dp)
     var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     // the tiles on show (kept in a list the user edits with the pencil): nine to a page

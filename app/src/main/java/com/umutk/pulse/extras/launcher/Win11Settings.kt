@@ -203,13 +203,13 @@ private fun Win11Colors() {
             val hsv = FloatArray(3); android.graphics.Color.colorToHSV(LauncherPrefs.accentArgb, hsv)
             val variants = listOf(
                 android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], (hsv[1] * .35f).coerceAtMost(1f), 1f)),
-                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], 1f, (hsv[2].coerceAtLeast(.85f)))),
-                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1], hsv[2] * .72f)))
+                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1], hsv[2] * .85f)),
+                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1], hsv[2] * .68f)))
             variants.forEachIndexed { i, v ->
                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(androidx.compose.ui.graphics.Color(v)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .5f), RoundedCornerShape(6.dp))
                     .clickable { LauncherPrefs.accentArgb = v; LauncherPrefs.save(ctx) })
             }
-            Text(tr("Light · Pure · Darker", "Açık · Saf · Koyu"), color = T.sub, fontSize = 11.sp)
+            Text(tr("Light · Dark · Darker", "Açık · Koyu · Daha koyu"), color = T.sub, fontSize = 11.sp)
         }
         SWATCHES.chunked(12).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
