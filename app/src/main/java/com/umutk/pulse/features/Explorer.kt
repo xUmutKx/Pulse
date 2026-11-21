@@ -784,6 +784,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         ThemedMenuItem(label, { ovf = false; act() }, icon = ic, checked = checked)
                     row(if (FilesPrefs.grid) tr("List", "Liste") else tr("Grid", "Izgara"), if (FilesPrefs.grid) Icons.Outlined.ViewList else Icons.Outlined.GridView) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
                     if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840) row(tr("Columns", "Sütunlar"), Icons.Outlined.ViewColumn, FilesPrefs.columns) { FilesPrefs.columns = !FilesPrefs.columns; FilesPrefs.save(ctx) }
+                    row(tr("Icons for picked files", "Seçilenler için simgeler"), Icons.Outlined.GridView, FilesPrefs.selIcons) { FilesPrefs.selIcons = !FilesPrefs.selIcons; FilesPrefs.save(ctx) }
                     row(tr("Sort", "Sırala"), Icons.Outlined.Sort) { sortMenu = true }
                     row(tr("Hidden files", "Gizli dosyalar"), Icons.Outlined.Visibility, showHidden) { showHidden = !showHidden }
                     row(tr("Sizes and dates", "Boyut ve tarih"), Icons.Outlined.Straighten, showSizes) { showSizes = !showSizes }
@@ -881,9 +882,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
         val selBar: @Composable () -> Unit = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.then(if (FilesPrefs.selIcons) Modifier.horizontalScroll(rememberScrollState()) else Modifier), verticalAlignment = Alignment.CenterVertically) {
                 DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
-                Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 11.sp, maxLines = 1)
+                Text("${sel.size}", (if (FilesPrefs.selIcons) Modifier.padding(start = 4.dp, end = 8.dp) else Modifier.weight(1f).padding(start = 4.dp)), color = T.text, fontSize = 11.sp, maxLines = 1)
                 DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
                 // several APKs picked: one button (left of cut) installs them all in one go, in the installer
                 if (picked.size >= 2 && picked.all { it.isFile && it.extension.lowercase() in setOf("apk", "xapk", "apks", "apkm") }) DenseSelSquare(Look.accent, {
@@ -896,7 +897,15 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
                 if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
                 DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
-                Box {
+                // every other action is an icon of its own (the setting in the top ⋮ menu puts them back in a menu of words)
+                if (FilesPrefs.selIcons) {
+                    DenseSelSquare(T.text, { zipAsk = picked }) { ExGlyph(Icons.Outlined.FolderZip, "zip", T.text, 24.dp) }
+                    picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { name = f.name; dialog = "rename" to f }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) } }
+                    picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { propsOf = f }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
+                    arcPick(picked)?.let { f -> archiveMenu(f).forEach { (_, k, kind) ->
+                        DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
+                    } }
+                } else Box {
                     DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
                     ThemedMenu(selMore, { selMore = false }) {
                         ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)

@@ -553,6 +553,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                         putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 8)
                     }
                     val out = ArrayList<Triple<Long, Long, String>>()
+                    val plainIds = HashSet<Long>()
                     (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
                     else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 8"))?.use { c ->
                         while (c.moveToNext()) {
@@ -564,12 +565,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                             val shot = listOf("screenshot", "screen_shot", "screen shot", "screen-shot", "screencap", "screen_cap", "ekran g", "ekran_g", "ekrang", "capture", "smartselect", "scrnshot").any { it in both }
                             val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
                             // a picture just downloaded (the Download folder) is offered the same way
-                            val down = path.contains("/download", true)
+                            // (directly in the Download folder: what a zip is unpacked into is a folder of its own, those pictures are not offered)
+                            val down = java.io.File(path).parentFile?.name.equals("Download", true) == true
                             // only what is new: a picture made in the last moments, never the older ones of the gallery
                             // (when the keyboard comes up, e.g. back from the camera or from the recent apps, a wider look: a photo made in the last quarter of an hour)
-                            if (shot && age <= (if (fromStart) 180 else 45) || cam && age <= (if (fromStart) 900 else 30) || down && age <= (if (fromStart) 180 else 45)) out += Triple(c.getLong(0), age, path)
+                            if (shot && age <= (if (fromStart) 180 else 45) || cam && age <= (if (fromStart) 900 else 30) || down && age <= (if (fromStart) 180 else 45)) {
+                                out += Triple(c.getLong(0), age, path)
+                                if (!shot && (down || cam)) plainIds += c.getLong(0)
+                            }
                         }
                     }
+                    // several pictures made at once that are not screenshots (a zip unpacked, a folder copied in) are not a picture the person just took: none of them is offered
+                    if (plainIds.size > 2) out.removeAll { it.first in plainIds }
                     out
                 }.getOrNull()
             }.orEmpty().filter { it.first !in shotsTaken }
