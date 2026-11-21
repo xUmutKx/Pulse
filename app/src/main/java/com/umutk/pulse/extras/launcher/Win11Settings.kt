@@ -197,6 +197,20 @@ private fun Win11Colors() {
             com.umutk.pulse.PSwitch(LauncherPrefs.blurAll, { LauncherPrefs.blurAll = it; LauncherPrefs.save(ctx) })
         }
         Text(tr("Accent color", "Vurgu rengi"), color = T.text, fontSize = 14.sp)
+        // the picked colour in three strengths: very light, purer (full colour) and a notch darker
+        if (LauncherPrefs.accentOn) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            val base = androidx.compose.ui.graphics.Color(LauncherPrefs.accentArgb)
+            val hsv = FloatArray(3); android.graphics.Color.colorToHSV(LauncherPrefs.accentArgb, hsv)
+            val variants = listOf(
+                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], (hsv[1] * .35f).coerceAtMost(1f), 1f)),
+                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], 1f, (hsv[2].coerceAtLeast(.85f)))),
+                android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], hsv[1], hsv[2] * .72f)))
+            variants.forEachIndexed { i, v ->
+                Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(androidx.compose.ui.graphics.Color(v)).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .5f), RoundedCornerShape(6.dp))
+                    .clickable { LauncherPrefs.accentArgb = v; LauncherPrefs.save(ctx) })
+            }
+            Text(tr("Light · Pure · Darker", "Açık · Saf · Koyu"), color = T.sub, fontSize = 11.sp)
+        }
         SWATCHES.chunked(12).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { c ->

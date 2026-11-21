@@ -100,6 +100,17 @@ internal fun wifiName(c: Context): String? = runCatching {
     wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != "<unknown ssid>" && it != "0x" }
 }.getOrNull()
 
+private fun saverOn(c: Context) = runCatching { (c.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode }.getOrDefault(false)
+
+/** Battery saver: written straight to the system when Pulse may write secure settings (adb's WRITE_SECURE_SETTINGS), else with root or Shizuku; only when neither is there the settings page opens. */
+private fun batterySaver(c: Context) {
+    val to = if (saverOn(c)) 0 else 1
+    val done = runCatching { Settings.Global.putInt(c.contentResolver, "low_power", to) }.getOrDefault(false)
+    if (done) return
+    if (privileged()) { Thread { com.umutk.pulse.extras.blackout.Privilege.run("settings put global low_power $to") }.start(); return }
+    settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)(c)
+}
+
 private fun btOn(c: Context) = runCatching { android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled == true }.getOrDefault(false)
 private fun locOn(c: Context) = runCatching { (c.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager).isLocationEnabled }.getOrDefault(false)
 private fun dndOn(c: Context) = runCatching { (c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }.getOrDefault(false)
@@ -136,7 +147,7 @@ internal val QUICK = listOf(
         val sv = com.umutk.pulse.features.AutoClickService.instance
         if (sv != null) sv.tileToggle() else runCatching { c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }, { com.umutk.pulse.features.AutoClickService.instance != null && com.umutk.pulse.features.AutoClick.running }),
-    QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
+    QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", ::batterySaver, ::saverOn),
     QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", state = { ActionCenter.torch }, run = { c ->
         runCatching {
             val m = c.getSystemService(Context.CAMERA_SERVICE) as CameraManager
