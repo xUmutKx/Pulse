@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.gamehub
 
+import androidx.compose.ui.graphics.asAndroidBitmap
 import kotlinx.coroutines.async
 import androidx.compose.runtime.collectAsState
 import android.content.Intent
@@ -580,13 +581,14 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
             list.map { g ->
                 async {
                     gate.acquire()
-                    try { g to (GameArt.cover(ctx, g.pkg, 360) ?: GameArt.banner(ctx, g.pkg, 360) ?: GameArt.icon(ctx, g.pkg, 256) ?: nameCover(g.name)) } finally { gate.release() }
+                    try { g to (GameArt.cover(ctx, g.pkg, 360) ?: GameArt.banner(ctx, g.pkg, 360) ?: iconCover(g.name, GameArt.icon(ctx, g.pkg, 256))) } finally { gate.release() }
                 }
             }.map { it.await() }
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
+    // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
+    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014)).padding(top = 64.dp)) {
         if (loaded.isEmpty()) Text(tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
         else {
             com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
@@ -618,5 +620,25 @@ private fun nameCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
     val words = name.split(' ').fold(ArrayList<String>()) { acc, w -> if (acc.isNotEmpty() && (acc.last().length + w.length) < 12) acc[acc.lastIndex] = acc.last() + " " + w else acc.add(w); acc }
     var y = size / 2f - (words.size - 1) * 36f
     for (line in words.take(5)) { c.drawText(line, size / 2f, y, p); y += 72f }
+    return bmp.asImageBitmap()
+}
+
+/** A cover for a game that has only its icon (or nothing): the icon on a colour taken from the name, with the name under it, so the lid of the case is not a blank sheet. */
+private fun iconCover(name: String, icon: androidx.compose.ui.graphics.ImageBitmap?): androidx.compose.ui.graphics.ImageBitmap {
+    if (icon == null) return nameCover(name)
+    val size = 600
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), android.graphics.Color.HSVToColor(floatArrayOf(hue, .5f, .6f)), android.graphics.Color.HSVToColor(floatArrayOf(hue, .7f, .22f)), android.graphics.Shader.TileMode.CLAMP)
+    c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+    p.shader = null
+    val ic = icon.asAndroidBitmap()
+    val side = 320
+    c.drawBitmap(ic, null, android.graphics.Rect((size - side) / 2, 70, (size + side) / 2, 70 + side), android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+    p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 44f
+    val line = if (name.length > 22) name.take(21) + "…" else name
+    c.drawText(line, size / 2f, 70f + side + 90f, p)
     return bmp.asImageBitmap()
 }
