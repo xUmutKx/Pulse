@@ -160,6 +160,8 @@ object LauncherPrefs {
     var iconAnim by mutableStateOf("none")
     /** The phone's wallpaper slides a little as the pages are swiped (the Material looks, which show it). */
     var wallScroll by mutableStateOf(false)
+    /** The size the person gave a placed widget (widget id -> "width,height" in dp); a widget without one has the size its maker asked for. */
+    var widgetSizes by mutableStateOf<Map<String, String>>(emptyMap())
     /** Windows 11: the black of the apps in windows is see-through (dark glass over the blurred desktop) instead of solid. */
     var glassApps by mutableStateOf(true)
     /** The items of the Win+X menu, in the order shown (keys of WINX_KEYS); empty = all of them in their usual order. */
@@ -265,6 +267,7 @@ object LauncherPrefs {
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         links = p.getProperty("links").orEmpty().split('|').filter { it.isNotBlank() }
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
+        widgetSizes = p.stringPropertyNames().filter { it.startsWith("wsize.") }.associate { it.removePrefix("wsize.") to p.getProperty(it) }
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         snapIcons = p.getProperty("snapIcons3") != "false"; snapWidgets = p.getProperty("snapWidgets") != "false"; searchContacts = p.getProperty("searchContacts") == "true"; phonePanel = p.getProperty("phonePanel") == "true"; fillGaps = p.getProperty("fillGaps") == "true"
@@ -330,6 +333,7 @@ object LauncherPrefs {
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
         p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack); p.setProperty("widgetPages", widgetPages.toString()); p.setProperty("loopScroll", loopScroll.toString()); p.setProperty("dockGlass", dockGlass.toString()); p.setProperty("dockAlpha", dockAlpha.toString()); p.setProperty("twoLineLabels", twoLineLabels.toString()); p.setProperty("landColumns", landColumns.toString()); p.setProperty("landRows", landRows.toString()); p.setProperty("hideUnusedDays", hideUnusedDays.toString()); p.setProperty("dailyBackup", dailyBackup.toString()); p.setProperty("searchEngine", searchEngine); p.setProperty("iconAnim", iconAnim); p.setProperty("wallScroll", wallScroll.toString()); p.setProperty("glassApps", glassApps.toString()); p.setProperty("winX", winX); p.setProperty("smartFolders", smartFolders.toString()); p.setProperty("gDualUp", gDualUp); p.setProperty("gDualDown", gDualDown); p.setProperty("gDualLeft", gDualLeft); p.setProperty("gDualRight", gDualRight)
         p.setProperty("homeOrder", homeOrder.joinToString(",")); p.setProperty("links", links.joinToString("|"))
+        widgetSizes.forEach { (id, v) -> p.setProperty("wsize.$id", v) }
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
@@ -360,7 +364,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = true; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; widgetSizes = emptyMap(); glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = true; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false

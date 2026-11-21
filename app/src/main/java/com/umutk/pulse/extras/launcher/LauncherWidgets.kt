@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.detectDragGestures
 import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
@@ -90,10 +91,17 @@ fun placedWidgets(): List<PlacedWidget> = LauncherPrefs.widgets.mapNotNull { s -
     p[0].toIntOrNull()?.takeIf { p.size == 3 }?.let { PlacedWidget(it, p[1], p[2]) }
 }
 
+/** The size a placed widget is shown at, in dp: the person's (dragged with the corner when the widget was held), else the size its maker asked for. */
+fun widgetSizeDp(id: Int, info: AppWidgetProviderInfo): Pair<Int, Int> {
+    val own = LauncherPrefs.widgetSizes[id.toString()]?.split(',')?.mapNotNull { it.toIntOrNull() }
+    return if (own != null && own.size == 2) own[0] to own[1] else info.minWidth.coerceAtLeast(40) to info.minHeight.coerceAtLeast(40)
+}
+
 /** Forgets a placed widget and frees its id. */
 fun removeWidget(c: Context, id: Int) {
     LauncherWidgetHost.get(c).deleteAppWidgetId(id)
     LauncherPrefs.widgets = LauncherPrefs.widgets.filterNot { it.startsWith("$id|") }
+    LauncherPrefs.widgetSizes = LauncherPrefs.widgetSizes - id.toString()
     LauncherPrefs.save(c)
 }
 
@@ -133,10 +141,12 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
                             if (up == null) editId = w.id
                         }
                     }) {
+                    val (sw, sh) = widgetSizeDp(w.id, info)
                     AndroidView(
                         factory = { c -> host.createView(c, w.id, info) },
-                        update = { it.setAppWidget(w.id, info) },
-                        modifier = Modifier.width(info.minWidth.coerceAtLeast(40).dp).height(info.minHeight.coerceAtLeast(40).dp),
+                        // the widget is told its size, so it draws itself for it
+                        update = { it.setAppWidget(w.id, info); it.updateAppWidgetSize(android.os.Bundle(), sw, sh, sw, sh) },
+                        modifier = Modifier.width(sw.dp).height(sh.dp),
                     )
                     if (editId == w.id) Row(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .62f)).clickable { editId = null }, horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                         @Composable fun dot(icon: String, go: () -> Unit) = Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color.White.copy(alpha = .18f)).clickable(onClick = go), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon(icon, androidx.compose.ui.graphics.Color.White, 20.dp) }
@@ -144,6 +154,22 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
                         dot("close") { editId = null; removeWidget(ctx, w.id) }
                         dot("check") { editId = null }
                         dot("forward") { move(w.id, 1) }
+                    }
+                    // held: the corner at the bottom right is dragged to make the widget any size (freeform); the size is kept when the finger lifts
+                    if (editId == w.id) Box(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).size(44.dp).pointerInput(w.id) {
+                        detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, d ->
+                            c.consume()
+                            val (cw, ch) = widgetSizeDp(w.id, info)
+                            val dens = density
+                            val nw = (cw + d.x / dens).toInt().coerceIn(info.minResizeWidth.coerceAtLeast(40), 900)
+                            val nh = (ch + d.y / dens).toInt().coerceIn(info.minResizeHeight.coerceAtLeast(40), 900)
+                            LauncherPrefs.widgetSizes = LauncherPrefs.widgetSizes + (w.id.toString() to "$nw,$nh")
+                        }
+                    }, contentAlignment = androidx.compose.ui.Alignment.BottomEnd) {
+                        androidx.compose.foundation.Canvas(Modifier.size(18.dp)) {
+                            val c = androidx.compose.ui.graphics.Color.White
+                            for (k in 1..3) drawLine(c, androidx.compose.ui.geometry.Offset(size.width, size.height * k / 4f), androidx.compose.ui.geometry.Offset(size.width * (4 - k) / 4f, size.height), 2.dp.toPx())
+                        }
                     }
                 }
             }
@@ -394,10 +420,11 @@ fun LauncherWidgetPages(modifier: Modifier = Modifier) {
             val w = list[i % list.size]
             val info = mgr.getAppWidgetInfo(w.id)
             if (info != null) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                val (_, sh) = widgetSizeDp(w.id, info)
                 AndroidView(
                     factory = { c -> host.createView(c, w.id, info) },
                     update = { it.setAppWidget(w.id, info) },
-                    modifier = Modifier.fillMaxWidth().height(info.minHeight.coerceAtLeast(80).dp),
+                    modifier = Modifier.fillMaxWidth().height(sh.coerceAtLeast(80).dp),
                 )
             }
         }

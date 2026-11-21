@@ -179,7 +179,11 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             placedWidgets().forEach { w ->
                 val info = mgr.getAppWidgetInfo(w.id) ?: return@forEach
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    WidgetPreview(info, w.id, Modifier.weight(1f))
+                    // the live widget is only a picture here: a tap on it must not open what the widget opens (a web page, an app)
+                    Box(Modifier.weight(1f)) {
+                        WidgetPreview(info, w.id, Modifier.fillMaxWidth())
+                        Box(Modifier.matchParentSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { })
+                    }
                     Box(Modifier.size(40.dp).clickable { removeWidget(ctx, w.id) }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
                 }
             }
