@@ -200,10 +200,13 @@ val LocalPickAny = androidx.compose.runtime.staticCompositionLocalOf { false }
 val LocalPickMime = androidx.compose.runtime.staticCompositionLocalOf<String?> { null }
 
 /** Whether [f] is of the kind [mime] asks for (any-type and null take everything; a family such as image takes all its members). */
+/** [mime] is one type, or several joined by commas (an app that asks for pptx and ppt, for example); a file matches when it fits any of them. */
 fun pickMatches(mime: String?, f: File): Boolean {
-    if (mime.isNullOrBlank() || mime == "*/*" || f.isDirectory) return true
+    if (mime.isNullOrBlank() || f.isDirectory) return true
+    val types = mime.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    if (types.isEmpty() || types.any { it == "*/*" }) return true
     val m = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: return false
-    return if (mime.endsWith("/*")) m.startsWith(mime.dropLast(1)) else m.equals(mime, true)
+    return types.any { t -> if (t.endsWith("/*")) m.startsWith(t.dropLast(1)) else m.equals(t, true) }
 }
 
 /** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. Full screen (Settings > Functions) puts it in its own window with the look's caption buttons. */

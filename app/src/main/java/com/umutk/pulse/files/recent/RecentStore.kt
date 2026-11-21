@@ -55,4 +55,35 @@ object RecentStore {
             out
         }.getOrDefault(emptyList())
     }
+
+    /**
+     * One page of the files, newest first, from the row [offset] on ([size] rows are read): the list of the files that exist, and how many rows were read (the next page starts there).
+     * Paging lets the list go on as far as the person scrolls, with no limit and no wait for the whole phone to be read.
+     */
+    fun arrivalsPage(c: Context, offset: Int, size: Int): Pair<List<Arrival>, Int> {
+        if (!canListAll(c)) return emptyList<Arrival>() to 0
+        return runCatching {
+            val out = ArrayList<Arrival>()
+            var rows = 0
+            val q = android.os.Bundle().apply {
+                putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(MediaStore.Files.FileColumns.DATE_ADDED))
+                putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+                putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, size)
+                putInt(android.content.ContentResolver.QUERY_ARG_OFFSET, offset)
+                // folders and hidden files are not listed
+                putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Files.FileColumns.MEDIA_TYPE} != 0 OR ${MediaStore.Files.FileColumns.SIZE} > 0")
+            }
+            c.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DATE_ADDED), q, null)?.use { cur ->
+                val dataCol = cur.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+                val addCol = cur.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+                while (cur.moveToNext()) {
+                    rows++
+                    val p = cur.getString(dataCol) ?: continue
+                    val f = File(p)
+                    if (f.isFile && !f.name.startsWith(".")) out += Arrival(p, f.name, cur.getLong(addCol) * 1000L)
+                }
+            }
+            out to rows
+        }.getOrDefault(emptyList<Arrival>() to 0)
+    }
 }
