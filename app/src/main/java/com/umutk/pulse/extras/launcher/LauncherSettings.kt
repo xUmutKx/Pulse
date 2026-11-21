@@ -337,6 +337,10 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             ValueRow("down", tr("Swipe down", "Aşağı kaydır"), gname(LauncherPrefs.gDown)) { pickGesture = 3 }
             ValueRow("zoomIn", tr("Pinch in (two fingers)", "İki parmakla kıstır"), gname(LauncherPrefs.gPinchIn)) { pickGesture = 4 }
             ValueRow("zoomOut", tr("Pinch out (two fingers)", "İki parmakla aç"), gname(LauncherPrefs.gPinchOut)) { pickGesture = 5 }
+            ValueRow("up", tr("Two fingers up", "İki parmakla yukarı"), gname(LauncherPrefs.gDualUp)) { pickGesture = 6 }
+            ValueRow("down", tr("Two fingers down", "İki parmakla aşağı"), gname(LauncherPrefs.gDualDown)) { pickGesture = 7 }
+            ValueRow("back", tr("Two fingers left", "İki parmakla sola"), gname(LauncherPrefs.gDualLeft)) { pickGesture = 8 }
+            ValueRow("forward", tr("Two fingers right", "İki parmakla sağa"), gname(LauncherPrefs.gDualRight)) { pickGesture = 9 }
             ValueRow("home", tr("Home page", "Ana sayfa"), "${LauncherPrefs.homePage + 1}") { LauncherPrefs.homePage = (LauncherPrefs.homePage + 1) % 5; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
@@ -451,12 +455,12 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
     }
     if (pickGesture != 0) {
-        val cur = when (pickGesture) { 1 -> LauncherPrefs.gDouble; 2 -> LauncherPrefs.gUp; 4 -> LauncherPrefs.gPinchIn; 5 -> LauncherPrefs.gPinchOut; else -> LauncherPrefs.gDown }
-        PickDialog(when (pickGesture) { 1 -> tr("Double tap", "Çift dokunuş"); 2 -> tr("Swipe up", "Yukarı kaydır"); 4 -> tr("Pinch in", "Kıstır"); 5 -> tr("Pinch out", "Aç"); else -> tr("Swipe down", "Aşağı kaydır") },
+        val cur = when (pickGesture) { 1 -> LauncherPrefs.gDouble; 2 -> LauncherPrefs.gUp; 4 -> LauncherPrefs.gPinchIn; 5 -> LauncherPrefs.gPinchOut; 6 -> LauncherPrefs.gDualUp; 7 -> LauncherPrefs.gDualDown; 8 -> LauncherPrefs.gDualLeft; 9 -> LauncherPrefs.gDualRight; else -> LauncherPrefs.gDown }
+        PickDialog(when (pickGesture) { 1 -> tr("Double tap", "Çift dokunuş"); 2 -> tr("Swipe up", "Yukarı kaydır"); 4 -> tr("Pinch in", "Kıstır"); 5 -> tr("Pinch out", "Aç"); 6 -> tr("Two fingers up", "İki parmakla yukarı"); 7 -> tr("Two fingers down", "İki parmakla aşağı"); 8 -> tr("Two fingers left", "İki parmakla sola"); 9 -> tr("Two fingers right", "İki parmakla sağa"); else -> tr("Swipe down", "Aşağı kaydır") },
             GESTURE_ACTIONS.map { tr(it.second, it.third) to (it.first == cur) }, onDismiss = { pickGesture = 0 },
             extra = { Text(tr("The lock, the notifications, the quick settings, the recents and the power menu need Pulse's accessibility service", "Kilit, bildirimler, hızlı ayarlar, son uygulamalar ve güç menüsü için Pulse'un erişilebilirlik hizmeti gerekir"), color = T.sub, fontSize = 12.sp) }) { i ->
             val k = GESTURE_ACTIONS[i].first
-            when (pickGesture) { 1 -> LauncherPrefs.gDouble = k; 2 -> LauncherPrefs.gUp = k; 4 -> LauncherPrefs.gPinchIn = k; 5 -> LauncherPrefs.gPinchOut = k; else -> LauncherPrefs.gDown = k }
+            when (pickGesture) { 1 -> LauncherPrefs.gDouble = k; 2 -> LauncherPrefs.gUp = k; 4 -> LauncherPrefs.gPinchIn = k; 5 -> LauncherPrefs.gPinchOut = k; 6 -> LauncherPrefs.gDualUp = k; 7 -> LauncherPrefs.gDualDown = k; 8 -> LauncherPrefs.gDualLeft = k; 9 -> LauncherPrefs.gDualRight = k; else -> LauncherPrefs.gDown = k }
             save(); pickGesture = 0
         }
     }
