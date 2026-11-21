@@ -170,7 +170,7 @@ private const val ICON_PX = 128
 private const val PAGE_ROWS = 4
 
 /** The looks that are a Windows desktop: their home screen holds the desktop shortcuts. */
-private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
+internal val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
 
 /** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint, the command prompt and the Task Manager. Drawn through the look's own icon set. */
 internal fun desktopItems(): List<LaunchApp> = listOf(
