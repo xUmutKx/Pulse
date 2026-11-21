@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -151,11 +152,14 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val kinds = listOf(tr("All", "Tümü"), tr("Apps", "Uygulamalar"), tr("Settings", "Ayarlar"), tr("Web", "Web"))
     val apps = remember(q, state) { if (q.isBlank()) state?.apps.orEmpty().take(8) else state?.apps.orEmpty().filter { it.label.contains(q.trim(), true) }.take(8) }
-    val setList = remember { listOf("Wi-Fi" to Settings.ACTION_WIFI_SETTINGS, "Bluetooth" to Settings.ACTION_BLUETOOTH_SETTINGS, "Display" to Settings.ACTION_DISPLAY_SETTINGS, "Sound" to Settings.ACTION_SOUND_SETTINGS,
-        "Battery" to Intent.ACTION_POWER_USAGE_SUMMARY, "Storage" to Settings.ACTION_INTERNAL_STORAGE_SETTINGS, "Apps" to Settings.ACTION_APPLICATION_SETTINGS, "Location" to Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Accessibility" to Settings.ACTION_ACCESSIBILITY_SETTINGS, "Date & time" to Settings.ACTION_DATE_SETTINGS) }
-    val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.first.contains(q.trim(), true) } }
+    // the settings are Pulse's own (Windows 11 Settings opens in a window on the matching page), not the phone's pages
+    val setList = remember { WIN11_SETTINGS.flatMap { it.items } }
+    val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.en.contains(q.trim(), true) || it.tr.contains(q.trim(), true) }.take(8) }
+    // YTXTube is our YouTube: found by "you", "tube", "ytx" and opens its own screen
+    val ytx = remember(q) { q.isNotBlank() && listOf("youtube", "ytxtube", "ytx", "tube", "yt music").any { it.contains(q.trim(), true) } && q.trim().length >= 2 }
+    val imeUp = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
-        val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().padding(top = 28.dp, bottom = taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
+        val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().imePadding().padding(top = 28.dp, bottom = if (imeUp) 8.dp else taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
         AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // the search pill with the accent line under it
@@ -183,12 +187,19 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                         }
                     }
                 }
+                if (ytx && (kind == 0 || kind == 1)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable {
+                    LauncherSession.w11SearchOpen = false
+                    runCatching { ctx.startActivity(Intent().setClassName(ctx.packageName, "com.umutk.pulse.extras.ytx.YtxActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x33FFFFFF)), contentAlignment = Alignment.Center) { Glyph("video", Color.White, 18.dp) }
+                    Text("YTXTube", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                }
                 if (kind == 0 || kind == 2) {
                     Text(tr("Settings", "Ayarlar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
-                    sets.forEach { (n, act) ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; runCatching { ctx.startActivity(Intent(act).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    sets.forEach { it ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; SettingsJump.item = it.en; openDesktopItem(ctx, "pulse:winsettings", "win11") }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Glyph("settings", Color.White, 20.dp)
-                            Text(n, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                            Text(tr(it.en, it.tr), color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
                         }
                     }
                 }
