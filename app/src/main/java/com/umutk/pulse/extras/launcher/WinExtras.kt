@@ -210,7 +210,7 @@ internal fun WinPopup(title: String, onClose: () -> Unit, content: @Composable (
     val shape = RoundedCornerShape(8.dp)
     Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }, contentAlignment = Alignment.Center) {
         Column(Modifier.padding(16.dp).offset { androidx.compose.ui.unit.IntOffset(off.x.toInt(), off.y.toInt()) }.fillMaxWidth().clip(shape).background(Color(0xF0202020)).border(1.dp, Color.White.copy(alpha = .2f), shape)) {
-            Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha = .06f)).pointerInput(Unit) { androidx.compose.foundation.gestures.detectDragGestures { c, d -> c.consume(); off += d } }.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha = .06f)).pointerInput(Unit) { detectDragGestures { c, d -> c.consume(); off += d } }.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(title, color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
                 Box(Modifier.width(40.dp).height(32.dp).clickable { onClose() }, contentAlignment = Alignment.Center) { Text("✕", color = Color.White, fontSize = 14.sp) }
             }

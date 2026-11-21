@@ -82,7 +82,7 @@ object FloatTimerPrefs {
  * The clock of the floating timer. It lives here and not in the window, so it keeps counting when the window is drawn again (a change of size or colour), hidden or shown. A countdown rings
  * at zero even while the window is not there. Times come from the phone's uptime, so a slow screen does not slow the clock.
  */
-internal object TimerClock {
+internal object FloatClock {
     var countdown by mutableStateOf(false)
     var running by mutableStateOf(false)
     /** The length of the countdown, in ms (what a reset goes back to). */
@@ -130,7 +130,7 @@ internal object TimerClock {
     }
 }
 
-/** The floating window: a small overlay above every app. Shown and hidden here; the clock is [TimerClock]. */
+/** The floating window: a small overlay above every app. Shown and hidden here; the clock is [FloatClock]. */
 object FloatingTimer {
     private var view: ComposeView? = null
     private var owner: TimerOwner? = null
@@ -195,12 +195,12 @@ private fun TimerBody(ctx: Context, onDrag: (Float, Float) -> Unit, onDragEnd: (
     val ink = if (bgc.red * .3f + bgc.green * .59f + bgc.blue * .11f > .6f) Color(0xFF111111) else Color.White
     val showControls = FloatTimerPrefs.controls(ctx)
     // the window only asks the clock for the time, 10 times a second while it runs
-    var shown by remember { mutableLongStateOf(TimerClock.current()) }
-    LaunchedEffect(TimerClock.running, TimerClock.countdown) {
-        shown = TimerClock.current()
-        while (TimerClock.running) { delay(100); shown = TimerClock.current() }
+    var shown by remember { mutableLongStateOf(FloatClock.current()) }
+    LaunchedEffect(FloatClock.running, FloatClock.countdown) {
+        shown = FloatClock.current()
+        while (FloatClock.running) { delay(100); shown = FloatClock.current() }
     }
-    val over = TimerClock.countdown && shown == 0L && !TimerClock.running
+    val over = FloatClock.countdown && shown == 0L && !FloatClock.running
     Column(
         Modifier.clip(RoundedCornerShape((16 * sc).dp)).background(bgc.copy(alpha = FloatTimerPrefs.alpha(ctx) / 100f)).padding(horizontal = (14 * sc).dp, vertical = (10 * sc).dp)
             .pointerInput(Unit) { detectDragGestures(onDragEnd = onDragEnd) { c, a -> c.consume(); onDrag(a.x, a.y) } },
@@ -208,15 +208,15 @@ private fun TimerBody(ctx: Context, onDrag: (Float, Float) -> Unit, onDragEnd: (
     ) {
         Text(clock(shown), color = if (over) Color(0xFFFF6B6B) else ink, fontSize = (34 * sc).sp, fontWeight = FontWeight.Light)
         if (showControls) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.toggle(ctx); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon(if (TimerClock.running) "pause" else "play", Color.White, 18.dp) }
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.reset(); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon("rotate", Color.White, 20.dp) }
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (TimerClock.countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { TimerClock.setCountdown(!TimerClock.countdown); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { FloatClock.toggle(ctx); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon(if (FloatClock.running) "pause" else "play", Color.White, 18.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { FloatClock.reset(); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon("rotate", Color.White, 20.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (FloatClock.countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { FloatClock.setCountdown(!FloatClock.countdown); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
             Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) { PIcon("close", Color.White, 18.dp) }
         }
         // the countdown's length: +1 / +5 / +10 minutes while it is not running
-        if (showControls && TimerClock.countdown && !TimerClock.running) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (showControls && FloatClock.countdown && !FloatClock.running) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 5, 10).forEach { m ->
-                Text("+$m", color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.add(m * 60_000L); shown = TimerClock.current() }.padding(horizontal = 12.dp, vertical = 4.dp))
+                Text("+$m", color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .14f)).clickable { FloatClock.add(m * 60_000L); shown = FloatClock.current() }.padding(horizontal = 12.dp, vertical = 4.dp))
             }
         }
     }

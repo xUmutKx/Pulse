@@ -1753,6 +1753,7 @@ private fun AsciiArtCell(text: String, th: KbTheme, modifier: Modifier, onCopy: 
 }
 
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)

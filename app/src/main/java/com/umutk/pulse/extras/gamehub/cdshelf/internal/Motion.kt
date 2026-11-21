@@ -38,3 +38,5 @@ internal fun wrapDelta(a: Float, b: Float, count: Int): Float {
     if (d < -span / 2f) d += span
     return d
 }
+
+internal const val PI_F: Float = 3.14159265358979f

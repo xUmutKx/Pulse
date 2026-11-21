@@ -650,7 +650,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     }
                 }
                 out
-            }.getOrNull() }
+            }.getOrNull()
         } ?: return
         val (id, path, mime) = hit
         videosTaken += id
@@ -694,7 +694,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     }
                 }
                 out
-            }.getOrNull()
+            }.getOrNull() }
         } ?: return
         val (id, path, mime) = hit
         filesTaken += id

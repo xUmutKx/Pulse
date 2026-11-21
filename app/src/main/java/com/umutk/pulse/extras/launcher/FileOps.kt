@@ -66,11 +66,11 @@ fun pasteInto(dir: File): String? {
 
 /** A right click of a mouse (or the secondary button of a trackpad) does what a long press does: [onRight] runs with the position kept for the menu. */
 internal fun Modifier.rightClick(origin: () -> Offset, onRight: () -> Unit): Modifier = pointerInput(Unit) {
-    androidx.compose.foundation.gestures.awaitEachGesture {
+    awaitEachGesture {
         val d = awaitFirstDown(requireUnconsumed = false)
         if (d.type == androidx.compose.ui.input.pointer.PointerType.Mouse && currentEvent.buttons.isSecondaryPressed) {
             d.consume(); LauncherSession.pressAt = origin() + d.position; onRight()
-            androidx.compose.foundation.gestures.waitForUpOrCancellation()
+            waitForUpOrCancellation()
         }
     }
 }
