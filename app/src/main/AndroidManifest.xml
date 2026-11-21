@@ -2367,6 +2367,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- "Open with" for any file: the code editor reads it as text (colours by language when it knows one); on by default, no launcher icon of its own -->
+        <activity-alias android:name=".CodeOpenActivity" android:enabled="true" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_code" android:roundIcon="@drawable/launch_code" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="*/*" />
+                <data android:scheme="file" android:mimeType="*/*" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".CodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_code" android:roundIcon="@drawable/launch_code" android:label="Code">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

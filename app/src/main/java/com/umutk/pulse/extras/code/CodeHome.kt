@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +37,9 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.tr
 import java.io.File
+
+/** The file another app handed to Code ("Open with"): read once by the home screen of Code. */
+object CodeIntake { var uri by androidx.compose.runtime.mutableStateOf<android.net.Uri?>(null) }
 
 /**
  * Code, the code editor as an app of its own (its launcher entry and the Extra apps menu): an AMOLED black page with the files opened lately, Open (any file the
@@ -61,24 +65,44 @@ fun CodeHome(back: () -> Unit) {
                 { t -> runCatching { ctx.contentResolver.openOutputStream(u, "wt")?.use { it.write(t.toByteArray()) } != null }.getOrDefault(false) })
         }
     }
+    // a file handed over by "Open with": a real path opens in the editor of Files, any other address is read as text through the system
+    val handed = CodeIntake.uri
+    androidx.compose.runtime.LaunchedEffect(handed) {
+        val u = handed ?: return@LaunchedEffect
+        CodeIntake.uri = null
+        val path = if (u.scheme == "file") u.path else null
+        if (path != null && File(path).isFile) { keep(File(path)); file = File(path); return@LaunchedEffect }
+        val name = runCatching { ctx.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull() ?: u.lastPathSegment ?: "file"
+        doc = CodeSource(name,
+            { runCatching { ctx.contentResolver.openInputStream(u)?.use { it.readBytes().toString(Charsets.UTF_8) } }.getOrNull() },
+            { t -> runCatching { ctx.contentResolver.openOutputStream(u, "wt")?.use { it.write(t.toByteArray()) } != null }.getOrDefault(false) })
+    }
+    var menu by remember { mutableStateOf(false) }
+    fun newFile() {
+        val dir = File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").also { it.mkdirs() }
+        var n = 1
+        var nf = File(dir, "untitled.txt")
+        while (nf.exists()) { n++; nf = File(dir, "untitled $n.txt") }
+        if (runCatching { nf.writeText(""); true }.getOrDefault(false)) { keep(nf); file = nf }
+    }
     val f = file
     val d = doc
     if (f != null) { CodeEditorDialog(f) { file = null }; return }
     if (d != null) { CodeEditorHost(d, false, null, null) { doc = null }; return }
     BackHandler { back() }
-    Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().padding(horizontal = 16.dp)) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { menu = !menu }, contentAlignment = Alignment.Center) { PIcon("menu", Color.White, 22.dp) }
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
             Text(tr("Code", "Kod"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 6.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PButton(tr("Open", "Aç"), compact = true) { pick.launch(arrayOf("*/*")) }
-            PButton(tr("New", "Yeni"), compact = true) {
-                val dir = File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").also { it.mkdirs() }
-                var n = 1
-                var nf = File(dir, "untitled.txt")
-                while (nf.exists()) { n++; nf = File(dir, "untitled $n.txt") }
-                if (runCatching { nf.writeText(""); true }.getOrDefault(false)) { keep(nf); file = nf }
+            listOf(Triple<String, String, () -> Unit>("open", tr("Open", "Aç"), { pick.launch(arrayOf("*/*")) }), Triple<String, String, () -> Unit>("add", tr("New", "Yeni"), { newFile() })).forEach { (ic, name, act) ->
+                Row(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF1A1A1A)).clickable { act() }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(ic, Color.White, 18.dp)
+                    Text(name, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
         Text(tr("Recent", "Son açılanlar"), color = Color(0xFF8AB4F8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 18.dp, bottom = 6.dp))
@@ -99,5 +123,24 @@ fun CodeHome(back: () -> Unit) {
                 }
             }
         }
+    }
+    // the menu of the three lines: open, new, and the projects (the files of Documents/Pulse/Code)
+    if (menu) {
+        Box(Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { menu = false })
+        Column(Modifier.statusBarsPadding().padding(top = 56.dp, start = 12.dp).width(260.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1A1A1A)).padding(vertical = 8.dp)) {
+            listOf(Triple<String, String, () -> Unit>("open", tr("Open a file", "Dosya aç"), { menu = false; pick.launch(arrayOf("*/*")) }), Triple<String, String, () -> Unit>("add", tr("New file", "Yeni dosya"), { menu = false; newFile() })).forEach { (ic, name, act) ->
+                Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(ic, Color.White, 20.dp); Text(name, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
+                }
+            }
+            val projects = remember(menu) { File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }?.take(12).orEmpty() }
+            if (projects.isNotEmpty()) Text(tr("Projects", "Projeler"), color = Color(0xFF8AB4F8), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp))
+            projects.forEach { pf ->
+                Row(Modifier.fillMaxWidth().clickable { menu = false; keep(pf); file = pf }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("folder", Color(0xFF8AB4F8), 18.dp); Text(pf.name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
+                }
+            }
+        }
+    }
     }
 }

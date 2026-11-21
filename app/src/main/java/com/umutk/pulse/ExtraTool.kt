@@ -202,6 +202,8 @@ open class ExtraToolActivity : ComponentActivity() {
         // Cfg / Opt are process-wide; this loads the saved ones before the first frame. The look itself is this tool's own (ExtraToolLook or a ToolLook).
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        // a file handed to Code by "Open with": the editor opens it
+        if (routeOf(intent) == "code") intent.data?.let { com.umutk.pulse.extras.code.CodeIntake.uri = it }
         val start = routeOf(intent)
         taskLook(start)
         val store = storeOf(start)
@@ -292,7 +294,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("OfficeLauncher") -> "office"
             n.endsWith("CalculatorLauncher") -> "calculator"
-            n.endsWith("CodeLauncher") -> "code"
+            n.endsWith("CodeLauncher") || n.endsWith("CodeOpenActivity") -> "code"
             n.endsWith("ClockLauncher") -> "clock"
             n.endsWith("TempMailLauncher") -> "tempmail"
             n.endsWith("EbookLauncher") -> "ebook"
