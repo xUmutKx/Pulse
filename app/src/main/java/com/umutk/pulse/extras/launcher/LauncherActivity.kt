@@ -204,7 +204,7 @@ class LauncherActivity : ComponentActivity() {
         return super.dispatchKeyEvent(e)
     }
     override fun onStart() { enter(); super.onStart() }
-    override fun onResume() { enter(); super.onResume(); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
+    override fun onResume() { enter(); super.onResume(); PhoneWall.restoreIfLeft(this); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
     override fun onStop() { super.onStop(); LauncherPrefs.restorePulse(); AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); AppLookGuard.leave(this) }
 }
