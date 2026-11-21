@@ -249,9 +249,12 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 SliderRow("${tr("Dock solidity", "Dock yoğunluğu")}: ${LauncherPrefs.dockAlpha}%", LauncherPrefs.dockAlpha.toFloat(), 20f..100f) { LauncherPrefs.dockAlpha = it.roundToInt(); save() }
             }
             // the Material looks can take the phone's own colours (Material You)
-            if (cur.id in setOf("material", "amoled", "oneui", "coloros") && DeviceAccent.available) {
-                var dev by remember { mutableStateOf(DeviceAccent.on(ctx)) }
-                SwitchLine("palette", tr("Use the device's colours (Material You)", "Cihazın renklerini kullan (Material You)"), dev) { dev = it; DeviceAccent.set(ctx, it) }
+            if (cur.id in setOf("material", "amoled", "oneui", "coloros")) {
+                var accMode by remember { mutableStateOf(DeviceAccent.mode(ctx)) }
+                ValueRow("palette", tr("Accent colours", "Vurgu renkleri"), when (accMode) { "device" -> tr("Device (Material You)", "Cihaz (Material You)"); "palette" -> "Palette"; else -> tr("White", "Beyaz") }) {
+                    val all = listOf("off", "device", "palette").filter { it != "device" || DeviceAccent.available }
+                    accMode = all[(all.indexOf(accMode) + 1) % all.size]; DeviceAccent.setMode(ctx, accMode)
+                }
             }
             if (cur.id == "win11") SwitchLine("palette", tr("Start button in the accent colour", "Başlat düğmesi vurgu renginde"), LauncherPrefs.startLogoAccent) { LauncherPrefs.startLogoAccent = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
