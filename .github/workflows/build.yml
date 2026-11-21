@@ -17,7 +17,7 @@ env:
   # the Client ID of Pulse's Spotify app (a repository variable, not a secret: a PKCE client id is public)
   SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
 jobs:
-  # which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes the full one (Pulse AI inside), the lite one (without it) and the Google Play bundle
+  # (the watch APK and the no-SMS APK are not built for now: the lite APK is already the one without Messages) which builds this run needs: a plain run (a push, or a dispatch without "release") makes the full APK only; a release makes the full one (Pulse AI inside), the lite one (without it) and the Google Play bundle
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -26,7 +26,7 @@ jobs:
       - id: p
         run: |
           V='["full"]'
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","nosms","32bit","play","watch"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","32bit","play"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
