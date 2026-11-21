@@ -238,6 +238,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                     Text(tr("Search the web for \"", "Webde ara: \"") + q.trim() + "\"", color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
                 }
                 if (q.isNotBlank()) ContactResults(q, Color.White, Color(0xAAFFFFFF))
+                if (q.isNotBlank()) CalendarResults(q, Color.White, Color(0xAAFFFFFF))
             }
         }
     }
