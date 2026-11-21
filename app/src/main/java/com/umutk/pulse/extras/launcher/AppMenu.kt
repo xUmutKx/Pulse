@@ -52,6 +52,9 @@ val MENU_ACTS = listOf(
     MenuAct("paste", "Paste", "Yapıştır", "paste"),
     MenuAct("uninstall", "Uninstall", "Kaldır", "trash", quick = true, danger = true),
     MenuAct("info", "App info", "Uygulama bilgisi", "info"),
+    MenuAct("desk", "Pin to desktop", "Masaüstüne sabitle", "pin"),
+    MenuAct("icon", "Change icon", "Simgeyi değiştir", "image"),
+    MenuAct("iconreset", "Reset icon", "Simgeyi sıfırla", "history"),
     MenuAct("hide", "Hide from launcher", "Ana ekranda gizle", "eyeOff"),
     MenuAct("folder", "Add to folder", "Klasöre ekle", "folder"),
     MenuAct("copypkg", "Copy package name", "Paket adını kopyala", "copy"),
@@ -83,7 +86,11 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
         "rename", "props" -> { PropState.app = app; PropState.tab = 0 }
         "share" -> open(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${app.label}: https://play.google.com/store/apps/details?id=$pkg"), null))
         "uninstall" -> com.umutk.pulse.features.AppUninstall.run(ctx, pkg) { ok -> if (ok) { LauncherPrefs.names = LauncherPrefs.names - pkg; LauncherPrefs.save(ctx) } }
-        "info" -> open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null)))
+        // the app's information page is Pulse's own (Properties); the phone's page is one tap from there
+        "info" -> { PropState.app = app; PropState.tab = 0 }
+        "desk" -> { LauncherPrefs.links = (LauncherPrefs.links + "app:$pkg").distinct(); LauncherPrefs.save(ctx) }
+        "icon" -> AppIcons.pick = app
+        "iconreset" -> AppIcons.clear(ctx, pkg)
         "hide" -> { LauncherPrefs.hidden = LauncherPrefs.hidden + pkg; LauncherPrefs.save(ctx) }
         "folder" -> FolderUi.pick = app
         "copypkg" -> { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("package", pkg)); android.widget.Toast.makeText(ctx, pkg, android.widget.Toast.LENGTH_SHORT).show() }
@@ -117,6 +124,8 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
             "uninstall" -> real && !app.system
             "info", "store", "stop", "extract", "copypkg", "share" -> real
             "open" -> real
+            "desk" -> real
+            "iconreset" -> AppIcons.has(ctx, app.pkg)
             "cut", "copy" -> app.pkg.startsWith("file:")
             "paste" -> app.pkg.startsWith("file:") && FileClip.files.isNotEmpty() && java.io.File(app.pkg.removePrefix("file:")).isDirectory
             else -> true

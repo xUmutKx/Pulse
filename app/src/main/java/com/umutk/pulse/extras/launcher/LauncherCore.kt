@@ -154,7 +154,10 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
     // the Windows 7 look draws the desktop's own items (This PC, Recycle Bin, Explorer, Paint, the players ...) with the pictures of the Windows 7 pack
     val w7pic = if (app.icon == null && com.umutk.pulse.T.id == "win7") LAUNCH7[app.pkg]?.let { com.umutk.pulse.features.ThemeIcons.bitmap(androidx.compose.ui.platform.LocalContext.current, "win7", it) } else null
     val shape = when (LauncherPrefs.iconShape) { "circle" -> androidx.compose.foundation.shape.CircleShape; "square" -> RoundedCornerShape(size * .06f); "rounded" -> RoundedCornerShape(size * .16f); else -> RoundedCornerShape(size * .28f) }
-    val bmp = app.icon
+    // a picture the person chose for this app wins over its own icon and the icon pack's
+    val lctx = androidx.compose.ui.platform.LocalContext.current
+    val own = remember(app.pkg, AppIcons.rev) { AppIcons.bitmap(lctx, app.pkg) }
+    val bmp = own ?: app.icon
     val n = if (LauncherPrefs.badges) LauncherBadges.counts[app.pkg] ?: 0 else 0
     Box(modifier.size(size)) {
         if (bmp != null) Image(bmp, null, Modifier.size(size).clip(shape))

@@ -164,6 +164,7 @@ private fun QuickFlyout(taskbar: Dp) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     val ctx = LocalContext.current
@@ -174,6 +175,9 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     val kinds = listOf(tr("All", "Tümü"), tr("Apps", "Uygulamalar"), tr("Settings", "Ayarlar"), tr("Web", "Web"))
+    // an app held in the results opens the same menu as on the desktop (pin, icon, information ...)
+    var menuApp by remember { mutableStateOf<LaunchApp?>(null) }
+    menuApp?.let { m -> AppActionDialog(m, emptyList()) { menuApp = null } }
     val apps = remember(q, state) { if (q.isBlank()) state?.apps.orEmpty().take(8) else state?.apps.orEmpty().filter { it.label.contains(q.trim(), true) }.take(8) }
     // the settings are Pulse's own (Windows 11 Settings opens in a window on the matching page), not the phone's pages
     val setList = remember { WIN11_SETTINGS.flatMap { it.items } }
@@ -204,7 +208,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 if (kind == 0 || kind == 1) {
                     Text(tr("Apps", "Uygulamalar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                     apps.forEach { a ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; state?.open(a) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).combinedClickable(onClick = { LauncherSession.w11SearchOpen = false; state?.open(a) }, onLongClick = { menuApp = a }).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             LaunchAppPicture(a, 28.dp, Color(0x33FFFFFF), Color.White)
                             Text(a.label, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
                         }

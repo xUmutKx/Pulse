@@ -123,6 +123,12 @@ private fun FRow(icon: String, label: String, onClick: () -> Unit) {
 fun FolderDialogs(apps: List<LaunchApp>, onOpenApp: (LaunchApp) -> Unit, onLong: (LaunchApp) -> Unit) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
+    // the picture picker of "Change icon": it lives here, which stays on screen after the menu has closed
+    val iconPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { u ->
+        val a = AppIcons.pick; AppIcons.pick = null
+        if (u != null && a != null) AppIcons.set(ctx, a.pkg, u)
+    }
+    androidx.compose.runtime.LaunchedEffect(AppIcons.pick) { if (AppIcons.pick != null) iconPicker.launch("image/*") }
     FolderUi.pick?.let { app ->
         var nm by remember { mutableStateOf("") }
         val close = { FolderUi.pick = null }
