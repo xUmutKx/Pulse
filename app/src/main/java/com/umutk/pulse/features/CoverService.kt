@@ -300,6 +300,53 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); autoCheck() }
 
+    // The Windows key of a physical keyboard: One UI opens its own launcher on it even when Pulse is the home app. With Pulse's launcher as home (Windows 10 / 11 look) this
+    // service takes the key before the system does and hands it to the launcher: the key alone is the Start menu, with a letter it is the Windows shortcut (Win+E, Win+D, ...).
+    private var metaDown = false
+    private var metaUsed = false
+    private var comboKey = -1
+    private var mineAt = 0L
+    private var mine = false
+    private fun winKeyMine(): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - mineAt > 4000L) {
+            mineAt = now
+            mine = runCatching {
+                val home = packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == packageName
+                if (!home) false else {
+                    com.umutk.pulse.extras.launcher.LauncherPrefs.load(this)
+                    com.umutk.pulse.extras.launcher.LauncherPrefs.look.let { it == "win11" || it == "win10" || it == "win10black" }
+                }
+            }.getOrDefault(false)
+        }
+        return mine
+    }
+    private fun sendWin(code: Int) {
+        runCatching {
+            startActivity(Intent().setClassName(packageName, "com.umutk.pulse.extras.launcher.LauncherActivity")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("winkey", code))
+        }
+    }
+    override fun onKeyEvent(e: android.view.KeyEvent): Boolean {
+        val k = e.keyCode
+        val meta = k == android.view.KeyEvent.KEYCODE_META_LEFT || k == android.view.KeyEvent.KEYCODE_META_RIGHT
+        if (!meta && !(metaDown && (e.action == android.view.KeyEvent.ACTION_DOWN || k == comboKey))) return false
+        if (!winKeyMine()) return false
+        if (meta) {
+            if (e.action == android.view.KeyEvent.ACTION_DOWN) { if (e.repeatCount == 0) { metaDown = true; metaUsed = false } }
+            else { metaDown = false; if (!metaUsed) sendWin(-1) }
+            return true
+        }
+        if (e.action == android.view.KeyEvent.ACTION_UP) { comboKey = -1; return true }
+        val known = k in intArrayOf(android.view.KeyEvent.KEYCODE_X, android.view.KeyEvent.KEYCODE_R, android.view.KeyEvent.KEYCODE_E, android.view.KeyEvent.KEYCODE_I, android.view.KeyEvent.KEYCODE_S,
+            android.view.KeyEvent.KEYCODE_Q, android.view.KeyEvent.KEYCODE_D, android.view.KeyEvent.KEYCODE_L, android.view.KeyEvent.KEYCODE_M, android.view.KeyEvent.KEYCODE_A,
+            android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN)
+        if (!known) return false
+        metaUsed = true; comboKey = k
+        if (e.repeatCount == 0) sendWin(k)
+        return true
+    }
+
     override fun onServiceConnected() {
         instance = this
         lastTouch = android.os.SystemClock.uptimeMillis(); tick.removeCallbacks(idleCheck); tick.postDelayed(idleCheck, 3000)

@@ -152,6 +152,8 @@ class LauncherActivity : ComponentActivity() {
     // a home press while the launcher is already open: close the apps list and go back to the first page
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // the Windows key taken by the accessibility service (before the phone's own launcher could answer it): -1 the key alone (Start), else a letter with it
+        if (intent.hasExtra("winkey")) { winKey(intent.getIntExtra("winkey", -1)); intent.removeExtra("winkey"); return }
         // the Windows key of a keyboard makes the phone send the home intent: when Pulse is the home app, that is the Start menu (not "go home"), as on a PC
         val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
         val now = SystemClock.uptimeMillis()
@@ -201,7 +203,20 @@ class LauncherActivity : ComponentActivity() {
             if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed) {
                 val look = LauncherPrefs.look
                 val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
-                val did = when (e.keyCode) {
+                val did = winCombo(e.keyCode, look, front)
+                if (did) { metaUsed = true; return true }
+            }
+            if (metaKey) {
+                lastMetaAt = SystemClock.uptimeMillis()
+                if (e.action == android.view.KeyEvent.ACTION_DOWN && e.repeatCount == 0) metaUsed = false
+                // the Windows key let go with nothing pressed with it: the Start menu
+                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) { lastStartToggleAt = SystemClock.uptimeMillis(); LauncherSession.startOpen = !LauncherSession.startOpen }; metaUsed = false; return true }
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(e)
+    }
+    private fun winCombo(code: Int, look: String, front: DWin?): Boolean = when (code) {
                     android.view.KeyEvent.KEYCODE_L -> { powerAction(this, "lock"); true }
                     android.view.KeyEvent.KEYCODE_M -> { DesktopWindows.list.forEach { it.min = true }; true }
                     android.view.KeyEvent.KEYCODE_A -> { LauncherSession.quickOpen = !LauncherSession.quickOpen; true }
@@ -215,17 +230,13 @@ class LauncherActivity : ComponentActivity() {
                     android.view.KeyEvent.KEYCODE_D -> { DesktopWindows.list.forEach { it.min = true }; LauncherSession.startOpen = false; true }
                     else -> false
                 }
-                if (did) { metaUsed = true; return true }
-            }
-            if (metaKey) {
-                lastMetaAt = SystemClock.uptimeMillis()
-                if (e.action == android.view.KeyEvent.ACTION_DOWN && e.repeatCount == 0) metaUsed = false
-                // the Windows key let go with nothing pressed with it: the Start menu
-                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) { lastStartToggleAt = SystemClock.uptimeMillis(); LauncherSession.startOpen = !LauncherSession.startOpen }; metaUsed = false; return true }
-                return true
-            }
-        }
-        return super.dispatchKeyEvent(e)
+
+    /** The Windows key (or a letter with it) as the accessibility service forwards it. */
+    private fun winKey(code: Int) {
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        if (!modern) return
+        if (code == -1) { LauncherSession.startOpen = !LauncherSession.startOpen; return }
+        winCombo(code, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z })
     }
     override fun onStart() { enter(); super.onStart() }
     override fun onResume() { enter(); super.onResume(); PhoneWall.restoreIfLeft(this); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
