@@ -40,8 +40,8 @@ fun AcrylicBox(lookId: String, tint: Color, modifier: Modifier = Modifier, shape
     val ctx = LocalContext.current
     val cfg = LocalConfiguration.current
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val wall = remember(lookId, land) {
-        wallpaperRes(lookId, land)?.let { r -> runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, r, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }.getOrNull() }
+    val wall = remember(lookId, land, LauncherPrefs.wallFile, LauncherPrefs.wallFileLand, LauncherPrefs.wallIndex(lookId)) {
+        launcherWallpaperBitmap(ctx, lookId, land)
     }
     var pos by remember { mutableStateOf(Offset.Zero) }
     // the picture is as big as the window really is (the launcher may scale the screen, so the screen size of the configuration is not the window's)

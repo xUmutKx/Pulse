@@ -50,12 +50,12 @@ val MENU_ACTS = listOf(
     MenuAct("cut", "Cut", "Kes", "cut"),
     MenuAct("copy", "Copy", "Kopyala", "copy"),
     MenuAct("paste", "Paste", "Yapıştır", "paste"),
-    MenuAct("uninstall", "Uninstall", "Kaldır", "trash", quick = true, danger = true),
+    MenuAct("uninstall", "Uninstall", "Kaldır", "trash", danger = true),
     MenuAct("info", "App info", "Uygulama bilgisi", "info"),
     MenuAct("desk", "Pin to desktop", "Masaüstüne sabitle", "pin"),
     MenuAct("icon", "Change icon", "Simgeyi değiştir", "image"),
     MenuAct("iconreset", "Reset icon", "Simgeyi sıfırla", "history"),
-    MenuAct("hide", "Hide from launcher", "Ana ekranda gizle", "eyeOff"),
+    MenuAct("removehome", "Remove from home", "Ana ekrandan kaldır", "eyeOff"),
     MenuAct("folder", "Add to folder", "Klasöre ekle", "folder"),
     MenuAct("copypkg", "Copy package name", "Paket adını kopyala", "copy"),
     MenuAct("store", "Open in Play Store", "Play Store'da aç", "globe"),
@@ -88,10 +88,21 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
         "uninstall" -> com.umutk.pulse.features.AppUninstall.run(ctx, pkg) { ok -> if (ok) { LauncherPrefs.names = LauncherPrefs.names - pkg; LauncherPrefs.save(ctx) } }
         // the app's information page is Pulse's own (Properties); the phone's page is one tap from there
         "info" -> { PropState.app = app; PropState.tab = 0 }
-        "desk" -> { LauncherPrefs.links = (LauncherPrefs.links + "app:$pkg").distinct(); LauncherPrefs.save(ctx) }
+        "desk" -> {
+            val link = "app:$pkg"
+            LauncherPrefs.links = if (link in LauncherPrefs.links) LauncherPrefs.links - link else (LauncherPrefs.links + link).distinct()
+            LauncherPrefs.homeHidden = LauncherPrefs.homeHidden - pkg
+            LauncherPrefs.save(ctx)
+        }
         "icon" -> AppIcons.pick = app
         "iconreset" -> AppIcons.clear(ctx, pkg)
-        "hide" -> { LauncherPrefs.hidden = LauncherPrefs.hidden + pkg; LauncherPrefs.save(ctx) }
+        "removehome" -> {
+            LauncherPrefs.dock = LauncherPrefs.dock - pkg
+            LauncherPrefs.links = LauncherPrefs.links.filterNot { it == "app:$pkg" }
+            LauncherPrefs.homeHidden = LauncherPrefs.homeHidden + pkg
+            LauncherPrefs.folders = LauncherPrefs.folders.mapValues { (_, ids) -> ids.filterNot { it == pkg } }.filterValues { it.isNotEmpty() }
+            LauncherPrefs.save(ctx)
+        }
         "folder" -> FolderUi.pick = app
         "copypkg" -> { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("package", pkg)); android.widget.Toast.makeText(ctx, pkg, android.widget.Toast.LENGTH_SHORT).show() }
         "store" -> open(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg")))
@@ -115,6 +126,7 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val w = LocalWindowLook.current
     val pinned = app.pkg in LauncherPrefs.dock
+    val deskPinned = "app:${app.pkg}" in LauncherPrefs.links
     val tiles = LauncherPrefs.look == "winphone" && LauncherPrefs.phoneTiles
     if (isFolder(app)) { ContextPopup(230.dp, 250.dp, onDismiss) { FolderActionRows(app, onDismiss) }; return }
     val inFolder = LauncherFolders.of(app.pkg) != null
@@ -136,7 +148,11 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     ContextPopup(if (win11) 260.dp else 236.dp, if (tiles) 460.dp else if (win11) 420.dp else 400.dp, onDismiss) {
         val sk = LocalMenuSkin.current
         val fluent = w.id == "win11" || w.id == "win10" || w.id == "win10black"
-        fun label(a: MenuAct) = when (a.key) { "pin" -> if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr(a.en, a.trName); else -> tr(a.en, a.trName) }
+        fun label(a: MenuAct) = when (a.key) {
+            "pin" -> if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr(a.en, a.trName)
+            "desk" -> if (deskPinned) tr("Remove from desktop", "Masaüstünden kaldır") else tr(a.en, a.trName)
+            else -> tr(a.en, a.trName)
+        }
         fun go(a: MenuAct) = runAct(ctx, a, app, auto, onDismiss)
         if (sk == null) Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
         // Windows Phone: the size of this app's tile

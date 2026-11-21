@@ -38,6 +38,9 @@ import com.umutk.pulse.LaunchedVisible
 fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
     val all = wallsFor(lookId)
     if (all.isEmpty()) return null
+    if (lookId == "win11" && LauncherPrefs.wallIndex(lookId) == 0 && LauncherPrefs.wallFile.isEmpty() && LauncherPrefs.wallFileLand.isEmpty()) {
+        if (!landscape) return com.umutk.pulse.R.drawable.splash_win11_wallpaper
+    }
     // "a different wallpaper every day": the day of the year picks the picture
     var i = (if (LauncherPrefs.wallDaily) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR) % all.size else LauncherPrefs.wallIndex(lookId)).coerceIn(0, all.lastIndex)
     // a phone picture is tall: a rotated screen takes the first desktop picture of the look instead
@@ -49,6 +52,18 @@ fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
     else if (!landscape && !com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
     return all[i]
 }
+
+/** Decode the wallpaper currently behind the launcher, including a custom portrait/landscape file. */
+fun launcherWallpaperBitmap(ctx: Context, lookId: String, landscape: Boolean): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+    val ownPath = (if (landscape) LauncherPrefs.wallFileLand.ifEmpty { LauncherPrefs.wallFile } else LauncherPrefs.wallFile.ifEmpty { LauncherPrefs.wallFileLand })
+    val own = ownPath.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile }
+    val hd = own?.let { android.graphics.BitmapFactory.decodeFile(it.path) }
+        ?: wallpaperRes(lookId, landscape)?.let { r ->
+            com.umutk.pulse.extras.store.HdWalls.file(ctx, r)?.let { android.graphics.BitmapFactory.decodeFile(it.path) }
+                ?: android.graphics.BitmapFactory.decodeResource(ctx.resources, r)
+        }
+    hd?.asImageBitmap()
+}.getOrNull()
 
 /** The look's wallpaper behind the launcher, or [fallback] when the look has no stock picture. */
 @Composable
@@ -108,4 +123,3 @@ fun setPhoneWallpaper(c: Context, lookId: String): Boolean = runCatching {
     WallpaperManager.getInstance(c).setBitmap(full)
     true
 }.getOrDefault(false)
-

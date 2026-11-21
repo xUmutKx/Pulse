@@ -333,6 +333,8 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
     val ctx = LocalContext.current
     val d = LocalDensity.current.density
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
+        var trashDrag by remember { mutableStateOf(false) }
+        var trashHot by remember { mutableStateOf(false) }
         // on the grid (the default) the screen is cut into the columns and rows set for this way of holding the phone; free placement keeps the spaced cells
         val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val snap = LauncherPrefs.snapIcons
@@ -390,6 +392,12 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
             }
         })
         box?.let { r -> Box(Modifier.offset((r.left / d).dp, (r.top / d).dp).size((r.width / d).dp, (r.height / d).dp).background(Color(0x553E8BFF)).border(1.dp, Color(0xCC9CC8FF))) }
+        if (trashDrag) Box(Modifier.align(Alignment.BottomEnd).padding(12.dp).size(82.dp, 74.dp)
+            .background(Color.Transparent)
+            .border(1.dp, if (trashHot) Look.accent else T.line.copy(alpha = .55f), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center) {
+            PIcon("recycle", if (trashHot) Look.accent else T.text.copy(alpha = .8f), 42.dp)
+        }
         items.forEach { app ->
             val (col, row) = cells.getValue(app.pkg)
             var drag by remember(app.pkg) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
@@ -418,11 +426,26 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                     }
                     .pointerInput(app.pkg, LauncherPrefs.lockLayout, LauncherPrefs.snapIcons, LauncherPrefs.iconFree[app.pkg], col, row, cellW, cellH, inset) {
                         if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
-                            onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW + inset), free?.get(1) ?: (row * cellH)) },
-                            onDrag = { c, dr -> c.consume(); movedPx += dr.getDistance(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
+                            onDragStart = { o -> downAt = o; movedPx = 0f; drag = androidx.compose.ui.geometry.Offset(free?.get(0) ?: (col * cellW + inset), free?.get(1) ?: (row * cellH)); trashDrag = true },
+                            onDrag = { c, dr ->
+                                c.consume(); movedPx += dr.getDistance()
+                                drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) }?.also { p ->
+                                    trashHot = p.x + boxW / 2f >= maxWidth.value - 106f && p.y + cellH / 2f >= maxHeight.value - 98f
+                                }
+                            },
                             onDragEnd = {
                                 val p = drag; drag = null
                                 if (movedPx < 12f * d) { LauncherSession.pressAt = origin + downAt; state.longPress(app) }
+                                else if (p != null && p.x + boxW / 2f >= maxWidth.value - 106f && p.y + cellH / 2f >= maxHeight.value - 98f) {
+                                    if (app.pkg.startsWith("pulse:")) LauncherPrefs.desktopOn = LauncherPrefs.desktopOn - app.pkg
+                                    else {
+                                        LauncherPrefs.links = LauncherPrefs.links.filterNot { it == "app:${app.pkg}" }
+                                        LauncherPrefs.homeHidden = LauncherPrefs.homeHidden + app.pkg
+                                    }
+                                    LauncherPrefs.iconPos = LauncherPrefs.iconPos - app.pkg
+                                    LauncherPrefs.iconFree = LauncherPrefs.iconFree - app.pkg
+                                    LauncherPrefs.save(ctx)
+                                }
                                 else if (p != null && !LauncherPrefs.snapIcons) {
                                     LauncherPrefs.iconFree = LauncherPrefs.iconFree + (app.pkg to "${p.x.coerceAtLeast(0f)},${p.y.coerceAtLeast(0f)}"); LauncherPrefs.save(ctx)
                                 } else if (p != null) {
@@ -433,8 +456,9 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
                                     while ((nc to nr) in taken && guard++ < cols * perColumn) { nr++; if (nr >= perColumn) { nr = 0; nc = (nc + 1) % cols } }
                                     LauncherPrefs.iconPos = LauncherPrefs.iconPos + (app.pkg to "$nc,$nr"); LauncherPrefs.save(ctx)
                                 }
+                                trashDrag = false; trashHot = false
                             },
-                            onDragCancel = { drag = null },
+                            onDragCancel = { drag = null; trashDrag = false; trashHot = false },
                         )
                     },
                         ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().then(if (app.pkg in picked) Modifier.background(Color(0x443E8BFF)).border(1.dp, Color(0x889CC8FF)) else Modifier).tapOnly({ open(app) }, if (LauncherPrefs.lockLayout) ({ LauncherSession.pressAt = origin + androidx.compose.ui.geometry.Offset(40f * d, 40f * d); state.longPress(app) }) else null)); ShortcutArrow(app, iconDp, Modifier.align(Alignment.TopCenter)) }
@@ -556,6 +580,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val tabletScale = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 1.35f else 1f
     val iconDp = (LauncherPrefs.iconDp.coerceIn(24, 64) * tabletScale).toInt()
     val hidden = LauncherPrefs.hidden
+    val homeHidden = LauncherPrefs.homeHidden
     val sort = LauncherPrefs.sort
     val usage = LauncherPrefs.usage
     val visible = remember(apps, hidden, sort, usage) {
@@ -571,6 +596,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         }
     }
     val autoDock = remember(visible) { visible.take(3).map { it.pkg } }
+    val homeVisible = remember(visible, homeHidden) { visible.filter { it.pkg !in homeHidden } }
     // the dock may hold folders too (a folder's menu: Add to dock)
     val dock = dockApps(visible + LauncherFolders.fold(emptyList(), apps), LauncherPrefs.dock)
     var query by remember { mutableStateOf("") }
@@ -604,7 +630,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS && FreeformSetup.isOn(ctx)); LauncherPrefs.touch(ctx, app.pkg) }
     }
     // what was put on the home screen by hand: files, pictures, folders, apps
-    val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
+    val linkItems = remember(LauncherPrefs.links, apps, homeHidden) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) }.filter { it.pkg !in homeHidden } }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) {
         // a long press opens the menu of the thing: an app has its own, a desktop shortcut, a file, a picture or a web address has one too (Open, Remove, Properties)
         if (it.pkg.startsWith("file:") || it.pkg.startsWith("url:") || it.pkg.startsWith("pulse:")) deskItemFor = it
@@ -616,7 +642,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     // Windows 10 / 11 have the Settings app, the older ones the Control Panel: each look shows its own of the two
     val newWin = look.id in setOf("win11", "win10", "win10black")
     val shortcuts = remember(desktop, LauncherPrefs.desktopOn, newWin) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn && !(newWin && it.pkg == "pulse:settings") && !(!newWin && it.pkg == "pulse:winsettings") } else emptyList() }
-    val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) (visible + linkItems).distinctBy { it.pkg } else if (desktop) shortcuts + linkItems else linkItems
+    val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) (homeVisible + linkItems).distinctBy { it.pkg } else if (desktop) shortcuts + linkItems else linkItems
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
@@ -648,14 +674,14 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     MovableDesktopClock(look.id)
                     DesktopWidgetLayer()
                 }
-                else if (look.id == "winphone" && LauncherPrefs.phoneTiles) WinPhoneTiles(state, visible, edge)
+                else if (look.id == "winphone" && LauncherPrefs.phoneTiles) WinPhoneTiles(state, homeVisible, edge)
                 else if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
                         items(home, key = { it.pkg }) { app ->
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
                         }
                     }
-                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone") || linkItems.isNotEmpty()) LabelScale { HomeGrid(look, state, (if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible + linkItems else linkItems).distinctBy { it.pkg }, columns, iconDp, edge, open) }
+                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone") || linkItems.isNotEmpty()) LabelScale { HomeGrid(look, state, (if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) homeVisible + linkItems else linkItems).distinctBy { it.pkg }, columns, iconDp, edge, open) }
             }
             // the taskbar: a long press opens its own menu (Task Manager, auto-hide, settings); hidden, a thin edge strip brings it back for a moment
             if (!look.taskbarTop && LauncherPrefs.dockShown) {
