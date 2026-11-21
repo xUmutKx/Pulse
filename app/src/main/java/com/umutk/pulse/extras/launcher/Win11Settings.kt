@@ -257,12 +257,19 @@ private fun wState(ctx: android.content.Context, en: String): Boolean? = runCatc
     }
 }.getOrNull()
 
-/** The system's own small panel (or page) to change the setting [en]: apps may not switch these themselves. */
+/** Switches [en] itself with Shizuku or root; without them the system's own small switch panel (never the Settings app) is what Android allows. */
 private fun wToggle(ctx: android.content.Context, en: String) {
+    val st = wState(ctx, en) == true
+    val cmd = when (en) {
+        "Wi-Fi" -> "svc wifi " + if (st) "disable" else "enable"
+        "Bluetooth" -> "svc bluetooth " + if (st) "disable" else "enable"
+        "Airplane mode" -> "cmd connectivity airplane-mode " + if (st) "disable" else "enable"
+        else -> return
+    }
+    if (com.umutk.pulse.Shell.shizukuOk() || com.umutk.pulse.Shell.root == true) { Thread { runCatching { com.umutk.pulse.Shell.run(cmd) } }.start(); return }
     val i = when (en) {
-        "Wi-Fi" -> if (android.os.Build.VERSION.SDK_INT >= 29) android.content.Intent(android.provider.Settings.Panel.ACTION_WIFI) else android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-        "Bluetooth" -> android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-        "Airplane mode" -> android.content.Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+        "Wi-Fi" -> if (android.os.Build.VERSION.SDK_INT >= 29) android.content.Intent(android.provider.Settings.Panel.ACTION_WIFI) else return
+        "Bluetooth" -> android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
         else -> return
     }
     runCatching { ctx.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
