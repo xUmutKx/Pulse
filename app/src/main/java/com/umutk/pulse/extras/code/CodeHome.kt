@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.code
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -127,20 +131,51 @@ fun CodeHome(back: () -> Unit) {
     // the menu of the three lines: open, new, and the projects (the files of Documents/Pulse/Code)
     if (menu) {
         Box(Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { menu = false })
-        Column(Modifier.statusBarsPadding().padding(top = 56.dp, start = 12.dp).width(260.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1A1A1A)).padding(vertical = 8.dp)) {
+        Column(Modifier.statusBarsPadding().padding(top = 56.dp, start = 12.dp).width(300.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1A1A1A)).padding(vertical = 8.dp)) {
             listOf(Triple<String, String, () -> Unit>("open", tr("Open a file", "Dosya aç"), { menu = false; pick.launch(arrayOf("*/*")) }), Triple<String, String, () -> Unit>("add", tr("New file", "Yeni dosya"), { menu = false; newFile() })).forEach { (ic, name, act) ->
                 Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon(ic, Color.White, 20.dp); Text(name, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
                 }
             }
-            val projects = remember(menu) { File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }?.take(12).orEmpty() }
-            if (projects.isNotEmpty()) Text(tr("Projects", "Projeler"), color = Color(0xFF8AB4F8), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp))
-            projects.forEach { pf ->
-                Row(Modifier.fillMaxWidth().clickable { menu = false; keep(pf); file = pf }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("folder", Color(0xFF8AB4F8), 18.dp); Text(pf.name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
-                }
+            // the folder tree: the folder you picked (Documents/Pulse/Code at first), folders open and close, a file opens in the editor
+            var root by remember { mutableStateOf(prefs.getString("root", null)?.let { File(it) }?.takeIf { it.isDirectory } ?: File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").also { it.mkdirs() }) }
+            val pickRoot = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
+                val id = u?.let { runCatching { android.provider.DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
+                val path = id?.let { if (it.startsWith("primary:")) android.os.Environment.getExternalStorageDirectory().path + "/" + it.removePrefix("primary:") else "/storage/" + it.replace(":", "/") }
+                if (path != null && File(path).isDirectory) { root = File(path); prefs.edit().putString("root", path).apply() }
+            }
+            Row(Modifier.fillMaxWidth().clickable { pickRoot.launch(null) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("folder", Color(0xFF8AB4F8), 18.dp); Text(root.name.ifBlank { root.path }, color = Color(0xFF8AB4F8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
+                PIcon("chevron", Color(0xFF9AA0A6), 16.dp)
+            }
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                CodeTree(root, 0) { f -> menu = false; keep(f); file = f }
             }
         }
     }
+    }
+}
+
+
+/** The files and folders under [dir]: a folder opens and closes where it stands, a file is handed to [open]. */
+@Composable
+private fun CodeTree(dir: File, depth: Int, open: (File) -> Unit) {
+    val items = remember(dir.path) { dir.listFiles()?.filter { !it.name.startsWith(".") }?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))?.take(300).orEmpty() }
+    items.forEach { f ->
+        if (f.isDirectory) {
+            var opened by remember(f.path) { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().clickable { opened = !opened }.padding(start = (16 + depth * 14).dp, end = 12.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon(if (opened) "chevron" else "chevron", Color(0xFF9AA0A6), 14.dp, Modifier.graphicsLayer { rotationZ = if (opened) 90f else 0f })
+                PIcon("folder", Color(0xFF8AB4F8), 18.dp, Modifier.padding(start = 6.dp))
+                Text(f.name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp))
+            }
+            if (opened) CodeTree(f, depth + 1, open)
+        } else {
+            val badge = com.umutk.pulse.features.exBadgeOf(f.extension)
+            Row(Modifier.fillMaxWidth().clickable { open(f) }.padding(start = (36 + depth * 14).dp, end = 12.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (badge != null) androidx.compose.material3.Icon(badge.second, null, tint = badge.first, modifier = Modifier.size(18.dp)) else PIcon("details", Color(0xFF9AA0A6), 18.dp)
+                Text(f.name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
     }
 }

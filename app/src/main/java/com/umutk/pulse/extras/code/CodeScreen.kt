@@ -204,9 +204,12 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
         matches = ed.searcher.matchedPositionCount.let { n -> if (n > 0) "${ed.searcher.currentMatchedPositionIndex + 1}/$n" else "0" }
     }
 
-    Dialog(onDismissRequest = { close() }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)) {
+    // inside a window of the desktop the editor is drawn in that window; anywhere else it takes the whole screen
+    val inWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
+    var langMenu by remember { mutableStateOf(false) }
+    val body: @Composable () -> Unit = {
         val ground = if (amoled) androidx.compose.ui.graphics.Color.Black else T.bg
-        Column(Modifier.fillMaxSize().background(ground).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        Column(Modifier.fillMaxSize().background(ground).then(if (inWin) Modifier else Modifier.statusBarsPadding().navigationBarsPadding().imePadding())) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
@@ -215,6 +218,13 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                         color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (editing) { TopIcon("undo", h.canUndo) { h.ed?.undo() }; TopIcon("redo", h.canRedo) { h.ed?.redo() } }
+                // the language: one icon that opens the list (the row of language names is gone)
+                Box {
+                    TopIcon("details") { langMenu = true }
+                    androidx.compose.material3.DropdownMenu(langMenu, { langMenu = false }) {
+                        PulseCode.common.forEach { l -> androidx.compose.material3.DropdownMenuItem(text = { Text(l.label, color = if (lang?.scope == l.scope) Look.accent else T.text) }, onClick = { langMenu = false; lang = l; onLang?.invoke(l) }) }
+                    }
+                }
                 TopIcon("search", accent = find) { startFind() }
                 if (editing) TopIcon("save", h.dirty, accent = h.dirty) { save() }
                 else TopIcon("edit", text != null) {
@@ -241,7 +251,6 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 }
                 PChip(false, "A−") { size = (size - 1f).coerceAtLeast(8f); prefs.edit().putFloat("size", size).apply() }
                 PChip(false, "A+") { size = (size + 1f).coerceAtMost(28f); prefs.edit().putFloat("size", size).apply() }
-                PulseCode.common.forEach { l -> PChip(lang?.scope == l.scope, l.label) { lang = l; onLang?.invoke(l) } }
             }
             if (find) Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -265,6 +274,7 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
             if (editing) SymbolBar(h)
         }
     }
+    if (inWin) body() else Dialog(onDismissRequest = { close() }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)) { body() }
     // the page run: shown as a browser shows it, with its scripts (it may load what it links to from the internet)
     runHtml?.let { html ->
         Dialog(onDismissRequest = { runHtml = null }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
