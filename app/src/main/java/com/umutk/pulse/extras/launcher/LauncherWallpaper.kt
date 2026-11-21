@@ -102,7 +102,7 @@ fun TaskbarClock(color: Color, modifier: Modifier = Modifier) {
 /** Sets the look's picture as the phone wallpaper. False when there is no picture or the system refuses. */
 fun setPhoneWallpaper(c: Context, lookId: String): Boolean = runCatching {
     val res = wallpaperRes(lookId) ?: return false
-    val full = BitmapFactory.decodeResource(c.resources, res) ?: return false
+    val full = (com.umutk.pulse.extras.store.HdWalls.file(c, res)?.let { BitmapFactory.decodeFile(it.path) } ?: BitmapFactory.decodeResource(c.resources, res)) ?: return false
     WallpaperManager.getInstance(c).setBitmap(full)
     true
 }.getOrDefault(false)

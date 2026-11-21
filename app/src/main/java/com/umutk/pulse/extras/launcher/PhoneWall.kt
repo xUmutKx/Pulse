@@ -44,7 +44,7 @@ object PhoneWall {
                     backup(app).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 }
                 val own = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { File(it) }?.takeIf { it.isFile }
-                val full = (if (own != null) BitmapFactory.decodeFile(own.path) else wallpaperRes(lookId)?.let { BitmapFactory.decodeResource(app.resources, it) }) ?: return@runCatching
+                val full = (if (own != null) BitmapFactory.decodeFile(own.path) else wallpaperRes(lookId)?.let { r -> com.umutk.pulse.extras.store.HdWalls.file(app, r)?.let { BitmapFactory.decodeFile(it.path) } ?: BitmapFactory.decodeResource(app.resources, r) }) ?: return@runCatching
                 wm.setBitmap(full, null, true, WallpaperManager.FLAG_SYSTEM)
                 prefs(app).edit().putString("key", k).apply()
             }
