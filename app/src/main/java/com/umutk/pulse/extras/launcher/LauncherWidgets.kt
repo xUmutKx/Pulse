@@ -94,7 +94,11 @@ fun placedWidgets(): List<PlacedWidget> = LauncherPrefs.widgets.mapNotNull { s -
 /** The size a placed widget is shown at, in dp: the person's (dragged with the corner when the widget was held), else the size its maker asked for. */
 fun widgetSizeDp(id: Int, info: AppWidgetProviderInfo): Pair<Int, Int> {
     val own = LauncherPrefs.widgetSizes[id.toString()]?.split(',')?.mapNotNull { it.toIntOrNull() }
-    return if (own != null && own.size == 2) own[0] to own[1] else info.minWidth.coerceAtLeast(40) to info.minHeight.coerceAtLeast(40)
+    if (own != null && own.size == 2) return own[0] to own[1]
+    val w = info.minWidth.coerceAtLeast(40); val h = info.minHeight.coerceAtLeast(40)
+    // a widget that is nearly square is made square (the frame is no longer wider or taller than the card it holds)
+    val r = w.toFloat() / h
+    return if (r in .6f..1.7f) maxOf(w, h).let { it to it } else w to h
 }
 
 /** Forgets a placed widget and frees its id. */
@@ -152,6 +156,8 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
                         @Composable fun dot(icon: String, go: () -> Unit) = Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color.White.copy(alpha = .18f)).clickable(onClick = go), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon(icon, androidx.compose.ui.graphics.Color.White, 20.dp) }
                         dot("back") { move(w.id, -1) }
                         dot("close") { editId = null; removeWidget(ctx, w.id) }
+                        // every widget of the strip gets this one's size
+                        dot("gridView") { val me = widgetSizeDp(w.id, info); LauncherPrefs.widgetSizes = placedWidgets().associate { it.id.toString() to "${me.first},${me.second}" }; LauncherPrefs.save(ctx) }
                         dot("check") { editId = null }
                         dot("forward") { move(w.id, 1) }
                     }
@@ -161,8 +167,13 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
                             c.consume()
                             val (cw, ch) = widgetSizeDp(w.id, info)
                             val dens = density
-                            val nw = (cw + d.x / dens).toInt().coerceIn(info.minResizeWidth.coerceAtLeast(40), 900)
-                            val nh = (ch + d.y / dens).toInt().coerceIn(info.minResizeHeight.coerceAtLeast(40), 900)
+                            var nw = (cw + d.x / dens).toInt().coerceIn(info.minResizeWidth.coerceAtLeast(40), 900)
+                            var nh = (ch + d.y / dens).toInt().coerceIn(info.minResizeHeight.coerceAtLeast(40), 900)
+                            // the size locks when it comes near the size of another widget (each side), or near a square
+                            val others = placedWidgets().filter { it.id != w.id }.mapNotNull { o -> mgr.getAppWidgetInfo(o.id)?.let { oi -> widgetSizeDp(o.id, oi) } }
+                            others.firstOrNull { kotlin.math.abs(it.first - nw) <= 12 }?.let { nw = it.first }
+                            others.firstOrNull { kotlin.math.abs(it.second - nh) <= 12 }?.let { nh = it.second }
+                            if (kotlin.math.abs(nw - nh) <= 12) { val sq = maxOf(nw, nh); nw = sq; nh = sq }
                             LauncherPrefs.widgetSizes = LauncherPrefs.widgetSizes + (w.id.toString() to "$nw,$nh")
                         }
                     }, contentAlignment = androidx.compose.ui.Alignment.BottomEnd) {
