@@ -143,7 +143,7 @@ private val tools = listOf(
     Tool("Sound mode", "Ses modu", "vibrate") { SoundModeTool() },
     Tool("Stopwatch", "Kronometre", "stopwatch") { StopwatchTool() },
     Tool("Timer", "Zamanlayıcı", "timer") { TimerTool() },
-    Tool("QR reader", "QR okuyucu", "gridView", action = { startQrReader(it) }),
+    Tool("QR reader", "QR okuyucu", "qr", action = { startQrReader(it) }),
     Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
     Tool("DNS and TTL", "DNS ve TTL", "globe", flow = true) { BypassTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },

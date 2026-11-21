@@ -122,6 +122,9 @@ class KbState {
     var alt by mutableIntStateOf(0)
     var win by mutableIntStateOf(0)
     var shiftMod by mutableIntStateOf(0)
+    /** The Shift key is under a finger right now (and whether another key used it): Shift + a key types that key's extra character. */
+    var shiftDown by mutableStateOf(false)
+    var shiftUsed = false
     /** The Fn key was pressed: the twelve F keys replace the key bar until one is chosen. */
     var fnOpen by mutableStateOf(false)
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */

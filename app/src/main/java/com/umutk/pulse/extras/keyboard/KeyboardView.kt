@@ -1141,6 +1141,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
                     try {
                     val key = kNow; val a = actNow
+                    if (key.kind == KeyKind.SHIFT) { st.shiftDown = true; st.shiftUsed = false }
                     a.feedback()
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
                     if (big && KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, key.label)
@@ -1249,12 +1250,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 glide -> a.type(key.label)
                                 long && sel >= 0 && key.alts.isNotEmpty() -> a.type(key.alts[sel.coerceIn(0, key.alts.lastIndex)])
                                 spaceDragged -> {}
-                                long && key.kind == KeyKind.SHIFT -> a.edit("capslock")
+                                long && key.kind == KeyKind.SHIFT -> if (!st.shiftUsed) a.edit("capslock")
                                 !long -> when (key.kind) {
                                     KeyKind.CHAR, KeyKind.COMMA, KeyKind.PERIOD -> {
                                         // a quick flick upwards types the first long-press character
                                         st.touch = if (key.kind == KeyKind.CHAR) curRoot else null
-                                        if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
+                                        if (KeyboardPrefs.holdShiftSymbols && st.shiftDown && key.alts.isNotEmpty()) { st.shiftUsed = true; st.touch = null; a.type(key.alts[0]) }
+                                        else if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
                                     }
                                     KeyKind.MULTI -> {
                                         val (ch, again) = MultiTap.press(key.label)
@@ -1262,7 +1264,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                         a.type(if (st.shift > 0) ch.uppercase() else ch)
                                     }
                                     KeyKind.SPACE -> a.space()
-                                    KeyKind.SHIFT -> a.shift()
+                                    KeyKind.SHIFT -> if (!st.shiftUsed) a.shift()
                                     KeyKind.ENTER -> a.enter()
                                     KeyKind.MODE -> a.page(if (st.page == 0) 1 else 0)
                                     KeyKind.SYMBOLS2 -> a.page(if (st.page == 1) 2 else 1)
@@ -1318,6 +1320,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     }
                     } finally {
                         down = false
+                        if (kNow.kind == KeyKind.SHIFT) st.shiftDown = false
                         st.cursorDrag = false
                         st.preview = null
                         st.trail = emptyList()
