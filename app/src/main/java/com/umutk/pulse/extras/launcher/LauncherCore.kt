@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.remember

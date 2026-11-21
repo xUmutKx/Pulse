@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import com.umutk.pulse.Look
+import com.umutk.pulse.tr
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.Color

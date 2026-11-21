@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent

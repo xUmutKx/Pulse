@@ -116,21 +116,22 @@ object NeofetchText {
         val red = Color(0xFFF25022); val green = Color(0xFF7FBA00); val blue = Color(0xFF00A4EF); val yellow = Color(0xFFFFB900)
         val name = when (look) { "win11" -> "Windows 11"; "win10", "win10black" -> "Windows 10"; "win7" -> "Windows 7"; "xp" -> "Windows XP"; else -> "Windows 95" }
         val art = ArrayList<List<NfSeg>>()
+        fun addRow(r: List<NfSeg>) { art.add(r) }
         when (look) {
             "win10", "win10black" -> listOf(
                 "                                ..,", "                    ....,,:;+ccllll", "      ...,,+:;  cllllllllllllllllll", ",cclllllllllll  lllllllllllllllllll",
                 "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll",
                 "llllllllllllll  lllllllllllllllllll", "", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll",
                 "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "`'ccllllllllll  lllllllllllllllllll", "       `' \\*::  :ccllllllllllllllll",
-                "                       ````''*::cll", "                                 ``").forEach { art += listOf(NfSeg(it, blue)) }
-            "win11" -> { repeat(8) { art += listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue)) }; art += emptyList(); repeat(8) { art += listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue)) } }
+                "                       ````''*::cll", "                                 ``").forEach { addRow(listOf(NfSeg(it, blue))) }
+            "win11" -> { repeat(8) { addRow(listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue))) }; addRow(emptyList()); repeat(8) { addRow(listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue))) } }
             else -> for (half in 0..1) {
                 // the flag of Windows 95, XP and 7: four panes in red, green, blue and yellow (XP and 7 wave a little at the left)
                 repeat(7) { i ->
                     val ind = if (look == "win95") 0 else (6 - i) / 2
-                    art += listOf(NfSeg(" ".repeat(ind)), NfSeg("l".repeat(16 - ind), if (half == 0) red else blue), NfSeg("  "), NfSeg("l".repeat(16), if (half == 0) green else yellow))
+                    addRow(listOf(NfSeg(" ".repeat(ind)), NfSeg("l".repeat(16 - ind), if (half == 0) red else blue), NfSeg("  "), NfSeg("l".repeat(16), if (half == 0) green else yellow)))
                 }
-                if (half == 0) art += emptyList()
+                if (half == 0) addRow(emptyList())
             }
         }
         val width = art.maxOf { r -> r.sumOf { it.text.length } } + 3
