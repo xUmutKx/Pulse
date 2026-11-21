@@ -136,8 +136,8 @@ fun FileMenu(target: File?, dir: File, onClose: () -> Unit, open: (File) -> Unit
             dismissButton = { TextButton({ rename = null }) { Text(tr("Cancel", "İptal")) } })
     }
     ask?.let { f ->
-        AlertDialog(onDismissRequest = { ask = null }, title = { Text(tr("Delete", "Sil")) }, text = { Text(f.name) },
-            confirmButton = { TextButton({ ask = null; f.deleteRecursively(); changed(null) }) { Text(tr("Delete", "Sil")) } },
+        AlertDialog(onDismissRequest = { ask = null }, title = { Text(tr("Delete", "Sil")) }, text = { Text(tr("Move ${f.name} to the Recycle Bin?", "${f.name} Geri Dönüşüm Kutusu'na taşınsın mı?")) },
+            confirmButton = { TextButton({ ask = null; if (!com.umutk.pulse.features.RecycleBin.trash(f)) f.deleteRecursively(); changed(null) }) { Text(tr("Delete", "Sil")) } },
             dismissButton = { TextButton({ ask = null }) { Text(tr("Cancel", "İptal")) } })
     }
 }
