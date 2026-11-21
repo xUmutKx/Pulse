@@ -371,3 +371,40 @@ fun rememberWidgetAdd(onAdded: () -> Unit): (AppWidgetProviderInfo) -> Unit {
 /** The sticky note widget of Pulse (the same one any launcher can place), so the desktop's note is a real widget: one note per widget, edited by a tap. */
 fun stickyNoteProvider(c: Context): AppWidgetProviderInfo? =
     AppWidgetManager.getInstance(c).installedProviders.firstOrNull { it.provider.packageName == c.packageName && it.provider.className.endsWith("StickyNoteWidget") }
+
+/**
+ * The home with a page for each placed widget: swipe sideways from one to the next (round and round when Loop is on), a row of dots says where you are.
+ * Widgets are drawn at their own size (never cut), at the top of the page; the rest of the page is the wallpaper.
+ */
+@Composable
+fun LauncherWidgetPages(modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val host = LauncherWidgetHost.get(ctx)
+    val mgr = AppWidgetManager.getInstance(ctx)
+    val placed = LauncherPrefs.widgets
+    DisposableEffect(host) { host.startListening(); onDispose { host.stopListening() } }
+    val list = remember(placed) { placedWidgets().filter { mgr.getAppWidgetInfo(it.id) != null } }
+    if (list.isEmpty()) return
+    val loop = LauncherPrefs.loopScroll && list.size > 1
+    val start = if (loop) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % list.size) else 0
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = start, pageCount = { if (loop) Int.MAX_VALUE else list.size })
+    androidx.compose.foundation.layout.Column(modifier) {
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth()) { i ->
+            val w = list[i % list.size]
+            val info = mgr.getAppWidgetInfo(w.id)
+            if (info != null) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                AndroidView(
+                    factory = { c -> host.createView(c, w.id, info) },
+                    update = { it.setAppWidget(w.id, info) },
+                    modifier = Modifier.fillMaxWidth().height(info.minHeight.coerceAtLeast(80).dp),
+                )
+            }
+        }
+        if (list.size > 1) androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center) {
+            repeat(list.size) { d ->
+                androidx.compose.foundation.layout.Box(Modifier.padding(3.dp).size(6.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = if (pager.currentPage % list.size == d) .95f else .35f)))
+            }
+        }
+    }
+}

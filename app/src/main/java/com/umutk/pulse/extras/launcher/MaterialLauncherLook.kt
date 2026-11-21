@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -100,7 +101,9 @@ class MaterialLauncherLook(
         val shape = RoundedCornerShape(28.dp)
         // a floating dock: a rounded tonal surface over the page, inset from the rounded screen corners
         Row(modifier.padding(horizontal = maxOf(12.dp, edge), vertical = 12.dp).shadow(if (black) 0.dp else 4.dp, shape).clip(shape)
-            .background(high()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            .background(if (LauncherPrefs.dockGlass) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f * LauncherPrefs.dockAlpha / 100f + .06f) else high().copy(alpha = LauncherPrefs.dockAlpha / 100f))
+            .then(if (LauncherPrefs.dockGlass) Modifier.border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .28f), shape) else Modifier)
+            .padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).clip(CircleShape).background(acc().copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
                 contentAlignment = Alignment.Center) {
                 PIcon("apps", acc(), 24.dp)
@@ -191,7 +194,7 @@ class MaterialLauncherLook(
         val fg = fg()
         Column(modifier.padding(vertical = 6.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             LaunchAppPicture(app, iconDp.dp, pill(), fg)
-            Text(app.label, color = fg, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+            Text(app.label, color = fg, fontSize = 12.sp, maxLines = if (LauncherPrefs.twoLineLabels) 2 else 1, lineHeight = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }

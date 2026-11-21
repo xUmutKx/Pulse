@@ -135,6 +135,25 @@ object LauncherPrefs {
     var gPinchIn by mutableStateOf("none")
     var gPinchOut by mutableStateOf("none")
     /** The page the home opens on and goes back to with the home button (0 = the first). */
+    // ---- Nova- and Smart Launcher-style extras ----
+    /** Each placed widget has a page of its own on the home screen (swipe between them), instead of one scrolling row. */
+    var widgetPages by mutableStateOf(false)
+    /** The pages of widgets (and the home pages) go round: after the last one comes the first. */
+    var loopScroll by mutableStateOf(false)
+    /** The Material dock and search field as frosted glass (see-through, a light edge) and how solid the dock is, 20..100 percent. */
+    var dockGlass by mutableStateOf(false)
+    var dockAlpha by mutableStateOf(100)
+    /** App names under the icons may take two lines. */
+    var twoLineLabels by mutableStateOf(false)
+    /** Another grid for the turned phone (0 = the same as upright). */
+    var landColumns by mutableStateOf(0)
+    var landRows by mutableStateOf(0)
+    /** Apps not opened for this many days are left out of the apps list (0 = off); the folders, the dock and the home screen still find them. */
+    var hideUnusedDays by mutableStateOf(0)
+    /** A copy of these settings is kept every day (the last seven). */
+    var dailyBackup by mutableStateOf(false)
+    /** The web search of the launcher: google, duckduckgo, bing, brave, yandex or startpage. */
+    var searchEngine by mutableStateOf("google")
     var homePage by mutableStateOf(0)
     var gUp by mutableStateOf("none")
     var gDown by mutableStateOf("none")
@@ -225,7 +244,7 @@ object LauncherPrefs {
         tileSizes = p.stringPropertyNames().filter { it.startsWith("tile.") }.associate { it.removePrefix("tile.") to p.getProperty(it) }
         rows = p.getProperty("rows")?.toIntOrNull()?.coerceIn(3, 8) ?: 4; pageEffect = p.getProperty("pageEffect") ?: "simple"; pageDots = p.getProperty("pageDots") != "false"
         dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
-        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen2") != "false"; loginScreen = p.getProperty("loginScreen2") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen2") != "false"; loginScreen = p.getProperty("loginScreen2") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty(); widgetPages = p.getProperty("widgetPages") == "true"; loopScroll = p.getProperty("loopScroll") == "true"; dockGlass = p.getProperty("dockGlass") == "true"; dockAlpha = p.getProperty("dockAlpha")?.toIntOrNull()?.coerceIn(20, 100) ?: 100; twoLineLabels = p.getProperty("twoLineLabels") == "true"; landColumns = p.getProperty("landColumns")?.toIntOrNull() ?: 0; landRows = p.getProperty("landRows")?.toIntOrNull() ?: 0; hideUnusedDays = p.getProperty("hideUnusedDays")?.toIntOrNull() ?: 0; dailyBackup = p.getProperty("dailyBackup") == "true"; searchEngine = p.getProperty("searchEngine") ?: "google"
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         links = p.getProperty("links").orEmpty().split('|').filter { it.isNotBlank() }
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
@@ -291,7 +310,7 @@ object LauncherPrefs {
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString()); p.setProperty("wpSideDock", wpSideDock.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
-        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack); p.setProperty("widgetPages", widgetPages.toString()); p.setProperty("loopScroll", loopScroll.toString()); p.setProperty("dockGlass", dockGlass.toString()); p.setProperty("dockAlpha", dockAlpha.toString()); p.setProperty("twoLineLabels", twoLineLabels.toString()); p.setProperty("landColumns", landColumns.toString()); p.setProperty("landRows", landRows.toString()); p.setProperty("hideUnusedDays", hideUnusedDays.toString()); p.setProperty("dailyBackup", dailyBackup.toString()); p.setProperty("searchEngine", searchEngine)
         p.setProperty("homeOrder", homeOrder.joinToString(",")); p.setProperty("links", links.joinToString("|"))
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
@@ -323,7 +342,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
@@ -336,6 +355,26 @@ object LauncherPrefs {
         save(c)
         val out = File(com.umutk.pulse.PulseDirs.sub("Backup"), "PulseLauncher.properties").also { it.parentFile?.mkdirs() }
         file(c).copyTo(out, overwrite = true); true
+    }.getOrDefault(false)
+
+    /** Once a day (when the launcher opens and Daily backup is on) the settings file is copied to Backup/launcher/; the last seven are kept. */
+    fun dailyBackupIfDue(c: Context) {
+        if (!dailyBackup) return
+        Thread {
+            runCatching {
+                val dir = File(com.umutk.pulse.PulseDirs.sub("Backup"), "launcher").also { it.mkdirs() }
+                val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+                val today = File(dir, "PulseLauncher-$day.properties")
+                if (!today.isFile) { save(c); file(c).copyTo(today, overwrite = true) }
+                dir.listFiles()?.filter { it.name.startsWith("PulseLauncher-") }?.sortedByDescending { it.name }?.drop(7)?.forEach { it.delete() }
+            }
+        }.start()
+    }
+
+    /** Puts the newest daily copy back. False when there is none. */
+    fun restoreDaily(c: Context): Boolean = runCatching {
+        val f = File(File(com.umutk.pulse.PulseDirs.sub("Backup"), "launcher"), "x").parentFile?.listFiles()?.filter { it.name.startsWith("PulseLauncher-") }?.maxByOrNull { it.name } ?: return false
+        f.copyTo(file(c), overwrite = true); load(c); true
     }.getOrDefault(false)
 
     fun importSettings(c: Context): Boolean = runCatching {

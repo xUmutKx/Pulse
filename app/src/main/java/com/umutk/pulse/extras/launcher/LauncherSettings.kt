@@ -192,6 +192,27 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
         }
         if (cat == "home") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // the owner's ready-made set-up of the apps list (folders, hidden tools, dock, 5 x 6 grid): only when asked for
+            // the extras of the big launchers: a page for each widget, loops, labels, another grid for the turned phone, unused apps, backups, the web search
+            SwitchLine("widgets", tr("A page for each widget", "Her widget için bir sayfa"), LauncherPrefs.widgetPages) { LauncherPrefs.widgetPages = it; save() }
+            SwitchLine("rotate", tr("Pages go round (infinite scroll)", "Sayfalar baştan dönsün (sonsuz kaydırma)"), LauncherPrefs.loopScroll) { LauncherPrefs.loopScroll = it; save() }
+            SwitchLine("rename", tr("Names may take two lines", "Adlar iki satır olabilsin"), LauncherPrefs.twoLineLabels) { LauncherPrefs.twoLineLabels = it; save() }
+            SliderRow("${tr("Turned phone: columns", "Yatay ekran: sütun")}: ${if (LauncherPrefs.landColumns == 0) tr("same", "aynı") else LauncherPrefs.landColumns.toString()}", LauncherPrefs.landColumns.toFloat(), 0f..12f) {
+                LauncherPrefs.landColumns = it.roundToInt(); save()
+            }
+            SliderRow("${tr("Turned phone: rows", "Yatay ekran: satır")}: ${if (LauncherPrefs.landRows == 0) tr("same", "aynı") else LauncherPrefs.landRows.toString()}", LauncherPrefs.landRows.toFloat(), 0f..12f) {
+                LauncherPrefs.landRows = it.roundToInt(); save()
+            }
+            SliderRow("${tr("Hide apps not opened for days", "Şu kadar gündür açılmayan uygulamaları gizle")}: ${if (LauncherPrefs.hideUnusedDays == 0) tr("off", "kapalı") else LauncherPrefs.hideUnusedDays.toString()}", LauncherPrefs.hideUnusedDays.toFloat(), 0f..90f) {
+                LauncherPrefs.hideUnusedDays = it.roundToInt(); save()
+            }
+            SwitchLine("history", tr("Daily backup of these settings", "Bu ayarların günlük yedeği"), LauncherPrefs.dailyBackup) { LauncherPrefs.dailyBackup = it; save() }
+            if (LauncherPrefs.dailyBackup) ValueRow("history", tr("Bring back the last daily backup", "Son günlük yedeği geri getir"), "") {
+                android.widget.Toast.makeText(ctx, if (LauncherPrefs.restoreDaily(ctx)) tr("Restored", "Geri getirildi") else tr("No backup yet", "Yedek yok"), android.widget.Toast.LENGTH_SHORT).show()
+            }
+            ValueRow("search", tr("Web search", "Web araması"), LauncherPrefs.searchEngine) {
+                val all = listOf("google", "duckduckgo", "bing", "brave", "yandex", "startpage")
+                LauncherPrefs.searchEngine = all[(all.indexOf(LauncherPrefs.searchEngine) + 1) % all.size]; save()
+            }
             ValueRow("folder", tr("Set up like my phone", "Telefonum gibi kur"), "") {
                 Thread {
                     val n = MyLayout.apply(ctx, loadApps(ctx))
@@ -215,6 +236,11 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 if (it) (ctx as? android.app.Activity)?.let { a -> androidx.core.app.ActivityCompat.requestPermissions(a, arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.CALL_PHONE), 7301) }
             }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock gadget", "Masaüstü saat gadget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
+            // frosted glass for the dock of the Material looks, and how solid the dock is
+            if (cur.id in setOf("material", "amoled", "oneui", "coloros")) {
+                SwitchLine("palette", tr("Glass dock", "Cam dock"), LauncherPrefs.dockGlass) { LauncherPrefs.dockGlass = it; save() }
+                SliderRow("${tr("Dock solidity", "Dock yoğunluğu")}: ${LauncherPrefs.dockAlpha}%", LauncherPrefs.dockAlpha.toFloat(), 20f..100f) { LauncherPrefs.dockAlpha = it.roundToInt(); save() }
+            }
             // the Material looks can take the phone's own colours (Material You)
             if (cur.id in setOf("material", "amoled", "oneui", "coloros") && DeviceAccent.available) {
                 var dev by remember { mutableStateOf(DeviceAccent.on(ctx)) }

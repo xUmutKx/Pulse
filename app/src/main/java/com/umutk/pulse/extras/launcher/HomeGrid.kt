@@ -99,7 +99,8 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     val view = LocalView.current
     val density = LocalDensity.current.density
     val items = remember(visible, LauncherPrefs.homeOrder, LauncherPrefs.folders, LauncherPrefs.folderOff) { resolveHome(visible) }
-    val perPage = columns * LauncherPrefs.rows
+    val landNow = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val perPage = columns * (if (landNow && LauncherPrefs.landRows > 0) LauncherPrefs.landRows else LauncherPrefs.rows)
     var dragKey by remember { mutableStateOf<String?>(null) }
     var finger by remember { mutableStateOf(Offset.Zero) }
     var moved by remember { mutableFloatStateOf(0f) }

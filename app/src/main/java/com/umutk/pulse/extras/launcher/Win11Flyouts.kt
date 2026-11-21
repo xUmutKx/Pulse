@@ -232,7 +232,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 }
                 if (q.isNotBlank() && (kind == 0 || kind == 3)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable {
                     LauncherSession.w11SearchOpen = false
-                    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(q.trim()))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(searchUrl(q.trim()))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Glyph("search", Color.White, 20.dp)
                     Text(tr("Search the web for \"", "Webde ara: \"") + q.trim() + "\"", color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
@@ -364,5 +364,19 @@ private fun WinXMenu(taskbar: Dp) {
         }
         if (w11) AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) { body() }
         else Box(place.background(Color(0xFF1F1F1F)).border(1.dp, Color(0xFF3A3A3A)).clickable(interactionSource = none, indication = null) {}) { body() }
+    }
+}
+
+
+/** The address of a web search in the launcher's chosen search engine. */
+internal fun searchUrl(q: String): String {
+    val e = Uri.encode(q)
+    return when (LauncherPrefs.searchEngine) {
+        "duckduckgo" -> "https://duckduckgo.com/?q=$e"
+        "bing" -> "https://www.bing.com/search?q=$e"
+        "brave" -> "https://search.brave.com/search?q=$e"
+        "yandex" -> "https://yandex.com/search/?text=$e"
+        "startpage" -> "https://www.startpage.com/do/search?q=$e"
+        else -> "https://www.google.com/search?q=$e"
     }
 }

@@ -161,7 +161,7 @@ class LauncherActivity : ComponentActivity() {
         }
     }
     override fun onStart() { enter(); super.onStart() }
-    override fun onResume() { enter(); super.onResume(); PhoneWall.sync(this, LauncherPrefs.look) }
+    override fun onResume() { enter(); super.onResume(); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
     override fun onStop() { super.onStop(); LauncherPrefs.restorePulse(); AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); AppLookGuard.leave(this) }
 }
@@ -428,7 +428,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val vertical = LauncherPrefs.vertical
     // turned sideways, the same few columns would sit far apart: the columns follow the width (about one per 100 dp)
     val screenCfg = androidx.compose.ui.platform.LocalConfiguration.current
-    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) maxOf(LauncherPrefs.columns.coerceIn(2, 12), (screenCfg.screenWidthDp / 100).coerceIn(4, 10)) else LauncherPrefs.columns.coerceIn(2, 12)
+    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) (if (LauncherPrefs.landColumns > 0) LauncherPrefs.landColumns.coerceIn(2, 12) else maxOf(LauncherPrefs.columns.coerceIn(2, 12), (screenCfg.screenWidthDp / 100).coerceIn(4, 10))) else LauncherPrefs.columns.coerceIn(2, 12)
     // a tablet's screen is far bigger than a phone's: the same icon size left the icons tiny between wide gaps, so they are drawn a third bigger there
     val tabletScale = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 1.35f else 1f
     val iconDp = (LauncherPrefs.iconDp.coerceIn(24, 64) * tabletScale).toInt()
@@ -436,7 +436,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val sort = LauncherPrefs.sort
     val usage = LauncherPrefs.usage
     val visible = remember(apps, hidden, sort, usage) {
-        val list = apps.filter { it.pkg !in hidden }
+        // apps not opened for a number of days (a setting) are left out of the list; one installed lately is not counted as unused
+        val limit = if (LauncherPrefs.hideUnusedDays > 0) System.currentTimeMillis() - LauncherPrefs.hideUnusedDays * 86_400_000L else 0L
+        val list = apps.filter { it.pkg !in hidden && (limit == 0L || it.pkg.startsWith("pulse:") || (usage[it.pkg] ?: it.installed) >= limit) }
         when (sort) {
             "installed" -> list.sortedWith(compareByDescending<LaunchApp> { it.installed }.thenBy { it.label.lowercase() })
             "opened" -> list.sortedWith(compareByDescending<LaunchApp> { usage[it.pkg] ?: 0L }.thenBy { it.label.lowercase() })
@@ -496,7 +498,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             if (!look.id.startsWith("winphone") || LauncherPrefs.wpSideDock) look.SideDock(state, Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
-            if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())
+            if (!(desktop && !LauncherPrefs.homeApps)) { if (LauncherPrefs.widgetPages) LauncherWidgetPages(Modifier.fillMaxWidth()) else LauncherWidgetStrip(Modifier.fillMaxWidth()) }
             // the taskbar: a long press opens its own menu (Task Manager, auto-hide, settings); hidden, a thin edge strip brings it back for a moment
             if (look.taskbarTop && LauncherPrefs.dockShown) {
                 val hide = look.id in WINDOWS_LOOKS && LauncherPrefs.taskbarAutoHide && !LauncherSession.taskbarPeek && !LauncherSession.startOpen && !LauncherSession.clockOpen

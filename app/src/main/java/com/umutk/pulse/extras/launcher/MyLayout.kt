@@ -53,6 +53,7 @@ object MyLayout {
         val dock = DOCK.mapNotNull { find(real, it)?.pkg }
         if (dock.size == DOCK.size) LauncherPrefs.dock = dock
         LauncherPrefs.columns = 5; LauncherPrefs.drawerColumns = 5; LauncherPrefs.rows = 6
+        LauncherPrefs.widgetPages = true
         // Pulse's own weather and music widgets go on the home screen (once; one already there stays as it is)
         runCatching {
             val host = LauncherWidgetHost.get(ctx)
