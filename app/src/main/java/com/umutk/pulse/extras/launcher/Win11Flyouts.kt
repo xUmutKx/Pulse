@@ -320,7 +320,8 @@ private fun RunBox(taskbar: Dp) {
     fun go() {
         val c = text.trim().lowercase().removeSuffix(".exe").removeSuffix(".msc")
         val id = when (c) {
-            "cmd", "powershell", "pwsh", "terminal", "wt", "command", "conhost" -> "pulse:cmd"
+            "terminal", "wt" -> "pulse:terminal"
+            "cmd", "powershell", "pwsh", "command", "conhost" -> "pulse:cmd"
             "taskmgr", "task manager", "perfmon", "resmon" -> "pulse:taskmgr"
             "control", "control panel", "appwiz.cpl", "main.cpl" -> "pulse:settings"
             "settings", "ms-settings:", "ms-settings", "winver", "msinfo32" -> "pulse:winsettings"

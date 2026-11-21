@@ -264,6 +264,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
     LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+    LaunchApp("Terminal", "pulse:terminal", null, iconKey = "run"),
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
     LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
     LaunchApp(tr("Settings", "Ayarlar"), "pulse:winsettings", null, iconKey = "settings"),
@@ -444,7 +445,7 @@ internal fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     }
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
-            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:taskmgr" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
+            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:taskmgr" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:cmd" to tr("Command Prompt", "Komut İstemi"); "pulse:terminal" -> "page:terminal" to "Terminal"
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:winsettings" -> (if (lookId == "win7" || lookId == "xp" || lookId == "win95") "controlpanel" to tr("Control Panel", "Denetim Masası") else "winsettings" to tr("Settings", "Ayarlar")); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:regedit" -> "win:regedit" to tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"); "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")

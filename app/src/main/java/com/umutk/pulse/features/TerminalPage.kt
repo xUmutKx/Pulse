@@ -115,7 +115,7 @@ private fun ansi(src: String, base: Color): androidx.compose.ui.text.AnnotatedSt
 }
 
 /** The neofetch card as the terminal prints it: ANSI colour codes around each run. */
-private fun neofetchOut(ctx: android.content.Context): String = NeofetchText.lines(ctx).joinToString("\n") { line ->
+private fun neofetchOut(ctx: android.content.Context, windowsLook: String? = null): String = (if (windowsLook != null) NeofetchText.windowsLines(ctx, windowsLook) else NeofetchText.lines(ctx)).joinToString("\n") { line ->
     line.joinToString("") { s ->
         val c = s.color
         if (c == null && !s.bold) s.text
@@ -128,7 +128,7 @@ private fun neofetchOut(ctx: android.content.Context): String = NeofetchText.lin
  * `neofetch` is built in, so the phone answers it as if it were installed; the colour codes of any program are drawn.
  */
 @Composable
-fun TerminalPage() {
+fun TerminalPage(windows: Boolean = false) {
     val ctx = LocalContext.current
     val home = remember { ctx.filesDir.absolutePath }
     var cmd by remember { mutableStateOf("") }
@@ -148,7 +148,7 @@ fun TerminalPage() {
         while (termHistory.size > 20) termHistory.removeAt(termHistory.lastIndex)
         if (!TermSession.alive) TermSession.start(TermSession.cwd.ifEmpty { home }, TermSession.asRoot)
         // neofetch is part of the terminal, as if it were installed
-        if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx); cmd = ""; return }
+        if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx, if (windows) com.umutk.pulse.T.id else null); cmd = ""; return }
         if (c == "clear") { TermSession.text = ""; cmd = ""; return }
         TermSession.send(c); cmd = ""
     }

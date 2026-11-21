@@ -190,6 +190,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "page:settings" -> SettingsPage()
         id == "page:recycle" -> com.umutk.pulse.features.RecycleBinPage()
         id == "page:terminal" -> com.umutk.pulse.features.TerminalPage()
+        id == "page:cmd" -> com.umutk.pulse.features.TerminalPage(windows = true)
         id == "page:files" -> com.umutk.pulse.features.FilesPage()
     }
 }
