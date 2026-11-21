@@ -664,10 +664,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             return
         }
         // a code file: the code editor (colours by language, folding, search); other text goes to the text editor as before
-        if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
+        if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.extension.lowercase() != "md" && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
-        // plain text of any name or extension (.md, .log, .conf, .env ...): opens in the editor at once
-        if (f.isFile && f.length() in 1..6_000_000L && exLooksText(f)) { recents = exAddRecent(ctx, f); codeView = f; return }
+        // plain text of any name or extension (.md, .log, .conf, .env ...): opens in Files' own text viewer as it did (the code editor is in the file's menu and "Open as")
+        if (f.isFile && f.length() in 1..6_000_000L && exLooksText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
         // a file of no known type always asks how to open it (with or without an extension)
         if (f.extension.isEmpty() || fileMime(f) == "*/*") { openAsAsk = f; return }
         recents = exAddRecent(ctx, f)
