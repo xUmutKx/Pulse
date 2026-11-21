@@ -2,6 +2,7 @@ package com.umutk.pulse.features
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.draw.rotate
@@ -114,7 +115,7 @@ private fun ansi(src: String, base: Color): androidx.compose.ui.text.AnnotatedSt
 }
 
 /** The neofetch card as the terminal prints it: ANSI colour codes around each run. */
-private fun neofetchOut(ctx: android.content.Context): String = NeofetchText.lines(ctx).joinToString("\n") { line ->
+private fun neofetchOut(ctx: android.content.Context, windowsLook: String? = null): String = (if (windowsLook != null) NeofetchText.windowsLines(ctx, windowsLook) else NeofetchText.lines(ctx)).joinToString("\n") { line ->
     line.joinToString("") { s ->
         val c = s.color
         if (c == null && !s.bold) s.text
@@ -127,12 +128,16 @@ private fun neofetchOut(ctx: android.content.Context): String = NeofetchText.lin
  * `neofetch` is built in, so the phone answers it as if it were installed; the colour codes of any program are drawn.
  */
 @Composable
-fun TerminalPage() {
+fun TerminalPage(windows: Boolean = false) {
     val ctx = LocalContext.current
     val home = remember { ctx.filesDir.absolutePath }
     var cmd by remember { mutableStateOf("") }
     val scroll = rememberScrollState()
-    LaunchedEffect(Unit) { if (!TermSession.alive) TermSession.start(home, false) }
+    LaunchedEffect(Unit) {
+        if (!TermSession.alive) TermSession.start(home, false)
+        // the session goes on in the background, with its notification and wake lock
+        runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, android.content.Intent(ctx, TermService::class.java)) }
+    }
     LaunchedEffect(TermSession.text.length) { scroll.animateScrollTo(scroll.maxValue) }
     val fg = Color(0xFFE6E6E6); val green = Color(0xFF3DDC84)
     var hi by remember { mutableStateOf(-1) }
@@ -143,14 +148,27 @@ fun TerminalPage() {
         while (termHistory.size > 20) termHistory.removeAt(termHistory.lastIndex)
         if (!TermSession.alive) TermSession.start(TermSession.cwd.ifEmpty { home }, TermSession.asRoot)
         // neofetch is part of the terminal, as if it were installed
-        if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx); cmd = ""; return }
+        if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx, if (windows) com.umutk.pulse.T.id else null); cmd = ""; return }
         if (c == "clear") { TermSession.text = ""; cmd = ""; return }
         TermSession.send(c); cmd = ""
     }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 10.dp, vertical = 8.dp)) {
+    // Windows 11: the terminal window is see-through (the desktop shows behind the text), as Settings is
+    val deskWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current
+    val glass = deskWin != null && com.umutk.pulse.T.id == "win11"
+    androidx.compose.runtime.DisposableEffect(deskWin, glass) { if (glass) deskWin?.glass = true; onDispose { if (glass) deskWin?.glass = false } }
+    var size by remember { mutableStateOf(12) }
+    // the page lifts itself above the keyboard (once): the page host does not do it too, which had left an empty band as tall as the keyboard under the input line
+    androidx.compose.runtime.DisposableEffect(Unit) { com.umutk.pulse.ImeFree.on = true; onDispose { com.umutk.pulse.ImeFree.on = false } }
+    val cm = remember { ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager }
+    Column(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (glass) .5f else .62f)).imePadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
         // the window's title line and its few buttons
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("pulse@phone" + if (TermSession.asRoot) " (root)" else "", color = green, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f), maxLines = 1)
+            // copy the whole output, paste into the command line, and the text size (the output itself can be selected by holding a word)
+            Text("copy", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { cm.setPrimaryClip(android.content.ClipData.newPlainText("terminal", TermSession.shown)); android.widget.Toast.makeText(ctx, "Copied", android.widget.Toast.LENGTH_SHORT).show() }.padding(4.dp))
+            Text("paste", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { cmd += cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty().replace('\n', ' ') }.padding(4.dp))
+            Text("A-", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { size = (size - 1).coerceAtLeast(8) }.padding(4.dp))
+            Text("A+", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { size = (size + 1).coerceAtMost(24) }.padding(4.dp))
             Text("^C", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.interrupt() }.padding(4.dp))
             Text("clear", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.text = "" }.padding(4.dp))
             if (Shell.root == true) Text(if (TermSession.asRoot) "sh" else "su", color = fg, fontSize = 13.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.clickable { TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot) }.padding(4.dp))
@@ -159,7 +177,9 @@ fun TerminalPage() {
             // the colour codes are worked out once per output, not on every frame (up to 60,000 characters)
             val shownText = TermSession.shown
             val coloured = remember(shownText) { ansi(shownText, fg) }
-            Text(coloured, color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(coloured, color = fg, fontSize = size.sp, fontFamily = FontFamily.Monospace, lineHeight = (size + 3).sp)
+            }
         }
         Text(TermSession.cwd, color = Color(0xFF729FCF), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,4 +192,30 @@ fun TerminalPage() {
             Text("\u2191", color = fg, fontSize = 18.sp, modifier = Modifier.clickable { if (termHistory.isNotEmpty()) { hi = (hi + 1).coerceAtMost(termHistory.lastIndex); cmd = termHistory[hi] } }.padding(8.dp))
         }
     }
+}
+
+/**
+ * Keeps the terminal's shell running while Pulse is in the background, as Termux does: a notification says a session is open (with a Stop button) and a partial wake lock keeps
+ * the processor awake for it. It ends with the shell (or at Stop), and the lock goes with it.
+ */
+class TermService : android.app.Service() {
+    private var wl: android.os.PowerManager.WakeLock? = null
+    private val h = android.os.Handler(android.os.Looper.getMainLooper())
+    private val check: Runnable = object : Runnable { override fun run() { if (!TermSession.alive) stopSelf() else h.postDelayed(this, 5000) } }
+    override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
+    override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
+        if (i?.action == "stop") { TermSession.stop(); stopSelf(); return START_NOT_STICKY }
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("terminal", "Terminal", android.app.NotificationManager.IMPORTANCE_LOW))
+        val stop = android.app.PendingIntent.getService(this, 0, android.content.Intent(this, TermService::class.java).setAction("stop"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = androidx.core.app.NotificationCompat.Builder(this, "terminal").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_terminal)
+            .setContentTitle(com.umutk.pulse.tr("Terminal session open", "Terminal oturumu açık")).setContentText(com.umutk.pulse.tr("The shell keeps running in the background", "Kabuk arka planda çalışmaya devam ediyor"))
+            .setOngoing(true).addAction(0, com.umutk.pulse.tr("Stop", "Durdur"), stop).build()
+        if (android.os.Build.VERSION.SDK_INT >= 34) androidx.core.app.ServiceCompat.startForeground(this, 7301, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        else startForeground(7301, n)
+        if (wl == null) wl = (getSystemService(POWER_SERVICE) as android.os.PowerManager).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "pulse:terminal").apply { setReferenceCounted(false); acquire() }
+        h.removeCallbacks(check); h.postDelayed(check, 5000)
+        return START_NOT_STICKY
+    }
+    override fun onDestroy() { h.removeCallbacks(check); runCatching { wl?.release() }; wl = null; super.onDestroy() }
 }

@@ -15,7 +15,7 @@ import java.util.Properties
  * cached, so a change saved from Pulse's process would never reach it (the look "did not change").
  */
 object LauncherPrefs {
-    var look by mutableStateOf("material")
+    var look by mutableStateOf("win11")
     var vertical by mutableStateOf(false)
     var columns by mutableStateOf(5)
     var iconDp by mutableStateOf(48)
@@ -32,13 +32,15 @@ object LauncherPrefs {
     var trayHidden by mutableStateOf<Set<String>>(emptySet())
     var clock by mutableStateOf(false)
     /** The clock widget on the Windows desktops (on at first; the cross on it turns it off). */
-    var desktopClock by mutableStateOf(true)
+    var desktopClock by mutableStateOf(false)
+    /** Windows 11 start button: the blue Windows 11 mark (false) or its four panes in the launcher's accent colour. */
+    var startLogoAccent by mutableStateOf(false)
     /** The Windows 7 style notes gadget on the desktop (off at first). */
     var desktopNote by mutableStateOf(false)
     /** Off (the default): the home screen shows no app grid. Windows looks show the desktop shortcuts, the other looks the clock, widgets and dock; the apps are in the apps list. */
     var homeApps by mutableStateOf(false)
     /** Apps open in a window of their own on the Windows looks (the system's freeform windows); without that mode they open full screen as usual. */
-    var windowed by mutableStateOf(false)
+    var windowed by mutableStateOf(true)
     var lockPortrait by mutableStateOf(false)
     var fullScreen by mutableStateOf(false)
     /** The Windows Phone look's dock on the left edge (off by default: the tiles cover the whole screen). */
@@ -76,6 +78,8 @@ object LauncherPrefs {
     var wallDaily by mutableStateOf(false)
     /** A wallpaper file chosen from the "more wallpapers" packs (path); empty: the look's stock pictures. */
     var wallFile by mutableStateOf("")
+    /** The person's own picture for the turned phone (the one in [wallFile] is for the phone held upright); with only one chosen, it serves both. */
+    var wallFileLand by mutableStateOf("")
     /** The screen stays on while the home is shown. */
     var keepOn by mutableStateOf(false)
     /** A short tick on a long press. */
@@ -133,6 +137,50 @@ object LauncherPrefs {
     var gPinchIn by mutableStateOf("none")
     var gPinchOut by mutableStateOf("none")
     /** The page the home opens on and goes back to with the home button (0 = the first). */
+    // ---- Nova- and Smart Launcher-style extras ----
+    /** Each placed widget has a page of its own on the home screen (swipe between them), instead of one scrolling row. */
+    var widgetPages by mutableStateOf(false)
+    /** The pages of widgets (and the home pages) go round: after the last one comes the first. */
+    var loopScroll by mutableStateOf(false)
+    /** Alt+Tab of a keyboard is taken by the launcher's own window switcher (Android's app switch is blocked while the launcher is in front). On by default. */
+    var blockAltTab by mutableStateOf(true)
+    /** A window dragged to the side edge snaps to a half of the screen (the top edge maximises it). Off by default; Settings turns it on. */
+    var dragSnap by mutableStateOf(false)
+    /** A small window lays its page out at the width of a phone and shows it scaled down, so more of the page is in view. On by default. */
+    var fitWindows by mutableStateOf(true)
+    /** The Material dock and search field as frosted glass (see-through, a light edge) and how solid the dock is, 20..100 percent. */
+    var dockGlass by mutableStateOf(false)
+    var dockAlpha by mutableStateOf(100)
+    /** App names under the icons may take two lines. */
+    var twoLineLabels by mutableStateOf(false)
+    /** Another grid for the turned phone (0 = the same as upright). */
+    var landColumns by mutableStateOf(0)
+    var landRows by mutableStateOf(0)
+    /** Apps not opened for this many days are left out of the apps list (0 = off); the folders, the dock and the home screen still find them. */
+    var hideUnusedDays by mutableStateOf(0)
+    /** A copy of these settings is kept every day (the last seven). */
+    var dailyBackup by mutableStateOf(false)
+    /** The web search of the launcher: google, duckduckgo, bing, brave, yandex or startpage. */
+    var searchEngine by mutableStateOf("google")
+    /** The old Windows looks (95, XP, 7) keep to their originals: none of the newer extras (smart folders, tap animations, going round) touch them. */
+    val classicWin: Boolean get() = look == "win95" || look == "xp" || look == "win7"
+    /** What an icon does when it is tapped: none, zoom, flip, rotate or bounce. */
+    var iconAnim by mutableStateOf("none")
+    /** The phone's wallpaper slides a little as the pages are swiped (the Material looks, which show it). */
+    var wallScroll by mutableStateOf(false)
+    /** The size the person gave a placed widget (widget id -> "width,height" in dp); a widget without one has the size its maker asked for. */
+    var widgetSizes by mutableStateOf<Map<String, String>>(emptyMap())
+    /** Windows 11: the black of the apps in windows is see-through (dark glass over the blurred desktop) instead of solid. */
+    var glassApps by mutableStateOf(true)
+    /** The items of the Win+X menu, in the order shown (keys of WINX_KEYS); empty = all of them in their usual order. */
+    var winX by mutableStateOf("")
+    /** Smart folders: the apps list gathers the apps of each store category (games, media, communication ...) into a folder by itself, new apps join on their own. */
+    var smartFolders by mutableStateOf(false)
+    /** Two fingers swiped together on the home: up, down, left, right (a gesture action each; "none" by default). */
+    var gDualUp by mutableStateOf("none")
+    var gDualDown by mutableStateOf("none")
+    var gDualLeft by mutableStateOf("none")
+    var gDualRight by mutableStateOf("none")
     var homePage by mutableStateOf(0)
     var gUp by mutableStateOf("none")
     var gDown by mutableStateOf("none")
@@ -140,6 +188,8 @@ object LauncherPrefs {
     var badges by mutableStateOf(true)
     /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
     var iconPack by mutableStateOf("")
+    /** The name the Start menu shows for this phone (empty: the phone's model). */
+    var deviceName by mutableStateOf("")
     /** The order of the home grid: "app:<package>" and "f:<folder id>" entries; apps not listed follow in the usual order. */
     /** Things put on the home screen by hand: "file:<path>" (a file, a picture or a folder) and "app:<package>". */
     var links by mutableStateOf<List<String>>(emptyList())
@@ -159,6 +209,8 @@ object LauncherPrefs {
     var snapWidgets by mutableStateOf(true)
     /** The search of the start menu also finds people of the contacts, with a button that calls them at once (off by default). */
     var searchContacts by mutableStateOf(false)
+    /** The Windows 11 Start menu shows the phone companion panel on its right (always on a turned screen; this turns it on upright too). */
+    var phonePanel by mutableStateOf(false)
     /** The launcher's own accent colour (the Windows 11 look): off, it follows the look; on, [accentArgb]. Not Pulse's accent: the launcher keeps its own. */
     // the launcher's own accent is on by default, in Windows blue (not the app's accent)
     var accentOn by mutableStateOf(true)
@@ -204,7 +256,7 @@ object LauncherPrefs {
         if (f.exists()) runCatching { f.inputStream().use { p.load(it) } }
         // first start after the change: keep the settings saved in the old SharedPreferences file
         else c.getSharedPreferences("launcher", Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v != null) p.setProperty(k, v.toString()) }
-        look = p.getProperty("look") ?: "material"
+        look = p.getProperty("look") ?: "win11"
         vertical = p.getProperty("vertical") == "true"
         columns = p.getProperty("columns")?.toIntOrNull() ?: 5
         iconDp = p.getProperty("iconDp")?.toIntOrNull() ?: 48
@@ -221,13 +273,14 @@ object LauncherPrefs {
         tileSizes = p.stringPropertyNames().filter { it.startsWith("tile.") }.associate { it.removePrefix("tile.") to p.getProperty(it) }
         rows = p.getProperty("rows")?.toIntOrNull()?.coerceIn(3, 8) ?: 4; pageEffect = p.getProperty("pageEffect") ?: "simple"; pageDots = p.getProperty("pageDots") != "false"
         dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
-        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen2") != "false"; loginScreen = p.getProperty("loginScreen2") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen2") != "false"; loginScreen = p.getProperty("loginScreen2") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty(); widgetPages = p.getProperty("widgetPages") == "true"; loopScroll = p.getProperty("loopScroll") == "true"; blockAltTab = p.getProperty("blockAltTab") != "false"; dragSnap = p.getProperty("dragSnap") == "true"; fitWindows = p.getProperty("fitWindows") != "false"; dockGlass = p.getProperty("dockGlass") == "true"; dockAlpha = p.getProperty("dockAlpha")?.toIntOrNull()?.coerceIn(20, 100) ?: 100; twoLineLabels = p.getProperty("twoLineLabels") == "true"; landColumns = p.getProperty("landColumns")?.toIntOrNull() ?: 0; landRows = p.getProperty("landRows")?.toIntOrNull() ?: 0; hideUnusedDays = p.getProperty("hideUnusedDays")?.toIntOrNull() ?: 0; dailyBackup = p.getProperty("dailyBackup") == "true"; searchEngine = p.getProperty("searchEngine") ?: "google"; iconAnim = p.getProperty("iconAnim") ?: "none"; wallScroll = p.getProperty("wallScroll") == "true"; glassApps = p.getProperty("glassApps") != "false"; winX = p.getProperty("winX").orEmpty(); smartFolders = p.getProperty("smartFolders") == "true"; gDualUp = p.getProperty("gDualUp") ?: "none"; gDualDown = p.getProperty("gDualDown") ?: "none"; gDualLeft = p.getProperty("gDualLeft") ?: "none"; gDualRight = p.getProperty("gDualRight") ?: "none"
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         links = p.getProperty("links").orEmpty().split('|').filter { it.isNotBlank() }
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
+        widgetSizes = p.stringPropertyNames().filter { it.startsWith("wsize.") }.associate { it.removePrefix("wsize.") to p.getProperty(it) }
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
-        snapIcons = p.getProperty("snapIcons3") != "false"; snapWidgets = p.getProperty("snapWidgets") != "false"; searchContacts = p.getProperty("searchContacts") == "true"; fillGaps = p.getProperty("fillGaps") == "true"
+        snapIcons = p.getProperty("snapIcons3") != "false"; snapWidgets = p.getProperty("snapWidgets") != "false"; searchContacts = p.getProperty("searchContacts") == "true"; phonePanel = p.getProperty("phonePanel") == "true"; fillGaps = p.getProperty("fillGaps") == "true"
         accentOn = p.getProperty("accentOn")?.let { it == "true" } ?: true; accentArgb = p.getProperty("accentArgb")?.toIntOrNull() ?: 0xFF0067C0.toInt()
         // a tablet has far more room: its grid starts finer (turned 16 x 8, upright 6 x 12), so an icon can sit between two others; a phone keeps 4 x 8 and 8 x 4
         val tab = c.resources.configuration.smallestScreenWidthDp >= 600
@@ -249,7 +302,7 @@ object LauncherPrefs {
         gUp = p.getProperty("gUp") ?: if (swipeUpApps) "apps" else "none"
         gDown = p.getProperty("gDown") ?: if (swipeDownShade) "shade" else if (swipeDownSearch) "search" else "none"
         iconShape = p.getProperty("iconShape") ?: "squircle"; sounds = p.getProperty("sounds") != "false"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0; glass = p.getProperty("glass")?.toIntOrNull()?.coerceIn(0, 80) ?: 0
-        wallDaily = p.getProperty("wallDaily") == "true"; wallFile = p.getProperty("wallFile").orEmpty(); keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
+        wallDaily = p.getProperty("wallDaily") == "true"; wallFile = p.getProperty("wallFile").orEmpty(); wallFileLand = p.getProperty("wallFileLand").orEmpty(); keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
         clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         // once: the settings (or the Control Panel) and the Store join the desktop of a launcher set up before they existed
@@ -257,10 +310,12 @@ object LauncherPrefs {
         // once: the Store is no longer on the desktop by itself (it is still one switch away in the launcher's settings)
         if (p.getProperty("desktopV3") == null) desktopOn = desktopOn - "pulse:store"
         clock = p.getProperty("clock") == "true"
-        desktopClock = p.getProperty("desktopClock") != "false"
+        // off by default (no gadget comes by itself); the key is new so a clock switched on by the old default is off too, and only a choice made now stays
+        desktopClock = p.getProperty("desktopClockOn") == "true"; startLogoAccent = p.getProperty("startLogoAccent") == "true"; deviceName = p.getProperty("deviceName").orEmpty()
         desktopNote = p.getProperty("desktopNote") == "true"
         homeApps = p.getProperty("homeApps") == "true"
-        windowed = p.getProperty("windowed") == "true"
+        // other apps open in a window of the desktop by default (on a phone that has no windows they simply open as before)
+        windowed = p.getProperty("windowed") != "false"
         lockPortrait = p.getProperty("lockPortrait") == "true"
         fullScreen = p.getProperty("fullScreen") == "true"
         wpSideDock = p.getProperty("wpSideDock") == "true"
@@ -279,19 +334,20 @@ object LauncherPrefs {
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
         p.setProperty("menuOrder", menuOrder.joinToString(",")); p.setProperty("menuOff", menuOff.joinToString(",")); p.setProperty("bootEggs", bootEggs.toString()); p.setProperty("drawerAz", drawerAz.toString()); p.setProperty("glance", glance.toString()); p.setProperty("gDouble", gDouble); p.setProperty("gPinchIn", gPinchIn); p.setProperty("gPinchOut", gPinchOut); p.setProperty("homePage", homePage.toString()); p.setProperty("gUp", gUp); p.setProperty("gDown", gDown); p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
-        p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString()); p.setProperty("wallFile", wallFile)
+        p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("wallFileLand", wallFileLand); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString()); p.setProperty("wallFile", wallFile)
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
-        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("deviceName", deviceName); p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClockOn", desktopClock.toString()); p.setProperty("startLogoAccent", startLogoAccent.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString()); p.setProperty("wpSideDock", wpSideDock.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
-        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen2", bootScreen.toString()); p.setProperty("loginScreen2", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack); p.setProperty("widgetPages", widgetPages.toString()); p.setProperty("loopScroll", loopScroll.toString()); p.setProperty("blockAltTab", blockAltTab.toString()); p.setProperty("dragSnap", dragSnap.toString()); p.setProperty("fitWindows", fitWindows.toString()); p.setProperty("dockGlass", dockGlass.toString()); p.setProperty("dockAlpha", dockAlpha.toString()); p.setProperty("twoLineLabels", twoLineLabels.toString()); p.setProperty("landColumns", landColumns.toString()); p.setProperty("landRows", landRows.toString()); p.setProperty("hideUnusedDays", hideUnusedDays.toString()); p.setProperty("dailyBackup", dailyBackup.toString()); p.setProperty("searchEngine", searchEngine); p.setProperty("iconAnim", iconAnim); p.setProperty("wallScroll", wallScroll.toString()); p.setProperty("glassApps", glassApps.toString()); p.setProperty("winX", winX); p.setProperty("smartFolders", smartFolders.toString()); p.setProperty("gDualUp", gDualUp); p.setProperty("gDualDown", gDualDown); p.setProperty("gDualLeft", gDualLeft); p.setProperty("gDualRight", gDualRight)
         p.setProperty("homeOrder", homeOrder.joinToString(",")); p.setProperty("links", links.joinToString("|"))
+        widgetSizes.forEach { (id, v) -> p.setProperty("wsize.$id", v) }
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
-        p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("snapWidgets", snapWidgets.toString()); p.setProperty("searchContacts", searchContacts.toString()); p.setProperty("fillGaps", fillGaps.toString())
+        p.setProperty("snapIcons3", snapIcons.toString()); p.setProperty("snapWidgets", snapWidgets.toString()); p.setProperty("searchContacts", searchContacts.toString()); p.setProperty("phonePanel", phonePanel.toString()); p.setProperty("fillGaps", fillGaps.toString())
         p.setProperty("accentOn", accentOn.toString()); p.setProperty("accentArgb", accentArgb.toString())
         p.setProperty("deskColsPort", deskColsPort.toString()); p.setProperty("deskRowsPort", deskRowsPort.toString()); p.setProperty("deskColsLand", deskColsLand.toString()); p.setProperty("deskRowsLand", deskRowsLand.toString())
         p.setProperty("glassStyle", glassStyle); p.setProperty("matTone", matTone.toString()); p.setProperty("matClear", matClear.toString()); p.setProperty("blurAll", blurAll.toString()); p.setProperty("blurAmt", blurAmt.toString())
@@ -317,10 +373,10 @@ object LauncherPrefs {
 
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
-        look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        look = "win11"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; blockAltTab = true; dragSnap = false; fitWindows = true; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; widgetSizes = emptyMap(); glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = true; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
-        gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; keepOn = false; haptic = true; searchFocus = false
+        gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; wallFileLand = ""; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
@@ -331,6 +387,26 @@ object LauncherPrefs {
         save(c)
         val out = File(com.umutk.pulse.PulseDirs.sub("Backup"), "PulseLauncher.properties").also { it.parentFile?.mkdirs() }
         file(c).copyTo(out, overwrite = true); true
+    }.getOrDefault(false)
+
+    /** Once a day (when the launcher opens and Daily backup is on) the settings file is copied to Backup/launcher/; the last seven are kept. */
+    fun dailyBackupIfDue(c: Context) {
+        if (!dailyBackup) return
+        Thread {
+            runCatching {
+                val dir = File(com.umutk.pulse.PulseDirs.sub("Backup"), "launcher").also { it.mkdirs() }
+                val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+                val today = File(dir, "PulseLauncher-$day.properties")
+                if (!today.isFile) { save(c); file(c).copyTo(today, overwrite = true) }
+                dir.listFiles()?.filter { it.name.startsWith("PulseLauncher-") }?.sortedByDescending { it.name }?.drop(7)?.forEach { it.delete() }
+            }
+        }.start()
+    }
+
+    /** Puts the newest daily copy back. False when there is none. */
+    fun restoreDaily(c: Context): Boolean = runCatching {
+        val f = File(File(com.umutk.pulse.PulseDirs.sub("Backup"), "launcher"), "x").parentFile?.listFiles()?.filter { it.name.startsWith("PulseLauncher-") }?.maxByOrNull { it.name } ?: return false
+        f.copyTo(file(c), overwrite = true); load(c); true
     }.getOrDefault(false)
 
     fun importSettings(c: Context): Boolean = runCatching {
@@ -366,10 +442,13 @@ object LauncherPrefs {
 val GESTURE_ACTIONS = listOf(
     Triple("none", "Nothing", "Hiçbir şey"), Triple("lock", "Lock the screen", "Ekranı kilitle"), Triple("shade", "Notifications", "Bildirimler"),
     Triple("quick", "Quick settings", "Hızlı ayarlar"), Triple("apps", "Apps list", "Uygulama listesi"), Triple("search", "Quick search", "Hızlı arama"),
-    Triple("settings", "Launcher settings", "Başlatıcı ayarları"), Triple("recents", "Recent apps", "Son uygulamalar"), Triple("power", "Power menu", "Güç menüsü"),
+    Triple("settings", "Launcher settings", "Başlatıcı ayarları"), Triple("recents", "Recent apps", "Son uygulamalar"), Triple("power", "Power menu", "Güç menüsü"), Triple("news", "News", "Haberler"),
 )
 
 
 /** The accent of the launcher: the one picked in the launcher settings, else the look's own. */
+/** The name of this phone as the Start menu shows it. */
+fun deviceName(): String = LauncherPrefs.deviceName.ifBlank { android.os.Build.MODEL }
+
 fun launcherAccent(): androidx.compose.ui.graphics.Color =
     if (LauncherPrefs.accentOn) androidx.compose.ui.graphics.Color(LauncherPrefs.accentArgb).copy(alpha = 1f) else com.umutk.pulse.Look.accent.copy(alpha = 1f)

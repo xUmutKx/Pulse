@@ -60,7 +60,10 @@ fun CalculatorHub(back: () -> Unit) {
     var err by remember { mutableStateOf(false) }
     var mem by remember { mutableDoubleStateOf(0.0) }
     var showHistory by remember { mutableStateOf(false) }
-    var mode by rememberSaveable { mutableStateOf("standard") }
+    // held turned on its side the calculator opens as the advanced one (the scientific keys); with a wide screen the graph sits beside it
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val landscape = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    var mode by rememberSaveable { mutableStateOf(if (landscape) "scientific" else "standard") }
     var menu by remember { mutableStateOf(false) }
     val history = remember { mutableStateListOf<String>() }
     val ops = "+−×÷"
@@ -171,7 +174,14 @@ fun CalculatorHub(back: () -> Unit) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Back leaves the pane for the plain calculator first, never the whole app
                 BackHandler { mode = "standard" }
-                when (mode) { "scientific" -> SciPane(classic); "graph" -> GraphPane(); "convert" -> ConvertPane(); else -> ProgrammerPane(classic) }
+                when (mode) {
+                    // a very wide screen: the keys and the graph side by side
+                    "scientific" -> if (landscape && cfg.screenWidthDp >= 1100) androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(.55f).fillMaxSize()) { SciPane(classic) }
+                        Box(Modifier.weight(.45f).fillMaxSize()) { GraphPane() }
+                    } else SciPane(classic)
+                    "graph" -> GraphPane(); "convert" -> ConvertPane(); else -> ProgrammerPane(classic)
+                }
             }
             return@Column
         }

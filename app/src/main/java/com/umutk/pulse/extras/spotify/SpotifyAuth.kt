@@ -25,7 +25,7 @@ import java.security.SecureRandom
  * The user pastes their own client id (developer.spotify.com dashboard, redirect URI [REDIRECT]); [DEFAULT_CLIENT_ID] is only a placeholder.
  */
 object SpotifyAuth {
-    const val DEFAULT_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
+    val DEFAULT_CLIENT_ID: String = com.umutk.pulse.BuildConfig.SPOTIFY_CLIENT_ID
     const val REDIRECT = "pulse-spotify://callback"
     private const val SCOPES = "user-read-private playlist-read-private playlist-read-collaborative user-library-read user-read-playback-state user-modify-playback-state user-read-currently-playing"
 
@@ -38,6 +38,8 @@ object SpotifyAuth {
     fun clientId(c: Context): String = sp(c).getString("client_id", null)?.trim().orEmpty().ifEmpty { DEFAULT_CLIENT_ID }
     fun setClientId(c: Context, id: String) { sp(c).edit().putString("client_id", id.trim()).apply() }
     fun hasClientId(c: Context) = clientId(c) != DEFAULT_CLIENT_ID
+    /** True when this build carries a Client ID of its own (the sign-in then needs nothing typed). */
+    fun hasBuiltInId() = DEFAULT_CLIENT_ID != "YOUR_SPOTIFY_CLIENT_ID"
 
     fun restore(c: Context) { loggedIn = sp(c).getString("refresh", null) != null }
 

@@ -59,18 +59,23 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     // the picture is decoded at its own size: only one at least twice as big as the screen is made smaller (the half-size decode it had made a 1280 x 800 picture 640 x 400 and then stretched it over the screen, which is what looked blurry)
     // a downloaded pack of higher-quality wallpapers (4K for Windows 11) takes the place of the small stock picture
     val packs by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
-    val bmp = remember(res, packs, LauncherPrefs.wallFile) {
-        res?.let { r ->
-            // a file chosen in "more wallpapers" wins over the stock picture
-            val hd = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile } ?: com.umutk.pulse.extras.store.HdWalls.file(ctx, r)
+    // the higher-quality pictures of the look come by themselves, no question asked
+    androidx.compose.runtime.LaunchedEffect(lookId) { com.umutk.pulse.extras.store.HdWalls.packFor(lookId)?.let { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, it.first) } }
+    val bmp = remember(res, packs, LauncherPrefs.wallFile, LauncherPrefs.wallFileLand, land) {
+        // a picture of the person's own (Look > Custom wallpaper) or a file chosen in "more wallpapers" wins over the stock picture, and shows on a look that has no stock one too;
+        // the turned phone has its own picture, and with only one chosen it serves both ways
+        val ownPath = (if (land) LauncherPrefs.wallFileLand.ifEmpty { LauncherPrefs.wallFile } else LauncherPrefs.wallFile.ifEmpty { LauncherPrefs.wallFileLand })
+        val own = ownPath.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile }
+        if (res == null && own == null) null else {
+            val hd = own ?: res?.let { com.umutk.pulse.extras.store.HdWalls.file(ctx, it) }
             val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            if (hd != null) BitmapFactory.decodeFile(hd.path, b) else BitmapFactory.decodeResource(ctx.resources, r, b)
+            if (hd != null) BitmapFactory.decodeFile(hd.path, b) else BitmapFactory.decodeResource(ctx.resources, res!!, b)
             val dm = ctx.resources.displayMetrics
             val need = maxOf(dm.widthPixels, dm.heightPixels)
             var step = 1
             while (b.outWidth / (step * 2) >= need && b.outHeight / (step * 2) >= need) step *= 2
             val o = BitmapFactory.Options().apply { inSampleSize = step }
-            (if (hd != null) BitmapFactory.decodeFile(hd.path, o) else BitmapFactory.decodeResource(ctx.resources, r, o))?.asImageBitmap()
+            (if (hd != null) BitmapFactory.decodeFile(hd.path, o) else BitmapFactory.decodeResource(ctx.resources, res!!, o))?.asImageBitmap()
         }
     }
     Box(modifier.fillMaxSize()) {
@@ -99,7 +104,7 @@ fun TaskbarClock(color: Color, modifier: Modifier = Modifier) {
 /** Sets the look's picture as the phone wallpaper. False when there is no picture or the system refuses. */
 fun setPhoneWallpaper(c: Context, lookId: String): Boolean = runCatching {
     val res = wallpaperRes(lookId) ?: return false
-    val full = BitmapFactory.decodeResource(c.resources, res) ?: return false
+    val full = (com.umutk.pulse.extras.store.HdWalls.file(c, res)?.let { BitmapFactory.decodeFile(it.path) } ?: BitmapFactory.decodeResource(c.resources, res)) ?: return false
     WallpaperManager.getInstance(c).setBitmap(full)
     true
 }.getOrDefault(false)

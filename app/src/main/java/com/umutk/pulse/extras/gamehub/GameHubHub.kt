@@ -341,6 +341,19 @@ private fun freeMemory(c: Context) {
 }
 
 /** Opens the game itself (its launch activity). */
+/** A short notification when a game starts from Game Hub: its name and icon, gone after a few seconds (a quiet one: no sound, no pop-up). */
+private fun launchNote(c: Context, pkg: String) {
+    if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
+    val nm = c.getSystemService(android.app.NotificationManager::class.java)
+    if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("pulse_gamehub", "Game Hub", android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+    val pm = c.packageManager
+    val name = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+    val icon = runCatching { pm.getApplicationIcon(pkg).toBitmap(96, 96) }.getOrNull()
+    nm.notify(4120, androidx.core.app.NotificationCompat.Builder(c, "pulse_gamehub").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(icon)
+        .setContentTitle(name).setContentText(tr("Started from Game Hub", "Game Hub'dan başlatıldı")).setAutoCancel(true).setTimeoutAfter(8000)
+        .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW).build())
+}
+
 internal fun openGame(c: Context, pkg: String) {
     runCatching { prepareGame(c, pkg) }
     val pm = c.packageManager
@@ -353,7 +366,7 @@ internal fun openGame(c: Context, pkg: String) {
         c.startActivity(android.content.Intent(intent).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     }.getOrDefault(false)
-    if (started) return
+    if (started) { runCatching { launchNote(c, pkg) }; return }
     val out = Privilege.run("monkey -p $pkg -c android.intent.category.LAUNCHER 1")
     val ok = out.code >= 0 && !Regex("(?i)aborted|error|no activities|exception").containsMatchIn(out.text)
     if (ok) return
@@ -883,7 +896,15 @@ fun GameHubHub(onBack: () -> Unit) {
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
-    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "boxshelf") ?: "boxshelf") }
+    // the CD shelf marks itself as "being tried" for its first seconds: if the app died in them (a phone whose graphics cannot take it), the next start goes back to Boxshelf by itself
+    var ghLook by remember {
+        mutableStateOf(prefs(ctx).getString("ghLook", "cdrack").let { k ->
+            if (k == "cdrack" && prefs(ctx).getBoolean("cdrack_try", false)) { prefs(ctx).edit().putString("ghLook", "boxshelf").putBoolean("cdrack_try", false).apply(); "boxshelf" } else k ?: "cdrack"
+        })
+    }
+    androidx.compose.runtime.LaunchedEffect(ghLook) {
+        if (ghLook == "cdrack") { prefs(ctx).edit().putBoolean("cdrack_try", true).commit(); try { kotlinx.coroutines.delay(6000) } finally { prefs(ctx).edit().putBoolean("cdrack_try", false).apply() } }
+    }
     // the views follow one another from the grid button of each: Boxshelf's shelf -> the CD rack -> the classic grid -> Boxshelf's shelf
     fun setLook(k: String) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply() }
     LaunchedEffect(ShelfAsk.look.value) { ShelfAsk.look.value?.let { setLook(it); ShelfAsk.look.value = null } }
@@ -1065,7 +1086,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
-                    } } else if (ghLook == "cdrack") CdRack(
+                    } } else if (ghLook == "cdrack") CdShelf(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
                         onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
                     ) else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
@@ -1102,7 +1123,8 @@ fun GameHubHub(onBack: () -> Unit) {
                     // Boxshelf's own screen has its own sort and search: Game Hub's bar and search are for the other shelves
                     val webShelf = theme == "shelf" && boxOn
                     // the sort row, like the library bar of a store: name, play time, size
-                    if (!webShelf) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // the CD shelf is a rack of cases of its own: no sort row over it
+                    if (!webShelf && ghLook != "cdrack") Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
                             Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
                         }
@@ -1139,7 +1161,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)"), "cdrack" to tr("CD rack", "CD rafı"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
+                        listOf("boxshelf" to tr("Boxshelf 3D", "Boxshelf 3B"), "cdrack" to tr("CD shelf (default)", "CD rafı (varsayılan)"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
                             Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
                         }
                     }

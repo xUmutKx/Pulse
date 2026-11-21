@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import android.os.SystemClock
 import androidx.compose.foundation.gestures.awaitEachGesture
 import android.content.Context
 import android.content.Intent
@@ -116,13 +117,15 @@ class LauncherActivity : ComponentActivity() {
                 // machine, Windows Phone with its own start
                 val ownBoot = look.id == "terminal" || look.id.startsWith("winphone")
                 // the boot and sign-in screens do not show at every start: now and then (about one start in three), unless the setting says every time
-                val bootShow = remember { LauncherPrefs.bootEvery || Math.random() < 0.34 }
+                // (Restart and Sign out of the power menu ask for the boot or the sign-in screen at once; the request is read once)
+                val force = remember { LauncherSession.forceBoot.also { LauncherSession.forceBoot = 0 } }
+                val bootShow = remember { force != 0 || LauncherPrefs.bootEvery || Math.random() < 0.34 }
                 if (!LauncherSession.booted && bootShow && (th.id in com.umutk.pulse.loginLooks || ownBoot)) {
                     val win = th.id in com.umutk.pulse.loginLooks
                     // now and then a surprise first on a Windows desktop: the BIOS screen of an old PC, very rarely a fake blue screen (stage -1)
-                    val egg = remember { if (win && LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }
+                    val egg = remember { if (force == 1 && win) 1 else if (force == 2) 0 else if (win && LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }
                     fun afterBoot() = if (win && LauncherPrefs.loginScreen) 1 else 2
-                    var stage by remember { mutableIntStateOf(if (egg != 0) -1 else if (LauncherPrefs.bootScreen) 0 else afterBoot()) }
+                    var stage by remember { mutableIntStateOf(if (force == 2 && win) 1 else if (egg != 0) -1 else if (LauncherPrefs.bootScreen) 0 else afterBoot()) }
                     when (stage) {
                         -1 -> if (egg == 2) BsodScreen(th.id) { stage = if (LauncherPrefs.bootScreen) 0 else afterBoot() }
                             else BiosScreen { stage = if (LauncherPrefs.bootScreen) 0 else afterBoot() }
@@ -131,6 +134,14 @@ class LauncherActivity : ComponentActivity() {
                         else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(this@LauncherActivity, th.id) }
                     }
                 } else LaunchedEffect(Unit) { if (!LauncherSession.booted) LauncherSounds.startup(this@LauncherActivity, th.id); LauncherSession.booted = true }
+                if (th.id in com.umutk.pulse.loginLooks) {
+                    if (LauncherSession.clipOpen) WinClipPanel()
+                    WinOsd()
+                    if (LauncherSession.keysOpen) WinKeysGuide()
+                    if (LauncherSession.errorText.isNotEmpty()) WinErrorDialog(th.id, LauncherSession.errorText)
+                    if (LauncherSession.lockOpen) WinLockHost(th)
+                    if (LauncherSession.powerScreen.isNotEmpty()) WinPowerScreen(th.id, LauncherSession.powerScreen)
+                }
             }
         }
     }
@@ -147,7 +158,21 @@ class LauncherActivity : ComponentActivity() {
     }
 
     // a home press while the launcher is already open: close the apps list and go back to the first page
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); LauncherSession.startOpen = false; LauncherSession.homeTick++ }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // the Windows key taken by the accessibility service (before the phone's own launcher could answer it): -1 the key alone (Start), else a letter with it
+        if (intent.hasExtra("winkey")) { winKey(intent.getIntExtra("winkey", -1)); intent.removeExtra("winkey"); return }
+        // the Windows key of a keyboard makes the phone send the home intent: when Pulse is the home app, that is the Start menu (not "go home"), as on a PC
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        val now = SystemClock.uptimeMillis()
+        if (modern && now - lastMetaAt < 1200) {
+            if (now - lastStartToggleAt > 1200) { lastStartToggleAt = now; LauncherSession.startOpen = !LauncherSession.startOpen }
+            return
+        }
+        LauncherSession.startOpen = false; LauncherSession.homeTick++
+    }
+    private var lastMetaAt = 0L
+    private var lastStartToggleAt = 0L
 
     /** Reads the saved settings again on every start / resume: the Pulse process may have changed them meanwhile. */
     private fun enter() {
@@ -160,8 +185,98 @@ class LauncherActivity : ComponentActivity() {
             if (LauncherPrefs.fullScreen) hide(WindowInsetsCompat.Type.statusBars()) else show(WindowInsetsCompat.Type.statusBars())
         }
     }
+    // Windows keyboard shortcuts (a physical keyboard, or Pulse's keyboard with its Win key): Win+X the menu, Win+R Run, Win+E Explorer, Win+I Settings, Win+S or Win+Q search, Win+D
+    // the desktop; the Windows key alone opens and closes the Start menu. Windows 10 and 11 only (the older looks keep to what they were).
+    private var metaUsed = false
+    override fun dispatchKeyEvent(e: android.view.KeyEvent): Boolean {
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        if (modern) {
+            val metaKey = e.keyCode == android.view.KeyEvent.KEYCODE_META_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_META_RIGHT
+            // Alt let go while the Alt+Tab switcher is open: the picked window comes up
+            if (e.action == android.view.KeyEvent.ACTION_UP && (e.keyCode == android.view.KeyEvent.KEYCODE_ALT_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_ALT_RIGHT) && LauncherSession.altTabIdx >= 0) DesktopWindows.altTabCommit()
+            // the shortcuts that are not on the Windows key: Alt+F4 closes the front window, Alt+Tab goes to the next one, Ctrl+Esc is Start, Esc closes an open menu
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey) {
+                val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
+                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen || LauncherSession.taskViewOpen || LauncherSession.altTabIdx >= 0 || LauncherSession.clipOpen || LauncherSession.keysOpen
+                when {
+                    e.keyCode == android.view.KeyEvent.KEYCODE_F4 && e.isAltPressed && front != null -> { DesktopWindows.close(front); return true }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_TAB && e.isAltPressed && LauncherPrefs.blockAltTab -> { if (e.repeatCount == 0) DesktopWindows.altTabStep(); return true }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && e.isCtrlPressed && e.repeatCount == 0 -> { LauncherSession.startOpen = !LauncherSession.startOpen; return true }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && menuOpen -> {
+                        LauncherSession.startOpen = false; LauncherSession.winXOpen = false; LauncherSession.runOpen = false; LauncherSession.w11SearchOpen = false; LauncherSession.quickOpen = false; LauncherSession.taskViewOpen = false; LauncherSession.clipOpen = false; LauncherSession.keysOpen = false; return true
+                    }
+                }
+            }
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed && e.isCtrlPressed && (e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
+                LauncherSession.pageMove = if (e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1; metaUsed = true; return true
+            }
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed) {
+                val look = LauncherPrefs.look
+                val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
+                val did = winCombo(e.keyCode, look, front, e.isShiftPressed)
+                if (did) { metaUsed = true; return true }
+            }
+            if (metaKey) {
+                lastMetaAt = SystemClock.uptimeMillis()
+                if (e.action == android.view.KeyEvent.ACTION_DOWN && e.repeatCount == 0) metaUsed = false
+                // the Windows key let go with nothing pressed with it: the Start menu
+                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) { lastStartToggleAt = SystemClock.uptimeMillis(); LauncherSession.startOpen = !LauncherSession.startOpen }; metaUsed = false; return true }
+                return true
+            }
+        }
+        // the volume and brightness keys of a keyboard: a small display of the level shows, as in Windows
+        if (e.action == android.view.KeyEvent.ACTION_UP && modern) {
+            val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+            when (e.keyCode) {
+                android.view.KeyEvent.KEYCODE_VOLUME_UP, android.view.KeyEvent.KEYCODE_VOLUME_DOWN, android.view.KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                    val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                    LauncherSession.osdText = tr("Volume", "Ses"); LauncherSession.osdLevel = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / max; LauncherSession.osdAt = SystemClock.uptimeMillis()
+                }
+                android.view.KeyEvent.KEYCODE_BRIGHTNESS_UP, android.view.KeyEvent.KEYCODE_BRIGHTNESS_DOWN -> {
+                    LauncherSession.osdText = tr("Brightness", "Parlaklık")
+                    LauncherSession.osdLevel = runCatching { android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f }.getOrDefault(.5f); LauncherSession.osdAt = SystemClock.uptimeMillis()
+                }
+            }
+        }
+        return super.dispatchKeyEvent(e)
+    }
+    private fun winCombo(code: Int, look: String, front: DWin?, shift: Boolean = false): Boolean = when (code) {
+                    android.view.KeyEvent.KEYCODE_L -> { powerAction(this, "lock"); true }
+                    android.view.KeyEvent.KEYCODE_V -> { LauncherSession.clipOpen = !LauncherSession.clipOpen; true }
+                    android.view.KeyEvent.KEYCODE_M -> { DesktopWindows.list.forEach { it.min = true }; true }
+                    android.view.KeyEvent.KEYCODE_A -> { LauncherSession.quickOpen = !LauncherSession.quickOpen; true }
+                    android.view.KeyEvent.KEYCODE_TAB -> { LauncherSession.taskViewOpen = !LauncherSession.taskViewOpen; true }
+                    android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        val dm = resources.displayMetrics
+                        if (front != null) DesktopWindows.snap(front, if (code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1, dm.widthPixels / dm.density)
+                        front != null
+                    }
+                    android.view.KeyEvent.KEYCODE_DPAD_UP -> { front?.max = true; front != null }
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { if (front != null) { if (front.max) front.max = false else if (!DesktopWindows.unsnap(front)) front.min = true }; front != null }
+                    android.view.KeyEvent.KEYCODE_X -> { LauncherSession.winXOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_R -> { LauncherSession.runOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_E -> { openDesktopItem(this, "pulse:files", look); true }
+                    android.view.KeyEvent.KEYCODE_I -> { openDesktopItem(this, "pulse:winsettings", look); true }
+                    android.view.KeyEvent.KEYCODE_S, android.view.KeyEvent.KEYCODE_Q ->
+                        if (shift && code == android.view.KeyEvent.KEYCODE_S) { globalAction(this, 9); true } else { LauncherSession.w11SearchOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_SLASH, android.view.KeyEvent.KEYCODE_F1 -> { LauncherSession.keysOpen = !LauncherSession.keysOpen; true }
+                    android.view.KeyEvent.KEYCODE_D -> { DesktopWindows.list.forEach { it.min = true }; LauncherSession.startOpen = false; true }
+                    else -> false
+                }
+
+    /** The Windows key (or a letter with it) as the accessibility service forwards it. */
+    private fun winKey(code: Int) {
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        if (!modern) return
+        if (code == -1) { LauncherSession.startOpen = !LauncherSession.startOpen; return }
+        if (code == -2) { DesktopWindows.altTabStep(); return }
+        if (code >= 2000) { LauncherSession.pageMove = if (code - 2000 == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1; return }
+        if (code == -3) { DesktopWindows.altTabCommit(); return }
+        if (code >= 1000) winCombo(code - 1000, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }, true)
+        else winCombo(code, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z })
+    }
     override fun onStart() { enter(); super.onStart() }
-    override fun onResume() { enter(); super.onResume() }
+    override fun onResume() { enter(); super.onResume(); PhoneWall.restoreIfLeft(this); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
     override fun onStop() { super.onStop(); LauncherPrefs.restorePulse(); AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); AppLookGuard.leave(this) }
 }
@@ -170,7 +285,7 @@ private const val ICON_PX = 128
 private const val PAGE_ROWS = 4
 
 /** The looks that are a Windows desktop: their home screen holds the desktop shortcuts. */
-private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
+internal val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
 
 /** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint, the command prompt and the Task Manager. Drawn through the look's own icon set. */
 internal fun desktopItems(): List<LaunchApp> = listOf(
@@ -179,6 +294,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
     LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+    LaunchApp("Terminal", "pulse:terminal", null, iconKey = "run"),
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
     LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
     LaunchApp(tr("Settings", "Ayarlar"), "pulse:winsettings", null, iconKey = "settings"),
@@ -359,9 +475,9 @@ internal fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     }
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
-            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:taskmgr" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
+            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:taskmgr" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:cmd" to tr("Command Prompt", "Komut İstemi"); "pulse:terminal" -> "page:terminal" to "Terminal"
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:winsettings" -> (if (lookId == "win7" || lookId == "xp" || lookId == "win95") "controlpanel" to tr("Control Panel", "Denetim Masası") else "winsettings" to tr("Settings", "Ayarlar")); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
-            "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
+            "pulse:regedit" -> "win:regedit" to tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"); "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
             "pulse:store" -> "store:launcher" to "Microsoft Store"; "pulse:control" -> "controlcenter" to tr("Control Center", "Denetim Merkezi")
@@ -417,6 +533,13 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
         // Pulse's own apps (Music player, Notes, Video, Weather...) are in the list too, so they can be opened, hidden and put on the home screen or the dock like any other app
         // the joke apps belong to the Windows desktops only (their Programs list and Start menu); the phone looks' app list leaves them out
         .let { it + desktopItems().filter { d -> d.pkg.startsWith("pulse:x:") && (LauncherPrefs.look in WINDOWS_LOOKS || !d.pkg.startsWith("pulse:x:win:fun:")) } }
+        // every extra app of Pulse (Files, Photos, Calendar, Contacts, Code, YTXTube ...) is in the list of this launcher, though the phone's own launchers do not show them (their entries are off
+        // by default); one that is in the list already (the music player, notes ...) is not added twice
+        .let { base ->
+            val have = base.map { it.label.lowercase() }.toSet()
+            base + com.umutk.pulse.AppPlace.all.filter { a -> tr(a.en, a.trName).lowercase() !in have && a.en.lowercase() !in have }
+                .map { a -> LaunchApp(tr(a.en, a.trName), "pulse:extra:" + a.alias, null, iconKey = a.key) }
+        }
         .sortedBy { it.label.lowercase() }
 }
 
@@ -428,7 +551,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val vertical = LauncherPrefs.vertical
     // turned sideways, the same few columns would sit far apart: the columns follow the width (about one per 100 dp)
     val screenCfg = androidx.compose.ui.platform.LocalConfiguration.current
-    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) maxOf(LauncherPrefs.columns.coerceIn(2, 8), (screenCfg.screenWidthDp / 100).coerceIn(4, 10)) else LauncherPrefs.columns.coerceIn(2, 8)
+    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) (if (LauncherPrefs.landColumns > 0) LauncherPrefs.landColumns.coerceIn(2, 12) else maxOf(LauncherPrefs.columns.coerceIn(2, 12), (screenCfg.screenWidthDp / 100).coerceIn(4, 10))) else LauncherPrefs.columns.coerceIn(2, 12)
     // a tablet's screen is far bigger than a phone's: the same icon size left the icons tiny between wide gaps, so they are drawn a third bigger there
     val tabletScale = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 1.35f else 1f
     val iconDp = (LauncherPrefs.iconDp.coerceIn(24, 64) * tabletScale).toInt()
@@ -436,7 +559,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val sort = LauncherPrefs.sort
     val usage = LauncherPrefs.usage
     val visible = remember(apps, hidden, sort, usage) {
-        val list = apps.filter { it.pkg !in hidden }
+        // apps not opened for a number of days (a setting) are left out of the list; one installed lately is not counted as unused
+        val limit = if (LauncherPrefs.hideUnusedDays > 0) System.currentTimeMillis() - LauncherPrefs.hideUnusedDays * 86_400_000L else 0L
+        val list = apps.filter { it.pkg !in hidden && (limit == 0L || it.pkg.startsWith("pulse:") || (usage[it.pkg] ?: it.installed) >= limit) }
         when (sort) {
             "installed" -> list.sortedWith(compareByDescending<LaunchApp> { it.installed }.thenBy { it.label.lowercase() })
             "opened" -> list.sortedWith(compareByDescending<LaunchApp> { usage[it.pkg] ?: 0L }.thenBy { it.label.lowercase() })
@@ -446,14 +571,15 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         }
     }
     val autoDock = remember(visible) { visible.take(3).map { it.pkg } }
-    val dock = dockApps(visible, LauncherPrefs.dock)
+    // the dock may hold folders too (a folder's menu: Add to dock)
+    val dock = dockApps(visible + LauncherFolders.fold(emptyList(), apps), LauncherPrefs.dock)
     var query by remember { mutableStateOf("") }
     LaunchedEffect(LauncherSession.startOpen) { if (!LauncherSession.startOpen) query = "" }
     // "keep the screen on at home"
     val hostActivity = LocalContext.current as? android.app.Activity
     androidx.compose.runtime.SideEffect { hostActivity?.window?.let { w -> if (LauncherPrefs.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
     val folderRows = LauncherPrefs.folders
-    val drawerBase = remember(visible, folderRows) { LauncherFolders.fold(visible) }
+    val drawerBase = remember(visible, folderRows, LauncherPrefs.smartFolders) { LauncherFolders.fold(visible, apps) }
     val drawer = remember(drawerBase, visible, query) {
         if (query.isBlank()) drawerBase else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
     }
@@ -467,8 +593,15 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // on a Windows desktop a file opens in a window of its own (the picture, the text, the PDF); a folder and the other looks go to the system
         else if (app.pkg.startsWith("file:") && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps && java.io.File(app.pkg.removePrefix("file:")).isFile) DesktopWindows.open("view:" + app.pkg.removePrefix("file:"), app.label)
         else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
+        else if (app.pkg.startsWith("pulse:extra:")) {
+            // an extra app of Pulse: in a window of the desktop on the Windows looks (when it has a page that can sit in a window), else as the app of its own
+            val alias = app.pkg.removePrefix("pulse:extra:")
+            val route = EXTRA_ROUTES[alias]
+            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label)
+            else com.umutk.pulse.AppPlace.byAlias(alias)?.run?.invoke(ctx) { }
+        }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
-        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
+        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS && FreeformSetup.isOn(ctx)); LauncherPrefs.touch(ctx, app.pkg) }
     }
     // what was put on the home screen by hand: files, pictures, folders, apps
     val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
@@ -487,6 +620,10 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
+    LaunchedEffect(LauncherSession.pageMove) {
+        val d = LauncherSession.pageMove
+        if (d != 0) { LauncherSession.pageMove = 0; pager.animateScrollToPage((pager.currentPage + d).coerceIn(0, (pager.pageCount - 1).coerceAtLeast(0))) }
+    }
     LaunchedEffect(LauncherSession.homeTick) {
         if (LauncherSession.homeTick > 0) { grid.scrollToItem(0); pager.scrollToPage(0) }
     }
@@ -496,7 +633,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             if (!look.id.startsWith("winphone") || LauncherPrefs.wpSideDock) look.SideDock(state, Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
-            if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())
+            if (!(desktop && !LauncherPrefs.homeApps)) { if (LauncherPrefs.widgetPages) LauncherWidgetPages(Modifier.fillMaxWidth()) else LauncherWidgetStrip(Modifier.fillMaxWidth()) }
             // the taskbar: a long press opens its own menu (Task Manager, auto-hide, settings); hidden, a thin edge strip brings it back for a moment
             if (look.taskbarTop && LauncherPrefs.dockShown) {
                 val hide = look.id in WINDOWS_LOOKS && LauncherPrefs.taskbarAutoHide && !LauncherSession.taskbarPeek && !LauncherSession.startOpen && !LauncherSession.clockOpen
@@ -546,7 +683,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                 com.umutk.pulse.ClippyView(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = (if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp) + 6.dp))
             }
         }
-        if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
+        if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp, state)
         // Windows 10 Mobile looks: the action center comes down from the top edge
         if (look.id.startsWith("winphone")) Box(Modifier.fillMaxSize()) {
             ActionCenterHandle(Modifier.align(Alignment.TopStart))
@@ -561,7 +698,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // the Windows Phone glance page; "all apps" on it opens the apps list
         if (LauncherSession.feedOpen && look.id.startsWith("winphone")) WinPhoneFeed({ LauncherSession.feedOpen = false; LauncherSession.startOpen = true }) { LauncherSession.feedOpen = false }
         HomeSheet()
-        FolderDialogs(visible, open) { actionFor = it }
+        FolderDialogs(apps, open) { actionFor = it }
         if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
         deskItemFor?.let { app -> DesktopItemMenu(app, open) { deskItemFor = null } }
@@ -617,3 +754,13 @@ private fun ShortcutArrow(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         }
     }
 }
+
+
+/** The extra apps of Pulse that have a page which can sit in a window of the desktop: the entry's alias and its page. (Calendar, Contacts and YTXTube keep to their own screens: each has its own look or its own process.) */
+private val EXTRA_ROUTES = mapOf(
+    "FilesLauncher" to "page:filestabs", "PhotosLauncher" to "win:gallery", "HealthLauncher" to "health", "CodeLauncher" to "code", "CalculatorLauncher" to "calculator",
+    "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "WeatherLauncher" to "weather",
+    "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "BrowserLauncher" to "browser", "OfficeLauncher" to "office",
+    "GameHubLauncher" to "gamehub", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaintLauncher" to "paint", "EbookLauncher" to "ebook",
+    "TempMailLauncher" to "tempmail", "ClockLauncher" to "clock", "AiLauncher" to "ai",
+)

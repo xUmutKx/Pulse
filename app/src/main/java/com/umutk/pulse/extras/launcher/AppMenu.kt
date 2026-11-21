@@ -8,6 +8,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,9 @@ val MENU_ACTS = listOf(
     MenuAct("paste", "Paste", "Yapıştır", "paste"),
     MenuAct("uninstall", "Uninstall", "Kaldır", "trash", quick = true, danger = true),
     MenuAct("info", "App info", "Uygulama bilgisi", "info"),
+    MenuAct("desk", "Pin to desktop", "Masaüstüne sabitle", "pin"),
+    MenuAct("icon", "Change icon", "Simgeyi değiştir", "image"),
+    MenuAct("iconreset", "Reset icon", "Simgeyi sıfırla", "history"),
     MenuAct("hide", "Hide from launcher", "Ana ekranda gizle", "eyeOff"),
     MenuAct("folder", "Add to folder", "Klasöre ekle", "folder"),
     MenuAct("copypkg", "Copy package name", "Paket adını kopyala", "copy"),
@@ -82,7 +86,11 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
         "rename", "props" -> { PropState.app = app; PropState.tab = 0 }
         "share" -> open(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${app.label}: https://play.google.com/store/apps/details?id=$pkg"), null))
         "uninstall" -> com.umutk.pulse.features.AppUninstall.run(ctx, pkg) { ok -> if (ok) { LauncherPrefs.names = LauncherPrefs.names - pkg; LauncherPrefs.save(ctx) } }
-        "info" -> open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null)))
+        // the app's information page is Pulse's own (Properties); the phone's page is one tap from there
+        "info" -> { PropState.app = app; PropState.tab = 0 }
+        "desk" -> { LauncherPrefs.links = (LauncherPrefs.links + "app:$pkg").distinct(); LauncherPrefs.save(ctx) }
+        "icon" -> AppIcons.pick = app
+        "iconreset" -> AppIcons.clear(ctx, pkg)
         "hide" -> { LauncherPrefs.hidden = LauncherPrefs.hidden + pkg; LauncherPrefs.save(ctx) }
         "folder" -> FolderUi.pick = app
         "copypkg" -> { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("package", pkg)); android.widget.Toast.makeText(ctx, pkg, android.widget.Toast.LENGTH_SHORT).show() }
@@ -101,6 +109,7 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
  * The menu of one app (a long press, or a right click): in Windows 11 it is the new compact menu, a row of icons on top (open, pin, rename, share, uninstall) and the rest as rows with
  * Fluent icons, the less common ones behind "Show more options"; the other looks list every action as rows. Which actions there are, and in what order, is the user's to set.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -115,6 +124,8 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
             "uninstall" -> real && !app.system
             "info", "store", "stop", "extract", "copypkg", "share" -> real
             "open" -> real
+            "desk" -> real
+            "iconreset" -> AppIcons.has(ctx, app.pkg)
             "cut", "copy" -> app.pkg.startsWith("file:")
             "paste" -> app.pkg.startsWith("file:") && FileClip.files.isNotEmpty() && java.io.File(app.pkg.removePrefix("file:")).isDirectory
             else -> true
@@ -157,10 +168,22 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
                 } else moreSet.forEach { a -> ActionRow(a.icon, label(a), sk.text) { go(a) } }
             }
         } else {
-            acts.forEach { a ->
-                if (fluent) FluentRow(a, label(a), sk?.text ?: w.text) { go(a) } else ActionRow(a.icon, label(a), w.text) { go(a) }
+            // the actions as icons, five to a row (a long press names the icon): a short menu in place of a long list
+            val ink = sk?.text ?: w.text
+            val items = acts.map { a -> Triple(a, label(a), { go(a) }) } + (if (inFolder) listOf(Triple(null as MenuAct?, tr("Remove from folder", "Klasörden çıkar"), { LauncherFolders.remove(ctx, app.pkg); onDismiss() })) else emptyList())
+            items.chunked(5).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    row.forEach { (a, name, act) ->
+                        Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .combinedClickable(onLongClick = { android.widget.Toast.makeText(ctx, name, android.widget.Toast.LENGTH_SHORT).show() }, onClick = act), contentAlignment = Alignment.Center) {
+                            val tint = if (a?.danger == true) Color(0xFFD13438) else ink
+                            if (a == null) PIcon("close", tint, 22.dp)
+                            else if (fluent) FluentIcon(if (a.key == "pin" && pinned) "pin" else a.icon, tint, 22.dp) else PIcon(a.icon, tint, 22.dp)
+                        }
+                    }
+                    repeat(5 - row.size) { Spacer(Modifier.size(44.dp)) }
+                }
             }
-            if (inFolder) ActionRow("close", tr("Remove from folder", "Klasörden çıkar"), w.text) { LauncherFolders.remove(ctx, app.pkg); onDismiss() }
         }
         // (arranging the menu is in the launcher settings, Context menu: no row for it here)
     }

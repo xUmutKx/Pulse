@@ -370,7 +370,7 @@ fun PlayerScreen(
             Row(Modifier.fillMaxSize()) {
                 Column(
                     Modifier
-                        .weight(0.60f)
+                        .weight(NavSettings.splitPct / 100f)
                         .fillMaxHeight()
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -385,7 +385,7 @@ fun PlayerScreen(
                 }
                 Column(
                     Modifier
-                        .weight(0.40f)
+                        .weight(1f - NavSettings.splitPct / 100f)
                         .fillMaxHeight()
                 ) {
                     Spacer(Modifier.height(top))
@@ -2044,13 +2044,13 @@ private fun VideoDetailsBlock(
             }
         }
         if (descriptionOpen && details != null) {
-            Text(
+            LinkText(
                 details.description,
                 modifier = Modifier.padding(top = 10.dp),
                 color = c.onSurfaceVariant,
+                linkColor = c.primary,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
             )
         }
         Spacer(Modifier.height(16.dp))

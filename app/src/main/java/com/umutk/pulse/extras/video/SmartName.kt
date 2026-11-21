@@ -24,7 +24,8 @@ private fun untilTag(tokens: List<String>): List<String> {
 }
 
 fun smartName(file: String): String {
-    val base = file.substringBeforeLast('.', file).trim()
+    // the site a release came from ("[ OxTorrent.com ] ", "[TorrentCouch.com]. ", "www.site.org - ") is not part of the title
+    val base = file.substringBeforeLast('.', file).trim().replace(Regex("^(?:\\s*[\\[(][^\\])]*[\\])][ ._-]*|www\\.[^ ]+? - )+"), "").trim().ifEmpty { file.substringBeforeLast('.', file).trim() }
     if (base.isEmpty()) return file
     // a name with spaces already is a person's own: only the extension goes
     val spaced = base.count { it == ' ' } >= 3

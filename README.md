@@ -1,26 +1,52 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
+<p align="center"><a href="docs/media/Pulse-long.mp4"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></a></p>
+<p align="center"><a href="docs/media/Pulse-long.mp4">▶ Tour video (landscape, ~1:40)</a></p>
+
+<p align="center"><img src="docs/media/cover-wall.jpg" width="900" alt="One phone. Every Windows."></p>
+
 ### Pulse
 
-| Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
+<p align="center"><b><a href="https://xumutkx.github.io/Pulse/">🌐 Website</a></b> · <a href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
+
+| Windows 11: windows | Windows 10 | Windows 7 | Windows XP | Windows 95 |
 |---|---|---|---|---|
-| <img src="docs/screenshots/keyboard.jpg" width="170" alt="Pulse keyboard settings"> | <img src="docs/screenshots/blackout.jpg" width="170" alt="BlackOut"> | <img src="docs/screenshots/buds-manager.jpg" width="170" alt="Buds manager"> | <img src="docs/screenshots/system-font.jpg" width="170" alt="System font"> | <img src="docs/screenshots/win11-flyout.jpg" width="170" alt="Windows 11 look: flyout"> |
+| <img src="docs/screenshots/win11-windows.jpg" width="170" alt="Windows 11: windows"> | <img src="docs/screenshots/win10-settings.jpg" width="170" alt="Windows 10"> | <img src="docs/screenshots/win7-desktop.jpg" width="170" alt="Windows 7"> | <img src="docs/screenshots/xp-desktop.jpg" width="170" alt="Windows XP"> | <img src="docs/screenshots/win95-programs.jpg" width="170" alt="Windows 95"> |
 
-| Windows 11 look: desktop | Calculator | Weather | Files | Music player |
+| Windows Phone tiles | Wallpapers | Task Manager (XP) | Screen cover | Toolkit |
 |---|---|---|---|---|
-| <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
+| <img src="docs/screenshots/winphone-tiles.jpg" width="170" alt="Windows Phone tiles"> | <img src="docs/screenshots/wallpapers.jpg" width="170" alt="Wallpapers"> | <img src="docs/screenshots/xp-taskmanager.jpg" width="170" alt="Task Manager (XP)"> | <img src="docs/screenshots/screen-cover.jpg" width="170" alt="Screen cover"> | <img src="docs/screenshots/toolkit.jpg" width="170" alt="Toolkit"> |
 
-| Processes | Performance | Overview | CPU cores | Windows 95 Performance |
+| CPU cores | Battery power | Gym library | Terminal | Weather |
 |---|---|---|---|---|
-| <img src="docs/screenshots/processes.png" width="170" alt="Processes"> | <img src="docs/screenshots/performance.png" width="170" alt="Performance"> | <img src="docs/screenshots/overview.png" width="170" alt="Overview"> | <img src="docs/screenshots/cores.png" width="170" alt="CPU cores"> | <img src="docs/screenshots/win95-performance.png" width="170" alt="Windows 95 Performance"> |
-
-| Windows 7 Startup apps | Windows XP widgets | Windows 7 gadgets | App manager |
-|---|---|---|---|
-| <img src="docs/screenshots/win7-startup.png" width="170" alt="Windows 7 Startup apps"> | <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
+| <img src="docs/screenshots/cpu-cores.jpg" width="170" alt="CPU cores"> | <img src="docs/screenshots/battery-power.jpg" width="170" alt="Battery power"> | <img src="docs/screenshots/gym.jpg" width="170" alt="Gym library"> | <img src="docs/screenshots/neofetch.jpg" width="170" alt="Terminal"> | <img src="docs/screenshots/weather-city.jpg" width="170" alt="Weather"> |
 
 
-**An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is so many stuff all sticked together actually for my own usage than turned into a general project wich includes a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
+<p align="center"><a href="docs/media/Pulse-short.mp4"><img src="docs/media/Pulse-short-preview.gif" width="300" alt="Pulse in 30 seconds"></a></p>
+<p align="center"><a href="docs/media/Pulse-short.mp4">▶ Short video (vertical, ~35 s)</a></p>
 
+**An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse started as the tools I wanted on my own phone and grew into one app: a Windows desktop launcher (Windows 11, 10, 7, XP, 95 and Windows Phone looks) with real windows, Settings, Control Panel, Task Manager and Registry Editor; a task manager and system monitor; a music player with Winamp, Poweramp and Windows Media Player skins; a video player with online subtitles; a keyboard; Files, Photos, Calendar, Contacts, Notes, Office, a code editor and a browser; Game Hub with a CD shelf; a screen cover with dozens of clocks and charging animations; a toolkit (QR and barcode reader, floating timer, auto clicker, DNS, compass ...); Health with a gym library; a Buds and Wear OS watch manager; and on-device AI. Every screen is drawn for every look. Free, open source (GPL-3.0), no ads, no account.
+
+
+
+<details><summary><b>🆕 New lately</b>: 2.0.18 to 2.0.21</summary>
+
+- **Launcher**: Windows 11 is the default look; the picker shows the Windows looks first. Lock screen (Win+L), shut down and restart screens, Win+V clipboard, Alt+Tab and Win+Tab, Win+arrows snap, a shortcut guide (Win+/).
+- **Windows tools**: Device Manager, Event Viewer, Disk Management, Windows Security, Task Scheduler; the Run box knows devmgmt, eventvwr, diskmgmt, taskschd, cmd, terminal.
+- **Settings without hand-off**: Wi-Fi with the networks around, Bluetooth (last three devices and pairing), NFC, USB, cameras, location, date and time, battery saver, dark mode, text size: all inside Pulse.
+- **Windows**: dark Windows 10 windows, Mica glass in Windows 11, a window narrower than a phone scales its page to fit, a tap brings a window to the front, Control Panel with a search box.
+- **Widgets**: resize by the corner, lock to another widget's size or to a square, one tap gives every widget the same size.
+- **Command Prompt** shows neofetch with the Windows logo of the look; Terminal keeps the Android robot and is see-through.
+- **Game Hub**: the CD shelf (3D cases) opens at once; Chess, Checkers and Connect 4 against a bot or over Bluetooth.
+- **Device manager**: Buds and Watch in one page; the watch gets a shell, logcat, 30 s screen recording, pull and disable apps.
+- **Keyboard**: Shift + key types a key's extra character, long press on signs and emoji for their variants, clipboard texts are not offered twice, Files' pictures from zips are not offered.
+- **Files**: icon bar for picked files, deletes go to the Recycle Bin, a crash in a zip from a notification fixed.
+- **Tools**: QR and barcode reader (every common code type), a new floating timer, Pulse's quick tiles close the panel, landscape calculator with side-by-side keys and a graph.
+- **AI**: models found anywhere on the phone (starting with Download), the folder picked in Pulse's own picker.
+- **Report**: Create crash report in Settings (search "crash").
+</details>
+
+<p align="center"><img src="docs/media/banner-looks.jpg" width="900" alt="One app. Every look."></p>
 
 <details><summary><b>🎨 Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
@@ -31,6 +57,49 @@
 - Extra apps (Files, Photos, Calendar, Contacts, Messages, Music, ...) have their own look and never mix with Pulse's.
 </details>
 
+<details><summary><b>🖥️ Windows desktop launcher</b>: windows, shortcuts, tools, keyboard</summary>
+
+- The launcher is a Windows desktop in the look you pick (Windows 11 is the default and first in the list; Material and AMOLED are last). Apps open in windows you can drag, snap to a half of the screen (drag to an edge, Win+Left / Right), maximise and minimise; Alt+Tab and Win+Tab show the windows as cards.
+- A physical keyboard (or Pulse's keyboard with its Win key) works as on a PC: the Windows key alone is Start, Win+X / R / E / I / S / D / L / M / A / V / Tab / arrows, Win+Shift+S, Win+/ for the list of shortcuts, Alt+F4, Ctrl+Esc, Esc. With Pulse as the home app the Windows key is taken before One UI can open its own launcher (needs the screen cover accessibility layer).
+- Lock (Win+L) shows that Windows' lock screen and sign-in; Shut down and Restart show the Shutting down screens (Windows 10 and 11 sometimes "Working on updates").
+- Windows tools over what the phone really reports: Task Manager, Services, Startup apps, Registry Editor (the phone's settings database), **Device Manager**, **Event Viewer**, **Disk Management**, **Windows Security**, **Task Scheduler**, Windows Update (Pulse updates), Command Prompt (neofetch with the logo of the look's Windows) and Terminal (the Android robot). Run box: cmd, terminal, regedit, devmgmt, eventvwr, diskmgmt, taskschd, control, calc, notepad ...
+- Settings pages with controls that work inside Pulse (Wi-Fi with the networks around, Bluetooth, airplane mode, Do not disturb, dark mode, screen timeout, text size, battery saver, time, lock screen lyrics ...), with Shizuku or root where Android asks for it; no hand-off to the phone's Settings app.
+- Clipboard history (Win+V), keyboard shortcut guide, mouse right click, a Windows style error box, the volume and brightness display, Recycle Bin for deleted files.
+- The look picker shows the Windows looks first (11, 10, 7, Phone, XP, 95); One UI, ColorOS, Terminal, Material and AMOLED wait in a small folded line.
+- Control Panel with a dark glass title bar and a rounded search box; Windows 10 windows are dark; the taskbar buttons scroll and never run under the tray and the clock.
+- A selected window comes to the front (title bar, body or its taskbar button).
+</details>
+
+<details><summary><b>🎮 Game Hub</b>: Boxshelf, CD shelf, Chess, Checkers, Power of 4</summary>
+
+- Game Hub shows your games as a Boxshelf 3D shelf, as a **CD shelf** (KMP Odd Scroll's CD Rack by mejdi14, GPL-3.0, see `THIRD_PARTY.md`), or as a classic grid; the grid button goes from one to the next.
+- Chess, Checkers and Power of 4 of Pulse's own, each with its own logo: against the computer (four levels), two players on one phone, or two phones over Bluetooth (no internet).
+</details>
+
+<details><summary><b>🎧 Device manager</b>: Galaxy Buds and the watch</summary>
+
+- Buds: the earbuds' battery, which bud is in the ear, noise control, and stopping the music when they are taken out.
+- Watch (over wireless debugging): install APKs and Pulse Watch, send files, screenshot, a 30 second screen recording, a shell, the log (logcat), the apps on the watch with Open, Pull (their APK to the phone), Disable and Remove.
+- Pulse Watch is a Wear OS app of its own with 21 small apps for a round screen.
+- Planned for Pulse Watch (see `wear/PLAN.md`): a file manager, a music and video player, a remote for the phone and its media, YouTube and YouTube Music, watch faces in the Windows looks, notifications and lyrics on the wrist.
+</details>
+
+<details><summary><b>⌚ Pulse Watch: what is planned</b> (not built yet, see <code>wear/PLAN.md</code>)</summary>
+
+<p><img src="docs/media/watch/watch-plan-sheet.jpg" width="900" alt="Pulse Watch: eight planned screens"></p>
+
+1. **File manager**: the watch's and the phone's folders, copy both ways, clean up.
+2. **Music on the watch**: offline playlists for a run, synced lyrics.
+3. **Video on the watch**: clips sent small from the phone, subtitles.
+4. **Media remote**: whatever plays on the phone (Pulse, YTXTube, Spotify ...), the crown is the volume.
+5. **Phone remote**: find the phone, camera shutter, Wi-Fi / DND / flashlight, an alert when the phone is left behind.
+6. **YouTube and YouTube Music** through YTXTube, audio on the watch.
+7. **Watch faces** in the Windows looks and the Screen cover clocks, tiles and complications.
+8. **Notifications and lyrics** with reply.
+</details>
+
+<p align="center"><img src="docs/media/banner-music.jpg" width="900" alt="Music, your way."></p>
+
 <details><summary><b>🎵 Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
 
 - Music player in three skins (Material, Poweramp, Winamp) with lyrics (synced, search by text), waveform seek bar, sleep timer, equalizer (also by genre), crossfade, playlists, mixes by mood, stars and favourites sorted both ways.
@@ -40,7 +109,7 @@
 - Galaxy Buds manager: noise control (also by movement), touch controls, equalizer, 360 audio, find my earbuds.
 </details>
 
-<details><summary><b>🚗 Car and motion sickness</b></summary>
+<details><summary><b>🚗 Car and motion sickness</b>: motion cues, car mode</summary>
 
 - **Motion cues** (Toolkit): a field of dots that stays fixed in the world while the phone moves (acceleration, turning and tilt are read from the sensors), against motion sickness (nausea); the middle can stay clear, and taps go through it.
 - Bluetooth auto-play when the car or a headset connects, resume on wired headset, pause on unplug.
@@ -56,39 +125,48 @@
 - Translation bar: the two languages at the ends, a swap button between them, the translation of what you type below, a tap puts it in. Deleting the space behind a word opens it again with its suggestions.
 - Hold a key for accents (many more letters). Optional compact bottom row with a Shift key, separate brightness for the top bar and the bottom rows, Shift shows outline / underline / filled for off, one capital and caps lock.
 - Emoji with search and kaomoji, a symbol tab (flowers, hearts, stars, arrows, presets, all Unicode symbol blocks, searchable by name), clipboard history with pins and images, translation inside the keyboard, extra key row (Ctrl, Alt, Win, Shift, arrows, F keys).
+- **Shift + key**: hold Shift with one finger and tap a key with another to type its extra character (/ @ ...); a setting, on at first.
+- A text pasted from the clipboard panel leaves the suggestion bar and is not offered again.
 </details>
 
-<details><summary><b>🚀 Launcher</b></summary>
+<details><summary><b>🚀 Launcher</b>: home screen, widgets, folders, gestures</summary>
 
 - Home screens for every look (taskbars, Start menus, Windows Phone tiles, Material), folders, links to files, pictures and folders, widgets, wallpapers with dimming and blur, icon packs, open animation, sounds, a mouse arrow where you touch in the Windows looks.
 </details>
 
-<details><summary><b>💬 Messages and contacts</b></summary>
+<details><summary><b>💬 Messages and contacts</b>: SMS, chats, contacts, calls</summary>
 
 - SMS and MMS (default-SMS capable): reply, read and copy-code in the notification, bubbles, mute, pin, block, undo send, signature, automatic spam blocking.
 - Contacts, Calendar and Photos as standalone apps.
 </details>
 
-<details><summary><b>📁 Files and storage</b></summary>
+<details><summary><b>📁 Files and storage</b>: browser, archives, storage analyser</summary>
 
 - File manager with zip, 7z and rar, folder tree, large and duplicate finders, type breakdown with previews, bulk delete and swipe actions on each file (delete, open or select, per direction), a full-page archive view with copy, cut and delete, cache cleaner (SD Maid SE rules), root browsing, media tools (compress, GIF, convert), installer for APK, APKS, APKM and XAPK, downloads with several connections, a Save-to panel for anything shared to Pulse.
 </details>
 
-<details><summary><b>📊 Task manager, battery and system</b></summary>
+<p align="center"><img src="docs/media/banner-measured.jpg" width="900" alt="Your phone, measured."></p>
+
+<details><summary><b>📊 Task manager, battery and system</b>: processes, battery, device info</summary>
 
 - Live CPU, memory, storage, network, GPU, battery and temperature, processes with End task, app history, startup apps, services, debloater with Safe / Expert / Unsafe marks.
 - Battery health: reported condition, cycles and capacity, and the capacity **measured** from the charge counter while charging or draining.
 - Floating monitor, Quick Settings tiles, alerts, watchdog, 20+ widgets.
 </details>
 
-<details><summary><b>🧰 Toolkit and everyday tools</b></summary>
+<p align="center"><img src="docs/media/banner-cover.jpg" width="900" alt="Screen cover and a whole toolkit."></p>
+
+<details><summary><b>🧰 Toolkit and everyday tools</b>: compass, level, flashlight, screenshots, sensors</summary>
 
 - Floating keys: a button over every app (tap opens the keyboard, hold opens a mini keyboard with Esc, Tab, Ctrl, F keys, arrows and more; slide sideways for pages; needs root or Shizuku to send the keys).
 - Compass, level, flashlight, lux meter, dice, coin, clipboard, screenshot, sensors off, volume, sound mode, stopwatch, timer, floating timer, network type, DNS and TTL, finder, power menu, calculator (a key layout per look, keys animate).
 - Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
+- QR and barcode reader: QR, Data Matrix, Aztec, PDF417, EAN, UPC, Code 128 / 39 / 93, ITF, Codabar, light-on-dark codes; a Quick Settings tile.
+- Calculator: turned on its side it opens the scientific keys beside the number keys; a very wide screen adds the graph.
+- Settings > Report > **Create crash report**: the last crash and the device details in one text (saved in Download/Pulse/Crash and shared); searching "crash" finds it.
 </details>
 
-<details><summary><b>📊 Task manager</b></summary>
+<details><summary><b>📊 Task manager</b>: processes, performance, services, startup</summary>
 
 - **Processes**: apps and background processes in groups, with CPU and memory per process and an End task button.
 - **Performance**: live graphs for CPU, memory, storage, network, GPU, battery and temperature. Thermal, Battery, Storage and Memory each have a detail page with a verdict and 30-minute graphs.
@@ -100,7 +178,7 @@
 
 </details>
 
-<details><summary><b>🧹 App manager and debloater</b></summary>
+<details><summary><b>🧹 App manager and debloater</b>: uninstall, freeze, APK extract</summary>
 
 - **Apps**: search, filter (All, User, System, Disabled, Battery limit, Xposed modules) and sort (name, size, install date, last used), each with its own icon. Open an app to open it, see its app settings, force stop it, uninstall it, or extract its APK to `Downloads/Pulse/extract`.
 - **Debloat**: remove system apps you do not need. Every app is marked **Safe**, **Expert** or **Unsafe**, with a short description of what it does. Removal is for your user only: the app's data stays, and the **Reinstall** tab brings any removed app back. **Undo last** at the top restores the most recent removal. The list is downloaded from GitHub with **Update list**, and a copy is bundled with the app for offline use. Debloat needs root.
@@ -109,7 +187,7 @@
 
 </details>
 
-<details><summary><b>📈 Monitoring</b></summary>
+<details><summary><b>📈 Monitoring</b>: floating numbers, alerts, logs</summary>
 
 - **Floating monitor** over other apps, live numbers in a notification, and alerts for temperature, battery and memory with limits you set.
 - **Quick Settings tiles** for the monitor, Private DNS and the toolkit tools.
@@ -120,7 +198,7 @@
 
 </details>
 
-<details><summary><b>🧩 Widgets and gadgets</b></summary>
+<details><summary><b>🧩 Widgets and gadgets</b>: home-screen widgets, desktop gadgets</summary>
 
 Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles. Music widgets include Winamp with its real skins, and searching "win" in the Widgets page lists them.
 
@@ -130,7 +208,7 @@ Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery a
 
 </details>
 
-<details><summary><b>📦 Files and install</b></summary>
+<details><summary><b>📦 Files and install</b>: APK installer, downloads, sharing</summary>
 
 - **Files**: a file explorer. Zip files opened from any other app can be opened with Pulse and browse like a folder. The folder tree and the file-type breakdown measure the storage once and keep the result between runs; only Refresh measures again. A folder of hundreds of entries (`/data/data`) fills in smoothly. A trash folder: Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back. Each file has its menu on the right, with the three dots stacked.
 - **Installer**: installs APK, APKS, APKM, XAPK and zip bundles; a zip with several different apps becomes one install per app, and root or Shizuku installs stream the files into the system installer. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
@@ -139,14 +217,14 @@ Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery a
 
 </details>
 
-<details><summary><b>🔒 App lock</b></summary>
+<details><summary><b>🔒 App lock</b>: PIN, fingerprint, hidden apps</summary>
 
 Lock any app behind a pattern, PIN or password, with optional fingerprint. The lock screen covers the app before you see it, also when the app opens as a chat bubble or a floating window. It follows the look you have chosen. Needs the accessibility service; usage access and root or Shizuku make it quicker.
 
 
 </details>
 
-<details><summary><b>🎧 Music player</b></summary>
+<details><summary><b>🎧 Music player</b>: skins, lyrics, queue, sleep timer</summary>
 
 One player with four looks: Material, Poweramp, Winamp and Windows Media Player, plus a Lyrics look.
 
@@ -173,7 +251,9 @@ One player with four looks: Material, Poweramp, Winamp and Windows Media Player,
 
 </details>
 
-<details><summary><b>📱 Apps</b></summary>
+<p align="center"><img src="docs/media/banner-everyday.jpg" width="900" alt="Every day, in one app."></p>
+
+<details><summary><b>📱 Apps</b>: Files, Photos, Calendar, Notes, Browser ...</summary>
 
 Settings has one **Apps** card for everything optional: the standalone apps, the tools and the pages. Each row has a switch (the app's home-screen icon, or whether the tool shows) and a chevron that folds **where it is listed inside Pulse**: the top-right menu, the left menu, or only Settings, one radio per place with that place's icon. Tap an app's name to open it. The top-right menu has an **Apps** group with the tools you placed there and an **Extra apps** entry that lists every standalone app in one place.
 
@@ -193,21 +273,21 @@ Settings has one **Apps** card for everything optional: the standalone apps, the
 
 </details>
 
-<details><summary><b>📝 Office</b></summary>
+<details><summary><b>📝 Office</b>: documents, sheets, slides, PDF</summary>
 
 **Word**, **Excel** and **PowerPoint** open and edit documents. Each window is drawn in the look you pick, from Windows 95 and 2003 menus to the flat 2013 and 365 ribbons, with a Home ribbon, a zoom bar and a status bar. The 365 window is solid grey (light or dark) and every text and icon colour is picked from the strip it sits on. Text files open in a Notepad-style editor drawn per look (grey in Windows 11), with a black AMOLED option that is remembered.
 
 
 </details>
 
-<details><summary><b>🚀 Launcher</b></summary>
+<details><summary><b>🚀 Launcher</b>: home screen, widgets, folders, gestures</summary>
 
 Pulse can be your home screen, and the looks of the launcher match the app's looks. The home screen is a desktop, not a wall of icons. The Windows looks show desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint and Command Prompt, drawn in that look's own icons. The other looks keep the home clean, with a clock, widgets and a dock. Apps are in the apps list, grouped by category (games, media, communication, productivity, maps, system and other). A setting brings the app grid back on the home screen.
 
 
 </details>
 
-<details><summary><b>🎬 Video player and subtitles</b></summary>
+<details><summary><b>🎬 Video player and subtitles</b>: online subtitles, picture in picture</summary>
 
 The video player searches subtitles online from its subtitle menu. The search uses yifysubtitles.ch, which needs no account or key.
 Also we got TheIntroDb implemention for skipping intros recaps etc and one of my most wanted thing subtile in pip mode!
@@ -215,14 +295,14 @@ Also we got TheIntroDb implemention for skipping intros recaps etc and one of my
 
 </details>
 
-<details><summary><b>🔄 Updates</b></summary>
+<details><summary><b>🔄 Updates</b>: in-app updates, release notes</summary>
 
 Pulse checks GitHub for a newer release at most every 12 hours. When one exists, a **New update available** dialog shows its notes; you can download it or dismiss it for that version. The check can also be started from settings.
 
 
 </details>
 
-<details><summary><b>🛠️ Tools</b></summary>
+<details><summary><b>🛠️ Tools</b>: QR, timer, auto clicker, DNS ...</summary>
 
 - **Toolkit**: 20 tools, including compass, level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.
 - **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
@@ -237,7 +317,7 @@ Pulse checks GitHub for a newer release at most every 12 hours. When one exists,
 
 </details>
 
-<details><summary><b>🖌️ Themes</b></summary>
+<details><summary><b>🖌️ Themes</b>: looks, colours, icons, wallpapers</summary>
 
 Pulse has these looks, each with its own title bar, buttons and window edge:
 
@@ -256,14 +336,14 @@ Each look can have its own wallpaper. The Settings page shows the picture in the
 
 </details>
 
-<details><summary><b>🌍 Language</b></summary>
+<details><summary><b>🌍 Language</b>: English and Turkish</summary>
 
 Pulse follows the phone language by default. You can pick English or Türkçe on the **About** page, with a direct switch.
 
 
 </details>
 
-<details><summary><b>🔑 Permissions</b></summary>
+<details><summary><b>🔑 Permissions</b>: what Pulse asks for and why</summary>
 
 Pulse asks for these. Most are optional and only used by the feature named.
 
@@ -283,7 +363,7 @@ Pulse asks for these. Most are optional and only used by the feature named.
 
 </details>
 
-<details><summary><b>⚡ Root and Shizuku</b></summary>
+<details><summary><b>⚡ Root and Shizuku</b>: what works better with them</summary>
 
 Pulse works without root. Root or Shizuku unlock more.
 
@@ -304,7 +384,7 @@ Without root or Shizuku you still get memory, battery, storage, network, device 
 
 </details>
 
-<details><summary><b>🏗️ Build</b></summary>
+<details><summary><b>🏗️ Build</b>: build it yourself</summary>
 
 Pulse is written in Kotlin with Jetpack Compose. The project has no Gradle wrapper, so build with Android Studio, or with a Gradle 8.9 install.
 
@@ -319,7 +399,7 @@ The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Acti
 
 </details>
 
-<details><summary><b>📜 Licences</b></summary>
+<details><summary><b>📜 Licences</b>: GPL-3.0 and third-party code</summary>
 
 - **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`; the filled and colour glyphs (`FluentFilled.kt`, `FluentMat.kt`, `FluentColor.kt`, `res/drawable-nodpi/fc_*.png`) come from the same set.
 - **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.

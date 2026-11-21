@@ -1,0 +1,443 @@
+package com.umutk.pulse.extras.launcher
+
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
+import android.content.Context
+import android.content.Intent
+import android.media.AudioManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.umutk.pulse.tr
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/**
+ * The Windows 11 flyouts that have a button of their own on the taskbar: the quick settings (the connection / sound / battery button: tiles, brightness, volume, battery)
+ * and the search (the search button: a search box, the kinds to search, the results). The Start button opens the Start menu and the clock the notifications and calendar,
+ * so every button opens its own panel.
+ */
+@Composable
+fun Win11Flyouts(taskbar: Dp, state: LauncherState?) {
+    if (LauncherSession.quickOpen) QuickFlyout(taskbar)
+    if (LauncherSession.w11SearchOpen) SearchFlyout(taskbar, state)
+    if (LauncherSession.runOpen) RunBox(taskbar)
+    if (LauncherSession.winXOpen) WinXMenu(taskbar)
+}
+
+private val FLY_BG = Color(0x7A1B2232)
+private val FLY_EDGE = Color(0x40FFFFFF)
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun QuickFlyout(taskbar: Dp) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val none = remember { MutableInteractionSource() }
+    // the lit tiles and the sliders take the accent a notch darker, as Windows does for its filled controls: a bright accent (pink, green) is not glaring on them
+    val hi = launcherAccent().let { c -> androidx.compose.ui.graphics.Color(c.red * .82f, c.green * .82f, c.blue * .82f, 1f) }
+    val shape = RoundedCornerShape(8.dp)
+    var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    // the tiles on show (kept in a list the user edits with the pencil): nine to a page
+    val qp = remember { ctx.getSharedPreferences("pulse_quick_tiles", Context.MODE_PRIVATE) }
+    val defaults = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder", "Motion cues", "Floating timer", "Auto clicker", "Screenshot", "Private DNS", "Dark mode", "NFC", "Sync", "Quiet hours") }
+    var shown by remember { mutableStateOf(qp.getString("shown", null)?.split("|")?.filter { n -> QUICK.any { it.en == n } } ?: defaults) }
+    var editing by remember { mutableStateOf(false) }
+    val names = if (editing) QUICK.map { it.en }.filter { it != "All settings" } else shown
+    val tiles = remember(names) { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
+    val ssid = remember(rev) { wifiName(ctx) }
+    val ons = remember(rev, tiles) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
+    val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+    var vol by remember { mutableFloatStateOf(am.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / max) }
+    var bright by remember { mutableFloatStateOf(runCatching { Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f }.getOrDefault(.5f)) }
+    val bat = remember { ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }
+    val pct = remember { bat?.let { (it.getIntExtra("level", 0) * 100 / it.getIntExtra("scale", 100).coerceAtLeast(1)) } ?: 0 }
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.quickOpen = false }) {
+        val place = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).statusBarsPadding().widthIn(max = 360.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
+        AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // the toggles: nine to a page (three by three), pages one under the other with dots at the right; the pencil edits which tiles show
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val rowH = (maxWidth - 14.dp - 16.dp) / 3 / 1.5f
+                    val pages = tiles.chunked(9)
+                    val pager = androidx.compose.foundation.pager.rememberPagerState { pages.size.coerceAtLeast(1) }
+                    androidx.compose.foundation.pager.VerticalPager(pager, Modifier.fillMaxWidth().padding(end = 14.dp).height(rowH * 3 + 16.dp), pageSpacing = 8.dp) { pg ->
+                        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            pages.getOrNull(pg).orEmpty().chunked(3).forEachIndexed { r, row ->
+                                Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    row.forEachIndexed { c, t ->
+                                        val on = ons.getOrNull(pg * 9 + r * 3 + c) == true
+                                        val kept = t.en in shown
+                            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(if (editing) (if (kept) hi else Color(0x22FFFFFF)) else if (on) hi else Color(0x33FFFFFF))
+                                // a tap works the tile; held, the tile's own page of Pulse's Settings opens in the launcher (the phone's page only for a tile Pulse has no page for)
+                                .combinedClickable(onClick = { if (editing) { shown = if (kept) shown - t.en else shown + t.en; qp.edit().putString("shown", shown.joinToString("|")).apply() } else t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }, onLongClick = {
+                                    val page = when (t.en) { "Wi-Fi" -> "Wi-Fi"; "Bluetooth" -> "Bluetooth"; "Airplane mode" -> "Airplane mode"; "Cellular" -> "Mobile network"; "Mobile hotspot" -> "Mobile hotspot"; "VPN" -> "VPN"; "Battery saver" -> "Power & battery"; "Quiet hours" -> "Focus"; "Rotation lock", "Dark mode" -> "Display"; else -> null }
+                                    val phoneAct = when (t.en) { "NFC" -> Settings.ACTION_NFC_SETTINGS; "Sync" -> Settings.ACTION_SYNC_SETTINGS; "Private DNS" -> Settings.ACTION_WIRELESS_SETTINGS; "Location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS; "Flashlight" -> Settings.ACTION_DISPLAY_SETTINGS; else -> null }
+                                    if (page != null) { SettingsJump.item = page; LauncherSession.quickOpen = false; openDesktopItem(ctx, "pulse:winsettings", "win11") }
+                                    else if (phoneAct != null) { LauncherSession.quickOpen = false; runCatching { ctx.startActivity(Intent(phoneAct).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+                                    else t.run(ctx)
+                                }).padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                                Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Text(if (t.en == "Wi-Fi" && on && ssid != null) ssid else tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                                    }
+                                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
+                    if (pages.size > 1) Column(Modifier.align(Alignment.CenterEnd), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        repeat(pages.size) { i -> Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (pager.currentPage == i) Color.White else Color(0x66FFFFFF))) }
+                    }
+                }
+                // the sliders: brightness (written to the system when it may be) and volume
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Glyph("light", Color.White, 18.dp)
+                    Slider(bright, { bright = it; runCatching { if (Settings.System.canWrite(ctx)) Settings.System.putInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, (it * 255).toInt().coerceIn(1, 255)) } },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp), colors = SliderDefaults.colors(thumbColor = hi, activeTrackColor = hi, inactiveTrackColor = Color(0x44FFFFFF)))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Glyph("volume", Color.White, 18.dp)
+                    Slider(vol, { vol = it; am.setStreamVolume(AudioManager.STREAM_MUSIC, (it * max).toInt(), 0) },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp), colors = SliderDefaults.colors(thumbColor = hi, activeTrackColor = hi, inactiveTrackColor = Color(0x44FFFFFF)))
+                }
+                // the foot: the battery and the way to the settings
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Glyph("battery", Color.White, 16.dp)
+                    Text("$pct%", color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                    Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(if (editing) hi else Color.Transparent).clickable { editing = !editing }, contentAlignment = Alignment.Center) { Glyph(if (editing) "check" else "edit", Color.White, 18.dp) }
+                    Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.quickOpen = false; runCatching { ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) {
+                        Glyph("settings", Color.White, 18.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
+    val ctx = LocalContext.current
+    val none = remember { MutableInteractionSource() }
+    val shape = RoundedCornerShape(8.dp)
+    var q by remember { mutableStateOf("") }
+    var kind by remember { mutableStateOf(0) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val kinds = listOf(tr("All", "Tümü"), tr("Apps", "Uygulamalar"), tr("Settings", "Ayarlar"), tr("Web", "Web"))
+    // an app held in the results opens the same menu as on the desktop (pin, icon, information ...)
+    var menuApp by remember { mutableStateOf<LaunchApp?>(null) }
+    menuApp?.let { m -> AppActionDialog(m, emptyList()) { menuApp = null } }
+    val apps = remember(q, state) { if (q.isBlank()) state?.apps.orEmpty().take(8) else state?.apps.orEmpty().filter { it.label.contains(q.trim(), true) }.take(8) }
+    // the settings are Pulse's own (Windows 11 Settings opens in a window on the matching page), not the phone's pages
+    val setList = remember { WIN11_SETTINGS.flatMap { it.items } }
+    val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.en.contains(q.trim(), true) || it.tr.contains(q.trim(), true) }.take(8) }
+    // YTXTube is our YouTube: found by "you", "tube", "ytx" and opens its own screen
+    val ytx = remember(q) { q.isNotBlank() && listOf("youtube", "ytxtube", "ytx", "tube", "yt music").any { it.contains(q.trim(), true) } && q.trim().length >= 2 }
+    // the tools of the system, found by their name or the command that opens them (con -> Control Panel, reg -> Registry Editor, cmd -> Terminal)
+    val lookId = if (LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black") "win10" else "win11"
+    val tools = remember(q) {
+        if (q.isBlank()) emptyList() else {
+            val n = q.trim().lowercase()
+            fun hit(vararg names: String) = names.any { it.lowercase().startsWith(n) || (n.length >= 3 && it.lowercase().contains(n)) }
+            buildList<Triple<String, String, () -> Unit>> {
+                if (hit("Control Panel", "control", "Denetim Masası")) add(Triple("settings", tr("Control Panel", "Denetim Masası"), { openDesktopItem(ctx, "pulse:settings", lookId) }))
+                if (hit("Registry Editor", "regedit", "registry", "Kayıt Defteri")) add(Triple("services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"), { DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }))
+                if (hit("Device Manager", "devmgmt", "Aygıt Yöneticisi")) add(Triple("performance", tr("Device Manager", "Aygıt Yöneticisi"), { DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }))
+                if (hit("Event Viewer", "eventvwr", "Olay Görüntüleyici")) add(Triple("details", tr("Event Viewer", "Olay Görüntüleyici"), { DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }))
+                if (hit("Disk Management", "diskmgmt", "Disk Yönetimi")) add(Triple("disk", tr("Disk Management", "Disk Yönetimi"), { DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }))
+                if (hit("Task Scheduler", "taskschd", "Görev Zamanlayıcı")) add(Triple("clock", tr("Task Scheduler", "Görev Zamanlayıcı"), { DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) }))
+                if (hit("Windows Security", "defender", "Windows Güvenliği")) add(Triple("lock", tr("Windows Security", "Windows Güvenliği"), { DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }))
+                if (hit("Task Manager", "taskmgr", "Görev Yöneticisi")) add(Triple("processes", tr("Task Manager", "Görev Yöneticisi"), { openDesktopItem(ctx, "pulse:taskmgr", lookId) }))
+                if (hit("Terminal", "Command Prompt", "cmd", "powershell", "Komut İstemi")) add(Triple("run", tr("Terminal", "Terminal"), { openDesktopItem(ctx, "pulse:cmd", lookId) }))
+                if (hit("Settings", "Ayarlar")) add(Triple("settings", tr("Settings", "Ayarlar"), { openDesktopItem(ctx, "pulse:winsettings", lookId) }))
+                if (hit("File Explorer", "explorer", "Dosya Gezgini", "files")) add(Triple("folder", tr("File Explorer", "Dosya Gezgini"), { openDesktopItem(ctx, "pulse:files", lookId) }))
+                if (hit("Notepad", "Not Defteri")) add(Triple("notes", tr("Notepad", "Not Defteri"), { openDesktopItem(ctx, "pulse:x:win:notepad", lookId) }))
+                if (hit("Calculator", "calc", "Hesap makinesi")) add(Triple("calc", tr("Calculator", "Hesap makinesi"), { openDesktopItem(ctx, "pulse:x:calculator", lookId) }))
+                if (hit("Paint")) add(Triple("palette", "Paint", { openDesktopItem(ctx, "pulse:paint", lookId) }))
+                if (hit("Run", "Çalıştır")) add(Triple("run", tr("Run", "Çalıştır"), { LauncherSession.runOpen = true }))
+            }
+        }
+    }
+    val imeUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
+        val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().imePadding().padding(top = 28.dp, bottom = if (imeUp) 8.dp else taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
+        AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // the search pill with the accent line under it
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0x26FFFFFF))) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Glyph("search", Color.White, 18.dp)
+                        BasicTextField(q, { q = it }, singleLine = true, textStyle = TextStyle(color = Color.White, fontSize = 15.sp), cursorBrush = SolidColor(Color.White),
+                            modifier = Modifier.weight(1f).padding(start = 10.dp).focusRequester(focus),
+                            decorationBox = { inner -> if (q.isEmpty()) Text(tr("Search apps, settings and the web", "Uygulama, ayar ve web ara"), color = Color(0xAAFFFFFF), fontSize = 15.sp); inner() })
+                    }
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(launcherAccent()))
+                }
+                // the kinds to search
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    kinds.forEachIndexed { i, n ->
+                        Text(n, color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (kind == i) launcherAccent() else Color(0x26FFFFFF)).clickable { kind = i }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    }
+                }
+                if (kind == 0 || kind == 1) {
+                    Text(tr("Apps", "Uygulamalar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                    tools.forEach { (icon, name, act) ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; act() }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Glyph(icon, Color.White, 22.dp)
+                            Text(name, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                    apps.forEach { a ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).combinedClickable(onClick = { LauncherSession.w11SearchOpen = false; state?.open(a) }, onLongClick = { menuApp = a }).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            LaunchAppPicture(a, 28.dp, Color(0x33FFFFFF), Color.White)
+                            Text(a.label, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                }
+                if (ytx && (kind == 0 || kind == 1)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable {
+                    LauncherSession.w11SearchOpen = false
+                    runCatching { ctx.startActivity(Intent().setClassName(ctx.packageName, "com.umutk.pulse.extras.ytx.YtxActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).background(Color(0x33FFFFFF)), contentAlignment = Alignment.Center) { Glyph("video", Color.White, 18.dp) }
+                    Text("YTXTube", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                if (kind == 0 || kind == 2) {
+                    Text(tr("Settings", "Ayarlar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                    sets.forEach { it ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; SettingsJump.item = it.en; openDesktopItem(ctx, "pulse:winsettings", "win11") }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Glyph(it.icon, Color.White, 20.dp)
+                            Text(tr(it.en, it.tr), color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                }
+                if (q.isNotBlank() && (kind == 0 || kind == 3)) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable {
+                    LauncherSession.w11SearchOpen = false
+                    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(searchUrl(q.trim()))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Glyph("search", Color.White, 20.dp)
+                    Text(tr("Search the web for \"", "Webde ara: \"") + q.trim() + "\"", color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp))
+                }
+                if (q.isNotBlank()) ContactResults(q, Color.White, Color(0xAAFFFFFF))
+                if (q.isNotBlank()) CalendarResults(q, Color.White, Color(0xAAFFFFFF))
+            }
+        }
+    }
+}
+
+/**
+ * The phone companion of the Start menu (its second layout): the phone and its battery, Wi-Fi and Bluetooth, Messages, Calls, Send files and a place for the recent phone activity,
+ * docked on the right of the menu like Phone Link in Windows 11.
+ */
+@Composable
+internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val shape = RoundedCornerShape(8.dp)
+    val bat = remember { ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }
+    val pct = remember { bat?.let { (it.getIntExtra("level", 0) * 100 / it.getIntExtra("scale", 100).coerceAtLeast(1)) } ?: 0 }
+    var renameDev by remember { mutableStateOf(false) }
+    if (renameDev) RenameDeviceDialog { renameDev = false }
+    // the panel scrolls, so Messages, Calls and Send files stay reachable on a short (turned) screen
+    Column(Modifier.width(190.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.align(Alignment.CenterHorizontally).size(width = 52.dp, height = 92.dp).clip(RoundedCornerShape(10.dp)).background(launcherAccent().copy(alpha = .85f)))
+        Text(deviceName(), color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.CenterHorizontally).clickable { renameDev = true })
+        Row(Modifier.align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Glyph("battery", fg, 16.dp); Text("$pct%", color = fg, fontSize = 12.sp)
+            QUICK.firstOrNull { it.en == "Wi-Fi" }?.let { t -> Icon(t.icon, null, tint = fg, modifier = Modifier.size(18.dp).clickable { t.run(ctx) }) }
+            QUICK.firstOrNull { it.en == "Bluetooth" }?.let { t -> Icon(t.icon, null, tint = fg, modifier = Modifier.size(18.dp).clickable { t.run(ctx) }) }
+        }
+        Spacer(Modifier.height(10.dp))
+        listOf(
+            // Pulse's own Messages (SMS) opens as a window on the desktop, not in another app
+            Triple("chat", tr("Messages", "Mesajlar")) { openDesktopItem(ctx, "pulse:x:messages", "win11") },
+            Triple("phone", tr("Calls", "Aramalar")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
+            Triple("share", tr("Send files", "Dosyaları gönder")) { openDesktopItem(ctx, "pulse:x:localsend", "win11") },
+        ).forEach { (ic, label, act) ->
+            Row(Modifier.fillMaxWidth().clip(shape).clickable { onClose(); act() }.padding(horizontal = 8.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                Glyph(ic, fg, 18.dp)
+                Text(label, color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(tr("Recent", "En son"), color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Recent mobile activity shows here.", "Son mobil etkinlikler burada görünür."), color = fg.copy(alpha = .6f), fontSize = 12.sp)
+    }
+}
+
+
+/** The Run box: a command typed in it opens the matching Windows tool of Pulse (cmd and terminal, regedit, taskmgr, control, settings, notepad, calc, explorer, paint ...). */
+@Composable
+private fun RunBox(taskbar: Dp) {
+    val ctx = LocalContext.current
+    var text by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(8.dp)
+    fun close() { LauncherSession.runOpen = false }
+    fun go() {
+        val c = text.trim().lowercase().removeSuffix(".exe").removeSuffix(".msc")
+        val id = when (c) {
+            "terminal", "wt" -> "pulse:terminal"
+            "cmd", "powershell", "pwsh", "command", "conhost" -> "pulse:cmd"
+            "taskmgr", "task manager", "perfmon", "resmon" -> "pulse:taskmgr"
+            "control", "control panel", "appwiz.cpl", "main.cpl" -> "pulse:settings"
+            "settings", "ms-settings:", "ms-settings", "winver", "msinfo32" -> "pulse:winsettings"
+            "explorer", "files", ".", "this pc", "shell:mycomputer" -> "pulse:files"
+            "notepad", "wordpad" -> "pulse:x:win:notepad"
+            "calc", "calculator" -> "pulse:x:calculator"
+            "mspaint", "paint" -> "pulse:paint"
+            else -> null
+        }
+        when {
+            c == "regedit" || c == "regedt32" -> { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }
+            c == "devmgmt" || c == "device manager" -> { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }
+            c == "eventvwr" || c == "event viewer" -> { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }
+            c == "diskmgmt" || c == "disk management" -> { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }
+            c == "taskschd" || c == "task scheduler" -> { close(); DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) }
+            c == "windowsdefender" || c == "security" || c == "windows security" -> { close(); DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }
+            id != null -> { close(); openDesktopItem(ctx, id, "win11") }
+            else -> error = true
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color(0x66000000)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { close() }, contentAlignment = Alignment.BottomStart) {
+        Column(Modifier.padding(start = 12.dp, bottom = taskbar + 10.dp).widthIn(max = 380.dp).fillMaxWidth(.94f).clip(shape).background(Color(0xF2202530)).border(1.dp, Color(0x33FFFFFF), shape)
+            .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {}.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Glyph("run", Color.White, 20.dp); Text("  " + tr("Run", "Çalıştır"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+            Text(tr("Type the name of a program, folder or tool, and it will open.", "Bir programın, klasörün veya aracın adını yaz, açılsın."), color = Color(0xB3FFFFFF), fontSize = 12.sp)
+            androidx.compose.foundation.text.BasicTextField(text, { text = it; error = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go, autoCorrect = false),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { go() }),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Color(0x26FFFFFF)).padding(horizontal = 10.dp, vertical = 9.dp))
+            if (error) Text(tr("Windows cannot find '$text'. Make sure you typed the name correctly.", "'$text' bulunamadı. Adı doğru yazdığından emin ol."), color = Color(0xFFFFB4AB), fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.align(Alignment.End)) {
+                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0x33FFFFFF)).clickable { close() }.padding(horizontal = 16.dp, vertical = 7.dp)) { Text(tr("Cancel", "İptal"), color = Color.White, fontSize = 13.sp) }
+                Box(Modifier.clip(RoundedCornerShape(4.dp)).background(launcherAccent()).clickable { go() }.padding(horizontal = 20.dp, vertical = 7.dp)) { Text("OK", color = Color.White, fontSize = 13.sp) }
+            }
+        }
+    }
+}
+
+
+/** The Win+X menu (the Start button held): the system tools in a short list, in the look of the launcher (acrylic and rounded in Windows 11, flat and square in Windows 10). */
+@Composable
+private fun WinXMenu(taskbar: Dp) {
+    val ctx = LocalContext.current
+    val w11 = LauncherPrefs.look == "win11"
+    val shape = RoundedCornerShape(if (w11) 8.dp else 0.dp)
+    fun close() { LauncherSession.winXOpen = false }
+    fun page(id: String) { close(); openDesktopItem(ctx, id, if (w11) "win11" else "win10") }
+    val none = remember { MutableInteractionSource() }
+    fun xi(key: String, icon: String, name: String, act: () -> Unit) = listOf(key to Triple(icon, name, act))
+    val all = listOf(
+        xi("apps", "apps", tr("Apps and Features", "Uygulamalar ve özellikler")) { page("pulse:apps") },
+        xi("power", "battery", tr("Power Options", "Güç seçenekleri")) { close(); SettingsJump.item = "Power & battery"; openDesktopItem(ctx, "pulse:winsettings", if (w11) "win11" else "win10") },
+        xi("system", "cpu", tr("System", "Sistem")) { page("pulse:pc") },
+        xi("taskmgr", "processes", tr("Task Manager", "Görev Yöneticisi")) { page("pulse:taskmgr") },
+        xi("settings", "settings", tr("Settings", "Ayarlar")) { page("pulse:winsettings") },
+        xi("control", "settings", tr("Control Panel", "Denetim Masası")) { page("pulse:settings") },
+        xi("terminal", "run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
+        xi("devmgmt", "performance", tr("Device Manager", "Aygıt Yöneticisi")) { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) },
+        xi("eventvwr", "details", tr("Event Viewer", "Olay Görüntüleyici")) { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) },
+        xi("taskschd", "clock", tr("Task Scheduler", "Görev Zamanlayıcı")) { close(); DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) },
+        xi("diskmgmt", "disk", tr("Disk Management", "Disk Yönetimi")) { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) },
+        xi("regedit", "services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
+        xi("explorer", "folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },
+        xi("search", "search", tr("Search", "Ara")) { close(); LauncherSession.w11SearchOpen = true },
+        xi("run", "run", tr("Run", "Çalıştır")) { close(); LauncherSession.runOpen = true },
+    ).flatten().toMap()
+    // the order and the choice are the person's (Launcher settings > Win+X menu); every item in its default place until then
+    val order = LauncherPrefs.winX.split(',').filter { it.isNotBlank() }.ifEmpty { WINX_KEYS.map { it.first } }
+    val items = order.mapNotNull { all[it] }
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { close() }) {
+        val place = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 8.dp, bottom = taskbar + 6.dp).width(268.dp)
+        val body: @Composable () -> Unit = {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
+                items.forEach { (icon, name, act) ->
+                    Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Glyph(icon, Color.White, 18.dp)
+                        Text(name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 14.dp))
+                    }
+                }
+            }
+        }
+        if (w11) AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) { body() }
+        else Box(place.background(Color(0xFF1F1F1F)).border(1.dp, Color(0xFF3A3A3A)).clickable(interactionSource = none, indication = null) {}) { body() }
+    }
+}
+
+
+/** The address of a web search in the launcher's chosen search engine. */
+internal fun searchUrl(q: String): String {
+    val e = Uri.encode(q)
+    return when (LauncherPrefs.searchEngine) {
+        "duckduckgo" -> "https://duckduckgo.com/?q=$e"
+        "bing" -> "https://www.bing.com/search?q=$e"
+        "brave" -> "https://search.brave.com/search?q=$e"
+        "yandex" -> "https://yandex.com/search/?text=$e"
+        "startpage" -> "https://www.startpage.com/do/search?q=$e"
+        else -> "https://www.google.com/search?q=$e"
+    }
+}
+
+
+/** The items of the Win+X menu in their default order: key, English name, Turkish name. The settings let the person choose and order them. */
+internal val WINX_KEYS = listOf(
+    Triple("apps", "Apps and Features", "Uygulamalar ve özellikler"), Triple("power", "Power Options", "Güç seçenekleri"), Triple("system", "System", "Sistem"),
+    Triple("taskmgr", "Task Manager", "Görev Yöneticisi"), Triple("settings", "Settings", "Ayarlar"), Triple("control", "Control Panel", "Denetim Masası"),
+    Triple("terminal", "Terminal", "Terminal"), Triple("regedit", "Registry Editor", "Kayıt Defteri Düzenleyicisi"), Triple("explorer", "File Explorer", "Dosya Gezgini"),
+    Triple("search", "Search", "Ara"), Triple("run", "Run", "Çalıştır"),
+)

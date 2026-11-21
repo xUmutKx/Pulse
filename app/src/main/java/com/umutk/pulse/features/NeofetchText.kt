@@ -47,7 +47,7 @@ object NeofetchText {
             "      `/++MMMMh++hMMMM++/`      ",
             "          MMMMo  oMMMM          ",
             "          MMMMo  oMMMM          ",
-            "          oNMm-  -mNMo          ",
+            "          oNMm-  -mMNs          ",
     )
 
     private fun uptime(): String {
@@ -105,6 +105,51 @@ object NeofetchText {
         return List(n) { i ->
             val left = art.getOrNull(i).orEmpty()
             listOf(NfSeg(left.padEnd(width), GREEN)) + right.getOrElse(i) { emptyList() }
+        }
+    }
+
+    /**
+     * The card of the Windows desktops' Command Prompt: the logo of the Windows the look is (11, 10, 7, XP, 95) in its own colours, the phone's lines at its right (the OS line names that
+     * Windows). The Terminal of Pulse keeps the Android robot.
+     */
+    fun windowsLines(ctx: Context, look: String): List<List<NfSeg>> {
+        val red = Color(0xFFF25022); val green = Color(0xFF7FBA00); val blue = Color(0xFF00A4EF); val yellow = Color(0xFFFFB900)
+        val name = when (look) { "win11" -> "Windows 11"; "win10", "win10black" -> "Windows 10"; "win7" -> "Windows 7"; "xp" -> "Windows XP"; else -> "Windows 95" }
+        val art = ArrayList<List<NfSeg>>()
+        fun addRow(r: List<NfSeg>) { art.add(r) }
+        when (look) {
+            "win10", "win10black" -> listOf(
+                "                                ..,", "                    ....,,:;+ccllll", "      ...,,+:;  cllllllllllllllllll", ",cclllllllllll  lllllllllllllllllll",
+                "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll",
+                "llllllllllllll  lllllllllllllllllll", "", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll",
+                "llllllllllllll  lllllllllllllllllll", "llllllllllllll  lllllllllllllllllll", "`'ccllllllllll  lllllllllllllllllll", "       `' \\*::  :ccllllllllllllllll",
+                "                       ````''*::cll", "                                 ``").forEach { addRow(listOf(NfSeg(it, blue))) }
+            "win11" -> { repeat(8) { addRow(listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue))) }; addRow(emptyList()); repeat(8) { addRow(listOf(NfSeg("lllllllllllllllll  lllllllllllllllll", blue))) } }
+            else -> for (half in 0..1) {
+                // the flag of Windows 95, XP and 7: four panes in red, green, blue and yellow (XP and 7 wave a little at the left)
+                repeat(7) { i ->
+                    val ind = if (look == "win95") 0 else (6 - i) / 2
+                    addRow(listOf(NfSeg(" ".repeat(ind)), NfSeg("l".repeat(16 - ind), if (half == 0) red else blue), NfSeg("  "), NfSeg("l".repeat(16), if (half == 0) green else yellow)))
+                }
+                if (half == 0) addRow(emptyList())
+            }
+        }
+        val width = art.maxOf { r -> r.sumOf { it.text.length } } + 3
+        val right = columns(ctx).second.map { line ->
+            line.map { seg ->
+                when {
+                    seg.color == KEY -> NfSeg(seg.text, blue, seg.bold)
+                    seg.text.startsWith("Android ") -> NfSeg("$name (Pulse look) on " + seg.text, seg.color, seg.bold)
+                    seg.text == "Pulse Terminal" || seg.text == "sh (Pulse Terminal)" -> NfSeg(if (seg.text.startsWith("sh")) "cmd (Pulse)" else "Command Prompt", seg.color, seg.bold)
+                    else -> seg
+                }
+            }
+        }
+        val n = maxOf(art.size, right.size)
+        return List(n) { i ->
+            val left = art.getOrNull(i).orEmpty()
+            val len = left.sumOf { it.text.length }
+            left + NfSeg(" ".repeat(width - len)) + right.getOrElse(i) { emptyList() }
         }
     }
 

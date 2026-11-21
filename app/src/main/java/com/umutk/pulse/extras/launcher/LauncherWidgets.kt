@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.detectDragGestures
 import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
@@ -10,6 +11,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -86,10 +91,21 @@ fun placedWidgets(): List<PlacedWidget> = LauncherPrefs.widgets.mapNotNull { s -
     p[0].toIntOrNull()?.takeIf { p.size == 3 }?.let { PlacedWidget(it, p[1], p[2]) }
 }
 
+/** The size a placed widget is shown at, in dp: the person's (dragged with the corner when the widget was held), else the size its maker asked for. */
+fun widgetSizeDp(id: Int, info: AppWidgetProviderInfo): Pair<Int, Int> {
+    val own = LauncherPrefs.widgetSizes[id.toString()]?.split(',')?.mapNotNull { it.toIntOrNull() }
+    if (own != null && own.size == 2) return own[0] to own[1]
+    val w = info.minWidth.coerceAtLeast(40); val h = info.minHeight.coerceAtLeast(40)
+    // a widget that is nearly square is made square (the frame is no longer wider or taller than the card it holds)
+    val r = w.toFloat() / h
+    return if (r in .6f..1.7f) maxOf(w, h).let { it to it } else w to h
+}
+
 /** Forgets a placed widget and frees its id. */
 fun removeWidget(c: Context, id: Int) {
     LauncherWidgetHost.get(c).deleteAppWidgetId(id)
     LauncherPrefs.widgets = LauncherPrefs.widgets.filterNot { it.startsWith("$id|") }
+    LauncherPrefs.widgetSizes = LauncherPrefs.widgetSizes - id.toString()
     LauncherPrefs.save(c)
 }
 
@@ -106,15 +122,67 @@ fun LauncherWidgetStrip(modifier: Modifier = Modifier) {
         onDispose { host.stopListening() }
     }
     if (placed.isEmpty()) return
+    // a widget held for a moment gets its controls: take it off, move it left or right, done
+    var editId by remember { mutableStateOf<Int?>(null) }
+    fun move(id: Int, by: Int) {
+        val l = LauncherPrefs.widgets.toMutableList()
+        val i = l.indexOfFirst { it.startsWith("$id|") }
+        val j = i + by
+        if (i < 0 || j !in l.indices) return
+        val t = l[i]; l[i] = l[j]; l[j] = t
+        LauncherPrefs.widgets = l; LauncherPrefs.save(ctx)
+    }
     Row(modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp)) {
         placedWidgets().forEach { w ->
             val info = mgr.getAppWidgetInfo(w.id) ?: return@forEach
             key(w.id) {
-                AndroidView(
-                    factory = { c -> host.createView(c, w.id, info) },
-                    update = { it.setAppWidget(w.id, info) },
-                    modifier = Modifier.width(info.minWidth.coerceAtLeast(40).dp).height(info.minHeight.coerceAtLeast(40).dp).padding(end = 8.dp),
-                )
+                Box(Modifier.padding(end = 8.dp)
+                    // the press is only watched (the widget still gets its touches); held without lifting it is the long press
+                    .pointerInput(w.id) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation(androidx.compose.ui.input.pointer.PointerEventPass.Initial) }
+                            if (up == null) editId = w.id
+                        }
+                    }) {
+                    val (sw, sh) = widgetSizeDp(w.id, info)
+                    AndroidView(
+                        factory = { c -> host.createView(c, w.id, info) },
+                        // the widget is told its size, so it draws itself for it
+                        update = { it.setAppWidget(w.id, info); it.updateAppWidgetSize(android.os.Bundle(), sw, sh, sw, sh) },
+                        modifier = Modifier.width(sw.dp).height(sh.dp),
+                    )
+                    if (editId == w.id) Row(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .62f)).clickable { editId = null }, horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        @Composable fun dot(icon: String, go: () -> Unit) = Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color.White.copy(alpha = .18f)).clickable(onClick = go), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon(icon, androidx.compose.ui.graphics.Color.White, 20.dp) }
+                        dot("back") { move(w.id, -1) }
+                        dot("close") { editId = null; removeWidget(ctx, w.id) }
+                        // every widget of the strip gets this one's size
+                        dot("gridView") { val me = widgetSizeDp(w.id, info); LauncherPrefs.widgetSizes = placedWidgets().associate { it.id.toString() to "${me.first},${me.second}" }; LauncherPrefs.save(ctx) }
+                        dot("check") { editId = null }
+                        dot("forward") { move(w.id, 1) }
+                    }
+                    // held: the corner at the bottom right is dragged to make the widget any size (freeform); the size is kept when the finger lifts
+                    if (editId == w.id) Box(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).size(44.dp).pointerInput(w.id) {
+                        detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, d ->
+                            c.consume()
+                            val (cw, ch) = widgetSizeDp(w.id, info)
+                            val dens = density
+                            var nw = (cw + d.x / dens).toInt().coerceIn(info.minResizeWidth.coerceAtLeast(40), 900)
+                            var nh = (ch + d.y / dens).toInt().coerceIn(info.minResizeHeight.coerceAtLeast(40), 900)
+                            // the size locks when it comes near the size of another widget (each side), or near a square
+                            val others = placedWidgets().filter { it.id != w.id }.mapNotNull { o -> mgr.getAppWidgetInfo(o.id)?.let { oi -> widgetSizeDp(o.id, oi) } }
+                            others.firstOrNull { kotlin.math.abs(it.first - nw) <= 12 }?.let { nw = it.first }
+                            others.firstOrNull { kotlin.math.abs(it.second - nh) <= 12 }?.let { nh = it.second }
+                            if (kotlin.math.abs(nw - nh) <= 12) { val sq = maxOf(nw, nh); nw = sq; nh = sq }
+                            LauncherPrefs.widgetSizes = LauncherPrefs.widgetSizes + (w.id.toString() to "$nw,$nh")
+                        }
+                    }, contentAlignment = androidx.compose.ui.Alignment.BottomEnd) {
+                        androidx.compose.foundation.Canvas(Modifier.size(18.dp)) {
+                            val c = androidx.compose.ui.graphics.Color.White
+                            for (k in 1..3) drawLine(c, androidx.compose.ui.geometry.Offset(size.width, size.height * k / 4f), androidx.compose.ui.geometry.Offset(size.width * (4 - k) / 4f, size.height), 2.dp.toPx())
+                        }
+                    }
+                }
             }
         }
     }
@@ -254,11 +322,22 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
                     }
                 }
                 else if (flat != null && flat.isEmpty()) Text(tr("No gadgets", "Gadget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
-                else LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (flat != null) gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
-                    else GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
-                        if (group == "") item(key = "h_$g", span = { GridItemSpan(maxLineSpan) }) { Text(groupName(g), color = w.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
-                        gridItems(ownBy.getValue(g), key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
+                else if (flat != null) LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
+                }
+                // Pulse's own widgets: every group is open, each a row that slides sideways (as the Windows 11 widget board), so a group's widgets are picked by sliding, not by scrolling a long page
+                else androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
+                        item(key = "g_$g") {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(groupName(g), color = w.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
+                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(ownBy.getValue(g), key = { it.provider.flattenToString() }) { inf ->
+                                        Box(Modifier.width(if (wide(inf)) 230.dp else 140.dp)) { Card(inf, wide(inf)) }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -275,7 +354,8 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
 private fun WidgetCardPicture(info: AppWidgetProviderInfo, onTap: () -> Unit) {
     val ctx = LocalContext.current
     val picture = remember(info.provider) {
-        if (info.previewImage == 0) null else runCatching { info.loadPreviewImage(ctx, ctx.resources.displayMetrics.densityDpi)?.toBitmap()?.asImageBitmap() }.getOrNull()
+        // the plain white note of the music widgets is no preview: those show the live widget instead
+        if (info.previewImage == 0 || info.previewImage == com.umutk.pulse.R.drawable.widget_prev_white) null else runCatching { info.loadPreviewImage(ctx, ctx.resources.displayMetrics.densityDpi)?.toBitmap()?.asImageBitmap() }.getOrNull()
     }
     if (picture != null) { Image(picture, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit); return }
     var id by remember(info.provider) { mutableStateOf(-1) }
@@ -339,3 +419,42 @@ fun rememberWidgetAdd(onAdded: () -> Unit): (AppWidgetProviderInfo) -> Unit {
 /** The sticky note widget of Pulse (the same one any launcher can place), so the desktop's note is a real widget: one note per widget, edited by a tap. */
 fun stickyNoteProvider(c: Context): AppWidgetProviderInfo? =
     AppWidgetManager.getInstance(c).installedProviders.firstOrNull { it.provider.packageName == c.packageName && it.provider.className.endsWith("StickyNoteWidget") }
+
+/**
+ * The home with a page for each placed widget: swipe sideways from one to the next (round and round when Loop is on), a row of dots says where you are.
+ * Widgets are drawn at their own size (never cut), at the top of the page; the rest of the page is the wallpaper.
+ */
+@Composable
+fun LauncherWidgetPages(modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val host = LauncherWidgetHost.get(ctx)
+    val mgr = AppWidgetManager.getInstance(ctx)
+    val placed = LauncherPrefs.widgets
+    DisposableEffect(host) { host.startListening(); onDispose { host.stopListening() } }
+    val list = remember(placed) { placedWidgets().filter { mgr.getAppWidgetInfo(it.id) != null } }
+    if (list.isEmpty()) return
+    val loop = LauncherPrefs.loopScroll && list.size > 1
+    val start = if (loop) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % list.size) else 0
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = start, pageCount = { if (loop) Int.MAX_VALUE else list.size })
+    WallpaperScrollEffect(pager, list.size, loop)
+    androidx.compose.foundation.layout.Column(modifier) {
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth()) { i ->
+            val w = list[i % list.size]
+            val info = mgr.getAppWidgetInfo(w.id)
+            if (info != null) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                val (_, sh) = widgetSizeDp(w.id, info)
+                AndroidView(
+                    factory = { c -> host.createView(c, w.id, info) },
+                    update = { it.setAppWidget(w.id, info) },
+                    modifier = Modifier.fillMaxWidth().height(sh.coerceAtLeast(80).dp),
+                )
+            }
+        }
+        if (list.size > 1) androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center) {
+            repeat(list.size) { d ->
+                androidx.compose.foundation.layout.Box(Modifier.padding(3.dp).size(6.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = if (pager.currentPage % list.size == d) .95f else .35f)))
+            }
+        }
+    }
+}

@@ -2,6 +2,8 @@ package com.umutk.pulse.extras.launcher
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,59 +62,147 @@ internal val CONTROL_PANEL = listOf(
         CpItem("settings", "Personalization", "Kişiselleştirme", "Look of the desktop, wallpaper, icons, dock", "Masaüstünün görünümü, duvar kağıdı, simgeler, dok", "win:lsettings"),
         CpItem("menu", "Context menu", "Sağ tık menüsü", "Choose and order the actions of an app's menu", "Uygulama menüsündeki eylemleri seç ve sırala", "win:lsettings:menu"),
         CpItem("details", "Fonts", "Yazı tipleri", "Change the system font", "Sistem yazı tipini değiştir", "fonts"),
-        CpItem("run", "Command Prompt", "Komut İstemi", "Run commands", "Komut çalıştır", "page:terminal"),
+        CpItem("run", "Command Prompt", "Komut İstemi", "Run commands", "Komut çalıştır", "page:cmd"),
     )),
 )
 
-/** The Control Panel as a window opens it: the groups with their items and a line under each saying what it holds. A tap opens the page in the same window. */
+/**
+ * The Control Panel as a window opens it. It is the classic one whatever the look: a white body in Category view (the eight categories with their first tasks as links), a View by switch
+ * for large or small icons, an address bar and a search box. A tap opens the page of the phone or of Pulse that does the job.
+ */
 @Composable
 fun ControlPanelHome() {
     // the Windows 7 desktop has the Control Panel in its Category view: the big category names, each with its first tasks under it as links
     if (T.id == "win7") { Win7ControlPanel(); return }
     val open = LocalOpenTool.current
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
-        Text(tr("Adjust your computer's settings", "Bilgisayar ayarlarınızı düzenleyin"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        Text(tr("View by: Category", "Görüntüleme: Kategori"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
-        CONTROL_PANEL.forEach { g ->
-            Text(tr(g.en, g.trName), color = T.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
-            Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
-            g.items.forEach { it ->
-                Row(Modifier.fillMaxWidth().clickable { open(it.route) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon(it.icon, T.accent, 30.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(tr(it.en, it.trName), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Text(tr(it.enDesc, it.trDesc), color = T.sub, fontSize = 12.sp)
-                    }
+    var wDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WItem?>(null) }
+    val pickW: (WItem) -> Unit = { if (it.route.startsWith("intent:")) wDetail = it else open(it.route) }
+    wDetail?.let { d -> Box(Modifier.fillMaxSize().background(T.bg).padding(14.dp)) { Win11Detail(d) { wDetail = null } }; return }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var view by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var cat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WGroup?>(null) }
+    var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    // Windows 11: dark and see-through (the window's body lets the desktop show), as its Settings; the other looks keep the classic white page
+    val w11 = T.id == "win11" || LauncherPrefs.look == "win11"
+    val deskWin = LocalDesktopWin.current
+    androidx.compose.runtime.DisposableEffect(deskWin, w11) { if (w11) deskWin?.glass = true; onDispose { if (w11) deskWin?.glass = false } }
+    val white = if (w11) T.bg.copy(alpha = .3f) else androidx.compose.ui.graphics.Color.White
+    val ink = if (w11) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1A1A1A)
+    val link = if (w11) androidx.compose.ui.graphics.Color(0xFF60CDFF) else androidx.compose.ui.graphics.Color(0xFF0066CC)
+    val title = if (w11) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1E3287)
+    val bar = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else androidx.compose.ui.graphics.Color(0xFFF1F1F1)
+    val tile = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else androidx.compose.ui.graphics.Color(0xFFE8F0FA)
+    val tileEdge = if (w11) androidx.compose.ui.graphics.Color(0x33FFFFFF) else androidx.compose.ui.graphics.Color(0xFFA9C0DC)
+    val field = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else white
+    Column(Modifier.fillMaxSize().background(white)) {
+        // the address bar and the search box
+        Row(Modifier.fillMaxWidth().then(if (w11) Modifier else Modifier.background(bar)).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (cat == null) "Control Panel ›" else "Control Panel › " + tr(cat!!.en, cat!!.tr) + " ›", color = ink, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).clickable { cat = null })
+            // the search box: a rounded field with its own hint and a magnifier (it was an empty grey rectangle)
+            Row(Modifier.width(170.dp).clip(RoundedCornerShape(if (w11) 8.dp else 0.dp)).background(field).border(1.dp, if (w11) tileEdge else androidx.compose.ui.graphics.Color(0xFFAAAAAA), RoundedCornerShape(if (w11) 8.dp else 0.dp)).padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("search", ink.copy(alpha = .7f), 14.dp)
+                Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                    if (q.isEmpty()) Text(tr("Search Control Panel", "Denetim Masası'nda ara"), color = ink.copy(alpha = .5f), fontSize = 12.sp, maxLines = 1)
+                    androidx.compose.foundation.text.BasicTextField(q, { q = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = ink, fontSize = 12.sp), cursorBrush = androidx.compose.ui.graphics.SolidColor(ink))
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        if (w11) Box(Modifier.fillMaxWidth().height(1.dp).background(androidx.compose.ui.graphics.Color(0x22FFFFFF)))
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (cat == null) tr("Adjust your computer's settings", "Bilgisayar ayarlarınızı düzenleyin") else tr(cat!!.en, cat!!.tr), color = title, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text(tr("View by: ", "Görüntüleme: ") + listOf(tr("Category", "Kategori"), tr("Large icons", "Büyük simgeler"), tr("Small icons", "Küçük simgeler"))[view] + " ▾", color = link, fontSize = 12.sp, modifier = Modifier.clickable { view = (view + 1) % 3 })
+            }
+            Spacer(Modifier.height(10.dp))
+            val flat = CONTROL_PANEL_8.flatMap { it.items }
+            val hits = if (q.isBlank()) emptyList() else flat.filter { tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
+            when {
+                q.isNotBlank() -> hits.forEach { it -> CpApplet(it, 1, ink, link) { pickW(it) } }
+                cat != null -> cat!!.items.forEach { it -> CpApplet(it, 1, ink, link) { pickW(it) } }
+                view == 0 -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    // room enough (a turned phone, a wide window): the categories stand in two columns
+                    val cols = if (maxWidth >= 560.dp) 2 else 1
+                    Column(Modifier.fillMaxWidth()) {
+                        CONTROL_PANEL_8.chunked(cols).forEach { rowGroups ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                rowGroups.forEach { g ->
+                                    Row(Modifier.weight(1f).padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                                        Box(Modifier.size(52.dp).background(tile).border(1.dp, tileEdge), contentAlignment = Alignment.Center) { PIcon(g.icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5).let { if (w11) link else it }, 32.dp) }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column {
+                                            Text(tr(g.en, g.tr), color = link, fontSize = 15.sp, modifier = Modifier.clickable { cat = g })
+                                            g.items.take(3).forEach { it -> Text(tr(it.en, it.tr), color = link, fontSize = 12.sp, modifier = Modifier.clickable { pickW(it) }.padding(top = 3.dp)) }
+                                        }
+                                    }
+                                }
+                                repeat(cols - rowGroups.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
+                else -> flat.chunked(if (view == 1) 3 else 2).forEach { row ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { it -> Box(Modifier.weight(1f)) { CpApplet(it, view, ink, link) { pickW(it) } } }
+                        repeat((if (view == 1) 3 else 2) - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
     }
 }
 
+@Composable
+private fun CpApplet(it: WItem, mode: Int, ink: androidx.compose.ui.graphics.Color, link: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    val dark = T.id == "win11"
+    val iconTint = if (dark) link else androidx.compose.ui.graphics.Color(0xFF2F6DB5)
+    val subTint = if (dark) androidx.compose.ui.graphics.Color(0xFFC9C9C9) else androidx.compose.ui.graphics.Color(0xFF555555)
+    if (mode == 1 || mode == 0) Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon(it.icon, iconTint, 32.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr(it.en, it.tr), color = link, fontSize = 14.sp)
+            Text(tr(it.enDesc, it.trDesc), color = subTint, fontSize = 12.sp)
+        }
+    } else Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon(it.icon, iconTint, 20.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(tr(it.en, it.tr), color = ink, fontSize = 12.sp)
+    }
+}
 
 /** The Windows 10 / 11 Settings app: a title, a search box and the settings as big tiles (two across) with a line of what is inside. A tap opens the page in the same window. */
 @Composable
 fun WindowsSettingsHome() {
     val open = LocalOpenTool.current
+    var wDetail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WItem?>(null) }
+    val pickW: (WItem) -> Unit = { if (it.route.startsWith("intent:")) wDetail = it else open(it.route) }
+    wDetail?.let { d -> Box(Modifier.fillMaxSize().background(T.bg).padding(14.dp)) { Win11Detail(d) { wDetail = null } }; return }
     // Windows 11 has its own Settings: a sidebar, a search box and rounded rows
     if (T.id == "win11") { Win11SettingsHome(open); return }
     var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    val all = CONTROL_PANEL.flatMap { g -> g.items.map { g to it } }
-    val shown = all.filter { (_, it) -> q.isBlank() || tr(it.en, it.trName).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
-        Text(tr("Settings", "Ayarlar"), color = T.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val all = WIN11_SETTINGS.flatMap { g -> g.items.map { g to it } }
+    val shown = all.filter { (_, it) -> q.isBlank() || tr(it.en, it.tr).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
+    // Windows 10: one flat palette for the whole window (dark: near black with grey tiles; light: pale grey with white tiles), so the window never shows a white page behind dark tiles
+    val w10 = T.id == "win10" || T.id == "win10black"
+    val dark = T.dark || T.id == "win10black"
+    val pageBg = if (!w10) androidx.compose.ui.graphics.Color.Transparent else if (dark) androidx.compose.ui.graphics.Color(0xFF1A1A1A) else androidx.compose.ui.graphics.Color(0xFFF0F0F0)
+    val tileBg = if (!w10) T.panel else if (dark) androidx.compose.ui.graphics.Color(0xFF2B2B2B) else androidx.compose.ui.graphics.Color.White
+    val ink = if (!w10) T.text else if (dark) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1B1B1B)
+    val sub = if (!w10) T.sub else if (dark) androidx.compose.ui.graphics.Color(0xFFB0B0B0) else androidx.compose.ui.graphics.Color(0xFF5E5E5E)
+    Column(Modifier.fillMaxSize().background(pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Text(tr("Settings", "Ayarlar"), color = ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
         com.umutk.pulse.PField(q, { q = it }, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth().padding(vertical = 10.dp))
         shown.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (_, it) ->
-                    Row(Modifier.weight(1f).background(T.panel).clickable { open(it.route) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).background(tileBg).clickable { pickW(it) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon(it.icon, T.accent, 32.dp)
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(tr(it.en, it.trName), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
-                            Text(tr(it.enDesc, it.trDesc), color = T.sub, fontSize = 11.sp, maxLines = 2)
+                            Text(tr(it.en, it.tr), color = ink, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+                            Text(tr(it.enDesc, it.trDesc), color = sub, fontSize = 11.sp, maxLines = 2)
                         }
                     }
                 }

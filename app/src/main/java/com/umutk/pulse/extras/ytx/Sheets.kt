@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PersonOff
 import androidx.compose.ui.unit.sp
 
@@ -84,6 +85,13 @@ fun VideoOptionsSheet(video: VideoItem, player: PlayerState, onDismiss: () -> Un
         }
         OptionRow(Icons.AutoMirrored.Rounded.PlaylistPlay, "Play next") { player.playNext(video); onDismiss() }
         OptionRow(Icons.AutoMirrored.Rounded.PlaylistAdd, "Add to queue") { player.addToQueue(video); onDismiss() }
+        OptionRow(Icons.Rounded.MusicNote, "Open as Music") {
+            // the song plays in Pulse's music player (that lives in the main process): the video is handed over in a broadcast
+            runCatching { context.sendBroadcast(Intent(com.umutk.pulse.extras.music.OpenAsMusicReceiver.ACTION).setPackage(context.packageName)
+                .setClassName(context.packageName, "com.umutk.pulse.extras.music.OpenAsMusicReceiver").putExtra("id", video.id).putExtra("title", video.title).putExtra("channel", video.channel).putExtra("thumb", video.thumbnail)) }
+            player.actionMessage = "Playing in the music player"
+            onDismiss()
+        }
         OptionRow(Icons.Rounded.Download, "Download") { player.downloadFor = video; onDismiss() }
         if (Account.signedIn) {
             OptionRow(Icons.Rounded.WatchLater, "Save to Watch later") { player.saveToWatchLater(video); onDismiss() }

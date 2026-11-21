@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse "no SMS" build: the same app without any SMS/MMS permission or receiver (no Play Protect "unsafe" warning). Used with -PnoSms on the lite flavor. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
+    <application>
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsDeliverReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
+        <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />
+    </application>
+</manifest>

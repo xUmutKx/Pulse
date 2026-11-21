@@ -248,6 +248,14 @@ object SeasonDl {
                 }
                 com.umutk.pulse.PSwitch(Downloads.torrentAuto, { Downloads.setTorrentAuto(ctx, it) })
             }
+            // encrypted torrent connections: for a school or hotel Wi-Fi that blocks torrents by their traffic, with no VPN
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentEnc(ctx, !Downloads.torrentEnc) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Encrypted torrent connections", "Şifreli torrent bağlantıları"), color = T.text, fontSize = 15.sp)
+                    Text(tr("A Wi-Fi that blocks torrents often lets these through; fewer peers can talk this way", "Torrenti engelleyen Wi-Fi çoğu zaman bunlara izin verir; bu yolla konuşabilen eş sayısı azalır"), color = T.sub, fontSize = 12.sp)
+                }
+                com.umutk.pulse.PSwitch(Downloads.torrentEnc, { Downloads.setTorrentEnc(ctx, it) })
+            }
             // a Wi-Fi that blocks torrents (school, hotel, sign-in page): they run over mobile data while the rest of the phone stays on the Wi-Fi
             Row(Modifier.fillMaxWidth().clickable { Downloads.setTorrentCell(ctx, !Downloads.torrentCell) }.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -352,7 +360,8 @@ object SeasonDl {
         if (torrents.isEmpty()) return tr("Could not open the stream", "Yayın açılamadı")
         if (!TorrentEngine.available) return tr("This phone cannot run the torrent engine (64-bit only): set a local torrent server, or use an add-on with direct links", "Bu telefon torrent motorunu çalıştıramıyor (yalnız 64 bit): yerel torrent sunucusu ya da doğrudan bağlantı veren bir eklenti kullan")
         // the best shared ones first, then the ones near the size wanted; if one does not start, the next is tried
-        val order = (torrents.sortedByDescending { it.seeds } .take(3) + ranked(torrents, limit).take(2)).distinctBy { it.url }
+        // the best shared first, whatever the size (a well seeded 3 GB file starts at once; a 700 MB one with few peers never does)
+        val order = torrents.sortedByDescending { it.seeds }.take(6).distinctBy { it.url }
         var last = ""
         for (t in order) {
             try {
@@ -485,8 +494,25 @@ object SeasonDl {
             val c = URL(u).openConnection() as HttpURLConnection
             c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
             c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+            // the same trusted-server list as the catalogue itself (a network that breaks the picture hosts' certificates left every cover empty)
+            if (c is javax.net.ssl.HttpsURLConnection) Downloads.appContext()?.let { ctx -> pinnedFactory(c.url.host, ctx)?.let { f -> c.sslSocketFactory = f } }
             c.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
-        }.getOrNull()
+        }.getOrElse { e ->
+            // covers are public pictures: when only the certificate is refused, the picture is still taken (nothing private is sent or shown)
+            if (generateSequence<Throwable>(e) { it.cause }.none { it is javax.net.ssl.SSLException }) null else runCatching {
+                val all = arrayOf<javax.net.ssl.TrustManager>(object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(c: Array<java.security.cert.X509Certificate>?, a: String?) {}
+                    override fun checkServerTrusted(c: Array<java.security.cert.X509Certificate>?, a: String?) {}
+                    override fun getAcceptedIssuers() = arrayOf<java.security.cert.X509Certificate>()
+                })
+                val ctx2 = javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, all, null) }
+                val c = URL(u).openConnection() as HttpURLConnection
+                if (c is javax.net.ssl.HttpsURLConnection) { c.sslSocketFactory = ctx2.socketFactory; c.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, _ -> true } }
+                c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
+                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36")
+                c.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+        }
         val raw = fetch(url) ?: (if (url.contains("/poster/medium/")) fetch(url.replace("/poster/medium/", "/poster/small/")) else null) ?: fetch(url) ?: return null
         // a wide picture shown upright (cropped to a portrait box) needs enough height, not only enough width: twice the box's height, at most what the picture has
         val want = minOf(raw.width, if (hPx > 0) maxOf(wPx * 2, (hPx * 2f * raw.width / raw.height).toInt()) else wPx * 2)
@@ -497,7 +523,7 @@ object SeasonDl {
 
     /** A picture of the catalogue, loaded as it is shown; while it is not there (or there is none) the box shows [label], so a missing picture never leaves a hole. */
     @Composable
-    private fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
+    fun Poster(url: String, w: androidx.compose.ui.unit.Dp = 46.dp, h: androidx.compose.ui.unit.Dp = 68.dp, label: String = "") {
         val src = sharp(url)
         val wPx = with(androidx.compose.ui.platform.LocalDensity.current) { w.roundToPx() }
         val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(posters.get("$src@$wPx"), src, wPx) {

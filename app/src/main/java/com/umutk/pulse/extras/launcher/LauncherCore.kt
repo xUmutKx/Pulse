@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.launcher
 
+import com.umutk.pulse.tr
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -65,8 +68,20 @@ fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Mo
     // where the finger is in the window, so the long-press menu opens right there like a context menu
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     val view = androidx.compose.ui.platform.LocalView.current
+    // the small show of a tapped icon (a setting): zoom, flip, rotate or bounce
+    val prog = remember { androidx.compose.animation.core.Animatable(0f) }
+    val anim = androidx.compose.runtime.rememberCoroutineScope()
     onGloballyPositioned { origin = it.positionInRoot() }
-        .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
+        .graphicsLayer {
+            val t = prog.value
+            when (if (LauncherPrefs.classicWin) "none" else LauncherPrefs.iconAnim) {
+                "zoom" -> { val k = 1f + .18f * kotlin.math.sin(Math.PI.toFloat() * t); scaleX = k; scaleY = k }
+                "flip" -> { rotationY = 360f * t; cameraDistance = 12f * density }
+                "rotate" -> rotationZ = 360f * t
+                "bounce" -> translationY = -22f * density * kotlin.math.sin(Math.PI.toFloat() * t)
+            }
+        }
+        .pointerInput(app.pkg) { detectTapGestures(onTap = { if (LauncherPrefs.iconAnim != "none" && !LauncherPrefs.classicWin) anim.launch { prog.snapTo(0f); prog.animateTo(1f, androidx.compose.animation.core.tween(300)) }; onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
 }
 
 /** A tap opens the app; a long press asks for its menu only when [menuOnLongPress] (the desktop moves an icon with the long press, and opens the menu when the finger lifts without having moved it). */
@@ -83,7 +98,25 @@ val LocalLauncherEdge = compositionLocalOf { 0.dp }
 
 /** Start menu data: the pinned apps (only while nothing is typed) and every app whose label matches the search. */
 fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<LaunchApp>> =
-    (if (query.isBlank()) state.dock else emptyList()) to state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) }
+    (if (query.isBlank()) state.dock else emptyList()) to (state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) } + windowsTools(query))
+
+/**
+ * The tools of Windows 10 and 11 in the Start menu's list and search (Command Prompt, Control Panel, Registry Editor, Task Manager, Services, Run ...), as the real Start menu has them
+ * under Windows Tools; the older looks keep their own lists. An app that has the same name is not listed twice.
+ */
+fun windowsTools(query: String): List<LaunchApp> {
+    val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+    if (!modern) return emptyList()
+    val tools = listOf(
+        LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+        LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
+        LaunchApp(tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"), "pulse:regedit", null, iconKey = "services"),
+        LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
+        LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
+        LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
+    )
+    return tools.filter { it.label.contains(query.trim(), ignoreCase = true) }
+}
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
@@ -94,13 +127,41 @@ object LauncherSession {
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
+    /** Windows 11: the quick settings flyout (the connection / sound / battery button of the tray) and the search flyout (the search button of the taskbar). */
+    var quickOpen by mutableStateOf(false)
+    var w11SearchOpen by mutableStateOf(false)
     /** MSN (Messages) was opened: it keeps a little icon in the Windows 7 tray, as if it ran in the background. */
     var msnTray by mutableStateOf(false)
+    /** The Run box (Win+R of Windows): type a command (cmd, regedit, taskmgr, control, notepad ...) and it opens. */
+    var runOpen by mutableStateOf(false)
+    /** Win+Tab: every window as a card (task view). */
+    var taskViewOpen by mutableStateOf(false)
+    /** The Windows lock screen (Win+L, Lock), the clipboard panel (Win+V), and the Shutting down / Restarting screen ("off" or "restart"; empty = none). */
+    var lockOpen by mutableStateOf(false)
+    var clipOpen by mutableStateOf(false)
+    /** The keyboard shortcut guide (Win+/ or Win+F1) and a Windows style error box (the text of what could not open; empty = none). */
+    var keysOpen by mutableStateOf(false)
+    /** Win+Ctrl+Left / Right: move to the next or the previous desktop (home page) of the launcher (-1, 0, 1). */
+    var pageMove by mutableStateOf(0)
+    /** The little on screen display of the volume and brightness keys: its text, the level 0..1 and when it was set (uptime ms). */
+    var osdText by mutableStateOf("")
+    var osdLevel by mutableStateOf(0f)
+    var osdAt by mutableStateOf(0L)
+    var errorText by mutableStateOf("")
+    var powerScreen by mutableStateOf("")
+    /** Alt+Tab: the card picked in the switcher while Alt is held; -1 = the switcher is closed. */
+    var altTabIdx by mutableStateOf(-1)
+    /** The Win+X menu (the Start button held): the tools of the system in a short list. */
+    var winXOpen by mutableStateOf(false)
+    /** The news page (a gesture action) is open. */
+    var newsOpen by mutableStateOf(false)
     /** The hidden-icons flyout of the Windows 7 tray (the arrow pointing up) is open. */
     var trayOpen by mutableStateOf(false)
     /** The Windows Phone glance page (behind the Windows button) is open. */
     /** The boot and sign-in screens were passed in this launcher process. */
     var booted by mutableStateOf(false)
+    /** What the next start of the launcher shows first: 1 = the boot (BIOS, then the start-up screen: Restart), 2 = the sign-in screen (Sign out). Read once, then 0. */
+    var forceBoot = 0
     var feedOpen by mutableStateOf(false)
     /** The quick search (a swipe down on the home) is open. */
     var searchOpen by mutableStateOf(false)
@@ -128,17 +189,18 @@ object LauncherLooks {
     // add looks here
     private val defaultLook = MaterialLauncherLook("material", "Material You", "Material You", black = false)
     // the Pulse themes are drawn by the Material look code, which reads its colours from the theme of the same id
+    // the order of the list: Windows 11 first (the default), then 10, 7, Windows Phone, XP and 95, the other phone looks, and Material and AMOLED last
     val all: List<LauncherLook> = listOf(
-        defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
-        Win11LauncherLook(), Win10LauncherLook(),
-        Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
+        Win11LauncherLook(), Win10LauncherLook(), Win7LauncherLook(),
         // one Windows Phone look, on pure black (the grey one is gone; a saved "winphone_amoled" resolves to it)
         WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = true),
+        XpLauncherLook(), Win95LauncherLook(),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
         TerminalLauncherLook(),
+        defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
     )
-    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: defaultLook
+    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: all.first()
 }
 
 /** App picture from the launcher icon, or a letter tile when the icon could not be read. Clipped to a squircle. */
@@ -147,7 +209,10 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
     // the Windows 7 look draws the desktop's own items (This PC, Recycle Bin, Explorer, Paint, the players ...) with the pictures of the Windows 7 pack
     val w7pic = if (app.icon == null && com.umutk.pulse.T.id == "win7") LAUNCH7[app.pkg]?.let { com.umutk.pulse.features.ThemeIcons.bitmap(androidx.compose.ui.platform.LocalContext.current, "win7", it) } else null
     val shape = when (LauncherPrefs.iconShape) { "circle" -> androidx.compose.foundation.shape.CircleShape; "square" -> RoundedCornerShape(size * .06f); "rounded" -> RoundedCornerShape(size * .16f); else -> RoundedCornerShape(size * .28f) }
-    val bmp = app.icon
+    // a picture the person chose for this app wins over its own icon and the icon pack's
+    val lctx = androidx.compose.ui.platform.LocalContext.current
+    val own = remember(app.pkg, AppIcons.rev) { AppIcons.bitmap(lctx, app.pkg) }
+    val bmp = own ?: app.icon
     val n = if (LauncherPrefs.badges) LauncherBadges.counts[app.pkg] ?: 0 else 0
     Box(modifier.size(size)) {
         if (bmp != null) Image(bmp, null, Modifier.size(size).clip(shape))
@@ -164,7 +229,9 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
             val d = (size.value * .34f).coerceIn(14f, 22f)
             val dot = LauncherPrefs.badgeStyle == "dot"
             Box(Modifier.align(Alignment.TopEnd).size((if (dot) d * .6f else d).dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
-                if (!dot) Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                if (!dot) Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, lineHeight = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    // no extra space above or below the digits: they sit in the middle of the dot
+                    style = androidx.compose.ui.text.TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false), lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.Both)))
             }
         }
     }

@@ -61,7 +61,7 @@ fun QuickSearch(state: LauncherState, onClose: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .18f)).clickable(interactionSource = none, indication = null, onClick = onClose)) {
         Column(
             Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp).widthIn(max = 540.dp).fillMaxWidth()
-                .background(T.bg.copy(alpha = .74f)).border(1.dp, T.line).clickable(interactionSource = none, indication = null) {}.padding(12.dp),
+                .background(T.bg.copy(alpha = if (LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black") .34f else .52f)).border(1.dp, if (LauncherPrefs.look == "win11") androidx.compose.ui.graphics.Color(0x40FFFFFF) else T.line).clickable(interactionSource = none, indication = null) {}.padding(12.dp),
         ) {
             PField(q, { q = it }, tr("Search apps and the web", "Uygulama ve web'de ara"), Modifier.fillMaxWidth().focusRequester(focus), onDone = {
                 found.firstOrNull()?.let { state.open(it); onClose() }

@@ -46,7 +46,7 @@ import com.umutk.pulse.produceStateVisible
 @Composable
 fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f, compact: Boolean = false) {
     // a turned screen has little height: the tiles are short there, so the apps below them stay in view
-    fun f(x: Int) = (x * (if (compact) .66f else 1f)).sp
+    fun f(x: Int) = (x * (if (compact) .6f else 1f)).sp
     val ctx = LocalContext.current
     val now by produceStateVisible(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val battery by produceStateVisible(0 to false) {
@@ -64,7 +64,7 @@ fun LiveTiles(corner: Dp, modifier: Modifier = Modifier, see: Float = 1f, compac
     val turn = (now / 4000L) % 2L == 0L
     val shape = RoundedCornerShape(corner)
     val notes = LauncherBadges.counts.values.sum()
-    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(if (compact) 52.dp else 88.dp).clip(shape).background(c.copy(alpha = c.alpha * see)).padding(if (compact) 7.dp else 10.dp), contentAlignment = Alignment.BottomStart) { content() }
+    @Composable fun tile(w: Float, c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(2.dp).height(if (compact) 70.dp else 88.dp).clip(shape).background(c.copy(alpha = c.alpha * see)).padding(if (compact) 6.dp else 10.dp), contentAlignment = Alignment.BottomStart) { content() }
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
             Box(Modifier.weight(2f)) { tile(2f, Color(0xFF0078D7)) {

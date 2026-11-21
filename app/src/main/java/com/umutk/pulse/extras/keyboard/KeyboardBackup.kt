@@ -18,6 +18,8 @@ object KeyboardBackup {
     private const val PREFS = "prefs.json"
 
     private fun prefsJson(c: Context): String {
+        // what is on the keyboard now (the theme, its size, the open key rows ...) is written to the preferences first, so the backup holds all of it and not only what was saved last
+        runCatching { KeyboardPrefs.save(c) }
         val o = JSONObject()
         for ((k, v) in c.getSharedPreferences(KeyboardPrefs.FILE, Context.MODE_PRIVATE).all) {
             val e = JSONObject().put("v", if (v is Set<*>) JSONArray(v.toList()) else v)

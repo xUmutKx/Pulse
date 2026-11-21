@@ -167,6 +167,14 @@ object TorrentEngine {
         sp.setBoolean(settings_pack.bool_types.announce_to_all_trackers.swigValue(), true)
         sp.setBoolean(settings_pack.bool_types.announce_to_all_tiers.swigValue(), true)
         sp.setBoolean(settings_pack.bool_types.enable_lsd.swigValue(), true)
+        // encrypted connections only (protocol encryption, RC4): a network that blocks BitTorrent by looking at its traffic often lets these through
+        // (enc_policy 0 = forced, enc_level 2 = RC4)
+        if (Downloads.torrentEnc) {
+            sp.setInteger(settings_pack.int_types.out_enc_policy.swigValue(), 0)
+            sp.setInteger(settings_pack.int_types.in_enc_policy.swigValue(), 0)
+            sp.setInteger(settings_pack.int_types.allowed_enc_level.swigValue(), 2)
+            sp.setBoolean(settings_pack.bool_types.prefer_rc4.swigValue(), true)
+        }
         val p = SessionParams(sp)
         p.setPosixDiskIO() // plain file writes: memory-mapped files misbehave on the phone's shared storage
         it.start(p)
@@ -347,7 +355,7 @@ object TorrentEngine {
                 val st = h.status(true)
                 if (st.hasMetadata()) break
                 onStatus(com.umutk.pulse.tr("Finding peers… (${st.numPeers()})", "Kaynak aranıyor… (${st.numPeers()})"))
-                if (waited > 150_000) throw IOException("no peers answered for this torrent")
+                if (waited > 45_000) throw IOException("no peers answered for this torrent")
                 delay(400); waited += 400
             }
             val ti = h.torrentFile() ?: throw IOException("the torrent has no file list")
@@ -366,7 +374,9 @@ object TorrentEngine {
                 if (need.all { h.havePiece(it) }) break
                 val st = h.status(true)
                 onStatus(com.umutk.pulse.tr("Buffering… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} peers  ·  ${st.downloadPayloadRate() / 1024} KB/s", "Hazırlanıyor… ${need.count { h.havePiece(it) }}/${need.size}  ·  ${st.numPeers()} kaynak  ·  ${st.downloadPayloadRate() / 1024} KB/s"))
-                if (waited > 240_000) throw IOException("the peers sent no data")
+                // a start that crawls (a few percent after half a minute) is dropped so the next, better shared torrent is tried
+                if (waited > 30_000 && st.downloadPayloadRate() < 30 * 1024 && need.none { h.havePiece(it) }) throw IOException("too slow to start")
+                if (waited > 90_000) throw IOException("the peers sent no data")
                 delay(500); waited += 500
             }
             val path = File(dir, fs.filePath(pick))

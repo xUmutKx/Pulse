@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.keyboard
 
+import com.umutk.pulse.features.collapsePanel
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -30,6 +31,7 @@ class KeyboardTile : TileService() {
         qsTile?.apply { state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; updateTile() }
         // a keyboard that is up changes its look now
         PulseKeyboardService.live?.floatChanged()
+        if (on) collapsePanel()
     }
 }
 

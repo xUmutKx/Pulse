@@ -58,6 +58,8 @@ object KeyboardPrefs {
     // layout
     var langs by mutableStateOf("tr,en")
     var numberRow by mutableStateOf(false)
+    /** The floating keyboard has its own number row switch: off (the digits come by holding a letter) unless it is turned on here. */
+    var floatNumberRow by mutableStateOf(false)
     var arrows by mutableStateOf(false)
     var emojiKey by mutableStateOf(true)
     /** The key beside ?123: "menu" (the three-dot menu), "emoji" or "none". */
@@ -160,6 +162,8 @@ object KeyboardPrefs {
     var perAppLang by mutableStateOf(false)
     /** A circle drawn on a letter types it in capital; a swipe out and back types its first long-press character. */
     var circleGestures by mutableStateOf(false)
+    /** Hold Shift (or Caps) with one finger and tap another key with the other: that key's extra character is typed (/ @ ...). On at first. */
+    var holdShiftSymbols by mutableStateOf(true)
     /** The phone keypad: letters by pressing a digit key again and again. */
     var multiTap by mutableStateOf(false)
     /** Typing five letters or more of a file's name offers that file at the right of the bar (a tap sends it, in a field that takes files). */
@@ -210,7 +214,7 @@ object KeyboardPrefs {
     val floatNow: Boolean get() = floating || floatSession
     var floatX by mutableStateOf(.5f)
     /** Floating: the size of the keyboard, 0.55 (small) to 1 (full); the grip at the right end of the handle changes it. */
-    var floatScale by mutableStateOf(.76f)
+    var floatScale by mutableStateOf(.88f)
     /** Floating: how far the keyboard is lifted off its place at the bottom, 0 (down) to 1 (up to the middle of the screen). */
     var floatY by mutableStateOf(0f)
     private var appCtx: Context? = null
@@ -273,11 +277,11 @@ object KeyboardPrefs {
         heightPct = p.getInt("heightPct", heightPct); landHeightPct = p.getInt("landHeightPct", landHeightPct); landProRow = p.getBoolean("landProRow", landProRow); samProRow = p.getBoolean("samProRow", samProRow); landNumberRow = p.getBoolean("landNumberRow", landNumberRow); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
         keyGap = p.getInt("keyGap", keyGap); compact = p.getBoolean("compact", compact); compactPct = p.getInt("compactPct", compactPct); emojiRight = p.getBoolean("emojiRight", emojiRight); emojiFull = p.getBoolean("emojiFull", emojiFull); modeShrink = p.getInt("modeShrink", modeShrink); commaShrink = p.getInt("commaShrink", commaShrink); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
-        numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
+        numberRow = p.getBoolean("numberRow", numberRow); floatNumberRow = p.getBoolean("floatNumberRow", false); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); barTools = p.getBoolean("barTools", barTools); emojiTheme = p.getString("emojiTheme", "same") ?: "same"; floatScale = p.getFloat("floatScale", .76f).coerceIn(.55f, 1f); autocorrect = p.getBoolean("autocorrect", autocorrect); fixFlash = p.getBoolean("fixFlash", fixFlash); fixSelect = p.getBoolean("fixSelect2", true); pauseFix = p.getBoolean("pauseFix", false) && p.getBoolean("pauseOff13", false)
-        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); undoToKeep = p.getInt("undoToKeep", 2).coerceIn(1, 2); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill); neural = p.getBoolean("neural", neural); smooth = p.getBoolean("smooth", false); cornerHints = p.getBoolean("cornerHints", true); circleGestures = p.getBoolean("circleGestures", false); multiTap = p.getBoolean("multiTap", false); fileSuggest = p.getBoolean("fileSuggest", true); spacePic = p.getString("spacePic", "") ?: ""; spaceWalker = p.getString("spaceWalker", "") ?: ""; spaceWalkerPic = p.getString("spaceWalkerPic", "") ?: ""; spaceFlip = p.getBoolean("spaceFlip", false); capColors = parseInts(p.getString("capColors", "") ?: ""); capPics = parseStrs(p.getString("capPics", "") ?: "")
+        undoOnBackspace = p.getBoolean("undoOnBackspace", undoOnBackspace); undoToKeep = p.getInt("undoToKeep", 2).coerceIn(1, 2); quickPrediction = p.getBoolean("quickPrediction", quickPrediction); quickPinBtn = p.getBoolean("quickPinBtn", quickPinBtn); inlineAutofill = p.getBoolean("inlineAutofill", inlineAutofill); neural = p.getBoolean("neural", neural); smooth = p.getBoolean("smooth", false); cornerHints = p.getBoolean("cornerHints", true); circleGestures = p.getBoolean("circleGestures", false); holdShiftSymbols = p.getBoolean("holdShiftSymbols", true); multiTap = p.getBoolean("multiTap", false); fileSuggest = p.getBoolean("fileSuggest", true); spacePic = p.getString("spacePic", "") ?: ""; spaceWalker = p.getString("spaceWalker", "") ?: ""; spaceWalkerPic = p.getString("spaceWalkerPic", "") ?: ""; spaceFlip = p.getBoolean("spaceFlip", false); capColors = parseInts(p.getString("capColors", "") ?: ""); capPics = parseStrs(p.getString("capPics", "") ?: "")
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); cursorSens = p.getInt("cursorSens", cursorSens).coerceIn(50, 200); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn); rememberNumbers = p.getBoolean("rememberNumbers", rememberNumbers); learnMode = p.getInt("learnMode", if (learn) 3 else 0); autoLang = p.getBoolean("autoLang", true); emailDomain = p.getString("emailDomain", "gmail.com") ?: "gmail.com"; learn = learnMode != 0
@@ -400,6 +404,20 @@ object KeyboardPrefs {
             menuItems = mn.joinToString(",")
             p.edit().putBoolean("scanMenu209", true).putString("menuItems", menuItems).apply()
         }
+        // once: the Calculator, Convert, Stickers and Grammar tiles leave the menu (they can be put back in the settings) and Notes joins it
+        if (!p.getBoolean("trimMenu2011", false)) {
+            val drop = setOf("calc", "convert", "stickers", "grammar")
+            val mn = menuItems.split(',').filter { it.isNotBlank() && it !in drop }.toMutableList()
+            if ("notes" !in mn) mn.add(minOf(mn.indexOf("dict") + 1, mn.size).coerceAtLeast(0), "notes")
+            menuItems = mn.joinToString(",")
+            toolbarItems = toolbarItems.split(',').filter { it.isNotBlank() && it !in drop }.joinToString(",")
+            p.edit().putBoolean("trimMenu2011", true).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems).apply()
+        }
+        // once: the floating keyboard is a little wider than before (88 percent of the full size; a size the person set himself stays)
+        if (!p.getBoolean("floatWide2017", false)) {
+            if (kotlin.math.abs(floatScale - .76f) < .001f) floatScale = .88f
+            p.edit().putBoolean("floatWide2017", true).putFloat("floatScale", floatScale).apply()
+        }
         numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
@@ -413,10 +431,10 @@ object KeyboardPrefs {
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("landHeightPct", landHeightPct).putBoolean("landProRow", landProRow).putBoolean("samProRow", samProRow).putBoolean("landNumberRow", landNumberRow).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putBoolean("compact", compact).putInt("compactPct", compactPct).putBoolean("emojiRight", emojiRight).putBoolean("emojiFull", emojiFull).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
-            .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
+            .putBoolean("numberRow", numberRow).putBoolean("floatNumberRow", floatNumberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("barTools", barTools).putString("emojiTheme", emojiTheme).putFloat("floatScale", floatScale).putBoolean("autocorrect", autocorrect).putBoolean("fixFlash", fixFlash).putBoolean("fixSelect2", fixSelect).putBoolean("pauseFix", pauseFix).putString("numCorners", numCorners).putBoolean("calcEquals", calcEquals).putBoolean("otpCodes", otpOn).putString("numerals", numerals).putInt("splitGap", splitGap).putInt("keyRadius", keyRadius).putString("keyIcons", keyIcons).putString("gifKey", gifKey).putBoolean("powerSave", powerSave).putBoolean("perAppLang", perAppLang).putBoolean("voiceWhisper", voiceWhisper).putBoolean("hybridFix", hybridFix).putBoolean("undoOnBackspace", undoOnBackspace).putInt("undoToKeep", undoToKeep)
-            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
+            .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPinBtn", quickPinBtn).putBoolean("inlineAutofill", inlineAutofill).putBoolean("neural", neural).putBoolean("smooth", smooth).putBoolean("cornerHints", cornerHints).putBoolean("circleGestures", circleGestures).putBoolean("holdShiftSymbols", holdShiftSymbols).putBoolean("multiTap", multiTap).putBoolean("fileSuggest", fileSuggest).putString("spacePic", spacePic).putString("spaceWalker", spaceWalker).putString("spaceWalkerPic", spaceWalkerPic).putBoolean("spaceFlip", spaceFlip).putString("capColors", capsToText()).putString("capPics", picsToText()).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("rememberNumbers", rememberNumbers).putBoolean("cursorControl", cursorControl).putInt("cursorSens", cursorSens).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn).putInt("learnMode", learnMode).putBoolean("autoLang", autoLang).putString("emailDomain", emailDomain)
             .putString("numEnter", numEnter).putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("corners", corners).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putBoolean("floating_v2", true).putFloat("floatX", floatX).putFloat("floatY", floatY).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putBoolean("dirLayout", dirLayout).putInt("rgb", rgb).putInt("rgbSpeed", rgbSpeed).putInt("clipKeep", clipHours).putBoolean("clipLimitOn", clipLimitOn).putInt("clipLimit", clipLimit).putString("clipLayout", clipLayout).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("pressFx", pressFx).putInt("fxColor", fxColor).putInt("fxCustom", fxCustom).putString("bgPath", bgPath).putInt("bgDim", bgDim).putInt("fxSpeed", fxSpeed).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)

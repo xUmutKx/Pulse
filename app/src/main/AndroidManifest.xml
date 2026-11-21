@@ -34,6 +34,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <!-- storage tools (folder tree, cache cleaner, cleaner) read the whole shared storage on Android 11+; granted from the Tools page -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
@@ -979,6 +980,9 @@
         <service android:name="com.umutk.pulse.extras.relay.RelayService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="local network file transfer, listens for paired devices" />
         </service>
+        <service android:name="com.umutk.pulse.features.TermService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a terminal shell session the user opened that keeps running in the background" />
+        </service>
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>
@@ -1026,6 +1030,8 @@
             </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
+        <!-- "Open as Music" of YTXTube's videos: the song plays in the music player (main process) -->
+        <receiver android:name="com.umutk.pulse.extras.music.OpenAsMusicReceiver" android:exported="false" />
         <!-- the colour picker: an eyedropper over the screen and a picker, from its quick settings tile -->
         <activity android:name="com.umutk.pulse.extras.colorpick.ColorPickActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" />
         <service android:name="com.umutk.pulse.extras.colorpick.ColorPickTile" android:exported="true" android:label="Colour picker" android:icon="@drawable/ic_qs_colorpick"
@@ -2362,7 +2368,65 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- "Open with" for any file: the code editor reads it as text (colours by language when it knows one); on by default, no launcher icon of its own -->
+        <activity-alias android:name=".CodeOpenActivity" android:enabled="true" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_code" android:roundIcon="@drawable/launch_code" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="*/*" />
+                <data android:scheme="file" android:mimeType="*/*" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".CodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_code" android:roundIcon="@drawable/launch_code" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass" android:roundIcon="@drawable/launch_pulse_glass" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassNavyCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_navy" android:roundIcon="@drawable/launch_pulse_glass_navy" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassSkyCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_sky" android:roundIcon="@drawable/launch_pulse_glass_sky" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPurpleCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_purple" android:roundIcon="@drawable/launch_pulse_glass_purple" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPinkCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_pink" android:roundIcon="@drawable/launch_pulse_glass_pink" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassCyanCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_cyan" android:roundIcon="@drawable/launch_pulse_glass_cyan" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassGreenCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_green" android:roundIcon="@drawable/launch_pulse_glass_green" android:label="Code">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassAmberCodeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_amber" android:roundIcon="@drawable/launch_pulse_glass_amber" android:label="Code">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -2963,6 +3027,54 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GlassHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass" android:roundIcon="@drawable/launch_pulse_glass" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassNavyHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_navy" android:roundIcon="@drawable/launch_pulse_glass_navy" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassSkyHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_sky" android:roundIcon="@drawable/launch_pulse_glass_sky" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPurpleHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_purple" android:roundIcon="@drawable/launch_pulse_glass_purple" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassPinkHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_pink" android:roundIcon="@drawable/launch_pulse_glass_pink" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassCyanHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_cyan" android:roundIcon="@drawable/launch_pulse_glass_cyan" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassGreenHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_green" android:roundIcon="@drawable/launch_pulse_glass_green" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".GlassAmberHealthLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_pulse_glass_amber" android:roundIcon="@drawable/launch_pulse_glass_amber" android:label="Health">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout" android:roundIcon="@drawable/launch_blackout" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -3078,7 +3190,9 @@
         </activity>
         <!-- Pulse Launcher: HOME app (own process, own look store) -->
         <!-- Pulse launcher: HOME filter only, so it is in the default home app choice but not in the app drawer -->
-        <activity android:name=".extras.launcher.LauncherActivity" android:process=":launcher" android:exported="true" android:label="Launcher" android:icon="@mipmap/ic_ti_default" android:roundIcon="@mipmap/ic_ti_default" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize">
+        <receiver android:name=".extras.launcher.TaskAlarmReceiver" android:exported="false" />
+        <activity android:name=".features.CollapseActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="" />
+        <activity android:name=".extras.launcher.LauncherActivity" android:process=":launcher" android:taskAffinity="com.umutk.pulse.launcher" android:exported="true" android:label="Launcher" android:icon="@mipmap/ic_ti_11" android:roundIcon="@mipmap/ic_ti_11" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />

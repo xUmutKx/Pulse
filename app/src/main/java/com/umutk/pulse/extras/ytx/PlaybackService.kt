@@ -95,11 +95,11 @@ class PlaybackService : MediaSessionService() {
 
             .setLoadControl(
                 DefaultLoadControl.Builder()
-                    // Start after a quarter second, keep a 30 s runway and a 10 s rewind
+                    // Start after a quarter second, read ahead up to two minutes while it plays (the disk cache keeps what was read) and keep a 10 s rewind
                     // buffer. The old 15 s/50 s/1 s policy is what made every open sit on
                     // a spinner before the first frame.
                     .setAllocator(androidx.media3.exoplayer.upstream.DefaultAllocator(true, 64 * 1024))
-                    .setBufferDurationsMs(2_500, 30_000, 250, 750)
+                    .setBufferDurationsMs(2_500, 120_000, 250, 750)
                     .setBackBuffer(10_000, false)
                     .setPrioritizeTimeOverSizeThresholds(true)
                     .build(),

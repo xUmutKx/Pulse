@@ -218,7 +218,12 @@ private fun AiModelsPage() {
     var query by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<AiModel>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
-    val onPhone by produceState(emptyList<AiModel>(), tick / 30) { value = withContext(Dispatchers.IO) { runCatching { phoneModels() }.getOrDefault(emptyList()) } }
+    var scanDir by remember { mutableStateOf(Store.scanDir(c)) }
+    val onPhone by produceState(emptyList<AiModel>(), tick / 60, scanDir) { value = withContext(Dispatchers.IO) { runCatching { phoneModels(c) }.getOrDefault(emptyList()) } }
+    // Pulse's own folder picker (the system one opened in Music); the path comes back as text
+    val pickDir = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickFolder()) { path: String? ->
+        if (path != null) { Store.setScanDir(c, path); scanDir = path; tick++ }
+    }
     val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
         if (u != null) { runCatching { c.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }; Store.setCustomUri(c, if (u.toString().endsWith(".bin")) "speech" else "chat", u); tick++ }
     }
@@ -226,7 +231,12 @@ private fun AiModelsPage() {
     val extras = remember(tick) { Store.extras(c) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("RAM ${gb(Device.ramBytes(c))} · Download/PulseAI", color = AiSub, fontSize = 13.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("RAM ${gb(Device.ramBytes(c))} · ", color = AiSub, fontSize = 13.sp)
+                Text(scanDir?.removePrefix(Environment.getExternalStorageDirectory().path + "/") ?: tr("Whole phone (Download first)", "Tüm telefon (önce Download)"), color = AiAccent, fontSize = 13.sp,
+                    modifier = Modifier.clickable { pickDir.launch(Unit) }.padding(vertical = 8.dp))
+                if (scanDir != null) Text("  ✕", color = AiSub, fontSize = 13.sp, modifier = Modifier.clickable { Store.setScanDir(c, null); scanDir = null; tick++ }.padding(8.dp))
+            }
             if (!Environment.isExternalStorageManager()) TextButton({ runCatching { c.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${c.packageName}"))) } }) {
                 Text(tr("Allow file access: models already on the phone are found", "Dosya erişimine izin ver: telefondaki modeller bulunur"), color = AiAccent, fontSize = 13.sp)
             }

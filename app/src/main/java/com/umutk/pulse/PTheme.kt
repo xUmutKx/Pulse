@@ -1,5 +1,7 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -206,13 +208,13 @@ fun glassTwin(t: PTheme, dark: Boolean): PTheme {
 }
 
 /** The light twin of Windows 11: the base look is the dark one, so the light mode needs its own colours. */
-fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF000000), c(0xFF5C5C5C), c(0xFF0067C0), c(0xFFE5E5E5), t.radius, glassA = t.glassA)
+fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF1A1A1A), c(0xFF5C5C5C), c(0xFF0067C0), c(0xFFE5E5E5), t.radius, glassA = t.glassA)
 
 /** The dark twin of a light sidebar theme (Windows 11 / 10); others have none. */
 fun darkTwin(t: PTheme): PTheme? = when (t.id) {
     // Windows 11 takes the accent swatch too (PTheme.accent); the background is black (AMOLED) or dark grey
-    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius)
-        else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF3A3A3A), t.radius)
+    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFC9C9C9), c(0xFF60CDFF), c(0xFF2A2A2A), t.radius)
+        else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFC9C9C9), c(0xFF60CDFF), c(0xFF3A3A3A), t.radius)
     "win10" -> PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF0E0E0E), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF4CC2FF), c(0xFF2A2A2A), t.radius, tabs = true, titleName = t.titleName, glassA = t.glassA)
     else -> null
 }
@@ -310,8 +312,11 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
             else -> Modifier.clip(RoundedCornerShape(8.dp)).background(if (id == "win11") Color.Transparent else body)
                 .border(1.dp, if (id == "win11") (if (w.dark) Color.White.copy(alpha = .14f) else Color.White.copy(alpha = .8f)) else w.line, RoundedCornerShape(8.dp))
         }
-        Column(Modifier.then(if (id == "win11") Modifier.widthIn(min = 280.dp, max = minOf(480, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 32).dp) else Modifier.padding(16.dp).widthIn(min = 280.dp, max = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 560.dp else 480.dp)).then(outer)) {
+        var dragOff by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Offset.Zero) }
+        Column(Modifier.offset { androidx.compose.ui.unit.IntOffset(dragOff.x.toInt(), dragOff.y.toInt()) }.then(if (id == "win11") Modifier.widthIn(min = 280.dp, max = minOf(480, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 32).dp) else Modifier.padding(16.dp).widthIn(min = 280.dp, max = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 560.dp else 480.dp)).then(outer)) {
             Row(Modifier.fillMaxWidth().height(when (id) { "win95" -> 20.dp; "xp", "win7" -> 28.dp; else -> 32.dp })
+                // a dialog is a window: its title bar moves it
+                .pointerInput(Unit) { detectDragGestures { c, d -> c.consume(); dragOff += d } }
                 .then(if (id == "xp") Modifier.background(Brush.verticalGradient(0f to Color(0xFF0058EE), .14f to Color(0xFF3A93FF), .32f to Color(0xFF0A60EE), .85f to Color(0xFF0050E0), 1f to Color(0xFF0046C8)))
                 .drawBehind { drawLine(Color(0xFF7DB4FF), Offset(0f, 1.dp.toPx() / 2), Offset(size.width, 1.dp.toPx() / 2), 1.dp.toPx()) } else if (id == "win95") Modifier.background(Color(0xFF000080)) else if (classic) w.title?.let { Modifier.background(it) } ?: Modifier else if (id == "win11") Modifier.background(body) else Modifier)
                 .padding(start = if (id == "win95") 4.dp else 10.dp, end = if (classic || id == "win7") 2.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {

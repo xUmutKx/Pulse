@@ -111,10 +111,13 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "ram" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.RamPage() }
         id == "trayicons" -> com.umutk.pulse.extras.launcher.TrayIconsPage()
         id == "fonts" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.FontChangerScreen() }
-        id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
+        id == "dns" -> { androidx.activity.compose.BackHandler { back() }
+            // in a window of the launcher the page has no list around it: its cards were drawn on top of each other
+            if (com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { com.umutk.pulse.features.DnsSettings() }
+            else com.umutk.pulse.features.DnsSettings() }
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
         id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
-        id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
+        id == "buds" -> com.umutk.pulse.extras.buds.DeviceManagerScreen(back)
         id == "clock" -> com.umutk.pulse.extras.lucid.LucidClockScreen(back)
         id == "radio" -> com.umutk.pulse.extras.radio.RadioScreen(back)
         id == "relay" -> com.umutk.pulse.extras.share.ShareHub(back)
@@ -163,13 +166,20 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "win:tictactoe" -> com.umutk.pulse.extras.launcher.TicTacToeGame()
         id.startsWith("win:fun:") -> com.umutk.pulse.extras.launcher.FunAppScreen(id.removePrefix("win:fun:"))
         // the launcher's own settings in a window of the desktop: they change the launcher (its look, wallpaper, icons), not the app
-        id == "win:lsettings:menu" -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true, startCat = "menu") }
+        id.startsWith("win:lsettings:") -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true, startCat = id.removePrefix("win:lsettings:")) }
         id == "win:lsettings" -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true) }
+        id == "win:regedit" -> com.umutk.pulse.extras.launcher.MiniRegistry()
+        id == "win:devmgmt" -> com.umutk.pulse.extras.launcher.DeviceManagerWindow()
+        id == "win:eventvwr" -> com.umutk.pulse.extras.launcher.EventViewerWindow()
+        id == "win:diskmgmt" -> com.umutk.pulse.extras.launcher.DiskManagementWindow()
+        id == "win:taskschd" -> com.umutk.pulse.extras.launcher.TaskSchedulerWindow()
+        id == "win:security" -> com.umutk.pulse.extras.launcher.WindowsSecurityWindow()
         id == "win:gallery" -> com.umutk.pulse.extras.launcher.GalleryWindow()
         id.startsWith("view:") -> com.umutk.pulse.extras.launcher.FileWindow(id.removePrefix("view:"))
         id == "game:minesweeper" -> com.umutk.pulse.extras.launcher.MinesweeperGame()
         id == "game:hub" -> com.umutk.pulse.extras.launcher.GameHub()
         id == "game:freecell" -> com.umutk.pulse.extras.launcher.FreeCellGame()
+        id == "game:chess" || id == "game:checkers" || id == "game:connect4" -> com.umutk.pulse.extras.launcher.TinyGameHost(id.removePrefix("game:"))
         id == "game:solitaire" -> com.umutk.pulse.extras.launcher.SolitaireGame()
         id == "store:launcher" -> com.umutk.pulse.extras.launcher.LauncherStoreWindow()
         id == "page:filestabs" -> com.umutk.pulse.extras.launcher.ExplorerTabsWindow()
@@ -189,6 +199,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "page:settings" -> SettingsPage()
         id == "page:recycle" -> com.umutk.pulse.features.RecycleBinPage()
         id == "page:terminal" -> com.umutk.pulse.features.TerminalPage()
+        id == "page:cmd" -> com.umutk.pulse.features.TerminalPage(windows = true)
         id == "page:files" -> com.umutk.pulse.features.FilesPage()
     }
 }

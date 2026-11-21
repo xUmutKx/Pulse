@@ -176,7 +176,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val stamp = if (android.os.Build.VERSION.SDK_INT >= 26) clip.description.timestamp else 0L
         val sig = "$stamp|" + (clip.getItemAt(0).text?.toString()?.take(200) ?: clip.getItemAt(0).uri?.toString().orEmpty())
         if (sig == lastClipSig) return
-        if (onOpen && (stamp == 0L || android.os.SystemClock.elapsedRealtime() - stamp > 120_000)) { lastClipSig = sig; return }
+        if (onOpen && (stamp == 0L || android.os.SystemClock.elapsedRealtime() - stamp > 120_000)) {
+            lastClipSig = sig
+            // an older copy the system never told the keyboard about still goes into the clipboard list (not the bar), unless it is there already
+            val old = clip.getItemAt(0).takeIf { it.uri == null }?.text?.toString()?.trim().orEmpty()
+            if (old.isNotEmpty()) scope.launch(Dispatchers.IO) {
+                if (ClipStore.load(this@PulseKeyboardService).none { it.image == null && it.text == old }) {
+                    val l = ClipStore.addText(this@PulseKeyboardService, old)
+                    withContext(Dispatchers.Main) { st.clipItems = l }
+                }
+            }
+            return
+        }
         lastClipSig = sig
         val item = clip.getItemAt(0)
         val uri = item.uri
@@ -227,7 +238,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 ?: uri?.let { u -> runCatching { contentResolver.openInputStream(u)?.use { ins -> String(ins.readBytes().let { b -> if (b.size > 2_000_000) b.copyOf(2_000_000) else b }) } }.getOrNull() })?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
-            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 1; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -349,7 +360,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         val path = item.image
         // a text goes in and is also the copied text again (the phone's clipboard), so it can be pasted from anywhere
-        if (path == null) { c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text)); st.panel = "keys"; afterText(); return }
+        if (path == null) {
+            c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text))
+            // the paste put the text on the phone's clipboard again: it is marked as seen and leaves the bar, so it is not offered a second time
+            runCatching {
+                val cp = clipboard?.primaryClip
+                if (cp != null && cp.itemCount > 0) lastClipSig = "${if (android.os.Build.VERSION.SDK_INT >= 26) cp.description.timestamp else 0L}|" + (cp.getItemAt(0).text?.toString()?.take(200) ?: cp.getItemAt(0).uri?.toString().orEmpty())
+            }
+            quickClip = null; st.panel = "keys"; afterText(); updateSuggestions(); return
+        }
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val ok = types.any { it.startsWith("image/") || it == "*/*" }
@@ -483,6 +502,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         if (android.os.Build.VERSION.SDK_INT >= 29) runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, true, shotObserver) }
+        // every other file made anywhere (a zip made in a folder of its own, a document) is looked at the same way
+        runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Files.getContentUri("external"), true, shotObserver) }
     }
 
     // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
@@ -511,8 +532,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var shotPinned = false
     private var shotAt = 0L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-        // looked at three times: a screenshot is listed only when its file is finished, which takes a moment (longer for a long or an edited one)
-        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(6000); checkShot(); checkVideo(); checkFile() } }
+        // looked at four times, the first one quick (a downloaded file or a screenshot shows in the bar as soon as it is finished); a file that is still being written is taken by a later look
+        // one look at a time: a change that comes while the looks of the last one are still going (a zip unpacked sends hundreds of them) starts them over instead of piling up another set, which had made the keyboard heavy
+        private var job: kotlinx.coroutines.Job? = null
+        override fun onChange(selfChange: Boolean) {
+            job?.cancel()
+            job = scope.launch { delay(250); checkShot(); checkVideo(); checkFile(); delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(5000); checkShot(); checkVideo(); checkFile() }
+        }
     }
     /** The pictures already taken in (their numbers in the phone's picture list), so none is taken twice and none is skipped when two come close together. */
     private val shotsTaken = LinkedHashSet<Long>()
@@ -542,6 +568,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                         putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 8)
                     }
                     val out = ArrayList<Triple<Long, Long, String>>()
+                    val plainIds = HashSet<Long>()
                     (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
                     else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 8"))?.use { c ->
                         while (c.moveToNext()) {
@@ -553,12 +580,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                             val shot = listOf("screenshot", "screen_shot", "screen shot", "screen-shot", "screencap", "screen_cap", "ekran g", "ekran_g", "ekrang", "capture", "smartselect", "scrnshot").any { it in both }
                             val cam = path.contains("/dcim/", true) || path.contains("/camera/", true)
                             // a picture just downloaded (the Download folder) is offered the same way
-                            val down = path.contains("/download", true)
+                            // (directly in the Download folder: what a zip is unpacked into is a folder of its own, those pictures are not offered)
+                            val down = java.io.File(path).parentFile?.name.equals("Download", true) == true
                             // only what is new: a picture made in the last moments, never the older ones of the gallery
                             // (when the keyboard comes up, e.g. back from the camera or from the recent apps, a wider look: a photo made in the last quarter of an hour)
-                            if (shot && age <= (if (fromStart) 180 else 45) || cam && age <= (if (fromStart) 900 else 30) || down && age <= (if (fromStart) 180 else 45)) out += Triple(c.getLong(0), age, path)
+                            if (shot && age <= (if (fromStart) 180 else 45) || cam && age <= (if (fromStart) 900 else 30) || down && age <= (if (fromStart) 180 else 45)) {
+                                out += Triple(c.getLong(0), age, path)
+                                if (!shot && (down || cam)) plainIds += c.getLong(0)
+                            }
                         }
                     }
+                    // several pictures made at once that are not screenshots (a zip unpacked, a folder copied in) are not a picture the person just took: none of them is offered
+                    if (plainIds.size > 2) out.removeAll { it.first in plainIds }
                     out
                 }.getOrNull()
             }.orEmpty().filter { it.first !in shotsTaken }
@@ -580,6 +613,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // pictures of the same kind taken together wait as one stack: one tap sends them all
         fun kind(p: String) = if (p.contains("/dcim/", true) || p.contains("/camera/", true)) 1 else if (p.contains("/download", true)) 2 else 0
         val same = batchPaths.filter { kind(it) == kind(hit.third) }.map { java.io.File(it) }.filter { it.isFile && it.length() > 0 }
+        // many pictures at once that are not from the camera or a screenshot (a zip opened, a folder copied) are not a thing to paste: nothing shows in the bar
+        if (kind(hit.third) == 2 && same.size > 5) return
         shotGroup = (same + shotGroup.filter { f -> f.isFile && kind(f.path) == kind(hit.third) && same.none { it.path == f.path } }).take(12)
         st.shotCount = shotGroup.size
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
@@ -647,9 +682,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** Any other file just downloaded (a PDF, an archive, a document, an APK) waits in the right slot too, for a chat that takes files. */
     private suspend fun checkFile() {
         if (st.incognito || android.os.Build.VERSION.SDK_INT < 29) return
-        val D = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
         val hit = withContext(Dispatchers.IO) {
-            runCatching {
+            // the whole file list first (a file made in any folder), the Downloads list when the phone does not show that one
+            listOf(android.provider.MediaStore.Files.getContentUri("external"), android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI).firstNotNullOfOrNull { D -> runCatching {
                 val cols = arrayOf(android.provider.MediaStore.Downloads._ID, android.provider.MediaStore.Downloads.DISPLAY_NAME, android.provider.MediaStore.Downloads.DATE_MODIFIED, android.provider.MediaStore.Downloads.MIME_TYPE, android.provider.MediaStore.Downloads.DATA, android.provider.MediaStore.Downloads.SIZE)
                 val q = android.os.Bundle().apply {
                     putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Downloads.DATE_MODIFIED))
@@ -667,7 +702,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     }
                 }
                 out
-            }.getOrNull()
+            }.getOrNull() }
         } ?: return
         val (id, path, mime) = hit
         filesTaken += id
@@ -763,6 +798,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onCreateInputView(): View {
+        // the keyboard view is made with the knowledge of a connected physical keyboard
+        st.hardware = hardwareAttached()
         val o = owner ?: StandByOwner().also { it.start(); owner = it }
         // Compose finds its lifecycle on the root of the window, which for a keyboard is the window's decor view
         window.window?.decorView?.let { it.setViewTreeLifecycleOwner(o); it.setViewTreeSavedStateRegistryOwner(o) }
@@ -865,6 +902,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        // is a physical keyboard connected? asked before the keyboard is drawn, so a field opens as the suggestion bar at once (not the full keys first and the bar a moment later);
+        // the full keys come only when the keyboard button of the bar is pressed, and every new field starts as the bar again
+        if (!restarting) { st.hardware = hardwareAttached(); st.hwOpen = false }
         // a restart of the input with the keyboard already up: the new kind is taken at once
         if (restarting) syncKind(attribute)
     }
@@ -941,9 +981,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val d = android.view.InputDevice.getDevice(id) ?: return@any false
                 val pad = (d.sources and android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD ||
                     (d.sources and android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
-                !d.isVirtual && !pad && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
+                // (a keyboard cover of a tablet, joined by contacts, can be reported as "virtual" with an id above zero: only the phone's own virtual keyboard, id below zero, is left out)
+                (!d.isVirtual || d.id > 0) && !pad && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
                     d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
-            }
+            } ||
+                // the system itself says a keyboard with letter keys is out (not hidden)
+                (resources.configuration.keyboard == android.content.res.Configuration.KEYBOARD_QWERTY && resources.configuration.hardKeyboardHidden == android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO)
         }.getOrDefault(resources.configuration.keyboard == android.content.res.Configuration.KEYBOARD_QWERTY)
     }
 
@@ -1821,6 +1864,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
+        // the copied item in the right slot: held, a preview opens above the bar (the text in full, the picture bigger, the video playing)
+        val sl = st.slots.getOrNull(i).orEmpty()
+        if (sl.startsWith("\u0002")) { st.previewShot = true; return }
+        if (sl.startsWith("\u0001") && !sl.startsWith("\u0001🔑")) { quickClip?.let { st.previewText = it; return } }
         // the address in the left slot of an empty box: held, all the saved addresses come up on the bar to pick from
         if (i == 0 && word.isEmpty() && '@' in w && emailRe.matches(w)) {
             val all = emailsSaved().filter { !KeyboardDictionary.isBanned(it) }.take(8)
@@ -1855,6 +1902,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** The answer of the sum before the cursor, offered in the middle slot (written as it stands when tapped). */
+    private var ratesAsked = 0L
+    /** "35$", "20 eur", "£8": the amount in lira (and "500 tl" in dollars), offered in the middle of the bar; a tap writes it after the amount. The rates are the calculator's (kept on the phone, refreshed every few hours). */
+    private fun currencyAnswer(before: String): String? {
+        val m = Regex("""(?:^|[\s(])([0-9]+(?:[.,][0-9]{1,2})?)\s?(\$|€|£|usd|eur|gbp|dolar|euro|tl|₺|try)$""", RegexOption.IGNORE_CASE).find(before)
+        val (num, sym) = if (m != null) m.groupValues[1] to m.groupValues[2] else {
+            val m2 = Regex("""(?:^|[\s(])(\$|€|£)\s?([0-9]+(?:[.,][0-9]{1,2})?)$""").find(before) ?: return null
+            m2.groupValues[2] to m2.groupValues[1]
+        }
+        val v = num.replace(',', '.').toDoubleOrNull() ?: return null
+        val from = when (sym.lowercase()) { "$", "usd", "dolar" -> "USD"; "€", "eur", "euro" -> "EUR"; "£", "gbp" -> "GBP"; else -> "TRY" }
+        val to = if (from == "TRY") "USD" else "TRY"
+        if (com.umutk.pulse.extras.calculator.Rates.updated == 0L) com.umutk.pulse.extras.calculator.Rates.load(this)
+        if (System.currentTimeMillis() - com.umutk.pulse.extras.calculator.Rates.updated > 6 * 3600_000L && System.currentTimeMillis() - ratesAsked > 600_000L) { ratesAsked = System.currentTimeMillis(); scope.launch { if (com.umutk.pulse.extras.calculator.Rates.refresh(this@PulseKeyboardService)) updateSuggestions() } }
+        val r = com.umutk.pulse.extras.calculator.Rates.rates; val a = r[from] ?: return null; val b = r[to] ?: return null
+        val out = v / a * b
+        val txt = java.math.BigDecimal(out).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        return " ≈ $txt " + if (to == "TRY") "TL" else to
+    }
+
     private var calcText: String? = null
 
     override fun slot(i: Int) {
@@ -1910,7 +1976,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // a word being typed is kept as it is, then the copied text follows it
             if (word.isNotEmpty()) finishWord("", false)
             currentInputConnection?.commitText(qc, 1)
-            // pasted twice, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
+            // pasted once, it leaves the bar (a pinned one stays); it stays in the clipboard list either way
             quickLeft--
             if (quickLeft <= 0 && !quickPinned) quickClip = null
             afterText(); return
@@ -2152,6 +2218,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             // holding the emoji key: the GIF page of the emoji panel
             "gif" -> { finishWord("", false); st.emojiQuery = null; st.gifSearch = false; st.emojiTab = 12; st.panel = "emoji" }
+            "notes" -> runCatching { startActivity(android.content.Intent().setClassName(this, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "notes").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
             "stickers" -> st.panel = if (st.panel == "stickers") "keys" else "stickers"
             // the grammar check: the selected text, else the paragraph before the cursor, put right (spaces, repeated words, capitals, apostrophes)
             "grammar" -> {
@@ -2653,7 +2720,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "email" -> insertEmailDomain()
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
             // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
-            "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
+            "tab" -> if (st.alt > 0) { if (com.umutk.pulse.features.CoverAccessibilityService.instance?.altTabFromKeyboard() != true) com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
             else -> if (d.code != 0) sendKey(d.code)
         }
     }
@@ -2752,7 +2819,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && !KeyboardDictionary.isBanned(it) }
         val list0 = when {
             // the addresses used most come first (the list is kept most recent first); all of them scroll on the bar
-            tok.isEmpty() -> saved.take(8)
+            tok.isEmpty() -> saved.take(2)
             // the continuation of an address: saved addresses first, then the domains after the "@"
             '@' in tok -> {
                 val local = tok.substringBefore('@')
@@ -2765,7 +2832,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 (mine.take(2) + dom.take(8)).distinct()
             }
             // the first letters of an address typed before ("umut"): in an e-mail field its saved addresses that begin so are offered whole, a tap writes one
-            emailField -> saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }.take(6)
+            emailField -> saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }.take(2)
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }
@@ -2917,7 +2984,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         calcText = null
         if (!st.plain) runCatching {
             val bt = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty()
-            val ans = KbCalc.answerFor(bt)
+            val ans = KbCalc.answerFor(bt) ?: currencyAnswer(bt)
             if (ans != null) { calcText = ans; slotWords = arrayOf("", "", ""); st.slots = listOf("", ans.trim(), ""); target = null; return }
         }
         detectLang()

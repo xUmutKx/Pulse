@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Buds: two earbuds, each a round head on a stem (a Fluent-style colour picture) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF8B7BFF" android:pathData="M8,4.2 A4.4,4.4 0 1 1 8,13 A4.4,4.4 0 1 1 8,4.2 Z" />
+    <path android:fillColor="#FF6F5FE0" android:pathData="M6.4,12 H9.6 V19 A1.6,1.6 0 0 1 6.4,19 Z" />
+    <path android:fillColor="#FF29B6F6" android:pathData="M16,4.2 A4.4,4.4 0 1 1 16,13 A4.4,4.4 0 1 1 16,4.2 Z" />
+    <path android:fillColor="#FF1E9BDB" android:pathData="M14.4,12 H17.6 V19 A1.6,1.6 0 0 1 14.4,19 Z" />
+</vector>

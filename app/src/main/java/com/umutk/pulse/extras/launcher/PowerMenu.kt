@@ -35,10 +35,13 @@ import com.umutk.pulse.tr
  */
 internal fun powerAction(ctx: Context, what: String) {
     when (what) {
-        "sleep", "lock" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
-        "off" -> if (Shell.root == true || Shell.shizukuOk()) Thread { Shell.run("reboot -p") }.start() else com.umutk.pulse.PowerMenu.show()
-        "restart" -> if (Shell.root == true || Shell.shizukuOk()) Thread { Shell.run("reboot") }.start() else com.umutk.pulse.PowerMenu.show()
-        "signout" -> logOff(ctx)
+        // on a Windows desktop Lock shows its lock screen (only the launcher is locked); Sleep locks the phone itself
+        "lock" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.lockOpen = true else globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        "sleep" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        // the launcher is the computer here: Shut down closes it, Restart starts it again with its boot screens, Sign out shows the sign-in screen (the phone itself is not touched)
+        "off" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.powerScreen = "off" else (ctx as? android.app.Activity)?.finishAndRemoveTask()
+        "restart" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.powerScreen = "restart" else (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 1; LauncherSession.booted = false; it.recreate() }
+        "signout" -> (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 2; LauncherSession.booted = false; it.recreate() } ?: logOff(ctx)
     }
 }
 
@@ -89,7 +92,7 @@ internal fun PowerClick(onDone: () -> Unit, modifier: Modifier = Modifier, conte
                         Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(if (w11) 5.dp else 0.dp))
                             .clickable { open = false; onDone(); powerAction(ctx, if (k == "power") "off" else k) }.padding(horizontal = 10.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            com.umutk.pulse.PIcon(k, t.text, 18.dp)
+                            com.umutk.pulse.PIcon(if (k == "restart") "refresh" else k, t.text, 18.dp)
                             Text(label, color = t.text, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
                         }
                     }

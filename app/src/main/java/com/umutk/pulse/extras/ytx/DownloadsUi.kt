@@ -237,6 +237,10 @@ fun DownloadsScreen(
     val ctx = LocalContext.current
     var pulse by remember { mutableStateOf(emptyList<PulseDl>()) }
     // what is popular now (Cinemeta, the open catalogue: no add-on needed to see it)
+    var searchOpen by remember { mutableStateOf(false) }
+    var sq by remember { mutableStateOf("") }
+    var sres by remember { mutableStateOf(emptyList<com.umutk.pulse.features.SeasonDl.Show>()) }
+    LaunchedEffect(sq) { if (sq.isBlank()) { sres = emptyList() } else { kotlinx.coroutines.delay(400); sres = runCatching { com.umutk.pulse.features.SeasonDl.search(sq.trim(), "series") + com.umutk.pulse.features.SeasonDl.search(sq.trim(), "movie") }.getOrDefault(emptyList()) } }
     var popularSeries by remember { mutableStateOf(emptyList<com.umutk.pulse.features.SeasonDl.Show>()) }
     var popularMovies by remember { mutableStateOf(emptyList<com.umutk.pulse.features.SeasonDl.Show>()) }
     LaunchedEffect(Unit) {
@@ -252,21 +256,29 @@ fun DownloadsScreen(
             // Series and movies, open: what is popular now (series, then films) shows here, a tap opens that title's page (its seasons, or the Watch button of a film)
             item(key = "seriesHead") {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { openSeriesPage(ctx) },
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable { searchOpen = !searchOpen; if (!searchOpen) { sq = ""; sres = emptyList() } },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Rounded.PlayArrow, null, Modifier.size(26.dp), MaterialTheme.colorScheme.primary)
                     Text(com.umutk.pulse.tr("Series and movies", "Diziler ve filmler"), fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
-                    Text(com.umutk.pulse.tr("Search", "Ara"), color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+                    Text(if (searchOpen) com.umutk.pulse.tr("Close", "Kapat") else com.umutk.pulse.tr("Search", "Ara"), color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
                 }
             }
-            listOf("series" to popularSeries, "movie" to popularMovies).forEach { (kind, list) ->
+            if (searchOpen) item(key = "seriesSearch") {
+                androidx.compose.material3.OutlinedTextField(
+                    value = sq, onValueChange = { sq = it }, singleLine = true,
+                    placeholder = { Text(com.umutk.pulse.tr("Search series and movies", "Dizi ve film ara")) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            val shelves = if (searchOpen && sq.isNotBlank()) listOf("series" to sres.filter { it.kind == "series" }, "movie" to sres.filter { it.kind == "movie" }) else listOf("series" to popularSeries, "movie" to popularMovies)
+            shelves.forEach { (kind, list) ->
                 if (list.isNotEmpty()) item(key = "shelf-$kind") {
                     androidx.compose.foundation.lazy.LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                         items(list.size) { i ->
                             val sh = list[i]
                             Column(Modifier.width(100.dp).clickable { openSeriesShow(ctx, sh) }) {
-                                coil.compose.AsyncImage(sh.poster, null, Modifier.size(width = 100.dp, height = 148.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                com.umutk.pulse.features.SeasonDl.Poster(sh.poster, 100.dp, 148.dp, sh.name)
                                 Text(sh.name, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                             }
                         }
@@ -597,7 +609,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.pulseItems(list: List
         val c = MaterialTheme.colorScheme
         val done = d.state == "DONE"
         Column(Modifier.fillMaxWidth().pressable(enabled = done, pressedScale = 0.985f) { openPulseFile(ctx, d.path) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text(d.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(com.umutk.pulse.extras.video.smartName(d.name), fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(3.dp))
             val pct = if (d.total > 0) (d.done * 100 / d.total).toInt() else -1
             Text(

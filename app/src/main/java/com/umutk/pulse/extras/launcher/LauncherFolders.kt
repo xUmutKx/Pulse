@@ -75,15 +75,33 @@ object LauncherFolders {
     fun delete(c: Context, id: String) = put(c, LauncherPrefs.folders - id, LauncherPrefs.folderOff - id)
 
     /** The apps list with the folders' members folded into folder icons, folders first. */
-    fun fold(apps: List<LaunchApp>): List<LaunchApp> {
+    fun fold(apps: List<LaunchApp>, all: List<LaunchApp> = apps): List<LaunchApp> {
         val fs = LauncherPrefs.folders
-        if (fs.isEmpty()) return apps
+        val smartOn = LauncherPrefs.smartFolders && !LauncherPrefs.classicWin
+        if (fs.isEmpty() && !smartOn) return apps
         val inside = fs.values.flatMap { members(it) }.toSet()
-        val made = fs.entries.map { (id, v) -> LaunchApp(name(v), FOLDER_PREFIX + id, icon(members(v).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }), system = true) }
-        return made + apps.filter { it.pkg !in inside }
+        val made = fs.entries.map { (id, v) -> LaunchApp(name(v), FOLDER_PREFIX + id, icon(members(v).mapNotNull { p -> all.firstOrNull { it.pkg == p } }), system = true) }
+        // smart folders: the apps that are in no folder of the person's go by their store category into a folder each (three apps at least)
+        val smart = if (smartOn) smartGroups(apps.filter { it.pkg !in inside }) else emptyList()
+        val smartPkgs = smart.flatMap { it.second }.map { it.pkg }.toSet()
+        return made + smart.map { (g, list) -> LaunchApp(tr(g.en, g.tr), FOLDER_PREFIX + SMART + g.name, icon(list), system = true) } + apps.filter { it.pkg !in inside && it.pkg !in smartPkgs }
     }
 
-    fun members(id: String, apps: List<LaunchApp>) = members(LauncherPrefs.folders[id].orEmpty()).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }
+    const val SMART = "smart:"
+
+    /** The groups of the apps that are not in a folder of the person's, a group of three or more: Games, Media, Communication ... (the other apps and Pulse's own entries stay out). */
+    fun smartGroups(apps: List<LaunchApp>): List<Pair<StartGroup, List<LaunchApp>>> =
+        apps.filter { !it.pkg.startsWith("pulse:") && !it.pkg.startsWith("file:") && !isFolder(it) }
+            .groupBy { startGroup(it) }.filter { (g, l) -> g != StartGroup.OTHER && g != StartGroup.FUN && l.size >= 3 }.toList().sortedBy { it.first.ordinal }
+
+    fun members(id: String, apps: List<LaunchApp>): List<LaunchApp> {
+        if (id.startsWith(SMART)) {
+            val inside = LauncherPrefs.folders.values.flatMap { members(it) }.toSet()
+            val g = StartGroup.values().firstOrNull { it.name == id.removePrefix(SMART) } ?: return emptyList()
+            return apps.filter { it.pkg !in inside && it.pkg !in LauncherPrefs.hidden && !it.pkg.startsWith("pulse:") && startGroup(it) == g }
+        }
+        return members(LauncherPrefs.folders[id].orEmpty()).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }
+    }
 
     /** Folder picture: a soft tile with up to four of the apps' icons in a 2 x 2 grid. */
     private fun icon(inside: List<LaunchApp>): ImageBitmap {
@@ -123,6 +141,13 @@ private fun FRow(icon: String, label: String, onClick: () -> Unit) {
 fun FolderDialogs(apps: List<LaunchApp>, onOpenApp: (LaunchApp) -> Unit, onLong: (LaunchApp) -> Unit) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
+    // the picture picker of "Change icon": it lives here, which stays on screen after the menu has closed
+    val iconPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { u ->
+        val a = AppIcons.pick; AppIcons.pick = null
+        if (u != null && a != null) AppIcons.set(ctx, a.pkg, u)
+    }
+    androidx.compose.runtime.LaunchedEffect(AppIcons.pick) { if (AppIcons.pick != null) iconPicker.launch("image/*") }
+    if (LauncherSession.newsOpen) NewsDialog { LauncherSession.newsOpen = false }
     FolderUi.pick?.let { app ->
         var nm by remember { mutableStateOf("") }
         val close = { FolderUi.pick = null }
@@ -139,11 +164,11 @@ fun FolderDialogs(apps: List<LaunchApp>, onOpenApp: (LaunchApp) -> Unit, onLong:
             confirmButton = { PButton(tr("Close", "Kapat"), onClick = close) })
     }
     FolderUi.open?.let { id ->
-        if (id !in LauncherPrefs.folders) { FolderUi.open = null; return@let }
+        if (id !in LauncherPrefs.folders && !id.startsWith(LauncherFolders.SMART)) { FolderUi.open = null; return@let }
         val inside = LauncherFolders.members(id, apps)
         val close = { FolderUi.open = null }
         WinAlert(onDismissRequest = close,
-            title = { Text(LauncherPrefs.folders[id].orEmpty().substringBefore('|'), color = w.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            title = { Text(if (id.startsWith(LauncherFolders.SMART)) StartGroup.values().firstOrNull { it.name == id.removePrefix(LauncherFolders.SMART) }?.let { tr(it.en, it.tr) }.orEmpty() else LauncherPrefs.folders[id].orEmpty().substringBefore('|'), color = w.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             text = {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (inside.isEmpty()) Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) { PIcon("folder", T.sub, 32.dp) }
@@ -170,10 +195,14 @@ fun FolderDialogs(apps: List<LaunchApp>, onOpenApp: (LaunchApp) -> Unit, onLong:
 fun FolderActionRows(app: LaunchApp, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val id = app.pkg.removePrefix(FOLDER_PREFIX)
+    // a smart folder is made by the launcher: it has no name to change and nothing to delete
+    if (id.startsWith(LauncherFolders.SMART)) return
     var nm by remember { mutableStateOf(app.label) }
     val onHome = id !in LauncherPrefs.folderOff
     PField(nm, { nm = it }, tr("Folder name", "Klasör adı"), Modifier.fillMaxWidth())
     FRow("check", tr("Save name", "Adı kaydet")) { LauncherFolders.rename(ctx, id, nm); onDismiss() }
     FRow(if (onHome) "eyeOff" else "pin", if (onHome) tr("Remove from home", "Ana ekrandan kaldır") else tr("Add to home", "Ana ekrana ekle")) { LauncherFolders.setHome(ctx, id, !onHome); onDismiss() }
+    val inDock = app.pkg in LauncherPrefs.dock
+    FRow(if (inDock) "eyeOff" else "pin", if (inDock) tr("Remove from dock", "Dock'tan çıkar") else tr("Add to dock", "Dock'a ekle")) { togglePin(ctx, app.pkg, emptyList()); onDismiss() }
     FRow("trash", tr("Delete folder", "Klasörü sil")) { LauncherFolders.delete(ctx, id); onDismiss() }
 }

@@ -133,16 +133,33 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
                 onDoubleTap = { runGesture(ctx, LauncherPrefs.gDouble) },
             )
         }
+        .rightClick({ origin }) { onLong() }
         .pointerInput(Unit) {
             // two fingers pinched in or spread out on the home (each a setting, nothing by default)
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 var start = 0f; var done = false
+                var mid0: androidx.compose.ui.geometry.Offset? = null
                 do {
                     val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                     val ps = ev.changes.filter { it.pressed }
                     if (ps.size >= 2 && !done) {
                         val d = (ps[0].position - ps[1].position).getDistance()
+                        // two fingers moving the same way: a swipe up, down, left or right (each a setting)
+                        val mid = (ps[0].position + ps[1].position) / 2f
+                        val m0 = mid0
+                        if (m0 == null) mid0 = mid
+                        else if (start != 0f && kotlin.math.abs(d - start) < start * .25f) {
+                            val dx = mid.x - m0.x; val dy = mid.y - m0.y
+                            val act = when {
+                                dy < -150f && kotlin.math.abs(dy) > kotlin.math.abs(dx) -> LauncherPrefs.gDualUp
+                                dy > 150f && kotlin.math.abs(dy) > kotlin.math.abs(dx) -> LauncherPrefs.gDualDown
+                                dx < -150f -> LauncherPrefs.gDualLeft
+                                dx > 150f -> LauncherPrefs.gDualRight
+                                else -> "none"
+                            }
+                            if (act != "none") { done = true; runGesture(ctx, act) }
+                        }
                         if (start == 0f) start = d
                         else if (d < start * .6f && LauncherPrefs.gPinchIn != "none") { done = true; runGesture(ctx, LauncherPrefs.gPinchIn) }
                         else if (d > start * 1.6f && LauncherPrefs.gPinchOut != "none") { done = true; runGesture(ctx, LauncherPrefs.gPinchOut) }
@@ -168,6 +185,7 @@ fun runGesture(ctx: Context, key: String) {
         "recents" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS)
         "power" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
         "apps" -> LauncherSession.startOpen = true
+        "news" -> LauncherSession.newsOpen = true
         "search" -> LauncherSession.searchOpen = true
         "settings" -> runCatching { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }

@@ -122,16 +122,26 @@ fun PlayerLyrics(
         var pull by remember { mutableFloatStateOf(0f) }
         val only = remember { LyricsShare.consecutive(ctx) }
         // a pull down that the lines did not take (they are at their top) closes the lyrics
+        // the lines moved during this touch: the lyrics then stop at the top when the finger gets there; only a new pull that starts at the top closes them
+        var movedThisTouch by remember { mutableStateOf(false) }
         val closer = remember(onDismiss) {
             object : NestedScrollConnection {
                 override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                    if (source == NestedScrollSource.UserInput) pull = if (consumed.y != 0f || available.y < 0f) 0f else pull + available.y
-                    // already at the first line and pulled down again: the lyrics close at once, no fling needed
+                    if (source == NestedScrollSource.UserInput) {
+                        if (consumed.y != 0f) { movedThisTouch = true; pull = 0f }
+                        else if (available.y < 0f || movedThisTouch) pull = 0f
+                        else pull += available.y
+                    }
+                    // already at the first line when the touch began and pulled down again: the lyrics close
                     if (pull > 70f) { pull = 0f; onDismiss() }
                     return Offset.Zero
                 }
-                // a flick down that the lines could not take (they were already at the first line) closes them too, however short the drag was
-                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { if (pull > 40f || available.y > 900f) onDismiss(); pull = 0f; return Velocity.Zero }
+                // a flick down that started at the first line closes them too, however short the drag was; one that scrolled to the top first only stops there
+                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                    if (!movedThisTouch && (pull > 40f || available.y > 900f)) onDismiss()
+                    pull = 0f; movedThisTouch = false
+                    return Velocity.Zero
+                }
             }
         }
         fun toggle(i: Int) {

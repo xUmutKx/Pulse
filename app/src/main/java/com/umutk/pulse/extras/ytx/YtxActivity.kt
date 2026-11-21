@@ -273,8 +273,13 @@ object NavSettings {
     /** The Music tab: off by default (music is the music player's job); it can be turned on in the settings. */
     var showMusic by androidx.compose.runtime.mutableStateOf(false)
         private set
+    /** Wide layout: the share of the width the video column takes (the list of videos gets the rest). */
+    var splitPct by androidx.compose.runtime.mutableIntStateOf(35)
+        private set
+    fun updateSplit(context: android.content.Context, v: Int) { splitPct = v.coerceIn(25, 70); context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putInt("split_pct", splitPct).apply() }
     fun init(context: android.content.Context) {
         val p = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        splitPct = p.getInt("split_pct", 35)
         showShorts = p.getBoolean("nav_shorts", false); showMusic = p.getBoolean("nav_music", false)
     }
     fun updateShowMusic(context: android.content.Context, on: Boolean) { showMusic = on; context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean("nav_music", on).apply() }

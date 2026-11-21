@@ -46,6 +46,14 @@ object RecycleBin {
         runCatching { dir().mkdirs(); origins().appendText("${trashed.name}\t${original.absolutePath}\n") }
     }
 
+    /** Moves a file or folder into the bin and remembers where it was (a file that cannot be moved is copied there first, so it can still be restored). False when it could not be saved. */
+    fun trash(f: File): Boolean = runCatching {
+        val d = dir().apply { mkdirs() }
+        val t = File(d, "${System.currentTimeMillis()}-0-${f.name}")
+        if (!f.renameTo(t)) { if (!f.copyRecursively(t, true)) return@runCatching false; f.deleteRecursively() }
+        remember(t, f); true
+    }.getOrDefault(false)
+
     fun items(): List<File> = dir().listFiles()?.filter { it.name != ".origins" }?.sortedByDescending { it.lastModified() }.orEmpty()
 
     /** Puts a trashed file back where it was; falls back to Downloads/Pulse/restored when that place is taken or gone. */

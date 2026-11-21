@@ -65,7 +65,7 @@ class PhotoWidget : AppWidgetProvider() {
             val r = if (frame == "none") radius.coerceIn(0f, 1f) * minOf(SW, SH) / 2f else 0f
             val clip = Path().apply { addRoundRect(win, r, r, Path.Direction.CW) }
             cv.save(); cv.clipPath(clip)
-            // with no frame and no photo the place stays empty (see-through); a framed window without a photo is a soft grey
+            // a framed window without a photo is a soft grey; with no frame and no photo a placeholder is drawn below
             if (frame != "none" && photo == null) cv.drawColor(0xFF2A2A2A.toInt())
             if (photo != null) {
                 val ww = win.width(); val wh = win.height()
@@ -74,6 +74,23 @@ class PhotoWidget : AppWidgetProvider() {
                 cv.drawBitmap(photo, null, RectF(win.centerX() - w / 2, win.centerY() - h / 2, win.centerX() + w / 2, win.centerY() + h / 2), Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
             }
             cv.restore()
+            // a frame with no photo yet is never invisible: a soft dark tile with a light edge and a picture mark with a plus, so it can be found and tapped to choose a photo
+            if (photo == null && frame == "none") {
+                val rr = maxOf(r, 24f)
+                cv.drawRoundRect(RectF(0f, 0f, SW, SH), rr, rr, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x99202428.toInt() })
+                cv.drawRoundRect(RectF(4f, 4f, SW - 4f, SH - 4f), rr, rr, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 6f; color = 0xCCFFFFFF.toInt() })
+                val cx = SW / 2; val cy = SH / 2; val m = minOf(SW, SH) * .16f
+                val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); style = Paint.Style.STROKE; strokeWidth = 7f; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
+                // the picture: a rounded box with a sun and two hills
+                cv.drawRoundRect(RectF(cx - m * 1.5f, cy - m * 1.1f, cx + m * 1.5f, cy + m * 1.1f), 14f, 14f, ink)
+                cv.drawCircle(cx - m * .7f, cy - m * .35f, m * .28f, ink)
+                cv.drawPath(Path().apply { moveTo(cx - m * 1.5f, cy + m * .75f); lineTo(cx - m * .35f, cy - m * .05f); lineTo(cx + m * .3f, cy + m * .45f); lineTo(cx + m * .7f, cy + m * .1f); lineTo(cx + m * 1.5f, cy + m * .7f) }, ink)
+                // the plus at the lower right
+                val px = cx + m * 1.25f; val py = cy + m * 1.2f
+                cv.drawCircle(px, py, m * .42f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF2F80ED.toInt() })
+                val plus = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); strokeWidth = 7f; strokeCap = Paint.Cap.ROUND }
+                cv.drawLine(px - m * .2f, py, px + m * .2f, py, plus); cv.drawLine(px, py - m * .2f, px, py + m * .2f, plus)
+            }
             if (border && frame == "none") cv.drawPath(Path().apply { addRoundRect(RectF(3f, 3f, SW - 3f, SH - 3f), maxOf(0f, r - 3f), maxOf(0f, r - 3f), Path.Direction.CW) },
                 Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 6f; color = 0x66FFFFFF })
             return out

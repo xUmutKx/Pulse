@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +34,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** One thing Pulse keeps on the phone: where it is, its size, what it is for. */
-private class StoreRow(val name: String, val path: String, val bytes: Long, val what: String, val file: File, val count: Int = 1, val parts: List<String> = emptyList())
+private class StoreRow(val name: String, val path: String, val bytes: Long, val what: String, val file: File, val count: Int = 1, val parts: List<String> = emptyList(), val entries: List<Pair<File, Long>> = emptyList(), val members: List<File>? = null)
 
 /** Everything Pulse keeps in its data (files) and its cache, largest first. */
 private fun storeRows(ctx: Context): List<StoreRow> {
@@ -44,7 +47,17 @@ private fun storeRows(ctx: Context): List<StoreRow> {
             // what the folder holds, by kind: how many files of each and how much they take (the biggest kinds first)
             val parts = if (f.isDirectory) files.groupBy { kindOf(f.name, it.first) }.map { (k, l) -> Triple(k, l.size, l.sumOf { it.second }) }
                 .sortedByDescending { it.third }.take(6).map { (k, n, b) -> "$k  ·  $n  ·  ${sizeText(b)}" } else emptyList()
-            out += StoreRow(f.name, "$base/$group/${f.name}", bytes, whatIs(group, f.name), f, files.size, parts)
+            val abs = if (f.isDirectory) f.walkTopDown().filter { it.isFile }.toList() else listOf(f)
+            val entries = abs.map { it to it.length() }.sortedByDescending { it.second }.take(300)
+            if (f.name == "covers") {
+                // the folder is shared: book covers are named by a 32-letter MD5, the music covers by a 40-letter SHA-1; the "found nothing" marks belong to whichever made them
+                val book = abs.filter { it.nameWithoutExtension.length == 32 }
+                val music = abs.filter { it.nameWithoutExtension.length != 32 }
+                listOf(Triple("covers (books)", tr("Book covers: the first page of a PDF or the cover of an EPUB, kept small", "Kitap kapakları: PDF'in ilk sayfası ya da EPUB'ın kapağı, küçük tutulur"), book),
+                    Triple("covers (music)", tr("Album covers of your songs that you picked or that were found online", "Şarkılarının albüm kapakları: seçtiklerin ya da internette bulunanlar"), music)).forEach { (n, w, l) ->
+                    if (l.isNotEmpty()) out += StoreRow(n, "$base/$group/covers", l.sumOf { it.length() }, w, f, l.size, emptyList(), l.map { it to it.length() }.sortedByDescending { it.second }.take(300), l)
+                }
+            } else out += StoreRow(f.name, "$base/$group/${f.name}", bytes, whatIs(group, f.name), f, files.size, parts, entries)
         }
     }
     return out.sortedByDescending { it.bytes }
@@ -57,7 +70,7 @@ private fun catOf(r: StoreRow): String = when {
     r.name == "extras" -> tr("Downloaded packs", "İndirilen paketler")
     r.name.startsWith("torrent") -> tr("Torrent engine", "Torrent motoru")
     r.name.startsWith("kbd") || r.name == "clips" -> tr("Keyboard", "Klavye")
-    r.name.startsWith("lyrics") || r.name.startsWith("music") || r.name in setOf("covers", "skins", "thumbs", "video_net", "artist_art") -> tr("Music, lyrics and books", "Müzik, sözler ve kitaplar")
+    r.name.startsWith("lyrics") || r.name.startsWith("music") || r.name.startsWith("covers") || r.name in setOf( "skins", "thumbs", "video_net", "artist_art") -> tr("Music, lyrics and books", "Müzik, sözler ve kitaplar")
     else -> tr("Other", "Diğer")
 }
 
@@ -174,6 +187,23 @@ fun StorageCard() {
                 Text(tr("${row.count} files", "${row.count} dosya"), color = T.sub, fontSize = 11.sp)
                 row.parts.forEach { Text(it, color = T.sub, fontSize = 11.sp) }
             }
+            var shown by remember(row.name) { mutableStateOf(false) }
+            if (row.entries.isNotEmpty()) Text((if (shown) "▾ " else "▸ ") + tr("What is inside", "İçindekiler"), color = Look.accent, fontSize = 12.sp, modifier = Modifier.clickable { shown = !shown }.padding(vertical = 6.dp))
+            if (shown) {
+                row.entries.take(60).forEach { (file, size) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val ext = file.extension.lowercase()
+                        val thumb = if (ext == "jpg" || ext == "png" || ext == "jpeg" || ext == "webp") remember(file.path) { runCatching {
+                            android.graphics.BitmapFactory.decodeFile(file.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }.getOrNull() } else null
+                        if (thumb != null) androidx.compose.foundation.Image(thumb, null, Modifier.size(36.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        else Spacer(Modifier.size(36.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(file.name, color = T.text, fontSize = 11.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                        Text(sizeText(size), color = T.sub, fontSize = 11.sp)
+                    }
+                }
+                if (row.entries.size > 60) Text(tr("… and ${row.count - 60} more", "… ve ${row.count - 60} tane daha"), color = T.sub, fontSize = 11.sp)
+            }
             PButton(tr("Delete", "Sil"), Modifier.fillMaxWidth(), danger = true, compact = true) { askDelete = row }
         }
         Spacer(Modifier.height(6.dp))
@@ -186,7 +216,7 @@ fun StorageCard() {
                 "${row.what}. Telefondan silinir; Pulse gerektiğinde yeniden oluşturur."),
             confirm = tr("Delete", "Sil"),
             onConfirm = {
-                runCatching { if (row.file.isDirectory) row.file.deleteRecursively() else row.file.delete() }
+                runCatching { if (row.members != null) row.members.forEach { it.delete() } else if (row.file.isDirectory) row.file.deleteRecursively() else row.file.delete() }
                 askDelete = null
                 reload++
             },

@@ -1,6 +1,10 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
@@ -60,6 +64,17 @@ fun pasteInto(dir: File): String? {
     return last
 }
 
+/** A right click of a mouse (or the secondary button of a trackpad) does what a long press does: [onRight] runs with the position kept for the menu. */
+internal fun Modifier.rightClick(origin: () -> Offset, onRight: () -> Unit): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val d = awaitFirstDown(requireUnconsumed = false)
+        if (d.type == androidx.compose.ui.input.pointer.PointerType.Mouse && currentEvent.buttons.isSecondaryPressed) {
+            d.consume(); LauncherSession.pressAt = origin() + d.position; onRight()
+            waitForUpOrCancellation()
+        }
+    }
+}
+
 /** Long press on a row (position kept for the menu), a tap, and (when [onDouble] is given) a double tap, as a file window of Windows: one tap picks, two open. */
 fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit, onDouble: (() -> Unit)? = null): Modifier = composed {
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -68,7 +83,7 @@ fun Modifier.fileRow(onTap: () -> Unit, onLong: () -> Unit, onDouble: (() -> Uni
     val dbl by androidx.compose.runtime.rememberUpdatedState(onDouble)
     onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(onDouble != null) {
         detectTapGestures(onTap = { tap() }, onDoubleTap = if (onDouble != null) ({ _ -> dbl?.invoke() }) else null, onLongPress = { LauncherSession.pressAt = origin + it; long() })
-    }
+    }.rightClick({ origin }) { long() }
 }
 
 /** A physical keyboard in a file window: Ctrl+C / X / V, Delete, F2, Enter, Backspace and Alt+Left. */
@@ -123,8 +138,8 @@ fun FileMenu(target: File?, dir: File, onClose: () -> Unit, open: (File) -> Unit
             dismissButton = { TextButton({ rename = null }) { Text(tr("Cancel", "İptal")) } })
     }
     ask?.let { f ->
-        AlertDialog(onDismissRequest = { ask = null }, title = { Text(tr("Delete", "Sil")) }, text = { Text(f.name) },
-            confirmButton = { TextButton({ ask = null; f.deleteRecursively(); changed(null) }) { Text(tr("Delete", "Sil")) } },
+        AlertDialog(onDismissRequest = { ask = null }, title = { Text(tr("Delete", "Sil")) }, text = { Text(tr("Move ${f.name} to the Recycle Bin?", "${f.name} Geri Dönüşüm Kutusu'na taşınsın mı?")) },
+            confirmButton = { TextButton({ ask = null; if (!com.umutk.pulse.features.RecycleBin.trash(f)) f.deleteRecursively(); changed(null) }) { Text(tr("Delete", "Sil")) } },
             dismissButton = { TextButton({ ask = null }) { Text(tr("Cancel", "İptal")) } })
     }
 }

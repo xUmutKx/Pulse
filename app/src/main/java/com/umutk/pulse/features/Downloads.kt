@@ -226,6 +226,8 @@ object Downloads {
     var torrentCell by mutableStateOf(false)
     /** Automatic network for torrents (on at first): on Wi-Fi that gives no peers (no DHT nodes a minute after the engine started, or a sign-in page / no internet) the torrents go over mobile data by themselves; [torrentCell] forces it always. */
     var torrentAuto by mutableStateOf(true)
+    /** Encrypted torrent connections only (on at first): a school or hotel network that spots and blocks BitTorrent by its traffic lets an encrypted one through more often. Fewer peers can talk this way. */
+    var torrentEnc by mutableStateOf(true)
     /** Set when this Wi-Fi was seen to give no peers: the torrents use mobile data until the network changes. */
     @Volatile var wifiTorrentBad = false
     /** Magnet links, and Stremio's local links that become magnets: off by default, they start only when this is on. */
@@ -254,6 +256,7 @@ object Downloads {
         autoSwitch = p.getBoolean("dlAutoSwitch", true)
         torrentCell = p.getBoolean("dlTorrentCell", false)
         torrentAuto = p.getBoolean("dlTorrentAuto", true)
+        torrentEnc = p.getBoolean("dlTorrentEnc", true)
         magnetLinks = p.getBoolean("dlMagnet", false)
         localServer = p.getString("dlLocalServer", "") ?: ""
         speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
@@ -330,6 +333,13 @@ object Downloads {
     fun setTorrentAuto(ctx: Context, v: Boolean) {
         torrentAuto = v; if (!v) wifiTorrentBad = false
         ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlTorrentAuto", v).apply()
+    }
+
+    fun setTorrentEnc(ctx: Context, v: Boolean) {
+        torrentEnc = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlTorrentEnc", v).apply()
+        // a running session keeps its old settings: it is let go, the next torrent starts a new one with the new
+        TorrentEngine.resetSession()
     }
 
     fun setTorrentCell(ctx: Context, v: Boolean) {
@@ -1685,7 +1695,8 @@ private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: 
             if (st == DlState.PAUSED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("play", T.text, 22.dp) }
             if (st == DlState.FAILED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("download", T.text, 22.dp) }
             var pick by remember { mutableStateOf(false) }
-            Box(Modifier.padding(start = 8.dp).clickable { pick = true }) { PIcon("folder", T.sub, 22.dp) }
+            // a tap opens this download's own folder in the file app; held, the folder new downloads go to can be changed
+            Box(Modifier.padding(start = 8.dp).combinedClickable(onLongClick = { pick = true }, onClick = { Downloads.openFolder(ctx, t.file.parentFile ?: File(Downloads.dirPath)) })) { PIcon("folder", T.sub, 22.dp) }
             if (pick) FolderPicker(File(Downloads.dirPath)) { pick = false }
             Spacer(Modifier.width(12.dp))
             var confirmDel by remember { mutableStateOf(false) }

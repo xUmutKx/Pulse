@@ -55,7 +55,7 @@ import androidx.compose.animation.core.animateFloat
 
 /** The Galaxy Buds manager: pick the earbuds, see the battery and which bud is in the ear, change the noise control, and let them stop the music when taken out. */
 @Composable
-fun BudsScreen(back: () -> Unit) {
+fun BudsScreen(back: () -> Unit, embedded: Boolean = false) {
     val ctx = LocalContext.current
     BackHandler { back() }
     val s by BudsLink.state.collectAsState()
@@ -86,7 +86,7 @@ fun BudsScreen(back: () -> Unit) {
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { if (!BudsPrefs.keepOn(ctx)) BudsService.stop(ctx) } }
     LaunchedEffect(address, granted) { if (address != null && granted && !BudsLink.state.value.connected) BudsService.start(ctx) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!embedded) Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             Text(tr("Buds manager", "Buds yöneticisi"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }

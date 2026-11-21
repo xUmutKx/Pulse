@@ -36,6 +36,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         MsgCore.storeInbox(c, addr, body, System.currentTimeMillis(), parts[0].timestampMillis)
         if (addr in MsgPrefs.blocked(c)) return
         if (spam(c, addr, body)) return
+        runCatching { com.umutk.pulse.extras.keyboard.KbOtp.onNotification(c, addr, body) }
         MsgNotifier.incoming(c, addr, body)
     }
 }
@@ -50,6 +51,7 @@ class SmsReceivedReceiver : BroadcastReceiver() {
         if (addr in MsgPrefs.blocked(c)) return
         val body = parts.joinToString("") { it.displayMessageBody ?: "" }
         if (spam(c, addr, body)) return
+        runCatching { com.umutk.pulse.extras.keyboard.KbOtp.onNotification(c, addr, body) }
         MsgNotifier.incoming(c, addr, body)
     }
 }

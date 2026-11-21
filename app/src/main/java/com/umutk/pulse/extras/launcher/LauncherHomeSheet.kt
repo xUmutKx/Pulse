@@ -93,7 +93,12 @@ fun HomeSheet() {
             else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
         }
         ActionRow("light", tr("Display settings", "Ekran ayarları"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
-        ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+        ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) {
+            HomeSheetState.sheet = false
+            // the Windows looks open it in a window of the desktop (Windows 11: the Personalization page of its Settings), the others on a screen of their own
+            if (LauncherPrefs.look in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open("win:lsettings", tr("Personalization", "Kişiselleştirme"))
+            else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).putExtra("cat", "look"))
+        }
         // paste what was cut or copied in a file window or on a file of the desktop: into the Desktop folder, each file also put on the desktop
         if (FileClip.files.isNotEmpty()) ActionRow("paste", tr("Paste", "Yapıştır"), w.text) {
             HomeSheetState.sheet = false

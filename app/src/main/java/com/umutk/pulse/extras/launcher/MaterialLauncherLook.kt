@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -65,9 +68,32 @@ class MaterialLauncherLook(
     /** surfaceContainerHigh: the dock and the search field. */
     private fun high(): Color = if (black) Color(0xFF2B2B2B) else lerp(T.panel, T.text, .06f)
 
+    /** The accent: the phone's own colour when that is switched on (Look > Use the device's colours), else the look's accent. */
+    @Composable
+    private fun acc(): Color {
+        val c = androidx.compose.ui.platform.LocalContext.current
+        val dark = black || T.dark
+        return remember(c, DeviceAccent.rev, dark) { DeviceAccent.color(c, dark) } ?: Look.accent
+    }
+
     @Composable
     override fun Background(modifier: Modifier, content: @Composable () -> Unit) {
-        Box(modifier.fillMaxSize().background(bg())) { content() }
+        // a picture of the person's own (Look > Custom wallpaper) is drawn; with none, the phone's own wallpaper shows through (the window is see-through) instead of a flat black
+        val own = LauncherPrefs.wallFile.isNotEmpty() && java.io.File(LauncherPrefs.wallFile).isFile
+        if (own) { LauncherWallpaper(id, bg(), modifier) { content() }; return }
+        // the AMOLED look stays pure black
+        if (black) { Box(modifier.fillMaxSize().background(bg())) { content() }; return }
+        val act = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+        androidx.compose.runtime.DisposableEffect(act) {
+            act?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+            act?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            onDispose {
+                act?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+                act?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
+            }
+        }
+        // a light veil keeps the labels readable on a bright picture
+        Box(modifier.fillMaxSize().background(bg().copy(alpha = .22f))) { content() }
     }
 
     @Composable
@@ -77,10 +103,14 @@ class MaterialLauncherLook(
         val shape = RoundedCornerShape(28.dp)
         // a floating dock: a rounded tonal surface over the page, inset from the rounded screen corners
         Row(modifier.padding(horizontal = maxOf(12.dp, edge), vertical = 12.dp).shadow(if (black) 0.dp else 4.dp, shape).clip(shape)
-            .background(high()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(Look.accent.copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
+            .then(if (LauncherPrefs.dockGlass) Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
+                androidx.compose.ui.graphics.Color.White.copy(alpha = .30f * LauncherPrefs.dockAlpha / 100f + .04f), androidx.compose.ui.graphics.Color.White.copy(alpha = .08f * LauncherPrefs.dockAlpha / 100f + .02f)))) // a soft sheen on top, like glass
+                else Modifier.background(high().copy(alpha = LauncherPrefs.dockAlpha / 100f)))
+            .then(if (LauncherPrefs.dockGlass) Modifier.border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .28f), shape) else Modifier)
+            .padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(acc().copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
                 contentAlignment = Alignment.Center) {
-                PIcon("apps", Look.accent, 24.dp)
+                PIcon("apps", acc(), 24.dp)
             }
             state.dock.forEach { app ->
                 Box(Modifier.weight(1f).appTap(state, app) { state.open(app) }, contentAlignment = Alignment.Center) {
@@ -95,12 +125,14 @@ class MaterialLauncherLook(
         val fg = fg()
         val edge = LocalLauncherEdge.current
         var query by remember { mutableStateOf("") }
+        // the category bar (a tap keeps one group of apps in view)
+        var catSel by remember { mutableStateOf<String?>(null) }
         val matches = state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) }
         // nothing typed: the apps in their store groups, one tonal card per group; typing: one flat list of matches
-        val sections = if (query.isBlank()) groupedApps(state.apps).map { (g, apps) -> tr(g.en, g.tr) to apps }
+        val sections = if (query.isBlank()) groupedApps(state.apps).map { (g, apps) -> tr(g.en, g.tr) to apps }.filter { catSel == null || it.first == catSel }
             else listOf(tr("Results", "Sonuçlar") to matches)
         Column(modifier.background(bg()).statusBarsPadding().navigationBarsPadding().padding(horizontal = maxOf(16.dp, edge))) {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).height(56.dp).clip(CircleShape).background(high()).padding(horizontal = 16.dp),
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).height(56.dp).clip(CircleShape).background(if (LauncherPrefs.dockGlass) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f) else high()).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 PIcon("search", sub(), 24.dp)
                 Spacer(Modifier.width(12.dp))
@@ -109,7 +141,7 @@ class MaterialLauncherLook(
                     onValueChange = { query = it },
                     singleLine = true,
                     textStyle = TextStyle(color = fg, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Look.accent),
+                    cursorBrush = SolidColor(acc()),
                     modifier = Modifier.weight(1f),
                     decorationBox = { inner ->
                         if (query.isEmpty()) Text(tr("Search apps", "Uygulama ara"), color = sub(), fontSize = 16.sp)
@@ -130,7 +162,7 @@ class MaterialLauncherLook(
                 Row(Modifier.fillMaxSize()) {
                     LazyColumn(Modifier.weight(1f).fillMaxHeight(), state = lst) {
                         rows.forEach { (l, rs) ->
-                            item(key = "h$l") { Text(l, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp)) }
+                            item(key = "h$l") { Text(l, color = acc(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp)) }
                             items(rs.size, key = { "r$l$it" }) { i ->
                                 Row(Modifier.fillMaxWidth()) {
                                     rs[i].forEach { app -> Box(Modifier.weight(1f).appTap(state, app) { state.open(app); onClose() }) { IconCell(app, state.iconDp, Modifier.fillMaxWidth()) } }
@@ -143,9 +175,19 @@ class MaterialLauncherLook(
                 }
                 return@Column
             }
+            if (query.isBlank()) {
+                val names = remember(state.apps) { groupedApps(state.apps).map { (g, _) -> tr(g.en, g.tr) } }
+                if (names.size > 1) androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (listOf<String?>(null) + names).forEach { n ->
+                        val on = catSel == n
+                        Text(n ?: tr("All", "Tümü"), color = if (on) bg() else fg, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (on) acc() else high()).clickable { catSel = n }.padding(horizontal = 14.dp, vertical = 8.dp))
+                    }
+                }
+            }
             LazyColumn(Modifier.fillMaxSize()) {
                 // the people of the contacts that match, with a call button (a setting, off by default)
                 if (query.isNotBlank()) item(key = "contacts") { ContactResults(query, fg, sub(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) }
+                if (query.isNotBlank()) item(key = "events") { CalendarResults(query, fg, sub(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) }
                 items(sections, key = { it.first }) { (label, apps) ->
                     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(RoundedCornerShape(28.dp)).background(pill()).padding(horizontal = 8.dp, vertical = 12.dp)) {
                         Text(label, color = sub(), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 12.dp, bottom = 4.dp))
@@ -168,7 +210,7 @@ class MaterialLauncherLook(
         val fg = fg()
         Column(modifier.padding(vertical = 6.dp, horizontal = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             LaunchAppPicture(app, iconDp.dp, pill(), fg)
-            Text(app.label, color = fg, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+            Text(app.label, color = fg, fontSize = 12.sp, maxLines = if (LauncherPrefs.twoLineLabels) 2 else 1, lineHeight = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }

@@ -305,6 +305,29 @@ fun ReportSettings() {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
+    // one tap: the crash log and the device details in one text, saved in Download/Pulse/Crash and offered to share
+    PCard {
+        var made by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth().clickable {
+            if (!made) { made = true; scope.launch {
+                val txt = withContext(Dispatchers.IO) {
+                    val pending = runCatching { java.io.File(ctx.filesDir, "crash-pending.txt").takeIf { it.isFile }?.readText() }.getOrNull()
+                    val full = (if (pending != null) "== Last crash\n$pending\n\n" else "") + Hw.report(ctx)
+                    runCatching { val f = java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash-report.txt"); f.parentFile?.mkdirs(); f.writeText(full) }
+                    full
+                }
+                ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, txt).putExtra(Intent.EXTRA_SUBJECT, "Pulse crash report"), "Crash report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                made = false
+            } }
+        }, verticalAlignment = Alignment.CenterVertically) {
+            PIcon("bug", T.text, 22.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(tr("Create crash report", "Çökme raporu oluştur"), color = T.text, fontSize = 15.sp)
+                Text(tr("Last crash and device details in one text", "Son çökme ve cihaz bilgisi tek metinde"), color = T.sub, fontSize = 12.sp)
+            }
+            PIcon("share", T.sub, 20.dp)
+        }
+    }
     // the crashes and freezes of Pulse, read again when opened (a freeze a moment ago is there)
     PCard(Modifier.fillMaxWidth().clickable { openTool("crashlog") }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -727,7 +750,7 @@ private fun ExtraAppsCard() {
         sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(ic).setIntent(i).build(), null)
     }
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
-    val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
+    val fluent = mapOf("YtxLauncher" to "extraVideo", "FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore", "HealthLauncher" to "tool_health", "GameHubLauncher" to "extraGameHub")
@@ -761,48 +784,38 @@ private fun ExtraAppsCard() {
             PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 8.dp).graphicsLayer { rotationZ = if (heading in closed) 0f else 180f })
         }
         // the apps as tiles, three to a row: the picture opens the app, the pill is its home-screen icon (on or off), the pin puts it on the phone's home screen, the chevron says where it is listed inside Pulse
-        (if (heading in closed && q.isEmpty()) emptyList() else shownGroup).chunked(3).forEach { rowApps ->
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rowApps.forEach { (alias, icon, label) ->
-                    val on = state[alias] == true
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
-                            .background(if (on) Look.accent.copy(alpha = .13f) else T.text.copy(alpha = .06f))
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            PIcon("pin", T.sub, 18.dp, Modifier.clickable { pinToHome(alias, label, icon) }.padding(4.dp))
-                            Spacer(Modifier.weight(1f))
-                            PIcon("chevron", T.sub, 18.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(4.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
+        // the apps, one row each (small picture, name, home-screen switch, pin, place): the picture opens the app, the pill is its home-screen icon (on or off), the pin puts it on the phone's home screen,
+        // the chevron says where it is listed inside Pulse
+        (if (heading in closed && q.isEmpty()) emptyList() else shownGroup).forEach { (alias, icon, label) ->
+            val on = state[alias] == true
+            Column(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { if (alias == "ExtraStoreLauncher") openTool("extrastore") else AppPlace.byAlias(alias)?.run(ctx, openTool) }, contentAlignment = Alignment.Center) {
+                        val colorIcon = if (T.id == "win11" && IconStyle.of(IconCat.APPS) != "line") fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
+                        if (T.id == "win11" && colorIcon == 0) FluentGlyph(fluent[alias] ?: "info", FluentFilled.color(fluent[alias] ?: "info"), 28.dp)
+                        else if (colorIcon != 0) Image(painterResource(colorIcon), null, Modifier.size(34.dp))
+                        else Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
+                            Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
                         }
-                        // the picture opens the app
-                        Box(Modifier.clickable { if (alias == "ExtraStoreLauncher") openTool("extrastore") else AppPlace.byAlias(alias)?.run(ctx, openTool) }) {
-                            val colorIcon = if (T.id == "win11" && IconStyle.of(IconCat.APPS) != "line") fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
-                            if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent[alias] ?: "info", FluentFilled.color(fluent[alias] ?: "info"), 36.dp) }
-                            else if (colorIcon != 0) Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(46.dp)) }
-                            else Box(Modifier.size(56.dp).clip(RoundedCornerShape(15.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
-                                Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
-                            }
-                        }
-                        Text(label, color = T.text, fontSize = 13.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, minLines = 2, modifier = Modifier.padding(top = 6.dp))
-                        // the home-screen icon of the app, on or off
-                        Box(
-                            Modifier.padding(top = 6.dp).clip(RoundedCornerShape(50)).background(if (on) Look.accent else T.text.copy(alpha = .12f))
-                                .clickable {
-                                    com.umutk.pulse.extras.store.LauncherGlass.setShown(ctx, alias, !on) // the line icon or its glass twin, by the look
-                                    state[alias] = !on
-                                    rev++
-                                }.padding(horizontal = 14.dp, vertical = 5.dp),
-                        ) { Text(if (on) tr("On home screen", "Ana ekranda") else tr("Off", "Kapalı"), color = if (on) (if (Look.accent.luminance() > .5f) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White) else T.sub, fontSize = 11.sp, maxLines = 1) }
                     }
+                    Text(label, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                    // the home-screen icon of the app, on or off
+                    Box(
+                        Modifier.clip(RoundedCornerShape(50)).background(if (on) Look.accent else T.text.copy(alpha = .12f))
+                            .clickable {
+                                com.umutk.pulse.extras.store.LauncherGlass.setShown(ctx, alias, !on) // the line icon or its glass twin, by the look
+                                state[alias] = !on
+                                rev++
+                            }.padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) { Text(if (on) tr("On home", "Ana ekranda") else tr("Off", "Kapalı"), color = if (on) (if (Look.accent.luminance() > .5f) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White) else T.sub, fontSize = 11.sp, maxLines = 1) }
+                    PIcon("pin", T.sub, 18.dp, Modifier.clickable { pinToHome(alias, label, icon) }.padding(6.dp))
+                    PIcon("chevron", T.sub, 18.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(6.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
                 }
-                repeat(3 - rowApps.size) { Spacer(Modifier.weight(1f)) }
-            }
-            // where the app is listed inside Pulse (top-right menu, left menu, Settings only), under the row of the tile that was opened
-            rowApps.firstOrNull { it.first == placeOpen }?.let { (alias, _, _) ->
-                Text(tr("Listed in", "Listelendiği yer"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, start = 4.dp))
-                PlaceChoice(AppPlace.where(alias), listOf("menu" to "more", "side" to "menu", "hidden" to "eyeOff")) { AppPlace.set(ctx, alias, it); rev++ }
+                // where the app is listed inside Pulse (top-right menu, left menu, Settings only), under the row that was opened
+                if (placeOpen == alias) {
+                    Text(tr("Listed in", "Listelendiği yer"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
+                    PlaceChoice(AppPlace.where(alias), listOf("menu" to "more", "side" to "menu", "hidden" to "eyeOff")) { AppPlace.set(ctx, alias, it); rev++ }
+                }
             }
         }
         }
@@ -954,7 +967,7 @@ internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
 
 private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
     "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "GameHubLauncher" to "gamehub", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "notes",
-    "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
+    "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store", "HealthLauncher" to "health", "YtxLauncher" to "video")
 private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")
 
 

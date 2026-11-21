@@ -25,6 +25,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.BatterySaver
+import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.outlined.Screenshot
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Nfc
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.BlurCircular
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.Cast
@@ -84,6 +93,24 @@ private fun toggle(isOn: (Context) -> Boolean, on: String, off: String, fallback
 private fun settingsInt(c: Context, global: Boolean, key: String, def: Int): Int = runCatching { if (global) Settings.Global.getInt(c.contentResolver, key, def) else Settings.System.getInt(c.contentResolver, key, def) }.getOrDefault(def)
 
 private fun wifiOn(c: Context) = runCatching { (c.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled }.getOrDefault(false)
+/** The name of the Wi-Fi network the phone is on (null when it is not on one or the phone does not tell the name: that needs the location permission). */
+@Suppress("DEPRECATION")
+internal fun wifiName(c: Context): String? = runCatching {
+    val wm = c.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+    wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != "<unknown ssid>" && it != "0x" }
+}.getOrNull()
+
+private fun saverOn(c: Context) = runCatching { (c.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isPowerSaveMode }.getOrDefault(false)
+
+/** Battery saver: written straight to the system when Pulse may write secure settings (adb's WRITE_SECURE_SETTINGS), else with root or Shizuku; only when neither is there the settings page opens. */
+private fun batterySaver(c: Context) {
+    val to = if (saverOn(c)) 0 else 1
+    val done = runCatching { Settings.Global.putInt(c.contentResolver, "low_power", to) }.getOrDefault(false)
+    if (done) return
+    if (privileged()) { Thread { com.umutk.pulse.extras.blackout.Privilege.run("settings put global low_power $to") }.start(); return }
+    settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)(c)
+}
+
 private fun btOn(c: Context) = runCatching { android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled == true }.getOrDefault(false)
 private fun locOn(c: Context) = runCatching { (c.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager).isLocationEnabled }.getOrDefault(false)
 private fun dndOn(c: Context) = runCatching { (c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }.getOrDefault(false)
@@ -111,7 +138,16 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane, ::airOn),
     QTile(Icons.Outlined.CameraAlt, "Camera", "Kamera", { c -> runCatching { c.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
-    QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
+    // Pulse's own screen recorder, in a window of the launcher (or its own screen when windows are off)
+    QTile(Icons.Outlined.FiberManualRecord, "Screen recorder", "Ekran kaydı", { c -> openDesktopItem(c, "pulse:x:screenrec", "win11") }),
+    // Pulse's own tiles of the phone's quick settings, here too: they work at once (no settings page)
+    QTile(Icons.Outlined.BlurCircular, "Motion cues", "Hareket noktaları", { c -> com.umutk.pulse.MotionCueService.toggle(c) }, { com.umutk.pulse.MotionCueService.running }),
+    QTile(Icons.Outlined.HourglassEmpty, "Floating timer", "Yüzen zamanlayıcı", { c -> if (com.umutk.pulse.features.FloatingTimer.showing) com.umutk.pulse.features.FloatingTimer.hide(c) else com.umutk.pulse.features.FloatingTimer.show(c) }, { com.umutk.pulse.features.FloatingTimer.showing }),
+    QTile(Icons.Outlined.TouchApp, "Auto clicker", "Otomatik tıklayıcı", { c ->
+        val sv = com.umutk.pulse.features.AutoClickService.instance
+        if (sv != null) sv.tileToggle() else runCatching { c.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }, { com.umutk.pulse.features.AutoClickService.instance != null && com.umutk.pulse.features.AutoClick.running }),
+    QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", ::batterySaver, ::saverOn),
     QTile(Icons.Outlined.FlashlightOn, "Flashlight", "El feneri", state = { ActionCenter.torch }, run = { c ->
         runCatching {
             val m = c.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -124,6 +160,25 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.Wifi, "Wi-Fi", "Wi-Fi", toggle(::wifiOn, "svc wifi enable", "svc wifi disable", Settings.ACTION_WIFI_SETTINGS), ::wifiOn),
     QTile(Icons.Outlined.Bluetooth, "Bluetooth", "Bluetooth", toggle(::btOn, "svc bluetooth enable", "svc bluetooth disable", Settings.ACTION_BLUETOOTH_SETTINGS), ::btOn),
     QTile(Icons.Outlined.ScreenLockRotation, "Rotation lock", "Döndürme kilidi", toggle(::rotationLocked, "settings put system accelerometer_rotation 0", "settings put system accelerometer_rotation 1", Settings.ACTION_DISPLAY_SETTINGS), ::rotationLocked),
+    // with root or Shizuku these work in place; without them the matching page of the phone opens
+    QTile(Icons.Outlined.Screenshot, "Screenshot", "Ekran görüntüsü", { c ->
+        if (privileged()) Thread { Thread.sleep(400); com.umutk.pulse.extras.blackout.Privilege.run("input keyevent 120") }.start()
+        else android.widget.Toast.makeText(c, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), android.widget.Toast.LENGTH_SHORT).show()
+    }),
+    QTile(Icons.Outlined.Dns, "Private DNS", "Özel DNS", { c ->
+        val on = runCatching { Settings.Global.getString(c.contentResolver, "private_dns_mode") }.getOrNull() == "hostname"
+        if (!privileged()) settings(Settings.ACTION_WIRELESS_SETTINGS)(c)
+        else Thread { com.umutk.pulse.extras.blackout.Privilege.run(if (on) "settings put global private_dns_mode opportunistic" else "settings put global private_dns_mode hostname") }.start()
+    }, { c -> runCatching { Settings.Global.getString(c.contentResolver, "private_dns_mode") }.getOrNull() == "hostname" }),
+    QTile(Icons.Outlined.DarkMode, "Dark mode", "Koyu mod", { c ->
+        val dark = (c.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!privileged()) settings(Settings.ACTION_DISPLAY_SETTINGS)(c) else Thread { com.umutk.pulse.extras.blackout.Privilege.run(if (dark) "cmd uimode night no" else "cmd uimode night yes") }.start()
+    }, { c -> (c.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES }),
+    QTile(Icons.Outlined.Nfc, "NFC", "NFC", settings(Settings.ACTION_NFC_SETTINGS), { c -> runCatching { android.nfc.NfcAdapter.getDefaultAdapter(c)?.isEnabled == true }.getOrDefault(false) }),
+    QTile(Icons.Outlined.Sync, "Sync", "Eşitleme", { c ->
+        val on = android.content.ContentResolver.getMasterSyncAutomatically()
+        android.content.ContentResolver.setMasterSyncAutomatically(!on)
+    }, { android.content.ContentResolver.getMasterSyncAutomatically() }),
     QTile(Icons.Outlined.Settings, "All settings", "Tüm ayarlar", settings(Settings.ACTION_SETTINGS)),
 )
 

@@ -132,7 +132,12 @@ open class MainActivity : ComponentActivity() {
         super.onResume()
         // Pulse always comes back in its own saved look (Files, same process, swaps colours / language in while it is open)
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
-        Look.resolved = pulseResolved
+        // the look is worked out again from Pulse's own saved choices (a look kept from before the pause could be another app's, or out of date,
+        // and drew a dark grey sheet over the Windows 11 glass until a setting was changed): LookHost recomposes on the tick and writes it
+        LookTick.n++
+        if (this !is FilesActivity) window.decorView.postDelayed({ if (!isFinishing) LookTick.n++ }, 450L)
+        // another launcher is the home app now: the wallpaper the phone had before Pulse comes back
+        if (this !is FilesActivity) com.umutk.pulse.extras.launcher.PhoneWall.restoreIfLeft(this)
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         com.umutk.pulse.features.StorageScan.dir = filesDir
         if (com.umutk.pulse.Compat.isStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
@@ -405,12 +410,22 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
                 }
                 Box(Modifier.weight(1f)) { if (sub.isNotEmpty()) SubScreen(sub) { sub = "" } else com.umutk.pulse.features.FilesPage() }
             }
+            // the Office Assistant keeps the old Windows looks company in Files too (as in Office and on the desktop)
+            if (com.umutk.pulse.features.FilesLook.theme in setOf("win95", "xp")) {
+                androidx.compose.runtime.LaunchedEffect(Unit) { ClippyPrefs.load(ctx) }
+                if (ClippyPrefs.on) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    ClippyView(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 6.dp))
+                }
+            }
             com.umutk.pulse.features.FilesInstall.file?.let { f ->
                 com.umutk.pulse.features.InstallWindow(f, com.umutk.pulse.features.FilesLook.theme) { com.umutk.pulse.features.FilesInstall.file = null }
             }
         }
     }
 }
+
+/** Bumped when an activity comes back: every LookHost works its look out again. */
+object LookTick { var n by mutableIntStateOf(0) }
 
 /** Resolves the look and provides it to the content: MainActivity and InstallActivity both use it. */
 @Composable
@@ -423,7 +438,14 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
     // an extra app (or the text editor) asked for AMOLED: it has no entry in Themes either, so it is built here too
     val th = if ((files && com.umutk.pulse.features.FilesLook.theme == "amoled") || (!files && lookId == "amoled")) amoledWindow() else effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved look is swapped in while composing
-    Look.resolved = if (th !== Look.theme) th else null
+    // only the window in front writes it: a paused or stopped tool (same process) recomposes when Look.theme is handed back to Pulse,
+    // and its Material look would overwrite Pulse's, so Pulse's Fluent icons turned into Material until the next recomposition
+    @Suppress("UNUSED_EXPRESSION") LookTick.n
+    val lc = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val firstDraw = remember { booleanArrayOf(true) }
+    val front = lc.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    if (front || firstDraw[0]) Look.resolved = if (th !== Look.theme) th else null
+    if (front) firstDraw[0] = false
     // pop-up windows take their own look: the app look, Material, or AMOLED black
     val wl = if (files) (com.umutk.pulse.features.filesLook() ?: th) else when (Look.windowTheme) { "material" -> monoWindow(effective(Themes.first { it.id == "material" })); "amoled" -> amoledWindow(); else -> th }
     val acc = Look.accent

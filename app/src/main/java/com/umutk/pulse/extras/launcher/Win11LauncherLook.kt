@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -55,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.FluentPaths
@@ -106,12 +111,13 @@ class Win11LauncherLook : LauncherLook {
         // Windows 11: the taskbar is acrylic, the desktop's picture blurred behind a light tint, and its buttons start at the left
         AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.ui.graphics.RectangleShape, 30.dp) {
           Box(Modifier.fillMaxSize().padding(horizontal = edge), contentAlignment = Alignment.CenterStart) {
-            Row(Modifier.padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+            // the buttons stop short of the tray (the connection icons and the clock) and scroll when there are more of them: they used to run underneath it
+            Row(Modifier.padding(start = 10.dp, end = 190.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+                Box(Modifier.size(40.dp).clip(shape).pointerInput(Unit) { detectTapGestures(onTap = { LauncherSession.startOpen = true }, onLongPress = { LauncherSession.winXOpen = true }) }, contentAlignment = Alignment.Center) {
                     StartGlyph(fg)
                     if (open) Indicator(accent, Modifier.align(Alignment.BottomCenter))
                 }
-                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.w11SearchOpen = !LauncherSession.w11SearchOpen; LauncherSession.quickOpen = false; LauncherSession.clockOpen = false }, contentAlignment = Alignment.Center) {
                     Glyph("search", fg, 20.dp)
                 }
                 state.dock.forEach { app ->
@@ -123,8 +129,18 @@ class Win11LauncherLook : LauncherLook {
             }
             // the tray: the connection, the sound and the battery in one button that opens the quick settings (tiles, volume), then the clock, as in Windows 11
             Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.clip(shape).clickable { LauncherSession.clockOpen = true }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Glyph("wifi", fg, 16.dp); Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
+                Row(Modifier.clip(shape).clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // on Wi-Fi the connection shows the Wi-Fi arcs; the globe is for no connection or another kind (as Windows 11 does)
+                    val trayCtx = androidx.compose.ui.platform.LocalContext.current
+                    var onWifi by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        while (true) {
+                            onWifi = runCatching { val cm = trayCtx.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager; cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true }.getOrDefault(false)
+                            kotlinx.coroutines.delay(5000)
+                        }
+                    }
+                    if (onWifi) androidx.compose.material3.Icon(Icons.Outlined.Wifi, null, tint = fg, modifier = Modifier.size(16.dp)) else Glyph("wifi", fg, 16.dp)
+                    Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
                 }
                 TaskbarClock(fg, Modifier)
             }
@@ -141,6 +157,8 @@ class Win11LauncherLook : LauncherLook {
         val shape = RoundedCornerShape(8.dp)
         var query by remember { mutableStateOf("") }
         var allPage by remember { mutableStateOf(false) }
+        // a category folder opened from the Start page (Games, Media ...): its apps fill the menu until the back arrow
+        var groupOpen by remember { mutableStateOf<StartGroup?>(null) }
         // two layouts: the upright phone gets a tall panel of four columns, a turned phone a wide, low one of six (as the desktop's Start menu)
         val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val cols = if (land) 6 else 4
@@ -155,14 +173,14 @@ class Win11LauncherLook : LauncherLook {
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     // the width limit comes first: after fillMaxWidth it is ignored and the menu fills the whole turned screen
-                    .widthIn(max = if (land) 560.dp else 640.dp)
+                    .widthIn(max = if (land) (if (LauncherPrefs.phonePanel) 660.dp else 560.dp) else if (LauncherPrefs.phonePanel) 820.dp else 640.dp)
                     .fillMaxWidth()
-                    .fillMaxHeight(if (land) .9f else .78f)
+                    .fillMaxHeight(if (land) .84f else .78f)
                     .shadow(24.dp, shape, clip = false)
                     .border(1.dp, Color(0x33FFFFFF), shape)
                     .clickable(enabled = false) {},
                 shape, 30.dp,
-            ) { Column(Modifier.fillMaxSize().padding(16.dp)) {
+            ) { Row(Modifier.fillMaxSize()) { Column(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) {
                 Box(
                     Modifier.fillMaxWidth().height(40.dp).clip(shape).background(field())
                         .drawBehind { drawRect(accent, Offset(0f, size.height - 2.dp.toPx()), Size(size.width, 2.dp.toPx())) }
@@ -190,16 +208,16 @@ class Win11LauncherLook : LauncherLook {
                 }
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (query.isNotBlank() || allPage) {
+                    if (query.isNotBlank() || allPage || groupOpen != null) {
                         // searching gives one flat grid; the all-apps page has its group headings
                         Column(Modifier.fillMaxSize()) {
                             if (query.isNotBlank()) ContactResults(query, fg, fg.copy(alpha = .65f))
                             if (query.isBlank()) Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(32.dp).clip(shape).clickable { allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
-                                Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                                Box(Modifier.size(32.dp).clip(shape).clickable { if (groupOpen != null) groupOpen = null else allPage = false }, contentAlignment = Alignment.Center) { Glyph("back", fg, 16.dp) }
+                                Text(groupOpen?.let { tr(it.en, it.tr) } ?: tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
                             }
                             LazyVerticalGrid(GridCells.Fixed(cols), Modifier.fillMaxWidth().weight(1f)) {
-                                if (query.isBlank()) groupedApps(all).forEach { (g, apps) ->
+                                if (query.isBlank()) groupedApps(all).filter { groupOpen == null || it.first == groupOpen }.forEach { (g, apps) ->
                                     item(span = { GridItemSpan(cols) }) { Win11Heading(tr(g.en, g.tr), fg) }
                                     items(apps, key = { it.pkg }) { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.fillMaxWidth().clip(shape).appTap(state, app) { launch(app) }) }
                                 } else items(all, key = { it.pkg }) { app ->
@@ -220,6 +238,17 @@ class Win11LauncherLook : LauncherLook {
                             Row(Modifier.fillMaxWidth()) {
                                 row.forEach { app -> StartCell(app, state.iconDp, fg, tileC, Modifier.weight(1f).clip(shape).appTap(state, app) { launch(app) }) }
                                 repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                        // the apps sorted into folders by their category (Games, Media, Communication ...): a tap opens the folder
+                        val folders = groupedApps(all).filter { it.first != StartGroup.OTHER || it.second.size > 1 }
+                        if (folders.isNotEmpty()) {
+                            Win11Heading(tr("Folders", "Klasörler"), fg)
+                            folders.chunked(cols).forEach { row ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    row.forEach { (g, apps) -> GroupFolder(g, apps, state.iconDp, fg, tileC, Modifier.weight(1f).clip(shape).clickable { groupOpen = g }) }
+                                    repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
                             }
                         }
                         if (recent.isEmpty()) {
@@ -246,10 +275,27 @@ class Win11LauncherLook : LauncherLook {
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).clip(shape).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fg.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Glyph("person", fg, 16.dp) }
-                        Text(tr("This PC", "Bu bilgisayar"), color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                        var renameDev by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                        Text(deviceName(), color = fg, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).clickable { renameDev = true }.padding(start = 8.dp))
+                        if (renameDev) RenameDeviceDialog { renameDev = false }
+                    }
+                    // the quick folders beside the power button: Settings, File Explorer, Documents, Downloads
+                    val ctxF = androidx.compose.ui.platform.LocalContext.current
+                    listOf("settings" to "pulse:winsettings", "folder" to "pulse:files", "run" to "run:", "details" to "view:Documents", "download" to "view:Download").forEach { (ic, id) ->
+                        Box(Modifier.size(36.dp).clip(shape).clickable {
+                            onClose()
+                            if (id == "run:") { LauncherSession.runOpen = true; return@clickable }
+                            if (id.startsWith("view:")) {
+                                val dir = android.os.Environment.getExternalStoragePublicDirectory(if (id.endsWith("Documents")) android.os.Environment.DIRECTORY_DOCUMENTS else android.os.Environment.DIRECTORY_DOWNLOADS).path
+                                if (LauncherPrefs.windowedApps) DesktopWindows.open("view:$dir", id.removePrefix("view:")) else openDesktopItem(ctxF, "pulse:files", "win11")
+                            } else openDesktopItem(ctxF, id, "win11")
+                        }, contentAlignment = Alignment.Center) { Glyph(ic, fg, 18.dp) }
                     }
                     PowerClick(onClose, Modifier.size(36.dp).clip(shape)) { com.umutk.pulse.PIcon("power", fg, 18.dp) }
                 }
+            }
+            // the phone companion docked on the right of the menu (a wide or turned screen): the phone's state, messages, calls and files, as in Windows 11's Start with Phone Link
+            if (land || LauncherPrefs.phonePanel) PhoneCompanionPanel(fg, onClose)
             }
             }
         }
@@ -266,6 +312,22 @@ class Win11LauncherLook : LauncherLook {
                 style = TextStyle(shadow = Shadow(Color(0x99000000), Offset(0f, 1f), 4f)), modifier = Modifier.padding(top = 4.dp),
             )
         }
+    }
+}
+
+/** A category folder of the Start menu: a rounded square with the first four apps of the group as small icons, the group's name under it. */
+@Composable
+private fun GroupFolder(g: StartGroup, apps: List<LaunchApp>, iconDp: Int, fg: Color, tile: Color, modifier: Modifier) {
+    Column(modifier.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(iconDp.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(fg.copy(alpha = .14f)).padding(4.dp)) {
+            val mini = (iconDp - 8) / 2
+            Column(verticalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxSize()) {
+                apps.take(4).chunked(2).forEach { r -> Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) { r.forEach { LaunchAppPicture(it, (mini - 2).dp, tile, fg) } } }
+            }
+        }
+        val gname = tr(g.en, g.tr)
+        // long names (Communication, Productivity) get a smaller size so the whole word shows
+        Text(gname, color = fg, fontSize = (if (gname.length <= 8) 12f else (100f / gname.length).coerceIn(8.5f, 12f)).sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -297,7 +359,8 @@ private fun Indicator(color: Color, modifier: Modifier) {
 /** Start button: four plain squares in a 2x2 Path (no Microsoft mark). */
 @Composable
 private fun StartGlyph(@Suppress("UNUSED_PARAMETER") color: Color) {
-    // the Windows 11 logo: four panes in the accent of the launcher (the blue of the system at first), light at the top and deeper at the bottom
+    // the Windows 11 mark in its own blue; the four panes in the launcher's accent colour when that is chosen (Look > Start button in the accent colour)
+    if (!LauncherPrefs.startLogoAccent) { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(com.umutk.pulse.R.drawable.win11_start_logo), null, Modifier.size(22.dp)); return }
     Canvas(Modifier.size(22.dp)) {
         val gap = size.minDimension * .09f
         val q = (size.minDimension - gap) / 2f
@@ -309,7 +372,7 @@ private fun StartGlyph(@Suppress("UNUSED_PARAMETER") color: Color) {
 
 /** A Fluent UI System outline from FluentPaths, drawn in [tint] (24 px grid scaled to [size]). */
 @Composable
-private fun Glyph(key: String, tint: Color, size: Dp, modifier: Modifier = Modifier) {
+internal fun Glyph(key: String, tint: Color, size: Dp, modifier: Modifier = Modifier) {
     val paths = remember(key) { (FluentPaths.map[key] ?: FluentPaths.map["info"].orEmpty()).map { PathParser().parsePathString(it).toPath() } }
     Canvas(modifier.size(size)) {
         scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }

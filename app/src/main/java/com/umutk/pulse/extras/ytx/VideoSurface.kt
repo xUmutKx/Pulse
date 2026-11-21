@@ -49,6 +49,8 @@ object SharedVideoTexture {
 
             runCatching { view.setSurfaceTexture(kept) }
                 .onFailure { Log.w("YTXTube", "couldn't re-attach the video texture", it) }
+            // the view may have been small (the mini player) when the picture was last drawn: its stale transform is cleared and it is measured again, so the video fills the stage
+            view.post { runCatching { view.setTransform(android.graphics.Matrix()); view.requestLayout(); view.invalidate() } }
         }
     }
 }

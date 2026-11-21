@@ -71,11 +71,31 @@ import kotlin.math.roundToInt
 /** Settings of the Pulse Launcher. Drawn in the look passed in by its host; writes only LauncherPrefs. */
 @Composable
 fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: String = "") {
+    // Windows 11: the list of categories is gone; its pages are the settings of Personalization in the Windows 11 Settings, each opening its own page
+    var picked by remember { mutableStateOf(startCat) }
+    if (T.id == "win11" && picked.isEmpty()) {
+        BackHandler { back() }
+        val c11 = LocalContext.current
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+            // the quick start: opens the launcher as an app of its own, without making it the default home app
+            if (!fromLauncher && LocalDesktopWin.current == null) PButton(tr("Open the launcher to test", "Test için launcher'ı aç"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                runCatching { c11.startActivity(Intent().setClassName(c11.packageName, "com.umutk.pulse.extras.launcher.LauncherActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            Box(Modifier.weight(1f)) {
+                Win11SettingsHome({ r -> if (r.startsWith("win:lsettings:")) picked = r.removePrefix("win:lsettings:") }, startGroup = "personalization")
+            }
+        }
+    } else LauncherSettingsPages(back = { if (T.id == "win11" && picked.isNotEmpty()) picked = "" else back() }, fromLauncher = fromLauncher, startCat = picked)
+}
+
+@Composable
+private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, startCat: String) {
     val ctx = LocalContext.current
     // Pulse's process never runs LauncherActivity, so read the stored values before showing or saving them
     remember(ctx) { LauncherPrefs.load(ctx) }
     var cat by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(startCat) }
-    BackHandler { if (cat.isNotEmpty()) cat = "" else back() }
+    // opened for one category (from Windows 11 Settings): back leaves the page, it does not show the list of categories
+    BackHandler { if (cat.isNotEmpty() && startCat.isEmpty()) cat = "" else back() }
     var pickLook by remember { mutableStateOf(false) }
     var pickDock by remember { mutableStateOf(false) }
     var pickPack by remember { mutableStateOf(false) }
@@ -84,6 +104,8 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     var pickGesture by remember { mutableStateOf(0) }
     var pickHidden by remember { mutableStateOf(false) }
     var pickWall by remember { mutableStateOf(false) }
+    var showNews by remember { mutableStateOf(false) }
+    var showWinX by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
     val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the gadget", "Gadget ekle"), tr("Watch a short ad to add this gadget. It is added only when the ad is watched to the end.", "Bu gadget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
@@ -97,7 +119,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { if (cat.isNotEmpty()) cat = "" else back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { if (cat.isNotEmpty() && startCat.isEmpty()) cat = "" else back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(if (cat.isEmpty()) tr("Launcher", "Ana ekran") else LAUNCHER_CATS.first { it.key == cat }.let { tr(it.en, it.trName) }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         }
         // to try the launcher as it is: starts its own screen (the home screen itself is only ever the default home app)
@@ -123,6 +145,36 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             ValueRow("image", tr("Wallpaper", "Duvar kağıdı"), if (walls.isEmpty()) "-" else "${(LauncherPrefs.wallIndex(cur.id) + 1).coerceAtMost(walls.size)}/${walls.size}") {
                 if (walls.isNotEmpty()) pickWall = true
             }
+            // a picture of the person's own, for every look (also those with no stock wallpaper)
+            val pickOwn = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) Thread {
+                    runCatching {
+                        val out = java.io.File(ctx.filesDir, "launcher_custom_wall_" + System.currentTimeMillis() + ".img")
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { o -> i.copyTo(o) } }
+                        ctx.filesDir.listFiles { f -> f.name.startsWith("launcher_custom_wall_") && f != out }?.forEach { it.delete() }
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { LauncherPrefs.wallFile = out.path; save() }
+                    }
+                }.start()
+            }
+            // a picture for the turned phone as well (with only one chosen, it serves both ways)
+            val pickOwnLand = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) Thread {
+                    runCatching {
+                        val out = java.io.File(ctx.filesDir, "launcher_wall_land_" + System.currentTimeMillis() + ".img")
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { o -> i.copyTo(o) } }
+                        ctx.filesDir.listFiles { f -> f.name.startsWith("launcher_wall_land_") && f != out }?.forEach { it.delete() }
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { LauncherPrefs.wallFileLand = out.path; save() }
+                    }
+                }.start()
+            }
+            ValueRow("image", tr("Custom wallpaper (upright)", "Kendi duvar kağıdın (dikey)"), if (LauncherPrefs.wallFile.isNotEmpty()) tr("On", "Açık") else "") { pickOwn.launch("image/*") }
+            ValueRow("image", tr("Custom wallpaper (turned phone)", "Kendi duvar kağıdın (yatay)"), if (LauncherPrefs.wallFileLand.isNotEmpty()) tr("On", "Açık") else "") { pickOwnLand.launch("image/*") }
+            if (LauncherPrefs.wallFileLand.isNotEmpty()) ValueRow("close", tr("Remove the turned-phone picture", "Yatay resmi kaldır"), "") { LauncherPrefs.wallFileLand = ""; save() }
+            if (LauncherPrefs.wallFile.isNotEmpty()) ValueRow("close", tr("Use the look's own wallpaper", "Görünümün kendi duvar kağıdını kullan"), "") { LauncherPrefs.wallFile = ""; save() }
+            // while Pulse is the home app its picture is the phone's wallpaper too (the recent apps show it); the phone's own comes back when Pulse is not the home app
+            var phoneSync by remember { mutableStateOf(PhoneWall.enabled(ctx)) }
+            SwitchLine("image", tr("Phone wallpaper follows the launcher", "Telefon duvar kağıdı launcher'ı izlesin"), phoneSync) { phoneSync = it; PhoneWall.setEnabled(ctx, it) }
+            if (PhoneWall.hasBackup(ctx)) ValueRow("history", tr("Bring back the phone's own wallpaper", "Telefonun eski duvar kağıdını geri getir"), "") { PhoneWall.restore(ctx) }
             ValueRow("image", tr("Set as phone wallpaper", "Telefon duvar kağıdı yap"), "") {
                 val id = cur.id
                 // full-size decode is slow: off the main thread, the result is reported on it
@@ -140,7 +192,11 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             placedWidgets().forEach { w ->
                 val info = mgr.getAppWidgetInfo(w.id) ?: return@forEach
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    WidgetPreview(info, w.id, Modifier.weight(1f))
+                    // the live widget is only a picture here: a tap on it must not open what the widget opens (a web page, an app)
+                    Box(Modifier.weight(1f)) {
+                        WidgetPreview(info, w.id, Modifier.fillMaxWidth())
+                        Box(Modifier.matchParentSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { })
+                    }
                     Box(Modifier.size(40.dp).clickable { removeWidget(ctx, w.id) }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
                 }
             }
@@ -154,6 +210,56 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             }
         }
         if (cat == "home") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // the owner's ready-made set-up of the apps list (folders, hidden tools, dock, 5 x 6 grid): only when asked for
+            // the extras of the big launchers: a page for each widget, loops, labels, another grid for the turned phone, unused apps, backups, the web search
+            SwitchLine("folder", tr("Smart folders (games, media, communication ...)", "Akıllı klasörler (oyunlar, medya, iletişim ...)"), LauncherPrefs.smartFolders) { LauncherPrefs.smartFolders = it; save() }
+            SwitchLine("widgets", tr("A page for each widget", "Her widget için bir sayfa"), LauncherPrefs.widgetPages) { LauncherPrefs.widgetPages = it; save() }
+            SwitchLine("rotate", tr("Pages go round (infinite scroll)", "Sayfalar baştan dönsün (sonsuz kaydırma)"), LauncherPrefs.loopScroll) { LauncherPrefs.loopScroll = it; save() }
+            SwitchLine("keyboard", tr("Alt+Tab switches the launcher windows (blocks the Android app switch)", "Alt+Tab launcher pencerelerini değiştirsin (Android uygulama geçişini engeller)"), LauncherPrefs.blockAltTab) { LauncherPrefs.blockAltTab = it; save() }
+            SwitchLine("details", tr("Windows snap to the screen edge when dragged there", "Pencereler kenara sürüklenince ekrana yapışsın"), LauncherPrefs.dragSnap) { LauncherPrefs.dragSnap = it; save() }
+            SwitchLine("details", tr("Small windows show the page scaled to fit", "Küçük pencereler sayfayı sığdırıp küçülterek göstersin"), LauncherPrefs.fitWindows) { LauncherPrefs.fitWindows = it; save() }
+            SwitchLine("image", tr("Wallpaper slides with the pages", "Duvar kağıdı sayfalarla kaysın"), LauncherPrefs.wallScroll) { LauncherPrefs.wallScroll = it; save() }
+            SwitchLine("rename", tr("Names may take two lines", "Adlar iki satır olabilsin"), LauncherPrefs.twoLineLabels) { LauncherPrefs.twoLineLabels = it; save() }
+            SliderRow("${tr("Turned phone: columns", "Yatay ekran: sütun")}: ${if (LauncherPrefs.landColumns == 0) tr("same", "aynı") else LauncherPrefs.landColumns.toString()}", LauncherPrefs.landColumns.toFloat(), 0f..12f) {
+                LauncherPrefs.landColumns = it.roundToInt(); save()
+            }
+            SliderRow("${tr("Turned phone: rows", "Yatay ekran: satır")}: ${if (LauncherPrefs.landRows == 0) tr("same", "aynı") else LauncherPrefs.landRows.toString()}", LauncherPrefs.landRows.toFloat(), 0f..12f) {
+                LauncherPrefs.landRows = it.roundToInt(); save()
+            }
+            SliderRow("${tr("Hide apps not opened for days", "Şu kadar gündür açılmayan uygulamaları gizle")}: ${if (LauncherPrefs.hideUnusedDays == 0) tr("off", "kapalı") else LauncherPrefs.hideUnusedDays.toString()}", LauncherPrefs.hideUnusedDays.toFloat(), 0f..90f) {
+                LauncherPrefs.hideUnusedDays = it.roundToInt(); save()
+            }
+            SwitchLine("history", tr("Daily backup of these settings", "Bu ayarların günlük yedeği"), LauncherPrefs.dailyBackup) { LauncherPrefs.dailyBackup = it; save() }
+            if (LauncherPrefs.dailyBackup) ValueRow("history", tr("Bring back the last daily backup", "Son günlük yedeği geri getir"), "") {
+                android.widget.Toast.makeText(ctx, if (LauncherPrefs.restoreDaily(ctx)) tr("Restored", "Geri getirildi") else tr("No backup yet", "Yedek yok"), android.widget.Toast.LENGTH_SHORT).show()
+            }
+            // other apps in windows of the desktop need Android's freeform windows: switched on here (the permission by one adb command, or root / Shizuku)
+            ValueRow("gridView", tr("Freeform windows for other apps", "Diğer uygulamalar için serbest pencereler"), if (FreeformSetup.isOn(ctx)) tr("On (restart if they do not open as windows)", "Açık (pencere olmazsa yeniden başlat)") else tr("Off", "Kapalı")) {
+                val r = FreeformSetup.enable(ctx)
+                android.widget.Toast.makeText(ctx, when (r) {
+                    "on" -> tr("On. Restart the phone if apps still open full screen", "Açıldı. Uygulamalar hâlâ tam ekran açılırsa telefonu yeniden başlat")
+                    "needs-adb" -> tr("Needs one command on a computer; it is copied: ${FreeformSetup.ADB_GRANT}", "Bilgisayarda bir komut gerek; kopyalandı: ${FreeformSetup.ADB_GRANT}")
+                    else -> tr("Could not switch it on", "Açılamadı")
+                }, android.widget.Toast.LENGTH_LONG).show()
+            }
+            ValueRow("gridView", tr("Icon animation when tapped", "Simgeye dokununca animasyon"), LauncherPrefs.iconAnim) {
+                val all = listOf("none", "zoom", "flip", "rotate", "bounce")
+                LauncherPrefs.iconAnim = all[(all.indexOf(LauncherPrefs.iconAnim) + 1) % all.size]; save()
+            }
+            ValueRow("globe", tr("News", "Haberler"), "RSS") { showNews = true }
+            if (cur.id == "win11" && android.os.Build.VERSION.SDK_INT >= 31) SwitchLine("palette", tr("See-through apps in windows", "Pencerelerde şeffaf uygulamalar"), LauncherPrefs.glassApps) { LauncherPrefs.glassApps = it; save() }
+            // the Win+X menu of Windows 10 and 11: which items, in which order
+            if (cur.id in setOf("win11", "win10", "win10black")) ValueRow("menu", tr("Win+X menu", "Win+X menüsü"), "") { showWinX = true }
+            ValueRow("search", tr("Web search", "Web araması"), LauncherPrefs.searchEngine) {
+                val all = listOf("google", "duckduckgo", "bing", "brave", "yandex", "startpage")
+                LauncherPrefs.searchEngine = all[(all.indexOf(LauncherPrefs.searchEngine) + 1) % all.size]; save()
+            }
+            ValueRow("folder", tr("Set up like my phone", "Telefonum gibi kur"), "") {
+                Thread {
+                    val n = MyLayout.apply(ctx, loadApps(ctx))
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(ctx, tr("$n apps placed", "$n uygulama yerleşti"), android.widget.Toast.LENGTH_SHORT).show() }
+                }.start()
+            }
             if (cur.id.startsWith("winphone")) SwitchLine("gridView", tr("Live tiles", "Canlı kutucuklar"), LauncherPrefs.phoneTiles) { LauncherPrefs.phoneTiles = it; save() }
             if (cur.id.startsWith("winphone") && LauncherPrefs.phoneTiles) {
                 Text(tr("Tile layout", "Kutucuk düzeni"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
@@ -164,12 +270,27 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 }
             }
             SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
+            SwitchLine("phone", tr("Start menu: phone panel on the right", "Başlat menüsü: sağda telefon paneli"), LauncherPrefs.phonePanel) { LauncherPrefs.phonePanel = it; save() }
             SwitchLine("contacts", tr("Search finds contacts (tap to call)", "Arama kişileri de bulur (dokununca arar)"), LauncherPrefs.searchContacts) {
                 LauncherPrefs.searchContacts = it; save()
                 // the contacts (and the phone, for calling at once) are asked for when it is turned on
                 if (it) (ctx as? android.app.Activity)?.let { a -> androidx.core.app.ActivityCompat.requestPermissions(a, arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.CALL_PHONE), 7301) }
             }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock gadget", "Masaüstü saat gadget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
+            // frosted glass for the dock of the Material looks, and how solid the dock is
+            if (cur.id in setOf("material", "amoled", "oneui", "coloros")) {
+                SwitchLine("palette", tr("Glass dock", "Cam dock"), LauncherPrefs.dockGlass) { LauncherPrefs.dockGlass = it; save() }
+                SliderRow("${tr("Dock solidity", "Dock yoğunluğu")}: ${LauncherPrefs.dockAlpha}%", LauncherPrefs.dockAlpha.toFloat(), 20f..100f) { LauncherPrefs.dockAlpha = it.roundToInt(); save() }
+            }
+            // the Material looks can take the phone's own colours (Material You)
+            if (cur.id in setOf("material", "amoled", "oneui", "coloros")) {
+                var accMode by remember { mutableStateOf(DeviceAccent.mode(ctx)) }
+                ValueRow("palette", tr("Accent colours", "Vurgu renkleri"), when (accMode) { "device" -> tr("Device (Material You)", "Cihaz (Material You)"); "palette" -> "Palette"; else -> tr("White", "Beyaz") }) {
+                    val all = listOf("off", "device", "palette").filter { it != "device" || DeviceAccent.available }
+                    accMode = all[(all.indexOf(accMode) + 1) % all.size]; DeviceAccent.setMode(ctx, accMode)
+                }
+            }
+            if (cur.id == "win11") SwitchLine("palette", tr("Start button in the accent colour", "Başlat düğmesi vurgu renginde"), LauncherPrefs.startLogoAccent) { LauncherPrefs.startLogoAccent = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }
@@ -178,10 +299,10 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             SwitchLine("rotate", tr("Lock to portrait", "Dikey ekranda kilitle"), LauncherPrefs.lockPortrait) { LauncherPrefs.lockPortrait = it; save() }
             SwitchLine("fullscreen", tr("Hide status bar", "Durum çubuğunu gizle"), LauncherPrefs.fullScreen) { LauncherPrefs.fullScreen = it; save() }
             SwitchLine("pin", tr("Windows Phone: dock on the left edge", "Windows Phone: sol kenarda dock"), LauncherPrefs.wpSideDock) { LauncherPrefs.wpSideDock = it; save() }
-            SliderRow("${tr("Columns", "Sütun")}: ${LauncherPrefs.columns}", LauncherPrefs.columns.toFloat(), 2f..8f) {
+            SliderRow("${tr("Columns", "Sütun")}: ${LauncherPrefs.columns}", LauncherPrefs.columns.toFloat(), 2f..12f) {
                 LauncherPrefs.columns = it.roundToInt(); save()
             }
-            SliderRow("${tr("Rows", "Satır")}: ${LauncherPrefs.rows}", LauncherPrefs.rows.toFloat(), 3f..8f) {
+            SliderRow("${tr("Rows", "Satır")}: ${LauncherPrefs.rows}", LauncherPrefs.rows.toFloat(), 3f..12f) {
                 LauncherPrefs.rows = it.roundToInt(); save()
             }
             SliderRow("${tr("Icon size", "Simge boyutu")}: ${LauncherPrefs.iconDp}", LauncherPrefs.iconDp.toFloat(), 24f..64f) {
@@ -255,6 +376,10 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             ValueRow("down", tr("Swipe down", "Aşağı kaydır"), gname(LauncherPrefs.gDown)) { pickGesture = 3 }
             ValueRow("zoomIn", tr("Pinch in (two fingers)", "İki parmakla kıstır"), gname(LauncherPrefs.gPinchIn)) { pickGesture = 4 }
             ValueRow("zoomOut", tr("Pinch out (two fingers)", "İki parmakla aç"), gname(LauncherPrefs.gPinchOut)) { pickGesture = 5 }
+            ValueRow("up", tr("Two fingers up", "İki parmakla yukarı"), gname(LauncherPrefs.gDualUp)) { pickGesture = 6 }
+            ValueRow("down", tr("Two fingers down", "İki parmakla aşağı"), gname(LauncherPrefs.gDualDown)) { pickGesture = 7 }
+            ValueRow("back", tr("Two fingers left", "İki parmakla sola"), gname(LauncherPrefs.gDualLeft)) { pickGesture = 8 }
+            ValueRow("forward", tr("Two fingers right", "İki parmakla sağa"), gname(LauncherPrefs.gDualRight)) { pickGesture = 9 }
             ValueRow("home", tr("Home page", "Ana sayfa"), "${LauncherPrefs.homePage + 1}") { LauncherPrefs.homePage = (LauncherPrefs.homePage + 1) % 5; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
@@ -345,8 +470,12 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
             // the width of a card comes from the dialog's measured width (a width taken from the screen made the third card of every row squeeze); capped so an unbounded width cannot blow it up
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
             val itemW = ((maxWidth - 16.dp) / 3).coerceIn(56.dp, 110.dp)
+            // the Windows looks first; the others (One UI, ColorOS, Terminal, Material, AMOLED) wait in a small folded line, open only when one of them is the look in use
+            val winIds = setOf("win11", "win10", "win7", "winphone", "xp", "win95")
+            var otherOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(LauncherPrefs.look !in winIds) }
+            val shownLooks = if (otherOpen) LauncherLooks.all else LauncherLooks.all.filter { it.id in winIds }
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LauncherLooks.all.chunked(3).forEach { row ->
+                shownLooks.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { l ->
                             val sel = l.id == LauncherPrefs.look
@@ -359,22 +488,28 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                         repeat(3 - row.size) { Spacer(Modifier.width(itemW)) }
                     }
                 }
+                Row(Modifier.fillMaxWidth().clickable { otherOpen = !otherOpen }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Other looks", "Diğer görünümler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    com.umutk.pulse.PIcon(if (otherOpen) "up" else "down", T.sub, 16.dp)
+                }
             }
             }
         },
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
     if (pickPack) IconPackPicker(LauncherPrefs.iconPack, onPick = { LauncherPrefs.iconPack = it; save(); pickPack = false }, onDismiss = { pickPack = false })
     if (pickWidget) WidgetPickDialog(onPick = { adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
+    if (showNews) NewsDialog { showNews = false }
+    if (showWinX) WinXEditor { showWinX = false }
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }, onPickFile = { f -> LauncherPrefs.wallFile = f.path; save(); pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
     }
     if (pickGesture != 0) {
-        val cur = when (pickGesture) { 1 -> LauncherPrefs.gDouble; 2 -> LauncherPrefs.gUp; 4 -> LauncherPrefs.gPinchIn; 5 -> LauncherPrefs.gPinchOut; else -> LauncherPrefs.gDown }
-        PickDialog(when (pickGesture) { 1 -> tr("Double tap", "Çift dokunuş"); 2 -> tr("Swipe up", "Yukarı kaydır"); 4 -> tr("Pinch in", "Kıstır"); 5 -> tr("Pinch out", "Aç"); else -> tr("Swipe down", "Aşağı kaydır") },
+        val cur = when (pickGesture) { 1 -> LauncherPrefs.gDouble; 2 -> LauncherPrefs.gUp; 4 -> LauncherPrefs.gPinchIn; 5 -> LauncherPrefs.gPinchOut; 6 -> LauncherPrefs.gDualUp; 7 -> LauncherPrefs.gDualDown; 8 -> LauncherPrefs.gDualLeft; 9 -> LauncherPrefs.gDualRight; else -> LauncherPrefs.gDown }
+        PickDialog(when (pickGesture) { 1 -> tr("Double tap", "Çift dokunuş"); 2 -> tr("Swipe up", "Yukarı kaydır"); 4 -> tr("Pinch in", "Kıstır"); 5 -> tr("Pinch out", "Aç"); 6 -> tr("Two fingers up", "İki parmakla yukarı"); 7 -> tr("Two fingers down", "İki parmakla aşağı"); 8 -> tr("Two fingers left", "İki parmakla sola"); 9 -> tr("Two fingers right", "İki parmakla sağa"); else -> tr("Swipe down", "Aşağı kaydır") },
             GESTURE_ACTIONS.map { tr(it.second, it.third) to (it.first == cur) }, onDismiss = { pickGesture = 0 },
             extra = { Text(tr("The lock, the notifications, the quick settings, the recents and the power menu need Pulse's accessibility service", "Kilit, bildirimler, hızlı ayarlar, son uygulamalar ve güç menüsü için Pulse'un erişilebilirlik hizmeti gerekir"), color = T.sub, fontSize = 12.sp) }) { i ->
             val k = GESTURE_ACTIONS[i].first
-            when (pickGesture) { 1 -> LauncherPrefs.gDouble = k; 2 -> LauncherPrefs.gUp = k; 4 -> LauncherPrefs.gPinchIn = k; 5 -> LauncherPrefs.gPinchOut = k; else -> LauncherPrefs.gDown = k }
+            when (pickGesture) { 1 -> LauncherPrefs.gDouble = k; 2 -> LauncherPrefs.gUp = k; 4 -> LauncherPrefs.gPinchIn = k; 5 -> LauncherPrefs.gPinchOut = k; 6 -> LauncherPrefs.gDualUp = k; 7 -> LauncherPrefs.gDualDown = k; 8 -> LauncherPrefs.gDualLeft = k; 9 -> LauncherPrefs.gDualRight = k; else -> LauncherPrefs.gDown = k }
             save(); pickGesture = 0
         }
     }

@@ -69,6 +69,9 @@ class KbState {
     var preview by mutableStateOf<KbPreview?>(null)
     /** The suggestion slot (0..2) asked "never suggest this again", waiting for the second tap; -1 none. */
     var banAsk by mutableStateOf(-1)
+    /** Held on the bar's right slot: the copied text in full (or the picture / video bigger) in a preview above the bar. */
+    var previewText by mutableStateOf<String?>(null)
+    var previewShot by mutableStateOf(false)
     var clips by mutableStateOf(listOf<String>())
     /** The kept clipboard: texts and pictures, pinned first. */
     var clipItems by mutableStateOf(listOf<ClipItem>())
@@ -119,6 +122,9 @@ class KbState {
     var alt by mutableIntStateOf(0)
     var win by mutableIntStateOf(0)
     var shiftMod by mutableIntStateOf(0)
+    /** The Shift key is under a finger right now (and whether another key used it): Shift + a key types that key's extra character. */
+    var shiftDown by mutableStateOf(false)
+    var shiftUsed = false
     /** The Fn key was pressed: the twelve F keys replace the key bar until one is chosen. */
     var fnOpen by mutableStateOf(false)
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */

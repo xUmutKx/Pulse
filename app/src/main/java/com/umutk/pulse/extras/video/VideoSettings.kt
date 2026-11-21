@@ -275,7 +275,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("New marker", "Yeni işareti"), { prefs.markNew }, { prefs.markNew = it }, done)
                 Sw(tr("Recent", "Son oynatılanlar"), { prefs.showRecent }, { prefs.showRecent = it }, done)
                 Num(tr("Recent length", "Son listesi uzunluğu"), listOf(10, 20, 40, 100), { prefs.recentMax }, { "$it" }, done) { prefs.recentMax = it }
-                Num(tr("Shortest video", "En kısa video"), listOf(0, 10, 30, 60, 300), { prefs.minDur }, { if (it == 0) tr("Any", "Hepsi") else "$it s" }, done) { prefs.minDur = it }
+                Num(tr("Shortest video", "En kısa video"), listOf(0, 3, 10, 30, 60, 300), { prefs.minDur }, { if (it == 0) tr("Any", "Hepsi") else "$it s" }, done) { prefs.minDur = it }
                 Sw(tr("Show hidden folders", "Gizli klasörleri göster"), { prefs.showHidden }, { prefs.showHidden = it }, done)
                 Act(tr("Hidden folders", "Gizli klasörler"), { "${prefs.hidden.size}" }) { folderDlg = 1 }
                 Act(tr("Only these folders", "Yalnız bu klasörler"), { if (prefs.include.isEmpty()) tr("All", "Hepsi") else "${prefs.include.size}" }) { folderDlg = 2 }

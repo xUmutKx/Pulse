@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.gamehub
 
+import androidx.compose.ui.graphics.asAndroidBitmap
+import kotlinx.coroutines.async
+import androidx.compose.runtime.collectAsState
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
@@ -30,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
@@ -65,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -220,50 +225,6 @@ private fun Racks(games: List<GameRow>, hidden: Set<String>, pal: Pal, onOpen: (
             }
         }
     }
-}
-
-/**
- * The CD rack: the games as jewel cases (the cover under a clear lid, the hinge down the left, a gloss over it) with the disc sliding out at the right, three to a rail
- * of the rack; a tap opens the case, as on the shelf. The game's name is written under it.
- */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-internal fun CdRack(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
-    var inspect by remember { mutableStateOf<GameRow?>(null) }
-    val rows = games.chunked(3)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 56.dp, bottom = 90.dp)) {
-        itemsIndexed(rows) { _, row ->
-            Column(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
-                    row.forEach { g ->
-                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(1f).combinedClickable(onClick = { inspect = g }, onLongClick = { onDetails(g) })) {
-                                // the disc, half out of the case at the right
-                                Canvas(Modifier.fillMaxSize()) {
-                                    val r = size.minDimension * .46f
-                                    val c = androidx.compose.ui.geometry.Offset(size.width - r - 2f, size.height / 2f)
-                                    drawCircle(Brush.sweepGradient(listOf(Color(0xFFE9EDF2), Color(0xFF9FB3C8), Color(0xFFF7F7F7), Color(0xFFB8C4D0), Color(0xFFE9EDF2)), c), r, c)
-                                    drawCircle(Color(0xFF1A1A1A), r * .28f, c); drawCircle(Color(0xFFDDE3EA), r * .12f, c)
-                                }
-                                // the jewel case: the cover, the hinge, the clear lid's gloss and its edge
-                                Box(Modifier.fillMaxHeight().fillMaxWidth(.86f).clip(RoundedCornerShape(3.dp)).background(Color(0xFF111111)).border(1.dp, Color.White.copy(alpha = .28f), RoundedCornerShape(3.dp))) {
-                                    Box(Modifier.fillMaxSize().padding(start = 9.dp, top = 2.dp, bottom = 2.dp, end = 2.dp)) { GameCover(g.pkg, pal, wide = false, title = g.name) }
-                                    Box(Modifier.fillMaxHeight().width(9.dp).background(Brush.horizontalGradient(listOf(Color(0xCC000000), Color(0x33FFFFFF), Color(0x00000000)))))
-                                    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent, Color.Transparent, Color.White.copy(alpha = .08f)))))
-                                    if (g.pkg in hidden) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
-                                }
-                            }
-                            Text(g.name, color = pal.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-                        }
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-                // the rail of the rack
-                Box(Modifier.fillMaxWidth().padding(top = 2.dp).height(7.dp).clip(RoundedCornerShape(3.dp)).background(Brush.verticalGradient(listOf(Color(0xFF3A3F46), Color(0xFF15181C)))))
-            }
-        }
-    }
-    inspect?.let { g -> CaseInspect(g, pal, onClose = { inspect = null }, onPlay = { onPlay(g) }, onDetails = { inspect = null; onDetails(g) }) }
 }
 
 /**
@@ -597,4 +558,112 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
             Text(value, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 16.dp))
         }
     }
+}
+
+/**
+ * The CD shelf: the games as jewel cases in a rack that runs up the screen on a slant (KMP Odd Scroll's CD Rack by mejdi14, GPL-3.0, see cdshelf/). Flick the rack to move it, tap a case to take it out and
+ * turn it; the case in the slot has Play and a details button under it.
+ */
+@Composable
+internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    // while the covers are being looked for in the background the pictures are not read again at each one found (that rebuilt the whole rack each time); they are read once when the search ends
+    val searching by CoverJob.running.collectAsState()
+    val ver = if (searching) -1 else GameArt.version.intValue
+    // a rack of more than 120 cases is slow to draw: the first 120 (the favourites come first)
+    val list = remember(games, hidden) { games.filter { it.pkg !in hidden }.take(120) }
+    // the games with no cover are looked for in the background, once
+    androidx.compose.runtime.LaunchedEffect(list.size) { if (list.any { !coverFile(ctx, it.pkg).isFile }) CoverJob.start(ctx, list) }
+    // each game's picture, small: its cover, else its wide picture, else its icon; read off the main thread, six at a time. The rack shows after the first 18 are read (the others stand as
+    // plain coloured covers for the moment) and is made again once when all of them are in, so there is no long wait on "Loading"
+    // the rack shows at once: every case starts with what is already known (a picture read before, kept for the whole session, else a coloured cover
+    // with the name) and the real pictures come in twelve at a time, six read together. A picture that cannot be read is skipped, never the whole
+    // rack (one bad file used to stop the reading and the page stayed on "Loading the covers" for good)
+    val loadedState = remember(list) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList()) }
+    val loaded = loadedState.value
+    androidx.compose.runtime.LaunchedEffect(list.map { it.pkg }, ver) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
+            loadedState.value = shown()
+            val todo = list.filter { !CdArt.cache.containsKey(it.pkg) || it.pkg in CdArt.fallback }
+            val gate = kotlinx.coroutines.sync.Semaphore(6)
+            todo.chunked(12).forEach { chunk ->
+                kotlinx.coroutines.coroutineScope {
+                    chunk.map { g ->
+                        async {
+                            gate.acquire()
+                            try {
+                                val real = runCatching { GameArt.cover(ctx, g.pkg, 300) ?: GameArt.banner(ctx, g.pkg, 300) }.getOrNull()
+                                if (real != null) { CdArt.cache[g.pkg] = real; CdArt.fallback.remove(g.pkg) }
+                                else runCatching { iconCover(g.name, GameArt.icon(ctx, g.pkg, 256)) }.getOrNull()?.let { CdArt.cache[g.pkg] = it; CdArt.fallback.add(g.pkg) }
+                            } finally { gate.release() }
+                        }
+                    }.forEach { it.await() }
+                }
+                loadedState.value = shown()
+            }
+        }
+    }
+    val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
+    // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
+    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
+        if (loaded.isEmpty()) Text(tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
+        else {
+            com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
+                items = loaded.map { (g, art) -> com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = art, title = g.name, artist = "", cover = art) },
+                modifier = Modifier.fillMaxSize(), background = Color(0xFF0F1014), contentColor = Color(0xFFEDEDF2),
+                inspectLabel = tr("Inspect", "İncele"), backLabel = tr("Back", "Geri"), openLabel = tr("Open", "Aç"), nextLabel = tr("Next", "Sonraki"), exitLabel = tr("Exit", "Çık"),
+                state = state,
+            )
+            val cur = loaded.getOrNull(state.slotted.coerceIn(0, loaded.lastIndex))?.first
+            if (cur != null) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("Play", "Oyna"), color = Color.Black, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onPlay(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
+                Text(tr("Details", "Ayrıntılar"), color = Color.White, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0x44FFFFFF)).clickable { onDetails(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
+            }
+        }
+    }
+}
+
+/** The pictures of the CD shelf kept for the whole session, so the shelf opens at once the next time; [fallback] marks icon covers that a cover found later replaces. */
+internal object CdArt {
+    val cache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    val names = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    val fallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+}
+
+/** A square cover for a game that has no picture: a colour taken from its name and the name across it. */
+private fun nameCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
+    val size = 300
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
+    val top = android.graphics.Color.HSVToColor(floatArrayOf(hue, .55f, .55f)); val bottom = android.graphics.Color.HSVToColor(floatArrayOf(hue, .7f, .25f))
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), top, bottom, android.graphics.Shader.TileMode.CLAMP)
+    c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+    p.shader = null; p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 32f
+    val words = name.split(' ').fold(ArrayList<String>()) { acc, w -> if (acc.isNotEmpty() && (acc.last().length + w.length) < 12) acc[acc.lastIndex] = acc.last() + " " + w else acc.add(w); acc }
+    var y = size / 2f - (words.size - 1) * 18f
+    for (line in words.take(5)) { c.drawText(line, size / 2f, y, p); y += 36f }
+    return bmp.asImageBitmap()
+}
+
+/** A cover for a game that has only its icon (or nothing): the icon on a colour taken from the name, with the name under it, so the lid of the case is not a blank sheet. */
+private fun iconCover(name: String, icon: androidx.compose.ui.graphics.ImageBitmap?): androidx.compose.ui.graphics.ImageBitmap {
+    if (icon == null) return nameCover(name)
+    val size = 600
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), android.graphics.Color.HSVToColor(floatArrayOf(hue, .5f, .6f)), android.graphics.Color.HSVToColor(floatArrayOf(hue, .7f, .22f)), android.graphics.Shader.TileMode.CLAMP)
+    c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+    p.shader = null
+    val ic = icon.asAndroidBitmap()
+    val side = 320
+    c.drawBitmap(ic, null, android.graphics.Rect((size - side) / 2, 70, (size + side) / 2, 70 + side), android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+    p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 44f
+    val line = if (name.length > 22) name.take(21) + "…" else name
+    c.drawText(line, size / 2f, 70f + side + 90f, p)
+    return bmp.asImageBitmap()
 }

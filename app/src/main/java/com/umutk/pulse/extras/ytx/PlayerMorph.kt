@@ -151,9 +151,9 @@ class PlayerMorph(
     }
 
     companion object {
-        const val FLING_PX_PER_S = 3000f
-        const val MIN_FLING_TRAVEL = 0.12f
-        const val DISMISS_FROM_FULL = 0.4f
+        const val FLING_PX_PER_S = 1300f
+        const val MIN_FLING_TRAVEL = 0.05f
+        const val DISMISS_FROM_FULL = 0.2f
         const val EXPAND_FROM_MINI = 0.32f
         // softer springs: the player glides into place from where the finger left it instead of jumping
         private val settleSpec = spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = 0.0005f)

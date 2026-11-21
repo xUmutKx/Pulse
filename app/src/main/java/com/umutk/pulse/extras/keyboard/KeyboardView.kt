@@ -326,7 +326,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (!float && st.panel == "keys" && !st.cursorDrag && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                if (!float && st.panel in setOf("keys", "gamepad", "keyset") && !st.cursorDrag && dy > 70.dp.toPx() && abs(dx) < dy * .5f && c.uptimeMillis - t0 < 600 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
@@ -624,12 +624,13 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
                 val plainLen = st.slots.map { if (it.startsWith("\u0001") || it.startsWith("\u0002")) 0 else it.length }
-                val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
+                val crowded = false && st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
                 st.slots.forEachIndexed { i, s0 ->
                     val s = if (crowded && i == 2) "" else s0
                     // the copied item and the photo in the right slot get a wider place to tap
                     val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else 1f
                     Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
+                        if ((st.previewText != null || st.previewShot) && i == 2) SlotPreview(st, th)
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             // the photo keeps its own shape (a portrait one stands upright), inside a box as tall as the bar allows
@@ -661,7 +662,8 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                                     else Text(st.shotFile.take(3), color = tint, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
                                 }
                                 // its name beside the tile, as much of it as fits (like a row of Files)
-                                if (st.shotFileName.isNotEmpty()) Text(st.shotFileName, color = th.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                // a picture has its preview already: the name is only for the other kinds of file
+                                if (st.shotFileName.isNotEmpty() && st.shotFile.lowercase() !in setOf("png", "jpg", "jpeg", "webp", "gif", "heic", "heif", "bmp")) Text(st.shotFileName, color = th.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(start = 6.dp).widthIn(max = 120.dp))
                             }
                             // a video with no picture of its own: the play mark alone, a little bigger
@@ -785,7 +787,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "gif" -> Icons.Rounded.Gif; "stickers" -> Icons.Rounded.StickyNote2; "grammar" -> Icons.Rounded.Spellcheck; "scan" -> Icons.Rounded.DocumentScanner; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "vault" -> Icons.Rounded.Key; "dict" -> Icons.Rounded.MenuBook; "gif" -> Icons.Rounded.Gif; "stickers" -> Icons.Rounded.StickyNote2; "notes" -> Icons.Rounded.Edit; "grammar" -> Icons.Rounded.Spellcheck; "scan" -> Icons.Rounded.DocumentScanner; "calc" -> Icons.Rounded.Calculate; "convert" -> Icons.Rounded.SwapHoriz; "media" -> Icons.Rounded.PlayArrow; "mediaNext" -> Icons.Rounded.SkipNext; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -867,7 +869,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val up = st.shift > 0
     val land = kbLand()
     // (the Samsung look has its number row when held upright)
-    val numRow = KeyboardPrefs.numberRowAt(land) || (th.samsung && !land)
+    // the floating keyboard follows its own switch (off: the digits come by holding a letter), the others the number row setting
+    val numRow = if (KeyboardPrefs.floatNow) KeyboardPrefs.floatNumberRow else (KeyboardPrefs.numberRowAt(land) || (th.samsung && !land))
     val digits = !numRow && KeyboardPrefs.longPressSymbols
     val langs = KeyboardPrefs.langList()
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
@@ -1138,6 +1141,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
                     try {
                     val key = kNow; val a = actNow
+                    if (key.kind == KeyKind.SHIFT) { st.shiftDown = true; st.shiftUsed = false }
                     a.feedback()
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
                     if (big && KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, key.label)
@@ -1209,6 +1213,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         curX = c.position.x
                         curY = c.position.y
                         curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
+                        // the finger moved away before the hold fired (a swipe down to close the keyboard, most of all on the number row and the number pad):
+                        // it is not a long press, so the hold never fires for it
+                        if (!long && key.kind != KeyKind.DELETE && key.kind != KeyKind.SPACE && (curRoot - startRoot).y > 26.dp.toPx()) due = Long.MAX_VALUE / 2
                         if (KeyboardPrefs.circleGestures && isLetterNow) {
                             val seg = curRoot - lastPt
                             if (seg.getDistance() > 3.dp.toPx()) {
@@ -1246,12 +1253,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 glide -> a.type(key.label)
                                 long && sel >= 0 && key.alts.isNotEmpty() -> a.type(key.alts[sel.coerceIn(0, key.alts.lastIndex)])
                                 spaceDragged -> {}
-                                long && key.kind == KeyKind.SHIFT -> a.edit("capslock")
+                                long && key.kind == KeyKind.SHIFT -> if (!st.shiftUsed) a.edit("capslock")
                                 !long -> when (key.kind) {
                                     KeyKind.CHAR, KeyKind.COMMA, KeyKind.PERIOD -> {
                                         // a quick flick upwards types the first long-press character
                                         st.touch = if (key.kind == KeyKind.CHAR) curRoot else null
-                                        if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
+                                        if (KeyboardPrefs.holdShiftSymbols && st.shiftDown && key.alts.isNotEmpty()) { st.shiftUsed = true; st.touch = null; a.type(key.alts[0]) }
+                                        else if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
                                     }
                                     KeyKind.MULTI -> {
                                         val (ch, again) = MultiTap.press(key.label)
@@ -1259,7 +1267,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                         a.type(if (st.shift > 0) ch.uppercase() else ch)
                                     }
                                     KeyKind.SPACE -> a.space()
-                                    KeyKind.SHIFT -> a.shift()
+                                    KeyKind.SHIFT -> if (!st.shiftUsed) a.shift()
                                     KeyKind.ENTER -> a.enter()
                                     KeyKind.MODE -> a.page(if (st.page == 0) 1 else 0)
                                     KeyKind.SYMBOLS2 -> a.page(if (st.page == 1) 2 else 1)
@@ -1315,6 +1323,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     }
                     } finally {
                         down = false
+                        if (kNow.kind == KeyKind.SHIFT) st.shiftDown = false
                         st.cursorDrag = false
                         st.preview = null
                         st.trail = emptyList()
@@ -1750,6 +1759,7 @@ private fun AsciiArtCell(text: String, th: KbTheme, modifier: Modifier, onCopy: 
 }
 
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)
@@ -1789,9 +1799,26 @@ private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<Keyb
                     Text(sg.ch, fontSize = fs, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = Modifier.widthIn(max = room).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(sg.ch) }.padding(horizontal = 10.dp, vertical = 8.dp))
                 }
             }
-        } else LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
-            items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip) }
+        } else Column(Modifier.fillMaxSize()) {
+            // a sign that has others of its kind (another weight, colour or direction) carries a small dot; held, the variants show above the grid
+            val varMap = remember(fam?.id) { fam?.let { KeyboardSymbols.variants(it) } ?: emptyMap() }
+            var picked by remember(sub) { mutableStateOf<List<String>?>(null) }
+            picked?.let { vs ->
+                Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        vs.forEach { v -> Box(Modifier.size(40.dp).clickable { act.emoji(v); picked = null }, contentAlignment = Alignment.Center) { Text(v, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false) } }
+                    }
+                    Box(Modifier.size(34.dp).clickable { picked = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Close"), null, tint = th.sub, modifier = Modifier.size(18.dp)) }
+                }
+            }
+            LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
+                items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
+                    val vs = varMap[KeyboardSymbols.reduce(sg.name)]
+                    Box(Modifier.height(44.dp).combinedClickable(onLongClick = if (vs != null) ({ picked = vs }) else null, onClick = { act.emoji(sg.ch) }), contentAlignment = Alignment.Center) {
+                        Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
+                        if (vs != null) Box(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 4.dp).size(4.dp).clip(RoundedCornerShape(50)).background(th.sub))
+                    }
+                }
             }
         }
     }
@@ -1807,6 +1834,8 @@ private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions, tones: Boolean
     val canTone = tones && !kao && EmojiTone.supports(it.e)
     Box(Modifier.height(44.dp).combinedClickable(onLongClick = if (canTone) ({ onTones(it.e) }) else null, onClick = { act.emoji(shown) }), contentAlignment = Alignment.Center) {
         Text(shown, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
+        // skin tones: a small dot says that holding the emoji shows its variants
+        if (canTone) Box(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 3.dp).size(4.dp).clip(RoundedCornerShape(50)).background(th.sub))
     }
 }
 
@@ -2227,4 +2256,33 @@ private fun emojiTh(th: KbTheme): KbTheme {
     if (id == "same" || id == th.id) return th
     val dark = androidx.compose.foundation.isSystemInDarkTheme()
     return remember(id, dark, KeyboardPrefs.keyRadius, KeyboardPrefs.keyIcons) { KeyboardThemes.of(id, dark).tuned() }
+}
+
+
+/** The preview of the copied item held in the bar's right slot: the whole text (scrolls), the picture large, a video with a small playing animation. */
+@Composable
+private fun SlotPreview(st: KbState, th: KbTheme) {
+    val close = { st.previewText = null; st.previewShot = false }
+    androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter, offset = androidx.compose.ui.unit.IntOffset(0, -150), onDismissRequest = close, properties = androidx.compose.ui.window.PopupProperties(focusable = false, clippingEnabled = false)) {
+        Box(Modifier.padding(8.dp).widthIn(max = 340.dp).clip(RoundedCornerShape(16.dp)).background(th.bg).border(1.dp, th.text.copy(alpha = .18f), RoundedCornerShape(16.dp)).clickable { close() }.padding(10.dp), contentAlignment = Alignment.Center) {
+            val txt = st.previewText
+            if (txt != null) Text(txt, color = th.text, fontSize = 14.sp, maxLines = 14, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()))
+            else st.shotThumb?.let { bmp ->
+                Box(contentAlignment = Alignment.Center) {
+                    Image(bmp, null, Modifier.heightIn(max = 260.dp).widthIn(max = 320.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Fit)
+                    if (st.shotVideo) {
+                        // a video: the play disc breathes and a bar sweeps along the bottom, so it reads as moving
+                        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "pv")
+                        val k by t.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(1800, easing = androidx.compose.animation.core.LinearEasing)), label = "pvk")
+                        Canvas(Modifier.size(44.dp)) {
+                            drawCircle(Color.Black.copy(alpha = .72f), radius = size.minDimension / 2f * (0.9f + 0.1f * kotlin.math.sin(k * 6.2832f)))
+                            val r = size.minDimension / 2f
+                            drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(r * .78f, r * .58f); lineTo(r * 1.42f, r); lineTo(r * .78f, r * 1.42f); close() }, Color.White)
+                        }
+                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = .25f))) { Box(Modifier.fillMaxWidth(k).height(3.dp).background(th.accent)) }
+                    }
+                }
+            }
+        }
+    }
 }
