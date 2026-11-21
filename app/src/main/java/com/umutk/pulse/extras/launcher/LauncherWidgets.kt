@@ -306,7 +306,8 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
 private fun WidgetCardPicture(info: AppWidgetProviderInfo, onTap: () -> Unit) {
     val ctx = LocalContext.current
     val picture = remember(info.provider) {
-        if (info.previewImage == 0) null else runCatching { info.loadPreviewImage(ctx, ctx.resources.displayMetrics.densityDpi)?.toBitmap()?.asImageBitmap() }.getOrNull()
+        // the plain white note of the music widgets is no preview: those show the live widget instead
+        if (info.previewImage == 0 || info.previewImage == com.umutk.pulse.R.drawable.widget_prev_white) null else runCatching { info.loadPreviewImage(ctx, ctx.resources.displayMetrics.densityDpi)?.toBitmap()?.asImageBitmap() }.getOrNull()
     }
     if (picture != null) { Image(picture, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit); return }
     var id by remember(info.provider) { mutableStateOf(-1) }

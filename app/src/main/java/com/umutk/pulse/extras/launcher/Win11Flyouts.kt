@@ -86,9 +86,14 @@ private fun QuickFlyout(taskbar: Dp) {
     val hi = launcherAccent()
     val shape = RoundedCornerShape(8.dp)
     var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    val names = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder", "Motion cues", "Floating timer", "Auto clicker") }
-    val tiles = remember { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
-    val ons = remember(rev) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
+    // the tiles on show (kept in a list the user edits with the pencil): nine to a page
+    val qp = remember { ctx.getSharedPreferences("pulse_quick_tiles", Context.MODE_PRIVATE) }
+    val defaults = remember { listOf("Wi-Fi", "Bluetooth", "Airplane mode", "Battery saver", "Rotation lock", "Flashlight", "Location", "Cellular", "Screen recorder", "Motion cues", "Floating timer", "Auto clicker", "Screenshot", "Private DNS", "Dark mode", "NFC", "Sync", "Quiet hours") }
+    var shown by remember { mutableStateOf(qp.getString("shown", null)?.split("|")?.filter { n -> QUICK.any { it.en == n } } ?: defaults) }
+    var editing by remember { mutableStateOf(false) }
+    val names = if (editing) QUICK.map { it.en }.filter { it != "All settings" } else shown
+    val tiles = remember(names) { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
+    val ons = remember(rev, tiles) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
     val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
     var vol by remember { mutableFloatStateOf(am.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / max) }
@@ -99,22 +104,35 @@ private fun QuickFlyout(taskbar: Dp) {
         val place = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = taskbar + 6.dp).statusBarsPadding().widthIn(max = 360.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
         AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // the toggles: three in a row, lit in the accent colour when on
-                tiles.chunked(3).forEachIndexed { r, row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEachIndexed { c, t ->
-                            val on = ons.getOrNull(r * 3 + c) == true
-                            Column(Modifier.weight(1f).aspectRatio(1.5f).clip(RoundedCornerShape(4.dp)).background(if (on) hi else Color(0x33FFFFFF))
+                // the toggles: nine to a page (three by three), pages one under the other with dots at the right; the pencil edits which tiles show
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val rowH = (maxWidth - 14.dp - 16.dp) / 3 / 1.5f
+                    val pages = tiles.chunked(9)
+                    val pager = androidx.compose.foundation.pager.rememberPagerState { pages.size.coerceAtLeast(1) }
+                    androidx.compose.foundation.pager.VerticalPager(pager, Modifier.fillMaxWidth().padding(end = 14.dp).height(rowH * 3 + 16.dp), pageSpacing = 8.dp) { pg ->
+                        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            pages.getOrNull(pg).orEmpty().chunked(3).forEachIndexed { r, row ->
+                                Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    row.forEachIndexed { c, t ->
+                                        val on = ons.getOrNull(pg * 9 + r * 3 + c) == true
+                                        val kept = t.en in shown
+                            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(if (editing) (if (kept) hi else Color(0x22FFFFFF)) else if (on) hi else Color(0x33FFFFFF))
                                 // a tap works the tile; held, the tile's own page of Pulse's Settings opens in the launcher (the phone's page only for a tile Pulse has no page for)
-                                .combinedClickable(onClick = { t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }, onLongClick = {
+                                .combinedClickable(onClick = { if (editing) { shown = if (kept) shown - t.en else shown + t.en; qp.edit().putString("shown", shown.joinToString("|")).apply() } else t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }, onLongClick = {
                                     val page = when (t.en) { "Wi-Fi" -> "Wi-Fi"; "Bluetooth" -> "Bluetooth"; "Airplane mode" -> "Airplane mode"; "Cellular" -> "Mobile network"; "Mobile hotspot" -> "Mobile hotspot"; "VPN" -> "VPN"; "Battery saver" -> "Power & battery"; "Quiet hours" -> "Focus"; else -> null }
                                     if (page != null) { SettingsJump.item = page; LauncherSession.quickOpen = false; openDesktopItem(ctx, "pulse:winsettings", "win11") } else t.run(ctx)
                                 }).padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                                 Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Text(tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
+                                    }
+                                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
                         }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                    if (pages.size > 1) Column(Modifier.align(Alignment.CenterEnd), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        repeat(pages.size) { i -> Box(Modifier.size(6.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (pager.currentPage == i) Color.White else Color(0x66FFFFFF))) }
                     }
                 }
                 // the sliders: brightness (written to the system when it may be) and volume
@@ -132,6 +150,7 @@ private fun QuickFlyout(taskbar: Dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Glyph("battery", Color.White, 16.dp)
                     Text("$pct%", color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                    Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).background(if (editing) hi else Color.Transparent).clickable { editing = !editing }, contentAlignment = Alignment.Center) { Glyph(if (editing) "check" else "edit", Color.White, 18.dp) }
                     Box(Modifier.size(34.dp).clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.quickOpen = false; runCatching { ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }, contentAlignment = Alignment.Center) {
                         Glyph("settings", Color.White, 18.dp)
                     }

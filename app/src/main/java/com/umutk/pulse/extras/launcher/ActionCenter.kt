@@ -26,6 +26,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.BatterySaver
 import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.outlined.Screenshot
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Nfc
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.BlurCircular
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.TouchApp
@@ -137,6 +142,25 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.Wifi, "Wi-Fi", "Wi-Fi", toggle(::wifiOn, "svc wifi enable", "svc wifi disable", Settings.ACTION_WIFI_SETTINGS), ::wifiOn),
     QTile(Icons.Outlined.Bluetooth, "Bluetooth", "Bluetooth", toggle(::btOn, "svc bluetooth enable", "svc bluetooth disable", Settings.ACTION_BLUETOOTH_SETTINGS), ::btOn),
     QTile(Icons.Outlined.ScreenLockRotation, "Rotation lock", "Döndürme kilidi", toggle(::rotationLocked, "settings put system accelerometer_rotation 0", "settings put system accelerometer_rotation 1", Settings.ACTION_DISPLAY_SETTINGS), ::rotationLocked),
+    // with root or Shizuku these work in place; without them the matching page of the phone opens
+    QTile(Icons.Outlined.Screenshot, "Screenshot", "Ekran görüntüsü", { c ->
+        if (privileged()) Thread { Thread.sleep(400); com.umutk.pulse.extras.blackout.Privilege.run("input keyevent 120") }.start()
+        else android.widget.Toast.makeText(c, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), android.widget.Toast.LENGTH_SHORT).show()
+    }),
+    QTile(Icons.Outlined.Dns, "Private DNS", "Özel DNS", { c ->
+        val on = runCatching { Settings.Global.getString(c.contentResolver, "private_dns_mode") }.getOrNull() == "hostname"
+        if (!privileged()) settings(Settings.ACTION_WIRELESS_SETTINGS)(c)
+        else Thread { com.umutk.pulse.extras.blackout.Privilege.run(if (on) "settings put global private_dns_mode opportunistic" else "settings put global private_dns_mode hostname") }.start()
+    }, { c -> runCatching { Settings.Global.getString(c.contentResolver, "private_dns_mode") }.getOrNull() == "hostname" }),
+    QTile(Icons.Outlined.DarkMode, "Dark mode", "Koyu mod", { c ->
+        val dark = (c.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!privileged()) settings(Settings.ACTION_DISPLAY_SETTINGS)(c) else Thread { com.umutk.pulse.extras.blackout.Privilege.run(if (dark) "cmd uimode night no" else "cmd uimode night yes") }.start()
+    }, { c -> (c.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES }),
+    QTile(Icons.Outlined.Nfc, "NFC", "NFC", settings(Settings.ACTION_NFC_SETTINGS), { c -> runCatching { android.nfc.NfcAdapter.getDefaultAdapter(c)?.isEnabled == true }.getOrDefault(false) }),
+    QTile(Icons.Outlined.Sync, "Sync", "Eşitleme", { c ->
+        val on = android.content.ContentResolver.getMasterSyncAutomatically()
+        android.content.ContentResolver.setMasterSyncAutomatically(!on)
+    }, { android.content.ContentResolver.getMasterSyncAutomatically() }),
     QTile(Icons.Outlined.Settings, "All settings", "Tüm ayarlar", settings(Settings.ACTION_SETTINGS)),
 )
 
