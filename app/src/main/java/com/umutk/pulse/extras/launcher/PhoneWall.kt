@@ -28,7 +28,7 @@ object PhoneWall {
         c.packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName == c.packageName
     }.getOrDefault(false)
 
-    private fun key(lookId: String): String = "$lookId|${wallpaperRes(lookId)}|${LauncherPrefs.wallFile}"
+    private fun key(lookId: String): String = "$lookId|${wallpaperRes(lookId)}|${LauncherPrefs.wallFile}|${LauncherPrefs.wallFileLand}"
 
     /** The launcher is on screen: its picture becomes the phone's when Pulse is the home app (off the main thread). */
     fun sync(c: Context, lookId: String) {
@@ -44,9 +44,10 @@ object PhoneWall {
                     val bmp = runCatching { wm.drawable?.toBitmap() }.getOrNull() ?: return@runCatching
                     backup(app).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 }
-                val own = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { File(it) }?.takeIf { it.isFile }
+                // the phone's wallpaper is made for the phone held upright: the upright picture, else the turned-phone one
+                val own = LauncherPrefs.wallFile.ifEmpty { LauncherPrefs.wallFileLand }.takeIf { it.isNotEmpty() }?.let { File(it) }?.takeIf { it.isFile }
                 val full = (if (own != null) BitmapFactory.decodeFile(own.path) else wallpaperRes(lookId)?.let { r -> com.umutk.pulse.extras.store.HdWalls.file(app, r)?.let { BitmapFactory.decodeFile(it.path) } ?: BitmapFactory.decodeResource(app.resources, r) }) ?: return@runCatching
-                wm.setBitmap(full, null, true, WallpaperManager.FLAG_SYSTEM)
+                wm.setBitmap(upright(app, full), null, true, WallpaperManager.FLAG_SYSTEM)
                 prefs(app).edit().putString("key", k).apply()
             }
         }.start()
@@ -69,4 +70,17 @@ object PhoneWall {
 
     /** Pulse's own app opens: when another launcher has become the home app, the phone's wallpaper returns. */
     fun restoreIfLeft(c: Context) { if (hasBackup(c) && !isDefaultHome(c)) restore(c) }
+
+    /**
+     * A wide picture is cut to the shape of the screen straight from its middle (no zoom, no stretching: what the phone would show of it anyway, but at its real size);
+     * a picture that is already as tall as the screen is left alone.
+     */
+    private fun upright(c: Context, bm: Bitmap): Bitmap {
+        val dm = c.resources.displayMetrics
+        val aspect = minOf(dm.widthPixels, dm.heightPixels).toFloat() / maxOf(dm.widthPixels, dm.heightPixels)   // width / height of the upright screen
+        val cur = bm.width.toFloat() / bm.height
+        if (cur <= aspect * 1.02f) return bm
+        val w = (bm.height * aspect).toInt().coerceIn(1, bm.width)
+        return Bitmap.createBitmap(bm, (bm.width - w) / 2, 0, w, bm.height)
+    }
 }

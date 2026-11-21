@@ -61,9 +61,11 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     val packs by com.umutk.pulse.extras.store.StoreInstaller.rev.collectAsState()
     // the higher-quality pictures of the look come by themselves, no question asked
     androidx.compose.runtime.LaunchedEffect(lookId) { com.umutk.pulse.extras.store.HdWalls.packFor(lookId)?.let { com.umutk.pulse.extras.store.PackAuto.ensure(ctx, it.first) } }
-    val bmp = remember(res, packs, LauncherPrefs.wallFile) {
-        // a picture of the person's own (Look > Custom wallpaper) or a file chosen in "more wallpapers" wins over the stock picture, and shows on a look that has no stock one too
-        val own = LauncherPrefs.wallFile.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile }
+    val bmp = remember(res, packs, LauncherPrefs.wallFile, LauncherPrefs.wallFileLand, land) {
+        // a picture of the person's own (Look > Custom wallpaper) or a file chosen in "more wallpapers" wins over the stock picture, and shows on a look that has no stock one too;
+        // the turned phone has its own picture, and with only one chosen it serves both ways
+        val ownPath = (if (land) LauncherPrefs.wallFileLand.ifEmpty { LauncherPrefs.wallFile } else LauncherPrefs.wallFile.ifEmpty { LauncherPrefs.wallFileLand })
+        val own = ownPath.takeIf { it.isNotEmpty() }?.let { java.io.File(it) }?.takeIf { it.isFile }
         if (res == null && own == null) null else {
             val hd = own ?: res?.let { com.umutk.pulse.extras.store.HdWalls.file(ctx, it) }
             val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }

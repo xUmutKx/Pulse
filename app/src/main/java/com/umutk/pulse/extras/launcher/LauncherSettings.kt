@@ -156,7 +156,20 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                     }
                 }.start()
             }
-            ValueRow("image", tr("Custom wallpaper", "Kendi duvar kağıdın"), if (LauncherPrefs.wallFile.isNotEmpty()) tr("On", "Açık") else "") { pickOwn.launch("image/*") }
+            // a picture for the turned phone as well (with only one chosen, it serves both ways)
+            val pickOwnLand = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) Thread {
+                    runCatching {
+                        val out = java.io.File(ctx.filesDir, "launcher_wall_land_" + System.currentTimeMillis() + ".img")
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { o -> i.copyTo(o) } }
+                        ctx.filesDir.listFiles { f -> f.name.startsWith("launcher_wall_land_") && f != out }?.forEach { it.delete() }
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { LauncherPrefs.wallFileLand = out.path; save() }
+                    }
+                }.start()
+            }
+            ValueRow("image", tr("Custom wallpaper (upright)", "Kendi duvar kağıdın (dikey)"), if (LauncherPrefs.wallFile.isNotEmpty()) tr("On", "Açık") else "") { pickOwn.launch("image/*") }
+            ValueRow("image", tr("Custom wallpaper (turned phone)", "Kendi duvar kağıdın (yatay)"), if (LauncherPrefs.wallFileLand.isNotEmpty()) tr("On", "Açık") else "") { pickOwnLand.launch("image/*") }
+            if (LauncherPrefs.wallFileLand.isNotEmpty()) ValueRow("close", tr("Remove the turned-phone picture", "Yatay resmi kaldır"), "") { LauncherPrefs.wallFileLand = ""; save() }
             if (LauncherPrefs.wallFile.isNotEmpty()) ValueRow("close", tr("Use the look's own wallpaper", "Görünümün kendi duvar kağıdını kullan"), "") { LauncherPrefs.wallFile = ""; save() }
             // while Pulse is the home app its picture is the phone's wallpaper too (the recent apps show it); the phone's own comes back when Pulse is not the home app
             var phoneSync by remember { mutableStateOf(PhoneWall.enabled(ctx)) }
