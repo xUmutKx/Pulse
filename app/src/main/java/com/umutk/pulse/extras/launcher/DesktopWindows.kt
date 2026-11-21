@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.layout.layout
 import com.umutk.pulse.Look
 import com.umutk.pulse.tr
 import androidx.compose.ui.graphics.graphicsLayer
@@ -202,11 +203,11 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         Row(
             Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).then(if (skin.kind == "11" && (w.start == "controlpanel" || w.route == "controlpanel") && LauncherPrefs.accentOn) Modifier.background(launcherAccent()) else Modifier.background(skin.title, alpha = when (skin.kind) { "11" -> 0f; "7" -> .34f; else -> 1f })).padding(start = 8.dp)
                 // a double tap or a long press on the title bar switches between the window and the full screen, as on Windows
-                .pointerInput(w.id) { detectTapGestures(onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
+                .pointerInput(w.id) { detectTapGestures(onPress = { DesktopWindows.front(w) }, onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
                 .pointerInput(w.id, areaW, areaH) {
                     detectDragGestures(onDragEnd = {
                         // let go at an edge of the screen: the window snaps to that half (the top edge makes it full screen), as in Windows
-                        if (!w.max) {
+                        if (!w.max && LauncherPrefs.dragSnap) {
                             if (w.x < -fw.value * .3f) DesktopWindows.snap(w, -1, areaW.value)
                             else if (w.x + fw.value > areaW.value + fw.value * .3f) DesktopWindows.snap(w, 1, areaW.value)
                             else if (w.y <= 0f) { w.restore = floatArrayOf(w.x, 20f, w.wDp, w.hDp); w.max = true }
@@ -234,8 +235,16 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
             // Windows 11: the black of an app's page becomes dark glass (the lighter things stay solid), so every app in a window shows the blurred desktop behind it, as the launcher does
             val glassy = skin.kind == "11" && LauncherPrefs.glassApps && android.os.Build.VERSION.SDK_INT >= 31 && !w.glass
             Box(Modifier.fillMaxSize().then(if (glassy) Modifier.graphicsLayer { renderEffect = darkGlassEffect(); compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen } else Modifier)) {
-                CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
-                    SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                // a window narrower than a phone lays its page out at the width of one and shows it scaled down: more of the page is in view, nothing is cut or squeezed
+                val fitRef = 400.dp
+                val fit = if (LauncherPrefs.fitWindows && !w.max && fw < fitRef) (fw / fitRef).coerceAtLeast(.5f) else 1f
+                Box(Modifier.fillMaxSize().then(if (fit < 1f) Modifier.layout { m, c ->
+                    val p = m.measure(androidx.compose.ui.unit.Constraints.fixed((c.maxWidth / fit).toInt(), (c.maxHeight / fit).toInt()))
+                    layout(c.maxWidth, c.maxHeight) { p.placeWithLayer(0, 0) { scaleX = fit; scaleY = fit; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) } }
+                } else Modifier)) {
+                    CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
+                        SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                    }
                 }
             }
             // the grip at the bottom right resizes the window

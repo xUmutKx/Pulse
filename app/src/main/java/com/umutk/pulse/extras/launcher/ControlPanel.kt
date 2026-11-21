@@ -81,7 +81,7 @@ fun ControlPanelHome() {
     var cat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WGroup?>(null) }
     var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
     // Windows 11: dark and see-through (the window's body lets the desktop show), as its Settings; the other looks keep the classic white page
-    val w11 = T.id == "win11"
+    val w11 = T.id == "win11" || LauncherPrefs.look == "win11"
     val deskWin = LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin, w11) { if (w11) deskWin?.glass = true; onDispose { if (w11) deskWin?.glass = false } }
     val white = if (w11) T.bg.copy(alpha = .3f) else androidx.compose.ui.graphics.Color.White

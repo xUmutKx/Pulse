@@ -260,7 +260,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                     Text(tr("Settings", "Ayarlar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                     sets.forEach { it ->
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; SettingsJump.item = it.en; openDesktopItem(ctx, "pulse:winsettings", "win11") }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Glyph("settings", Color.White, 20.dp)
+                            Glyph(it.icon, Color.White, 20.dp)
                             Text(tr(it.en, it.tr), color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
                         }
                     }
