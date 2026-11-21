@@ -171,6 +171,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "game:minesweeper" -> com.umutk.pulse.extras.launcher.MinesweeperGame()
         id == "game:hub" -> com.umutk.pulse.extras.launcher.GameHub()
         id == "game:freecell" -> com.umutk.pulse.extras.launcher.FreeCellGame()
+        id == "game:chess" || id == "game:checkers" || id == "game:connect4" -> com.umutk.pulse.extras.launcher.TinyGameHost(id.removePrefix("game:"))
         id == "game:solitaire" -> com.umutk.pulse.extras.launcher.SolitaireGame()
         id == "store:launcher" -> com.umutk.pulse.extras.launcher.LauncherStoreWindow()
         id == "page:filestabs" -> com.umutk.pulse.extras.launcher.ExplorerTabsWindow()

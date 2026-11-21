@@ -361,12 +361,16 @@ fun GameHub() {
         Triple("game:minesweeper", tr("Minesweeper", "Mayın Tarlası"), tr("Clear the board without a mine", "Mayına basmadan tahtayı temizle")),
         Triple("game:solitaire", tr("Solitaire", "Solitaire"), tr("Klondike, draw one", "Klondike, tek kart çek")),
         Triple("game:freecell", tr("FreeCell", "FreeCell"), tr("Every deal can be won", "Her dağıtım kazanılabilir")),
+        Triple("game:chess", tr("Chess", "Satranç"), tr("Computer, two players or Bluetooth", "Bilgisayar, iki kişi veya Bluetooth")),
+        Triple("game:checkers", tr("Checkers", "Dama"), tr("Computer, two players or Bluetooth", "Bilgisayar, iki kişi veya Bluetooth")),
+        Triple("game:connect4", tr("Power of 4", "Dörtlü"), tr("Computer, two players or Bluetooth", "Bilgisayar, iki kişi veya Bluetooth")),
     )
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
         Text(tr("Games", "Oyunlar"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
         games.forEach { (id, name, sub) ->
             Row(Modifier.fillMaxWidth().clickable { open(id) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.panel), contentAlignment = Alignment.Center) {
+                if (id == "game:chess" || id == "game:checkers" || id == "game:connect4") TinyLogo(id.removePrefix("game:"), 44.dp)
+                else Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.panel), contentAlignment = Alignment.Center) {
                     Text(when (id) { "game:minesweeper" -> "✸"; "game:solitaire" -> "♠"; else -> "♥" }, fontSize = 24.sp, color = if (id == "game:solitaire") T.text else Color(0xFFD02020))
                 }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
