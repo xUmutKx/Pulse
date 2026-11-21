@@ -55,7 +55,7 @@ val MENU_ACTS = listOf(
     MenuAct("desk", "Pin to desktop", "Masaüstüne sabitle", "pin"),
     MenuAct("icon", "Change icon", "Simgeyi değiştir", "image"),
     MenuAct("iconreset", "Reset icon", "Simgeyi sıfırla", "history"),
-    MenuAct("removehome", "Remove from home", "Ana ekrandan kaldır", "eyeOff"),
+    MenuAct("removehome", "Remove from home", "Ana ekrandan kaldır", "trash", quick = true),
     MenuAct("folder", "Add to folder", "Klasöre ekle", "folder"),
     MenuAct("copypkg", "Copy package name", "Paket adını kopyala", "copy"),
     MenuAct("store", "Open in Play Store", "Play Store'da aç", "globe"),
