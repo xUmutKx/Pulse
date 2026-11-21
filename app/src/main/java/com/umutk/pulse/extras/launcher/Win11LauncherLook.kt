@@ -157,7 +157,7 @@ class Win11LauncherLook : LauncherLook {
                 Modifier.align(Alignment.BottomCenter)
                     .padding(start = maxOf(8.dp, edge), end = maxOf(8.dp, edge), bottom = taskbarHeight + 8.dp)
                     // the width limit comes first: after fillMaxWidth it is ignored and the menu fills the whole turned screen
-                    .widthIn(max = if (land) 720.dp else if (LauncherPrefs.phonePanel) 820.dp else 640.dp)
+                    .widthIn(max = if (land) (if (LauncherPrefs.phonePanel) 660.dp else 560.dp) else if (LauncherPrefs.phonePanel) 820.dp else 640.dp)
                     .fillMaxWidth()
                     .fillMaxHeight(if (land) .84f else .78f)
                     .shadow(24.dp, shape, clip = false)
@@ -307,7 +307,9 @@ private fun GroupFolder(g: StartGroup, apps: List<LaunchApp>, iconDp: Int, fg: C
                 apps.take(4).chunked(2).forEach { r -> Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) { r.forEach { LaunchAppPicture(it, (mini - 2).dp, tile, fg) } } }
             }
         }
-        Text(tr(g.en, g.tr), color = fg, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        val gname = tr(g.en, g.tr)
+        // long names (Communication, Productivity) get a smaller size so the whole word shows
+        Text(gname, color = fg, fontSize = (if (gname.length <= 8) 12f else (100f / gname.length).coerceIn(8.5f, 12f)).sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
