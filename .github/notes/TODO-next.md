@@ -8,3 +8,6 @@
 - Camera permission of the QR reader (done: opens the app page after a refusal) - check on the phone.
 - Pulse AI: the folder picker is now Pulse's own; the model still does not run - needs a crash report.
 - Settings > Look: the background (grey / black) turns grey by itself in the background and does not come back; check the background option logic (screenshot Settings page, 17:12).
+- Launcher: app icons of Pulse's own apps are grey tiles in the AMOLED look; make them black by default.
+- Launcher: right-click desktop menu (Settings, Display settings, Personalize, Gadgets, New) for XP and Windows 95 too.
+- Unclear request: 'pecteleden maydoroğ app çekmece açma falan taze ayarlar' - ask what was meant (app drawer opening settings?).

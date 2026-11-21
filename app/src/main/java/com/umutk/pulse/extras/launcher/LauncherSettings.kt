@@ -470,8 +470,12 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             // the width of a card comes from the dialog's measured width (a width taken from the screen made the third card of every row squeeze); capped so an unbounded width cannot blow it up
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
             val itemW = ((maxWidth - 16.dp) / 3).coerceIn(56.dp, 110.dp)
+            // the Windows looks first; the others (One UI, ColorOS, Terminal, Material, AMOLED) wait in a small folded line, open only when one of them is the look in use
+            val winIds = setOf("win11", "win10", "win7", "winphone", "xp", "win95")
+            var otherOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(LauncherPrefs.look !in winIds) }
+            val shownLooks = if (otherOpen) LauncherLooks.all else LauncherLooks.all.filter { it.id in winIds }
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LauncherLooks.all.chunked(3).forEach { row ->
+                shownLooks.chunked(3).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { l ->
                             val sel = l.id == LauncherPrefs.look
@@ -483,6 +487,10 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                         }
                         repeat(3 - row.size) { Spacer(Modifier.width(itemW)) }
                     }
+                }
+                Row(Modifier.fillMaxWidth().clickable { otherOpen = !otherOpen }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Other looks", "Diğer görünümler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    com.umutk.pulse.PIcon(if (otherOpen) "up" else "down", T.sub, 16.dp)
                 }
             }
             }
