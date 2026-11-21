@@ -28,6 +28,7 @@ import com.umutk.pulse.PSwitch
 import com.umutk.pulse.Shell
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.lyrics.LiveLyrics
+import androidx.compose.ui.text.font.FontWeight
 import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 
@@ -80,10 +81,13 @@ private fun putSys(ctx: Context, k: String, v: Int) { if (Settings.System.canWri
 internal fun Win11Controls(ctx: Context, action: String) {
     val a = action
     when {
-        a == Settings.ACTION_WIFI_SETTINGS || a == Settings.ACTION_WIRELESS_SETTINGS -> Section("Wi-Fi") {
-            val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-            Tog("Wi-Fi", runCatching { wm.isWifiEnabled }.getOrDefault(false), priv()) { sh("svc wifi " + if (it) "enable" else "disable") }
-            NeedPriv(ctx)
+        a == Settings.ACTION_WIFI_SETTINGS || a == Settings.ACTION_WIRELESS_SETTINGS -> {
+            Section("Wi-Fi") {
+                val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                Tog("Wi-Fi", runCatching { wm.isWifiEnabled }.getOrDefault(false), priv()) { sh("svc wifi " + if (it) "enable" else "disable") }
+                NeedPriv(ctx)
+            }
+            WifiNetworks(ctx)
         }
         a == Settings.ACTION_BLUETOOTH_SETTINGS -> Section("Bluetooth") {
             val on = runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter?.isEnabled == true }.getOrDefault(false)
@@ -190,6 +194,40 @@ internal fun Win11Controls(ctx: Context, action: String) {
             listOf(tr("Device", "Cihaz") to "${Build.MANUFACTURER} ${Build.MODEL}", "Android" to "${Build.VERSION.RELEASE} (${Build.VERSION.SDK_INT})", tr("Build", "Derleme") to Build.DISPLAY).forEach { (k, v) ->
                 Row(Modifier.padding(vertical = 2.dp)) { Text(k, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f)); Text(v, color = T.sub, fontSize = 13.sp) }
             }
+        }
+    }
+}
+
+/** The Wi-Fi network the phone is on, and the networks around it with their signal and security (the list needs the location permission, as the system asks). */
+@SuppressLint("MissingPermission")
+@Composable
+private fun WifiNetworks(ctx: Context) {
+    @Suppress("DEPRECATION")
+    val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    var tick by remember { mutableStateOf(0) }
+    val have = ctx.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    Section(tr("Networks", "Ağlar")) {
+        val name = remember(tick) { wifiName(ctx) }
+        if (name != null) Text("✓ " + name + "  ·  " + tr("Connected", "Bağlı"), color = T.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        else Text(tr("Not connected", "Bağlı değil"), color = T.sub, fontSize = 13.sp)
+        if (!have) {
+            Text(tr("Pulse lists the networks around once it may use the location.", "Pulse, konuma izin alınca çevredeki ağları listeler."), color = T.sub, fontSize = 12.sp)
+            PButton(tr("Allow", "İzin ver")) { ask.launch(android.Manifest.permission.ACCESS_FINE_LOCATION) }
+        } else {
+            val list = remember(tick) {
+                runCatching { wm.scanResults.filter { it.SSID.isNotBlank() }.groupBy { it.SSID }.map { (k, v) -> v.maxBy { it.level } }.sortedByDescending { it.level } }.getOrDefault(emptyList())
+            }
+            list.take(25).forEach { r ->
+                val pct = android.net.wifi.WifiManager.calculateSignalLevel(r.level, 5) * 25
+                val sec = when { r.capabilities.contains("WPA3") -> "WPA3"; r.capabilities.contains("WPA2") -> "WPA2"; r.capabilities.contains("WPA") -> "WPA"; r.capabilities.contains("WEP") -> "WEP"; else -> tr("Open", "Açık") }
+                Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(r.SSID, color = if (r.SSID == name) T.accent else T.text, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text("$sec · ${r.frequency / 1000f} GHz · $pct%", color = T.sub, fontSize = 11.sp)
+                }
+            }
+            if (list.isEmpty()) Text(tr("No networks found", "Ağ bulunamadı"), color = T.sub, fontSize = 12.sp)
+            PButton(tr("Scan again", "Yeniden tara")) { runCatching { @Suppress("DEPRECATION") wm.startScan() }; tick++ }
         }
     }
 }

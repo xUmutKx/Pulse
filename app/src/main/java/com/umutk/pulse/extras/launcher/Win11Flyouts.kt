@@ -96,6 +96,7 @@ private fun QuickFlyout(taskbar: Dp) {
     var editing by remember { mutableStateOf(false) }
     val names = if (editing) QUICK.map { it.en }.filter { it != "All settings" } else shown
     val tiles = remember(names) { names.mapNotNull { n -> QUICK.firstOrNull { it.en == n } } }
+    val ssid = remember(rev) { wifiName(ctx) }
     val ons = remember(rev, tiles) { tiles.map { runCatching { it.state?.invoke(ctx) == true }.getOrDefault(false) } }
     val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
@@ -129,7 +130,7 @@ private fun QuickFlyout(taskbar: Dp) {
                                     else t.run(ctx)
                                 }).padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                                 Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                                Text(tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(if (t.en == "Wi-Fi" && on && ssid != null) ssid else tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                                     }
                                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -195,6 +196,10 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
             buildList<Triple<String, String, () -> Unit>> {
                 if (hit("Control Panel", "control", "Denetim Masası")) add(Triple("settings", tr("Control Panel", "Denetim Masası"), { openDesktopItem(ctx, "pulse:settings", lookId) }))
                 if (hit("Registry Editor", "regedit", "registry", "Kayıt Defteri")) add(Triple("services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"), { DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }))
+                if (hit("Device Manager", "devmgmt", "Aygıt Yöneticisi")) add(Triple("performance", tr("Device Manager", "Aygıt Yöneticisi"), { DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }))
+                if (hit("Event Viewer", "eventvwr", "Olay Görüntüleyici")) add(Triple("details", tr("Event Viewer", "Olay Görüntüleyici"), { DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }))
+                if (hit("Disk Management", "diskmgmt", "Disk Yönetimi")) add(Triple("disk", tr("Disk Management", "Disk Yönetimi"), { DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }))
+                if (hit("Windows Security", "defender", "Windows Güvenliği")) add(Triple("lock", tr("Windows Security", "Windows Güvenliği"), { DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }))
                 if (hit("Task Manager", "taskmgr", "Görev Yöneticisi")) add(Triple("processes", tr("Task Manager", "Görev Yöneticisi"), { openDesktopItem(ctx, "pulse:taskmgr", lookId) }))
                 if (hit("Terminal", "Command Prompt", "cmd", "powershell", "Komut İstemi")) add(Triple("run", tr("Terminal", "Terminal"), { openDesktopItem(ctx, "pulse:cmd", lookId) }))
                 if (hit("Settings", "Ayarlar")) add(Triple("settings", tr("Settings", "Ayarlar"), { openDesktopItem(ctx, "pulse:winsettings", lookId) }))
@@ -333,6 +338,10 @@ private fun RunBox(taskbar: Dp) {
         }
         when {
             c == "regedit" || c == "regedt32" -> { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }
+            c == "devmgmt" || c == "device manager" -> { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }
+            c == "eventvwr" || c == "event viewer" -> { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }
+            c == "diskmgmt" || c == "disk management" -> { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }
+            c == "windowsdefender" || c == "security" || c == "windows security" -> { close(); DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }
             id != null -> { close(); openDesktopItem(ctx, id, "win11") }
             else -> error = true
         }
@@ -375,6 +384,9 @@ private fun WinXMenu(taskbar: Dp) {
         xi("settings", "settings", tr("Settings", "Ayarlar")) { page("pulse:winsettings") },
         xi("control", "settings", tr("Control Panel", "Denetim Masası")) { page("pulse:settings") },
         xi("terminal", "run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
+        xi("devmgmt", "performance", tr("Device Manager", "Aygıt Yöneticisi")) { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) },
+        xi("eventvwr", "details", tr("Event Viewer", "Olay Görüntüleyici")) { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) },
+        xi("diskmgmt", "disk", tr("Disk Management", "Disk Yönetimi")) { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) },
         xi("regedit", "services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
         xi("explorer", "folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },
         xi("search", "search", tr("Search", "Ara")) { close(); LauncherSession.w11SearchOpen = true },

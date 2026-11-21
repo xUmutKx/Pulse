@@ -93,6 +93,13 @@ private fun toggle(isOn: (Context) -> Boolean, on: String, off: String, fallback
 private fun settingsInt(c: Context, global: Boolean, key: String, def: Int): Int = runCatching { if (global) Settings.Global.getInt(c.contentResolver, key, def) else Settings.System.getInt(c.contentResolver, key, def) }.getOrDefault(def)
 
 private fun wifiOn(c: Context) = runCatching { (c.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled }.getOrDefault(false)
+/** The name of the Wi-Fi network the phone is on (null when it is not on one or the phone does not tell the name: that needs the location permission). */
+@Suppress("DEPRECATION")
+internal fun wifiName(c: Context): String? = runCatching {
+    val wm = c.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+    wm.connectionInfo?.ssid?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != "<unknown ssid>" && it != "0x" }
+}.getOrNull()
+
 private fun btOn(c: Context) = runCatching { android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled == true }.getOrDefault(false)
 private fun locOn(c: Context) = runCatching { (c.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager).isLocationEnabled }.getOrDefault(false)
 private fun dndOn(c: Context) = runCatching { (c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL }.getOrDefault(false)

@@ -166,6 +166,10 @@ fun SubScreen(id: String, back: () -> Unit) {
         id.startsWith("win:lsettings:") -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true, startCat = id.removePrefix("win:lsettings:")) }
         id == "win:lsettings" -> { val win = com.umutk.pulse.extras.launcher.LocalDesktopWin.current; com.umutk.pulse.extras.launcher.LauncherSettings(back = { win?.let { com.umutk.pulse.extras.launcher.DesktopWindows.close(it) } }, fromLauncher = true) }
         id == "win:regedit" -> com.umutk.pulse.extras.launcher.MiniRegistry()
+        id == "win:devmgmt" -> com.umutk.pulse.extras.launcher.DeviceManagerWindow()
+        id == "win:eventvwr" -> com.umutk.pulse.extras.launcher.EventViewerWindow()
+        id == "win:diskmgmt" -> com.umutk.pulse.extras.launcher.DiskManagementWindow()
+        id == "win:security" -> com.umutk.pulse.extras.launcher.WindowsSecurityWindow()
         id == "win:gallery" -> com.umutk.pulse.extras.launcher.GalleryWindow()
         id.startsWith("view:") -> com.umutk.pulse.extras.launcher.FileWindow(id.removePrefix("view:"))
         id == "game:minesweeper" -> com.umutk.pulse.extras.launcher.MinesweeperGame()

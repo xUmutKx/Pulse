@@ -105,7 +105,8 @@ fun MiniRegistry() {
     LaunchedEffect(hive, rev) { rows = withContext(Dispatchers.IO) { readHive(ctx, hive) } }
     val shown = remember(rows, q) { if (q.isBlank()) rows else rows.filter { it.first.contains(q.trim(), true) || it.second.contains(q.trim(), true) } }
     val tweaks = remember(hive, rows) { TWEAKS.filter { it.second == hive } }
-    Column(Modifier.fillMaxSize().background(T.bg).padding(10.dp)) {
+    WinGlass()
+    Column(Modifier.fillMaxSize().background(winPageBg()).padding(10.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             HIVES.forEach { (id, name) ->
                 Text(name, color = if (hive == id) T.accent else T.text, fontSize = 12.sp, fontWeight = if (hive == id) FontWeight.Bold else FontWeight.Normal, fontFamily = FontFamily.Monospace,
@@ -140,8 +141,8 @@ fun MiniRegistry() {
     edit?.let { (k0, v0) ->
         var k by remember(k0) { mutableStateOf(k0) }
         var v by remember(k0) { mutableStateOf(v0) }
-        androidx.compose.ui.window.Dialog(onDismissRequest = { edit = null }) {
-            Column(Modifier.fillMaxWidth().background(T.panel).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        WinPopup(tr("Edit value", "Değeri düzenle"), { edit = null }) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(HIVES.first { it.first == hive }.second, color = T.sub, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                 PField(k, { k = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
                 PField(v, { v = it }, tr("Value", "Değer"), Modifier.fillMaxWidth())

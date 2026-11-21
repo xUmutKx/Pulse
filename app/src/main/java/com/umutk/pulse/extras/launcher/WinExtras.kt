@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -184,6 +186,33 @@ internal fun WinErrorDialog(lookId: String, what: String) {
             }
             Box(Modifier.align(Alignment.End).padding(end = 14.dp, bottom = 12.dp).clip(RoundedCornerShape(if (classic) 2.dp else 4.dp)).background(if (classic) Color(0xFFE0E0E0) else Color(0xFF0067C0))
                 .clickable { LauncherSession.errorText = "" }.padding(horizontal = 28.dp, vertical = 6.dp)) { Text(tr("OK", "Tamam"), color = if (classic) Color.Black else Color.White, fontSize = 13.sp) }
+        }
+    }
+}
+
+/** The window of a tool is see-through on Windows 11 (the desktop shows behind it), as Settings and the Terminal are. */
+@Composable
+internal fun WinGlass() {
+    val deskWin = LocalDesktopWin.current
+    val on = com.umutk.pulse.T.id == "win11"
+    androidx.compose.runtime.DisposableEffect(deskWin, on) { if (on) deskWin?.glass = true; onDispose { if (on) deskWin?.glass = false } }
+}
+
+/** The page colour of a tool window: dark and see-through on Windows 11, the look's own colour elsewhere. */
+internal fun winPageBg(): Color = if (com.umutk.pulse.T.id == "win11") Color.Black.copy(alpha = .5f) else com.umutk.pulse.T.bg
+
+/** A small window inside the tool's own window (not a screen wide dialog): a title bar that moves it, a cross, and the content. Used for the edit boxes of the tools. */
+@Composable
+internal fun WinPopup(title: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+    var off by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val shape = RoundedCornerShape(8.dp)
+    Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }, contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(16.dp).offset { androidx.compose.ui.unit.IntOffset(off.x.toInt(), off.y.toInt()) }.fillMaxWidth().clip(shape).background(Color(0xF0202020)).border(1.dp, Color.White.copy(alpha = .2f), shape)) {
+            Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha = .06f)).pointerInput(Unit) { androidx.compose.foundation.gestures.detectDragGestures { c, d -> c.consume(); off += d } }.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                Box(Modifier.width(40.dp).height(32.dp).clickable { onClose() }, contentAlignment = Alignment.Center) { Text("✕", color = Color.White, fontSize = 14.sp) }
+            }
+            Column(Modifier.padding(14.dp)) { content() }
         }
     }
 }
