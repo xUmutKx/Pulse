@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -119,18 +120,27 @@ internal fun SciPane(classic: Boolean) {
         listOf("C", "e", "Ans", "|x|", "÷"),
     )
     val pad = listOf(listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("±", "0", ".", "="))
+    val cfgS = androidx.compose.ui.platform.LocalConfiguration.current
+    // landscape: the function keys on the left and the number keys on the right, under one display
+    val wide = cfgS.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfgS.screenWidthDp >= 560
+    val round = T.id == "amoled" || T.id == "material"
+    val longKey: (String) -> Unit = { k -> if ((k == "(" || k == ")") && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }
     Column(Modifier.fillMaxSize()) {
         CalcDisplay(if (err) "" else preview?.let { "= $it" } ?: "", if (err) tr("Error", "Hata") else e, classic)
         Spacer(Modifier.height(6.dp))
-        val round = T.id == "amoled" || T.id == "material"
-        if (round) {
-            CalcPad(sci, classic, Modifier.weight(4f), onLong = { k -> if ((k == "(" || k == ")") && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
+        if (wide) {
+            Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.weight(1.25f).fillMaxHeight()) { CalcPad(sci, classic, Modifier.fillMaxHeight(), onLong = longKey) { press(it) } }
+                Box(Modifier.weight(1f).fillMaxHeight()) { CalcPad(pad, classic, Modifier.fillMaxHeight()) { press(it) } }
+            }
+        } else if (round) {
+            CalcPad(sci, classic, Modifier.weight(4f), onLong = longKey) { press(it) }
             Spacer(Modifier.height(4.dp))
             CalcPad(pad, classic, Modifier.weight(4f)) { press(it) }
         } else {
             // Windows looks: the keys are smaller and sit at the bottom, under the display
             Spacer(Modifier.weight(1f))
-            CalcPad(sci, classic, onLong = { k -> if ((k == "(" || k == ")") && e.isNotEmpty()) { e = "(" + e.trim() + ")"; done = false } }) { press(it) }
+            CalcPad(sci, classic, onLong = longKey) { press(it) }
             Spacer(Modifier.height(4.dp))
             CalcPad(pad, classic) { press(it) }
         }

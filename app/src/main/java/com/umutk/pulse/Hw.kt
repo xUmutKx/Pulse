@@ -362,6 +362,8 @@ object Hw {
         listOf(system(ctx), battery(ctx), memory(ctx), storage(ctx), display(ctx), network(ctx), thermal(ctx), camera(ctx), media()).flatten().forEach { s ->
             sb.append("\n== ${s.title}\n"); s.rows.forEach { (k, v) -> sb.append("$k: $v\n") }
         }
+        // the last crashes and app exits (CrashSaver), so a shared report says why Pulse closed
+        runCatching { CrashSaver.readNow(ctx).trim().takeIf { it.isNotEmpty() } }.getOrNull()?.let { sb.append("\n== Crash log\n").append(it.lines().takeLast(120).joinToString("\n")).append('\n') }
         return sb.toString()
     }
 }

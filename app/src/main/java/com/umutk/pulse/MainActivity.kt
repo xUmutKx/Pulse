@@ -432,7 +432,13 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
     // an extra app (or the text editor) asked for AMOLED: it has no entry in Themes either, so it is built here too
     val th = if ((files && com.umutk.pulse.features.FilesLook.theme == "amoled") || (!files && lookId == "amoled")) amoledWindow() else effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved look is swapped in while composing
-    Look.resolved = if (th !== Look.theme) th else null
+    // only the window in front writes it: a paused or stopped tool (same process) recomposes when Look.theme is handed back to Pulse,
+    // and its Material look would overwrite Pulse's, so Pulse's Fluent icons turned into Material until the next recomposition
+    val lc = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val firstDraw = remember { booleanArrayOf(true) }
+    val front = lc.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    if (front || firstDraw[0]) Look.resolved = if (th !== Look.theme) th else null
+    if (front) firstDraw[0] = false
     // pop-up windows take their own look: the app look, Material, or AMOLED black
     val wl = if (files) (com.umutk.pulse.features.filesLook() ?: th) else when (Look.windowTheme) { "material" -> monoWindow(effective(Themes.first { it.id == "material" })); "amoled" -> amoledWindow(); else -> th }
     val acc = Look.accent

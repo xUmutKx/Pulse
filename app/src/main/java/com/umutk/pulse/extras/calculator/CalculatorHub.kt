@@ -175,8 +175,8 @@ fun CalculatorHub(back: () -> Unit) {
                 // Back leaves the pane for the plain calculator first, never the whole app
                 BackHandler { mode = "standard" }
                 when (mode) {
-                    // enough width: the scientific keys and the graph side by side
-                    "scientific" -> if (landscape && cfg.screenWidthDp >= 840) androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+                    // a very wide screen: the keys and the graph side by side
+                    "scientific" -> if (landscape && cfg.screenWidthDp >= 1100) androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
                         Box(Modifier.weight(.55f).fillMaxSize()) { SciPane(classic) }
                         Box(Modifier.weight(.45f).fillMaxSize()) { GraphPane() }
                     } else SciPane(classic)
