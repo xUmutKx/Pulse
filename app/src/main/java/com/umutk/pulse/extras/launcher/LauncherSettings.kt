@@ -194,6 +194,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
         if (cat == "home") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // the owner's ready-made set-up of the apps list (folders, hidden tools, dock, 5 x 6 grid): only when asked for
             // the extras of the big launchers: a page for each widget, loops, labels, another grid for the turned phone, unused apps, backups, the web search
+            SwitchLine("folder", tr("Smart folders (games, media, communication ...)", "Akıllı klasörler (oyunlar, medya, iletişim ...)"), LauncherPrefs.smartFolders) { LauncherPrefs.smartFolders = it; save() }
             SwitchLine("widgets", tr("A page for each widget", "Her widget için bir sayfa"), LauncherPrefs.widgetPages) { LauncherPrefs.widgetPages = it; save() }
             SwitchLine("rotate", tr("Pages go round (infinite scroll)", "Sayfalar baştan dönsün (sonsuz kaydırma)"), LauncherPrefs.loopScroll) { LauncherPrefs.loopScroll = it; save() }
             SwitchLine("image", tr("Wallpaper slides with the pages", "Duvar kağıdı sayfalarla kaysın"), LauncherPrefs.wallScroll) { LauncherPrefs.wallScroll = it; save() }

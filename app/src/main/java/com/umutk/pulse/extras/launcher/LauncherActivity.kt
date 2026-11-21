@@ -455,7 +455,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val hostActivity = LocalContext.current as? android.app.Activity
     androidx.compose.runtime.SideEffect { hostActivity?.window?.let { w -> if (LauncherPrefs.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
     val folderRows = LauncherPrefs.folders
-    val drawerBase = remember(visible, folderRows) { LauncherFolders.fold(visible, apps) }
+    val drawerBase = remember(visible, folderRows, LauncherPrefs.smartFolders) { LauncherFolders.fold(visible, apps) }
     val drawer = remember(drawerBase, visible, query) {
         if (query.isBlank()) drawerBase else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
     }
