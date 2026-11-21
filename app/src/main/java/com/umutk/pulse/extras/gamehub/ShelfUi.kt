@@ -574,17 +574,22 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     val list = remember(games, hidden) { games.filter { it.pkg !in hidden }.take(120) }
     // the games with no cover are looked for in the background, once
     androidx.compose.runtime.LaunchedEffect(list.size) { if (list.any { !coverFile(ctx, it.pkg).isFile }) CoverJob.start(ctx, list) }
-    // each game's picture, small (360 px): its cover, else its wide picture, else its icon; read off the main thread, four at a time
+    // each game's picture, small: its cover, else its wide picture, else its icon; read off the main thread, six at a time. The rack shows after the first 18 are read (the others stand as
+    // plain coloured covers for the moment) and is made again once when all of them are in, so there is no long wait on "Loading"
     val loaded by androidx.compose.runtime.produceState<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList(), list.map { it.pkg }, ver) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val gate = kotlinx.coroutines.sync.Semaphore(4)
-            list.map { g ->
+        suspend fun read(games: List<GameRow>): Map<String, androidx.compose.ui.graphics.ImageBitmap> = kotlinx.coroutines.coroutineScope {
+            val gate = kotlinx.coroutines.sync.Semaphore(6)
+            games.map { g ->
                 async {
                     gate.acquire()
-                    try { g to (GameArt.cover(ctx, g.pkg, 360) ?: GameArt.banner(ctx, g.pkg, 360) ?: iconCover(g.name, GameArt.icon(ctx, g.pkg, 256))) } finally { gate.release() }
+                    try { g.pkg to (GameArt.cover(ctx, g.pkg, 300) ?: GameArt.banner(ctx, g.pkg, 300) ?: iconCover(g.name, GameArt.icon(ctx, g.pkg, 256))) } finally { gate.release() }
                 }
-            }.map { it.await() }
+            }.map { it.await() }.toMap()
         }
+        val first = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read(list.take(18)) }
+        value = list.map { g -> g to (first[g.pkg] ?: nameCover(g.name)) }
+        val all = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { first + read(list.drop(18)) }
+        value = list.map { g -> g to (all[g.pkg] ?: nameCover(g.name)) }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
@@ -608,7 +613,7 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
 
 /** A square cover for a game that has no picture: a colour taken from its name and the name across it. */
 private fun nameCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
-    val size = 600
+    val size = 300
     val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
     val c = android.graphics.Canvas(bmp)
     val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
@@ -616,10 +621,10 @@ private fun nameCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
     val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), top, bottom, android.graphics.Shader.TileMode.CLAMP)
     c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
-    p.shader = null; p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 64f
+    p.shader = null; p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 32f
     val words = name.split(' ').fold(ArrayList<String>()) { acc, w -> if (acc.isNotEmpty() && (acc.last().length + w.length) < 12) acc[acc.lastIndex] = acc.last() + " " + w else acc.add(w); acc }
-    var y = size / 2f - (words.size - 1) * 36f
-    for (line in words.take(5)) { c.drawText(line, size / 2f, y, p); y += 72f }
+    var y = size / 2f - (words.size - 1) * 18f
+    for (line in words.take(5)) { c.drawText(line, size / 2f, y, p); y += 36f }
     return bmp.asImageBitmap()
 }
 
