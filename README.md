@@ -1,5 +1,7 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
+<p align="center"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></p>
+
 ### Pulse
 
 | Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
@@ -39,6 +41,9 @@
 - Windows tools over what the phone really reports: Task Manager, Services, Startup apps, Registry Editor (the phone's settings database), **Device Manager**, **Event Viewer**, **Disk Management**, **Windows Security**, **Task Scheduler**, Windows Update (Pulse updates), Command Prompt (neofetch with the logo of the look's Windows) and Terminal (the Android robot). Run box: cmd, terminal, regedit, devmgmt, eventvwr, diskmgmt, taskschd, control, calc, notepad ...
 - Settings pages with controls that work inside Pulse (Wi-Fi with the networks around, Bluetooth, airplane mode, Do not disturb, dark mode, screen timeout, text size, battery saver, time, lock screen lyrics ...), with Shizuku or root where Android asks for it; no hand-off to the phone's Settings app.
 - Clipboard history (Win+V), keyboard shortcut guide, mouse right click, a Windows style error box, the volume and brightness display, Recycle Bin for deleted files.
+- The look picker shows the Windows looks first (11, 10, 7, Phone, XP, 95); One UI, ColorOS, Terminal, Material and AMOLED wait in a small folded line.
+- Control Panel with a dark glass title bar and a rounded search box; Windows 10 windows are dark; the taskbar buttons scroll and never run under the tray and the clock.
+- A selected window comes to the front (title bar, body or its taskbar button).
 </details>
 
 <details><summary><b>🎮 Game Hub</b>: Boxshelf, CD shelf, Chess, Checkers, Power of 4</summary>
@@ -52,6 +57,7 @@
 - Buds: the earbuds' battery, which bud is in the ear, noise control, and stopping the music when they are taken out.
 - Watch (over wireless debugging): install APKs and Pulse Watch, send files, screenshot, a 30 second screen recording, a shell, the log (logcat), the apps on the watch with Open, Pull (their APK to the phone), Disable and Remove.
 - Pulse Watch is a Wear OS app of its own with 21 small apps for a round screen.
+- Planned for Pulse Watch (see `wear/PLAN.md`): a file manager, a music and video player, a remote for the phone and its media, YouTube and YouTube Music, watch faces in the Windows looks, notifications and lyrics on the wrist.
 </details>
 
 <details><summary><b>🎵 Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
@@ -79,6 +85,8 @@
 - Translation bar: the two languages at the ends, a swap button between them, the translation of what you type below, a tap puts it in. Deleting the space behind a word opens it again with its suggestions.
 - Hold a key for accents (many more letters). Optional compact bottom row with a Shift key, separate brightness for the top bar and the bottom rows, Shift shows outline / underline / filled for off, one capital and caps lock.
 - Emoji with search and kaomoji, a symbol tab (flowers, hearts, stars, arrows, presets, all Unicode symbol blocks, searchable by name), clipboard history with pins and images, translation inside the keyboard, extra key row (Ctrl, Alt, Win, Shift, arrows, F keys).
+- **Shift + key**: hold Shift with one finger and tap a key with another to type its extra character (/ @ ...); a setting, on at first.
+- A text pasted from the clipboard panel leaves the suggestion bar and is not offered again.
 </details>
 
 <details><summary><b>🚀 Launcher</b></summary>
@@ -109,6 +117,9 @@
 - Floating keys: a button over every app (tap opens the keyboard, hold opens a mini keyboard with Esc, Tab, Ctrl, F keys, arrows and more; slide sideways for pages; needs root or Shizuku to send the keys).
 - Compass, level, flashlight, lux meter, dice, coin, clipboard, screenshot, sensors off, volume, sound mode, stopwatch, timer, floating timer, network type, DNS and TTL, finder, power menu, calculator (a key layout per look, keys animate).
 - Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
+- QR and barcode reader: QR, Data Matrix, Aztec, PDF417, EAN, UPC, Code 128 / 39 / 93, ITF, Codabar, light-on-dark codes; a Quick Settings tile.
+- Calculator: turned on its side it opens the scientific keys beside the number keys; a very wide screen adds the graph.
+- Settings > Report > **Create crash report**: the last crash and the device details in one text (saved in Download/Pulse/Crash and shared); searching "crash" finds it.
 </details>
 
 <details><summary><b>📊 Task manager</b></summary>
