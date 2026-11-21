@@ -446,6 +446,13 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
         // Pulse's own apps (Music player, Notes, Video, Weather...) are in the list too, so they can be opened, hidden and put on the home screen or the dock like any other app
         // the joke apps belong to the Windows desktops only (their Programs list and Start menu); the phone looks' app list leaves them out
         .let { it + desktopItems().filter { d -> d.pkg.startsWith("pulse:x:") && (LauncherPrefs.look in WINDOWS_LOOKS || !d.pkg.startsWith("pulse:x:win:fun:")) } }
+        // every extra app of Pulse (Files, Photos, Calendar, Contacts, Code, YTXTube ...) is in the list of this launcher, though the phone's own launchers do not show them (their entries are off
+        // by default); one that is in the list already (the music player, notes ...) is not added twice
+        .let { base ->
+            val have = base.map { it.label.lowercase() }.toSet()
+            base + com.umutk.pulse.AppPlace.all.filter { a -> tr(a.en, a.trName).lowercase() !in have && a.en.lowercase() !in have }
+                .map { a -> LaunchApp(tr(a.en, a.trName), "pulse:extra:" + a.alias, null, iconKey = a.key) }
+        }
         .sortedBy { it.label.lowercase() }
 }
 
@@ -499,6 +506,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // on a Windows desktop a file opens in a window of its own (the picture, the text, the PDF); a folder and the other looks go to the system
         else if (app.pkg.startsWith("file:") && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps && java.io.File(app.pkg.removePrefix("file:")).isFile) DesktopWindows.open("view:" + app.pkg.removePrefix("file:"), app.label)
         else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
+        else if (app.pkg.startsWith("pulse:extra:")) com.umutk.pulse.AppPlace.byAlias(app.pkg.removePrefix("pulse:extra:"))?.run?.invoke(ctx) { }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
