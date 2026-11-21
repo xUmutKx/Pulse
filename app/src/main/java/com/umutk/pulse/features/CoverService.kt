@@ -364,7 +364,7 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT, android.view.KeyEvent.KEYCODE_TAB)
         if (!known) return false
         metaUsed = true; comboKey = k
-        if (e.repeatCount == 0) sendWin(if (e.isShiftPressed) k + 1000 else k)
+        if (e.repeatCount == 0) sendWin(if (e.isCtrlPressed && (k == android.view.KeyEvent.KEYCODE_DPAD_LEFT || k == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) k + 2000 else if (e.isShiftPressed) k + 1000 else k)
         return true
     }
 

@@ -216,3 +216,20 @@ internal fun WinPopup(title: String, onClose: () -> Unit, content: @Composable (
         }
     }
 }
+
+/** The level shown when the volume or brightness keys of a keyboard are pressed: a small rounded bar at the bottom of the screen that goes away by itself. */
+@Composable
+internal fun WinOsd() {
+    var now by remember { mutableLongStateOf(android.os.SystemClock.uptimeMillis()) }
+    LaunchedEffect(LauncherSession.osdAt) { if (LauncherSession.osdAt != 0L) { delay(1600); now = android.os.SystemClock.uptimeMillis() } }
+    if (LauncherSession.osdAt == 0L || now - LauncherSession.osdAt > 1500L && now >= LauncherSession.osdAt + 1500L) return
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        androidx.compose.foundation.layout.Row(Modifier.padding(bottom = 90.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xE6202020)).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(LauncherSession.osdText, color = Color.White, fontSize = 13.sp, modifier = Modifier.width(80.dp))
+            Box(Modifier.width(140.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = .25f))) {
+                Box(Modifier.fillMaxWidth(LauncherSession.osdLevel.coerceIn(.02f, 1f)).height(6.dp).background(launcherAccent()))
+            }
+            Text("${(LauncherSession.osdLevel * 100).toInt()}", color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
+        }
+    }
+}

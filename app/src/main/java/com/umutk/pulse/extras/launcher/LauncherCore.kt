@@ -140,6 +140,12 @@ object LauncherSession {
     var clipOpen by mutableStateOf(false)
     /** The keyboard shortcut guide (Win+/ or Win+F1) and a Windows style error box (the text of what could not open; empty = none). */
     var keysOpen by mutableStateOf(false)
+    /** Win+Ctrl+Left / Right: move to the next or the previous desktop (home page) of the launcher (-1, 0, 1). */
+    var pageMove by mutableStateOf(0)
+    /** The little on screen display of the volume and brightness keys: its text, the level 0..1 and when it was set (uptime ms). */
+    var osdText by mutableStateOf("")
+    var osdLevel by mutableStateOf(0f)
+    var osdAt by mutableStateOf(0L)
     var errorText by mutableStateOf("")
     var powerScreen by mutableStateOf("")
     /** Alt+Tab: the card picked in the switcher while Alt is held; -1 = the switcher is closed. */

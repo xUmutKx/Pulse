@@ -136,6 +136,7 @@ class LauncherActivity : ComponentActivity() {
                 } else LaunchedEffect(Unit) { if (!LauncherSession.booted) LauncherSounds.startup(this@LauncherActivity, th.id); LauncherSession.booted = true }
                 if (th.id in com.umutk.pulse.loginLooks) {
                     if (LauncherSession.clipOpen) WinClipPanel()
+                    WinOsd()
                     if (LauncherSession.keysOpen) WinKeysGuide()
                     if (LauncherSession.errorText.isNotEmpty()) WinErrorDialog(th.id, LauncherSession.errorText)
                     if (LauncherSession.lockOpen) WinLockHost(th)
@@ -206,6 +207,9 @@ class LauncherActivity : ComponentActivity() {
                     }
                 }
             }
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed && e.isCtrlPressed && (e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
+                LauncherSession.pageMove = if (e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1; metaUsed = true; return true
+            }
             if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed) {
                 val look = LauncherPrefs.look
                 val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
@@ -218,6 +222,20 @@ class LauncherActivity : ComponentActivity() {
                 // the Windows key let go with nothing pressed with it: the Start menu
                 if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) { lastStartToggleAt = SystemClock.uptimeMillis(); LauncherSession.startOpen = !LauncherSession.startOpen }; metaUsed = false; return true }
                 return true
+            }
+        }
+        // the volume and brightness keys of a keyboard: a small display of the level shows, as in Windows
+        if (e.action == android.view.KeyEvent.ACTION_UP && modern) {
+            val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+            when (e.keyCode) {
+                android.view.KeyEvent.KEYCODE_VOLUME_UP, android.view.KeyEvent.KEYCODE_VOLUME_DOWN, android.view.KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                    val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                    LauncherSession.osdText = tr("Volume", "Ses"); LauncherSession.osdLevel = am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / max; LauncherSession.osdAt = SystemClock.uptimeMillis()
+                }
+                android.view.KeyEvent.KEYCODE_BRIGHTNESS_UP, android.view.KeyEvent.KEYCODE_BRIGHTNESS_DOWN -> {
+                    LauncherSession.osdText = tr("Brightness", "Parlaklık")
+                    LauncherSession.osdLevel = runCatching { android.provider.Settings.System.getInt(contentResolver, android.provider.Settings.System.SCREEN_BRIGHTNESS) / 255f }.getOrDefault(.5f); LauncherSession.osdAt = SystemClock.uptimeMillis()
+                }
             }
         }
         return super.dispatchKeyEvent(e)
@@ -252,6 +270,7 @@ class LauncherActivity : ComponentActivity() {
         if (!modern) return
         if (code == -1) { LauncherSession.startOpen = !LauncherSession.startOpen; return }
         if (code == -2) { DesktopWindows.altTabStep(); return }
+        if (code >= 2000) { LauncherSession.pageMove = if (code - 2000 == android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1; return }
         if (code == -3) { DesktopWindows.altTabCommit(); return }
         if (code >= 1000) winCombo(code - 1000, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }, true)
         else winCombo(code, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z })
@@ -601,6 +620,10 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
+    LaunchedEffect(LauncherSession.pageMove) {
+        val d = LauncherSession.pageMove
+        if (d != 0) { LauncherSession.pageMove = 0; pager.animateScrollToPage((pager.currentPage + d).coerceIn(0, (pager.pageCount - 1).coerceAtLeast(0))) }
+    }
     LaunchedEffect(LauncherSession.homeTick) {
         if (LauncherSession.homeTick > 0) { grid.scrollToItem(0); pager.scrollToPage(0) }
     }
