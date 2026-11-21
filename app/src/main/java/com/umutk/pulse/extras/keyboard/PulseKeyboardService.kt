@@ -580,6 +580,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // pictures of the same kind taken together wait as one stack: one tap sends them all
         fun kind(p: String) = if (p.contains("/dcim/", true) || p.contains("/camera/", true)) 1 else if (p.contains("/download", true)) 2 else 0
         val same = batchPaths.filter { kind(it) == kind(hit.third) }.map { java.io.File(it) }.filter { it.isFile && it.length() > 0 }
+        // many pictures at once that are not from the camera or a screenshot (a zip opened, a folder copied) are not a thing to paste: nothing shows in the bar
+        if (kind(hit.third) == 2 && same.size > 5) return
         shotGroup = (same + shotGroup.filter { f -> f.isFile && kind(f.path) == kind(hit.third) && same.none { it.path == f.path } }).take(12)
         st.shotCount = shotGroup.size
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
