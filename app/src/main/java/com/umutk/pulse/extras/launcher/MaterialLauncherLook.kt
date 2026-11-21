@@ -103,7 +103,9 @@ class MaterialLauncherLook(
         val shape = RoundedCornerShape(28.dp)
         // a floating dock: a rounded tonal surface over the page, inset from the rounded screen corners
         Row(modifier.padding(horizontal = maxOf(12.dp, edge), vertical = 12.dp).shadow(if (black) 0.dp else 4.dp, shape).clip(shape)
-            .background(if (LauncherPrefs.dockGlass) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f * LauncherPrefs.dockAlpha / 100f + .06f) else high().copy(alpha = LauncherPrefs.dockAlpha / 100f))
+            .then(if (LauncherPrefs.dockGlass) Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
+                androidx.compose.ui.graphics.Color.White.copy(alpha = .30f * LauncherPrefs.dockAlpha / 100f + .04f), androidx.compose.ui.graphics.Color.White.copy(alpha = .08f * LauncherPrefs.dockAlpha / 100f + .02f)))) // a soft sheen on top, like glass
+                else Modifier.background(high().copy(alpha = LauncherPrefs.dockAlpha / 100f)))
             .then(if (LauncherPrefs.dockGlass) Modifier.border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .28f), shape) else Modifier)
             .padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).clip(CircleShape).background(acc().copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
@@ -130,7 +132,7 @@ class MaterialLauncherLook(
         val sections = if (query.isBlank()) groupedApps(state.apps).map { (g, apps) -> tr(g.en, g.tr) to apps }.filter { catSel == null || it.first == catSel }
             else listOf(tr("Results", "Sonuçlar") to matches)
         Column(modifier.background(bg()).statusBarsPadding().navigationBarsPadding().padding(horizontal = maxOf(16.dp, edge))) {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).height(56.dp).clip(CircleShape).background(high()).padding(horizontal = 16.dp),
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).height(56.dp).clip(CircleShape).background(if (LauncherPrefs.dockGlass) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f) else high()).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 PIcon("search", sub(), 24.dp)
                 Spacer(Modifier.width(12.dp))
