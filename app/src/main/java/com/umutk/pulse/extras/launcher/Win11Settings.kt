@@ -57,7 +57,7 @@ internal fun Win11SettingsHome(open: (String) -> Unit, startGroup: String = "") 
     // Mica: the window's body is see-through for Settings and the page is tinted, so the desktop shows through it
     val deskWin = LocalDesktopWin.current
     androidx.compose.runtime.DisposableEffect(deskWin) { deskWin?.glass = true; onDispose { deskWin?.glass = false } }
-    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null) .3f else 1f))) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(T.bg.copy(alpha = if (deskWin != null || T.dark) .3f else .6f))) {
         val wide = maxWidth >= 600.dp
         val pageOf: @Composable (WGroup) -> Unit = { g -> Win11Page(g, open) { detail = it } }
         if (wide) {
