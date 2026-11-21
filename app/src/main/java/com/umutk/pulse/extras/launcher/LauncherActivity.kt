@@ -117,13 +117,15 @@ class LauncherActivity : ComponentActivity() {
                 // machine, Windows Phone with its own start
                 val ownBoot = look.id == "terminal" || look.id.startsWith("winphone")
                 // the boot and sign-in screens do not show at every start: now and then (about one start in three), unless the setting says every time
-                val bootShow = remember { LauncherPrefs.bootEvery || Math.random() < 0.34 }
+                // (Restart and Sign out of the power menu ask for the boot or the sign-in screen at once; the request is read once)
+                val force = remember { LauncherSession.forceBoot.also { LauncherSession.forceBoot = 0 } }
+                val bootShow = remember { force != 0 || LauncherPrefs.bootEvery || Math.random() < 0.34 }
                 if (!LauncherSession.booted && bootShow && (th.id in com.umutk.pulse.loginLooks || ownBoot)) {
                     val win = th.id in com.umutk.pulse.loginLooks
                     // now and then a surprise first on a Windows desktop: the BIOS screen of an old PC, very rarely a fake blue screen (stage -1)
-                    val egg = remember { if (win && LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }
+                    val egg = remember { if (force == 1 && win) 1 else if (force == 2) 0 else if (win && LauncherPrefs.bootScreen && LauncherPrefs.bootEggs) BootEggs.roll() else 0 }
                     fun afterBoot() = if (win && LauncherPrefs.loginScreen) 1 else 2
-                    var stage by remember { mutableIntStateOf(if (egg != 0) -1 else if (LauncherPrefs.bootScreen) 0 else afterBoot()) }
+                    var stage by remember { mutableIntStateOf(if (force == 2 && win) 1 else if (egg != 0) -1 else if (LauncherPrefs.bootScreen) 0 else afterBoot()) }
                     when (stage) {
                         -1 -> if (egg == 2) BsodScreen(th.id) { stage = if (LauncherPrefs.bootScreen) 0 else afterBoot() }
                             else BiosScreen { stage = if (LauncherPrefs.bootScreen) 0 else afterBoot() }

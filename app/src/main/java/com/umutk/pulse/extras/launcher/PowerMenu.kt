@@ -36,9 +36,10 @@ import com.umutk.pulse.tr
 internal fun powerAction(ctx: Context, what: String) {
     when (what) {
         "sleep", "lock" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
-        "off" -> if (Shell.root == true || Shell.shizukuOk()) Thread { Shell.run("reboot -p") }.start() else com.umutk.pulse.PowerMenu.show()
-        "restart" -> if (Shell.root == true || Shell.shizukuOk()) Thread { Shell.run("reboot") }.start() else com.umutk.pulse.PowerMenu.show()
-        "signout" -> logOff(ctx)
+        // the launcher is the computer here: Shut down closes it, Restart starts it again with its boot screens, Sign out shows the sign-in screen (the phone itself is not touched)
+        "off" -> (ctx as? android.app.Activity)?.finishAndRemoveTask()
+        "restart" -> (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 1; LauncherSession.booted = false; it.recreate() }
+        "signout" -> (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 2; LauncherSession.booted = false; it.recreate() } ?: logOff(ctx)
     }
 }
 

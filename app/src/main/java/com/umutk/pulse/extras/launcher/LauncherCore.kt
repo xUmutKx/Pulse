@@ -142,6 +142,8 @@ object LauncherSession {
     /** The Windows Phone glance page (behind the Windows button) is open. */
     /** The boot and sign-in screens were passed in this launcher process. */
     var booted by mutableStateOf(false)
+    /** What the next start of the launcher shows first: 1 = the boot (BIOS, then the start-up screen: Restart), 2 = the sign-in screen (Sign out). Read once, then 0. */
+    var forceBoot = 0
     var feedOpen by mutableStateOf(false)
     /** The quick search (a swipe down on the home) is open. */
     var searchOpen by mutableStateOf(false)
