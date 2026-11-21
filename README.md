@@ -61,6 +61,8 @@
 - **Report**: Create crash report in Settings (search "crash").
 </details>
 
+<p align="center"><img src="docs/media/banner-looks.jpg" width="900" alt="One app. Every look."></p>
+
 <details><summary><b>🎨 Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
 - Every screen, dialog, menu, icon and animation is drawn for each look; looks change at once, nothing needs a restart.
@@ -111,6 +113,8 @@
 8. **Notifications and lyrics** with reply.
 </details>
 
+<p align="center"><img src="docs/media/banner-music.jpg" width="900" alt="Music, your way."></p>
+
 <details><summary><b>🎵 Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
 
 - Music player in three skins (Material, Poweramp, Winamp) with lyrics (synced, search by text), waveform seek bar, sleep timer, equalizer (also by genre), crossfade, playlists, mixes by mood, stars and favourites sorted both ways.
@@ -156,12 +160,16 @@
 - File manager with zip, 7z and rar, folder tree, large and duplicate finders, type breakdown with previews, bulk delete and swipe actions on each file (delete, open or select, per direction), a full-page archive view with copy, cut and delete, cache cleaner (SD Maid SE rules), root browsing, media tools (compress, GIF, convert), installer for APK, APKS, APKM and XAPK, downloads with several connections, a Save-to panel for anything shared to Pulse.
 </details>
 
+<p align="center"><img src="docs/media/banner-measured.jpg" width="900" alt="Your phone, measured."></p>
+
 <details><summary><b>📊 Task manager, battery and system</b>: processes, battery, device info</summary>
 
 - Live CPU, memory, storage, network, GPU, battery and temperature, processes with End task, app history, startup apps, services, debloater with Safe / Expert / Unsafe marks.
 - Battery health: reported condition, cycles and capacity, and the capacity **measured** from the charge counter while charging or draining.
 - Floating monitor, Quick Settings tiles, alerts, watchdog, 20+ widgets.
 </details>
+
+<p align="center"><img src="docs/media/banner-cover.jpg" width="900" alt="Screen cover and a whole toolkit."></p>
 
 <details><summary><b>🧰 Toolkit and everyday tools</b>: compass, level, flashlight, screenshots, sensors</summary>
 
@@ -257,6 +265,8 @@ One player with four looks: Material, Poweramp, Winamp and Windows Media Player,
 
 
 </details>
+
+<p align="center"><img src="docs/media/banner-everyday.jpg" width="900" alt="Every day, in one app."></p>
 
 <details><summary><b>📱 Apps</b>: Files, Photos, Calendar, Notes, Browser ...</summary>
 
