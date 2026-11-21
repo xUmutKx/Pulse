@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -568,7 +569,8 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     // each game's picture: its cover, else its wide picture, else its icon; read off the main thread
     val loaded by androidx.compose.runtime.produceState<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList(), list.map { it.pkg }, ver) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            list.mapNotNull { g -> (GameArt.cover(ctx, g.pkg, 600) ?: GameArt.banner(ctx, g.pkg, 600) ?: GameArt.icon(ctx, g.pkg, 256))?.let { g to it } }
+            // a game with no picture yet gets a coloured cover with its name, so the shelf shows at once; the picture replaces it when it arrives
+            list.map { g -> g to (GameArt.cover(ctx, g.pkg, 600) ?: GameArt.banner(ctx, g.pkg, 600) ?: GameArt.icon(ctx, g.pkg, 256) ?: nameCover(g.name)) }
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
@@ -588,4 +590,21 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
             }
         }
     }
+}
+
+/** A square cover for a game that has no picture: a colour taken from its name and the name across it. */
+private fun nameCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
+    val size = 600
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
+    val top = android.graphics.Color.HSVToColor(floatArrayOf(hue, .55f, .55f)); val bottom = android.graphics.Color.HSVToColor(floatArrayOf(hue, .7f, .25f))
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), top, bottom, android.graphics.Shader.TileMode.CLAMP)
+    c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+    p.shader = null; p.color = android.graphics.Color.WHITE; p.textAlign = android.graphics.Paint.Align.CENTER; p.isFakeBoldText = true; p.textSize = 64f
+    val words = name.split(' ').fold(ArrayList<String>()) { acc, w -> if (acc.isNotEmpty() && (acc.last().length + w.length) < 12) acc[acc.lastIndex] = acc.last() + " " + w else acc.add(w); acc }
+    var y = size / 2f - (words.size - 1) * 36f
+    for (line in words.take(5)) { c.drawText(line, size / 2f, y, p); y += 72f }
+    return bmp.asImageBitmap()
 }
