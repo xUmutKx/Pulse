@@ -87,7 +87,15 @@ internal object PowerampCovers {
     fun save(c: Context, path: String, jpg: ByteArray) {
         val f = fileFor(c, path)
         f.parentFile?.mkdirs()
-        f.writeBytes(jpg)
+        // the pictures found online come at 600 px and 100-200 KB each: they are kept at 512 px, a JPEG of about 50 KB (the lists never show more)
+        val small = runCatching {
+            val bmp = BitmapFactory.decodeByteArray(jpg, 0, jpg.size) ?: return@runCatching null
+            val side = maxOf(bmp.width, bmp.height)
+            val out = if (side > 512) android.graphics.Bitmap.createScaledBitmap(bmp, bmp.width * 512 / side, bmp.height * 512 / side, true) else bmp
+            val bo = java.io.ByteArrayOutputStream(); out.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, bo)
+            bo.toByteArray().takeIf { it.size < jpg.size }
+        }.getOrNull()
+        f.writeBytes(small ?: jpg)
         forgetArt(path)
     }
 

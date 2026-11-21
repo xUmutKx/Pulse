@@ -176,7 +176,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val stamp = if (android.os.Build.VERSION.SDK_INT >= 26) clip.description.timestamp else 0L
         val sig = "$stamp|" + (clip.getItemAt(0).text?.toString()?.take(200) ?: clip.getItemAt(0).uri?.toString().orEmpty())
         if (sig == lastClipSig) return
-        if (onOpen && (stamp == 0L || android.os.SystemClock.elapsedRealtime() - stamp > 120_000)) { lastClipSig = sig; return }
+        if (onOpen && (stamp == 0L || android.os.SystemClock.elapsedRealtime() - stamp > 120_000)) {
+            lastClipSig = sig
+            // an older copy the system never told the keyboard about still goes into the clipboard list (not the bar), unless it is there already
+            val old = clip.getItemAt(0).takeIf { it.uri == null }?.text?.toString()?.trim().orEmpty()
+            if (old.isNotEmpty()) scope.launch(Dispatchers.IO) {
+                if (ClipStore.load(this@PulseKeyboardService).none { it.image == null && it.text == old }) {
+                    val l = ClipStore.addText(this@PulseKeyboardService, old)
+                    withContext(Dispatchers.Main) { st.clipItems = l }
+                }
+            }
+            return
+        }
         lastClipSig = sig
         val item = clip.getItemAt(0)
         val uri = item.uri

@@ -52,7 +52,8 @@ object ClipStore {
         val checkGone = nowMs - lastGoneCheck > 20_000L
         if (checkGone) lastGoneCheck = nowMs
         // a picture whose original was deleted elsewhere (the gallery, Files) leaves the clipboard too; a pinned one stays
-        val keep = items.filter { (it.pinned || it.time >= limit) && !(checkGone && !it.pinned && it.src != null && originalGone(c, it.src)) }
+        // a picture whose own copy is gone (the app's storage was cleared, a cleaner took it) would stay as an empty tile: it leaves the list, pinned or not
+        val keep = items.filter { (it.pinned || it.time >= limit) && !(checkGone && !it.pinned && it.src != null && originalGone(c, it.src)) && (it.image == null || File(it.image).let { f -> f.isFile && f.length() > 0 }) }
         if (keep.size != items.size) { drop(c, items - keep.toSet()); items = keep; write(c) }
         return sorted(items)
     }
