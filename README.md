@@ -7,22 +7,7 @@
 
 ### Pulse
 
-| Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
-|---|---|---|---|---|
-| <img src="docs/screenshots/keyboard.jpg" width="170" alt="Pulse keyboard settings"> | <img src="docs/screenshots/blackout.jpg" width="170" alt="BlackOut"> | <img src="docs/screenshots/buds-manager.jpg" width="170" alt="Buds manager"> | <img src="docs/screenshots/system-font.jpg" width="170" alt="System font"> | <img src="docs/screenshots/win11-flyout.jpg" width="170" alt="Windows 11 look: flyout"> |
-
-| Windows 11 look: desktop | Calculator | Weather | Files | Music player |
-|---|---|---|---|---|
-| <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
-
-| Processes | Performance | Overview | CPU cores | Windows 95 Performance |
-|---|---|---|---|---|
-| <img src="docs/screenshots/processes.png" width="170" alt="Processes"> | <img src="docs/screenshots/performance.png" width="170" alt="Performance"> | <img src="docs/screenshots/overview.png" width="170" alt="Overview"> | <img src="docs/screenshots/cores.png" width="170" alt="CPU cores"> | <img src="docs/screenshots/win95-performance.png" width="170" alt="Windows 95 Performance"> |
-
-| Windows 7 Startup apps | Windows XP widgets | Windows 7 gadgets | App manager |
-|---|---|---|---|
-| <img src="docs/screenshots/win7-startup.png" width="170" alt="Windows 7 Startup apps"> | <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
-
+<p align="center"><b><a href="https://xumutkx.github.io/Pulse/">🌐 Website</a></b> · <a href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
 
 | Windows 11: windows | Windows 10 | Windows 7 | Windows XP | Windows 95 |
 |---|---|---|---|---|
