@@ -271,6 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "win11" to (tr("Launcher: desktop trash feedback follows the current look, and removing an app cleanly removes it from its folder.",
+        "Launcher: masaüstü çöp geri bildirimi geçerli görünümü kullanıyor ve uygulama klasörlerden temizce kaldırılıyor.")),
+    "kbd18" to (tr("Build and release: the merged launcher updates now compile across full, lite and 32-bit builds.",
+        "Derleme ve yayın: birleştirilen launcher güncellemeleri tam, lite ve 32-bit derlemelerde derleniyor.")),
     "win11" to (tr("Windows 11 glass is clear again (no grey sheet over it), the keyboard closes with a swipe down on every layout.",
         "Windows 11 camı yine şeffaf (üstünde gri katman yok), klavye her düzende aşağı kaydırınca kapanıyor.")),
     "game" to (tr("Game Hub's CD shelf opens at once and no longer hangs on Loading the covers; the launcher's look picker shows the Windows looks first.",
