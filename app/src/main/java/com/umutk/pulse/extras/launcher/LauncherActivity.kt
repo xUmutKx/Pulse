@@ -182,9 +182,31 @@ class LauncherActivity : ComponentActivity() {
         val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
         if (modern) {
             val metaKey = e.keyCode == android.view.KeyEvent.KEYCODE_META_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_META_RIGHT
+            // the shortcuts that are not on the Windows key: Alt+F4 closes the front window, Alt+Tab goes to the next one, Ctrl+Esc is Start, Esc closes an open menu
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey) {
+                val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
+                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen
+                when {
+                    e.keyCode == android.view.KeyEvent.KEYCODE_F4 && e.isAltPressed && front != null -> { DesktopWindows.close(front); return true }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_TAB && e.isAltPressed && e.repeatCount == 0 -> {
+                        val vis = DesktopWindows.list.filter { !it.min }.sortedBy { it.z }
+                        if (vis.size > 1) { DesktopWindows.front(vis.first()); return true }
+                    }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && e.isCtrlPressed && e.repeatCount == 0 -> { LauncherSession.startOpen = !LauncherSession.startOpen; return true }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && menuOpen -> {
+                        LauncherSession.startOpen = false; LauncherSession.winXOpen = false; LauncherSession.runOpen = false; LauncherSession.w11SearchOpen = false; LauncherSession.quickOpen = false; return true
+                    }
+                }
+            }
             if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed) {
                 val look = LauncherPrefs.look
+                val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
                 val did = when (e.keyCode) {
+                    android.view.KeyEvent.KEYCODE_L -> { powerAction(this, "lock"); true }
+                    android.view.KeyEvent.KEYCODE_M -> { DesktopWindows.list.forEach { it.min = true }; true }
+                    android.view.KeyEvent.KEYCODE_A -> { LauncherSession.quickOpen = !LauncherSession.quickOpen; true }
+                    android.view.KeyEvent.KEYCODE_DPAD_UP -> { front?.max = true; front != null }
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { if (front != null) { if (front.max) front.max = false else front.min = true }; front != null }
                     android.view.KeyEvent.KEYCODE_X -> { LauncherSession.winXOpen = true; true }
                     android.view.KeyEvent.KEYCODE_R -> { LauncherSession.runOpen = true; true }
                     android.view.KeyEvent.KEYCODE_E -> { openDesktopItem(this, "pulse:files", look); true }
