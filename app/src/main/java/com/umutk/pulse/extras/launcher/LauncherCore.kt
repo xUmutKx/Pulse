@@ -208,7 +208,9 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
             val d = (size.value * .34f).coerceIn(14f, 22f)
             val dot = LauncherPrefs.badgeStyle == "dot"
             Box(Modifier.align(Alignment.TopEnd).size((if (dot) d * .6f else d).dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
-                if (!dot) Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                if (!dot) Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, lineHeight = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    // no extra space above or below the digits: they sit in the middle of the dot
+                    style = androidx.compose.ui.text.TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false), lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.Both)))
             }
         }
     }
