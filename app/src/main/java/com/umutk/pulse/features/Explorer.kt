@@ -479,6 +479,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var binView by remember { mutableStateOf<File?>(null) }
     // the code editor (extras/code): a code file opens in it, and any text file can be opened in it from its menu
     var codeView by remember { mutableStateOf<File?>(null) }
+    var lrcView by remember { mutableStateOf<File?>(null) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
@@ -663,6 +664,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (!exOpenInGallery(ctx, f)) com.umutk.pulse.imgOpen(ctx, f)
             return
         }
+        // lyrics with times: the lyrics editor (the song of the same name plays beside it)
+        if (f.extension.lowercase() == "lrc" && f.length() <= 2_000_000L) { recents = exAddRecent(ctx, f); lrcView = f; return }
         // a code file: the code editor (colours by language, folding, search); other text goes to the text editor as before
         if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.extension.lowercase() != "md" && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
@@ -1440,6 +1443,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
     binView?.let { b -> ExBinViewer(b) { binView = null } }
     codeView?.let { c -> com.umutk.pulse.extras.code.CodeEditorDialog(c) { codeView = null } }
+    lrcView?.let { c -> com.umutk.pulse.extras.code.LrcEditorDialog(c) { lrcView = null } }
     arcInfo?.let { p ->
         val af = arcFile
         val all = arcAll.orEmpty()
