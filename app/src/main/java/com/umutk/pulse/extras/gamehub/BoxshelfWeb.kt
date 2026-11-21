@@ -346,7 +346,7 @@ private class PulseHost(val c: Context, val onLaunch: (String) -> Unit, val onDe
                 "reshuffle" -> { Thread { CaseCover.applyAll(c, loadGames(c).map { it.pkg }, "mix"); ShelfSync.bump() }.start() }
                 "restoreMega" -> { MegaGames.restoreAll(c); ShelfSync.bump() }
                 // the grid button of the shelf: Game Hub goes on to its next view (the CD rack)
-                "nextView" -> { ShelfAsk.look.value = "cdrack" }
+                "nextView" -> { ShelfAsk.look.value = "classic" }
             }
         }
     }
