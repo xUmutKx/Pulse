@@ -201,7 +201,7 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         Modifier.fillMaxSize().background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).then(if (skin.kind == "11" && (w.start == "controlpanel" || w.route == "controlpanel") && LauncherPrefs.accentOn) Modifier.background(launcherAccent()) else Modifier.background(skin.title, alpha = when (skin.kind) { "11" -> 0f; "7" -> .34f; else -> 1f })).padding(start = 8.dp)
+            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).then(Modifier.background(skin.title, alpha = when (skin.kind) { "11" -> 0f; "7" -> .34f; else -> 1f })).padding(start = 8.dp)
                 // a double tap or a long press on the title bar switches between the window and the full screen, as on Windows
                 .pointerInput(w.id) { detectTapGestures(onPress = { DesktopWindows.front(w) }, onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
                 .pointerInput(w.id, areaW, areaH) {

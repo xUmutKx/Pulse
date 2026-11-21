@@ -134,7 +134,7 @@ open class MainActivity : ComponentActivity() {
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
         Look.resolved = pulseResolved
         // a tool that was just left (same process) may still finish a frame of its own: Pulse's look is put back once more a moment later
-        window.decorView.postDelayed({ if (!isFinishing && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) { if (this !is FilesActivity) Cfg.load(this); Look.resolved = pulseResolved } }, 450L)
+        if (this !is FilesActivity) window.decorView.postDelayed({ if (!isFinishing && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) { if (this !is FilesActivity) Cfg.load(this); Look.resolved = pulseResolved } }, 450L)
         // another launcher is the home app now: the wallpaper the phone had before Pulse comes back
         if (this !is FilesActivity) com.umutk.pulse.extras.launcher.PhoneWall.restoreIfLeft(this)
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready

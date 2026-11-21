@@ -102,7 +102,11 @@ fun QrPage(back: () -> Unit) {
     val ctx = LocalContext.current
     BackHandler { back() }
     var granted by remember { mutableStateOf(ctx.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        granted = it
+        // asked and refused for good: Android shows no dialog any more, so the permission page of the app opens (the only place it can be given)
+        if (!it) runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
     var scanning by remember { mutableStateOf(true) }
     var last by remember { mutableStateOf<String?>(null) }
     var history by remember { mutableStateOf(QrHistory.list(ctx)) }
