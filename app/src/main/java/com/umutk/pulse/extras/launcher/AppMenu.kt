@@ -100,7 +100,11 @@ private fun runAct(ctx: Context, a: MenuAct, app: LaunchApp, auto: List<String>,
             LauncherPrefs.dock = LauncherPrefs.dock - pkg
             LauncherPrefs.links = LauncherPrefs.links.filterNot { link -> link == "app:$pkg" }
             LauncherPrefs.homeHidden = LauncherPrefs.homeHidden + pkg
-            LauncherPrefs.folders = LauncherPrefs.folders.mapValues { (_, ids) -> ids.filterNot { it == pkg } }.filterValues { it.isNotEmpty() }
+            LauncherPrefs.folders = LauncherPrefs.folders.mapValues { (_, value) ->
+                val name = value.substringBefore('|')
+                val members = value.substringAfter('|', "").split(',').filter { it.isNotBlank() && it != pkg }
+                name + "|" + members.joinToString(",")
+            }.filterValues { it.substringAfter('|', "").isNotEmpty() }
             LauncherPrefs.save(ctx)
         }
         "folder" -> FolderUi.pick = app
