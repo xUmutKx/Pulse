@@ -305,6 +305,29 @@ fun ReportSettings() {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
+    // one tap: the crash log and the device details in one text, saved in Download/Pulse/Crash and offered to share
+    PCard {
+        var made by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth().clickable {
+            if (!made) { made = true; scope.launch {
+                val txt = withContext(Dispatchers.IO) {
+                    val pending = runCatching { java.io.File(ctx.filesDir, "crash-pending.txt").takeIf { it.isFile }?.readText() }.getOrNull()
+                    val full = (if (pending != null) "== Last crash\n$pending\n\n" else "") + Hw.report(ctx)
+                    runCatching { val f = java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "Pulse/Crash/crash-report.txt"); f.parentFile?.mkdirs(); f.writeText(full) }
+                    full
+                }
+                ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, txt).putExtra(Intent.EXTRA_SUBJECT, "Pulse crash report"), "Crash report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                made = false
+            } }
+        }, verticalAlignment = Alignment.CenterVertically) {
+            PIcon("bug", T.text, 22.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(tr("Create crash report", "Çökme raporu oluştur"), color = T.text, fontSize = 15.sp)
+                Text(tr("Last crash and device details in one text", "Son çökme ve cihaz bilgisi tek metinde"), color = T.sub, fontSize = 12.sp)
+            }
+            PIcon("share", T.sub, 20.dp)
+        }
+    }
     // the crashes and freezes of Pulse, read again when opened (a freeze a moment ago is there)
     PCard(Modifier.fillMaxWidth().clickable { openTool("crashlog") }) {
         Row(verticalAlignment = Alignment.CenterVertically) {

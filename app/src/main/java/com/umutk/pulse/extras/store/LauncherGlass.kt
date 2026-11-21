@@ -34,7 +34,7 @@ object LauncherGlass {
         "FilesLauncher", "CalendarLauncher", "ContactsLauncher", "ArtCraftLauncher", "PhotosLauncher", "IslandLauncher", "MusicLauncher", "VideoLauncher",
         "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "PaintLauncher", "BrowserLauncher", "OfficeLauncher", "CalculatorLauncher", "ClockLauncher",
         "EbookLauncher", "TempMailLauncher", "KeyboardLauncher", "AiLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher",
-        "NotifHistLauncher", "ExtraStoreLauncher", "LocalSendLauncher", "PaletteLauncher", "GameHubLauncher", "BlackOutLauncher",
+        "CodeLauncher", "HealthLauncher", "NotifHistLauncher", "ExtraStoreLauncher", "LocalSendLauncher", "PaletteLauncher", "GameHubLauncher", "BlackOutLauncher",
     )
 
     /** Pulse's other icons (the Windows looks): they are off while a default or glass icon is applied. */
