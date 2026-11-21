@@ -2698,7 +2698,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "email" -> insertEmailDomain()
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
             // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
-            "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
+            "tab" -> if (st.alt > 0) { if (com.umutk.pulse.features.CoverAccessibilityService.instance?.altTabFromKeyboard() != true) com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
             else -> if (d.code != 0) sendKey(d.code)
         }
     }

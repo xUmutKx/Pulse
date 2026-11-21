@@ -184,16 +184,15 @@ class LauncherActivity : ComponentActivity() {
         val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
         if (modern) {
             val metaKey = e.keyCode == android.view.KeyEvent.KEYCODE_META_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_META_RIGHT
+            // Alt let go while the Alt+Tab switcher is open: the picked window comes up
+            if (e.action == android.view.KeyEvent.ACTION_UP && (e.keyCode == android.view.KeyEvent.KEYCODE_ALT_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_ALT_RIGHT) && LauncherSession.altTabIdx >= 0) DesktopWindows.altTabCommit()
             // the shortcuts that are not on the Windows key: Alt+F4 closes the front window, Alt+Tab goes to the next one, Ctrl+Esc is Start, Esc closes an open menu
             if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey) {
                 val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
-                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen || LauncherSession.taskViewOpen
+                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen || LauncherSession.taskViewOpen || LauncherSession.altTabIdx >= 0
                 when {
                     e.keyCode == android.view.KeyEvent.KEYCODE_F4 && e.isAltPressed && front != null -> { DesktopWindows.close(front); return true }
-                    e.keyCode == android.view.KeyEvent.KEYCODE_TAB && e.isAltPressed && e.repeatCount == 0 -> {
-                        val vis = DesktopWindows.list.filter { !it.min }.sortedBy { it.z }
-                        if (vis.size > 1) { DesktopWindows.front(vis.first()); return true }
-                    }
+                    e.keyCode == android.view.KeyEvent.KEYCODE_TAB && e.isAltPressed && LauncherPrefs.blockAltTab -> { if (e.repeatCount == 0) DesktopWindows.altTabStep(); return true }
                     e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && e.isCtrlPressed && e.repeatCount == 0 -> { LauncherSession.startOpen = !LauncherSession.startOpen; return true }
                     e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && menuOpen -> {
                         LauncherSession.startOpen = false; LauncherSession.winXOpen = false; LauncherSession.runOpen = false; LauncherSession.w11SearchOpen = false; LauncherSession.quickOpen = false; LauncherSession.taskViewOpen = false; return true
@@ -242,6 +241,8 @@ class LauncherActivity : ComponentActivity() {
         val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
         if (!modern) return
         if (code == -1) { LauncherSession.startOpen = !LauncherSession.startOpen; return }
+        if (code == -2) { DesktopWindows.altTabStep(); return }
+        if (code == -3) { DesktopWindows.altTabCommit(); return }
         winCombo(code, LauncherPrefs.look, DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z })
     }
     override fun onStart() { enter(); super.onStart() }

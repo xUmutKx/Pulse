@@ -327,8 +327,29 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT).putExtra("winkey", code))
         }
     }
+    // Alt+Tab: Android's own app switch is answered here instead while Pulse's launcher is the window in front, so the launcher's switcher (its own windows) opens
+    @Volatile private var launcherFront = false
+    private val altCommit = Runnable { sendWin(-3) }
+    /** Alt+Tab from an on-screen or floating keyboard (no Alt is held down): each press goes one window on, and the pick is taken 0.9 s after the last press. False when the launcher is not the window in front. */
+    fun altTabFromKeyboard(): Boolean {
+        if (!(launcherFront && winKeyMine() && com.umutk.pulse.extras.launcher.LauncherPrefs.blockAltTab)) return false
+        sendWin(-2)
+        tick.removeCallbacks(altCommit); tick.postDelayed(altCommit, 900L)
+        return true
+    }
+    private var altDown = false
+    private var altTabActive = false
     override fun onKeyEvent(e: android.view.KeyEvent): Boolean {
         val k = e.keyCode
+        if (k == android.view.KeyEvent.KEYCODE_ALT_LEFT || k == android.view.KeyEvent.KEYCODE_ALT_RIGHT) {
+            if (e.action == android.view.KeyEvent.ACTION_DOWN) altDown = true
+            else { altDown = false; if (altTabActive) { altTabActive = false; sendWin(-3) } }
+            return false
+        }
+        if (k == android.view.KeyEvent.KEYCODE_TAB && altDown && launcherFront && winKeyMine() && com.umutk.pulse.extras.launcher.LauncherPrefs.blockAltTab) {
+            if (e.action == android.view.KeyEvent.ACTION_DOWN) { altTabActive = true; if (e.repeatCount == 0) sendWin(-2) }
+            return true
+        }
         val meta = k == android.view.KeyEvent.KEYCODE_META_LEFT || k == android.view.KeyEvent.KEYCODE_META_RIGHT
         if (!meta && !(metaDown && (e.action == android.view.KeyEvent.ACTION_DOWN || k == comboKey))) return false
         if (!winKeyMine()) return false
@@ -359,6 +380,9 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         // the camera opened (the swipe from the lock screen, or the camera app): the cover and the lock screen lyrics close, they must not stay over the viewfinder
         if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val p = event.packageName?.toString().orEmpty(); val k = event.className?.toString().orEmpty()
+            // whether Pulse's launcher is the window in front (the keyboard and the system's own panels do not count as another app)
+            if (p == packageName && k.contains("LauncherActivity")) launcherFront = true
+            else if (p != packageName && !p.contains("systemui", true) && !p.contains("inputmethod", true) && !p.contains("keyboard", true)) launcherFront = false
             // the lock screen itself has a camera shortcut (a window or view with "camera" in its name, drawn the moment the screen wakes): that is not the camera opening
             val sys = p.contains("systemui", true) || p.contains("keyguard", true) || p.contains("lockscreen", true) || p.contains("launcher", true)
             if (p != packageName && !sys && (p.contains("camera", true) || k.contains("camera", true))) {

@@ -127,6 +127,19 @@ object DesktopWindows {
         w.x = r[0]; w.y = r[1]; w.wDp = r[2]; w.hDp = r[3]; w.restore = null; w.max = false
         return true
     }
+    /** One more press of Tab while Alt is held: opens the switcher on the next window, then goes on round. */
+    fun altTabStep() {
+        val n = list.size
+        if (n < 2) return
+        LauncherSession.altTabIdx = if (LauncherSession.altTabIdx < 0) 1 else (LauncherSession.altTabIdx + 1) % n
+    }
+    /** Alt let go: the window picked in the switcher comes to the front. */
+    fun altTabCommit() {
+        val i = LauncherSession.altTabIdx
+        LauncherSession.altTabIdx = -1
+        val w = list.toList().sortedByDescending { it.z }.getOrNull(i) ?: return
+        w.min = false; front(w)
+    }
     fun front(w: DWin) { if (w.z != top) w.z = ++top }
     fun minimize(w: DWin) { w.min = true }
     fun close(w: DWin) { list.remove(w) }
@@ -262,14 +275,15 @@ private fun darkGlassEffect(): androidx.compose.ui.graphics.RenderEffect {
 /** Win+Tab: every open window as a card over the desktop; a tap brings that window to the front, the cross closes it, a tap outside leaves. */
 @Composable
 private fun TaskView() {
-    if (!LauncherSession.taskViewOpen) return
+    val alt = LauncherSession.altTabIdx
+    if (!LauncherSession.taskViewOpen && alt < 0) return
     val wins = DesktopWindows.list.toList().sortedByDescending { it.z }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .6f)).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { LauncherSession.taskViewOpen = false },
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .6f)).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { LauncherSession.taskViewOpen = false; LauncherSession.altTabIdx = -1 },
         contentAlignment = Alignment.Center) {
         if (wins.isEmpty()) Text(tr("No open windows", "Açık pencere yok"), color = Color.White, fontSize = 16.sp)
         else androidx.compose.foundation.layout.FlowRow(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            wins.forEach { w ->
-                Column(Modifier.width(150.dp).height(100.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2B2B2B)).border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(8.dp))
+            wins.forEachIndexed { wi, w ->
+                Column(Modifier.width(150.dp).height(100.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2B2B2B)).border(if (wi == alt) 3.dp else 1.dp, if (wi == alt) Look.accent else Color.White.copy(alpha = .25f), RoundedCornerShape(8.dp))
                     .clickable { w.min = false; DesktopWindows.front(w); LauncherSession.taskViewOpen = false }.padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(w.title, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

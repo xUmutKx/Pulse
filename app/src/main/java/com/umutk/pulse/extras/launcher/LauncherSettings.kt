@@ -215,6 +215,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             SwitchLine("folder", tr("Smart folders (games, media, communication ...)", "Akıllı klasörler (oyunlar, medya, iletişim ...)"), LauncherPrefs.smartFolders) { LauncherPrefs.smartFolders = it; save() }
             SwitchLine("widgets", tr("A page for each widget", "Her widget için bir sayfa"), LauncherPrefs.widgetPages) { LauncherPrefs.widgetPages = it; save() }
             SwitchLine("rotate", tr("Pages go round (infinite scroll)", "Sayfalar baştan dönsün (sonsuz kaydırma)"), LauncherPrefs.loopScroll) { LauncherPrefs.loopScroll = it; save() }
+            SwitchLine("keyboard", tr("Alt+Tab switches the launcher windows (blocks the Android app switch)", "Alt+Tab launcher pencerelerini değiştirsin (Android uygulama geçişini engeller)"), LauncherPrefs.blockAltTab) { LauncherPrefs.blockAltTab = it; save() }
             SwitchLine("image", tr("Wallpaper slides with the pages", "Duvar kağıdı sayfalarla kaysın"), LauncherPrefs.wallScroll) { LauncherPrefs.wallScroll = it; save() }
             SwitchLine("rename", tr("Names may take two lines", "Adlar iki satır olabilsin"), LauncherPrefs.twoLineLabels) { LauncherPrefs.twoLineLabels = it; save() }
             SliderRow("${tr("Turned phone: columns", "Yatay ekran: sütun")}: ${if (LauncherPrefs.landColumns == 0) tr("same", "aynı") else LauncherPrefs.landColumns.toString()}", LauncherPrefs.landColumns.toFloat(), 0f..12f) {
