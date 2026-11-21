@@ -29,6 +29,7 @@ import com.umutk.pulse.Shell
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.lyrics.LiveLyrics
 import com.umutk.pulse.tr
+import kotlinx.coroutines.launch
 
 /** True when Pulse can run system commands (Shizuku granted, or root). */
 private fun priv(): Boolean = Shell.shizukuOk() || Shell.root == true
@@ -139,6 +140,22 @@ internal fun Win11Controls(ctx: Context, action: String) {
             Pick(tr("Screen off after", "Ekran kapanma"), listOf("15 s" to 15000, "30 s" to 30000, "1 min" to 60000, "2 min" to 120000, "5 min" to 300000, "10 min" to 600000),
                 { sint(ctx, Settings.System.SCREEN_OFF_TIMEOUT, 60000) }) { putSys(ctx, Settings.System.SCREEN_OFF_TIMEOUT, it) }
             NeedWrite(ctx); NeedPriv(ctx)
+        }
+        a == "android.settings.SYSTEM_UPDATE_SETTINGS" -> Section("Windows Update") {
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            var state by remember { mutableStateOf("") }
+            var rel by remember { mutableStateOf<com.umutk.pulse.Updates.Release?>(null) }
+            Row(Modifier.padding(vertical = 2.dp)) { Text("Pulse", color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f)); Text(com.umutk.pulse.Updates.installed(ctx), color = T.sub, fontSize = 13.sp) }
+            Text(when { state == "busy" -> tr("Checking for updates…", "Güncellemeler denetleniyor…"); state == "latest" -> tr("You're up to date", "Güncelsiniz"); state == "fail" -> tr("Could not check", "Denetlenemedi"); rel != null -> tr("Update available: ", "Güncelleme var: ") + rel!!.version; else -> "" }, color = T.sub, fontSize = 12.sp)
+            PButton(tr("Check for updates", "Güncellemeleri denetle")) {
+                state = "busy"
+                scope.launch { val r = runCatching { com.umutk.pulse.Updates.fetch() }.getOrNull()
+                    if (r == null) state = "fail" else if (com.umutk.pulse.Updates.newer(r.version, com.umutk.pulse.Updates.installed(ctx))) { rel = r; state = "new" } else state = "latest" }
+            }
+            rel?.let { r -> PButton(tr("Download", "İndir")) {
+                if (r.url.contains(".apk", ignoreCase = true)) com.umutk.pulse.features.Downloads.add(ctx, r.url, "Pulse-${r.version}", into = com.umutk.pulse.PulseDirs.updates())
+                else runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            } }
         }
         a == Settings.ACTION_DATE_SETTINGS -> Section(tr("Date & time", "Tarih ve saat")) {
             Tog(tr("Set time automatically", "Saati otomatik ayarla"), gint(ctx, Settings.Global.AUTO_TIME) == 1, priv()) { sh("settings put global auto_time " + if (it) "1" else "0") }

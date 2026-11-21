@@ -138,6 +138,9 @@ object LauncherSession {
     /** The Windows lock screen (Win+L, Lock), the clipboard panel (Win+V), and the Shutting down / Restarting screen ("off" or "restart"; empty = none). */
     var lockOpen by mutableStateOf(false)
     var clipOpen by mutableStateOf(false)
+    /** The keyboard shortcut guide (Win+/ or Win+F1) and a Windows style error box (the text of what could not open; empty = none). */
+    var keysOpen by mutableStateOf(false)
+    var errorText by mutableStateOf("")
     var powerScreen by mutableStateOf("")
     /** Alt+Tab: the card picked in the switcher while Alt is held; -1 = the switcher is closed. */
     var altTabIdx by mutableStateOf(-1)

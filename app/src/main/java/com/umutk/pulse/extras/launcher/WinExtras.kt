@@ -140,3 +140,50 @@ internal fun WinClipPanel() {
         }
     }
 }
+
+/** Win+/ or Win+F1: the keyboard shortcuts of the launcher, in a small panel. */
+@Composable
+internal fun WinKeysGuide() {
+    val shape = RoundedCornerShape(8.dp)
+    val rows = listOf("Win" to tr("Start menu", "Başlat menüsü"), "Win + X" to tr("Quick menu", "Hızlı menü"), "Win + R" to tr("Run", "Çalıştır"), "Win + E" to tr("File Explorer", "Dosya Gezgini"),
+        "Win + I" to tr("Settings", "Ayarlar"), "Win + S / Q" to tr("Search", "Ara"), "Win + D" to tr("Show the desktop", "Masaüstünü göster"), "Win + M" to tr("Minimise all", "Tümünü küçült"),
+        "Win + L" to tr("Lock", "Kilitle"), "Win + A" to tr("Quick settings", "Hızlı ayarlar"), "Win + V" to tr("Clipboard history", "Pano geçmişi"), "Win + Tab" to tr("Task view", "Görev görünümü"),
+        "Win + ← / →" to tr("Snap the window", "Pencereyi yapıştır"), "Win + ↑ / ↓" to tr("Maximise / restore / minimise", "Büyüt / geri al / küçült"), "Win + Shift + S" to tr("Screenshot", "Ekran görüntüsü"),
+        "Alt + Tab" to tr("Switch window", "Pencere değiştir"), "Alt + F4" to tr("Close the window", "Pencereyi kapat"), "Ctrl + Esc" to tr("Start menu", "Başlat menüsü"), "Esc" to tr("Close a menu", "Menüyü kapat"))
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { LauncherSession.keysOpen = false }, contentAlignment = Alignment.Center) {
+        Column(Modifier.width(360.dp).heightIn(max = 520.dp).clip(shape).background(Color(0xF2202020)).border(1.dp, Color.White.copy(alpha = .15f), shape)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }.padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(tr("Keyboard shortcuts", "Klavye kısayolları"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            rows.forEach { (k, v) ->
+                androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth()) {
+                    Text(k, color = Color(0xFF60CDFF), fontSize = 13.sp, modifier = Modifier.width(130.dp))
+                    Text(v, color = Color.White, fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+/** A Windows style error box: used when something on the desktop cannot be opened. */
+@Composable
+internal fun WinErrorDialog(lookId: String, what: String) {
+    val classic = lookId == "win95" || lookId == "xp" || lookId == "win7"
+    val title = when (lookId) { "win95" -> Color(0xFF000080); "xp" -> Color(0xFF0A246A); "win7" -> Color(0xFF4F7CB5); else -> Color(0xFF202020) }
+    val body = if (classic) (if (lookId == "win95") Color(0xFFC0C0C0) else Color(0xFFECE9D8)) else Color(0xFF2B2B2B)
+    val ink = if (classic) Color.Black else Color.White
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .3f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }, contentAlignment = Alignment.Center) {
+        Column(Modifier.width(300.dp).clip(RoundedCornerShape(if (classic) 3.dp else 8.dp)).background(body).border(1.dp, if (classic) Color(0xFF404040) else Color.White.copy(alpha = .2f), RoundedCornerShape(if (classic) 3.dp else 8.dp))) {
+            Text(what.ifBlank { tr("Error", "Hata") }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.fillMaxWidth().background(title).padding(horizontal = 10.dp, vertical = 6.dp))
+            androidx.compose.foundation.layout.Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(32.dp).height(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFD13438)), contentAlignment = Alignment.Center) { Text("✕", color = Color.White, fontSize = 18.sp) }
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text(what, color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tr("This app cannot be opened. It may have been removed or turned off.", "Bu uygulama açılamıyor. Kaldırılmış ya da kapatılmış olabilir."), color = ink.copy(alpha = .8f), fontSize = 13.sp)
+                }
+            }
+            Box(Modifier.align(Alignment.End).padding(end = 14.dp, bottom = 12.dp).clip(RoundedCornerShape(if (classic) 2.dp else 4.dp)).background(if (classic) Color(0xFFE0E0E0) else Color(0xFF0067C0))
+                .clickable { LauncherSession.errorText = "" }.padding(horizontal = 28.dp, vertical = 6.dp)) { Text(tr("OK", "Tamam"), color = if (classic) Color.Black else Color.White, fontSize = 13.sp) }
+        }
+    }
+}
