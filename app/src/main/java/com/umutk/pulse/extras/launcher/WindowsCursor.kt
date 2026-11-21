@@ -39,7 +39,8 @@ fun WindowsCursor(enabled: Boolean, content: @Composable () -> Unit) {
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             // a real mouse (or a pen) has the system's own pointer: the drawn arrow is only for a finger, so two arrows never show
-            if (d.type != androidx.compose.ui.input.pointer.PointerType.Touch) {
+            // (a real mouse that is connected, or a touchpad that sends touches, also has the system's pointer: the arrow is not drawn then either)
+            if (d.type != androidx.compose.ui.input.pointer.PointerType.Touch || mouseConnected()) {
                 while (true) { val ev = awaitPointerEvent(PointerEventPass.Initial); if (ev.changes.none { it.pressed }) break }
                 return@awaitEachGesture
             }
@@ -69,3 +70,11 @@ fun WindowsCursor(enabled: Boolean, content: @Composable () -> Unit) {
         }
     }
 }
+
+
+/** True while a mouse (not a virtual one) is connected: the system then draws its own pointer, and a second arrow would be drawn beside it. */
+private fun mouseConnected(): Boolean = runCatching {
+    android.view.InputDevice.getDeviceIds().any { id ->
+        android.view.InputDevice.getDevice(id)?.let { dev -> !dev.isVirtual && (dev.sources and android.view.InputDevice.SOURCE_MOUSE) == android.view.InputDevice.SOURCE_MOUSE } == true
+    }
+}.getOrDefault(false)
