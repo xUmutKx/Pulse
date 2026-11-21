@@ -220,13 +220,9 @@ private fun AiModelsPage() {
     var searching by remember { mutableStateOf(false) }
     var scanDir by remember { mutableStateOf(Store.scanDir(c)) }
     val onPhone by produceState(emptyList<AiModel>(), tick / 60, scanDir) { value = withContext(Dispatchers.IO) { runCatching { phoneModels(c) }.getOrDefault(emptyList()) } }
-    val pickDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u: Uri? ->
-        if (u != null) {
-            // content://…/tree/primary:Download/Models -> /storage/emulated/0/Download/Models
-            val id = runCatching { android.provider.DocumentsContract.getTreeDocumentId(u) }.getOrNull()
-            val path = id?.let { if (it.startsWith("primary:")) Environment.getExternalStorageDirectory().path + "/" + it.removePrefix("primary:") else "/storage/" + it.replace(":", "/") }
-            if (path != null) { Store.setScanDir(c, path); scanDir = path; tick++ }
-        }
+    // Pulse's own folder picker (the system one opened in Music); the path comes back as text
+    val pickDir = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickFolder()) { path: String? ->
+        if (path != null) { Store.setScanDir(c, path); scanDir = path; tick++ }
     }
     val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u: Uri? ->
         if (u != null) { runCatching { c.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }; Store.setCustomUri(c, if (u.toString().endsWith(".bin")) "speech" else "chat", u); tick++ }
@@ -238,7 +234,7 @@ private fun AiModelsPage() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("RAM ${gb(Device.ramBytes(c))} · ", color = AiSub, fontSize = 13.sp)
                 Text(scanDir?.removePrefix(Environment.getExternalStorageDirectory().path + "/") ?: tr("Whole phone (Download first)", "Tüm telefon (önce Download)"), color = AiAccent, fontSize = 13.sp,
-                    modifier = Modifier.clickable { pickDir.launch(null) }.padding(vertical = 8.dp))
+                    modifier = Modifier.clickable { pickDir.launch(Unit) }.padding(vertical = 8.dp))
                 if (scanDir != null) Text("  ✕", color = AiSub, fontSize = 13.sp, modifier = Modifier.clickable { Store.setScanDir(c, null); scanDir = null; tick++ }.padding(8.dp))
             }
             if (!Environment.isExternalStorageManager()) TextButton({ runCatching { c.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${c.packageName}"))) } }) {
