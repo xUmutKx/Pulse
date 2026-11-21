@@ -42,8 +42,9 @@ internal fun frameSkin(look: String): WinSkin = when (look) {
     "win7" -> W7_WINDOW
     "xp" -> XP_WINDOW
     "win95" -> W95_WINDOW
-    "win10", "win10black" -> WinSkin("10", SolidColor(Color.White), Color(0xFF1A1A1A), Color(0xFF0078D7), 1.dp, 0.dp,
-        Color.White, Color(0xFFF2F2F2), Color.White, Color(0xFF1A1A1A), Color(0xFF666666), Color(0xFFCCE4F7), Color(0xFF1A1A1A), Color(0xFF0078D7))
+    // Windows 10 windows are black (dark mode): a white title bar and a white body showed through the dark Pulse pages
+    "win10", "win10black" -> WinSkin("10", SolidColor(Color(0xFF111111)), Color.White, Color(0xFF0078D7), 1.dp, 0.dp,
+        Color.Black, Color(0xFF111111), Color(0xFF1F1F1F), Color.White, Color(0xFFAAAAAA), Color(0xFF26364A), Color.White, Color(0xFF0078D7))
     // dark Mica: near-black grey, so the blurred picture behind never turns the window white
     "win11" -> WinSkin("11", SolidColor(Color(0xFF202020)), Color.White, Color(0xFF202020), 1.dp, 10.dp,
         Color(0xFF1C1C1C), Color(0xFF202020), Color(0xFF2B2B2B), Color.White, Color(0xFFB0B0B0), Color(0xFF3A3A3A), Color.White, Color(0xFF505050))
