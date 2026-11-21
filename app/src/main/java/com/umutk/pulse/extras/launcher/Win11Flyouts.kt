@@ -383,13 +383,13 @@ private fun WinXMenu(taskbar: Dp) {
     val order = LauncherPrefs.winX.split(',').filter { it.isNotBlank() }.ifEmpty { WINX_KEYS.map { it.first } }
     val items = order.mapNotNull { all[it] }
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { close() }) {
-        val place = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 8.dp, bottom = taskbar + 6.dp).widthIn(max = 280.dp).fillMaxWidth(.7f)
+        val place = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 8.dp, bottom = taskbar + 6.dp).width(268.dp)
         val body: @Composable () -> Unit = {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
                 items.forEach { (icon, name, act) ->
                     Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Glyph(icon, Color.White, 18.dp)
-                        Text(name, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 14.dp))
+                        Text(name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 14.dp))
                     }
                 }
             }
