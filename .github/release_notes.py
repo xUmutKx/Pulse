@@ -24,7 +24,7 @@ if os.path.isdir('.github/notes'):
         # only this version's own notes: older versions are not repeated in a release
         if v == cur:
             text = open(os.path.join('.github/notes', name), encoding='utf-8').read().strip()
-            entries.append(f'- {name[:-3]} {text}')
+            entries.append(text)
 print(f'## Pulse {cur_s}\n')
 print('\n'.join(entries) if entries else 'Fixes and small changes.')
-print(f'\n**Which file:** `Pulse-{cur_s}.apk` is the full app, with Pulse AI (the chat and the speech to text, which run on the phone). `Pulse-{cur_s}-lite.apk` is the same app without Pulse AI: smaller. Both work on Android 5 and newer (Pulse AI itself needs Android 9 and a 64-bit phone). Neither has been tested on every phone, so please report bugs.')
+print(f'\n### Which file\n- `Pulse-{cur_s}.apk`: the full app, with Pulse AI (chat and speech to text on the phone). Most phones.\n- `Pulse-{cur_s}-lite.apk`: the same app without Pulse AI, smaller.\n- `Pulse-{cur_s}-32bit.apk`: for older 32-bit phones.\n- `Pulse-{cur_s}-play.aab`: the Google Play bundle (not for installing by hand).\n\nAndroid 5 and newer (Pulse AI needs Android 9 and a 64-bit phone). Updating keeps your settings. Not every phone has been tested: a crash report can be made in Settings > Report > Create crash report.\n\n[README and videos](https://github.com/xUmutKx/Pulse#readme)')
