@@ -215,6 +215,11 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 if (it) (ctx as? android.app.Activity)?.let { a -> androidx.core.app.ActivityCompat.requestPermissions(a, arrayOf(android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.CALL_PHONE), 7301) }
             }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock gadget", "Masaüstü saat gadget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
+            // the Material looks can take the phone's own colours (Material You)
+            if (cur.id in setOf("material", "amoled", "oneui", "coloros") && DeviceAccent.available) {
+                var dev by remember { mutableStateOf(DeviceAccent.on(ctx)) }
+                SwitchLine("palette", tr("Use the device's colours (Material You)", "Cihazın renklerini kullan (Material You)"), dev) { dev = it; DeviceAccent.set(ctx, it) }
+            }
             if (cur.id == "win11") SwitchLine("palette", tr("Start button in the accent colour", "Başlat düğmesi vurgu renginde"), LauncherPrefs.startLogoAccent) { LauncherPrefs.startLogoAccent = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
@@ -224,10 +229,10 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             SwitchLine("rotate", tr("Lock to portrait", "Dikey ekranda kilitle"), LauncherPrefs.lockPortrait) { LauncherPrefs.lockPortrait = it; save() }
             SwitchLine("fullscreen", tr("Hide status bar", "Durum çubuğunu gizle"), LauncherPrefs.fullScreen) { LauncherPrefs.fullScreen = it; save() }
             SwitchLine("pin", tr("Windows Phone: dock on the left edge", "Windows Phone: sol kenarda dock"), LauncherPrefs.wpSideDock) { LauncherPrefs.wpSideDock = it; save() }
-            SliderRow("${tr("Columns", "Sütun")}: ${LauncherPrefs.columns}", LauncherPrefs.columns.toFloat(), 2f..8f) {
+            SliderRow("${tr("Columns", "Sütun")}: ${LauncherPrefs.columns}", LauncherPrefs.columns.toFloat(), 2f..12f) {
                 LauncherPrefs.columns = it.roundToInt(); save()
             }
-            SliderRow("${tr("Rows", "Satır")}: ${LauncherPrefs.rows}", LauncherPrefs.rows.toFloat(), 3f..8f) {
+            SliderRow("${tr("Rows", "Satır")}: ${LauncherPrefs.rows}", LauncherPrefs.rows.toFloat(), 3f..12f) {
                 LauncherPrefs.rows = it.roundToInt(); save()
             }
             SliderRow("${tr("Icon size", "Simge boyutu")}: ${LauncherPrefs.iconDp}", LauncherPrefs.iconDp.toFloat(), 24f..64f) {

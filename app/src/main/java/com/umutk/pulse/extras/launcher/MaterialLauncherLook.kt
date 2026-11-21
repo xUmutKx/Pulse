@@ -65,6 +65,14 @@ class MaterialLauncherLook(
     /** surfaceContainerHigh: the dock and the search field. */
     private fun high(): Color = if (black) Color(0xFF2B2B2B) else lerp(T.panel, T.text, .06f)
 
+    /** The accent: the phone's own colour when that is switched on (Look > Use the device's colours), else the look's accent. */
+    @Composable
+    private fun acc(): Color {
+        val c = androidx.compose.ui.platform.LocalContext.current
+        val dark = black || T.dark
+        return remember(c, DeviceAccent.rev, dark) { DeviceAccent.color(c, dark) } ?: Look.accent
+    }
+
     @Composable
     override fun Background(modifier: Modifier, content: @Composable () -> Unit) {
         // a picture of the person's own (Look > Custom wallpaper) is drawn; with none, the phone's own wallpaper shows through (the window is see-through) instead of a flat black
@@ -93,9 +101,9 @@ class MaterialLauncherLook(
         // a floating dock: a rounded tonal surface over the page, inset from the rounded screen corners
         Row(modifier.padding(horizontal = maxOf(12.dp, edge), vertical = 12.dp).shadow(if (black) 0.dp else 4.dp, shape).clip(shape)
             .background(high()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(Look.accent.copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
+            Box(Modifier.size(48.dp).clip(CircleShape).background(acc().copy(alpha = .16f)).clickable { LauncherSession.startOpen = true },
                 contentAlignment = Alignment.Center) {
-                PIcon("apps", Look.accent, 24.dp)
+                PIcon("apps", acc(), 24.dp)
             }
             state.dock.forEach { app ->
                 Box(Modifier.weight(1f).appTap(state, app) { state.open(app) }, contentAlignment = Alignment.Center) {
@@ -124,7 +132,7 @@ class MaterialLauncherLook(
                     onValueChange = { query = it },
                     singleLine = true,
                     textStyle = TextStyle(color = fg, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Look.accent),
+                    cursorBrush = SolidColor(acc()),
                     modifier = Modifier.weight(1f),
                     decorationBox = { inner ->
                         if (query.isEmpty()) Text(tr("Search apps", "Uygulama ara"), color = sub(), fontSize = 16.sp)
@@ -145,7 +153,7 @@ class MaterialLauncherLook(
                 Row(Modifier.fillMaxSize()) {
                     LazyColumn(Modifier.weight(1f).fillMaxHeight(), state = lst) {
                         rows.forEach { (l, rs) ->
-                            item(key = "h$l") { Text(l, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp)) }
+                            item(key = "h$l") { Text(l, color = acc(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 2.dp)) }
                             items(rs.size, key = { "r$l$it" }) { i ->
                                 Row(Modifier.fillMaxWidth()) {
                                     rs[i].forEach { app -> Box(Modifier.weight(1f).appTap(state, app) { state.open(app); onClose() }) { IconCell(app, state.iconDp, Modifier.fillMaxWidth()) } }

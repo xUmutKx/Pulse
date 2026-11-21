@@ -428,7 +428,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val vertical = LauncherPrefs.vertical
     // turned sideways, the same few columns would sit far apart: the columns follow the width (about one per 100 dp)
     val screenCfg = androidx.compose.ui.platform.LocalConfiguration.current
-    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) maxOf(LauncherPrefs.columns.coerceIn(2, 8), (screenCfg.screenWidthDp / 100).coerceIn(4, 10)) else LauncherPrefs.columns.coerceIn(2, 8)
+    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) maxOf(LauncherPrefs.columns.coerceIn(2, 12), (screenCfg.screenWidthDp / 100).coerceIn(4, 10)) else LauncherPrefs.columns.coerceIn(2, 12)
     // a tablet's screen is far bigger than a phone's: the same icon size left the icons tiny between wide gaps, so they are drawn a third bigger there
     val tabletScale = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 1.35f else 1f
     val iconDp = (LauncherPrefs.iconDp.coerceIn(24, 64) * tabletScale).toInt()
