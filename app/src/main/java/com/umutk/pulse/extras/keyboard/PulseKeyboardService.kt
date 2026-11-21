@@ -511,8 +511,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var shotPinned = false
     private var shotAt = 0L
     private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-        // looked at three times: a screenshot is listed only when its file is finished, which takes a moment (longer for a long or an edited one)
-        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(6000); checkShot(); checkVideo(); checkFile() } }
+        // looked at four times, the first one quick (a downloaded file or a screenshot shows in the bar as soon as it is finished); a file that is still being written is taken by a later look
+        override fun onChange(selfChange: Boolean) { scope.launch { delay(250); checkShot(); checkVideo(); checkFile(); delay(900); checkShot(); checkVideo(); checkFile(); delay(2500); checkShot(); checkVideo(); checkFile(); delay(5000); checkShot(); checkVideo(); checkFile() } }
     }
     /** The pictures already taken in (their numbers in the phone's picture list), so none is taken twice and none is skipped when two come close together. */
     private val shotsTaken = LinkedHashSet<Long>()
