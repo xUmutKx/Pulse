@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "game" to (tr("Game Hub's CD shelf opens at once and no longer hangs on Loading the covers; the launcher's look picker shows the Windows looks first.",
+        "Oyun Merkezi'nin CD rafı hemen açılıyor ve artık kapak yüklemede takılmıyor; launcher'ın görünüm seçicisi önce Windows görünümlerini gösteriyor.")),
     "kbd18" to (tr("Files opened from a notification keeps its look, Control Panel top bar, Shift + key on the keyboard, clipboard text not offered twice, QR reader permission and Toolkit icons, DNS page and taskbar fixes in the launcher, black Windows 10 windows and a black launcher icon.",
         "Bildirimden açılan Dosyalar kendi görünümünü koruyor, Denetim Masası üst çubuğu, klavyede Shift + tuş, panodaki metin iki kez önerilmiyor, QR okuyucu izni ve Toolkit ikonları, launcher'da DNS sayfası ve görev çubuğu düzeltmeleri, siyah Windows 10 pencereleri ve siyah launcher ikonu.")),
     "kbd18" to (tr("Launcher: Windows 11 is the first look, real controls in its Settings (Wi-Fi, Bluetooth, display, sound and more, no hand-off to the phone), lock screen, power screen, Win+V clipboard, Device Manager, Event Viewer, Task Scheduler, Disk Management, Windows Security, Alt+Tab and Win-key shortcuts, tiny chess, checkers and Connect 4 with a bot or over Bluetooth. Game Hub: a CD shelf look. Device manager for Buds and Watch. Calculator: side-by-side keys in landscape. Files: icon bar for picked files. Crash report in Settings.",

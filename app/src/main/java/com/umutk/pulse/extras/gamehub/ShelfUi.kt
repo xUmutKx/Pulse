@@ -576,24 +576,37 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     androidx.compose.runtime.LaunchedEffect(list.size) { if (list.any { !coverFile(ctx, it.pkg).isFile }) CoverJob.start(ctx, list) }
     // each game's picture, small: its cover, else its wide picture, else its icon; read off the main thread, six at a time. The rack shows after the first 18 are read (the others stand as
     // plain coloured covers for the moment) and is made again once when all of them are in, so there is no long wait on "Loading"
-    val loaded by androidx.compose.runtime.produceState<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList(), list.map { it.pkg }, ver) {
-        suspend fun read(games: List<GameRow>): Map<String, androidx.compose.ui.graphics.ImageBitmap> = kotlinx.coroutines.coroutineScope {
+    // the rack shows at once: every case starts with what is already known (a picture read before, kept for the whole session, else a coloured cover
+    // with the name) and the real pictures come in twelve at a time, six read together. A picture that cannot be read is skipped, never the whole
+    // rack (one bad file used to stop the reading and the page stayed on "Loading the covers" for good)
+    val loadedState = remember(list) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList()) }
+    val loaded = loadedState.value
+    androidx.compose.runtime.LaunchedEffect(list.map { it.pkg }, ver) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
+            loadedState.value = shown()
+            val todo = list.filter { it.pkg !in CdArt.cache || it.pkg in CdArt.fallback }
             val gate = kotlinx.coroutines.sync.Semaphore(6)
-            games.map { g ->
-                async {
-                    gate.acquire()
-                    try { g.pkg to (GameArt.cover(ctx, g.pkg, 300) ?: GameArt.banner(ctx, g.pkg, 300) ?: iconCover(g.name, GameArt.icon(ctx, g.pkg, 256))) } finally { gate.release() }
+            todo.chunked(12).forEach { chunk ->
+                kotlinx.coroutines.coroutineScope {
+                    chunk.map { g ->
+                        async {
+                            gate.acquire()
+                            try {
+                                val real = runCatching { GameArt.cover(ctx, g.pkg, 300) ?: GameArt.banner(ctx, g.pkg, 300) }.getOrNull()
+                                if (real != null) { CdArt.cache[g.pkg] = real; CdArt.fallback.remove(g.pkg) }
+                                else runCatching { iconCover(g.name, GameArt.icon(ctx, g.pkg, 256)) }.getOrNull()?.let { CdArt.cache[g.pkg] = it; CdArt.fallback.add(g.pkg) }
+                            } finally { gate.release() }
+                        }
+                    }.forEach { it.await() }
                 }
-            }.map { it.await() }.toMap()
+                loadedState.value = shown()
+            }
         }
-        val first = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { read(list.take(18)) }
-        value = list.map { g -> g to (first[g.pkg] ?: nameCover(g.name)) }
-        val all = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { first + read(list.drop(18)) }
-        value = list.map { g -> g to (all[g.pkg] ?: nameCover(g.name)) }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014)).padding(top = 64.dp)) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
         if (loaded.isEmpty()) Text(tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
         else {
             com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
@@ -609,6 +622,13 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
             }
         }
     }
+}
+
+/** The pictures of the CD shelf kept for the whole session, so the shelf opens at once the next time; [fallback] marks icon covers that a cover found later replaces. */
+internal object CdArt {
+    val cache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    val names = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    val fallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 }
 
 /** A square cover for a game that has no picture: a colour taken from its name and the name across it. */

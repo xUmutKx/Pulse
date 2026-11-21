@@ -1123,7 +1123,8 @@ fun GameHubHub(onBack: () -> Unit) {
                     // Boxshelf's own screen has its own sort and search: Game Hub's bar and search are for the other shelves
                     val webShelf = theme == "shelf" && boxOn
                     // the sort row, like the library bar of a store: name, play time, size
-                    if (!webShelf) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // the CD shelf is a rack of cases of its own: no sort row over it
+                    if (!webShelf && ghLook != "cdrack") Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
                             Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
                         }
