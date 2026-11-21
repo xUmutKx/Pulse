@@ -93,6 +93,20 @@ object DesktopWindows {
         val n = list.size % 6
         list += DWin(++seq, title, route, 14f + n * 22f, 20f + n * 26f, ++top)
     }
+    /**
+     * A small window at the bottom right, over the tray, like the messenger popup of the MSN years: [route] opens as usual, then it is made [wDp] x [hDp] and put by the
+     * tray (above the taskbar). Held on to by its title bar it can still be moved.
+     */
+    fun openCompact(ctx: android.content.Context, route: String, title: String, wDp: Float, hDp: Float) {
+        open(route, title)
+        val w = list.firstOrNull { it.start == route } ?: return
+        val dm = ctx.resources.displayMetrics
+        val sw = dm.widthPixels / dm.density; val sh = dm.heightPixels / dm.density
+        w.max = false; w.min = false
+        w.wDp = wDp.coerceAtMost(sw - 16f); w.hDp = hDp.coerceAtMost(sh - 140f)
+        w.x = (sw - w.wDp - 8f).coerceAtLeast(0f); w.y = (sh - w.hDp - 100f).coerceAtLeast(8f)
+        front(w)
+    }
     fun front(w: DWin) { if (w.z != top) w.z = ++top }
     fun minimize(w: DWin) { w.min = true }
     fun close(w: DWin) { list.remove(w) }

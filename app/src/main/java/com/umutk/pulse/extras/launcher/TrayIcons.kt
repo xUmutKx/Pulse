@@ -35,7 +35,7 @@ internal val TRAY_ITEMS = listOf(
     TrayItem("network", "tray_net", "Network", "Ağ", true, { true }) { settings(it, android.provider.Settings.ACTION_WIFI_SETTINGS) },
     TrayItem("volume", "tray_vol", "Volume", "Ses", true, { true }) { settings(it, "android.settings.panel.action.VOLUME") },
     // MSN stays in the bar once it was opened, as if it ran in the background
-    TrayItem("msn", "tray_msn", "MSN Messenger", "MSN Messenger", true, { LauncherSession.msnTray }) { openDesktopItem(it, "pulse:x:messages", "win7") },
+    TrayItem("msn", "tray_msn", "MSN Messenger", "MSN Messenger", true, { LauncherSession.msnTray }) { if (LauncherPrefs.windowedApps) DesktopWindows.openCompact(it, "messages", "MSN Messenger", 300f, 440f) else openDesktopItem(it, "pulse:x:messages", "win7") },
     // the hidden icons: each is there only while it is true
     TrayItem("music", "l_music", "Windows Media Player (playing)", "Windows Media Player (çalıyor)", false, { runCatching { (it.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager).isMusicActive }.getOrDefault(false) }) { openDesktopItem(it, "pulse:x:music", "win7") },
     TrayItem("downloads", "tray_update", "Downloads (running)", "İndirmeler (sürüyor)", false, { com.umutk.pulse.features.Downloads.tasks.value.any { t -> t.state.value == com.umutk.pulse.features.DlState.RUNNING } }) { c -> runCatching { c.startActivity(com.umutk.pulse.features.Downloads.openPage(c).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
