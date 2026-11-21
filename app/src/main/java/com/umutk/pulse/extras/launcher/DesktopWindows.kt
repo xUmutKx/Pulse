@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -188,8 +190,12 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
             skin.kind == "7" -> skin.body.copy(alpha = .7f)
             else -> skin.body
         }).clipToBounds()) {
-            CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
-                SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+            // Windows 11: the black of an app's page becomes dark glass (the lighter things stay solid), so every app in a window shows the blurred desktop behind it, as the launcher does
+            val glassy = skin.kind == "11" && LauncherPrefs.glassApps && android.os.Build.VERSION.SDK_INT >= 31 && !w.glass
+            Box(Modifier.fillMaxSize().then(if (glassy) Modifier.graphicsLayer { renderEffect = darkGlassEffect(); compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen } else Modifier)) {
+                CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
+                    SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                }
             }
             // the grip at the bottom right resizes the window
             if (!w.max) Box(Modifier.align(Alignment.BottomEnd).size(28.dp).pointerInput(w.id, areaW, areaH) {
@@ -207,4 +213,20 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
         }
     }
     }
+}
+
+
+private var darkGlass: androidx.compose.ui.graphics.RenderEffect? = null
+
+/** A colour filter that sets each pixel's opacity from its brightness: black stays 35 percent opaque (dark glass), anything lighter than a dark grey is solid. Android 12 and later. */
+@androidx.annotation.RequiresApi(31)
+private fun darkGlassEffect(): androidx.compose.ui.graphics.RenderEffect {
+    darkGlass?.let { return it }
+    val m = android.graphics.ColorMatrix(floatArrayOf(
+        1f, 0f, 0f, 0f, 0f,
+        0f, 1f, 0f, 0f, 0f,
+        0f, 0f, 1f, 0f, 0f,
+        1.794f, 3.522f, .684f, 0f, 89f,
+    ))
+    return android.graphics.RenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(m)).asComposeRenderEffect().also { darkGlass = it }
 }

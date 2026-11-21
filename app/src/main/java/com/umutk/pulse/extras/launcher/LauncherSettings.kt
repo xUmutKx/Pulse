@@ -218,6 +218,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 LauncherPrefs.iconAnim = all[(all.indexOf(LauncherPrefs.iconAnim) + 1) % all.size]; save()
             }
             ValueRow("globe", tr("News", "Haberler"), "RSS") { showNews = true }
+            if (cur.id == "win11" && android.os.Build.VERSION.SDK_INT >= 31) SwitchLine("palette", tr("See-through apps in windows", "Pencerelerde şeffaf uygulamalar"), LauncherPrefs.glassApps) { LauncherPrefs.glassApps = it; save() }
             // the Win+X menu of Windows 10 and 11: which items, in which order
             if (cur.id in setOf("win11", "win10", "win10black")) ValueRow("menu", tr("Win+X menu", "Win+X menüsü"), "") { showWinX = true }
             ValueRow("search", tr("Web search", "Web araması"), LauncherPrefs.searchEngine) {

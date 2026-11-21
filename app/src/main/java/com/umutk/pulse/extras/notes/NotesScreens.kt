@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.notes
 
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -153,7 +154,9 @@ fun HomeView(
         }
     }
 
-    if (drawer) NotesSidePanel(
+    // in a window of the desktop the side panel stays inside the window (a Dialog would cover the whole screen)
+    val inWindow = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
+    val sidePanel: @Composable (Boolean) -> Unit = { inl -> NotesSidePanel(
         all = unlocked.size,
         pinned = unlocked.count { it.pinned },
         locked = notes.count { it.locked && it.trashedAt == 0L },
@@ -169,8 +172,11 @@ fun HomeView(
         onLocked = { drawer = false },
         onTrash = { drawer = false; onOpenTrash() },
         onClose = { drawer = false },
-    )
+        inline = inl,
+    ) }
+    if (drawer && !inWindow) sidePanel(false)
     Box(Modifier.fillMaxSize()) {
+    if (drawer && inWindow) sidePanel(true)
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             if (selected.isEmpty()) {
@@ -513,12 +519,12 @@ fun StatsView(notes: List<Note>, onBack: () -> Unit) {
 private fun NotesSidePanel(
     all: Int, pinned: Int, locked: Int, trash: Int, folders: List<String>, counts: Map<String, Int>, current: String?,
     onAll: () -> Unit, onFolder: (String) -> Unit, onPinned: () -> Unit, onLocked: () -> Unit, onTrash: () -> Unit, onClose: () -> Unit,
-    expanded: Set<String> = emptySet(), onToggle: (String) -> Unit = {},
+    expanded: Set<String> = emptySet(), onToggle: (String) -> Unit = {}, inline: Boolean = false,
 ) {
     val fg = T.text
     val sub = T.sub
     val bg = T.panel
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+    val panel: @Composable () -> Unit = {
         Row(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .45f)).clickable(onClick = onClose)) {
             Column(
                 Modifier.fillMaxHeight().width(290.dp).background(bg).padding(vertical = 16.dp).verticalScroll(rememberScrollState()).clickable(enabled = false) {},
@@ -543,6 +549,8 @@ private fun NotesSidePanel(
             }
         }
     }
+    if (inline) Box(Modifier.fillMaxSize().zIndex(1f)) { panel() }
+    else androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) { panel() }
 }
 
 @Composable
