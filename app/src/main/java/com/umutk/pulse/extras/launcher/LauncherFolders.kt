@@ -201,5 +201,7 @@ fun FolderActionRows(app: LaunchApp, onDismiss: () -> Unit) {
     PField(nm, { nm = it }, tr("Folder name", "Klasör adı"), Modifier.fillMaxWidth())
     FRow("check", tr("Save name", "Adı kaydet")) { LauncherFolders.rename(ctx, id, nm); onDismiss() }
     FRow(if (onHome) "eyeOff" else "pin", if (onHome) tr("Remove from home", "Ana ekrandan kaldır") else tr("Add to home", "Ana ekrana ekle")) { LauncherFolders.setHome(ctx, id, !onHome); onDismiss() }
+    val inDock = app.pkg in LauncherPrefs.dock
+    FRow(if (inDock) "eyeOff" else "pin", if (inDock) tr("Remove from dock", "Dock'tan çıkar") else tr("Add to dock", "Dock'a ekle")) { togglePin(ctx, app.pkg, emptyList()); onDismiss() }
     FRow("trash", tr("Delete folder", "Klasörü sil")) { LauncherFolders.delete(ctx, id); onDismiss() }
 }

@@ -448,7 +448,8 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         }
     }
     val autoDock = remember(visible) { visible.take(3).map { it.pkg } }
-    val dock = dockApps(visible, LauncherPrefs.dock)
+    // the dock may hold folders too (a folder's menu: Add to dock)
+    val dock = dockApps(visible + LauncherFolders.fold(emptyList(), apps), LauncherPrefs.dock)
     var query by remember { mutableStateOf("") }
     LaunchedEffect(LauncherSession.startOpen) { if (!LauncherSession.startOpen) query = "" }
     // "keep the screen on at home"
