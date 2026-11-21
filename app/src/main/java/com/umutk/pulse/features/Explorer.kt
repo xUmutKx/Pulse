@@ -1145,9 +1145,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             // Samsung's Secure Folder (the user 150): the file goes to the same folder there, as Samsung's own Files does (root or Shizuku)
                             if (f.path.startsWith("/storage/emulated/0/")) add(Triple("Move to Secure Folder", "lock", {
                                 val rel = f.path.removePrefix("/storage/emulated/0/")
-                                val dest = "/data/media/150/$rel"
                                 note = "Moving to Secure Folder…"
                                 Thread {
+                                    // the Secure Folder is a user of its own; its number is read from the phone (150 on most Samsung phones, but not on all)
+                                    val users = com.umutk.pulse.extras.blackout.Privilege.run("pm list users").text
+                                    val sfId = Regex("UserInfo\\{(\\d+):(?:Secure Folder|Güvenli Klasör|Secure folder)[^}]*\\}", RegexOption.IGNORE_CASE).find(users)?.groupValues?.get(1) ?: "150"
+                                    val dest = "/data/media/$sfId/$rel"
                                     val q = { x: String -> "'" + x.replace("'", "'\\''") + "'" }
                                     val dir = dest.substringBeforeLast('/')
                                     // copied first, checked, and only then is the original removed: a failed step leaves the file where it was (it used to be moved at once and could be lost)
@@ -1193,7 +1196,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                         if (label == "Secure") Box(contentAlignment = Alignment.Center) {
                                             // a padlock with an arrow going in: the file moves into the Secure Folder
                                             ExIcon("lock", st.ink, 18.dp)
-                                            Box(Modifier.align(Alignment.BottomEnd)) { ExIcon("forward", Look.accent, 11.dp) }
+                                            // the arrow stands in a small disc of the ink colour, so it shows on every look (it was in the accent colour, black on AMOLED)
+                                            Box(Modifier.align(Alignment.BottomEnd).size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(st.ink), contentAlignment = Alignment.Center) { ExIcon("forward", st.bg, 9.dp) }
                                         }
                                         else ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, if (label == "Archive") Look.accent else st.ink, 20.dp)
                                     }

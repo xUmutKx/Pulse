@@ -53,6 +53,17 @@ object MyLayout {
         val dock = DOCK.mapNotNull { find(real, it)?.pkg }
         if (dock.size == DOCK.size) LauncherPrefs.dock = dock
         LauncherPrefs.columns = 5; LauncherPrefs.drawerColumns = 5; LauncherPrefs.rows = 6
+        // Pulse's own weather and music widgets go on the home screen (once; one already there stays as it is)
+        runCatching {
+            val host = LauncherWidgetHost.get(ctx)
+            val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
+            listOf("com.umutk.pulse.widgets.WeatherWidget", "com.umutk.pulse.widgets.music.MusicWidgetBig").forEach { cls ->
+                if (LauncherPrefs.widgets.any { it.endsWith("|$cls") }) return@forEach
+                val id = host.allocateAppWidgetId()
+                if (mgr.bindAppWidgetIdIfAllowed(id, android.content.ComponentName(ctx.packageName, cls))) LauncherPrefs.widgets = LauncherPrefs.widgets + "$id|${ctx.packageName}|$cls"
+                else host.deleteAppWidgetId(id)
+            }
+        }
         LauncherPrefs.save(ctx)
         return found
     }
