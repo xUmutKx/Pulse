@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import android.os.SystemClock
 import androidx.compose.foundation.gestures.awaitEachGesture
 import android.content.Context
 import android.content.Intent
@@ -147,7 +148,19 @@ class LauncherActivity : ComponentActivity() {
     }
 
     // a home press while the launcher is already open: close the apps list and go back to the first page
-    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); LauncherSession.startOpen = false; LauncherSession.homeTick++ }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // the Windows key of a keyboard makes the phone send the home intent: when Pulse is the home app, that is the Start menu (not "go home"), as on a PC
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        val now = SystemClock.uptimeMillis()
+        if (modern && now - lastMetaAt < 1200) {
+            if (now - lastStartToggleAt > 1200) { lastStartToggleAt = now; LauncherSession.startOpen = !LauncherSession.startOpen }
+            return
+        }
+        LauncherSession.startOpen = false; LauncherSession.homeTick++
+    }
+    private var lastMetaAt = 0L
+    private var lastStartToggleAt = 0L
 
     /** Reads the saved settings again on every start / resume: the Pulse process may have changed them meanwhile. */
     private fun enter() {
@@ -181,9 +194,10 @@ class LauncherActivity : ComponentActivity() {
                 if (did) { metaUsed = true; return true }
             }
             if (metaKey) {
+                lastMetaAt = SystemClock.uptimeMillis()
                 if (e.action == android.view.KeyEvent.ACTION_DOWN && e.repeatCount == 0) metaUsed = false
                 // the Windows key let go with nothing pressed with it: the Start menu
-                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) LauncherSession.startOpen = !LauncherSession.startOpen; metaUsed = false; return true }
+                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) { lastStartToggleAt = SystemClock.uptimeMillis(); LauncherSession.startOpen = !LauncherSession.startOpen }; metaUsed = false; return true }
                 return true
             }
         }
