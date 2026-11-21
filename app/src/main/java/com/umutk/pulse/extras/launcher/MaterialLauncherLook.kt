@@ -67,7 +67,22 @@ class MaterialLauncherLook(
 
     @Composable
     override fun Background(modifier: Modifier, content: @Composable () -> Unit) {
-        Box(modifier.fillMaxSize().background(bg())) { content() }
+        // a picture of the person's own (Look > Custom wallpaper) is drawn; with none, the phone's own wallpaper shows through (the window is see-through) instead of a flat black
+        val own = LauncherPrefs.wallFile.isNotEmpty() && java.io.File(LauncherPrefs.wallFile).isFile
+        if (own) { LauncherWallpaper(id, bg(), modifier) { content() }; return }
+        // the AMOLED look stays pure black
+        if (black) { Box(modifier.fillMaxSize().background(bg())) { content() }; return }
+        val act = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+        androidx.compose.runtime.DisposableEffect(act) {
+            act?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+            act?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            onDispose {
+                act?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
+                act?.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
+            }
+        }
+        // a light veil keeps the labels readable on a bright picture
+        Box(modifier.fillMaxSize().background(bg().copy(alpha = .22f))) { content() }
     }
 
     @Composable
