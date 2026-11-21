@@ -765,6 +765,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onCreateInputView(): View {
+        // the keyboard view is made with the knowledge of a connected physical keyboard
+        st.hardware = hardwareAttached()
         val o = owner ?: StandByOwner().also { it.start(); owner = it }
         // Compose finds its lifecycle on the root of the window, which for a keyboard is the window's decor view
         window.window?.decorView?.let { it.setViewTreeLifecycleOwner(o); it.setViewTreeSavedStateRegistryOwner(o) }
@@ -867,6 +869,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        // is a physical keyboard connected? asked before the keyboard is drawn, so a field opens as the suggestion bar at once (not the full keys first and the bar a moment later);
+        // the full keys come only when the keyboard button of the bar is pressed, and every new field starts as the bar again
+        if (!restarting) { st.hardware = hardwareAttached(); st.hwOpen = false }
         // a restart of the input with the keyboard already up: the new kind is taken at once
         if (restarting) syncKind(attribute)
     }
