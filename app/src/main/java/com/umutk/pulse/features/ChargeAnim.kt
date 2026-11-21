@@ -183,12 +183,20 @@ internal fun ChargeMini(style: Int, modifier: Modifier = Modifier) {
     Box(modifier.background(Color.Black)) { ChargeBody(style, t, fill, chargeColor(style), .32f) }
 }
 
-/** 22: a console: the lines are typed one after the other, the charge is a bar of # signs, the cursor blinks. */
+/** 22: a console: the lines (what the charger and the battery report) are typed one after the other, the charge is a bar of # signs, the cursor blinks. */
 @Composable
 private fun ConsoleCharge(t: Float, fill: Float, col: Color, scale: Float) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val pct = (fill * 100).toInt(); val bar = 20; val on = (fill * bar).toInt().coerceIn(0, bar)
-    val lines = listOf("$ pulse --charger", "> power connected", "> charging $pct%", "[" + "#".repeat(on) + ".".repeat(bar - on) + "]")
-    val shown = ((t * 5f).toInt() + 1).coerceAtMost(lines.size)
+    val b = remember(pct / 5) { runCatching { ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)) }.getOrNull() }
+    val src = when (b?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0) { android.os.BatteryManager.BATTERY_PLUGGED_AC -> "AC"; android.os.BatteryManager.BATTERY_PLUGGED_USB -> "USB"; android.os.BatteryManager.BATTERY_PLUGGED_WIRELESS -> "wireless"; else -> "dock" }
+    val volt = (b?.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000f
+    val temp = (b?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
+    val tech = b?.getStringExtra(android.os.BatteryManager.EXTRA_TECHNOLOGY).orEmpty().ifBlank { "Li-ion" }
+    val health = when (b?.getIntExtra(android.os.BatteryManager.EXTRA_HEALTH, 0) ?: 0) { android.os.BatteryManager.BATTERY_HEALTH_GOOD -> "good"; android.os.BatteryManager.BATTERY_HEALTH_OVERHEAT -> "overheat"; android.os.BatteryManager.BATTERY_HEALTH_COLD -> "cold"; else -> "unknown" }
+    val lines = listOf("$ pulse --charger", "> power connected", "> source    $src", "> battery   $tech", "> voltage   %.2f V".format(volt), "> temp      %.1f C".format(temp), "> health    $health",
+        "$ charge --watch", "> charging $pct%", "[" + "#".repeat(on) + ".".repeat(bar - on) + "]")
+    val shown = ((t * 1.5f * lines.size).toInt() + 1).coerceAtMost(lines.size)
     Column(Modifier.fillMaxSize().padding((18 * scale).dp), verticalArrangement = Arrangement.Center) {
         lines.take(shown).forEachIndexed { i, l ->
             Text(l + if (i == shown - 1 && (t * 10f).toInt() % 2 == 0) "_" else "", color = col, fontFamily = FontFamily.Monospace, fontSize = (15 * scale + 1).sp, maxLines = 1)
@@ -222,10 +230,17 @@ private fun NeofetchCharge(t: Float, fill: Float, col: Color, scale: Float) {
     val total = maxOf(card.first.size, card.second.size)
     val shown = (t * 1.7f * total).toInt().coerceIn(0, total)
     val pct = (fill * 100).toInt(); val bar = 24; val on = (fill * bar).toInt().coerceIn(0, bar)
-    val fs = (if (scale >= 1f) 7.4f else 3.6f * scale * 2f).coerceAtLeast(3f)
-    Column(Modifier.fillMaxSize().background(Color.Black).padding((10 * scale).dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        com.umutk.pulse.features.NeofetchCard(card.first, card.second, fs, shown)
-        if (shown >= total) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "] $pct%", color = col, fontFamily = FontFamily.Monospace, fontSize = fs.sp, modifier = Modifier.padding(top = (4 * scale).dp))
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding((10 * scale).dp), contentAlignment = Alignment.Center) {
+        // the type is made to fit the screen: the card (logo, gap and the longest line) across the width, its rows (and the bar under them) down the height
+        val artCols = card.first.maxOfOrNull { it.length } ?: 20
+        val rightCols = card.second.maxOfOrNull { l -> l.sumOf { it.text.length } } ?: 30
+        val byW = maxWidth.value / (0.6f * (artCols + rightCols) + 1.6f)
+        val byH = maxHeight.value / (1.25f * (total + 3).coerceAtLeast(6))
+        val fs = minOf(byW, byH).coerceIn(2.5f, if (scale >= 1f) 13f else 6f)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            com.umutk.pulse.features.NeofetchCard(card.first, card.second, fs, shown)
+            if (shown >= total) Text("[" + "#".repeat(on) + ".".repeat(bar - on) + "] $pct%", color = col, fontFamily = FontFamily.Monospace, fontSize = fs.sp, modifier = Modifier.padding(top = (4 * scale).dp))
+        }
     }
 }
 
