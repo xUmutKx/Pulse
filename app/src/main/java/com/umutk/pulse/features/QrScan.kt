@@ -39,6 +39,9 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.tr
 import kotlin.math.abs
 
+/** Every kind of code ZXing reads: QR, Data Matrix, Aztec, PDF417 and the shop and library barcodes. */
+private val BARCODE_FORMATS = listOf(BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC, BarcodeFormat.PDF_417, BarcodeFormat.MAXICODE, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.CODE_93, BarcodeFormat.ITF, BarcodeFormat.CODABAR, BarcodeFormat.RSS_14, BarcodeFormat.RSS_EXPANDED)
+
 /** Back camera into a preview surface plus a YUV reader; every frame's luminance goes to ZXing until a QR code reads. */
 private class QrCamera(ctx: Context, private val preview: Surface, private val size: Size, private val onText: (String) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
@@ -49,7 +52,7 @@ private class QrCamera(ctx: Context, private val preview: Surface, private val s
     private var session: CameraCaptureSession? = null
     private var reader: ImageReader? = null
     @Volatile private var done = false
-    private val zx = MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE), DecodeHintType.TRY_HARDER to true)) }
+    private val zx = MultiFormatReader().apply { setHints(mapOf(DecodeHintType.POSSIBLE_FORMATS to BARCODE_FORMATS, DecodeHintType.TRY_HARDER to true)) }
 
     fun start(id: String) = bg.post {
         try {
@@ -89,9 +92,12 @@ private class QrCamera(ctx: Context, private val preview: Surface, private val s
             val data = ByteArray(buf.remaining()).also { buf.get(it) }
             // the Y plane is the grey picture; rows may be padded, so the row stride is the data width
             val src = PlanarYUVLuminanceSource(data, p.rowStride, img.height, 0, 0, img.width, img.height, false)
-            val text = runCatching { zx.decodeWithState(BinaryBitmap(HybridBinarizer(src))).text }.getOrNull()
+            var text = runCatching { zx.decodeWithState(BinaryBitmap(HybridBinarizer(src))).text }.getOrNull()
             zx.reset()
-            if (text != null) { done = true; main.post { onText(text) } }
+            // light-on-dark codes (inverted) are tried when the normal read finds nothing
+            if (text == null) { text = runCatching { zx.decodeWithState(BinaryBitmap(HybridBinarizer(src.invert()))).text }.getOrNull(); zx.reset() }
+            val found = text
+            if (found != null) { done = true; main.post { onText(found) } }
         } finally { img.close() }
     }
 

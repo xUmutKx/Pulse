@@ -1,6 +1,5 @@
 package com.umutk.pulse.extras.colorpick
 
-import com.umutk.pulse.features.collapsePanel
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -71,7 +70,6 @@ class ColorPickTile : TileService() {
         val i = Intent(this, ColorPickActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (android.os.Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(android.app.PendingIntent.getActivity(this, 7_900, i, android.app.PendingIntent.FLAG_IMMUTABLE))
         else @Suppress("DEPRECATION") startActivityAndCollapse(i)
-        collapsePanel()
     }
 }
 
