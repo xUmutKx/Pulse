@@ -126,7 +126,17 @@ class Win11LauncherLook : LauncherLook {
             // the tray: the connection, the sound and the battery in one button that opens the quick settings (tiles, volume), then the clock, as in Windows 11
             Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.clip(shape).clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Glyph("wifi", fg, 16.dp); Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
+                    // on Wi-Fi the connection shows the Wi-Fi arcs; the globe is for no connection or another kind (as Windows 11 does)
+                    val trayCtx = androidx.compose.ui.platform.LocalContext.current
+                    var onWifi by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        while (true) {
+                            onWifi = runCatching { val cm = trayCtx.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager; cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true }.getOrDefault(false)
+                            kotlinx.coroutines.delay(5000)
+                        }
+                    }
+                    if (onWifi) androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Wifi, null, tint = fg, modifier = Modifier.size(16.dp)) else Glyph("wifi", fg, 16.dp)
+                    Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
                 }
                 TaskbarClock(fg, Modifier)
             }
