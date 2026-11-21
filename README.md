@@ -60,6 +60,20 @@
 - Planned for Pulse Watch (see `wear/PLAN.md`): a file manager, a music and video player, a remote for the phone and its media, YouTube and YouTube Music, watch faces in the Windows looks, notifications and lyrics on the wrist.
 </details>
 
+<details><summary><b>⌚ Pulse Watch: what is planned</b> (not built yet, see <code>wear/PLAN.md</code>)</summary>
+
+<p><img src="docs/media/watch/watch-plan-sheet.jpg" width="900" alt="Pulse Watch: eight planned screens"></p>
+
+1. **File manager**: the watch's and the phone's folders, copy both ways, clean up.
+2. **Music on the watch**: offline playlists for a run, synced lyrics.
+3. **Video on the watch**: clips sent small from the phone, subtitles.
+4. **Media remote**: whatever plays on the phone (Pulse, YTXTube, Spotify ...), the crown is the volume.
+5. **Phone remote**: find the phone, camera shutter, Wi-Fi / DND / flashlight, an alert when the phone is left behind.
+6. **YouTube and YouTube Music** through YTXTube, audio on the watch.
+7. **Watch faces** in the Windows looks and the Screen cover clocks, tiles and complications.
+8. **Notifications and lyrics** with reply.
+</details>
+
 <details><summary><b>🎵 Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
 
 - Music player in three skins (Material, Poweramp, Winamp) with lyrics (synced, search by text), waveform seek bar, sleep timer, equalizer (also by genre), crossfade, playlists, mixes by mood, stars and favourites sorted both ways.
