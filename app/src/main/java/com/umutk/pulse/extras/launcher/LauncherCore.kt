@@ -97,7 +97,25 @@ val LocalLauncherEdge = compositionLocalOf { 0.dp }
 
 /** Start menu data: the pinned apps (only while nothing is typed) and every app whose label matches the search. */
 fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<LaunchApp>> =
-    (if (query.isBlank()) state.dock else emptyList()) to state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) }
+    (if (query.isBlank()) state.dock else emptyList()) to (state.apps.filter { !it.pkg.startsWith("pulse:x:win:fun:") && it.label.contains(query.trim(), ignoreCase = true) } + windowsTools(query))
+
+/**
+ * The tools of Windows 10 and 11 in the Start menu's list and search (Command Prompt, Control Panel, Registry Editor, Task Manager, Services, Run ...), as the real Start menu has them
+ * under Windows Tools; the older looks keep their own lists. An app that has the same name is not listed twice.
+ */
+fun windowsTools(query: String): List<LaunchApp> {
+    val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+    if (!modern) return emptyList()
+    val tools = listOf(
+        LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+        LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
+        LaunchApp(tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"), "pulse:regedit", null, iconKey = "services"),
+        LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
+        LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
+        LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
+    )
+    return tools.filter { it.label.contains(query.trim(), ignoreCase = true) }
+}
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
