@@ -15,7 +15,7 @@ import java.util.Properties
  * cached, so a change saved from Pulse's process would never reach it (the look "did not change").
  */
 object LauncherPrefs {
-    var look by mutableStateOf("material")
+    var look by mutableStateOf("win11")
     var vertical by mutableStateOf(false)
     var columns by mutableStateOf(5)
     var iconDp by mutableStateOf(48)
@@ -252,7 +252,7 @@ object LauncherPrefs {
         if (f.exists()) runCatching { f.inputStream().use { p.load(it) } }
         // first start after the change: keep the settings saved in the old SharedPreferences file
         else c.getSharedPreferences("launcher", Context.MODE_PRIVATE).all.forEach { (k, v) -> if (v != null) p.setProperty(k, v.toString()) }
-        look = p.getProperty("look") ?: "material"
+        look = p.getProperty("look") ?: "win11"
         vertical = p.getProperty("vertical") == "true"
         columns = p.getProperty("columns")?.toIntOrNull() ?: 5
         iconDp = p.getProperty("iconDp")?.toIntOrNull() ?: 48
@@ -369,7 +369,7 @@ object LauncherPrefs {
 
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
-        look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
+        look = "win11"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; blockAltTab = true; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; widgetSizes = emptyMap(); glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = true; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; wallFileLand = ""; keepOn = false; haptic = true; searchFocus = false

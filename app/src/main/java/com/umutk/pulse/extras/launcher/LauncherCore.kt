@@ -189,17 +189,18 @@ object LauncherLooks {
     // add looks here
     private val defaultLook = MaterialLauncherLook("material", "Material You", "Material You", black = false)
     // the Pulse themes are drawn by the Material look code, which reads its colours from the theme of the same id
+    // the order of the list: Windows 11 first (the default), then 10, 7, Windows Phone, XP and 95, the other phone looks, and Material and AMOLED last
     val all: List<LauncherLook> = listOf(
-        defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
-        Win11LauncherLook(), Win10LauncherLook(),
-        Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
+        Win11LauncherLook(), Win10LauncherLook(), Win7LauncherLook(),
         // one Windows Phone look, on pure black (the grey one is gone; a saved "winphone_amoled" resolves to it)
         WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = true),
+        XpLauncherLook(), Win95LauncherLook(),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
         TerminalLauncherLook(),
+        defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
     )
-    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: defaultLook
+    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: all.first()
 }
 
 /** App picture from the launcher icon, or a letter tile when the icon could not be read. Clipped to a squircle. */
