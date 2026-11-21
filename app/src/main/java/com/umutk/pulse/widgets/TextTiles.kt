@@ -171,7 +171,9 @@ object TextTile {
         val maxSub = if (compact) (if (avail > 80f * d) 3 else 1) else 2
         val lineH = 15f * d
         val subs = t.sub.take(maxSub).take(((avail * .45f) / lineH).toInt().coerceAtLeast(0))
-        val vs = minOf((avail - subs.size * lineH) * .9f, if (compact) 34f * d else 42f * d).coerceAtLeast(12f * d)
+        // a bigger tile lets the number grow with it (the text no longer sits small in a corner of a large widget)
+        val grow = (1f + ((minOf(avail, R - L) / d - 90f) / 200f)).coerceIn(1f, 2.2f)
+        val vs = minOf((avail - subs.size * lineH) * .9f, (if (compact) 34f * d else 42f * d) * grow).coerceAtLeast(12f * d)
         // the widget's own scale, never taller than the room above the lines below (nothing overlaps)
         val vs2 = minOf(vs * WidgetText.scale(ctx, id, t.defScale), ((avail - subs.size * lineH) * .95f).coerceAtLeast(12f * d))
         val vp = paint(fg, vs2, valueFace)
@@ -183,7 +185,9 @@ object TextTile {
             text(vp, t.big, L + 5f * d, fr.bottom - vs2 * .28f, leftR - L - 10f * d)
             y = fr.bottom
         } else {
-            y = top + vs2 * .82f
+            // the number and its lines are put a little lower when the tile has room to spare (the block sits in the middle of the room, not at the top)
+            val shift = ((avail - (vs2 * .94f + subs.size * lineH)) * .35f).coerceAtLeast(0f)
+            y = top + shift + vs2 * .82f
             text(vp, t.big, L - (if (w10 || amo) d else 0f), y, leftR - L)
             y += vs2 * .12f
         }
