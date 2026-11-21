@@ -506,7 +506,13 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // on a Windows desktop a file opens in a window of its own (the picture, the text, the PDF); a folder and the other looks go to the system
         else if (app.pkg.startsWith("file:") && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps && java.io.File(app.pkg.removePrefix("file:")).isFile) DesktopWindows.open("view:" + app.pkg.removePrefix("file:"), app.label)
         else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
-        else if (app.pkg.startsWith("pulse:extra:")) com.umutk.pulse.AppPlace.byAlias(app.pkg.removePrefix("pulse:extra:"))?.run?.invoke(ctx) { }
+        else if (app.pkg.startsWith("pulse:extra:")) {
+            // an extra app of Pulse: in a window of the desktop on the Windows looks (when it has a page that can sit in a window), else as the app of its own
+            val alias = app.pkg.removePrefix("pulse:extra:")
+            val route = EXTRA_ROUTES[alias]
+            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label)
+            else com.umutk.pulse.AppPlace.byAlias(alias)?.run?.invoke(ctx) { }
+        }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
@@ -657,3 +663,13 @@ private fun ShortcutArrow(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         }
     }
 }
+
+
+/** The extra apps of Pulse that have a page which can sit in a window of the desktop: the entry's alias and its page. (Calendar, Contacts and YTXTube keep to their own screens: each has its own look or its own process.) */
+private val EXTRA_ROUTES = mapOf(
+    "FilesLauncher" to "page:filestabs", "PhotosLauncher" to "win:gallery", "HealthLauncher" to "health", "CodeLauncher" to "code", "CalculatorLauncher" to "calculator",
+    "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "WeatherLauncher" to "weather",
+    "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "BrowserLauncher" to "browser", "OfficeLauncher" to "office",
+    "GameHubLauncher" to "gamehub", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaintLauncher" to "paint", "EbookLauncher" to "ebook",
+    "TempMailLauncher" to "tempmail", "ClockLauncher" to "clock", "AiLauncher" to "ai",
+)
