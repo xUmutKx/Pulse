@@ -220,9 +220,12 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     look == MusicLook.IPOD -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.TURNTABLE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.SONIC -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.SonicPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize()) }
-                    look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
-                    look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
-                    else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
+                    look == MusicLook.LYRICS -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize()) }
+                    look == MusicLook.SKINS -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) }) }
+                    // the Windows Media Player look: the new one has a Settings entry beside Show list and Lyrics, the old WMP 7 gets the round settings button of the other looks
+                    else -> if (prefs(ctx).getBoolean("wmp12", true))
+                        androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.extras.music.wmp7.LocalMusicSettings provides { settingsOpen = true }) { WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true }) }
+                    else ExtraPlayerFrame(onSettings = { settingsOpen = true }) { WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true }) }
                 }
               }
             }

@@ -180,6 +180,9 @@ private fun WmpBackdrop(th: WTheme, cover: ImageBitmap?) {
 }
 
 
+/** The player page's way to its settings: set by the music page, so the Windows Media Player look has the settings entry the other looks have. */
+val LocalMusicSettings = androidx.compose.runtime.compositionLocalOf<(() -> Unit)?> { null }
+
 @Composable
 private fun NowPlaying(
     title: String, artist: String, album: String?, cover: ImageBitmap?, queue: List<Track>, current: Int, onPick: (Int) -> Unit,
@@ -199,6 +202,12 @@ private fun NowPlaying(
                     if (queue.isNotEmpty() && !side) Row(Modifier.clickable { toggleList() }, verticalAlignment = Alignment.CenterVertically) {
                         ListMark()
                         Text(if (showList) tr("Hide list", "Listeyi gizle") else tr("Show list", "Listeyi göster"), color = W_TEXT, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp))
+                    }
+                    LocalMusicSettings.current?.let { open ->
+                        Row(Modifier.clickable { open() }, verticalAlignment = Alignment.CenterVertically) {
+                            com.umutk.pulse.PIcon("settings", W_TEXT, 14.dp)
+                            Text(tr("Settings", "Ayarlar"), color = W_TEXT, fontSize = 12.sp, modifier = Modifier.padding(start = 5.dp))
+                        }
                     }
                     if (track != null) Row(Modifier.clickable { toggleLyrics() }, verticalAlignment = Alignment.CenterVertically) {
                         com.umutk.pulse.PIcon("document", if (showLyrics) acc() else W_TEXT, 14.dp)
