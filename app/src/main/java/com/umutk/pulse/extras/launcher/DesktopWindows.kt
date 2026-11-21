@@ -186,7 +186,9 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
     val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val blurred = skin.kind == "11" || skin.kind == "7"
     // the real blur: the desktop picture, blurred, sits behind the see-through frame at the spot where the window is (Mica / Aero)
-    val wall = remember(lookId, land) { if (blurred) wallpaperRes(lookId, land)?.let { r -> android.graphics.BitmapFactory.decodeResource(ctx.resources, r, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() } else null }
+    val wall = remember(lookId, land, LauncherPrefs.wallFile, LauncherPrefs.wallFileLand, LauncherPrefs.wallIndex(lookId)) {
+        if (blurred) launcherWallpaperBitmap(ctx, lookId, land) else null
+    }
     Box(
         Modifier.offset(if (w.max) 0.dp else w.x.dp, if (w.max) 0.dp else w.y.dp).size(fw, fh)
             // a touch anywhere on the window brings it to the front, without taking the touch from what is inside

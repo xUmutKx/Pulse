@@ -194,7 +194,7 @@ fun ProcessesPage() {
                     val isOpen = g.key in expanded
                     item(key = "g${g.key}") {
                         val on = !many && sel == g.head.p.pid
-                        Row(Modifier.fillMaxWidth().height(40.dp).rowRule(T.sub).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else if (g.head.p.pid > 0) sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else if (g.head.p.pid > 0) sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).fillMaxHeight().clipToBounds().colRule(T.sub), verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (many) (if (isOpen) "⌄" else "›") else "", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(26.dp).padding(start = 8.dp))
                                 AppIcon(g.head.p.name, 22.dp); Spacer(Modifier.width(8.dp))
@@ -207,7 +207,7 @@ fun ProcessesPage() {
                     }
                     if (many && isOpen) itemsIndexed(g.rows.sortedByDescending { it.p.rssMb }, key = { i, r -> if (r.p.pid > 0) "p${r.p.pid}" else "p0-$i" }) { _, r ->
                         val on = r.p.pid > 0 && sel == r.p.pid
-                        Row(Modifier.fillMaxWidth().height(36.dp).rowRule(T.sub).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (r.p.pid > 0) sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (r.p.pid > 0) sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).fillMaxHeight().clipToBounds().colRule(T.sub), verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(Modifier.width(52.dp))
                                 Text(r.p.name.substringAfter(':', r.p.name.substringAfterLast('.')), color = if (on && (win95Authentic || xpAuthentic)) Color.White else T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = if (on && win95Authentic) Modifier.background(Color(0xFF000080)).padding(horizontal = 2.dp) else Modifier)
@@ -516,12 +516,6 @@ private fun StatGrid(items: List<Pair<String, String>>) {
 
 /** Time of the last tap on the Network column head, for the double tap. */
 private object NetTap { var last = 0L }
-
-/** A thin line under a row of the process list, so the rows stand apart. */
-private fun Modifier.rowRule(c: Color): Modifier = this.drawBehind {
-    drawLine(c.copy(alpha = .1f), androidx.compose.ui.geometry.Offset(0f, size.height - .5f), androidx.compose.ui.geometry.Offset(size.width, size.height - .5f), 1f)
-}
-
 /** A thin line at the right edge of a column cell (the columns of the process list stand apart as well as its rows). */
 private fun Modifier.colRule(c: Color): Modifier = this.drawBehind {
     val w = 1.dp.toPx(); drawLine(c.copy(alpha = .22f), androidx.compose.ui.geometry.Offset(size.width - w / 2, 0f), androidx.compose.ui.geometry.Offset(size.width - w / 2, size.height), w)
