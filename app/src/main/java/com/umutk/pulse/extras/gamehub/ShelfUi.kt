@@ -585,7 +585,7 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
             loadedState.value = shown()
-            val todo = list.filter { it.pkg !in CdArt.cache || it.pkg in CdArt.fallback }
+            val todo = list.filter { !CdArt.cache.containsKey(it.pkg) || it.pkg in CdArt.fallback }
             val gate = kotlinx.coroutines.sync.Semaphore(6)
             todo.chunked(12).forEach { chunk ->
                 kotlinx.coroutines.coroutineScope {
