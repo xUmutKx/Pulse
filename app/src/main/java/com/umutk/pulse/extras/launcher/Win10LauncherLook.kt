@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.T
@@ -108,7 +109,7 @@ class Win10LauncherLook(
         val date = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(now))
         // the edge padding keeps the start button and the clock out of the rounded screen corners
         Row(modifier.background(bar()).padding(horizontal = edge), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(46.dp, hover(), onClick = { LauncherSession.startOpen = true }) {
+            BarButton(46.dp, hover(), onClick = { LauncherSession.startOpen = true }, onLong = { LauncherSession.winXOpen = true }) {
                 Canvas(Modifier.size(16.dp)) { startLogo(fg) }
             }
             BarButton(46.dp, hover(), onClick = { LauncherSession.w11SearchOpen = !LauncherSession.w11SearchOpen; LauncherSession.quickOpen = false; LauncherSession.clockOpen = false }) {
@@ -258,12 +259,13 @@ class Win10LauncherLook(
 
 /** Taskbar button: a flat 46dp cell that shows the hover colour while pressed. */
 @Composable
-private fun BarButton(width: Dp, hover: Color, onClick: () -> Unit, content: @Composable BoxScope.() -> Unit) {
+private fun BarButton(width: Dp, hover: Color, onClick: () -> Unit, onLong: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     Box(
         Modifier.width(width).fillMaxHeight().background(if (pressed) hover else Color.Transparent)
-            .clickable(interactionSource = src, indication = null, onClick = onClick),
+            .clickable(interactionSource = src, indication = null, onClick = onClick)
+            .then(if (onLong != null) Modifier.pointerInput(Unit) { androidx.compose.foundation.gestures.detectTapGestures(onLongPress = { onLong() }) } else Modifier),
         contentAlignment = Alignment.Center, content = content
     )
 }

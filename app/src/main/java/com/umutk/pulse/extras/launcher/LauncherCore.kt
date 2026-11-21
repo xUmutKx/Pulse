@@ -101,6 +101,8 @@ object LauncherSession {
     var msnTray by mutableStateOf(false)
     /** The Run box (Win+R of Windows): type a command (cmd, regedit, taskmgr, control, notepad ...) and it opens. */
     var runOpen by mutableStateOf(false)
+    /** The Win+X menu (the Start button held): the tools of the system in a short list. */
+    var winXOpen by mutableStateOf(false)
     /** The hidden-icons flyout of the Windows 7 tray (the arrow pointing up) is open. */
     var trayOpen by mutableStateOf(false)
     /** The Windows Phone glance page (behind the Windows button) is open. */

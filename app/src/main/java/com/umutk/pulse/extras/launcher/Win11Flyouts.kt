@@ -72,6 +72,7 @@ fun Win11Flyouts(taskbar: Dp, state: LauncherState?) {
     if (LauncherSession.quickOpen) QuickFlyout(taskbar)
     if (LauncherSession.w11SearchOpen) SearchFlyout(taskbar, state)
     if (LauncherSession.runOpen) RunBox(taskbar)
+    if (LauncherSession.winXOpen) WinXMenu(taskbar)
 }
 
 private val FLY_BG = Color(0x7A1B2232)
@@ -119,8 +120,11 @@ private fun QuickFlyout(taskbar: Dp) {
                             Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(if (editing) (if (kept) hi else Color(0x22FFFFFF)) else if (on) hi else Color(0x33FFFFFF))
                                 // a tap works the tile; held, the tile's own page of Pulse's Settings opens in the launcher (the phone's page only for a tile Pulse has no page for)
                                 .combinedClickable(onClick = { if (editing) { shown = if (kept) shown - t.en else shown + t.en; qp.edit().putString("shown", shown.joinToString("|")).apply() } else t.run(ctx); scope.launch { delay(500); rev++; delay(1200); rev++ } }, onLongClick = {
-                                    val page = when (t.en) { "Wi-Fi" -> "Wi-Fi"; "Bluetooth" -> "Bluetooth"; "Airplane mode" -> "Airplane mode"; "Cellular" -> "Mobile network"; "Mobile hotspot" -> "Mobile hotspot"; "VPN" -> "VPN"; "Battery saver" -> "Power & battery"; "Quiet hours" -> "Focus"; else -> null }
-                                    if (page != null) { SettingsJump.item = page; LauncherSession.quickOpen = false; openDesktopItem(ctx, "pulse:winsettings", "win11") } else t.run(ctx)
+                                    val page = when (t.en) { "Wi-Fi" -> "Wi-Fi"; "Bluetooth" -> "Bluetooth"; "Airplane mode" -> "Airplane mode"; "Cellular" -> "Mobile network"; "Mobile hotspot" -> "Mobile hotspot"; "VPN" -> "VPN"; "Battery saver" -> "Power & battery"; "Quiet hours" -> "Focus"; "Rotation lock", "Dark mode" -> "Display"; else -> null }
+                                    val phoneAct = when (t.en) { "NFC" -> Settings.ACTION_NFC_SETTINGS; "Sync" -> Settings.ACTION_SYNC_SETTINGS; "Private DNS" -> Settings.ACTION_WIRELESS_SETTINGS; "Location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS; "Flashlight" -> Settings.ACTION_DISPLAY_SETTINGS; else -> null }
+                                    if (page != null) { SettingsJump.item = page; LauncherSession.quickOpen = false; openDesktopItem(ctx, "pulse:winsettings", "win11") }
+                                    else if (phoneAct != null) { LauncherSession.quickOpen = false; runCatching { ctx.startActivity(Intent(phoneAct).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+                                    else t.run(ctx)
                                 }).padding(8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                                 Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Text(tr(t.en, t.trName), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -315,5 +319,46 @@ private fun RunBox(taskbar: Dp) {
                 Box(Modifier.clip(RoundedCornerShape(4.dp)).background(launcherAccent()).clickable { go() }.padding(horizontal = 20.dp, vertical = 7.dp)) { Text("OK", color = Color.White, fontSize = 13.sp) }
             }
         }
+    }
+}
+
+
+/** The Win+X menu (the Start button held): the system tools in a short list, in the look of the launcher (acrylic and rounded in Windows 11, flat and square in Windows 10). */
+@Composable
+private fun WinXMenu(taskbar: Dp) {
+    val ctx = LocalContext.current
+    val w11 = LauncherPrefs.look == "win11"
+    val shape = RoundedCornerShape(if (w11) 8.dp else 0.dp)
+    fun close() { LauncherSession.winXOpen = false }
+    fun page(id: String) { close(); openDesktopItem(ctx, id, if (w11) "win11" else "win10") }
+    val none = remember { MutableInteractionSource() }
+    fun xi(icon: String, name: String, act: () -> Unit) = Triple(icon, name, act)
+    val items = listOf(
+        xi("apps", tr("Apps and Features", "Uygulamalar ve özellikler")) { page("pulse:apps") },
+        xi("battery", tr("Power Options", "Güç seçenekleri")) { close(); SettingsJump.item = "Power & battery"; openDesktopItem(ctx, "pulse:winsettings", if (w11) "win11" else "win10") },
+        xi("cpu", tr("System", "Sistem")) { page("pulse:pc") },
+        xi("processes", tr("Task Manager", "Görev Yöneticisi")) { page("pulse:taskmgr") },
+        xi("settings", tr("Settings", "Ayarlar")) { page("pulse:winsettings") },
+        xi("settings", tr("Control Panel", "Denetim Masası")) { page("pulse:settings") },
+        xi("run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
+        xi("services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
+        xi("folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },
+        xi("search", tr("Search", "Ara")) { close(); LauncherSession.w11SearchOpen = true },
+        xi("run", tr("Run", "Çalıştır")) { close(); LauncherSession.runOpen = true },
+    )
+    Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { close() }) {
+        val place = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 8.dp, bottom = taskbar + 6.dp).widthIn(max = 280.dp).fillMaxWidth(.7f)
+        val body: @Composable () -> Unit = {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
+                items.forEach { (icon, name, act) ->
+                    Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Glyph(icon, Color.White, 18.dp)
+                        Text(name, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 14.dp))
+                    }
+                }
+            }
+        }
+        if (w11) AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) { body() }
+        else Box(place.background(Color(0xFF1F1F1F)).border(1.dp, Color(0xFF3A3A3A)).clickable(interactionSource = none, indication = null) {}) { body() }
     }
 }

@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.FluentPaths
@@ -107,7 +108,7 @@ class Win11LauncherLook : LauncherLook {
         AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.ui.graphics.RectangleShape, 30.dp) {
           Box(Modifier.fillMaxSize().padding(horizontal = edge), contentAlignment = Alignment.CenterStart) {
             Row(Modifier.padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-                Box(Modifier.size(40.dp).clip(shape).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(40.dp).clip(shape).pointerInput(Unit) { androidx.compose.foundation.gestures.detectTapGestures(onTap = { LauncherSession.startOpen = true }, onLongPress = { LauncherSession.winXOpen = true }) }, contentAlignment = Alignment.Center) {
                     StartGlyph(fg)
                     if (open) Indicator(accent, Modifier.align(Alignment.BottomCenter))
                 }
