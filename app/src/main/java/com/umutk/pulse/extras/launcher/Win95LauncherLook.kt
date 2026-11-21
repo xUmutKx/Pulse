@@ -93,7 +93,16 @@ class Win95LauncherLook : LauncherLook {
             ) {
                 // Start button: pressed (sunken, content shifted down 1 px) while the menu is open
                 Box(
-                    Modifier.width(72.dp).fillMaxHeight().w95Bevel(raised = !menuOpen).w95Click { LauncherSession.startOpen = true },
+                    Modifier.width(72.dp).fillMaxHeight().w95Bevel(raised = !menuOpen).drawBehind {
+                        // the open Start button carries a dotted focus box, three pixels in from every edge
+                        if (menuOpen) {
+                            val q = 1.dp.toPx(); val m = 4.dp.toPx()
+                            var x = m
+                            while (x < size.width - m) { drawRect(W95.Black, Offset(x, m), Size(q, q)); drawRect(W95.Black, Offset(x, size.height - m - q), Size(q, q)); x += 2 * q }
+                            var y = m
+                            while (y < size.height - m) { drawRect(W95.Black, Offset(m, y), Size(q, q)); drawRect(W95.Black, Offset(size.width - m - q, y), Size(q, q)); y += 2 * q }
+                        }
+                    }.w95Click { LauncherSession.startOpen = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(Modifier.padding(top = if (menuOpen) 1.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -119,7 +128,12 @@ class Win95LauncherLook : LauncherLook {
                 Spacer(Modifier.weight(1f))
                 // sunken tray with a speaker and the clock
                 Row(
-                    Modifier.fillMaxHeight().w95Bevel(raised = false).padding(horizontal = 6.dp),
+                    Modifier.fillMaxHeight().background(W95.Face).drawBehind {
+                        // the clock well is a single sunken line: shadow top and left, white bottom and right
+                        val p = 1.dp.toPx()
+                        drawRect(W95.Shadow, Offset.Zero, Size(size.width, p)); drawRect(W95.Shadow, Offset.Zero, Size(p, size.height))
+                        drawRect(W95.Hi, Offset(0f, size.height - p), Size(size.width, p)); drawRect(W95.Hi, Offset(size.width - p, 0f), Size(p, size.height))
+                    }.padding(horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Canvas(Modifier.size(12.dp)) { drawSpeaker() }

@@ -48,9 +48,14 @@ fun TaskbarWindows(kind: String, ink: Color, height: Dp, modifier: Modifier = Mo
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(if (kind == "95") 2.dp else 3.dp), verticalAlignment = Alignment.CenterVertically) {
         list.forEach { w ->
             val active = !w.min && w.z == topZ
-            val shape = RoundedCornerShape(when (kind) { "95", "10" -> 0.dp; "11" -> 6.dp; else -> 3.dp })
+            val shape = RoundedCornerShape(when (kind) { "95", "10" -> 0.dp; "11" -> 4.dp; else -> 3.dp })
             val look: Modifier = when (kind) {
-                "95" -> Modifier.background(Color(0xFFC0C0C0)).bevel(!active)
+                "95" -> Modifier.background(Color(0xFFC0C0C0)).then(if (active) Modifier.drawBehind {
+                    // the pressed task button of Windows 95: a 2x2 chequer of white and face inside the bevel (as the real one shows the window in front)
+                    val q = 2.dp.toPx(); val x0 = 2.dp.toPx(); val y0 = 2.dp.toPx()
+                    val cols = ((size.width - 2 * x0) / q).toInt(); val rows = ((size.height - 2 * y0) / q).toInt()
+                    for (r in 0 until rows) for (c in 0 until cols) if ((r + c) % 2 == 1) drawRect(Color.White, Offset(x0 + c * q, y0 + r * q), Size(q, q))
+                } else Modifier).bevel(!active)
                 "xp" -> Modifier.clip(shape).background(Brush.verticalGradient(if (active) listOf(Color(0xFF1B47A8), Color(0xFF2557C4)) else listOf(Color(0xFF4A8FF5), Color(0xFF2C66DD)))).border(1.dp, Color(0x55FFFFFF), shape)
                 "7" -> Modifier.clip(shape).background(if (active) Color(0x88A9CBEB) else Color(0x553E6E9E)).border(1.dp, Color(0x88A9CBEB), shape)
                 "10" -> Modifier.background(if (active) Color.White.copy(alpha = .2f) else Color.White.copy(alpha = .07f))
