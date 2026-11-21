@@ -19,7 +19,8 @@ object PhoneWall {
     private fun prefs(c: Context) = c.getSharedPreferences("pulse_phone_wall", Context.MODE_PRIVATE)
     private fun backup(c: Context) = File(c.filesDir, "phone_wall_backup.png")
 
-    fun enabled(c: Context): Boolean = prefs(c).getBoolean("sync", true)
+    // off unless it is switched on (Look > Phone wallpaper follows the launcher): the phone's wallpaper is not touched by the launcher on its own
+    fun enabled(c: Context): Boolean = prefs(c).getBoolean("sync", false)
     fun setEnabled(c: Context, on: Boolean) { prefs(c).edit().putBoolean("sync", on).apply(); if (!on) restore(c) }
     fun hasBackup(c: Context): Boolean = backup(c).isFile
 
