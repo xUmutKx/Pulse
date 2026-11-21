@@ -35,10 +35,12 @@ import com.umutk.pulse.tr
  */
 internal fun powerAction(ctx: Context, what: String) {
     when (what) {
-        "sleep", "lock" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        // on a Windows desktop Lock shows its lock screen (only the launcher is locked); Sleep locks the phone itself
+        "lock" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.lockOpen = true else globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
+        "sleep" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN)
         // the launcher is the computer here: Shut down closes it, Restart starts it again with its boot screens, Sign out shows the sign-in screen (the phone itself is not touched)
-        "off" -> (ctx as? android.app.Activity)?.finishAndRemoveTask()
-        "restart" -> (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 1; LauncherSession.booted = false; it.recreate() }
+        "off" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.powerScreen = "off" else (ctx as? android.app.Activity)?.finishAndRemoveTask()
+        "restart" -> if (LauncherPrefs.look in com.umutk.pulse.loginLooks) LauncherSession.powerScreen = "restart" else (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 1; LauncherSession.booted = false; it.recreate() }
         "signout" -> (ctx as? android.app.Activity)?.let { LauncherSession.forceBoot = 2; LauncherSession.booted = false; it.recreate() } ?: logOff(ctx)
     }
 }

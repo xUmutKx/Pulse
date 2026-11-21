@@ -360,7 +360,7 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         }
         if (e.action == android.view.KeyEvent.ACTION_UP) { comboKey = -1; return true }
         val known = k in intArrayOf(android.view.KeyEvent.KEYCODE_X, android.view.KeyEvent.KEYCODE_R, android.view.KeyEvent.KEYCODE_E, android.view.KeyEvent.KEYCODE_I, android.view.KeyEvent.KEYCODE_S,
-            android.view.KeyEvent.KEYCODE_Q, android.view.KeyEvent.KEYCODE_D, android.view.KeyEvent.KEYCODE_L, android.view.KeyEvent.KEYCODE_M, android.view.KeyEvent.KEYCODE_A,
+            android.view.KeyEvent.KEYCODE_Q, android.view.KeyEvent.KEYCODE_D, android.view.KeyEvent.KEYCODE_L, android.view.KeyEvent.KEYCODE_V, android.view.KeyEvent.KEYCODE_M, android.view.KeyEvent.KEYCODE_A,
             android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT, android.view.KeyEvent.KEYCODE_TAB)
         if (!known) return false
         metaUsed = true; comboKey = k

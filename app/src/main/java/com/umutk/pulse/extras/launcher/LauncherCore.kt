@@ -135,6 +135,10 @@ object LauncherSession {
     var runOpen by mutableStateOf(false)
     /** Win+Tab: every window as a card (task view). */
     var taskViewOpen by mutableStateOf(false)
+    /** The Windows lock screen (Win+L, Lock), the clipboard panel (Win+V), and the Shutting down / Restarting screen ("off" or "restart"; empty = none). */
+    var lockOpen by mutableStateOf(false)
+    var clipOpen by mutableStateOf(false)
+    var powerScreen by mutableStateOf("")
     /** Alt+Tab: the card picked in the switcher while Alt is held; -1 = the switcher is closed. */
     var altTabIdx by mutableStateOf(-1)
     /** The Win+X menu (the Start button held): the tools of the system in a short list. */

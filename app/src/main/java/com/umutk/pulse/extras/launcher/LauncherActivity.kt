@@ -134,6 +134,11 @@ class LauncherActivity : ComponentActivity() {
                         else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(this@LauncherActivity, th.id) }
                     }
                 } else LaunchedEffect(Unit) { if (!LauncherSession.booted) LauncherSounds.startup(this@LauncherActivity, th.id); LauncherSession.booted = true }
+                if (th.id in com.umutk.pulse.loginLooks) {
+                    if (LauncherSession.clipOpen) WinClipPanel()
+                    if (LauncherSession.lockOpen) WinLockHost(th)
+                    if (LauncherSession.powerScreen.isNotEmpty()) WinPowerScreen(th.id, LauncherSession.powerScreen)
+                }
             }
         }
     }
@@ -189,13 +194,13 @@ class LauncherActivity : ComponentActivity() {
             // the shortcuts that are not on the Windows key: Alt+F4 closes the front window, Alt+Tab goes to the next one, Ctrl+Esc is Start, Esc closes an open menu
             if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey) {
                 val front = DesktopWindows.list.filter { !it.min }.maxByOrNull { it.z }
-                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen || LauncherSession.taskViewOpen || LauncherSession.altTabIdx >= 0
+                val menuOpen = LauncherSession.startOpen || LauncherSession.winXOpen || LauncherSession.runOpen || LauncherSession.w11SearchOpen || LauncherSession.quickOpen || LauncherSession.taskViewOpen || LauncherSession.altTabIdx >= 0 || LauncherSession.clipOpen
                 when {
                     e.keyCode == android.view.KeyEvent.KEYCODE_F4 && e.isAltPressed && front != null -> { DesktopWindows.close(front); return true }
                     e.keyCode == android.view.KeyEvent.KEYCODE_TAB && e.isAltPressed && LauncherPrefs.blockAltTab -> { if (e.repeatCount == 0) DesktopWindows.altTabStep(); return true }
                     e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && e.isCtrlPressed && e.repeatCount == 0 -> { LauncherSession.startOpen = !LauncherSession.startOpen; return true }
                     e.keyCode == android.view.KeyEvent.KEYCODE_ESCAPE && menuOpen -> {
-                        LauncherSession.startOpen = false; LauncherSession.winXOpen = false; LauncherSession.runOpen = false; LauncherSession.w11SearchOpen = false; LauncherSession.quickOpen = false; LauncherSession.taskViewOpen = false; return true
+                        LauncherSession.startOpen = false; LauncherSession.winXOpen = false; LauncherSession.runOpen = false; LauncherSession.w11SearchOpen = false; LauncherSession.quickOpen = false; LauncherSession.taskViewOpen = false; LauncherSession.clipOpen = false; return true
                     }
                 }
             }
@@ -217,6 +222,7 @@ class LauncherActivity : ComponentActivity() {
     }
     private fun winCombo(code: Int, look: String, front: DWin?): Boolean = when (code) {
                     android.view.KeyEvent.KEYCODE_L -> { powerAction(this, "lock"); true }
+                    android.view.KeyEvent.KEYCODE_V -> { LauncherSession.clipOpen = !LauncherSession.clipOpen; true }
                     android.view.KeyEvent.KEYCODE_M -> { DesktopWindows.list.forEach { it.min = true }; true }
                     android.view.KeyEvent.KEYCODE_A -> { LauncherSession.quickOpen = !LauncherSession.quickOpen; true }
                     android.view.KeyEvent.KEYCODE_TAB -> { LauncherSession.taskViewOpen = !LauncherSession.taskViewOpen; true }
