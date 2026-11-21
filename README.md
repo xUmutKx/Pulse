@@ -1,7 +1,9 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
-<p align="center"><a href="docs/media/Pulse-short.mp4"><img src="docs/media/Pulse-short-preview.gif" width="300" alt="Pulse in 30 seconds"></a></p>
-<p align="center"><a href="docs/media/Pulse-short.mp4">▶ Short video (vertical, ~35 s)</a></p>
+<p align="center"><a href="docs/media/Pulse-long.mp4"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></a></p>
+<p align="center"><a href="docs/media/Pulse-long.mp4">▶ Tour video (landscape, ~1:40)</a></p>
+
+<p align="center"><img src="docs/media/cover-wall.jpg" width="900" alt="One phone. Every Windows."></p>
 
 ### Pulse
 
@@ -34,14 +36,30 @@
 |---|---|---|---|---|
 | <img src="docs/screenshots/cpu-cores.jpg" width="170" alt="CPU cores"> | <img src="docs/screenshots/battery-power.jpg" width="170" alt="Battery power"> | <img src="docs/screenshots/gym.jpg" width="170" alt="Gym library"> | <img src="docs/screenshots/neofetch.jpg" width="170" alt="Terminal"> | <img src="docs/screenshots/weather-city.jpg" width="170" alt="Weather"> |
 
-<p align="center"><a href="docs/media/Pulse-long.mp4"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></a></p>
-<p align="center"><a href="docs/media/Pulse-long.mp4">▶ Tour video (landscape, ~1:40)</a></p>
 
-<p align="center"><img src="docs/media/cover-wall.jpg" width="900" alt="One phone. Every Windows."></p>
+<p align="center"><a href="docs/media/Pulse-short.mp4"><img src="docs/media/Pulse-short-preview.gif" width="300" alt="Pulse in 30 seconds"></a></p>
+<p align="center"><a href="docs/media/Pulse-short.mp4">▶ Short video (vertical, ~35 s)</a></p>
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse started as the tools I wanted on my own phone and grew into one app: a Windows desktop launcher (Windows 11, 10, 7, XP, 95 and Windows Phone looks) with real windows, Settings, Control Panel, Task Manager and Registry Editor; a task manager and system monitor; a music player with Winamp, Poweramp and Windows Media Player skins; a video player with online subtitles; a keyboard; Files, Photos, Calendar, Contacts, Notes, Office, a code editor and a browser; Game Hub with a CD shelf; a screen cover with dozens of clocks and charging animations; a toolkit (QR and barcode reader, floating timer, auto clicker, DNS, compass ...); Health with a gym library; a Buds and Wear OS watch manager; and on-device AI. Every screen is drawn for every look. Free, open source (GPL-3.0), no ads, no account.
 
 
+
+<details><summary><b>🆕 New lately</b>: 2.0.18 to 2.0.21</summary>
+
+- **Launcher**: Windows 11 is the default look; the picker shows the Windows looks first. Lock screen (Win+L), shut down and restart screens, Win+V clipboard, Alt+Tab and Win+Tab, Win+arrows snap, a shortcut guide (Win+/).
+- **Windows tools**: Device Manager, Event Viewer, Disk Management, Windows Security, Task Scheduler; the Run box knows devmgmt, eventvwr, diskmgmt, taskschd, cmd, terminal.
+- **Settings without hand-off**: Wi-Fi with the networks around, Bluetooth (last three devices and pairing), NFC, USB, cameras, location, date and time, battery saver, dark mode, text size: all inside Pulse.
+- **Windows**: dark Windows 10 windows, Mica glass in Windows 11, a window narrower than a phone scales its page to fit, a tap brings a window to the front, Control Panel with a search box.
+- **Widgets**: resize by the corner, lock to another widget's size or to a square, one tap gives every widget the same size.
+- **Command Prompt** shows neofetch with the Windows logo of the look; Terminal keeps the Android robot and is see-through.
+- **Game Hub**: the CD shelf (3D cases) opens at once; Chess, Checkers and Connect 4 against a bot or over Bluetooth.
+- **Device manager**: Buds and Watch in one page; the watch gets a shell, logcat, 30 s screen recording, pull and disable apps.
+- **Keyboard**: Shift + key types a key's extra character, long press on signs and emoji for their variants, clipboard texts are not offered twice, Files' pictures from zips are not offered.
+- **Files**: icon bar for picked files, deletes go to the Recycle Bin, a crash in a zip from a notification fixed.
+- **Tools**: QR and barcode reader (every common code type), a new floating timer, Pulse's quick tiles close the panel, landscape calculator with side-by-side keys and a graph.
+- **AI**: models found anywhere on the phone (starting with Download), the folder picked in Pulse's own picker.
+- **Report**: Create crash report in Settings (search "crash").
+</details>
 
 <details><summary><b>🎨 Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
@@ -71,7 +89,7 @@
 - Chess, Checkers and Power of 4 of Pulse's own, each with its own logo: against the computer (four levels), two players on one phone, or two phones over Bluetooth (no internet).
 </details>
 
-<details><summary><b>⌚ Device manager</b>: Galaxy Buds and the watch</summary>
+<details><summary><b>🎧 Device manager</b>: Galaxy Buds and the watch</summary>
 
 - Buds: the earbuds' battery, which bud is in the ear, noise control, and stopping the music when they are taken out.
 - Watch (over wireless debugging): install APKs and Pulse Watch, send files, screenshot, a 30 second screen recording, a shell, the log (logcat), the apps on the watch with Open, Pull (their APK to the phone), Disable and Remove.
