@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
@@ -135,7 +137,7 @@ class Win11LauncherLook : LauncherLook {
                             kotlinx.coroutines.delay(5000)
                         }
                     }
-                    if (onWifi) androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Wifi, null, tint = fg, modifier = Modifier.size(16.dp)) else Glyph("wifi", fg, 16.dp)
+                    if (onWifi) androidx.compose.material3.Icon(Icons.Outlined.Wifi, null, tint = fg, modifier = Modifier.size(16.dp)) else Glyph("wifi", fg, 16.dp)
                     Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
                 }
                 TaskbarClock(fg, Modifier)
