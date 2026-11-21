@@ -75,11 +75,11 @@ object LauncherFolders {
     fun delete(c: Context, id: String) = put(c, LauncherPrefs.folders - id, LauncherPrefs.folderOff - id)
 
     /** The apps list with the folders' members folded into folder icons, folders first. */
-    fun fold(apps: List<LaunchApp>): List<LaunchApp> {
+    fun fold(apps: List<LaunchApp>, all: List<LaunchApp> = apps): List<LaunchApp> {
         val fs = LauncherPrefs.folders
         if (fs.isEmpty()) return apps
         val inside = fs.values.flatMap { members(it) }.toSet()
-        val made = fs.entries.map { (id, v) -> LaunchApp(name(v), FOLDER_PREFIX + id, icon(members(v).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }), system = true) }
+        val made = fs.entries.map { (id, v) -> LaunchApp(name(v), FOLDER_PREFIX + id, icon(members(v).mapNotNull { p -> all.firstOrNull { it.pkg == p } }), system = true) }
         return made + apps.filter { it.pkg !in inside }
     }
 

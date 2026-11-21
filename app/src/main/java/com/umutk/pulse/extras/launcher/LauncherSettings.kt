@@ -191,6 +191,13 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             }
         }
         if (cat == "home") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // the owner's ready-made set-up of the apps list (folders, hidden tools, dock, 5 x 6 grid): only when asked for
+            ValueRow("folder", tr("Set up like my phone", "Telefonum gibi kur"), "") {
+                Thread {
+                    val n = MyLayout.apply(ctx, loadApps(ctx))
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(ctx, tr("$n apps placed", "$n uygulama yerleşti"), android.widget.Toast.LENGTH_SHORT).show() }
+                }.start()
+            }
             if (cur.id.startsWith("winphone")) SwitchLine("gridView", tr("Live tiles", "Canlı kutucuklar"), LauncherPrefs.phoneTiles) { LauncherPrefs.phoneTiles = it; save() }
             if (cur.id.startsWith("winphone") && LauncherPrefs.phoneTiles) {
                 Text(tr("Tile layout", "Kutucuk düzeni"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
