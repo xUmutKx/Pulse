@@ -160,7 +160,7 @@ fun TerminalPage(windows: Boolean = false) {
     // the page lifts itself above the keyboard (once): the page host does not do it too, which had left an empty band as tall as the keyboard under the input line
     androidx.compose.runtime.DisposableEffect(Unit) { com.umutk.pulse.ImeFree.on = true; onDispose { com.umutk.pulse.ImeFree.on = false } }
     val cm = remember { ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager }
-    Column(Modifier.fillMaxSize().background(if (glass) Color.Black.copy(alpha = .5f) else Color.Black).imePadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (glass) .5f else .62f)).imePadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
         // the window's title line and its few buttons
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("pulse@phone" + if (TermSession.asRoot) " (root)" else "", color = green, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f), maxLines = 1)
