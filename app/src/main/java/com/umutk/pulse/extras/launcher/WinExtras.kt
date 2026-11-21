@@ -233,3 +233,13 @@ internal fun WinOsd() {
         }
     }
 }
+
+/** The box that renames the phone as the Start menu shows it (empty goes back to the phone's model). */
+@Composable
+internal fun RenameDeviceDialog(onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    var text by remember { mutableStateOf(LauncherPrefs.deviceName) }
+    com.umutk.pulse.WinAlert(onDismissRequest = onClose, title = { Text(tr("Device name", "Cihaz adı")) },
+        text = { com.umutk.pulse.PField(text, { text = it.take(24) }, android.os.Build.MODEL, Modifier.fillMaxWidth()) },
+        confirmButton = { com.umutk.pulse.PButton(tr("OK", "Tamam")) { LauncherPrefs.deviceName = text.trim(); LauncherPrefs.save(ctx); onClose() } })
+}

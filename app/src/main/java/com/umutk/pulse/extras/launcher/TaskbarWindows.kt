@@ -112,7 +112,7 @@ internal fun taskbarIconKey(route: String): String =
     desktopItems().firstOrNull { it.pkg == "pulse:x:$route" }?.iconKey ?: when {
         route == "page:device" -> (if (android.content.res.Resources.getSystem().configuration.smallestScreenWidthDp >= 600) "tablet" else "phone"); route == "page:filestabs" || route.startsWith("view:") -> "folder"
         route == "controlpanel" || route == "winsettings" -> "settings"; route == "page:processes" || route == "page:performance" || route == "page:taskmgr" -> "performance"
-        route == "win:regedit" -> "services"; route == "win:devmgmt" -> "performance"; route == "win:eventvwr" -> "details"; route == "win:diskmgmt" -> "disk"; route == "win:security" -> "lock"
+        route == "win:regedit" -> "services"; route == "win:devmgmt" -> "performance"; route == "win:eventvwr" -> "details"; route == "win:diskmgmt" -> "disk"; route == "win:security" -> "lock"; route == "win:taskschd" -> "clock"
         route == "game:chess" || route == "game:checkers" || route == "game:connect4" -> "gridView"
         route == "paint" -> "palette"; route == "win:gallery" -> "image"; route.startsWith("win:fun:") -> "chat"
         else -> "gridView"

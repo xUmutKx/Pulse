@@ -199,6 +199,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 if (hit("Device Manager", "devmgmt", "Aygıt Yöneticisi")) add(Triple("performance", tr("Device Manager", "Aygıt Yöneticisi"), { DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }))
                 if (hit("Event Viewer", "eventvwr", "Olay Görüntüleyici")) add(Triple("details", tr("Event Viewer", "Olay Görüntüleyici"), { DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }))
                 if (hit("Disk Management", "diskmgmt", "Disk Yönetimi")) add(Triple("disk", tr("Disk Management", "Disk Yönetimi"), { DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }))
+                if (hit("Task Scheduler", "taskschd", "Görev Zamanlayıcı")) add(Triple("clock", tr("Task Scheduler", "Görev Zamanlayıcı"), { DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) }))
                 if (hit("Windows Security", "defender", "Windows Güvenliği")) add(Triple("lock", tr("Windows Security", "Windows Güvenliği"), { DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }))
                 if (hit("Task Manager", "taskmgr", "Görev Yöneticisi")) add(Triple("processes", tr("Task Manager", "Görev Yöneticisi"), { openDesktopItem(ctx, "pulse:taskmgr", lookId) }))
                 if (hit("Terminal", "Command Prompt", "cmd", "powershell", "Komut İstemi")) add(Triple("run", tr("Terminal", "Terminal"), { openDesktopItem(ctx, "pulse:cmd", lookId) }))
@@ -287,9 +288,12 @@ internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val bat = remember { ctx.registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }
     val pct = remember { bat?.let { (it.getIntExtra("level", 0) * 100 / it.getIntExtra("scale", 100).coerceAtLeast(1)) } ?: 0 }
-    Column(Modifier.width(190.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    var renameDev by remember { mutableStateOf(false) }
+    if (renameDev) RenameDeviceDialog { renameDev = false }
+    // the panel scrolls, so Messages, Calls and Send files stay reachable on a short (turned) screen
+    Column(Modifier.width(190.dp).fillMaxHeight().background(Color(0x1FFFFFFF)).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.align(Alignment.CenterHorizontally).size(width = 52.dp, height = 92.dp).clip(RoundedCornerShape(10.dp)).background(launcherAccent().copy(alpha = .85f)))
-        Text(android.os.Build.MODEL, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Text(deviceName(), color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.CenterHorizontally).clickable { renameDev = true })
         Row(Modifier.align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Glyph("battery", fg, 16.dp); Text("$pct%", color = fg, fontSize = 12.sp)
             QUICK.firstOrNull { it.en == "Wi-Fi" }?.let { t -> Icon(t.icon, null, tint = fg, modifier = Modifier.size(18.dp).clickable { t.run(ctx) }) }
@@ -307,7 +311,7 @@ internal fun PhoneCompanionPanel(fg: Color, onClose: () -> Unit) {
                 Text(label, color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 12.dp))
             }
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(16.dp))
         Text(tr("Recent", "En son"), color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Text(tr("Recent mobile activity shows here.", "Son mobil etkinlikler burada görünür."), color = fg.copy(alpha = .6f), fontSize = 12.sp)
     }
@@ -341,6 +345,7 @@ private fun RunBox(taskbar: Dp) {
             c == "devmgmt" || c == "device manager" -> { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) }
             c == "eventvwr" || c == "event viewer" -> { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) }
             c == "diskmgmt" || c == "disk management" -> { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) }
+            c == "taskschd" || c == "task scheduler" -> { close(); DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) }
             c == "windowsdefender" || c == "security" || c == "windows security" -> { close(); DesktopWindows.open("win:security", tr("Windows Security", "Windows Güvenliği")) }
             id != null -> { close(); openDesktopItem(ctx, id, "win11") }
             else -> error = true
@@ -386,6 +391,7 @@ private fun WinXMenu(taskbar: Dp) {
         xi("terminal", "run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
         xi("devmgmt", "performance", tr("Device Manager", "Aygıt Yöneticisi")) { close(); DesktopWindows.open("win:devmgmt", tr("Device Manager", "Aygıt Yöneticisi")) },
         xi("eventvwr", "details", tr("Event Viewer", "Olay Görüntüleyici")) { close(); DesktopWindows.open("win:eventvwr", tr("Event Viewer", "Olay Görüntüleyici")) },
+        xi("taskschd", "clock", tr("Task Scheduler", "Görev Zamanlayıcı")) { close(); DesktopWindows.open("win:taskschd", tr("Task Scheduler", "Görev Zamanlayıcı")) },
         xi("diskmgmt", "disk", tr("Disk Management", "Disk Yönetimi")) { close(); DesktopWindows.open("win:diskmgmt", tr("Disk Management", "Disk Yönetimi")) },
         xi("regedit", "services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
         xi("explorer", "folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },

@@ -65,6 +65,20 @@ object KeyboardSymbols {
         return res
     }
 
+    private val plain = setOf("black", "white", "heavy", "light", "bold", "small", "large", "medium", "rightwards", "leftwards", "upwards", "downwards", "left", "right", "up", "down", "outlined", "open", "negative", "squared", "circled", "ornament", "ornamental", "very", "double", "triple", "north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest")
+    private val variantCache = HashMap<String, Map<String, List<String>>>()
+
+    /** The signs of a family that are the same drawing in another weight, colour or direction (black star, white star, ...): a sign points to the list it belongs to, by its reduced name. */
+    fun variants(f: Family): Map<String, List<String>> = synchronized(variantCache) {
+        variantCache.getOrPut(f.id) {
+            val m = LinkedHashMap<String, MutableList<String>>()
+            f.signs.forEach { sg -> m.getOrPut(reduce(sg.name)) { ArrayList() } += sg.ch }
+            m.filter { it.value.size > 1 && it.key.isNotEmpty() }
+        }
+    }
+
+    fun reduce(name: String): String = name.split(' ').filter { it !in plain }.joinToString(" ")
+
     /** The signs whose Unicode name has every word of [q] (English), first 120. */
     fun search(all: List<Family>, q: String): List<Sign> {
         val w = q.trim().lowercase().split(' ').filter { it.isNotEmpty() }

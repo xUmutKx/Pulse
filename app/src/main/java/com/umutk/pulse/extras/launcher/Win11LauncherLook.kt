@@ -261,7 +261,9 @@ class Win11LauncherLook : LauncherLook {
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).clip(shape).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(fg.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Glyph("person", fg, 16.dp) }
-                        Text(android.os.Build.MODEL, color = fg, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                        var renameDev by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                        Text(deviceName(), color = fg, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).clickable { renameDev = true }.padding(start = 8.dp))
+                        if (renameDev) RenameDeviceDialog { renameDev = false }
                     }
                     // the quick folders beside the power button: Settings, File Explorer, Documents, Downloads
                     val ctxF = androidx.compose.ui.platform.LocalContext.current

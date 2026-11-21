@@ -169,6 +169,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "win:devmgmt" -> com.umutk.pulse.extras.launcher.DeviceManagerWindow()
         id == "win:eventvwr" -> com.umutk.pulse.extras.launcher.EventViewerWindow()
         id == "win:diskmgmt" -> com.umutk.pulse.extras.launcher.DiskManagementWindow()
+        id == "win:taskschd" -> com.umutk.pulse.extras.launcher.TaskSchedulerWindow()
         id == "win:security" -> com.umutk.pulse.extras.launcher.WindowsSecurityWindow()
         id == "win:gallery" -> com.umutk.pulse.extras.launcher.GalleryWindow()
         id.startsWith("view:") -> com.umutk.pulse.extras.launcher.FileWindow(id.removePrefix("view:"))

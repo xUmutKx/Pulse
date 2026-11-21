@@ -1792,9 +1792,26 @@ private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<Keyb
                     Text(sg.ch, fontSize = fs, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = Modifier.widthIn(max = room).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(sg.ch) }.padding(horizontal = 10.dp, vertical = 8.dp))
                 }
             }
-        } else LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
-            items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip) }
+        } else Column(Modifier.fillMaxSize()) {
+            // a sign that has others of its kind (another weight, colour or direction) carries a small dot; held, the variants show above the grid
+            val varMap = remember(fam?.id) { fam?.let { KeyboardSymbols.variants(it) } ?: emptyMap() }
+            var picked by remember(sub) { mutableStateOf<List<String>?>(null) }
+            picked?.let { vs ->
+                Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        vs.forEach { v -> Box(Modifier.size(40.dp).clickable { act.emoji(v); picked = null }, contentAlignment = Alignment.Center) { Text(v, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false) } }
+                    }
+                    Box(Modifier.size(34.dp).clickable { picked = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Close"), null, tint = th.sub, modifier = Modifier.size(18.dp)) }
+                }
+            }
+            LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
+                items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
+                    val vs = varMap[KeyboardSymbols.reduce(sg.name)]
+                    Box(Modifier.height(44.dp).combinedClickable(onLongClick = if (vs != null) ({ picked = vs }) else null, onClick = { act.emoji(sg.ch) }), contentAlignment = Alignment.Center) {
+                        Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
+                        if (vs != null) Box(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 4.dp).size(4.dp).clip(RoundedCornerShape(50)).background(th.sub))
+                    }
+                }
             }
         }
     }
@@ -1810,6 +1827,8 @@ private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions, tones: Boolean
     val canTone = tones && !kao && EmojiTone.supports(it.e)
     Box(Modifier.height(44.dp).combinedClickable(onLongClick = if (canTone) ({ onTones(it.e) }) else null, onClick = { act.emoji(shown) }), contentAlignment = Alignment.Center) {
         Text(shown, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
+        // skin tones: a small dot says that holding the emoji shows its variants
+        if (canTone) Box(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 3.dp).size(4.dp).clip(RoundedCornerShape(50)).background(th.sub))
     }
 }
 

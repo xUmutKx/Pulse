@@ -184,6 +184,8 @@ object LauncherPrefs {
     var badges by mutableStateOf(true)
     /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
     var iconPack by mutableStateOf("")
+    /** The name the Start menu shows for this phone (empty: the phone's model). */
+    var deviceName by mutableStateOf("")
     /** The order of the home grid: "app:<package>" and "f:<folder id>" entries; apps not listed follow in the usual order. */
     /** Things put on the home screen by hand: "file:<path>" (a file, a picture or a folder) and "app:<package>". */
     var links by mutableStateOf<List<String>>(emptyList())
@@ -305,7 +307,7 @@ object LauncherPrefs {
         if (p.getProperty("desktopV3") == null) desktopOn = desktopOn - "pulse:store"
         clock = p.getProperty("clock") == "true"
         // off by default (no gadget comes by itself); the key is new so a clock switched on by the old default is off too, and only a choice made now stays
-        desktopClock = p.getProperty("desktopClockOn") == "true"; startLogoAccent = p.getProperty("startLogoAccent") == "true"
+        desktopClock = p.getProperty("desktopClockOn") == "true"; startLogoAccent = p.getProperty("startLogoAccent") == "true"; deviceName = p.getProperty("deviceName").orEmpty()
         desktopNote = p.getProperty("desktopNote") == "true"
         homeApps = p.getProperty("homeApps") == "true"
         // other apps open in a window of the desktop by default (on a phone that has no windows they simply open as before)
@@ -331,7 +333,7 @@ object LauncherPrefs {
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("sounds", sounds.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("wallFileLand", wallFileLand); p.setProperty("glass", glass.toString()); p.setProperty("wallDaily", wallDaily.toString()); p.setProperty("wallFile", wallFile)
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
-        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClockOn", desktopClock.toString()); p.setProperty("startLogoAccent", startLogoAccent.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("deviceName", deviceName); p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("desktopV3", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("trayHidden", trayHidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClockOn", desktopClock.toString()); p.setProperty("startLogoAccent", startLogoAccent.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString()); p.setProperty("wpSideDock", wpSideDock.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
@@ -441,5 +443,8 @@ val GESTURE_ACTIONS = listOf(
 
 
 /** The accent of the launcher: the one picked in the launcher settings, else the look's own. */
+/** The name of this phone as the Start menu shows it. */
+fun deviceName(): String = LauncherPrefs.deviceName.ifBlank { android.os.Build.MODEL }
+
 fun launcherAccent(): androidx.compose.ui.graphics.Color =
     if (LauncherPrefs.accentOn) androidx.compose.ui.graphics.Color(LauncherPrefs.accentArgb).copy(alpha = 1f) else com.umutk.pulse.Look.accent.copy(alpha = 1f)
