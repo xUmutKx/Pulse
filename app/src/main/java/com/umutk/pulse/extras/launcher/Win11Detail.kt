@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -202,39 +203,90 @@ internal fun Win11NetCard() {
     }
 }
 
-/** The top of Bluetooth & devices: the paired devices as cards and a card to add one. */
+/** The top of Bluetooth & devices: the last three devices that were connected as big cards, and a big plus card that looks for new ones inside Pulse. */
 @SuppressLint("MissingPermission")
 @Composable
 internal fun Win11BtCards() {
     val ctx = LocalContext.current
-    val devices = remember { runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter?.bondedDevices?.map { (it.name ?: it.address) to it.bluetoothClass?.majorDeviceClass }.orEmpty() }.getOrDefault(emptyList()) }
-    val shape = RoundedCornerShape(8.dp)
-    val cards: List<Pair<String, Int?>> = devices.map { it.first to it.second } + listOf("" to -1)
-    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        cards.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { (name, cls) ->
-                    val add = cls == -1
-                    Column(Modifier.weight(1f).height(104.dp).clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape)
-                        .clickable { runCatching { ctx.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        // the kind of device picks the picture: audio (headphones), phone, computer, peripheral (controller / keyboard), else a plain device
-                        val icon = when {
-                            add -> "add"
-                            cls == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO -> "voice"
-                            cls == android.bluetooth.BluetoothClass.Device.Major.PHONE -> "phone"
-                            cls == android.bluetooth.BluetoothClass.Device.Major.COMPUTER -> "cpu"
-                            cls == android.bluetooth.BluetoothClass.Device.Major.PERIPHERAL -> "pointer"
-                            else -> "sensors"
-                        }
-                        PIcon(icon, T.accent, 30.dp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(if (add) tr("Add device", "Cihaz ekle") else name, color = T.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        if (!add) Text(tr("Paired", "Eşleşmiş"), color = T.sub, fontSize = 11.sp)
-                    }
+    var add by remember { mutableStateOf(false) }
+    // the devices that are connected right now come first, then the others that were paired, three cards in all
+    val devices by androidx.compose.runtime.produceState(initialValue = emptyList<Pair<String, Int>>()) {
+        val ad = runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter }.getOrNull()
+        val bonded = runCatching { ad?.bondedDevices?.toList() ?: emptyList() }.getOrDefault(emptyList())
+        val live = HashSet<String>()
+        for (prof in listOf(android.bluetooth.BluetoothProfile.A2DP, android.bluetooth.BluetoothProfile.HEADSET)) runCatching {
+            ad?.getProfileProxy(ctx, object : android.bluetooth.BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(p: Int, proxy: android.bluetooth.BluetoothProfile) {
+                    runCatching { proxy.connectedDevices.forEach { live += it.address } }
+                    value = bonded.sortedByDescending { it.address in live }.take(3).map { (it.name ?: it.address) to (it.bluetoothClass?.majorDeviceClass ?: 0) }
+                    ad.closeProfileProxy(p, proxy)
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                override fun onServiceDisconnected(p: Int) {}
+            }, prof)
+        }
+        value = bonded.take(3).map { (it.name ?: it.address) to (it.bluetoothClass?.majorDeviceClass ?: 0) }
+    }
+    val shape = RoundedCornerShape(8.dp)
+    val cards: List<Pair<String, Int>> = devices + listOf("" to -1)
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        cards.forEach { (name, cls) ->
+            val isAdd = cls == -1
+            Column(Modifier.weight(1f).height(104.dp).clip(shape).background(T.panel.copy(alpha = .26f)).border(1.dp, Color.White.copy(alpha = .08f), shape)
+                .clickable(enabled = isAdd) { add = true }.padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                PIcon(btIcon(cls), T.accent, if (isAdd) 40.dp else 30.dp)
+                Spacer(Modifier.height(8.dp))
+                if (!isAdd) {
+                    Text(name, color = T.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
         }
+        repeat(4 - cards.size) { Spacer(Modifier.weight(1f)) }
     }
+    if (add) BtAddDialog { add = false }
+}
+
+private fun btIcon(cls: Int) = when (cls) {
+    -1 -> "add"
+    android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO -> "voice"
+    android.bluetooth.BluetoothClass.Device.Major.PHONE -> "phone"
+    android.bluetooth.BluetoothClass.Device.Major.COMPUTER -> "cpu"
+    android.bluetooth.BluetoothClass.Device.Major.PERIPHERAL -> "pointer"
+    else -> "sensors"
+}
+
+/** Looks for new Bluetooth devices inside Pulse and pairs the one that is picked. */
+@SuppressLint("MissingPermission")
+@Composable
+private fun BtAddDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val found = remember { androidx.compose.runtime.mutableStateListOf<android.bluetooth.BluetoothDevice>() }
+    val ad = remember { runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter }.getOrNull() }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { runCatching { ad?.startDiscovery() } }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val r = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                val d = i.getParcelableExtra<android.bluetooth.BluetoothDevice>(android.bluetooth.BluetoothDevice.EXTRA_DEVICE) ?: return
+                if (found.none { it.address == d.address }) found += d
+            }
+        }
+        ctx.registerReceiver(r, IntentFilter(android.bluetooth.BluetoothDevice.ACTION_FOUND))
+        if (Build.VERSION.SDK_INT >= 31) ask.launch(arrayOf(android.Manifest.permission.BLUETOOTH_SCAN, android.Manifest.permission.BLUETOOTH_CONNECT))
+        else ask.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION))
+        onDispose { runCatching { ctx.unregisterReceiver(r) }; runCatching { ad?.cancelDiscovery() } }
+    }
+    com.umutk.pulse.WinAlert(onDismissRequest = onDismiss, title = { Text(tr("Add a device", "Cihaz ekle")) },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (found.isEmpty()) Text(tr("Looking…", "Aranıyor…"), color = T.sub, fontSize = 13.sp)
+                found.forEach { d ->
+                    Row(Modifier.fillMaxWidth().clickable { runCatching { d.createBond() }; onDismiss() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon(btIcon(d.bluetoothClass?.majorDeviceClass ?: 0), T.accent, 24.dp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(d.name ?: d.address, color = T.text, fontSize = 14.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) })
 }
