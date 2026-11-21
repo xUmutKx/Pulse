@@ -6,6 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.umutk.pulse.PIcon
+import com.umutk.pulse.Look
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -110,10 +114,19 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     val rects = remember { HashMap<String, Rect>() }
     // while something is held, one empty page waits at the end so it can be put there
     val basePages = items.chunked(perPage)
-    val pages: List<List<HomeItem>> = if (dragKey != null && basePages.isNotEmpty()) basePages + listOf(emptyList<HomeItem>()) else basePages.ifEmpty { listOf(emptyList<HomeItem>()) }
-    val pager = rememberPagerState(initialPage = LauncherPrefs.homePage.coerceIn(0, (pages.size - 1).coerceAtLeast(0)), pageCount = { pages.size })
+    // infinite scroll (a setting): after the last page comes the first; then no empty page is added while something is held
+    val loop = LauncherPrefs.loopScroll && basePages.size > 1
+    val pages: List<List<HomeItem>> = if (!loop && dragKey != null && basePages.isNotEmpty()) basePages + listOf(emptyList<HomeItem>()) else basePages.ifEmpty { listOf(emptyList<HomeItem>()) }
+    val nPages = pages.size
+    val startPage = if (loop) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % nPages) + LauncherPrefs.homePage.coerceIn(0, nPages - 1) else LauncherPrefs.homePage.coerceIn(0, (nPages - 1).coerceAtLeast(0))
+    val pager = rememberPagerState(initialPage = startPage, pageCount = { if (loop) Int.MAX_VALUE else nPages })
+    WallpaperScrollEffect(pager, nPages, loop)
+    // the page overview (a tap on the dots): every page in small, a tap goes there, the arrows move a page
+    var overview by remember { mutableStateOf(false) }
+    // the page that is on screen, as a number of the list (the pager's own number runs on when pages go round)
+    val realPage = if (loop) pager.currentPage % nPages else pager.currentPage
     // the home button goes back to the chosen home page
-    LaunchedEffect(LauncherSession.homeTick) { if (LauncherSession.homeTick > 0 && dragKey == null) pager.animateScrollToPage(LauncherPrefs.homePage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))) }
+    LaunchedEffect(LauncherSession.homeTick) { if (LauncherSession.homeTick > 0 && dragKey == null) pager.animateScrollToPage(pager.currentPage + (LauncherPrefs.homePage.coerceIn(0, (pages.size - 1).coerceAtLeast(0)) - realPage)) }
     val side = when {
         dragKey == null -> 0
         finger.x - rootPos.x < 40 * density -> -1
@@ -124,7 +137,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
         while (side != 0) {
             delay(650)
             val t = pager.currentPage + side
-            if (t in 0 until pager.pageCount) pager.animateScrollToPage(t) else break
+            if (loop || t in 0 until pager.pageCount) pager.animateScrollToPage(t) else break
         }
     }
 
@@ -152,7 +165,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
             }
             else -> {
                 order.remove(dk)
-                val at = if (target != null) order.indexOf(target) else (pager.currentPage * perPage + (pages.getOrNull(pager.currentPage)?.count { it.key != dk } ?: 0)).coerceAtMost(order.size)
+                val at = if (target != null) order.indexOf(target) else (realPage * perPage + (pages.getOrNull(realPage)?.count { it.key != dk } ?: 0)).coerceAtMost(order.size)
                 order.add(at.coerceIn(0, order.size), dk)
                 commit(ctx, order)
             }
@@ -162,7 +175,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     Box(Modifier.fillMaxSize().onGloballyPositioned { rootPos = it.positionInRoot(); rootW = it.size.width.toFloat() }) {
         HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = dragKey == null) { p ->
             Column(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp).pageEffect(pager, p, LauncherPrefs.pageEffect)) {
-                pages.getOrElse(p) { emptyList() }.chunked(columns).forEach { row ->
+                pages.getOrElse(if (loop) p % nPages else p) { emptyList() }.chunked(columns).forEach { row ->
                     Row(Modifier.fillMaxWidth()) {
                         row.forEach { item ->
                             val k = item.key
@@ -193,7 +206,18 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
                 }
             }
         }
-        if (pages.size > 1 && LauncherPrefs.pageDots) PageDots(pager.currentPage, pages.size, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+        if (pages.size > 1 && LauncherPrefs.pageDots) PageDots(realPage, pages.size, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp).clickable { overview = true })
+        if (overview) {
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            PageOverview(pages, realPage, perPage,
+                onGo = { i -> overview = false; scope.launch { pager.animateScrollToPage(pager.currentPage + (i - realPage)) } },
+                onMove = { i, by ->
+                    val chunks = items.map { it.key }.chunked(perPage).toMutableList()
+                    val j = i + by
+                    if (i in chunks.indices && j in chunks.indices) { val t = chunks[i]; chunks[i] = chunks[j]; chunks[j] = t; commit(ctx, chunks.flatten()) }
+                },
+                onClose = { overview = false })
+        }
         // the held item follows the finger
         dragKey?.let { k ->
             val sz = (iconDp * 1.2f)
@@ -285,5 +309,43 @@ private fun Modifier.pageEffect(state: androidx.compose.foundation.pager.PagerSt
         "zoom" -> { alpha = 1f - a; scaleX = 1f - a * .25f; scaleY = 1f - a * .25f }
         "stack" -> { if (off < 0) { translationX = size.width * off; alpha = 1f - a * .3f; scaleX = 1f - a * .1f; scaleY = 1f - a * .1f } else { translationX = size.width * off * .0f } }
         "flip" -> { cameraDistance = 16f * density; rotationY = -off * 180f; alpha = if (a > .5f) 0f else 1f }
+    }
+}
+
+
+/** Every page of the home in small cards: a tap goes to the page, the arrows under a card move the page one place left or right. */
+@Composable
+private fun PageOverview(pages: List<List<HomeItem>>, current: Int, perPage: Int, onGo: (Int) -> Unit, onMove: (Int, Int) -> Unit, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(T.panel).padding(16.dp)) {
+            Text(tr("Pages", "Sayfalar"), color = T.text, fontSize = 16.sp)
+            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                itemsIndexed(pages) { i, page ->
+                    androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(width = 96.dp, height = 150.dp).clip(RoundedCornerShape(12.dp)).background(T.bg)
+                            .then(if (i == current) Modifier.border(2.dp, Look.accent, RoundedCornerShape(12.dp)) else Modifier)
+                            .clickable { onGo(i) }.padding(6.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                page.chunked(3).take(5).forEach { row ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        row.forEach { it2 ->
+                                            when (it2) {
+                                                is HomeItem.App -> LaunchAppPicture(it2.app, 24.dp, T.panel, T.text)
+                                                is HomeItem.Folder -> Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(T.text.copy(alpha = .2f)))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(28.dp).clickable { onMove(i, -1) }, contentAlignment = Alignment.Center) { PIcon("back", if (i > 0) T.text else T.sub.copy(alpha = .3f), 18.dp) }
+                            Text("${i + 1}", color = T.sub, fontSize = 12.sp)
+                            Box(Modifier.size(28.dp).clickable { onMove(i, 1) }, contentAlignment = Alignment.Center) { PIcon("forward", if (i < pages.lastIndex) T.text else T.sub.copy(alpha = .3f), 18.dp) }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

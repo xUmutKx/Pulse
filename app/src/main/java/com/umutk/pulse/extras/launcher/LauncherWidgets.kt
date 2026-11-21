@@ -388,6 +388,7 @@ fun LauncherWidgetPages(modifier: Modifier = Modifier) {
     val loop = LauncherPrefs.loopScroll && list.size > 1
     val start = if (loop) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % list.size) else 0
     val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = start, pageCount = { if (loop) Int.MAX_VALUE else list.size })
+    WallpaperScrollEffect(pager, list.size, loop)
     androidx.compose.foundation.layout.Column(modifier) {
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth()) { i ->
             val w = list[i % list.size]
