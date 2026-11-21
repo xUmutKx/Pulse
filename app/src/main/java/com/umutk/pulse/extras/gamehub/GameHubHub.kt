@@ -896,7 +896,15 @@ fun GameHubHub(onBack: () -> Unit) {
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
-    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "cdrack") ?: "cdrack") }
+    // the CD shelf marks itself as "being tried" for its first seconds: if the app died in them (a phone whose graphics cannot take it), the next start goes back to Boxshelf by itself
+    var ghLook by remember {
+        mutableStateOf(prefs(ctx).getString("ghLook", "cdrack").let { k ->
+            if (k == "cdrack" && prefs(ctx).getBoolean("cdrack_try", false)) { prefs(ctx).edit().putString("ghLook", "boxshelf").putBoolean("cdrack_try", false).apply(); "boxshelf" } else k ?: "cdrack"
+        })
+    }
+    androidx.compose.runtime.LaunchedEffect(ghLook) {
+        if (ghLook == "cdrack") { prefs(ctx).edit().putBoolean("cdrack_try", true).commit(); try { kotlinx.coroutines.delay(6000) } finally { prefs(ctx).edit().putBoolean("cdrack_try", false).apply() } }
+    }
     // the views follow one another from the grid button of each: Boxshelf's shelf -> the CD rack -> the classic grid -> Boxshelf's shelf
     fun setLook(k: String) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply() }
     LaunchedEffect(ShelfAsk.look.value) { ShelfAsk.look.value?.let { setLook(it); ShelfAsk.look.value = null } }
