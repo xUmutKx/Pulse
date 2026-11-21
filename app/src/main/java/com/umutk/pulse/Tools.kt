@@ -111,7 +111,10 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "ram" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.RamPage() }
         id == "trayicons" -> com.umutk.pulse.extras.launcher.TrayIconsPage()
         id == "fonts" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.FontChangerScreen() }
-        id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
+        id == "dns" -> { androidx.activity.compose.BackHandler { back() }
+            // in a window of the launcher the page has no list around it: its cards were drawn on top of each other
+            if (com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { com.umutk.pulse.features.DnsSettings() }
+            else com.umutk.pulse.features.DnsSettings() }
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
         id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
         id == "buds" -> com.umutk.pulse.extras.buds.DeviceManagerScreen(back)

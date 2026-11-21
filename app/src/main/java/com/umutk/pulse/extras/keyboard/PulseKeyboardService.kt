@@ -360,7 +360,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         val path = item.image
         // a text goes in and is also the copied text again (the phone's clipboard), so it can be pasted from anywhere
-        if (path == null) { c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text)); st.panel = "keys"; afterText(); return }
+        if (path == null) {
+            c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text))
+            // the paste put the text on the phone's clipboard again: it is marked as seen and leaves the bar, so it is not offered a second time
+            runCatching {
+                val cp = clipboard?.primaryClip
+                if (cp != null && cp.itemCount > 0) lastClipSig = "${if (android.os.Build.VERSION.SDK_INT >= 26) cp.description.timestamp else 0L}|" + (cp.getItemAt(0).text?.toString()?.take(200) ?: cp.getItemAt(0).uri?.toString().orEmpty())
+            }
+            quickClip = null; st.panel = "keys"; afterText(); updateSuggestions(); return
+        }
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val ok = types.any { it.startsWith("image/") || it == "*/*" }

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -110,7 +111,8 @@ class Win11LauncherLook : LauncherLook {
         // Windows 11: the taskbar is acrylic, the desktop's picture blurred behind a light tint, and its buttons start at the left
         AcrylicBox("win11", Color(0x8A141B2A), modifier.fillMaxWidth().height(taskbarHeight).padding(0.dp), androidx.compose.ui.graphics.RectangleShape, 30.dp) {
           Box(Modifier.fillMaxSize().padding(horizontal = edge), contentAlignment = Alignment.CenterStart) {
-            Row(Modifier.padding(start = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+            // the buttons stop short of the tray (the connection icons and the clock) and scroll when there are more of them: they used to run underneath it
+            Row(Modifier.padding(start = 10.dp, end = 190.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
                 Box(Modifier.size(40.dp).clip(shape).pointerInput(Unit) { detectTapGestures(onTap = { LauncherSession.startOpen = true }, onLongPress = { LauncherSession.winXOpen = true }) }, contentAlignment = Alignment.Center) {
                     StartGlyph(fg)
                     if (open) Indicator(accent, Modifier.align(Alignment.BottomCenter))
