@@ -869,7 +869,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val up = st.shift > 0
     val land = kbLand()
     // (the Samsung look has its number row when held upright)
-    val numRow = KeyboardPrefs.numberRowAt(land) || (th.samsung && !land)
+    // the floating keyboard follows its own switch (off: the digits come by holding a letter), the others the number row setting
+    val numRow = if (KeyboardPrefs.floatNow) KeyboardPrefs.floatNumberRow else (KeyboardPrefs.numberRowAt(land) || (th.samsung && !land))
     val digits = !numRow && KeyboardPrefs.longPressSymbols
     val langs = KeyboardPrefs.langList()
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())

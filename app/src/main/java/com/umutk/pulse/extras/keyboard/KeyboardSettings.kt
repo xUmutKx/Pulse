@@ -235,6 +235,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A keyboard you move anywhere on the screen by the handle on top", "Üstteki tutamakla ekranın her yerine taşınan klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
+            if (KeyboardPrefs.floating) Switch(tr("Number row in the floating keyboard", "Yüzen klavyede sayı satırı"), tr("Off: hold a letter for its digit", "Kapalı: sayı için harfe basılı tut"), KeyboardPrefs.floatNumberRow) { KeyboardPrefs.floatNumberRow = it; save() }
             // the accessibility keyboard: over any app, switched on here; turning it on sends the phone to its accessibility settings when Pulse is not on there yet
             val accCtx = LocalContext.current
             var accOn by remember { mutableStateOf(AccessKeyboard.on(accCtx)) }
