@@ -77,15 +77,23 @@ fun ControlPanelHome() {
     var view by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var cat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<WGroup?>(null) }
     var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    val white = androidx.compose.ui.graphics.Color.White
-    val ink = androidx.compose.ui.graphics.Color(0xFF1A1A1A)
-    val link = androidx.compose.ui.graphics.Color(0xFF0066CC)
-    val title = androidx.compose.ui.graphics.Color(0xFF1E3287)
+    // Windows 11: dark and see-through (the window's body lets the desktop show), as its Settings; the other looks keep the classic white page
+    val w11 = T.id == "win11"
+    val deskWin = LocalDesktopWin.current
+    androidx.compose.runtime.DisposableEffect(deskWin, w11) { if (w11) deskWin?.glass = true; onDispose { if (w11) deskWin?.glass = false } }
+    val white = if (w11) T.bg.copy(alpha = .3f) else androidx.compose.ui.graphics.Color.White
+    val ink = if (w11) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1A1A1A)
+    val link = if (w11) androidx.compose.ui.graphics.Color(0xFF60CDFF) else androidx.compose.ui.graphics.Color(0xFF0066CC)
+    val title = if (w11) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF1E3287)
+    val bar = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else androidx.compose.ui.graphics.Color(0xFFF1F1F1)
+    val tile = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else androidx.compose.ui.graphics.Color(0xFFE8F0FA)
+    val tileEdge = if (w11) androidx.compose.ui.graphics.Color(0x33FFFFFF) else androidx.compose.ui.graphics.Color(0xFFA9C0DC)
+    val field = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else white
     Column(Modifier.fillMaxSize().background(white)) {
         // the address bar and the search box
-        Row(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color(0xFFF1F1F1)).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(bar).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(if (cat == null) "Control Panel ›" else "Control Panel › " + tr(cat!!.en, cat!!.tr) + " ›", color = ink, fontSize = 12.sp, modifier = Modifier.weight(1f).clickable { cat = null })
-            Box(Modifier.width(140.dp).background(white).border(1.dp, androidx.compose.ui.graphics.Color(0xFFAAAAAA)).padding(horizontal = 6.dp, vertical = 4.dp)) {
+            Box(Modifier.width(140.dp).background(field).border(1.dp, if (w11) tileEdge else androidx.compose.ui.graphics.Color(0xFFAAAAAA)).padding(horizontal = 6.dp, vertical = 4.dp)) {
                 androidx.compose.foundation.text.BasicTextField(q, { q = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = ink, fontSize = 12.sp))
             }
         }
@@ -100,13 +108,24 @@ fun ControlPanelHome() {
             when {
                 q.isNotBlank() -> hits.forEach { it -> CpApplet(it, 1, ink, link) { openWItem(ctx, it.route, open) } }
                 cat != null -> cat!!.items.forEach { it -> CpApplet(it, 1, ink, link) { openWItem(ctx, it.route, open) } }
-                view == 0 -> CONTROL_PANEL_8.forEach { g ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
-                        Box(Modifier.size(52.dp).background(androidx.compose.ui.graphics.Color(0xFFE8F0FA)).border(1.dp, androidx.compose.ui.graphics.Color(0xFFA9C0DC)), contentAlignment = Alignment.Center) { PIcon(g.icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5), 30.dp) }
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(tr(g.en, g.tr), color = link, fontSize = 15.sp, modifier = Modifier.clickable { cat = g })
-                            g.items.take(3).forEach { it -> Text(tr(it.en, it.tr), color = link, fontSize = 12.sp, modifier = Modifier.clickable { openWItem(ctx, it.route, open) }.padding(top = 3.dp)) }
+                view == 0 -> androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    // room enough (a turned phone, a wide window): the categories stand in two columns
+                    val cols = if (maxWidth >= 560.dp) 2 else 1
+                    Column(Modifier.fillMaxWidth()) {
+                        CONTROL_PANEL_8.chunked(cols).forEach { rowGroups ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                rowGroups.forEach { g ->
+                                    Row(Modifier.weight(1f).padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                                        Box(Modifier.size(52.dp).background(tile).border(1.dp, tileEdge), contentAlignment = Alignment.Center) { PIcon(g.icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5).let { if (w11) link else it }, 32.dp) }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column {
+                                            Text(tr(g.en, g.tr), color = link, fontSize = 15.sp, modifier = Modifier.clickable { cat = g })
+                                            g.items.take(3).forEach { it -> Text(tr(it.en, it.tr), color = link, fontSize = 12.sp, modifier = Modifier.clickable { openWItem(ctx, it.route, open) }.padding(top = 3.dp)) }
+                                        }
+                                    }
+                                }
+                                repeat(cols - rowGroups.size) { Spacer(Modifier.weight(1f)) }
+                            }
                         }
                     }
                 }
@@ -124,15 +143,18 @@ fun ControlPanelHome() {
 
 @Composable
 private fun CpApplet(it: WItem, mode: Int, ink: androidx.compose.ui.graphics.Color, link: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    val dark = T.id == "win11"
+    val iconTint = if (dark) link else androidx.compose.ui.graphics.Color(0xFF2F6DB5)
+    val subTint = if (dark) androidx.compose.ui.graphics.Color(0xFFC9C9C9) else androidx.compose.ui.graphics.Color(0xFF555555)
     if (mode == 1 || mode == 0) Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon(it.icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5), 32.dp)
+        PIcon(it.icon, iconTint, 32.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(tr(it.en, it.tr), color = link, fontSize = 14.sp)
-            Text(tr(it.enDesc, it.trDesc), color = androidx.compose.ui.graphics.Color(0xFF555555), fontSize = 12.sp)
+            Text(tr(it.enDesc, it.trDesc), color = subTint, fontSize = 12.sp)
         }
     } else Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon(it.icon, androidx.compose.ui.graphics.Color(0xFF2F6DB5), 20.dp)
+        PIcon(it.icon, iconTint, 20.dp)
         Spacer(Modifier.width(8.dp))
         Text(tr(it.en, it.tr), color = ink, fontSize = 12.sp)
     }

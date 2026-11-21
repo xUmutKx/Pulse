@@ -186,6 +186,26 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.en.contains(q.trim(), true) || it.tr.contains(q.trim(), true) }.take(8) }
     // YTXTube is our YouTube: found by "you", "tube", "ytx" and opens its own screen
     val ytx = remember(q) { q.isNotBlank() && listOf("youtube", "ytxtube", "ytx", "tube", "yt music").any { it.contains(q.trim(), true) } && q.trim().length >= 2 }
+    // the tools of the system, found by their name or the command that opens them (con -> Control Panel, reg -> Registry Editor, cmd -> Terminal)
+    val lookId = if (LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black") "win10" else "win11"
+    val tools = remember(q) {
+        if (q.isBlank()) emptyList() else {
+            val n = q.trim().lowercase()
+            fun hit(vararg names: String) = names.any { it.lowercase().startsWith(n) || (n.length >= 3 && it.lowercase().contains(n)) }
+            buildList<Triple<String, String, () -> Unit>> {
+                if (hit("Control Panel", "control", "Denetim Masası")) add(Triple("settings", tr("Control Panel", "Denetim Masası"), { openDesktopItem(ctx, "pulse:settings", lookId) }))
+                if (hit("Registry Editor", "regedit", "registry", "Kayıt Defteri")) add(Triple("services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi"), { DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) }))
+                if (hit("Task Manager", "taskmgr", "Görev Yöneticisi")) add(Triple("processes", tr("Task Manager", "Görev Yöneticisi"), { openDesktopItem(ctx, "pulse:taskmgr", lookId) }))
+                if (hit("Terminal", "Command Prompt", "cmd", "powershell", "Komut İstemi")) add(Triple("run", tr("Terminal", "Terminal"), { openDesktopItem(ctx, "pulse:cmd", lookId) }))
+                if (hit("Settings", "Ayarlar")) add(Triple("settings", tr("Settings", "Ayarlar"), { openDesktopItem(ctx, "pulse:winsettings", lookId) }))
+                if (hit("File Explorer", "explorer", "Dosya Gezgini", "files")) add(Triple("folder", tr("File Explorer", "Dosya Gezgini"), { openDesktopItem(ctx, "pulse:files", lookId) }))
+                if (hit("Notepad", "Not Defteri")) add(Triple("notes", tr("Notepad", "Not Defteri"), { openDesktopItem(ctx, "pulse:x:win:notepad", lookId) }))
+                if (hit("Calculator", "calc", "Hesap makinesi")) add(Triple("calc", tr("Calculator", "Hesap makinesi"), { openDesktopItem(ctx, "pulse:x:calculator", lookId) }))
+                if (hit("Paint")) add(Triple("palette", "Paint", { openDesktopItem(ctx, "pulse:paint", lookId) }))
+                if (hit("Run", "Çalıştır")) add(Triple("run", tr("Run", "Çalıştır"), { LauncherSession.runOpen = true }))
+            }
+        }
+    }
     val imeUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
         val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().imePadding().padding(top = 28.dp, bottom = if (imeUp) 8.dp else taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
@@ -209,6 +229,12 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
                 }
                 if (kind == 0 || kind == 1) {
                     Text(tr("Apps", "Uygulamalar"), color = Color(0xCCFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                    tools.forEach { (icon, name, act) ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable { LauncherSession.w11SearchOpen = false; act() }.padding(vertical = 8.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Glyph(icon, Color.White, 22.dp)
+                            Text(name, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
                     apps.forEach { a ->
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).combinedClickable(onClick = { LauncherSession.w11SearchOpen = false; state?.open(a) }, onLongClick = { menuApp = a }).padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             LaunchAppPicture(a, 28.dp, Color(0x33FFFFFF), Color.White)
