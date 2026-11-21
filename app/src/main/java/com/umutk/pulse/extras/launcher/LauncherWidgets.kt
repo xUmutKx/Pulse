@@ -311,11 +311,22 @@ fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> U
                     }
                 }
                 else if (flat != null && flat.isEmpty()) Text(tr("No gadgets", "Gadget yok"), color = w.sub, modifier = Modifier.padding(16.dp))
-                else LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (flat != null) gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
-                    else GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
-                        if (group == "") item(key = "h_$g", span = { GridItemSpan(maxLineSpan) }) { Text(groupName(g), color = w.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
-                        gridItems(ownBy.getValue(g), key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
+                else if (flat != null) LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    gridItems(flat, key = { it.provider.flattenToString() }, span = { GridItemSpan(if (wide(it)) 2 else 1) }) { Card(it, wide(it)) }
+                }
+                // Pulse's own widgets: every group is open, each a row that slides sideways (as the Windows 11 widget board), so a group's widgets are picked by sliding, not by scrolling a long page
+                else androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GROUP_ORDER.filter { it in ownBy && (group == "" || group == it) }.forEach { g ->
+                        item(key = "g_$g") {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(groupName(g), color = w.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
+                                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(ownBy.getValue(g), key = { it.provider.flattenToString() }) { inf ->
+                                        Box(Modifier.width(if (wide(inf)) 230.dp else 140.dp)) { Card(inf, wide(inf)) }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
