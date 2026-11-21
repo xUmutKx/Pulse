@@ -188,6 +188,9 @@ object Store {
     fun active(c: Context, kind: String): String? = sp(c).getString("active_$kind", null)
     fun setActive(c: Context, kind: String, id: String) { sp(c).edit().putString("active_$kind", id).apply() }
     fun customUri(c: Context, kind: String): Uri? = sp(c).getString("custom_$kind", null)?.let(Uri::parse)
+    /** The folder searched for models; null = the whole phone, starting with Download. */
+    fun scanDir(c: Context): String? = sp(c).getString("scan_dir", null)?.takeIf { it.isNotBlank() }
+    fun setScanDir(c: Context, path: String?) { sp(c).edit().putString("scan_dir", path).apply() }
     fun setCustomUri(c: Context, kind: String, u: Uri?) { sp(c).edit().putString("custom_$kind", u?.toString()).putString("active_$kind", if (u != null) "custom" else null).apply() }
 }
 
@@ -219,13 +222,15 @@ fun searchHf(q: String, limit: Int = 12): List<AiModel> {
     return out
 }
 
-/** GGUF and whisper files already on the phone (Download, Download/PulseAI and the folders other apps keep them in): used in place, nothing is copied. */
-fun phoneModels(): List<AiModel> {
+/** GGUF and whisper files already on the phone: in the chosen folder, or (default) all over the phone starting with Download. Used in place, nothing is copied. */
+fun phoneModels(c: Context): List<AiModel> {
     if (!Environment.isExternalStorageManager()) return emptyList()
     val root = Environment.getExternalStorageDirectory()
-    val dirs = listOf(Store.dir, File(root, "Pulse"), File(root, "Download"), File(root, "Documents"), File(root, "Models"), File(root, "Android/media"), File(root, "Movies"))
+    val chosen = Store.scanDir(c)?.let { File(it) }?.takeIf { it.isDirectory }
+    val dirs = if (chosen != null) listOf(chosen) else listOf(File(root, "Download"), Store.dir, root)
     val seen = HashSet<String>()
-    return dirs.flatMap { d -> d.walkTopDown().maxDepth(4).filter { it.isFile && (it.name.endsWith(".gguf", true) || (it.name.startsWith("ggml-") && it.name.endsWith(".bin"))) }.toList() }
+    fun skip(f: File) = f.name.startsWith(".") || (f.parentFile?.name == "Android" && (f.name == "data" || f.name == "obb"))
+    return dirs.flatMap { d -> d.walkTopDown().maxDepth(8).onEnter { !skip(it) }.filter { it.isFile && (it.name.endsWith(".gguf", true) || (it.name.startsWith("ggml-") && it.name.endsWith(".bin"))) }.toList() }
         .filter { seen.add(it.canonicalPath) && CHAT_MODELS.none { m -> m.file == it.name } && SPEECH_MODELS.none { m -> m.file == it.name } }
         .map { f -> AiModel("file:" + f.path, if (f.name.endsWith(".bin")) "speech" else "chat", f.nameWithoutExtension, f.name, "", f.length(), "?", path = f.path) }
 }
