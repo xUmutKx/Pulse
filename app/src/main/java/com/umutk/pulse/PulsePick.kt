@@ -398,7 +398,15 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
             }
             // what to show: the kinds of files in this folder
             if (mode != "folder") Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(tr("All", "Hepsi"), tr("Pictures", "Resimler"), tr("Videos", "Videolar"), tr("Audio", "Ses"), tr("Documents", "Belgeler"), tr("Archives", "Arşivler")).forEachIndexed { i, n -> PChip(kind == i, n) { kind = i } }
+                listOf(tr("All", "Hepsi") to "apps", tr("Pictures", "Resimler") to "image", tr("Videos", "Videolar") to "video", tr("Audio", "Ses") to "music", tr("Documents", "Belgeler") to "document", tr("Archives", "Arşivler") to "zip")
+                    .forEachIndexed { i, (n, ic) ->
+                        // a chip with its icon (the kind of file at a glance)
+                        val on = kind == i
+                        Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(if (T.bevel) 0.dp else 18.dp)).background(if (on) T.accent.copy(alpha = .2f) else T.text.copy(alpha = .07f)).clickable { kind = i }.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PIcon(ic, if (on) T.accent else T.sub, 16.dp)
+                            Text(n, color = if (on) T.accent else T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
             }
             if (list == null) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { PLoader(Modifier.size(28.dp)) }
             else if (list.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { PIcon("folder", T.sub, 48.dp) }

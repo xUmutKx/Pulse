@@ -40,7 +40,7 @@ object LauncherPrefs {
     /** Off (the default): the home screen shows no app grid. Windows looks show the desktop shortcuts, the other looks the clock, widgets and dock; the apps are in the apps list. */
     var homeApps by mutableStateOf(false)
     /** Apps open in a window of their own on the Windows looks (the system's freeform windows); without that mode they open full screen as usual. */
-    var windowed by mutableStateOf(false)
+    var windowed by mutableStateOf(true)
     var lockPortrait by mutableStateOf(false)
     var fullScreen by mutableStateOf(false)
     /** The Windows Phone look's dock on the left edge (off by default: the tiles cover the whole screen). */
@@ -301,7 +301,8 @@ object LauncherPrefs {
         desktopClock = p.getProperty("desktopClockOn") == "true"; startLogoAccent = p.getProperty("startLogoAccent") == "true"
         desktopNote = p.getProperty("desktopNote") == "true"
         homeApps = p.getProperty("homeApps") == "true"
-        windowed = p.getProperty("windowed") == "true"
+        // other apps open in a window of the desktop by default (on a phone that has no windows they simply open as before)
+        windowed = p.getProperty("windowed") != "false"
         lockPortrait = p.getProperty("lockPortrait") == "true"
         fullScreen = p.getProperty("fullScreen") == "true"
         wpSideDock = p.getProperty("wpSideDock") == "true"
@@ -359,7 +360,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; widgetPages = false; loopScroll = false; dockGlass = false; dockAlpha = 100; twoLineLabels = false; landColumns = 0; landRows = 0; hideUnusedDays = 0; dailyBackup = false; searchEngine = "google"; iconAnim = "none"; wallScroll = false; glassApps = true; winX = ""; smartFolders = false; gDualUp = "none"; gDualDown = "none"; gDualLeft = "none"; gDualRight = "none"; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = false; startLogoAccent = false; desktopNote = false; homeApps = false; windowed = true; lockPortrait = false; fullScreen = false
         gDouble = "none"; gUp = "none"; gDown = "none"; drawerAz = true; glance = true; bootEggs = true; menuOrder = emptyList(); menuOff = emptySet()
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; glass = 0; sounds = true; wallDaily = false; wallFile = ""; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
