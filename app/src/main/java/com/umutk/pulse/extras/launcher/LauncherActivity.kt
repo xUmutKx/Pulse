@@ -160,6 +160,35 @@ class LauncherActivity : ComponentActivity() {
             if (LauncherPrefs.fullScreen) hide(WindowInsetsCompat.Type.statusBars()) else show(WindowInsetsCompat.Type.statusBars())
         }
     }
+    // Windows keyboard shortcuts (a physical keyboard, or Pulse's keyboard with its Win key): Win+X the menu, Win+R Run, Win+E Explorer, Win+I Settings, Win+S or Win+Q search, Win+D
+    // the desktop; the Windows key alone opens and closes the Start menu. Windows 10 and 11 only (the older looks keep to what they were).
+    private var metaUsed = false
+    override fun dispatchKeyEvent(e: android.view.KeyEvent): Boolean {
+        val modern = LauncherPrefs.look == "win11" || LauncherPrefs.look == "win10" || LauncherPrefs.look == "win10black"
+        if (modern) {
+            val metaKey = e.keyCode == android.view.KeyEvent.KEYCODE_META_LEFT || e.keyCode == android.view.KeyEvent.KEYCODE_META_RIGHT
+            if (e.action == android.view.KeyEvent.ACTION_DOWN && !metaKey && e.isMetaPressed) {
+                val look = LauncherPrefs.look
+                val did = when (e.keyCode) {
+                    android.view.KeyEvent.KEYCODE_X -> { LauncherSession.winXOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_R -> { LauncherSession.runOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_E -> { openDesktopItem(this, "pulse:files", look); true }
+                    android.view.KeyEvent.KEYCODE_I -> { openDesktopItem(this, "pulse:winsettings", look); true }
+                    android.view.KeyEvent.KEYCODE_S, android.view.KeyEvent.KEYCODE_Q -> { LauncherSession.w11SearchOpen = true; true }
+                    android.view.KeyEvent.KEYCODE_D -> { DesktopWindows.list.forEach { it.min = true }; LauncherSession.startOpen = false; true }
+                    else -> false
+                }
+                if (did) { metaUsed = true; return true }
+            }
+            if (metaKey) {
+                if (e.action == android.view.KeyEvent.ACTION_DOWN && e.repeatCount == 0) metaUsed = false
+                // the Windows key let go with nothing pressed with it: the Start menu
+                if (e.action == android.view.KeyEvent.ACTION_UP) { if (!metaUsed) LauncherSession.startOpen = !LauncherSession.startOpen; metaUsed = false; return true }
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(e)
+    }
     override fun onStart() { enter(); super.onStart() }
     override fun onResume() { enter(); super.onResume(); PhoneWall.sync(this, LauncherPrefs.look); LauncherPrefs.dailyBackupIfDue(this) }
     override fun onStop() { super.onStop(); LauncherPrefs.restorePulse(); AppLookGuard.leave(this) }

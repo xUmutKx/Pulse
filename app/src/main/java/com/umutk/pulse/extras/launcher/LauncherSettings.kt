@@ -105,6 +105,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
     var pickHidden by remember { mutableStateOf(false) }
     var pickWall by remember { mutableStateOf(false) }
     var showNews by remember { mutableStateOf(false) }
+    var showWinX by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
     val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the gadget", "Gadget ekle"), tr("Watch a short ad to add this gadget. It is added only when the ad is watched to the end.", "Bu gadget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
@@ -217,6 +218,8 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
                 LauncherPrefs.iconAnim = all[(all.indexOf(LauncherPrefs.iconAnim) + 1) % all.size]; save()
             }
             ValueRow("globe", tr("News", "Haberler"), "RSS") { showNews = true }
+            // the Win+X menu of Windows 10 and 11: which items, in which order
+            if (cur.id in setOf("win11", "win10", "win10black")) ValueRow("menu", tr("Win+X menu", "Win+X menüsü"), "") { showWinX = true }
             ValueRow("search", tr("Web search", "Web araması"), LauncherPrefs.searchEngine) {
                 val all = listOf("google", "duckduckgo", "bing", "brave", "yandex", "startpage")
                 LauncherPrefs.searchEngine = all[(all.indexOf(LauncherPrefs.searchEngine) + 1) % all.size]; save()
@@ -458,6 +461,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
     if (pickPack) IconPackPicker(LauncherPrefs.iconPack, onPick = { LauncherPrefs.iconPack = it; save(); pickPack = false }, onDismiss = { pickPack = false })
     if (pickWidget) WidgetPickDialog(onPick = { adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
     if (showNews) NewsDialog { showNews = false }
+    if (showWinX) WinXEditor { showWinX = false }
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }, onPickFile = { f -> LauncherPrefs.wallFile = f.path; save(); pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
     }

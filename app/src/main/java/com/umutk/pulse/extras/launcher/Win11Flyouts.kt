@@ -365,20 +365,23 @@ private fun WinXMenu(taskbar: Dp) {
     fun close() { LauncherSession.winXOpen = false }
     fun page(id: String) { close(); openDesktopItem(ctx, id, if (w11) "win11" else "win10") }
     val none = remember { MutableInteractionSource() }
-    fun xi(icon: String, name: String, act: () -> Unit) = Triple(icon, name, act)
-    val items = listOf(
-        xi("apps", tr("Apps and Features", "Uygulamalar ve özellikler")) { page("pulse:apps") },
-        xi("battery", tr("Power Options", "Güç seçenekleri")) { close(); SettingsJump.item = "Power & battery"; openDesktopItem(ctx, "pulse:winsettings", if (w11) "win11" else "win10") },
-        xi("cpu", tr("System", "Sistem")) { page("pulse:pc") },
-        xi("processes", tr("Task Manager", "Görev Yöneticisi")) { page("pulse:taskmgr") },
-        xi("settings", tr("Settings", "Ayarlar")) { page("pulse:winsettings") },
-        xi("settings", tr("Control Panel", "Denetim Masası")) { page("pulse:settings") },
-        xi("run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
-        xi("services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
-        xi("folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },
-        xi("search", tr("Search", "Ara")) { close(); LauncherSession.w11SearchOpen = true },
-        xi("run", tr("Run", "Çalıştır")) { close(); LauncherSession.runOpen = true },
-    )
+    fun xi(key: String, icon: String, name: String, act: () -> Unit) = listOf(key to Triple(icon, name, act))
+    val all = listOf(
+        xi("apps", "apps", tr("Apps and Features", "Uygulamalar ve özellikler")) { page("pulse:apps") },
+        xi("power", "battery", tr("Power Options", "Güç seçenekleri")) { close(); SettingsJump.item = "Power & battery"; openDesktopItem(ctx, "pulse:winsettings", if (w11) "win11" else "win10") },
+        xi("system", "cpu", tr("System", "Sistem")) { page("pulse:pc") },
+        xi("taskmgr", "processes", tr("Task Manager", "Görev Yöneticisi")) { page("pulse:taskmgr") },
+        xi("settings", "settings", tr("Settings", "Ayarlar")) { page("pulse:winsettings") },
+        xi("control", "settings", tr("Control Panel", "Denetim Masası")) { page("pulse:settings") },
+        xi("terminal", "run", tr("Terminal", "Terminal")) { page("pulse:cmd") },
+        xi("regedit", "services", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) { close(); DesktopWindows.open("win:regedit", tr("Registry Editor", "Kayıt Defteri Düzenleyicisi")) },
+        xi("explorer", "folder", tr("File Explorer", "Dosya Gezgini")) { page("pulse:files") },
+        xi("search", "search", tr("Search", "Ara")) { close(); LauncherSession.w11SearchOpen = true },
+        xi("run", "run", tr("Run", "Çalıştır")) { close(); LauncherSession.runOpen = true },
+    ).flatten().toMap()
+    // the order and the choice are the person's (Launcher settings > Win+X menu); every item in its default place until then
+    val order = LauncherPrefs.winX.split(',').filter { it.isNotBlank() }.ifEmpty { WINX_KEYS.map { it.first } }
+    val items = order.mapNotNull { all[it] }
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { close() }) {
         val place = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 8.dp, bottom = taskbar + 6.dp).widthIn(max = 280.dp).fillMaxWidth(.7f)
         val body: @Composable () -> Unit = {
@@ -409,3 +412,12 @@ internal fun searchUrl(q: String): String {
         else -> "https://www.google.com/search?q=$e"
     }
 }
+
+
+/** The items of the Win+X menu in their default order: key, English name, Turkish name. The settings let the person choose and order them. */
+internal val WINX_KEYS = listOf(
+    Triple("apps", "Apps and Features", "Uygulamalar ve özellikler"), Triple("power", "Power Options", "Güç seçenekleri"), Triple("system", "System", "Sistem"),
+    Triple("taskmgr", "Task Manager", "Görev Yöneticisi"), Triple("settings", "Settings", "Ayarlar"), Triple("control", "Control Panel", "Denetim Masası"),
+    Triple("terminal", "Terminal", "Terminal"), Triple("regedit", "Registry Editor", "Kayıt Defteri Düzenleyicisi"), Triple("explorer", "File Explorer", "Dosya Gezgini"),
+    Triple("search", "Search", "Ara"), Triple("run", "Run", "Çalıştır"),
+)
