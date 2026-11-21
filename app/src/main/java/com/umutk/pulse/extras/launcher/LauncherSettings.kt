@@ -75,7 +75,16 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
     var picked by remember { mutableStateOf(startCat) }
     if (T.id == "win11" && picked.isEmpty()) {
         BackHandler { back() }
-        Win11SettingsHome({ r -> if (r.startsWith("win:lsettings:")) picked = r.removePrefix("win:lsettings:") }, startGroup = "personalization")
+        val c11 = LocalContext.current
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+            // the quick start: opens the launcher as an app of its own, without making it the default home app
+            if (!fromLauncher && LocalDesktopWin.current == null) PButton(tr("Open the launcher to test", "Test için launcher'ı aç"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                runCatching { c11.startActivity(Intent().setClassName(c11.packageName, "com.umutk.pulse.extras.launcher.LauncherActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            Box(Modifier.weight(1f)) {
+                Win11SettingsHome({ r -> if (r.startsWith("win:lsettings:")) picked = r.removePrefix("win:lsettings:") }, startGroup = "personalization")
+            }
+        }
     } else LauncherSettingsPages(back = { if (T.id == "win11" && startCat.isEmpty() && picked.isNotEmpty()) picked = "" else back() }, fromLauncher = fromLauncher, startCat = picked)
 }
 
