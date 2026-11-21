@@ -184,6 +184,7 @@ fun runGesture(ctx: Context, key: String) {
         "recents" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS)
         "power" -> globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
         "apps" -> LauncherSession.startOpen = true
+        "news" -> LauncherSession.newsOpen = true
         "search" -> LauncherSession.searchOpen = true
         "settings" -> runCatching { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }

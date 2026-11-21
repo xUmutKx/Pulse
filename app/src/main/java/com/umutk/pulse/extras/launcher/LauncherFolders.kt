@@ -129,6 +129,7 @@ fun FolderDialogs(apps: List<LaunchApp>, onOpenApp: (LaunchApp) -> Unit, onLong:
         if (u != null && a != null) AppIcons.set(ctx, a.pkg, u)
     }
     androidx.compose.runtime.LaunchedEffect(AppIcons.pick) { if (AppIcons.pick != null) iconPicker.launch("image/*") }
+    if (LauncherSession.newsOpen) NewsDialog { LauncherSession.newsOpen = false }
     FolderUi.pick?.let { app ->
         var nm by remember { mutableStateOf("") }
         val close = { FolderUi.pick = null }

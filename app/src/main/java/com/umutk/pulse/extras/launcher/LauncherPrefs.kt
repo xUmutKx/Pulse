@@ -419,7 +419,7 @@ object LauncherPrefs {
 val GESTURE_ACTIONS = listOf(
     Triple("none", "Nothing", "Hiçbir şey"), Triple("lock", "Lock the screen", "Ekranı kilitle"), Triple("shade", "Notifications", "Bildirimler"),
     Triple("quick", "Quick settings", "Hızlı ayarlar"), Triple("apps", "Apps list", "Uygulama listesi"), Triple("search", "Quick search", "Hızlı arama"),
-    Triple("settings", "Launcher settings", "Başlatıcı ayarları"), Triple("recents", "Recent apps", "Son uygulamalar"), Triple("power", "Power menu", "Güç menüsü"),
+    Triple("settings", "Launcher settings", "Başlatıcı ayarları"), Triple("recents", "Recent apps", "Son uygulamalar"), Triple("power", "Power menu", "Güç menüsü"), Triple("news", "News", "Haberler"),
 )
 
 
