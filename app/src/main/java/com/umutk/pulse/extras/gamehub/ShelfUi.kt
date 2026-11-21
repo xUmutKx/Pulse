@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.gamehub
 
+import kotlinx.coroutines.async
+import androidx.compose.runtime.collectAsState
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
@@ -564,13 +566,23 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
 @Composable
 internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val ver = GameArt.version.intValue
-    val list = remember(games, hidden) { games.filter { it.pkg !in hidden } }
-    // each game's picture: its cover, else its wide picture, else its icon; read off the main thread
+    // while the covers are being looked for in the background the pictures are not read again at each one found (that rebuilt the whole rack each time); they are read once when the search ends
+    val searching by CoverJob.running.collectAsState()
+    val ver = if (searching) -1 else GameArt.version.intValue
+    // a rack of more than 120 cases is slow to draw: the first 120 (the favourites come first)
+    val list = remember(games, hidden) { games.filter { it.pkg !in hidden }.take(120) }
+    // the games with no cover are looked for in the background, once
+    androidx.compose.runtime.LaunchedEffect(list.size) { if (list.any { !coverFile(ctx, it.pkg).isFile }) CoverJob.start(ctx, list) }
+    // each game's picture, small (360 px): its cover, else its wide picture, else its icon; read off the main thread, four at a time
     val loaded by androidx.compose.runtime.produceState<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList(), list.map { it.pkg }, ver) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            // a game with no picture yet gets a coloured cover with its name, so the shelf shows at once; the picture replaces it when it arrives
-            list.map { g -> g to (GameArt.cover(ctx, g.pkg, 600) ?: GameArt.banner(ctx, g.pkg, 600) ?: GameArt.icon(ctx, g.pkg, 256) ?: nameCover(g.name)) }
+            val gate = kotlinx.coroutines.sync.Semaphore(4)
+            list.map { g ->
+                async {
+                    gate.acquire()
+                    try { g to (GameArt.cover(ctx, g.pkg, 360) ?: GameArt.banner(ctx, g.pkg, 360) ?: GameArt.icon(ctx, g.pkg, 256) ?: nameCover(g.name)) } finally { gate.release() }
+                }
+            }.map { it.await() }
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
