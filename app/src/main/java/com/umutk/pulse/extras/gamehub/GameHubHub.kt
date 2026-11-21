@@ -896,7 +896,7 @@ fun GameHubHub(onBack: () -> Unit) {
     // Boxshelf's screen needs the phone's WebView with WebGL; without it the Compose shelf is shown
     var caseStyle by remember { mutableStateOf(prefs(ctx).getString("caseStyle", "pc") ?: "pc") }
     // the look of the shelf: the CD rack (jewel cases on the rails of a rack, the default) or Boxshelf's 3D shelf; chosen in the settings
-    var ghLook by remember { mutableStateOf((prefs(ctx).getString("ghLook", "boxshelf") ?: "boxshelf").let { if (it == "cdrack") "boxshelf" else it }) }
+    var ghLook by remember { mutableStateOf(prefs(ctx).getString("ghLook", "boxshelf") ?: "boxshelf") }
     // the views follow one another from the grid button of each: Boxshelf's shelf -> the CD rack -> the classic grid -> Boxshelf's shelf
     fun setLook(k: String) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply() }
     LaunchedEffect(ShelfAsk.look.value) { ShelfAsk.look.value?.let { setLook(it); ShelfAsk.look.value = null } }
@@ -1009,7 +1009,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
                 )
                 // the view button: the CD rack -> the classic grid -> Boxshelf's shelf (whose own grid button comes back to the CD rack)
-                if (page == 1 && webShelfOk) Box(Modifier.size(44.dp).clickable { setLook(if (ghLook == "classic") "boxshelf" else "classic") }, contentAlignment = Alignment.Center) {
+                if (page == 1 && webShelfOk) Box(Modifier.size(44.dp).clickable { setLook(when (ghLook) { "cdrack" -> "classic"; "classic" -> "boxshelf"; else -> "cdrack" }) }, contentAlignment = Alignment.Center) {
                     FluentIcon("gridView", pal.text, 22.dp)
                 }
             }
@@ -1078,7 +1078,10 @@ fun GameHubHub(onBack: () -> Unit) {
                     if (shown.isEmpty()) { if (GameHubState.games != null || games.isNotEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
-                    } } else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
+                    } } else if (ghLook == "cdrack") CdRack3D(
+                        sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
+                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
+                    ) else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
                         onDetails = { pkg -> games.firstOrNull { it.pkg == pkg }?.let { profile = it } },
@@ -1149,7 +1152,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
                     Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
+                        listOf("boxshelf" to tr("Boxshelf 3D (default)", "Boxshelf 3B (varsayılan)"), "cdrack" to tr("CD rack 3D", "CD rafı 3B"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
                             Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
                         }
                     }

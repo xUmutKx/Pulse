@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
@@ -553,4 +554,63 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
             Text(value, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 16.dp))
         }
     }
+}
+
+/**
+ * The CD rack, drawn for Pulse: the games as jewel cases standing in a rack, all turned the same way in 3D and overlapping down the screen, so the row of covers runs on a slant like the
+ * cases in a real rack. The case nearest the middle of the screen steps forward (larger, brighter, turned less); a tap opens the case as on the shelf, a long press its page.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun CdRack3D(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+    var inspect by remember { mutableStateOf<GameRow?>(null) }
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val caseW = maxWidth * .6f
+        val rowH = caseW * .5f
+        LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 70.dp, bottom = 160.dp)) {
+            itemsIndexed(games, key = { _, g -> g.pkg }) { i, g ->
+                Box(Modifier.fillMaxWidth().height(rowH)) {
+                    Box(
+                        Modifier.align(Alignment.TopStart).requiredSize(caseW, caseW)
+                            .graphicsLayer {
+                                // how far this case is from the middle of the list (-1 above, 0 in the middle, 1 below)
+                                val info = state.layoutInfo
+                                val me = info.visibleItemsInfo.firstOrNull { it.index == i }
+                                val mid = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                                val f = if (me == null) 1f else ((me.offset + me.size / 2f - mid) / (info.viewportEndOffset - info.viewportStartOffset).coerceAtLeast(1)).coerceIn(-1f, 1f) * 2f
+                                val near = 1f - kotlin.math.abs(f).coerceIn(0f, 1f)
+                                cameraDistance = 14f * density
+                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, .5f)
+                                rotationY = -36f + 20f * near
+                                rotationZ = -4f
+                                val s = .9f + .14f * near
+                                scaleX = s; scaleY = s
+                                translationX = 26f * density * near
+                                alpha = .72f + .28f * near
+                            }
+                            .combinedClickable(onClick = { inspect = g }, onLongClick = { onDetails(g) }),
+                    ) {
+                        // the disc, half out of the case at the right
+                        Canvas(Modifier.fillMaxSize()) {
+                            val r = size.minDimension * .46f
+                            val c = androidx.compose.ui.geometry.Offset(size.width - r - 2f, size.height / 2f)
+                            drawCircle(Brush.sweepGradient(listOf(Color(0xFFE9EDF2), Color(0xFF9FB3C8), Color(0xFFF7F7F7), Color(0xFFB8C4D0), Color(0xFFE9EDF2)), c), r, c)
+                            drawCircle(Color(0xFF1A1A1A), r * .28f, c); drawCircle(Color(0xFFDDE3EA), r * .12f, c)
+                        }
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(.86f).clip(RoundedCornerShape(3.dp)).background(Color(0xFF111111)).border(1.dp, Color.White.copy(alpha = .28f), RoundedCornerShape(3.dp))) {
+                            Box(Modifier.fillMaxSize().padding(start = 12.dp, top = 2.dp, bottom = 2.dp, end = 2.dp)) { GameCover(g.pkg, pal, wide = false, title = g.name) }
+                            // the spine of the case, down the left, then the gloss of the clear lid
+                            Box(Modifier.fillMaxHeight().width(12.dp).background(Brush.horizontalGradient(listOf(Color(0xFF000000), Color(0x55FFFFFF), Color(0x00000000)))))
+                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color.White.copy(alpha = .24f), Color.Transparent, Color.Transparent, Color.White.copy(alpha = .08f)))))
+                            if (g.pkg in hidden) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
+                        }
+                    }
+                    Text(g.name, color = pal.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(.32f).padding(end = 6.dp))
+                }
+            }
+        }
+    }
+    inspect?.let { g -> CaseInspect(g, pal, onClose = { inspect = null }, onPlay = { onPlay(g) }, onDetails = { inspect = null; onDetails(g) }) }
 }
