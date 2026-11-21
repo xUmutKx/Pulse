@@ -116,7 +116,7 @@ internal object FloatClock {
 
     fun reset() { running = false; handler.removeCallbacks(ring); value = if (countdown) length else 0L }
 
-    fun setCountdown(on: Boolean) { running = false; handler.removeCallbacks(ring); countdown = on; value = if (on) length else 0L }
+    fun switchMode(on: Boolean) { running = false; handler.removeCallbacks(ring); countdown = on; value = if (on) length else 0L }
 
     /** More minutes on the countdown (only while it is not running). */
     fun add(ms: Long) { if (running || !countdown) return; value += ms; length = value }
@@ -210,7 +210,7 @@ private fun TimerBody(ctx: Context, onDrag: (Float, Float) -> Unit, onDragEnd: (
         if (showControls) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { FloatClock.toggle(ctx); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon(if (FloatClock.running) "pause" else "play", Color.White, 18.dp) }
             Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { FloatClock.reset(); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon("rotate", Color.White, 20.dp) }
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (FloatClock.countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { FloatClock.setCountdown(!FloatClock.countdown); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (FloatClock.countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { FloatClock.switchMode(!FloatClock.countdown); shown = FloatClock.current() }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
             Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) { PIcon("close", Color.White, 18.dp) }
         }
         // the countdown's length: +1 / +5 / +10 minutes while it is not running
