@@ -1,5 +1,6 @@
 package com.umutk.pulse
 
+import com.umutk.pulse.features.collapsePanel
 import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
@@ -557,7 +558,7 @@ class MotionCueTile : ToolkitTile() {
     override val start: String get() = "toolkit:motion"
     override val trName: String get() = "Hareket noktaları"
     override fun active(): Boolean = MotionCueService.running
-    override fun act(): Boolean { if (!MotionCueService.toggle(this)) { openPulse(start); return false }; main.postDelayed({ paint() }, 300); return true }
+    override fun act(): Boolean { if (!MotionCueService.toggle(this)) { openPulse(start); return false }; main.postDelayed({ paint() }, 300); collapsePanel(); return true }
 }
 @androidx.annotation.RequiresApi(24)
 class PowerMenuTile : ToolkitTile() {

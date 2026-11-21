@@ -78,11 +78,66 @@ object FloatTimerPrefs {
     fun bgColor(c: Context) = Color(bgColors[bg(c).coerceIn(0, bgColors.lastIndex)])
 }
 
+/**
+ * The clock of the floating timer. It lives here and not in the window, so it keeps counting when the window is drawn again (a change of size or colour), hidden or shown. A countdown rings
+ * at zero even while the window is not there. Times come from the phone's uptime, so a slow screen does not slow the clock.
+ */
+internal object TimerClock {
+    var countdown by mutableStateOf(false)
+    var running by mutableStateOf(false)
+    /** The length of the countdown, in ms (what a reset goes back to). */
+    var length by mutableLongStateOf(5 * 60_000L)
+    private var value = 0L        // the stopwatch's time, or the countdown's time left, as of the last change
+    private var since = 0L        // uptime when the current run began
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var app: Context? = null
+    private val ring = Runnable { finish() }
+
+    private fun now() = android.os.SystemClock.elapsedRealtime()
+
+    /** The time to show: counted up for the stopwatch, down for the countdown. */
+    fun current(): Long {
+        val run = if (running) now() - since else 0L
+        return if (countdown) (value - run).coerceAtLeast(0L) else value + run
+    }
+
+    fun start(ctx: Context) {
+        app = ctx.applicationContext
+        if (running) return
+        if (countdown && value <= 0L) value = length
+        since = now(); running = true
+        handler.removeCallbacks(ring)
+        if (countdown) handler.postDelayed(ring, value)
+    }
+
+    fun pause() { if (!running) return; value = current(); running = false; handler.removeCallbacks(ring) }
+
+    fun toggle(ctx: Context) { if (running) pause() else start(ctx) }
+
+    fun reset() { running = false; handler.removeCallbacks(ring); value = if (countdown) length else 0L }
+
+    fun setCountdown(on: Boolean) { running = false; handler.removeCallbacks(ring); countdown = on; value = if (on) length else 0L }
+
+    /** More minutes on the countdown (only while it is not running). */
+    fun add(ms: Long) { if (running || !countdown) return; value += ms; length = value }
+
+    private fun finish() {
+        running = false; value = 0L
+        val c = app ?: return
+        // time is up: a buzz and the default notification sound
+        runCatching { (c.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).let { v -> if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300, 150, 600), -1)) else @Suppress("DEPRECATION") v.vibrate(longArrayOf(0, 300, 150, 300, 150, 600), -1) } }
+        runCatching { android.media.RingtoneManager.getRingtone(c, android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)).play() }
+    }
+}
+
+/** The floating window: a small overlay above every app. Shown and hidden here; the clock is [TimerClock]. */
 object FloatingTimer {
     private var view: ComposeView? = null
     private var owner: TimerOwner? = null
+    private var params: WindowManager.LayoutParams? = null
     val showing get() = view != null
 
+    /** Shows the window; false (and the overlay permission page opens) when Pulse may not draw over other apps. */
     fun show(ctx: Context): Boolean {
         val app = ctx.applicationContext
         if (view != null) return true
@@ -94,27 +149,37 @@ object FloatingTimer {
         val d = app.resources.displayMetrics
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            // where it was left last time, else near the top left
+            // where it was left last time (kept inside the screen), else near the top left
             val saved = FloatTimerPrefs.pos(app)
-            x = saved?.first ?: (d.widthPixels * 0.08f).toInt(); y = saved?.second ?: (d.heightPixels * 0.12f).toInt()
+            x = (saved?.first ?: (d.widthPixels * 0.08f).toInt()).coerceIn(0, (d.widthPixels - 80).coerceAtLeast(0))
+            y = (saved?.second ?: (d.heightPixels * 0.12f).toInt()).coerceIn(0, (d.heightPixels - 80).coerceAtLeast(0))
         }
         val o = TimerOwner().also { it.start() }
         val v = ComposeView(app).apply {
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
-            setContent { TimerBody(app, onDrag = { dx, dy -> lp.x += dx.toInt(); lp.y += dy.toInt(); runCatching { wm.updateViewLayout(this, lp) } }, onDragEnd = { FloatTimerPrefs.setPos(app, lp.x, lp.y) }, onClose = { hide(app) }) }
+            setContent {
+                TimerBody(app,
+                    onDrag = { dx, dy ->
+                        lp.x = (lp.x + dx.toInt()).coerceIn(0, (d.widthPixels - width).coerceAtLeast(0))
+                        lp.y = (lp.y + dy.toInt()).coerceIn(0, (d.heightPixels - height).coerceAtLeast(0))
+                        runCatching { wm.updateViewLayout(this, lp) }
+                    },
+                    onDragEnd = { FloatTimerPrefs.setPos(app, lp.x, lp.y) },
+                    onClose = { hide(app) })
+            }
         }
-        view = v; owner = o
-        runCatching { wm.addView(v, lp) }.onFailure { view = null; o.stop(); owner = null; return false }
+        view = v; owner = o; params = lp
+        if (runCatching { wm.addView(v, lp) }.isFailure) { view = null; owner = null; params = null; o.stop(); return false }
         return true
     }
 
     fun hide(ctx: Context) {
         val v = view ?: return
         runCatching { (ctx.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(v) }
-        owner?.stop(); owner = null; view = null
+        owner?.stop(); owner = null; view = null; params = null
     }
 }
 
@@ -129,42 +194,29 @@ private fun TimerBody(ctx: Context, onDrag: (Float, Float) -> Unit, onDragEnd: (
     val bgc = FloatTimerPrefs.bgColor(ctx)
     val ink = if (bgc.red * .3f + bgc.green * .59f + bgc.blue * .11f > .6f) Color(0xFF111111) else Color.White
     val showControls = FloatTimerPrefs.controls(ctx)
-    var countdown by remember { mutableStateOf(false) }
-    var running by remember { mutableStateOf(false) }
-    var elapsed by remember { mutableLongStateOf(0L) }   // stopwatch: counted up
-    var left by remember { mutableLongStateOf(5 * 60_000L) }   // countdown: counted down
-    LaunchedEffect(running, countdown) {
-        var last = System.currentTimeMillis()
-        while (running) {
-            delay(100)
-            val now = System.currentTimeMillis(); val dt = now - last; last = now
-            if (countdown) {
-                left -= dt
-                if (left <= 0L) {
-                    left = 0L; running = false
-                    // time is up: a buzz and the default notification sound
-                    runCatching { (ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).let { v -> if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)) else @Suppress("DEPRECATION") v.vibrate(longArrayOf(0, 400, 200, 400), -1) } }
-                    runCatching { android.media.RingtoneManager.getRingtone(ctx, android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)).play() }
-                }
-            } else elapsed += dt
-        }
+    // the window only asks the clock for the time, 10 times a second while it runs
+    var shown by remember { mutableLongStateOf(TimerClock.current()) }
+    LaunchedEffect(TimerClock.running, TimerClock.countdown) {
+        shown = TimerClock.current()
+        while (TimerClock.running) { delay(100); shown = TimerClock.current() }
     }
+    val over = TimerClock.countdown && shown == 0L && !TimerClock.running
     Column(
         Modifier.clip(RoundedCornerShape((16 * sc).dp)).background(bgc.copy(alpha = FloatTimerPrefs.alpha(ctx) / 100f)).padding(horizontal = (14 * sc).dp, vertical = (10 * sc).dp)
             .pointerInput(Unit) { detectDragGestures(onDragEnd = onDragEnd) { c, a -> c.consume(); onDrag(a.x, a.y) } },
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(clock(if (countdown) left else elapsed), color = if (countdown && left == 0L) Color(0xFFFF6B6B) else ink, fontSize = (34 * sc).sp, fontWeight = FontWeight.Light)
+        Text(clock(shown), color = if (over) Color(0xFFFF6B6B) else ink, fontSize = (34 * sc).sp, fontWeight = FontWeight.Light)
         if (showControls) Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { running = !running; if (countdown && left == 0L) left = 5 * 60_000L }, contentAlignment = Alignment.Center) { PIcon(if (running) "pause" else "play", Color.White, 20.dp) }
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { running = false; elapsed = 0L; left = 5 * 60_000L }, contentAlignment = Alignment.Center) { PIcon("rotate", Color.White, 20.dp) }
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { countdown = !countdown; running = false }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.toggle(ctx); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon(if (TimerClock.running) "pause" else "play", Color.White, 18.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.reset(); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon("rotate", Color.White, 20.dp) }
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(if (TimerClock.countdown) Color(0xFF3B82F6) else Color.White.copy(alpha = .14f)).clickable { TimerClock.setCountdown(!TimerClock.countdown); shown = TimerClock.current() }, contentAlignment = Alignment.Center) { PIcon("timer", Color.White, 20.dp) }
             Box(Modifier.size(38.dp).clip(RoundedCornerShape(19.dp)).background(Color.White.copy(alpha = .14f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) { PIcon("close", Color.White, 18.dp) }
         }
         // the countdown's length: +1 / +5 / +10 minutes while it is not running
-        if (showControls && countdown && !running) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (showControls && TimerClock.countdown && !TimerClock.running) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1, 5, 10).forEach { m ->
-                Text("+$m", color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .14f)).clickable { left += m * 60_000L }.padding(horizontal = 12.dp, vertical = 6.dp))
+                Text("+$m", color = Color.White, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .14f)).clickable { TimerClock.add(m * 60_000L); shown = TimerClock.current() }.padding(horizontal = 12.dp, vertical = 4.dp))
             }
         }
     }

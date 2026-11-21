@@ -85,8 +85,8 @@ class CoverTile : TileService() {
     private fun click0() {
         if (!com.umutk.pulse.Compat.canOverlay(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
         // the advanced (StandBy) cover is a window of its own; the basic one is the black foreground service
-        if (StandByPrefs.advanced(this)) { StandBy.toggle(this); paint(StandBy.showing); if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade(); return }
-        if (CoverService.running) { CoverService.stop(this); paint(false) } else { CoverService.start(this); paint(true); CoverAccessibilityService.instance?.collapseShade() }
+        if (StandByPrefs.advanced(this)) { StandBy.toggle(this); paint(StandBy.showing); if (StandBy.showing) collapsePanel(); return }
+        if (CoverService.running) { CoverService.stop(this); paint(false) } else { CoverService.start(this); paint(true); collapsePanel() }
     }
 
     /** Opens "display over other apps" for Pulse; the cover does not start on this tap. */

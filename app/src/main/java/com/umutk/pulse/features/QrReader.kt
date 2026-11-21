@@ -169,5 +169,6 @@ class QrTile : TileService() {
         val i = Intent(this, ToolOpenActivity::class.java).putExtra("route", "qr").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (android.os.Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 7301, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         else @Suppress("DEPRECATION") startActivityAndCollapse(i)
+        collapsePanel()
     }
 }

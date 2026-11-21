@@ -25,6 +25,7 @@ class FloatingTimerTile : TileService() {
             return
         }
         paint()
+        collapsePanel()
     }
 
     private fun paint() {

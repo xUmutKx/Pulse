@@ -319,7 +319,7 @@ class AutoClickTile : TileService() {
             val i = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (android.os.Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE))
             else @Suppress("DEPRECATION") startActivityAndCollapse(i)
-        } else s.tileToggle()
+        } else { s.tileToggle(); collapsePanel() }
         paint()
     }
 }

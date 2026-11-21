@@ -3095,6 +3095,7 @@
         <!-- Pulse Launcher: HOME app (own process, own look store) -->
         <!-- Pulse launcher: HOME filter only, so it is in the default home app choice but not in the app drawer -->
         <receiver android:name=".extras.launcher.TaskAlarmReceiver" android:exported="false" />
+        <activity android:name=".features.CollapseActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="" />
         <activity android:name=".extras.launcher.LauncherActivity" android:process=":launcher" android:taskAffinity="com.umutk.pulse.launcher" android:exported="true" android:label="Launcher" android:icon="@mipmap/ic_ti_default" android:roundIcon="@mipmap/ic_ti_default" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
