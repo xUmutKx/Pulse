@@ -171,7 +171,45 @@ private fun rowsFor(ctx: Context, item: WItem): List<DRow> {
                 listOf(DRow(tr("Resolution", "Çözünürlük"), "${m.widthPixels} × ${m.heightPixels}"), DRow(tr("Density", "Yoğunluk"), "${m.densityDpi} dpi"))
             }
             "Focus" -> listOf(DRow(tr("Do not disturb", "Rahatsız etme"), when (gi("zen_mode")) { 0 -> off; else -> on }))
-            "Cameras" -> emptyList()
+            "NFC" -> {
+                val nfc = android.nfc.NfcAdapter.getDefaultAdapter(ctx)
+                val pm = ctx.packageManager
+                val pay = runCatching { Settings.Secure.getString(ctx.contentResolver, "nfc_payment_default_component")?.substringBefore('/') }.getOrNull()
+                    ?.takeIf { it.isNotBlank() }?.let { pk -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pk, 0)).toString() }.getOrDefault(pk) }
+                listOf(DRow("NFC", when { nfc == null -> tr("Not in this phone", "Bu telefonda yok"); nfc.isEnabled -> on; else -> off }),
+                    DRow(tr("Tap to pay (card emulation)", "Dokunarak öde (kart öykünmesi)"), if (pm.hasSystemFeature("android.hardware.nfc.hce")) tr("Supported", "Destekli") else tr("Not supported", "Desteklenmiyor")),
+                    DRow(tr("Payment app", "Ödeme uygulaması"), pay ?: "-"),
+                    DRow(tr("Reads tags", "Etiket okur"), if (nfc != null) tr("Yes", "Evet") else "-"))
+            }
+            "USB" -> {
+                val um = ctx.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
+                val b = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                val plug = when (b?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) { BatteryManager.BATTERY_PLUGGED_USB -> "USB"; BatteryManager.BATTERY_PLUGGED_AC -> "AC"; BatteryManager.BATTERY_PLUGGED_WIRELESS -> tr("Wireless", "Kablosuz"); else -> tr("Not plugged", "Takılı değil") }
+                listOf(DRow(tr("Power", "Güç"), plug)) + um.deviceList.values.map { DRow(it.productName ?: it.deviceName, "%04x:%04x".format(it.vendorId, it.productId)) }
+            }
+            "Cameras" -> {
+                val cm = ctx.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                cm.cameraIdList.map { id ->
+                    val c = cm.getCameraCharacteristics(id)
+                    val face = when (c.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)) { android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT -> tr("Front", "Ön"); android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK -> tr("Back", "Arka"); else -> tr("External", "Harici") }
+                    val sz = c.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+                    DRow("$face · $id", if (sz != null) "%.1f MP".format(sz.width * sz.height / 1e6) else "-")
+                }
+            }
+            "Location" -> {
+                val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+                listOf(DRow(tr("Location", "Konum"), if (lm.isLocationEnabled) on else off), DRow("GPS", if (lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) on else off),
+                    DRow(tr("Network location", "Ağ konumu"), if (lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)) on else off))
+            }
+            "Date & time", "Date and Time" -> listOf(DRow(tr("Time zone", "Saat dilimi"), java.util.TimeZone.getDefault().id), DRow(tr("Now", "Şimdi"), java.text.DateFormat.getDateTimeInstance().format(java.util.Date())),
+                DRow(tr("Automatic time", "Otomatik saat"), if (gi(Settings.Global.AUTO_TIME) == 1) on else off))
+            "Language & region", "Region" -> listOf(DRow(tr("Language", "Dil"), java.util.Locale.getDefault().displayName), DRow(tr("Region", "Bölge"), java.util.Locale.getDefault().displayCountry.ifBlank { "-" }))
+            "Text input", "Typing", "Typing and keyboard" -> {
+                val cur = runCatching { Settings.Secure.getString(ctx.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/') }.getOrNull()
+                val pm = ctx.packageManager
+                listOf(DRow(tr("Current keyboard", "Geçerli klavye"), cur?.let { pk -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pk, 0)).toString() }.getOrDefault(pk) } ?: "-"),
+                    DRow(tr("Pulse keyboard", "Pulse klavyesi"), if (cur == ctx.packageName) tr("In use", "Kullanımda") else tr("Not selected", "Seçili değil")))
+            }
             else -> emptyList()
         }
     }.getOrDefault(emptyList())
