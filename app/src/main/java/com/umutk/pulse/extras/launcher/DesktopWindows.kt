@@ -8,6 +8,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -60,6 +63,8 @@ class DWin(val id: Long, val title: String, val start: String, x0: Float, y0: Fl
     var x by mutableFloatStateOf(x0)
     var y by mutableFloatStateOf(y0)
     var max by mutableStateOf(false)
+    /** Where the window stood before it was snapped to a half of the screen (x, y, width, height in dp), so Win+Down or a drag puts it back. */
+    var restore: FloatArray? = null
     /** A tool that draws its own top bars over the glass (Windows 7 File Explorer) asks for a see-through body; the rest of the window is drawn by the tool. */
     var glass by mutableStateOf(false)
     var z by mutableIntStateOf(z0)
@@ -109,6 +114,19 @@ object DesktopWindows {
         w.x = (sw - w.wDp - 8f).coerceAtLeast(0f); w.y = (sh - w.hDp - 100f).coerceAtLeast(8f)
         front(w)
     }
+    /** Snaps [w] to the left (-1) or right (1) half of an area [areaW] dp wide; the height is the whole area (the frame keeps it inside). */
+    fun snap(w: DWin, side: Int, areaW: Float) {
+        if (w.restore == null && !w.max) w.restore = floatArrayOf(w.x, w.y, w.wDp, w.hDp)
+        w.max = false; w.min = false
+        w.wDp = areaW / 2f; w.hDp = 10000f; w.y = 0f; w.x = if (side < 0) 0f else areaW / 2f
+        front(w)
+    }
+    /** Puts a snapped window back where it was; true when it was snapped. */
+    fun unsnap(w: DWin): Boolean {
+        val r = w.restore ?: return false
+        w.x = r[0]; w.y = r[1]; w.wDp = r[2]; w.hDp = r[3]; w.restore = null; w.max = false
+        return true
+    }
     fun front(w: DWin) { if (w.z != top) w.z = ++top }
     fun minimize(w: DWin) { w.min = true }
     fun close(w: DWin) { list.remove(w) }
@@ -121,6 +139,7 @@ fun DesktopWindowLayer(lookId: String, bottom: Dp) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(bottom = bottom)) {
         DesktopWindows.list.filter { !it.min }.sortedBy { it.z }.forEach { w -> key(w.id) { DesktopWindowFrame(w, skin, lookId, maxWidth, maxHeight) } }
         // the minimised windows wait on the taskbar (TaskbarWindows); with the taskbar hidden they wait as small chips along the bottom
+        TaskView()
         val mins = DesktopWindows.list.filter { it.min }
         if (!LauncherPrefs.dockShown && mins.isNotEmpty()) Row(Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             mins.forEach { w ->
@@ -170,7 +189,14 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
                 // a double tap or a long press on the title bar switches between the window and the full screen, as on Windows
                 .pointerInput(w.id) { detectTapGestures(onDoubleTap = { w.max = !w.max }, onLongPress = { w.max = !w.max }) }
                 .pointerInput(w.id, areaW, areaH) {
-                    detectDragGestures { c, drag ->
+                    detectDragGestures(onDragEnd = {
+                        // let go at an edge of the screen: the window snaps to that half (the top edge makes it full screen), as in Windows
+                        if (!w.max) {
+                            if (w.x < -fw.value * .3f) DesktopWindows.snap(w, -1, areaW.value)
+                            else if (w.x + fw.value > areaW.value + fw.value * .3f) DesktopWindows.snap(w, 1, areaW.value)
+                            else if (w.y <= 0f) { w.restore = floatArrayOf(w.x, 20f, w.wDp, w.hDp); w.max = true }
+                        }
+                    }) { c, drag ->
                         c.consume()
                         if (!w.max) { w.x = (w.x + drag.x / d).coerceIn(-areaW.value + 80f, areaW.value - 40f); w.y = (w.y + drag.y / d).coerceIn(0f, areaH.value - 30f) }
                     }
@@ -229,4 +255,29 @@ private fun darkGlassEffect(): androidx.compose.ui.graphics.RenderEffect {
         1.794f, 3.522f, .684f, 0f, 89f,
     ))
     return android.graphics.RenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(m)).asComposeRenderEffect().also { darkGlass = it }
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+/** Win+Tab: every open window as a card over the desktop; a tap brings that window to the front, the cross closes it, a tap outside leaves. */
+@Composable
+private fun TaskView() {
+    if (!LauncherSession.taskViewOpen) return
+    val wins = DesktopWindows.list.toList().sortedByDescending { it.z }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .6f)).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { LauncherSession.taskViewOpen = false },
+        contentAlignment = Alignment.Center) {
+        if (wins.isEmpty()) Text(tr("No open windows", "Açık pencere yok"), color = Color.White, fontSize = 16.sp)
+        else androidx.compose.foundation.layout.FlowRow(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            wins.forEach { w ->
+                Column(Modifier.width(150.dp).height(100.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2B2B2B)).border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(8.dp))
+                    .clickable { w.min = false; DesktopWindows.front(w); LauncherSession.taskViewOpen = false }.padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(w.title, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(22.dp).clickable { DesktopWindows.close(w) }, contentAlignment = Alignment.Center) { PIcon("close", Color.White, 14.dp) }
+                    }
+                    Text(if (w.min) tr("Minimised", "Küçültüldü") else tr("Open", "Açık"), color = Color.White.copy(alpha = .6f), fontSize = 11.sp)
+                }
+            }
+        }
+    }
 }

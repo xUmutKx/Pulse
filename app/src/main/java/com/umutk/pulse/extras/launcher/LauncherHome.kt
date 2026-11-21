@@ -133,6 +133,7 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
                 onDoubleTap = { runGesture(ctx, LauncherPrefs.gDouble) },
             )
         }
+        .rightClick({ origin }) { onLong() }
         .pointerInput(Unit) {
             // two fingers pinched in or spread out on the home (each a setting, nothing by default)
             awaitEachGesture {

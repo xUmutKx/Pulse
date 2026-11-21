@@ -133,6 +133,8 @@ object LauncherSession {
     var msnTray by mutableStateOf(false)
     /** The Run box (Win+R of Windows): type a command (cmd, regedit, taskmgr, control, notepad ...) and it opens. */
     var runOpen by mutableStateOf(false)
+    /** Win+Tab: every window as a card (task view). */
+    var taskViewOpen by mutableStateOf(false)
     /** The Win+X menu (the Start button held): the tools of the system in a short list. */
     var winXOpen by mutableStateOf(false)
     /** The news page (a gesture action) is open. */
