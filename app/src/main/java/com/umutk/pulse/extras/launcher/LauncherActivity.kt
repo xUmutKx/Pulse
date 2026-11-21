@@ -530,7 +530,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             else com.umutk.pulse.AppPlace.byAlias(alias)?.run?.invoke(ctx) { }
         }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
-        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
+        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS && FreeformSetup.isOn(ctx)); LauncherPrefs.touch(ctx, app.pkg) }
     }
     // what was put on the home screen by hand: files, pictures, folders, apps
     val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
