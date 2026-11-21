@@ -122,6 +122,8 @@ fun WatchManagerTool() {
     var busy by remember { mutableStateOf(false) }
     var apps by remember { mutableStateOf(emptyList<String>()) }
     var screen by remember { mutableStateOf<ImageBitmap?>(null) }
+    var shellCmd by remember { mutableStateOf("") }
+    var shellOut by remember { mutableStateOf("") }
 
     fun job(what: String, block: suspend (WatchAdb) -> String) = scope.launch {
         busy = true; msg = what
@@ -137,6 +139,8 @@ fun WatchManagerTool() {
         apps = a.shell("pm list packages -3").lines().map { it.removePrefix("package:").trim() }.filter { it.isNotEmpty() }.sorted()
         tr("Connected", "Bağlandı")
     }
+    // what is taken from the watch (an APK, a recording) goes to Download/Pulse/Watch on the phone
+    fun saveDir(): File = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "Pulse/Watch").apply { mkdirs() }
     // an APK or any file from the phone, copied first so it can be streamed
     fun copyIn(u: Uri): File {
         val name = runCatching { ctx.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } }.getOrNull() ?: "file"
@@ -200,6 +204,28 @@ fun WatchManagerTool() {
                 }
                 screen?.let { Image(it, null, Modifier.padding(top = 8.dp).size(200.dp).clip(CircleShape).align(Alignment.CenterHorizontally), contentScale = ContentScale.Crop) }
             }
+            // the shell, the log and the screen recording
+            PCard {
+                Text(tr("Shell and logs", "Kabuk ve kayıtlar"), color = com.umutk.pulse.Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PField(shellCmd, { shellCmd = it }, tr("Command (adb shell …)", "Komut (adb shell …)"), Modifier.weight(1f))
+                    PButton(tr("Run", "Çalıştır"), compact = true) { if (shellCmd.isNotBlank() && !busy) job("…") { a -> shellOut = a.shell(shellCmd.trim()).take(6000); "" } }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                    PButton(tr("Log (logcat)", "Günlük (logcat)"), Modifier.weight(1f), compact = true) { job("…") { a -> shellOut = a.shell("logcat -d -t 300").takeLast(6000); "" } }
+                    PButton(tr("Record 30 s", "30 sn kaydet"), Modifier.weight(1f), compact = true) {
+                        job(tr("Recording…", "Kaydediliyor…")) { a ->
+                            a.shell("screenrecord --time-limit 30 /sdcard/pulse_rec.mp4")
+                            val out = File(saveDir(), "watch_${System.currentTimeMillis() / 1000}.mp4")
+                            out.writeBytes(a.execBytes("cat /sdcard/pulse_rec.mp4")); a.shell("rm /sdcard/pulse_rec.mp4")
+                            tr("Saved: ", "Kaydedildi: ") + out.name
+                        }
+                    }
+                }
+                if (shellOut.isNotEmpty()) androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(shellOut, color = T.text, fontSize = 11.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, modifier = Modifier.padding(top = 6.dp))
+                }
+            }
             PCard {
                 Text(tr("Apps on the watch", "Saatteki uygulamalar"), color = com.umutk.pulse.Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 apps.forEach { p ->
@@ -207,6 +233,14 @@ fun WatchManagerTool() {
                         PIcon("apps", T.sub, 18.dp)
                         Text(p, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         PButton(tr("Open", "Aç"), compact = true) { job("…") { a -> a.shell("monkey -p $p -c android.intent.category.LAUNCHER 1"); "" } }
+                        // the app's APK is copied from the watch to the phone
+                        PButton(tr("Pull", "Al"), compact = true) {
+                            job("…") { a ->
+                                val path = a.shell("pm path $p").lines().firstOrNull { it.startsWith("package:") }?.removePrefix("package:")?.trim().orEmpty()
+                                if (path.isEmpty()) tr("Not found", "Bulunamadı") else { val out = File(saveDir(), "$p.apk"); out.writeBytes(a.execBytes("cat $path")); tr("Saved: ", "Kaydedildi: ") + out.name }
+                            }
+                        }
+                        PButton(tr("Disable", "Kapat"), compact = true) { job("…") { a -> a.shell("pm disable-user --user 0 $p").trim() } }
                         PButton(tr("Remove", "Kaldır"), compact = true, danger = true) {
                             job("…") { a -> val r = a.shell("pm uninstall $p").trim(); apps = apps - p; r }
                         }
