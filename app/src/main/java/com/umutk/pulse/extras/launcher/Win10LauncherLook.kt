@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import android.content.Intent
 import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.Canvas
@@ -268,7 +269,7 @@ private fun BarButton(width: Dp, hover: Color, onClick: () -> Unit, onLong: (() 
     Box(
         Modifier.width(width).fillMaxHeight().background(if (pressed) hover else Color.Transparent)
             .clickable(interactionSource = src, indication = null, onClick = onClick)
-            .then(if (onLong != null) Modifier.pointerInput(Unit) { androidx.compose.foundation.gestures.detectTapGestures(onLongPress = { onLong() }) } else Modifier),
+            .then(if (onLong != null) Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onLong() }) } else Modifier),
         contentAlignment = Alignment.Center, content = content
     )
 }

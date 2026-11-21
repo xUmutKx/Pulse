@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -184,7 +186,7 @@ private fun SearchFlyout(taskbar: Dp, state: LauncherState?) {
     val sets = remember(q) { if (q.isBlank()) setList.take(5) else setList.filter { it.en.contains(q.trim(), true) || it.tr.contains(q.trim(), true) }.take(8) }
     // YTXTube is our YouTube: found by "you", "tube", "ytx" and opens its own screen
     val ytx = remember(q) { q.isNotBlank() && listOf("youtube", "ytxtube", "ytx", "tube", "yt music").any { it.contains(q.trim(), true) } && q.trim().length >= 2 }
-    val imeUp = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val imeUp = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Box(Modifier.fillMaxSize().clickable(interactionSource = none, indication = null) { LauncherSession.w11SearchOpen = false }) {
         val place = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().statusBarsPadding().imePadding().padding(top = 28.dp, bottom = if (imeUp) 8.dp else taskbar + 8.dp).widthIn(max = 560.dp).fillMaxWidth(.94f).wrapContentHeight(align = Alignment.Bottom)
         AcrylicBox("win11", FLY_BG, place.border(1.dp, FLY_EDGE, shape).clickable(interactionSource = none, indication = null) {}, shape, 30.dp) {
