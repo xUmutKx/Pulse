@@ -154,6 +154,8 @@ object LauncherPrefs {
     var dailyBackup by mutableStateOf(false)
     /** The web search of the launcher: google, duckduckgo, bing, brave, yandex or startpage. */
     var searchEngine by mutableStateOf("google")
+    /** The old Windows looks (95, XP, 7) keep to their originals: none of the newer extras (smart folders, tap animations, going round) touch them. */
+    val classicWin: Boolean get() = look == "win95" || look == "xp" || look == "win7"
     /** What an icon does when it is tapped: none, zoom, flip, rotate or bounce. */
     var iconAnim by mutableStateOf("none")
     /** The phone's wallpaper slides a little as the pages are swiped (the Material looks, which show it). */

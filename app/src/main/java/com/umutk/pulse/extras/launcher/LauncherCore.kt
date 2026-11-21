@@ -72,14 +72,14 @@ fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Mo
     onGloballyPositioned { origin = it.positionInRoot() }
         .graphicsLayer {
             val t = prog.value
-            when (LauncherPrefs.iconAnim) {
+            when (if (LauncherPrefs.classicWin) "none" else LauncherPrefs.iconAnim) {
                 "zoom" -> { val k = 1f + .18f * kotlin.math.sin(Math.PI.toFloat() * t); scaleX = k; scaleY = k }
                 "flip" -> { rotationY = 360f * t; cameraDistance = 12f * density }
                 "rotate" -> rotationZ = 360f * t
                 "bounce" -> translationY = -22f * density * kotlin.math.sin(Math.PI.toFloat() * t)
             }
         }
-        .pointerInput(app.pkg) { detectTapGestures(onTap = { if (LauncherPrefs.iconAnim != "none") anim.launch { prog.snapTo(0f); prog.animateTo(1f, androidx.compose.animation.core.tween(300)) }; onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
+        .pointerInput(app.pkg) { detectTapGestures(onTap = { if (LauncherPrefs.iconAnim != "none" && !LauncherPrefs.classicWin) anim.launch { prog.snapTo(0f); prog.animateTo(1f, androidx.compose.animation.core.tween(300)) }; onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
 }
 
 /** A tap opens the app; a long press asks for its menu only when [menuOnLongPress] (the desktop moves an icon with the long press, and opens the menu when the finger lifts without having moved it). */

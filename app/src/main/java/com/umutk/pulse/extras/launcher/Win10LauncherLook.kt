@@ -123,6 +123,9 @@ class Win10LauncherLook(
                 }
                 TaskbarWindows("10", fg, 40.dp)
             }
+            // Messages in the tray (bottom right): a tap opens Pulse's Messages in a window
+            val trayCtx = androidx.compose.ui.platform.LocalContext.current
+            Box(Modifier.fillMaxHeight().clickable { openDesktopItem(trayCtx, "pulse:x:messages", "win10") }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) { Glyph("chat", fg, 16.dp) }
             // the connection, the sound and the battery in one button that opens the quick settings, as in Windows 11
             Row(Modifier.fillMaxHeight().clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 10.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Canvas(Modifier.size(16.dp)) { wifiIcon(fg) }

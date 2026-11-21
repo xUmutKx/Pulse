@@ -115,7 +115,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     // while something is held, one empty page waits at the end so it can be put there
     val basePages = items.chunked(perPage)
     // infinite scroll (a setting): after the last page comes the first; then no empty page is added while something is held
-    val loop = LauncherPrefs.loopScroll && basePages.size > 1
+    val loop = LauncherPrefs.loopScroll && !LauncherPrefs.classicWin && basePages.size > 1
     val pages: List<List<HomeItem>> = if (!loop && dragKey != null && basePages.isNotEmpty()) basePages + listOf(emptyList<HomeItem>()) else basePages.ifEmpty { listOf(emptyList<HomeItem>()) }
     val nPages = pages.size
     val startPage = if (loop) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % nPages) + LauncherPrefs.homePage.coerceIn(0, nPages - 1) else LauncherPrefs.homePage.coerceIn(0, (nPages - 1).coerceAtLeast(0))

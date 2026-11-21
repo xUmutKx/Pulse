@@ -77,11 +77,12 @@ object LauncherFolders {
     /** The apps list with the folders' members folded into folder icons, folders first. */
     fun fold(apps: List<LaunchApp>, all: List<LaunchApp> = apps): List<LaunchApp> {
         val fs = LauncherPrefs.folders
-        if (fs.isEmpty() && !LauncherPrefs.smartFolders) return apps
+        val smartOn = LauncherPrefs.smartFolders && !LauncherPrefs.classicWin
+        if (fs.isEmpty() && !smartOn) return apps
         val inside = fs.values.flatMap { members(it) }.toSet()
         val made = fs.entries.map { (id, v) -> LaunchApp(name(v), FOLDER_PREFIX + id, icon(members(v).mapNotNull { p -> all.firstOrNull { it.pkg == p } }), system = true) }
         // smart folders: the apps that are in no folder of the person's go by their store category into a folder each (three apps at least)
-        val smart = if (LauncherPrefs.smartFolders) smartGroups(apps.filter { it.pkg !in inside }) else emptyList()
+        val smart = if (smartOn) smartGroups(apps.filter { it.pkg !in inside }) else emptyList()
         val smartPkgs = smart.flatMap { it.second }.map { it.pkg }.toSet()
         return made + smart.map { (g, list) -> LaunchApp(tr(g.en, g.tr), FOLDER_PREFIX + SMART + g.name, icon(list), system = true) } + apps.filter { it.pkg !in inside && it.pkg !in smartPkgs }
     }

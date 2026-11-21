@@ -124,6 +124,9 @@ class Win11LauncherLook : LauncherLook {
             }
             // the tray: the connection, the sound and the battery in one button that opens the quick settings (tiles, volume), then the clock, as in Windows 11
             Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Messages in the tray (bottom right): a tap opens Pulse's Messages in a window
+                val trayCtx = androidx.compose.ui.platform.LocalContext.current
+                Box(Modifier.size(32.dp).clip(shape).clickable { openDesktopItem(trayCtx, "pulse:x:messages", "win11") }, contentAlignment = Alignment.Center) { Glyph("chat", fg, 16.dp) }
                 Row(Modifier.clip(shape).clickable { LauncherSession.quickOpen = !LauncherSession.quickOpen; LauncherSession.clockOpen = false; LauncherSession.w11SearchOpen = false }.padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Glyph("wifi", fg, 16.dp); Glyph("volume", fg, 16.dp); Glyph("battery", fg, 16.dp)
                 }
