@@ -31,6 +31,29 @@
 - Extra apps (Files, Photos, Calendar, Contacts, Messages, Music, ...) have their own look and never mix with Pulse's.
 </details>
 
+<details><summary><b>🖥️ Windows desktop launcher</b>: windows, shortcuts, tools, keyboard</summary>
+
+- The launcher is a Windows desktop in the look you pick (Windows 11 is the default and first in the list; Material and AMOLED are last). Apps open in windows you can drag, snap to a half of the screen (drag to an edge, Win+Left / Right), maximise and minimise; Alt+Tab and Win+Tab show the windows as cards.
+- A physical keyboard (or Pulse's keyboard with its Win key) works as on a PC: the Windows key alone is Start, Win+X / R / E / I / S / D / L / M / A / V / Tab / arrows, Win+Shift+S, Win+/ for the list of shortcuts, Alt+F4, Ctrl+Esc, Esc. With Pulse as the home app the Windows key is taken before One UI can open its own launcher (needs the screen cover accessibility layer).
+- Lock (Win+L) shows that Windows' lock screen and sign-in; Shut down and Restart show the Shutting down screens (Windows 10 and 11 sometimes "Working on updates").
+- Windows tools over what the phone really reports: Task Manager, Services, Startup apps, Registry Editor (the phone's settings database), **Device Manager**, **Event Viewer**, **Disk Management**, **Windows Security**, **Task Scheduler**, Windows Update (Pulse updates), Command Prompt (neofetch with the logo of the look's Windows) and Terminal (the Android robot). Run box: cmd, terminal, regedit, devmgmt, eventvwr, diskmgmt, taskschd, control, calc, notepad ...
+- Settings pages with controls that work inside Pulse (Wi-Fi with the networks around, Bluetooth, airplane mode, Do not disturb, dark mode, screen timeout, text size, battery saver, time, lock screen lyrics ...), with Shizuku or root where Android asks for it; no hand-off to the phone's Settings app.
+- Clipboard history (Win+V), keyboard shortcut guide, mouse right click, a Windows style error box, the volume and brightness display, Recycle Bin for deleted files.
+</details>
+
+<details><summary><b>🎮 Game Hub</b>: Boxshelf, CD shelf, Chess, Checkers, Power of 4</summary>
+
+- Game Hub shows your games as a Boxshelf 3D shelf, as a **CD shelf** (KMP Odd Scroll's CD Rack by mejdi14, GPL-3.0, see `THIRD_PARTY.md`), or as a classic grid; the grid button goes from one to the next.
+- Chess, Checkers and Power of 4 of Pulse's own, each with its own logo: against the computer (four levels), two players on one phone, or two phones over Bluetooth (no internet).
+</details>
+
+<details><summary><b>⌚ Device manager</b>: Galaxy Buds and the watch</summary>
+
+- Buds: the earbuds' battery, which bud is in the ear, noise control, and stopping the music when they are taken out.
+- Watch (over wireless debugging): install APKs and Pulse Watch, send files, screenshot, a 30 second screen recording, a shell, the log (logcat), the apps on the watch with Open, Pull (their APK to the phone), Disable and Remove.
+- Pulse Watch is a Wear OS app of its own with 21 small apps for a round screen.
+</details>
+
 <details><summary><b>🎵 Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
 
 - Music player in three skins (Material, Poweramp, Winamp) with lyrics (synced, search by text), waveform seek bar, sleep timer, equalizer (also by genre), crossfade, playlists, mixes by mood, stars and favourites sorted both ways.
