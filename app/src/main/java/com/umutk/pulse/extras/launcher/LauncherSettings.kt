@@ -85,7 +85,7 @@ fun LauncherSettings(back: () -> Unit, fromLauncher: Boolean = false, startCat: 
                 Win11SettingsHome({ r -> if (r.startsWith("win:lsettings:")) picked = r.removePrefix("win:lsettings:") }, startGroup = "personalization")
             }
         }
-    } else LauncherSettingsPages(back = { if (T.id == "win11" && startCat.isEmpty() && picked.isNotEmpty()) picked = "" else back() }, fromLauncher = fromLauncher, startCat = picked)
+    } else LauncherSettingsPages(back = { if (T.id == "win11" && picked.isNotEmpty()) picked = "" else back() }, fromLauncher = fromLauncher, startCat = picked)
 }
 
 @Composable
@@ -156,6 +156,10 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             }
             ValueRow("image", tr("Custom wallpaper", "Kendi duvar kağıdın"), if (LauncherPrefs.wallFile.isNotEmpty()) tr("On", "Açık") else "") { pickOwn.launch("image/*") }
             if (LauncherPrefs.wallFile.isNotEmpty()) ValueRow("close", tr("Use the look's own wallpaper", "Görünümün kendi duvar kağıdını kullan"), "") { LauncherPrefs.wallFile = ""; save() }
+            // while Pulse is the home app its picture is the phone's wallpaper too (the recent apps show it); the phone's own comes back when Pulse is not the home app
+            var phoneSync by remember { mutableStateOf(PhoneWall.enabled(ctx)) }
+            SwitchLine("image", tr("Phone wallpaper follows the launcher", "Telefon duvar kağıdı launcher'ı izlesin"), phoneSync) { phoneSync = it; PhoneWall.setEnabled(ctx, it) }
+            if (PhoneWall.hasBackup(ctx)) ValueRow("history", tr("Bring back the phone's own wallpaper", "Telefonun eski duvar kağıdını geri getir"), "") { PhoneWall.restore(ctx) }
             ValueRow("image", tr("Set as phone wallpaper", "Telefon duvar kağıdı yap"), "") {
                 val id = cur.id
                 // full-size decode is slow: off the main thread, the result is reported on it
