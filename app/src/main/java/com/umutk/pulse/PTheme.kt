@@ -206,13 +206,13 @@ fun glassTwin(t: PTheme, dark: Boolean): PTheme {
 }
 
 /** The light twin of Windows 11: the base look is the dark one, so the light mode needs its own colours. */
-fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF000000), c(0xFF5C5C5C), c(0xFF0067C0), c(0xFFE5E5E5), t.radius, glassA = t.glassA)
+fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF1A1A1A), c(0xFF5C5C5C), c(0xFF0067C0), c(0xFFE5E5E5), t.radius, glassA = t.glassA)
 
 /** The dark twin of a light sidebar theme (Windows 11 / 10); others have none. */
 fun darkTwin(t: PTheme): PTheme? = when (t.id) {
     // Windows 11 takes the accent swatch too (PTheme.accent); the background is black (AMOLED) or dark grey
-    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius)
-        else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF3A3A3A), t.radius)
+    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFC9C9C9), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius)
+        else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFC9C9C9), c(0xFFD0D0D0), c(0xFF3A3A3A), t.radius)
     "win10" -> PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF0E0E0E), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF4CC2FF), c(0xFF2A2A2A), t.radius, tabs = true, titleName = t.titleName, glassA = t.glassA)
     else -> null
 }
