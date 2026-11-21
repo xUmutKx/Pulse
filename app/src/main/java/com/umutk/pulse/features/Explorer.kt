@@ -1132,7 +1132,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         if (canPaste) add(Triple("Paste", "paste", { doPaste() }))
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
                         add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
-                        add(Triple("Archive", "zip", { archiveOpen = true }))
+                        // a file that is no archive has one job only (Compress): the menu is skipped and the compress question opens at once
+                        add(Triple("Archive", "zip", { if (isArchiveFile(f) || isFirstPart(f)) archiveOpen = true else zipAsk = listOf(f) }))
                     }
                     // the rest, in groups: open, send, folder, details
                     val groups = listOf(
