@@ -326,7 +326,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (!float && st.panel == "keys" && !st.cursorDrag && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                if (!float && st.panel in setOf("keys", "gamepad", "keyset") && !st.cursorDrag && dy > 70.dp.toPx() && abs(dx) < dy * .5f && c.uptimeMillis - t0 < 600 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
@@ -1213,6 +1213,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         curX = c.position.x
                         curY = c.position.y
                         curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
+                        // the finger moved away before the hold fired (a swipe down to close the keyboard, most of all on the number row and the number pad):
+                        // it is not a long press, so the hold never fires for it
+                        if (!long && key.kind != KeyKind.DELETE && key.kind != KeyKind.SPACE && (curRoot - startRoot).y > 26.dp.toPx()) due = Long.MAX_VALUE / 2
                         if (KeyboardPrefs.circleGestures && isLetterNow) {
                             val seg = curRoot - lastPt
                             if (seg.getDistance() > 3.dp.toPx()) {

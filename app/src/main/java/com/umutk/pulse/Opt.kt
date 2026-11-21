@@ -46,7 +46,7 @@ object Opt {
         val p = sp(c)
         startPage = p.getString("start", "processes") ?: "processes"
         lang = p.getString("lang", "auto") ?: "auto"
-        amoledBg = p.getBoolean("amoledBg", true)
+        amoledBg = true // Windows 11 dark is always black now (the dark grey choice is gone)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
         tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); splash = p.getBoolean("splash", true); splashLen = p.getInt("splashLen", 1).coerceIn(0, 2); startSound = p.getBoolean("startSound", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false);

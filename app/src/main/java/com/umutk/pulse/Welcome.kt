@@ -271,6 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "win11" to (tr("Windows 11 glass is clear again (no grey sheet over it), the keyboard closes with a swipe down on every layout.",
+        "Windows 11 camı yine şeffaf (üstünde gri katman yok), klavye her düzende aşağı kaydırınca kapanıyor.")),
     "game" to (tr("Game Hub's CD shelf opens at once and no longer hangs on Loading the covers; the launcher's look picker shows the Windows looks first.",
         "Oyun Merkezi'nin CD rafı hemen açılıyor ve artık kapak yüklemede takılmıyor; launcher'ın görünüm seçicisi önce Windows görünümlerini gösteriyor.")),
     "kbd18" to (tr("Files opened from a notification keeps its look, Control Panel top bar, Shift + key on the keyboard, clipboard text not offered twice, QR reader permission and Toolkit icons, DNS page and taskbar fixes in the launcher, black Windows 10 windows and a black launcher icon.",

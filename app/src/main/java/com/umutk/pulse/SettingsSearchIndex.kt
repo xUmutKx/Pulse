@@ -7,7 +7,6 @@ package com.umutk.pulse
 internal val SETTINGS_ROWS: List<Triple<String, String, String>> = listOf(
     Triple("look", "Background", "Arka plan"),
     Triple("look", "Black (AMOLED)", "Siyah (AMOLED)"),
-    Triple("look", "Dark grey", "Koyu gri"),
     Triple("look", "Icons (Windows 11)", "İkonlar (Windows 11)"),
     Triple("look", "Blur amount", "Bulanıklık"),
     Triple("look", "Tint (darkness)", "Koyuluk"),

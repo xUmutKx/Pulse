@@ -463,13 +463,6 @@ fun SettingsPage() {
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
                 }
                 if (T.id == "win11") {
-                    com.umutk.pulse.extras.ui.FlatSection(tr("Background", "Arka plan")) {
-                        // previews instead of words: the background as it is drawn, the material as a panel over a picture
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            BackgroundPreview(tr("Black (AMOLED)", "Siyah (AMOLED)"), Color.Black, Opt.amoledBg) { Opt.amoledBg = true; Opt.save(ctx) }
-                            BackgroundPreview(tr("Dark grey", "Koyu gri"), Color(0xFF202020), !Opt.amoledBg) { Opt.amoledBg = false; Opt.save(ctx) }
-                        }
-                    }
                     com.umutk.pulse.extras.ui.FlatSection(tr("Window material", "Pencere malzemesi")) {
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Effects.list.forEach { (id, n) -> MaterialPreview(id, n, Look.effect == id) { Cfg.setEffect(ctx, id) } }
