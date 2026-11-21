@@ -150,6 +150,7 @@ internal fun Win11Controls(ctx: Context, action: String) {
         }
         a == Settings.ACTION_INPUT_METHOD_SETTINGS -> Section(tr("Keyboard", "Klavye")) {
             Text(tr("Pulse keyboard is picked from the list of keyboards.", "Pulse klavyesi klavye listesinden seçilir."), color = T.sub, fontSize = 12.sp)
+            PButton(tr("Pulse keyboard settings", "Pulse klavye ayarları")) { runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.KeyboardSettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
             PButton(tr("Choose keyboard", "Klavye seç")) { runCatching { (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() } }
         }
         a == Settings.ACTION_SECURITY_SETTINGS -> Section(tr("Lock screen", "Kilit ekranı")) {
