@@ -2,6 +2,8 @@ package com.umutk.pulse.extras.launcher
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,12 +96,18 @@ fun ControlPanelHome() {
     val field = if (w11) androidx.compose.ui.graphics.Color(0x22FFFFFF) else white
     Column(Modifier.fillMaxSize().background(white)) {
         // the address bar and the search box
-        Row(Modifier.fillMaxWidth().background(bar).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (cat == null) "Control Panel ›" else "Control Panel › " + tr(cat!!.en, cat!!.tr) + " ›", color = ink, fontSize = 12.sp, modifier = Modifier.weight(1f).clickable { cat = null })
-            Box(Modifier.width(140.dp).background(field).border(1.dp, if (w11) tileEdge else androidx.compose.ui.graphics.Color(0xFFAAAAAA)).padding(horizontal = 6.dp, vertical = 4.dp)) {
-                androidx.compose.foundation.text.BasicTextField(q, { q = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = ink, fontSize = 12.sp))
+        Row(Modifier.fillMaxWidth().then(if (w11) Modifier else Modifier.background(bar)).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (cat == null) "Control Panel ›" else "Control Panel › " + tr(cat!!.en, cat!!.tr) + " ›", color = ink, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).clickable { cat = null })
+            // the search box: a rounded field with its own hint and a magnifier (it was an empty grey rectangle)
+            Row(Modifier.width(170.dp).clip(RoundedCornerShape(if (w11) 8.dp else 0.dp)).background(field).border(1.dp, if (w11) tileEdge else androidx.compose.ui.graphics.Color(0xFFAAAAAA), RoundedCornerShape(if (w11) 8.dp else 0.dp)).padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("search", ink.copy(alpha = .7f), 14.dp)
+                Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                    if (q.isEmpty()) Text(tr("Search Control Panel", "Denetim Masası'nda ara"), color = ink.copy(alpha = .5f), fontSize = 12.sp, maxLines = 1)
+                    androidx.compose.foundation.text.BasicTextField(q, { q = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = ink, fontSize = 12.sp), cursorBrush = androidx.compose.ui.graphics.SolidColor(ink))
+                }
             }
         }
+        if (w11) Box(Modifier.fillMaxWidth().height(1.dp).background(androidx.compose.ui.graphics.Color(0x22FFFFFF)))
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (cat == null) tr("Adjust your computer's settings", "Bilgisayar ayarlarınızı düzenleyin") else tr(cat!!.en, cat!!.tr), color = title, fontSize = 18.sp, modifier = Modifier.weight(1f))
