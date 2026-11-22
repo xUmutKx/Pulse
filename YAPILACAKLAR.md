@@ -2550,3 +2550,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 10. YTX: bağlantılara tıklanmıyor; Diziler ve Filmler posterleri; her videonun 3 noktasında "Müzik olarak aç"; Spotify OAuth (INVALID_CLIENT) + Aran404/SpotAPI; mini oynatıcıdan normale geçince video sol sütunda kalıyor; mini oynatıcıya kaydırmak kolay olsun; video/öneri bölme oranı ayarı (varsayılan %35/%65); tam ekran oynatıcı: yukarı kaydırınca kanal adı solda, Abone ol sağda, altta öneriler; üstte durum çubuğu ve beyaz ilerleme çubuğu gizli; öngörülü animasyon; PiP altyazı; izlerken indirebildiği kadar önbelleğe al, ekran kapalıyken de devam; tam ekranda sağ-sol ölü bölge; oynat tuşuna menü (Flow kodu); oynatma listelerinde arama; Game Hub oyun açılışında bildirim
 
 - [readme/reddit] README images and current feature list turned into updated REDDIT_POST.md; derlenmedi (documentation-only, build not requested).
+
+- [readme/reddit] REDDIT_POST.md expanded to Reddit's 40,000-character text-post limit, with README screenshots, repository and latest-download links; derlenmedi (documentation-only, build not requested).
