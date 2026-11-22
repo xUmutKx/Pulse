@@ -627,7 +627,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             // an extra app of Pulse: in a window of the desktop on the Windows looks (when it has a page that can sit in a window), else as the app of its own
             val alias = app.pkg.removePrefix("pulse:extra:")
             val route = EXTRA_ROUTES[alias]
-            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label, com.umutk.pulse.extraToolSavedLook(ctx, route))
+            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label, com.umutk.pulse.ExtraToolLook.extraToolSavedLook(ctx, route))
             else com.umutk.pulse.AppPlace.byAlias(alias)?.run?.invoke(ctx) { }
         }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
