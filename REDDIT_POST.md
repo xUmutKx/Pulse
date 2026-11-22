@@ -1,4 +1,4 @@
-# I turned my Android phone into a Windows 95/XP/7/10/11 desktop
+# All In One Toolbox For Android with Windows Looks
 
 **Repository:** https://github.com/xUmutKx/Pulse
 
@@ -20,20 +20,7 @@ Pulse's desktop has real app windows: move them, resize them, snap them to a sid
 
 The launcher includes desktop icons for This PC, Recycle Bin, File Explorer, Paint and Command Prompt. It has Start menus, folders, widgets, wallpapers, hidden apps, a home app grid and a Windows-style right-click menu.
 
-A physical keyboard works as a desktop keyboard:
-
-- Win+R opens Run
-- Win+E opens Files
-- Win+I opens Settings
-- Win+V opens clipboard history
-- Win+L opens the lock screen
-- Win+D returns to the desktop
-- Win+Tab shows window cards
-- Win+Left/Right snaps a window
-- Alt+F4 closes the active window
-- Win+/ opens the shortcut guide
-
-Some shortcuts need Pulse to be the home app or the screen-cover accessibility layer. Pulse also lets an Android phone's Windows key behave like a PC key instead of handing the key to a device launcher.
+A physical keyboard works as a desktop keyboard Pulse also lets an Android phone's Windows key behave like a PC key instead of handing the key to a device launcher.
 
 ---
 
@@ -51,7 +38,6 @@ The included looks are:
 - Windows Phone
 - Material You
 - AMOLED
-- One UI and ColorOS styles where they exist
 
 Windows 11 uses Fluent icons and Mica-style surfaces. Windows 95, XP and 7 use their period-style frames and controls. AMOLED is genuinely pure black. Extra apps use their own look settings, so changing Files or Photos does not change the main Pulse launcher.
 
@@ -78,7 +64,7 @@ Pulse includes familiar Windows interfaces backed by real Android data:
 - Recycle Bin
 - Windows Update for Pulse
 
-The Run box understands commands such as `cmd`, `terminal`, `regedit`, `devmgmt`, `eventvwr`, `diskmgmt`, `taskschd`, `control`, `calc` and `notepad`.
+The Run box understands commands.
 
 Pulse's Task Manager reads live CPU, memory, storage, network, GPU, battery and temperature information. It can show per-core frequency, thermal zones, foreground time, notification counts and running services. Root or Shizuku adds more system controls, startup switches and service access, but Pulse works without either.
 
@@ -105,7 +91,7 @@ The music player has separate Material, Poweramp, Winamp and Windows Media Playe
 - Bold or highlighted playback position
 - LRCLIB results
 - Cached and saved lyrics
-- Lyrics in the Winamp title bar
+- Lyrics in the title bar
 - Lyrics in the media notification
 
 The notification can show cover art and lyrics, and notification buttons can be ordered by the user. The media session supports shuffle, repeat, favourite, sleep timer, audio output and rewind/forward controls.
@@ -146,7 +132,7 @@ Pulse has a Windows-style lock and sign-in screen. Win+L opens it, and the shutd
 
 The screen cover is a black, low-brightness overlay for charging or a desk. It can show the clock, date, battery and custom text. It includes:
 
-- Six clock styles
+- Clock styles
 - Multiple positions
 - Charging animations
 - Sideways desk mode
@@ -165,9 +151,7 @@ Game Hub supports a 3D box shelf, a CD jewel-case shelf and a normal app grid.
 
 It includes Pulse's own:
 
-- Chess
-- Checkers
-- Power of 4
+Mega Game Hub With over 300 games
 
 Each game has its own icon and look. You can play against a computer at several levels, use two players on one phone or play two phones over Bluetooth without internet. The CD shelf and 3D views are drawn directly inside the app.
 
@@ -348,7 +332,7 @@ The Wear OS manager supports:
 
 ## 📦 Releases and privacy
 
-Pulse has FOSS, lite, 32-bit and Google Play variants. The FOSS build has no ads. It does not require an account.
+Pulse has FOSS, lite wich doesnt have sms and local ai, 32-bit
 
 Features that use the internet include update checks, weather, lyrics, album art, subtitles and downloads. Local music, files, games, the desktop and system tools work offline.
 
