@@ -1,11 +1,14 @@
 <p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
 
-<p align="center"><a href="docs/media/Pulse-long.mp4"><img src="docs/media/cover-wide.jpg" width="900" alt="Pulse: Windows 95 to 11, Material and AMOLED looks for Android"></a></p>
-<p align="center"><a href="docs/media/Pulse-long.mp4">▶ Tour video (landscape, ~1:40)</a></p>
+<p align="center"><a href="https://xumutkx.github.io/Pulse/"><b>🌐 Pulse Website</b></a></p>
+
+https://github.com/user-attachments/assets/e582096e-a6d9-41b2-84a0-473d02aca9a1
+
+**▶ Tour video (landscape, ~1:40)**
 
 <p align="center"><img src="docs/media/cover-wall.jpg" width="900" alt="One phone. Every Windows."></p>
 
-### 
+### Pulse
 
 | Windows 11: windows | Windows 10 | Windows 7 | Windows XP | Windows 95 |
 |---|---|---|---|---|
@@ -36,8 +39,9 @@
 | <img src="docs/screenshots/cpu-cores.jpg" width="170" alt="CPU cores"> | <img src="docs/screenshots/battery-power.jpg" width="170" alt="Battery power"> | <img src="docs/screenshots/gym.jpg" width="170" alt="Gym library"> | <img src="docs/screenshots/neofetch.jpg" width="170" alt="Terminal"> | <img src="docs/screenshots/weather-city.jpg" width="170" alt="Weather"> |
 
 
-<p align="center"><a href="docs/media/Pulse-short.mp4"><img src="docs/media/Pulse-short-preview.gif" width="300" alt="Pulse in 30 seconds"></a></p>
-<p align="center"><a href="docs/media/Pulse-short.mp4">▶ Short video (vertical, ~35 s)</a></p>
+https://github.com/user-attachments/assets/f3ad02ad-b30b-4174-8fca-da37350e7aee
+
+**▶ Short video (vertical, ~35 s)**
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse started as the tools I wanted on my own phone and grew into one app: a Windows desktop launcher (Windows 11, 10, 7, XP, 95 and Windows Phone looks) with real windows, Settings, Control Panel, Task Manager and Registry Editor; a task manager and system monitor; a music player with Winamp, Poweramp and Windows Media Player skins; a video player with online subtitles; a keyboard; Files, Photos, Calendar, Contacts, Notes, Office, a code editor and a browser; Game Hub with a CD shelf; a screen cover with dozens of clocks and charging animations; a toolkit (QR and barcode reader, floating timer, auto clicker, DNS, compass ...); Health with a gym library; a Buds and Wear OS watch manager; and on-device AI. Every screen is drawn for every look. Free, open source (GPL-3.0), no ads, no account.
 
