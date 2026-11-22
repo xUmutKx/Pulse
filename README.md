@@ -2,14 +2,9 @@
 
 https://github.com/user-attachments/assets/e582096e-a6d9-41b2-84a0-473d02aca9a1
 
-**▶ Tour video (landscape, ~1:40)**
-
 <p align="center"><img src="docs/media/cover-wall.jpg" width="900" alt="One phone. Every Windows."></p>
 
-### Pulse
-
-<p align="center"><b><a
-href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
+### 
 
 | Windows 11: windows | Windows 10 | Windows 7 | Windows XP | Windows 95 |
 |---|---|---|---|---|
@@ -41,8 +36,6 @@ href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
 
 
 https://github.com/user-attachments/assets/f3ad02ad-b30b-4174-8fca-da37350e7aee
-
-**▶ Short video (vertical, ~35 s)**
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse started as the tools I wanted on my own phone and grew into one app: a Windows desktop launcher (Windows 11, 10, 7, XP, 95 and Windows Phone looks) with real windows, Settings, Control Panel, Task Manager and Registry Editor; a task manager and system monitor; a music player with Winamp, Poweramp and Windows Media Player skins; a video player with online subtitles; a keyboard; Files, Photos, Calendar, Contacts, Notes, Office, a code editor and a browser; Game Hub with a CD shelf; a screen cover with dozens of clocks and charging animations; a toolkit (QR and barcode reader, floating timer, auto clicker, DNS, compass ...); Health with a gym library; a Buds and Wear OS watch manager; and on-device AI. Every screen is drawn for every look. Free, open source (GPL-3.0), no ads, no account.
 
