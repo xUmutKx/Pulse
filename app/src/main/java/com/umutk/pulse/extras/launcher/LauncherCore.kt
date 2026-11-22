@@ -56,8 +56,8 @@ fun startGroup(app: LaunchApp): StartGroup = if (app.pkg.startsWith("pulse:x:win
 
 /** The apps split into their groups, in group order; empty groups are left out. */
 fun groupedApps(all: List<LaunchApp>): List<Pair<StartGroup, List<LaunchApp>>> =
-    // the joke apps are on the desktop only, not in the lists of the Start menus
-    StartGroup.values().filter { it != StartGroup.FUN }.map { g -> g to all.filter { startGroup(it) == g } }.filter { it.second.isNotEmpty() }
+    // joke apps live in a Fun apps folder in the Start menu, instead of mixing with real categories
+    StartGroup.values().map { g -> g to all.filter { startGroup(it) == g } }.filter { it.second.isNotEmpty() }
 
 /** [columns] is the drawer's column count; [longPress] opens the app's action sheet. */
 class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val columns: Int, val iconDp: Int, val dock: List<LaunchApp>,

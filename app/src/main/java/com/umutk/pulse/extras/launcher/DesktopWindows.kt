@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.LocalOpenTool
+import com.umutk.pulse.LookHost
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.SubScreen
 import com.umutk.pulse.bevel
@@ -63,6 +64,8 @@ import com.umutk.pulse.bevel
 /** One open window of the desktop: where it is (in dp), whether it fills the screen, and which Pulse page it shows. */
 class DWin(val id: Long, val title: String, val start: String, x0: Float, y0: Float, z0: Int) {
     var route by mutableStateOf(start)
+    /** An extra app's own saved look, separate from the launcher/Pulse look. */
+    var extraLook by mutableStateOf<String?>(null)
     var x by mutableFloatStateOf(x0)
     var y by mutableFloatStateOf(y0)
     var max by mutableStateOf(false)
@@ -98,10 +101,13 @@ object DesktopWindows {
     private var top = 0
 
     fun open(route: String, title: String) {
+        open(route, title, null)
+    }
+    fun open(route: String, title: String, extraLook: String?) {
         if (route == "messages") LauncherSession.msnTray = true
-        list.firstOrNull { it.start == route }?.let { it.min = false; front(it); return }
+        list.firstOrNull { it.start == route }?.let { it.min = false; it.extraLook = extraLook; front(it); return }
         val n = list.size % 6
-        list += DWin(++seq, title, route, 14f + n * 22f, 20f + n * 26f, ++top)
+        list += DWin(++seq, title, route, 14f + n * 22f, 20f + n * 26f, ++top).apply { this.extraLook = extraLook }
     }
     /**
      * A small window at the bottom right, over the tray, like the messenger popup of the MSN years: [route] opens as usual, then it is made [wDp] x [hDp] and put by the
@@ -245,7 +251,13 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp
                     layout(c.maxWidth, c.maxHeight) { p.placeWithLayer(0, 0) { scaleX = fit; scaleY = fit; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) } }
                 } else Modifier)) {
                     CompositionLocalProvider(LocalOpenTool provides { id -> w.route = if (id.isNotEmpty()) id else w.start }, LocalDesktopWin provides w) {
-                        SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                        if (w.extraLook != null) {
+                            LookHost(lookId = w.extraLook) { _ ->
+                                SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                            }
+                        } else {
+                            SubScreen(w.route) { if (w.route != w.start) w.route = w.start else DesktopWindows.close(w) }
+                        }
                     }
                 }
             }

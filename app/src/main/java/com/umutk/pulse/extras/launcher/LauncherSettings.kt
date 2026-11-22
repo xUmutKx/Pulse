@@ -19,6 +19,7 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,7 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.PCheck
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.PField
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.T
 import com.umutk.pulse.features.wallsFor
@@ -67,6 +70,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import androidx.core.graphics.drawable.toBitmap
 
 /** Settings of the Pulse Launcher. Drawn in the look passed in by its host; writes only LauncherPrefs. */
 @Composable
@@ -310,6 +314,7 @@ private fun LauncherSettingsPages(back: () -> Unit, fromLauncher: Boolean, start
             }
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
             SwitchLine("window", tr("Open apps in windows on the Windows desktops (off: each app opens by itself)", "Windows masaüstlerinde uygulamalar pencerede açılır (kapalı: her biri kendi başına açılır)"), LauncherPrefs.windowedApps) { LauncherPrefs.windowedApps = it; save() }
+            SwitchLine("pin", tr("Shortcut arrow on app icons", "Uygulama simgelerinde kısayol oku"), LauncherPrefs.shortcutArrows) { LauncherPrefs.shortcutArrows = it; save() }
             SwitchLine("grid", tr("Desktop icons on a grid (off: place them anywhere)", "Masaüstü simgeleri ızgarada (kapalı: istediğin yere koy)"), LauncherPrefs.snapIcons) { LauncherPrefs.snapIcons = it; save() }
             SwitchLine("scale", tr("Gadgets on the grid (off: place and size them freely)", "Gadget'lar ızgarada (kapalı: serbest yerleştir ve boyutlandır)"), LauncherPrefs.snapWidgets) { LauncherPrefs.snapWidgets = it; save() }
             if (LauncherPrefs.snapIcons) {
@@ -591,21 +596,49 @@ private fun SwitchLine(icon: String, title: String, checked: Boolean, onChange: 
 internal fun AppCheckDialog(title: String, initial: List<String>, max: Int, onDismiss: () -> Unit, onOk: (List<String>) -> Unit) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
-    val apps by produceState(emptyList<LaunchApp>()) { value = withContext(Dispatchers.IO) { loadApps(ctx) } }
+    var query by remember { mutableStateOf("") }
+    val apps by produceState(emptyList<LaunchApp>()) {
+        value = withContext(Dispatchers.IO) {
+            val base = loadApps(ctx).associateBy { it.pkg }.toMutableMap()
+            val pm = ctx.packageManager
+            runCatching {
+                pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES)
+                    .forEach { ai ->
+                        val pkg = ai.packageName
+                        if (pkg !in base) base[pkg] = LaunchApp(
+                            pm.getApplicationLabel(ai).toString(),
+                            pkg,
+                            runCatching { ai.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+                        )
+                    }
+            }
+            base.values.sortedBy { it.label.lowercase() }
+        }
+    }
     val picked = remember { mutableStateListOf<String>().apply { addAll(initial) } }
     fun toggle(pkg: String) { if (pkg in picked) picked.remove(pkg) else if (picked.size < max) picked.add(pkg) }
+    val shown = apps.filter { query.isBlank() || it.label.contains(query.trim(), ignoreCase = true) || it.pkg.contains(query.trim(), ignoreCase = true) }
     WinAlert(
         onDismissRequest = onDismiss,
         title = { Text(title, color = w.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         text = {
-            Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
-                apps.forEach { app ->
+            Column(Modifier.heightIn(max = 380.dp)) {
+                PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                shown.forEach { app ->
                     val on = app.pkg in picked
                     Row(Modifier.fillMaxWidth().clickable { toggle(app.pkg) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         PCheck(on, { toggle(app.pkg) }, enabled = on || picked.size < max)
                         Spacer(Modifier.width(8.dp))
+                        app.icon?.let { Image(it, null, Modifier.size(32.dp).clip(RoundedCornerShape(7.dp))) }
+                            ?: app.iconKey?.let { PIcon(it, w.text, 32.dp) }
+                            ?: Box(Modifier.size(32.dp).clip(RoundedCornerShape(7.dp)).background(w.panel), contentAlignment = Alignment.Center) {
+                                Text(app.label.take(1).uppercase(), color = w.text, fontSize = 13.sp)
+                            }
+                        Spacer(Modifier.width(8.dp))
                         Text(app.label, color = w.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                }
                 }
             }
         },

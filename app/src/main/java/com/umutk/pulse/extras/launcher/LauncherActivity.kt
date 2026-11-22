@@ -622,12 +622,12 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         else if (app.pkg.startsWith("url:")) runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(app.pkg.removePrefix("url:"))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         // on a Windows desktop a file opens in a window of its own (the picture, the text, the PDF); a folder and the other looks go to the system
         else if (app.pkg.startsWith("file:") && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps && java.io.File(app.pkg.removePrefix("file:")).isFile) DesktopWindows.open("view:" + app.pkg.removePrefix("file:"), app.label)
-        else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
+        else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"), look.id)
         else if (app.pkg.startsWith("pulse:extra:")) {
             // an extra app of Pulse: in a window of the desktop on the Windows looks (when it has a page that can sit in a window), else as the app of its own
             val alias = app.pkg.removePrefix("pulse:extra:")
             val route = EXTRA_ROUTES[alias]
-            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label)
+            if (route != null && look.id in WINDOWS_LOOKS && LauncherPrefs.windowedApps) DesktopWindows.open(route, app.label, com.umutk.pulse.extraToolSavedLook(ctx, route))
             else com.umutk.pulse.AppPlace.byAlias(alias)?.run?.invoke(ctx) { }
         }
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
@@ -759,20 +759,24 @@ internal fun linkApp(link: String, apps: List<LaunchApp>): LaunchApp? {
 }
 
 /** Opens a file with whatever handles it, a picture in the gallery, a folder in Pulse Files. */
-internal fun openLink(ctx: Context, path: String) {
+internal fun openLink(ctx: Context, path: String, lookId: String = "") {
     val f = java.io.File(path)
     if (f.isDirectory) {
         com.umutk.pulse.features.ExNav.lastHere = f.path
-        runCatching { ctx.startActivity(Intent().setClassName(ctx, "com.umutk.pulse.FilesActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        if (lookId in WINDOWS_LOOKS && LauncherPrefs.windowedApps) {
+            DesktopWindows.open("page:filestabs", tr("File Explorer", "Dosya Gezgini"))
+        } else {
+            runCatching { ctx.startActivity(Intent().setClassName(ctx, "com.umutk.pulse.FilesActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
     } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f)
 }
 
 /** The small arrow in the corner of a shortcut on the Windows desktops (an app of the phone, not one of the desktop's own items), as Windows draws it. */
 @Composable
 private fun ShortcutArrow(app: LaunchApp, iconDp: Int, modifier: Modifier) {
-    if (app.icon == null || app.pkg.startsWith("pulse:") || com.umutk.pulse.T.id !in setOf("win95", "xp", "win7", "win10", "win11")) return
+    if (!LauncherPrefs.shortcutArrows || app.icon == null || app.pkg.startsWith("pulse:") || com.umutk.pulse.T.id !in setOf("win95", "xp", "win7", "win10", "win11")) return
     val s = (iconDp * .34f).coerceAtLeast(12f)
-    Box(modifier.offset(x = (-iconDp / 2f + s / 2f).dp, y = (iconDp - s).dp).size(s.dp).background(Color.White).border(.5.dp, Color(0xFF7A7A7A)), contentAlignment = Alignment.Center) {
+    Box(modifier.offset(x = (iconDp / 2f - s * .72f).dp, y = (iconDp - s * .72f).dp).size(s.dp).background(Color.White).border(.5.dp, Color(0xFF7A7A7A)), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.size((s * .78f).dp)) {
             val w = size.width
             val p = androidx.compose.ui.graphics.Path().apply {

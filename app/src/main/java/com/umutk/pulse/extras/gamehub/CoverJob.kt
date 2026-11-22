@@ -37,14 +37,18 @@ object CoverJob {
     internal fun start(c: Context, games: List<GameRow>) {
         if (running.value) return
         val app = c.applicationContext
-        val todo = games.filter { !coverFile(app, it.pkg).isFile }
+        val todo = games.filter {
+            !coverFile(app, it.pkg).isFile &&
+                !steamCoverFile(app, it.pkg).isFile &&
+                !playCoverFile(app, it.pkg).isFile
+        }
         running.value = true; done.value = 0; total.value = todo.size; found.value = 0
         runCatching { ContextCompat.startForegroundService(app, Intent(app, CoverService::class.java)) }
         job = CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 for (g in todo) {
                     // a cover the person chose or Steam's art is kept
-                    if (!coverFile(app, g.pkg).isFile && !steamCoverFile(app, g.pkg).isFile) {
+                    if (!coverFile(app, g.pkg).isFile && !steamCoverFile(app, g.pkg).isFile && !playCoverFile(app, g.pkg).isFile) {
                         if (fetchBestCover(app, g)) { found.value = found.value + 1; withContext(Dispatchers.Main) { GameArt.version.intValue++ } }
                     }
                     done.value = done.value + 1

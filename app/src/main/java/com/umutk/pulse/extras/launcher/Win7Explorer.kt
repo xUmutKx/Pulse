@@ -94,6 +94,11 @@ fun Win7Explorer() {
     // a picture or a text file opens in a window of the desktop; the other kinds go to another app
     fun open(f: File) {
         if (f.isDirectory) go(f)
+        else if (com.umutk.pulse.features.isArchiveFile(f)) {
+            com.umutk.pulse.features.ExNav.lastHere = f.parentFile?.path ?: com.umutk.pulse.features.ExNav.lastHere
+            com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f
+            DesktopWindows.open("page:filestabs", tr("File Explorer", "Dosya Gezgini"))
+        }
         else if (opensInWindow(f)) DesktopWindows.open("view:" + f.path, f.name)
         else com.umutk.pulse.features.exHandOver(ctx, f, false)
     }

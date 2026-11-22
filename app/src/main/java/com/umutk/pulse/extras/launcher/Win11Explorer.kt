@@ -83,6 +83,11 @@ fun Win11Explorer() {
     fun go(d: File) { if (d.path != dir.path) { back.add(dir); fwd.clear(); dir = d; sel = null; query = "" } }
     fun open(f: File) {
         if (f.isDirectory) go(f)
+        else if (com.umutk.pulse.features.isArchiveFile(f)) {
+            com.umutk.pulse.features.ExNav.lastHere = f.parentFile?.path ?: com.umutk.pulse.features.ExNav.lastHere
+            com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f
+            DesktopWindows.open("page:filestabs", tr("File Explorer", "Dosya Gezgini"))
+        }
         else if (opensInWindow(f)) DesktopWindows.open("view:" + f.path, f.name)
         else com.umutk.pulse.features.exHandOver(ctx, f, false)
     }

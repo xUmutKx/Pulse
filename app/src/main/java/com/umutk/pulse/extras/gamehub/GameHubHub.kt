@@ -290,6 +290,18 @@ internal fun fetchPlayCover(c: Context, pkg: String): Boolean {
 
 internal fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
 
+/** Removes every downloaded or chosen cover source so a later cover search really starts from empty. */
+internal fun removeGameCover(c: Context, pkg: String) {
+    coverFile(c, pkg).delete()
+    playCoverFile(c, pkg).delete()
+    steamCoverFile(c, pkg).delete()
+    steamHeroFile(c, pkg).delete()
+    steamLogoFile(c, pkg).delete()
+    (0 until 4).forEach { steamShotFile(c, pkg, it).delete() }
+    prefs(c).edit().remove("rating_$pkg").remove("artTry_$pkg").remove("steamId_$pkg").apply()
+    GameArt.version.intValue++
+}
+
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
 private fun iconFile(c: Context, pkg: String): java.io.File {
     // the icons of other apps are not Pulse's own data: they live in the folder that is private and left out of every backup (noBackupFilesDir)
@@ -736,7 +748,7 @@ internal fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed
             SectionTitle(pal, tr("Cover", "Kapak"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip(pal, tr("Change cover", "Kapağı değiştir")) { if (com.umutk.pulse.ads.PulseAds.ENABLED) askAd = true else pick.launch("image/*") }
-                Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
+                Chip(pal, tr("Remove cover", "Kapağı kaldır")) { removeGameCover(ctx, g.pkg); coverTick++ }
             }
             // the game does not report achievements: these are Pulse's own marks, counted from the time played
             GameMilestones(pal, g.pkg, total)
@@ -1040,7 +1052,7 @@ fun GameHubHub(onBack: () -> Unit) {
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .75f)))))
                             // removes the cover picture kept for the game (the one chosen or fetched); the game's own banner from its app stays
                             Box(Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.Black.copy(alpha = .5f))
-                                .clickable { coverFile(ctx, last.pkg).delete(); playCoverFile(ctx, last.pkg).delete(); GameArt.version.intValue++ }, contentAlignment = Alignment.Center) {
+                                .clickable { removeGameCover(ctx, last.pkg) }, contentAlignment = Alignment.Center) {
                                 FluentIcon("delete", Color.White, 16.dp)
                             }
                             Row(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {

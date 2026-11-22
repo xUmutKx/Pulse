@@ -271,6 +271,12 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
+    "pin" to (tr("Launcher: desktop shortcut arrows are off by default and can be switched on in Settings; hidden apps have search and icons.",
+        "Launcher: masaüstü kısayol okları varsayılan kapalıdır ve Ayarlar'dan açılır; gizli uygulamalarda arama ve simgeler vardır.")),
+    "folder" to (tr("Launcher: Files folders open inside the desktop window, ZIP and archive files use the same Files view, and fun apps have their own Windows 11 Start folder.",
+        "Launcher: Dosyalar klasörleri masaüstü penceresinde açılır, ZIP ve arşiv dosyaları normal Dosyalar görünümünü kullanır ve eğlence uygulamaları Windows 11 Başlat'ta kendi klasöründedir.")),
+    "game" to (tr("Extra apps keep their own look inside launcher windows. Game Hub CD shelf opens first and removing a cover clears every downloaded cover source.",
+        "Ekstra uygulamalar launcher penceresinde kendi görünümünü korur. Oyun Merkezi CD rafı ilk açılır ve kapak kaldırma tüm indirilen kapak kaynaklarını temizler.")),
     "win11" to (tr("Launcher: desktop trash feedback follows the current look, and removing an app cleanly removes it from its folder.",
         "Launcher: masaüstü çöp geri bildirimi geçerli görünümü kullanıyor ve uygulama klasörlerden temizce kaldırılıyor.")),
     "kbd18" to (tr("Build and release: the merged launcher updates now compile across full, lite and 32-bit builds.",

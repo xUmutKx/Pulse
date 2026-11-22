@@ -72,6 +72,14 @@ object ExtraToolLook {
     fun name(id: String) = when (id) {
         "amoled" -> "AMOLED"; "material" -> "Material"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"; "xp" -> "Windows XP"; "win95" -> "Windows 95"; else -> id
     }
+
+    /** The look saved for a standalone extra app; launcher windows use this instead of Pulse's active look. */
+    fun extraToolSavedLook(c: Context, start: String): String = when (start) {
+        "voice" -> VoiceLook.get(c); "notes" -> NotesLook.get(c); "weather" -> WeatherLook.get(c); "ai" -> AiLook.get(c)
+        "paint" -> PaintLook.get(c); "calculator" -> CalculatorLook.get(c); "localsend" -> LocalSendLook.get(c)
+        "keyboard" -> KeyboardLook.get(c); "goodlock" -> GoodLockLook.get(c); "browser" -> BrowserLook.get(c)
+        "office" -> OfficeLook.get(c); else -> ExtraToolLook.get(c)
+    }
 }
 
 /**
@@ -165,7 +173,7 @@ open class ExtraToolActivity : ComponentActivity() {
     private fun enter() { toolLook?.apply(this) }
 
     // the own look store of each tool (null: the shared ExtraToolLook)
-    private fun storeOf(start: String): ToolLook? = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "ai" -> AiLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
+    internal fun storeOf(start: String): ToolLook? = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "ai" -> AiLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; "office" -> OfficeLook; else -> null }
 
     // Windows 11: the window is see-through and blurs what is behind it, in every tool (the theme is fixed at start; a look change restarts the page)
     private var glass = false

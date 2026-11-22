@@ -29,8 +29,10 @@
 
 
 
-<details><summary><b>🆕 New lately</b>: 2.0.18 to 2.0.21</summary>
+<details><summary><b>🆕 New lately</b>: 2.0.22 to 2.0.24</summary>
 
+- **2.0.24**: launcher shortcut arrows are optional, hidden-app lists have search and icons, desktop Files stays in the desktop window, archives use the full Files view, extra apps keep their own looks, Game Hub opens its CD shelf and fully clears removed covers.
+- **2.0.23**: launcher and build fixes for full, lite and 32-bit APK variants.
 - **Launcher**: Windows 11 is the default look; the picker shows the Windows looks first. Lock screen (Win+L), shut down and restart screens, Win+V clipboard, Alt+Tab and Win+Tab, Win+arrows snap, a shortcut guide (Win+/).
 - **Windows tools**: Device Manager, Event Viewer, Disk Management, Windows Security, Task Scheduler; the Run box knows devmgmt, eventvwr, diskmgmt, taskschd, cmd, terminal.
 - **Settings without hand-off**: Wi-Fi with the networks around, Bluetooth (last three devices and pairing), NFC, USB, cameras, location, date and time, battery saver, dark mode, text size: all inside Pulse.

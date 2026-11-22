@@ -6,9 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
@@ -26,6 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import com.umutk.pulse.PField
 import com.umutk.pulse.extras.blackout.Privilege
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
@@ -45,23 +51,33 @@ internal fun autoHideGames(c: Context) {
     loadGames(c).filter { it.pkg !in have && it.pkg !in keep && it.pkg !in mine && !it.pkg.contains(':') }.forEach { runCatching { setGameHidden(c, it.pkg, true, quiet = true) } }
 }
 
-private class SelRow(val pkg: String, val name: String, val hidden: Boolean)
+private class SelRow(val pkg: String, val name: String, val hidden: Boolean, val icon: androidx.compose.ui.graphics.ImageBitmap? = null)
 
 /** Select games: the hidden games on top (they fold away), then every app of the phone; a tick hides the app from the phone (root or Shizuku), no tick shows it. */
 @Composable
 internal fun SelectGamesDialog(ctx: Context, pal: Pal, onClose: () -> Unit, onChanged: () -> Unit) {
     var tick by remember { mutableStateOf(0) }
     var folded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
     val rows by produceState<List<SelRow>>(emptyList(), tick) {
         value = withContext(Dispatchers.IO) {
             val hidden = hiddenSet(ctx)
             val pm = ctx.packageManager
-            val hiddenRows = (loadGames(ctx).filter { it.pkg in hidden }.map { SelRow(it.pkg, it.name, true) } + runCatching { hiddenAppsAll(ctx) }.getOrDefault(emptyList()).map { SelRow(it.pkg, it.name, true) })
+            val hiddenRows = (loadGames(ctx).filter { it.pkg in hidden }.map { g ->
+                val icon = runCatching { pm.getApplicationIcon(g.pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+                SelRow(g.pkg, g.name, true, icon)
+            } + runCatching { hiddenAppsAll(ctx) }.getOrDefault(emptyList()).map { r ->
+                val icon = runCatching { pm.getApplicationIcon(r.pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+                SelRow(r.pkg, r.name, true, icon)
+            })
                 .distinctBy { it.pkg }
             val seen = hiddenRows.map { it.pkg }.toSet()
             val apps = runCatching {
                 pm.getInstalledApplications(0).filter { it.packageName != ctx.packageName && it.packageName !in seen && pm.getLaunchIntentForPackage(it.packageName) != null }
-                    .map { SelRow(it.packageName, pm.getApplicationLabel(it).toString(), false) }
+                    .map { ai ->
+                        val icon = runCatching { ai.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+                        SelRow(ai.packageName, pm.getApplicationLabel(ai).toString(), false, icon)
+                    }
             }.getOrDefault(emptyList())
             hiddenRows.sortedBy { it.name.lowercase() } + apps.sortedBy { it.name.lowercase() }
         }
@@ -82,7 +98,9 @@ internal fun SelectGamesDialog(ctx: Context, pal: Pal, onClose: () -> Unit, onCh
                 Text("✕", color = pal.text, fontSize = 18.sp, modifier = Modifier.clickable { onClose() }.padding(8.dp))
             }
             if (!hasShell()) Text(tr("Without root or Shizuku an app cannot be hidden from the phone.", "Root ya da Shizuku olmadan uygulama telefondan gizlenemez."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
-            val hiddenRows = rows.filter { it.hidden }; val appRows = rows.filter { !it.hidden }
+            PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp))
+            val found = rows.filter { query.isBlank() || it.name.contains(query.trim(), ignoreCase = true) || it.pkg.contains(query.trim(), ignoreCase = true) }
+            val hiddenRows = found.filter { it.hidden }; val appRows = found.filter { !it.hidden }
             LazyColumn(Modifier.weight(1f)) {
                 item(key = "hh") {
                     Row(Modifier.fillMaxWidth().clickable { folded = !folded }.padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -104,6 +122,7 @@ internal fun SelectGamesDialog(ctx: Context, pal: Pal, onClose: () -> Unit, onCh
 private fun SelLine(r: SelRow, ticked: Boolean, pal: Pal, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Checkbox(ticked, { onClick() }, colors = CheckboxDefaults.colors(checkedColor = pal.accent, uncheckedColor = pal.sub))
+        r.icon?.let { Image(it, null, Modifier.size(32.dp)) }
         Text(r.name, color = pal.text, fontSize = 15.sp, maxLines = 1)
     }
 }

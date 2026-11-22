@@ -551,7 +551,11 @@ private fun InstallMultiBody(paths: List<String>, onDone: () -> Unit) {
     val finished = running && picked.isNotEmpty() && picked.all { it.pkg in results }
     val dismiss = { if (!running || finished) onDone() }
     val body: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             if (list == null) { BusyLine(w); Text(tr("Reading the apps...", "Uygulamalar okunuyor..."), color = w.sub, fontSize = 13.sp); return@Column }
             // the icons lie on each other, a little turned
             Box(Modifier.height(72.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -735,7 +739,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     // the window stays until the install is really done; only a finished or idle window can be closed
     val dismiss = { if (!installing) { if (InstallShow.cancelOnDismiss) BioGate.pending?.cancel(); onDone() } }
     val body: @Composable () -> Unit = {
-            Column(Modifier.fillMaxWidth().graphicsLayer {
+            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).graphicsLayer {
                 if (fancy) { alpha = enter.value; scaleX = .92f + .08f * enter.value; scaleY = .92f + .08f * enter.value }
             }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val img = icon
