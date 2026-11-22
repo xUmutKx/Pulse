@@ -7,7 +7,8 @@
 
 ### Pulse
 
-<p align="center"><b><a href="https://xumutkx.github.io/Pulse/">🌐 Website</a></b> · <a href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
+<p align="center"><b><a
+href="https://github.com/xUmutKx/Pulse/releases/latest">Download</a></p>
 
 | Windows 11: windows | Windows 10 | Windows 7 | Windows XP | Windows 95 |
 |---|---|---|---|---|
