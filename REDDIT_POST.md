@@ -10,13 +10,7 @@ Pulse is a free, GPL-3.0 Android app that started as a personal collection of to
 
 The idea is simple: choose a look and the app follows it. There are Windows 95, XP, 7, 10, 11, Windows Phone, Material You and AMOLED looks. Menus, windows, dialogs and icons are drawn for the selected look, and you can change it immediately.
 
-| Windows 11 | Windows 7 | Windows XP | Windows 95 |
-|---|---|---|---|
-| [![Windows 11](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/win11-windows.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/win11-windows.jpg) | [![Windows 7](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/win7-desktop.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/win7-desktop.jpg) | [![Windows XP](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/xp-desktop.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/xp-desktop.jpg) | [![Windows 95](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/win95-programs.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/win95-programs.jpg) |
-
 ## Windows desktop
-
-[Small preview: one phone, every Windows](https://github.com/xUmutKx/Pulse/blob/main/docs/media/cover-wall.jpg)
 
 Pulse can replace or sit alongside the Android launcher. The Windows versions have their own desktop, taskbar, Start menu, icons, shortcuts and window controls.
 
@@ -40,10 +34,6 @@ The physical keyboard is also useful: Win+R opens Run, Win+E opens Files, Win+I 
 - Fitness and gym library
 - Galaxy Buds controls and Wear OS watch management
 - On-device AI chat, speech and OCR
-
-| Music | Files | Toolkit |
-|---|---|---|
-| [![Music](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/music-player.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/music-player.jpg) | [![Files](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/files.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/files.jpg) | [![Toolkit](https://raw.githubusercontent.com/xUmutKx/Pulse/main/docs/screenshots/toolkit.jpg)](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/toolkit.jpg) |
 
 ## Extra apps
 
@@ -76,8 +66,6 @@ The task manager reads the phone's actual CPU, memory, storage, network, GPU, ba
 The Toolkit includes QR/barcodes, compass, level, flashlight, timer, calculator, DNS tools, screen controls and motion cues. There are more than 20 home-screen widgets for the system and media features.
 
 ## Keyboard
-
-[Keyboard screenshot](https://github.com/xUmutKx/Pulse/blob/main/docs/screenshots/keyboard.jpg)
 
 The built-in keyboard has themes, one-handed and split layouts, learning autocorrect, Turkish language support, emoji, Unicode symbols, clipboard history and translation.
 

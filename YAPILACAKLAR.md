@@ -2554,3 +2554,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - [readme/reddit] REDDIT_POST.md expanded to Reddit's 40,000-character text-post limit, with README screenshots, repository and latest-download links; derlenmedi (documentation-only, build not requested).
 
 - [readme/reddit] Reddit post shortened and reorganized to a medium-length showcase with small screenshot tables and repository/download links; derlenmedi (documentation-only, build not requested).
+
+- [readme/reddit] REDDIT_POST.md image-free rewrite prepared for manual Reddit image uploads; derlenmedi (documentation-only, build not requested).
