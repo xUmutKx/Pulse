@@ -1,145 +1,423 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pulse — an all-in-one toolbox for Android</title>
-<meta name="description" content="Pulse is a task manager, launcher, keyboard, music player, file manager, password vault and more, in the look of Windows 95, XP, 7, 10, 11, Material or AMOLED. Free, open source, under 50 MB.">
-<meta property="og:title" content="Pulse — an all-in-one toolbox for Android">
-<meta property="og:description" content="Every screen drawn for every look: Windows 95 to 11, Material, AMOLED. Task manager, launcher, keyboard, music player, files, vault, Buds, weather and more.">
-<meta property="og:image" content="screenshots/win11-desktop.jpg">
-<style>
-:root{--bg:#f6f7fb;--fg:#14161c;--sub:#5a6070;--card:#ffffff;--line:#e2e5ee;--accent:#0067c0;--glow:#0067c033}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0b0d12;--fg:#eef0f6;--sub:#9aa2b4;--card:#141824;--line:#232a3a;--accent:#4cc2ff;--glow:#4cc2ff33}}
-:root[data-theme=dark]{--bg:#0b0d12;--fg:#eef0f6;--sub:#9aa2b4;--card:#141824;--line:#232a3a;--accent:#4cc2ff;--glow:#4cc2ff33}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:background .4s,color .4s}
-a{color:var(--accent)}
-.wrap{max-width:1080px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-left))}
-nav{position:sticky;top:0;z-index:5;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line)}
-nav .wrap{display:flex;align-items:center;gap:18px;height:56px}
-nav b{font-size:20px;letter-spacing:.5px}
-nav .sp{flex:1}
-nav a.l{color:var(--sub);text-decoration:none;font-size:14px}
-nav a.l:hover{color:var(--fg)}
-.btn{display:inline-block;background:var(--accent);color:#fff;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:600;box-shadow:0 6px 24px var(--glow);transition:transform .2s}
-.btn:hover{transform:translateY(-2px)}
-.btn.o{background:transparent;color:var(--fg);border:1px solid var(--line);box-shadow:none}
-.tg{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px}
-.hero{padding:72px 0 40px;text-align:center;position:relative;overflow:hidden}
-.hero h1{font-size:clamp(34px,6vw,64px);line-height:1.08;margin:0 0 14px;letter-spacing:-1px}
-.hero h1 span{color:var(--accent);transition:color .6s}
-.hero p{max-width:640px;margin:0 auto 26px;color:var(--sub);font-size:18px}
-.hero .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;animation:float 12s ease-in-out infinite;pointer-events:none}
-.orb.a{width:340px;height:340px;background:var(--accent);left:-80px;top:-60px}
-.orb.b{width:300px;height:300px;background:#a855f7;right:-60px;top:120px;animation-delay:-5s}
-@keyframes float{50%{transform:translate(40px,30px) scale(1.12)}}
-.looks{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:30px 0 8px}
-.look{border:1px solid var(--line);background:var(--card);padding:6px 14px;border-radius:99px;font-size:13px;cursor:pointer;color:var(--sub);transition:.25s}
-.look.on{background:var(--accent);color:#fff;border-color:var(--accent);transform:scale(1.07)}
-.shots{display:flex;gap:16px;overflow:auto;padding:26px 4px 30px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.shots figure{margin:0;flex:0 0 auto;scroll-snap-align:center;text-align:center}
-.shots img{height:420px;max-width:none;border-radius:18px;border:1px solid var(--line);box-shadow:0 14px 40px #0004;transition:transform .35s}
-.shots img:hover{transform:translateY(-6px) rotate(-.6deg)}
-.shots figcaption{font-size:13px;color:var(--sub);margin-top:8px}
-h2{font-size:clamp(26px,4vw,38px);margin:60px 0 6px;letter-spacing:-.5px}
-.lead{color:var(--sub);margin:0 0 24px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;transition:transform .3s,box-shadow .3s,border-color .3s}
-.card:hover{transform:translateY(-4px);box-shadow:0 16px 40px var(--glow);border-color:var(--accent)}
-.card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--glow);color:var(--accent);font-size:22px;margin-bottom:10px}
-.card h3{margin:0 0 6px;font-size:18px}
-.card p{margin:0;color:var(--sub);font-size:14.5px}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.tags span{font-size:11.5px;border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--sub)}
-.rv{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s}
-.rv.in{opacity:1;transform:none}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:40px 0}
-.stat{text-align:center;padding:18px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
-.stat b{display:block;font-size:34px;color:var(--accent)}
-.stat span{color:var(--sub);font-size:13px}
-.topics{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.topics span{background:var(--glow);color:var(--accent);padding:4px 12px;border-radius:99px;font-size:13px}
-footer{margin:70px 0 40px;padding-top:24px;border-top:1px solid var(--line);color:var(--sub);font-size:14px;text-align:center}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pulse — Telefonunuzu Masaüstüne Dönüştürür</title>
+  <meta name="description" content="Windows, Android, araçlar, performans monitörü, müzik, dosyalar, sağlık ve daha fazlasını tek uygulamada toplayan Pulse'u keşfedin.">
+  <meta property="og:title" content="Pulse — Her şey tek uygulamada">
+  <meta property="og:description" content="Windows 95'ten Windows 11'e, Material ve AMOLED görünümüne sahip açık kaynaklı Android uygulaması.">
+  <meta property="og:image" content="media/cover-wide.jpg">
+  <style>
+    :root {
+      --ink: #ecf1ff;
+      --muted: #9da9bf;
+      --bg: #080b12;
+      --panel: rgba(18, 23, 36, .82);
+      --line: rgba(255, 255, 255, .09);
+      --accent: #69a8ff;
+      --accent-2: #b79cff;
+      --green: #62ddb1;
+      --max: 1180px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 82% 8%, rgba(76, 110, 190, .16), transparent 28rem),
+        radial-gradient(circle at 12% 38%, rgba(159, 111, 210, .08), transparent 24rem),
+        var(--bg);
+      color: var(--ink);
+      font: 16px/1.65 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+    .shell { width: min(var(--max), calc(100% - 40px)); margin-inline: auto; }
+    .progress { position: fixed; z-index: 40; inset: 0 0 auto; height: 2px; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+    nav {
+      position: fixed;
+      z-index: 30;
+      inset: 0 0 auto;
+      height: 68px;
+      border-bottom: 1px solid transparent;
+      transition: .25s;
+    }
+    nav.scrolled { background: rgba(8, 11, 18, .82); border-color: var(--line); backdrop-filter: blur(18px); }
+    nav .shell { height: 100%; display: flex; align-items: center; gap: 26px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; letter-spacing: -.3px; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(145deg, rgba(105,168,255,.22), rgba(183,156,255,.12)); }
+    nav .links { display: flex; gap: 22px; margin-left: auto; }
+    nav .links a { color: var(--muted); text-decoration: none; font-size: 14px; }
+    nav .links a:hover { color: var(--ink); }
+    .download { text-decoration: none; font-size: 14px; font-weight: 750; padding: 9px 15px; border: 1px solid rgba(105,168,255,.38); border-radius: 10px; background: rgba(105,168,255,.12); }
+
+    .hero { min-height: 760px; display: grid; align-items: center; padding: 115px 0 60px; position: relative; }
+    .hero-grid { display: grid; grid-template-columns: .82fr 1.18fr; align-items: center; gap: 64px; }
+    .eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 800; }
+    h1 { margin: 14px 0 22px; max-width: 720px; font-size: clamp(48px, 7vw, 88px); line-height: .98; letter-spacing: -.065em; }
+    .hero-copy { max-width: 540px; color: var(--muted); font-size: 19px; }
+    .actions { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 12px; text-decoration: none; font-weight: 800; border: 1px solid var(--line); }
+    .button.primary { background: var(--ink); color: #111827; border: 0; }
+    .button.secondary { background: rgba(255,255,255,.04); }
+    .hero-media { position: relative; }
+    .phone-stage { position: relative; border-radius: 28px; padding: 11px; border: 1px solid var(--line); background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.015)); box-shadow: 0 35px 100px rgba(0,0,0,.5); transform: perspective(1200px) rotateY(-7deg) rotateX(2deg); transition: transform .2s linear; }
+    .phone-stage video { width: 100%; max-height: 520px; object-fit: cover; border-radius: 18px; background: #05070a; }
+    .float-card { position: absolute; z-index: 3; right: -28px; bottom: 34px; width: 190px; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: rgba(12,16,26,.88); backdrop-filter: blur(12px); box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+    .float-card small { color: var(--muted); }
+    .float-card strong { display: block; margin-top: 2px; }
+
+    .marquee { border-block: 1px solid var(--line); overflow: hidden; }
+    .marquee-track { display: flex; width: max-content; gap: 42px; padding: 15px 0; color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; animation: crawl 28s linear infinite; }
+    .marquee-track span::after { content: "•"; color: var(--accent); margin-left: 42px; }
+    @keyframes crawl { to { transform: translateX(-50%); } }
+
+    section { padding: 110px 0; }
+    .section-head { max-width: 740px; margin-bottom: 42px; }
+    h2 { margin: 8px 0 16px; font-size: clamp(38px, 6vw, 68px); line-height: 1.02; letter-spacing: -.055em; }
+    .section-head p { color: var(--muted); max-width: 610px; font-size: 18px; }
+
+    .looks-layout { display: grid; grid-template-columns: 280px 1fr; gap: 44px; align-items: start; }
+    .look-tabs { position: sticky; top: 94px; display: grid; gap: 8px; }
+    .look-tab { border: 1px solid transparent; background: transparent; color: var(--muted); text-align: left; border-radius: 12px; padding: 12px 14px; cursor: pointer; font: inherit; transition: .22s; }
+    .look-tab strong { display: block; color: inherit; }
+    .look-tab span { font-size: 13px; }
+    .look-tab.active { color: var(--ink); border-color: var(--line); background: var(--panel); transform: translateX(8px); }
+    .look-showcase { min-height: 670px; position: relative; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 30px; background: radial-gradient(circle at 50% 35%, var(--look-glow, rgba(105,168,255,.2)), transparent 40%), #0d111a; }
+    .look-showcase::before { content: ""; position: absolute; width: 500px; height: 500px; border: 1px solid var(--line); border-radius: 50%; }
+    .look-showcase img { position: relative; z-index: 2; height: 560px; max-width: 78%; object-fit: contain; border-radius: 18px; filter: drop-shadow(0 28px 40px rgba(0,0,0,.5)); transition: opacity .25s, transform .45s; }
+    .look-showcase img.changing { opacity: 0; transform: translateY(20px) scale(.97); }
+    .look-caption { position: absolute; z-index: 4; left: 20px; bottom: 18px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(8,11,18,.78); color: var(--muted); font-size: 13px; }
+
+    .story { border-top: 1px solid var(--line); }
+    .story-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8vw; align-items: center; min-height: 620px; }
+    .story-row.reverse .story-copy { order: 2; }
+    .story-copy h3 { margin: 8px 0 14px; font-size: clamp(34px, 5vw, 58px); line-height: 1.03; letter-spacing: -.045em; }
+    .story-copy p { color: var(--muted); max-width: 520px; }
+    .story-copy ul { margin: 26px 0 0; padding: 0; list-style: none; display: grid; gap: 11px; }
+    .story-copy li { display: flex; gap: 10px; color: #c7cfdf; }
+    .story-copy li::before { content: "✓"; color: var(--green); }
+    .story-shot { position: relative; min-height: 520px; display: grid; place-items: center; }
+    .story-shot::before { content: ""; position: absolute; inset: 12% 5%; border-radius: 40%; background: var(--shot-glow, rgba(105,168,255,.15)); filter: blur(40px); }
+    .story-shot img { position: relative; z-index: 2; max-height: 520px; border-radius: 20px; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.45); transform: translateY(var(--py, 0)); transition: transform .1s linear; }
+
+    .gallery { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+    .tile { grid-column: span 4; min-height: 260px; overflow: hidden; position: relative; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+    .tile.wide { grid-column: span 8; }
+    .tile.tall { grid-row: span 2; }
+    .tile img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+    .tile:hover img { transform: scale(1.035); }
+    .tile-label { position: absolute; z-index: 2; left: 12px; bottom: 12px; border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: rgba(8,11,18,.78); backdrop-filter: blur(8px); font-size: 13px; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .feature { min-height: 210px; padding: 26px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .feature .icon { color: var(--accent); font-size: 22px; }
+    .feature h3 { margin: 22px 0 8px; }
+    .feature p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .cta-section { margin: 40px 0 100px; text-align: center; border: 1px solid var(--line); border-radius: 28px; padding: 90px 20px; background: linear-gradient(145deg, rgba(105,168,255,.12), rgba(183,156,255,.06)); }
+    .cta-section h2 { max-width: 800px; margin-inline: auto; }
+    footer { border-top: 1px solid var(--line); padding: 32px 0 46px; color: var(--muted); font-size: 13px; }
+    footer .shell { display: flex; justify-content: space-between; gap: 20px; }
+    footer a { text-decoration: none; }
+
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    @media (max-width: 900px) {
+      nav .links a:not(.active-link) { display: none; }
+      .hero { min-height: auto; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-media { max-width: 620px; width: 100%; margin-inline: auto; }
+      .looks-layout { grid-template-columns: 1fr; }
+      .look-tabs { position: static; grid-template-columns: repeat(4, minmax(0,1fr)); }
+      .look-tab { text-align: center; }
+      .look-tab.active { transform: translateY(-4px); }
+      .look-tab span { display: none; }
+      .story-row { grid-template-columns: 1fr; gap: 10px; padding: 40px 0; }
+      .story-row.reverse .story-copy { order: 0; }
+      .story-shot { min-height: 460px; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 28px, var(--max)); }
+      nav .links { display: none; }
+      .hero { padding-top: 104px; }
+      h1 { font-size: 52px; }
+      .hero-copy { font-size: 16px; }
+      .float-card { display: none; }
+      .phone-stage { transform: none; }
+      .look-tabs { grid-template-columns: repeat(2, 1fr); }
+      .look-showcase { min-height: 520px; }
+      .look-showcase img { height: 430px; max-width: 92%; }
+      .story-shot { min-height: 400px; }
+      .story-shot img { max-height: 400px; }
+      .gallery { grid-template-columns: 1fr 1fr; }
+      .tile, .tile.wide { grid-column: span 1; min-height: 220px; }
+      .features-grid { grid-template-columns: 1fr; }
+      footer .shell { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .marquee-track { animation: none; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+  </style>
 </head>
 <body>
-<nav><div class="wrap"><b>Pulse</b><span class="sp"></span><a class="l" href="#features">Features</a><a class="l" href="#looks">Looks</a><a class="l" href="https://github.com/xUmutKx/Pulse">GitHub</a><button class="tg" id="tg" aria-label="Switch theme">◐</button></div></nav>
+  <div class="progress" id="progress"></div>
+  <nav id="nav">
+    <div class="shell">
+      <a class="brand" href="#"><span class="brand-mark">P</span><span>Pulse</span></a>
+      <div class="links">
+        <a href="#looks">Görünümler</a>
+        <a href="#explorer">Uygulamalar</a>
+        <a href="#performance">Performans</a>
+        <a class="active-link" href="https://github.com/xUmutKx/Pulse">GitHub</a>
+      </div>
+      <a class="download" href="https://github.com/xUmutKx/Pulse/releases/latest">İndir</a>
+    </div>
+  </nav>
 
-<header class="hero"><div class="orb a"></div><div class="orb b"></div>
-<div class="wrap">
-<h1>One app for <span id="word">everything</span><br>your phone is missing</h1>
-<p>A task manager, launcher, keyboard, music player, file manager, password vault, Buds manager, weather, health and more. Drawn for every look, free, open source and under 50&nbsp;MB.</p>
-<div class="cta"><a class="btn" href="https://github.com/xUmutKx/Pulse/releases/latest">Download the latest APK</a><a class="btn o" href="#features">See everything</a></div>
-<div class="looks" id="looks"></div>
-</div></header>
+  <header class="hero">
+    <div class="shell hero-grid">
+      <div>
+        <div class="eyebrow">Açık kaynak · Ücretsiz · Reklam yok</div>
+        <h1>Telefonunda<br>bir masaüstü.</h1>
+        <p class="hero-copy">Windows 95'ten 11'e, sade bir Android görünümünden AMOLED karanlığına kadar her şeyi yeniden tasarlayan bütünleşik bir araç seti.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/xUmutKx/Pulse/releases/latest">Pulse'u İndir</a>
+          <a class="button secondary" href="#explorer">İçeriği Keşfet</a>
+        </div>
+      </div>
+      <div class="hero-media">
+        <div class="phone-stage" id="phoneStage">
+          <video controls preload="metadata" poster="media/cover-wide.jpg">
+            <source src="media/Pulse-short.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="float-card"><small>Yeni sürüm</small><strong>2.0.24</strong></div>
+      </div>
+    </div>
+  </header>
 
-<main class="wrap">
-<div class="shots rv" aria-label="Screenshots">
-<figure><img src="screenshots/win11-desktop.jpg" alt="Windows 11 look" loading="lazy"><figcaption>Windows 11</figcaption></figure>
-<figure><img src="screenshots/music-player.jpg" alt="Music player" loading="lazy"><figcaption>Music player</figcaption></figure>
-<figure><img src="screenshots/keyboard.jpg" alt="Keyboard" loading="lazy"><figcaption>Keyboard</figcaption></figure>
-<figure><img src="screenshots/buds-manager.jpg" alt="Buds manager" loading="lazy"><figcaption>Buds manager</figcaption></figure>
-<figure><img src="screenshots/blackout.jpg" alt="BlackOut" loading="lazy"><figcaption>BlackOut</figcaption></figure>
-<figure><img src="screenshots/weather.jpg" alt="Weather" loading="lazy"><figcaption>Weather</figcaption></figure>
-<figure><img src="screenshots/files.jpg" alt="Files" loading="lazy"><figcaption>Files</figcaption></figure>
-<figure><img src="screenshots/calculator.jpg" alt="Calculator" loading="lazy"><figcaption>Calculator</figcaption></figure>
-</div>
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Windows Görünümleri</span><span>Görev Yöneticisi</span><span>Müzik</span><span>Dosyalar</span><span>Sağlık</span><span>Galaxy Buds</span><span>Wear OS</span><span>Oyunlar</span>
+      <span>Windows Görünümleri</span><span>Görev Yöneticisi</span><span>Müzik</span><span>Dosyalar</span><span>Sağlık</span><span>Galaxy Buds</span><span>Wear OS</span><span>Oyunlar</span>
+    </div>
+  </div>
 
-<div class="stats rv">
-<div class="stat"><b data-n="7">0</b><span>looks, from Windows 95 to AMOLED</span></div>
-<div class="stat"><b data-n="25">0</b><span>extra apps with their own icon</span></div>
-<div class="stat"><b data-n="20">0</b><span>home-screen widgets and more</span></div>
-<div class="stat"><b data-n="50">0</b><span>MB at most</span></div>
-</div>
+  <main>
+    <section id="looks">
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="eyebrow">Bir uygulama, farklı karakterler</div>
+          <h2>Görünümünü seç.</h2>
+          <p>Windows 95'in nostaljisinden Windows 11'in cam yüzeylerine; Material ve AMOLED'un sade çizgilerine kadar arayüzün her ekranla birlikte değişir.</p>
+        </div>
+        <div class="looks-layout reveal">
+          <div class="look-tabs" id="lookTabs">
+            <button class="look-tab active" data-image="screenshots/win95-programs.jpg" data-color="rgba(0,128,128,.34)"><strong>Windows 95</strong><span>Bilgisayarın başlangıcı</span></button>
+            <button class="look-tab" data-image="screenshots/xp-desktop.jpg" data-color="rgba(58,123,213,.34)"><strong>Windows XP</strong><span>Renkli masaüstü</span></button>
+            <button class="look-tab" data-image="screenshots/win7-desktop.jpg" data-color="rgba(43,136,216,.34)"><strong>Windows 7</strong><span>Cam ve Aero</span></button>
+            <button class="look-tab" data-image="screenshots/win10-settings.jpg" data-color="rgba(0,120,212,.34)"><strong>Windows 10</strong><span>Uçan pencere çizgileri</span></button>
+            <button class="look-tab" data-image="screenshots/win11-desktop.jpg" data-color="rgba(93,120,218,.34)"><strong>Windows 11</strong><span>Mica ve Fluent</span></button>
+            <button class="look-tab" data-image="screenshots/music-player.jpg" data-color="rgba(166,111,220,.34)"><strong>Material</strong><span>Dinamik, modern</span></button>
+          </div>
+          <div class="look-showcase" id="lookShowcase">
+            <img id="lookImage" src="screenshots/win95-programs.jpg" alt="Pulse Windows görünümü">
+            <div class="look-caption" id="lookCaption">Windows 95 · Masaüstü ve uygulamalar</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<h2 id="features" class="rv">Everything in Pulse</h2>
-<p class="lead rv">Each part is built for every look and changes at once, no restart.</p>
-<div class="grid" id="grid"></div>
+    <section class="story" id="explorer">
+      <div class="shell story-row">
+        <div class="story-copy reveal">
+          <div class="eyebrow">Gerçek masaüstü</div>
+          <h3>Pencereler, görev çubuğu, Başlat.</h3>
+          <p>Sürükleyebileceğin, büyütebileceğin, küçültebileceğin ve yarıya bölerek dizebileceğin pencere deneyimi. Pulse artık Android ekranında gerçek bir masaüstü hissi verir.</p>
+          <ul>
+            <li>Alt+Tab ve Win+Tab pencere geçişleri</li>
+            <li>Başlat, Görev Yöneticisi, Ayarlar ve Denetim Masası</li>
+            <li>Win tuşlu klavye kısayolları</li>
+          </ul>
+        </div>
+        <div class="story-shot reveal" style="--shot-glow:rgba(105,168,255,.22)">
+          <img src="screenshots/win11-windows.jpg" alt="Pulse pencere deneyimi" loading="lazy">
+        </div>
+      </div>
+    </section>
 
-<h2 class="rv">Built in the open</h2>
-<p class="lead rv">Kotlin and Jetpack Compose, GPL-3.0. Ideas, bugs and pull requests are welcome.</p>
-<div class="topics rv" id="topics"></div>
-<p class="rv"><a class="btn" href="https://github.com/xUmutKx/Pulse">Star Pulse on GitHub</a> &nbsp; <a href="privacy.html">Privacy</a></p>
-</main>
-<footer class="wrap">Pulse · © xUmutKx · GPL-3.0 · Made for people who like their phone to feel like a desktop.</footer>
+    <section class="story" id="performance">
+      <div class="shell story-row reverse">
+        <div class="story-copy reveal">
+          <div class="eyebrow">Canlı sistem bilgisi</div>
+          <h3>Telefonunu gerçekten izle.</h3>
+          <p>CPU çekirdeklerinden pil sıcaklığına, süreçlerden depolama kullanımına kadar telefonunun canlı durumunu açık, hızlı ve ayrıntılı ekranlarda takip et.</p>
+          <ul>
+            <li>İşlemci, RAM, GPU, ağ ve depolama</li>
+            <li>Pil gücü, ısı ve pil sağlığı</li>
+            <li>İşlem sonlandırma, başlangıç uygulamaları ve hizmetler</li>
+          </ul>
+        </div>
+        <div class="story-shot reveal" style="--shot-glow:rgba(98,221,177,.16)">
+          <img src="screenshots/performance.png" alt="Pulse performans görünümü" loading="lazy">
+        </div>
+      </div>
+    </section>
 
-<script>
-var F=[
-["🪟","Looks","Windows 95, XP, 7, 10 and 11, Material You and AMOLED. Start-up screens, sounds, wallpapers and Fluent icons for each.",["Win 95","XP","7","10","11","Material","AMOLED"]],
-["📊","Task manager","Live CPU, memory, storage, network, GPU, battery and temperature, processes with End task, startup apps and services.",["processes","performance","battery"]],
-["🚀","Launcher","Home screens for every look with folders, widgets, wallpapers, icon packs and open animations.",["home","widgets","folders"]],
-["⌨️","Keyboard","Autocorrect that learns, themes, effects, glide typing, translation bar, clipboard history, number pad and a vault bar for logins.",["autocorrect","themes","clipboard"]],
-["🎵","Music player","Material, Poweramp, Winamp and WMP skins, lyrics word by word, equalizer, mixes, and a recap as a shop receipt with a barcode.",["lyrics","Winamp","recap"]],
-["🎧","Buds manager","Galaxy Buds battery, noise control, touch controls with custom hold actions, equalizer and find my earbuds.",["ANC","gestures","EQ"]],
-["🔐","Passwords and codes","A private vault with Bitwarden import and an authenticator. Suggestions sit on the keyboard bar.",["vault","TOTP","offline"]],
-["📁","Files","File manager with zip, 7z and rar, duplicate and large file finders, downloads and an APK installer.",["archives","installer","downloads"]],
-["🌦️","Weather","Forecast with places, a sun arc, moon phase, alerts and a widget with no background.",["alerts","sun","moon"]],
-["📝","Notes and Paint","Notes with a pen toolbar and ink, voice notes, Paint, ArtCraft, a recorder and a screen recorder.",["ink","voice","record"]],
-["❤️","Health","Steps, heart rate from the camera, battery wear and a workout log with recaps.",["steps","gym","recap"]],
-["🛡️","BlackOut and tools","Greys to true black on AMOLED, motion cues against motion sickness, floating keys, compass, level, timers and a terminal.",["AMOLED","toolkit","terminal"]],
-["🔒","App lock","Lock any app with a pattern, PIN or password and a fingerprint, in the look you picked.",["pattern","PIN","biometric"]],
-["📅","Calendar, contacts, messages","Standalone apps that follow their own look: SMS and MMS, Calendar, Contacts and Photos.",["SMS","calendar","contacts"]],
-["🪄","Screen cover","A dashboard face, always-on clock and charge animations for the desk or the car.",["AOD","charging","dashboard"]],
-["🧩","Widgets","Over 20 widgets drawn live: Windows 7 gadgets, XP classics, Material You, glass, Winamp and more.",["gadgets","tiles","Winamp"]]
-];
-var g=document.getElementById('grid');
-F.forEach(function(f){var d=document.createElement('div');d.className='card rv';d.innerHTML='<div class="ic">'+f[0]+'</div><h3>'+f[1]+'</h3><p>'+f[2]+'</p><div class="tags">'+f[3].map(function(t){return '<span>'+t+'</span>'}).join('')+'</div>';g.appendChild(d)});
-var T=['android','kotlin','jetpack-compose','material-you','windows-11','windows-95','windows-xp','windows-7','task-manager','toolbox','launcher','android-launcher','keyboard','music-player','poweramp','winamp','lyrics','file-manager','password-manager','authenticator','weather','notes','screen-recorder','galaxy-buds','amoled','widgets','debloater','open-source','foss','all-in-one','apk-installer'];
-document.getElementById('topics').innerHTML=T.map(function(t){return '<span>#'+t+'</span>'}).join('');
-var L=[["Windows 95","#008080"],["Windows XP","#2a6fdb"],["Windows 7","#2b88d8"],["Windows 10","#0078d4"],["Windows 11","#0067c0"],["Material You","#6750a4"],["AMOLED","#00e0a0"]];
-var lk=document.getElementById('looks'),root=document.documentElement,w=document.getElementById('word'),W=['everything','your files','your music','your keyboard','your passwords','your battery','your look'];
-function setLook(i){[].forEach.call(lk.children,function(c,k){c.classList.toggle('on',k===i)});root.style.setProperty('--accent',L[i][1]);root.style.setProperty('--glow',L[i][1]+'33');w.textContent=W[i]}
-L.forEach(function(l,i){var b=document.createElement('button');b.className='look';b.textContent=l[0];b.onclick=function(){clearInterval(t);setLook(i)};lk.appendChild(b)});
-var cur=0;setLook(0);var t=setInterval(function(){cur=(cur+1)%L.length;setLook(cur)},2400);
-var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
-document.querySelectorAll('.rv').forEach(function(e){io.observe(e)});
-var so=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;var el=e.target,n=+el.dataset.n,s=0,id=setInterval(function(){s+=Math.max(1,Math.ceil(n/30));if(s>=n){s=n;clearInterval(id)}el.textContent=s},30);so.unobserve(el)})},{threshold:.6});
-document.querySelectorAll('[data-n]').forEach(function(e){so.observe(e)});
-document.getElementById('tg').onclick=function(){var d=root.getAttribute('data-theme');root.setAttribute('data-theme',d==='dark'||(!d&&matchMedia('(prefers-color-scheme:dark)').matches)?'light':'dark')};
-</script>
+    <section>
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="eyebrow">Uygulamanın içinde uygulamalar</div>
+          <h2>Birden fazla araç. Tek akış.</h2>
+        </div>
+        <div class="gallery reveal">
+          <div class="tile wide"><img src="screenshots/music-player.jpg" alt="Müzik çalar" loading="lazy"><span class="tile-label">Müzik · Winamp, WMP ve Poweramp görünümü</span></div>
+          <div class="tile"><img src="screenshots/files.jpg" alt="Dosyalar" loading="lazy"><span class="tile-label">Dosya yöneticisi</span></div>
+          <div class="tile"><img src="screenshots/buds-manager.jpg" alt="Buds yöneticisi" loading="lazy"><span class="tile-label">Galaxy Buds</span></div>
+          <div class="tile wide"><img src="screenshots/weather.jpg" alt="Hava durumu" loading="lazy"><span class="tile-label">Hava, ay ve güneş</span></div>
+          <div class="tile"><img src="screenshots/calculator.jpg" alt="Hesap makinesi" loading="lazy"><span class="tile-label">Bilimsel hesap makinesi</span></div>
+          <div class="tile"><img src="screenshots/keyboard.jpg" alt="Klavye" loading="lazy"><span class="tile-label">Pulse klavye</span></div>
+          <div class="tile wide"><img src="screenshots/gym.jpg" alt="Egzersiz kitaplığı" loading="lazy"><span class="tile-label">Sağlık ve egzersiz</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="story">
+      <div class="shell story-row">
+        <div class="story-copy reveal">
+          <div class="eyebrow">Cihazlarını bir arada yönet</div>
+          <h3>Buds'unu ve saatini kontrol et.</h3>
+          <p>Buds pil durumunu, gürültü kontrolünü ve kulak içi durumunu takip et. Kablosuz hata ayıklama üzerinden Wear OS saatine uygulama gönder, ekran görüntüsü al ve shell aç.</p>
+          <ul>
+            <li>Kulaklık pil, ANC ve dokunma ayarları</li>
+            <li>APK yükleme, dosya gönderme ve logcat</li>
+            <li>Pulse Watch için 21 küçük saat uygulaması</li>
+          </ul>
+        </div>
+        <div class="story-shot reveal" style="--shot-glow:rgba(183,156,255,.18)">
+          <img src="media/watch/watch-plan-sheet.jpg" alt="Pulse Watch planları" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <section class="story">
+      <div class="shell story-row reverse">
+        <div class="story-copy reveal">
+          <div class="eyebrow">Boş zaman için</div>
+          <h3>Kütüphane değil, bir oyun odası.</h3>
+          <p>3D kutu rafı, CD rafı veya klasik ızgara görünümüyle oyunlarını düzenle. Satranç, dama ve Power of 4'ü tek telefonda, yapay zekaya veya Bluetooth üzerinden arkadaşına karşı oynayabilirsin.</p>
+          <ul>
+            <li>Boxshelf ve 3D CD rafı</li>
+            <li>Bilgisayara veya iki kişiyle karşılıklı oynama</li>
+            <li>Bluetooth üzerinden internet olmadan çok oyunculu oyun</li>
+          </ul>
+        </div>
+        <div class="story-shot reveal" style="--shot-glow:rgba(255,176,93,.14)">
+          <img src="screenshots/win11-desktop.jpg" alt="Pulse masaüstü ve oyunlar" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell">
+        <div class="section-head reveal">
+          <div class="eyebrow">Daha fazlası</div>
+          <h2>Günlük telefon ihtiyacının tamamı.</h2>
+        </div>
+        <div class="features-grid reveal">
+          <article class="feature"><div class="icon">▦</div><h3>Dosyalar ve arşivler</h3><p>Zip, 7z, rar, tekrar eden dosyalar ve büyük dosyalar; hepsi tek dosya yöneticisinde.</p></article>
+          <article class="feature"><div class="icon">◫</div><h3>Widget'lar</h3><p>20'den fazla canlı widget: görevler, saatler, hava, performans ve Windows klasikleri.</p></article>
+          <article class="feature"><div class="icon">⌨</div><h3>Akıllı klavye</h3><p>Emoji, pano geçmişi, çeviri, Tema paketleri ve şifre yönetimi.</p></article>
+          <article class="feature"><div class="icon">☁</div><h3>Hava durumu</h3><p>Şehirler, uydu uyumlu tahminler, ay evresi, güneş arcı ve hava uyarıları.</p></article>
+          <article class="feature"><div class="icon">◉</div><h3>Sağlık</h3><p>Adımlar, antrenmanlar, kamera ile nabız, egzersiz planları ve özetler.</p></article>
+          <article class="feature"><div class="icon">◎</div><h3>Gizlilik ve kilit</h3><p>Uygulama kilidi, özel şifre kasası, TOTP kodları ve yerel çalışma.</p></article>
+          <article class="feature"><div class="icon">▥</div><h3>Video ve altyazı</h3><p>Yerel oynatıcı, çevrim içi altyazı arama, resim içinde resim ve intro atlama.</p></article>
+          <article class="feature"><div class="icon">◐</div><h3>Ekran örtüsü</h3><p>Saatler, şarj animasyonları, masaüstü dashboard ve AMOLED yüzler.</p></article>
+          <article class="feature"><div class="icon">⌁</div><h3>Yapay zekâ</h3><p>Cihazdaki modellerle sohbet, dosya ve uygulama model seçimleri; bulut zorunlu değil.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell">
+      <section class="cta-section reveal">
+        <div class="eyebrow">Pulse'un tümünü aç</div>
+        <h2>Android cihazının daha fazlasını yapmasını sağla.</h2>
+        <div class="actions" style="justify-content:center">
+          <a class="button primary" href="https://github.com/xUmutKx/Pulse/releases/latest">GitHub'dan İndir</a>
+          <a class="button secondary" href="https://github.com/xUmutKx/Pulse">Kaynak kodu incele</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <span>Pulse · GPL-3.0 · xUmutKx</span>
+      <span><a href="https://github.com/xUmutKx/Pulse">GitHub</a></span>
+    </div>
+  </footer>
+
+  <script>
+    const nav = document.getElementById('nav');
+    const progress = document.getElementById('progress');
+    const stage = document.getElementById('phoneStage');
+
+    addEventListener('scroll', () => {
+      const top = scrollY;
+      const height = document.documentElement.scrollHeight - innerHeight;
+      progress.style.transform = `scaleX(${height ? top / height : 0})`;
+      nav.classList.toggle('scrolled', top > 20);
+    }, { passive: true });
+
+    document.querySelectorAll('.look-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.look-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const image = document.getElementById('lookImage');
+        const showcase = document.getElementById('lookShowcase');
+        const caption = document.getElementById('lookCaption');
+        image.classList.add('changing');
+        setTimeout(() => {
+          image.src = tab.dataset.image;
+          image.alt = 'Pulse — ' + tab.querySelector('strong').textContent;
+          showcase.style.setProperty('--look-glow', tab.dataset.color);
+          caption.textContent = tab.querySelector('strong').textContent + ' · ' + tab.querySelector('span').textContent;
+          image.classList.remove('changing');
+        }, 230);
+      });
+    });
+
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: .12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    addEventListener('scroll', () => {
+      document.querySelectorAll('.story-shot img').forEach(img => {
+        const rect = img.getBoundingClientRect();
+        const center = rect.top + rect.height / 2 - innerHeight / 2;
+        img.style.setProperty('--py', `${Math.max(-18, Math.min(18, center * -.035))}px`);
+      });
+    }, { passive: true });
+
+    addEventListener('pointermove', event => {
+      if (innerWidth < 900) return;
+      const x = event.clientX / innerWidth - .5;
+      const y = event.clientY / innerHeight - .5;
+      stage.style.transform = `perspective(1200px) rotateY(${x * 8 - 7}deg) rotateX(${y * -5 + 2}deg)`;
+    });
+  </script>
 </body>
 </html>
