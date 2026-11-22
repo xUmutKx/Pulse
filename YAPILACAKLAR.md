@@ -2556,3 +2556,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - [readme/reddit] Reddit post shortened and reorganized to a medium-length showcase with small screenshot tables and repository/download links; derlenmedi (documentation-only, build not requested).
 
 - [readme/reddit] REDDIT_POST.md image-free rewrite prepared for manual Reddit image uploads; derlenmedi (documentation-only, build not requested).
+
+- [readme/reddit] Pulse's Reddit showcase rewritten around README categories and the distinctive launcher, lock-screen, lyrics, notification, Game Hub, viewer and Files features; embedded images excluded for manual uploads; derlenmedi.
