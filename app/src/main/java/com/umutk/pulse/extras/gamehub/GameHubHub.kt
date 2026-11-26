@@ -355,6 +355,9 @@ private fun freeMemory(c: Context) {
 /** Opens the game itself (its launch activity). */
 /** A short notification when a game starts from Game Hub: its name and icon, gone after a few seconds (a quiet one: no sound, no pop-up). */
 private fun launchNote(c: Context, pkg: String) {
+    // no "Started from Game Hub" notification any more (it came back on every start); the old one that is still showing is removed
+    runCatching { c.getSystemService(android.app.NotificationManager::class.java).cancel(4120) }
+    if (true) return
     if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
     val nm = c.getSystemService(android.app.NotificationManager::class.java)
     if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("pulse_gamehub", "Game Hub", android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
@@ -1653,7 +1656,20 @@ class GameMenuService : android.app.Service() {
     private var nullStreak = 0
     private var games = emptySet<String>()
     private var gamesAt = 0L
-    private val poll = object : Runnable { override fun run() { runCatching { check() }; h.postDelayed(this, 2500) } }
+    private var lastGameAt = android.os.SystemClock.elapsedRealtime()
+    private val poll = object : Runnable {
+        override fun run() {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            // screen off: nothing to watch, so no usage look-up and a long wait (it ran every 2.5 s all day)
+            if (!pm.isInteractive) { h.postDelayed(this, 30_000); return }
+            runCatching { check() }
+            if (shown != null) lastGameAt = now
+            // ten minutes with no game on the screen: the service ends (the next game start brings it back)
+            if (now - lastGameAt > 10 * 60_000L) { runCatching { stopSelf() }; return }
+            h.postDelayed(this, if (shown != null) 2500 else 6000)
+        }
+    }
     // the frame counter, the recording and the warnings
     private var fpsView: android.widget.TextView? = null
     private var fpsLayer: String? = null
