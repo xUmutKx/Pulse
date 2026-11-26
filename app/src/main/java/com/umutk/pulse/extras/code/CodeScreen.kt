@@ -140,13 +140,13 @@ private fun TopIcon(name: String, on: Boolean = true, accent: Boolean = false, o
 }
 
 /** Where the code of an editor comes from and goes to: a file, or a note. */
-class CodeSource(val name: String, val read: suspend () -> String?, val write: suspend (String) -> Boolean)
+class CodeSource(val name: String, val read: suspend () -> String?, val write: suspend (String) -> Boolean, val path: String = "")
 
 /** The code editor of Files for [file] (a tap on a code file, or "Code editor" in a file's menu). */
 @Composable
 fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> Unit) {
     val src = remember(file) {
-        CodeSource(file.name, { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }, { runCatching { file.writeText(it) }.isSuccess })
+        CodeSource(file.name, { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }, { runCatching { file.writeText(it) }.isSuccess }, file.parent.orEmpty())
     }
     CodeEditorHost(src, startEditing, null, null, onClose)
 }
@@ -214,6 +214,12 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 TopIcon("back") { close() }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                     Text(src.name, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // the project (the folder) and the path of the file, then the type found from the name and the first lines
+                    if (src.path.isNotEmpty()) {
+                        val parts = src.path.trimEnd('/').split('/').filter { it.isNotEmpty() }
+                        Text(buildString { append(parts.lastOrNull().orEmpty()); if (parts.size > 1) append("  ·  ").append(parts.dropLast(1).takeLast(3).joinToString("/", prefix = ".../")) },
+                            color = Look.accent, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     Text(listOfNotNull(lang?.label, if (h.lines > 0) "${h.lines} " + tr("lines", "satır") else null, if (h.dirty) tr("edited", "değişti") else null).joinToString("  ·  "),
                         color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
