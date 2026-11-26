@@ -1139,7 +1139,9 @@ private suspend fun DlTask.transfer(): Boolean {
         val tag = first.getHeaderField("ETag")
         val mod = first.getHeaderField("Last-Modified")
         // the saved bytes only count for the same file: same validators, same size
-        if (started && ranged && ((etag != null && tag != etag) || (lastMod != null && mod != lastMod) || (total.value > 0 && size != total.value))) throw Changed()
+        // a different size is a different file; a different ETag alone is not (CDN edges of one file send different tags), it counts only together with a different date.
+        // The saved bytes used to be thrown away at every such change, and the download began again from zero after a lost connection.
+        if (started && ranged && ((total.value > 0 && size != total.value) || (etag != null && tag != etag && (lastMod == null || mod != lastMod)))) throw Changed()
         etag = tag
         lastMod = mod
         if (!started && !quiet) {
