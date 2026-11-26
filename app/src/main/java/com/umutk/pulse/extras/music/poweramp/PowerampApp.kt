@@ -255,7 +255,7 @@ fun PowerampApp(
                             },
                             onOpenEffects = { tab = PowerampTab.EFFECTS },
                             rating = track?.let { ratings[it.path] } ?: 0,
-                            onRate = { r -> track?.let { MusicStats.setRating(ctx, it.path, r); ratings = MusicStats.ratings(ctx) } },
+                            onRate = { r -> engine.state.value.current?.let { c -> MusicStats.setRating(ctx, c.inLibrary(libTracks).path, r); ratings = MusicStats.ratings(ctx) } },
                             favourite = track != null && track.path in favourites,
                             onFavourite = { track?.let { MusicStats.toggleFavourite(ctx, it.path); favourites = MusicStats.favourites(ctx) } },
                             sleepMinutes = if (sleepLeft < 0) -1 else ((sleepLeft + 59_999L) / 60_000L).toInt(),

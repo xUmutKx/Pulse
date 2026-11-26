@@ -248,6 +248,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val modesPrefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("music_modes", android.content.Context.MODE_PRIVATE)
     // "shuffled" also covers a queue that was shuffled once into a fixed order, which the player itself does not know
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled || modesPrefs.getBoolean("queue_shuffled", false)) }
+    // a list the person picked (a search, an artist, an album, a folder) plays as that list: Play goes through it in order, Shuffle mixes only its songs. The shuffle kinds that
+    // reach for the whole library (ALL, ALBUMS) are switched off first: they used to replace the picked list with songs from everywhere
+    fun playPicked(list: List<Track>, index: Int, shuffled: Boolean) {
+        com.umutk.pulse.extras.music.PlayModes.setShuffle(ctx, com.umutk.pulse.extras.music.ShuffleKind.OFF)
+        modesPrefs.edit().putBoolean("queue_shuffled", shuffled).apply(); shuffle = shuffled
+        if (shuffled) engine.playQueue(list.shuffled()) else engine.playQueue(list, index)
+    }
     var repeat by remember { mutableIntStateOf(engine.player.repeatMode) }
     LaunchedEffect(st.isPlaying, st.current) {
         while (true) { if (!dragging) pos = engine.positionMs; dur = engine.durationMs; if (!st.isPlaying) break; delay(100) }
@@ -356,13 +363,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Column {
                         if (g != null) Row(Modifier.fillMaxWidth().clickable { group = null }.padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(if (tab == 4) g.substringAfterLast('/') else g, color = TXT, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Icon(Icons.Rounded.Shuffle, null, tint = accent, modifier = Modifier.clickable { if (shown.isNotEmpty()) engine.playQueue(shown.shuffled()) })
+                            Icon(Icons.Rounded.Shuffle, null, tint = accent, modifier = Modifier.clickable { if (shown.isNotEmpty()) playPicked(shown, 0, true) })
                         }
                         LazyColumn(Modifier.fillMaxSize()) {
                             if (tab == 0 && g == null && q.isEmpty()) item { RecommendationHome(library, cur, TXT, SUB, PANEL, accent, round = false, onPlay = { engine.playQueue(library, it) }, onQueue = { l, i -> engine.playQueue(l, i) }) }
                             itemsIndexed(shown, key = { i, t -> "$i${t.path}" }) { i, t ->
                                 val on = cur?.path == t.path
-                                Row(Modifier.fillMaxWidth().clickable { engine.playQueue(shown, i); showNow = true }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().clickable { playPicked(shown, i, false); showNow = true }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Art(t, 44.dp, accent)
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {

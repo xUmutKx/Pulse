@@ -1116,6 +1116,9 @@ private fun AudioInfoDialog(track: Track, style: PowerampStyle, onEdit: (() -> U
 private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean, onFavourite: (() -> Unit)?, style: PowerampStyle, modifier: Modifier) {
     var picking by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Int?>(null) }
+    // the gesture below lives across songs: it must call the handlers of the song that is playing now, not the ones from when it started
+    val curRate by androidx.compose.runtime.rememberUpdatedState(onRate)
+    val curFav by androidx.compose.runtime.rememberUpdatedState(onFavourite)
     val cellPx = with(LocalDensity.current) { 28.dp.toPx() }
     val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
@@ -1126,7 +1129,7 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
         modifier.height(36.dp).width(width)
             .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
             // no wait: the five stars open on touch and a slide along them picks the rating; a tap without a slide toggles the favourite
-            .pointerInput(onRate, onFavourite) {
+            .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     picking = true; preview = starAt(down.position.x, cellPx)
@@ -1138,7 +1141,7 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
                         if (moved) { ch.consume(); preview = starAt(ch.position.x, cellPx) }
                     }
                     picking = false
-                    if (moved) preview?.let { onRate?.invoke(it) } else onFavourite?.invoke()
+                    if (moved) preview?.let { curRate?.invoke(it) } else curFav?.invoke()
                     preview = null
                 }
             },

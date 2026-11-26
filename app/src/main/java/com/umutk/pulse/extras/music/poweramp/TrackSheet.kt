@@ -87,7 +87,7 @@ internal fun TrackSheet(
     val library by MusicLibrary.tracks.collectAsState()
     // "delete", "playlist", or a value list: "artist", "album", "genre", "folder"
     var pane by remember { mutableStateOf<String?>(null) }
-    val format = track.path.substringAfterLast('.', "").uppercase()
+    val format = track.path.substringAfterLast('.', "").uppercase().takeIf { !track.path.contains("://") && it.length <= 5 }.orEmpty()
     val duration = track.durationSec.takeIf { it >= 0 }?.let { formatMs(it * 1000) }.orEmpty()
     val close = onDismiss
 
@@ -118,7 +118,7 @@ internal fun TrackSheet(
                             color = SheetSub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                         val year = track.year.takeIf { it > 0 }?.toString().orEmpty()
-                        Text(listOf(year, duration, format).filter { it.isNotEmpty() }.joinToString(" · "), color = SheetSub, fontSize = 12.sp)
+                        Text(listOf(year, duration, format).filter { it.isNotEmpty() }.joinToString(" · "), color = SheetSub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
