@@ -64,7 +64,33 @@ object EmojiData {
     }
 
     /** The emoji for [word] once the index is built (null before that, or when none fits). */
-    fun forWord(word: String): String? = wordIndex?.get(word.lowercase(Locale.ROOT))
+    fun forWord(word: String): String? = wordIndex?.get(word.lowercase(Locale.ROOT)) ?: chem[word.lowercase(Locale.ROOT)]
+
+    /** Chemistry words (Turkish and English) -> the sign or formula written for them: the benzene ring, formulas, the elements' symbols. Offered on the bar like an emoji. */
+    private val chem: Map<String, String> = buildMap {
+        fun put(sym: String, vararg names: String) { names.forEach { put(it, sym) } }
+        put("\u232C", "benzen", "benzene", "benzol")
+        put("\u2B21", "heksagon", "hexagon", "altıgen")
+        put("H\u2082O", "su", "water", "h2o")
+        put("CO\u2082", "karbondioksit", "carbondioxide", "karbon dioksit", "carbon dioxide", "co2")
+        put("O\u2082", "oksijen", "oxygen")
+        put("H\u2082", "hidrojen", "hydrogen")
+        put("N\u2082", "azot", "nitrogen")
+        put("NaCl", "tuz", "salt", "sodyum klorür")
+        put("CH\u2084", "metan", "methane")
+        put("C\u2082H\u2085OH", "etanol", "ethanol", "alkol")
+        put("C\u2086H\u2081\u2082O\u2086", "glikoz", "glucose", "glukoz")
+        put("NH\u2083", "amonyak", "ammonia")
+        put("H\u2082SO\u2084", "sülfürik asit", "sulfuric acid", "sülfürik")
+        put("HCl", "hidroklorik asit", "hydrochloric acid", "tuz ruhu")
+        put("NaOH", "sodyum hidroksit", "sodium hydroxide", "kostik")
+        put("O\u2083", "ozon", "ozone")
+        put("\u2697", "kimya", "chemistry", "simya", "alchemy")
+        put("Fe", "demir", "iron"); put("Au", "altın", "gold"); put("Ag", "gümüş", "silver"); put("Cu", "bakır", "copper")
+        put("Na", "sodyum", "sodium"); put("K", "potasyum", "potassium"); put("Ca", "kalsiyum", "calcium"); put("Mg", "magnezyum", "magnesium")
+        put("Hg", "cıva", "mercury"); put("Pb", "kurşun"); put("Zn", "çinko", "zinc"); put("Al", "alüminyum", "aluminium", "aluminum")
+        put("Cl", "klor", "chlorine"); put("He", "helyum", "helium"); put("Si", "silisyum", "silicon"); put("U", "uranyum", "uranium")
+    }
 
     /** The items whose words contain every word of [query]. */
     /** Semantic emoji search (as in WM Keyboard): the words are matched whole, by their start, by their Turkish stem, by a near spelling and by meaning
