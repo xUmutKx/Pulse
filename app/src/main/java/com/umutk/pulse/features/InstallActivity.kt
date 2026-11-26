@@ -27,6 +27,8 @@ class InstallActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // a browser that says "octet-stream" for every download sends all of them here: only a real package installs, any other file goes to the app that opens its kind
+        if (intent.getStringArrayListExtra("apks").isNullOrEmpty() && intent.data?.let { notPackage(it) } == true) { handOn(intent.data!!); finish(); return }
         // the play build does not install APK files (no REQUEST_INSTALL_PACKAGES there)
         if (!com.umutk.pulse.BuildConfig.APK_INSTALL) {
             android.widget.Toast.makeText(this, com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"), android.widget.Toast.LENGTH_LONG).show()
@@ -74,6 +76,29 @@ class InstallActivity : ComponentActivity() {
             runCatching { rootCheck.join(1500) }
             runOnUiThread { file = f }
         }.start()
+    }
+
+    private fun nameOf(uri: Uri): String = runCatching {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c: Cursor -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull() ?: uri.lastPathSegment.orEmpty()
+
+    /** True when the link is not an APK or a bundle: by its name first, then by the first bytes (a package is a zip). */
+    private fun notPackage(uri: Uri): Boolean {
+        val ext = nameOf(uri).substringAfterLast('.', "").lowercase()
+        if (ext in setOf("apk", "xapk", "apks", "apkm")) return false
+        if (ext.isNotEmpty() && ext != "bin") return true
+        val head = runCatching { contentResolver.openInputStream(uri)?.use { i -> ByteArray(4).also { i.read(it) } } }.getOrNull() ?: return false
+        return !(head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte())
+    }
+
+    /** The file goes on to the app that opens its kind (the Android chooser asks), never back to this window. */
+    private fun handOn(uri: Uri) {
+        val ext = nameOf(uri).substringAfterLast('.', "").lowercase()
+        val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: contentResolver.getType(uri)?.takeIf { it != "application/octet-stream" } ?: "*/*"
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val chooser = android.content.Intent.createChooser(view, null).addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .putExtra(android.content.Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(android.content.ComponentName(this, InstallActivity::class.java)))
+        runCatching { startActivity(chooser) }.onFailure { Toast.makeText(this, com.umutk.pulse.tr("No app opens this file", "Bu dosyayı açan uygulama yok"), Toast.LENGTH_LONG).show() }
     }
 
     /** Size of the APK for the copy bar; 0 when the provider does not say. */
