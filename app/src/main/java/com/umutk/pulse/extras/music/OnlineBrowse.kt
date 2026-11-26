@@ -100,7 +100,7 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
                 }
             }
         }
-        if (tab == 1 && spLists.isEmpty() && list.isEmpty() && !busy) Text(tr("Sign in to Spotify in the music settings to see your playlists and to search Spotify.", "Çalma listelerin ve Spotify araması için müzik ayarlarından Spotify’a giriş yap."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        if (tab == 1 && spLists.isEmpty() && list.isEmpty() && !busy) Text(com.umutk.pulse.extras.spotify.SpotifyApi.lastError.ifEmpty { tr("Nothing came back from Spotify. Open the log-in screen (the power icon in Spotify) and use Test the connection.", "Spotify’dan bir şey gelmedi. Giriş ekranını aç (Spotify’daki güç simgesi) ve Bağlantıyı dene’yi kullan.") }, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         Text(if (busy) tr("Loading…", "Yükleniyor…") else title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }

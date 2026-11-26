@@ -83,20 +83,55 @@ object SpotifyHub {
 @Composable
 internal fun LoginPage(onClose: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var id by remember { mutableStateOf(if (SpotifyAuth.hasClientId(ctx)) SpotifyAuth.clientId(ctx) else "") }
+    var test by remember { mutableStateOf("") }
+    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+    fun open(url: String) { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         IconButton(onClick = onClose) { PIcon("back", T.text, 22.dp) }
-        // a build that carries Pulse's own Spotify app logs in with one press; the field is only for a build without one
-        if (!SpotifyAuth.hasBuiltInId()) PField(id, { id = it }, tr("Client ID", "İstemci kimliği"), Modifier.fillMaxWidth())
-        PButton(tr("Log in", "Giriş yap"), Modifier.fillMaxWidth(), icon = null) {
-            SpotifyAuth.error = null
-            // the sign-in needs your own Client ID (from developer.spotify.com): without one Spotify answers INVALID_CLIENT, so nothing is sent
-            if (SpotifyAuth.hasBuiltInId()) { SpotifyAuth.setClientId(ctx, ""); SpotifyAuth.login(ctx) }
-            else if (id.isBlank() || id.contains("YOUR_SPOTIFY")) SpotifyAuth.error = tr("Enter your Spotify Client ID first: make an app at developer.spotify.com and add " + SpotifyAuth.REDIRECT + " as its redirect address.", "Önce Spotify Client ID'ni yaz: developer.spotify.com'da bir uygulama aç ve yönlendirme adresi olarak " + SpotifyAuth.REDIRECT + " ekle.")
-            else { SpotifyAuth.setClientId(ctx, id.trim()); SpotifyAuth.login(ctx) }
+        androidx.compose.foundation.lazy.LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item { Text(tr("Connect Spotify", "Spotify'ı bağla"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+            item { Text(tr("Your playlists and liked songs come from your own Spotify account. Spotify only lets its own app play music, so a song you pick here plays through YouTube Music.", "Çalma listelerin ve beğendiğin şarkılar kendi Spotify hesabından gelir. Spotify müziği yalnızca kendi uygulamasında çaldırdığı için buradan seçtiğin şarkı YouTube Music üzerinden çalar."), color = T.sub, fontSize = 14.sp) }
+            // the status first, so it is clear at once what is missing
+            item {
+                PCard {
+                    Text(tr("State", "Durum"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Client ID", "İstemci kimliği") + ": " + (if (SpotifyAuth.hasBuiltInId() || SpotifyAuth.hasClientId(ctx)) tr("saved", "kayıtlı") else tr("not entered yet", "henüz girilmedi")), color = T.sub, fontSize = 13.sp)
+                    Text(tr("Login", "Giriş") + ": " + (if (SpotifyAuth.loggedIn) tr("done", "yapıldı") else tr("not done", "yapılmadı")), color = T.sub, fontSize = 13.sp)
+                    SpotifyAuth.error?.let { Text(it, color = T.sub, fontSize = 13.sp) }
+                    if (test.isNotEmpty()) Text(test, color = T.text, fontSize = 13.sp)
+                }
+            }
+            if (!SpotifyAuth.hasBuiltInId()) {
+                item { Text(tr("1. Make an app", "1. Bir uygulama oluştur"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                item { Text(tr("Open the Spotify developer dashboard, log in and press Create app (any name). Tick Web API.", "Spotify geliştirici panelini aç, giriş yap ve Create app'e bas (adı önemli değil). Web API'yi işaretle."), color = T.sub, fontSize = 14.sp) }
+                item { PButton(tr("Open developer.spotify.com/dashboard", "developer.spotify.com/dashboard'u aç"), Modifier.fillMaxWidth()) { open("https://developer.spotify.com/dashboard") } }
+                item { Text(tr("2. Add this Redirect URI to the app", "2. Bu Redirect URI'yi uygulamaya ekle"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                item { PButton(SpotifyAuth.REDIRECT + "   (" + tr("copy", "kopyala") + ")", Modifier.fillMaxWidth()) { clip.setText(androidx.compose.ui.text.AnnotatedString(SpotifyAuth.REDIRECT)) } }
+                item { Text(tr("3. Allow your own account", "3. Kendi hesabını ekle"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                item { Text(tr("While the app is in development mode, Spotify only lets the accounts listed under Settings > User Management use it: add the e-mail of your Spotify account. Without this the login works but the lists come back empty (error 403).", "Uygulama geliştirme modundayken Spotify yalnızca Settings > User Management'taki hesapların kullanmasına izin verir: Spotify hesabının e-postasını ekle. Bunu yapmazsan giriş çalışır ama listeler boş döner (403 hatası)."), color = T.sub, fontSize = 14.sp) }
+                item { Text(tr("4. Paste the Client ID", "4. İstemci kimliğini yapıştır"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+                item { PField(id, { id = it }, tr("Client ID", "İstemci kimliği"), Modifier.fillMaxWidth()) }
+            }
+            item { Text(tr("Log in", "Giriş yap"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
+            item {
+                PButton(tr("Log in with Spotify", "Spotify ile giriş yap"), Modifier.fillMaxWidth(), icon = null) {
+                    SpotifyAuth.error = null
+                    // the sign-in needs your own Client ID (from developer.spotify.com): without one Spotify answers INVALID_CLIENT, so nothing is sent
+                    if (SpotifyAuth.hasBuiltInId()) { SpotifyAuth.setClientId(ctx, ""); SpotifyAuth.login(ctx) }
+                    else if (id.isBlank() || id.contains("YOUR_SPOTIFY")) SpotifyAuth.error = tr("Enter your Spotify Client ID first (step 4).", "Önce Spotify istemci kimliğini gir (4. adım).")
+                    else { SpotifyAuth.setClientId(ctx, id.trim()); SpotifyAuth.login(ctx) }
+                }
+            }
+            item {
+                PButton(tr("Test the connection", "Bağlantıyı dene"), Modifier.fillMaxWidth()) {
+                    test = tr("Testing ...", "Deneniyor ...")
+                    scope.launch { test = SpotifyApi(ctx).diagnose() }
+                }
+            }
+            item { Text(tr("Spotify has closed its recommendation service to new apps, so there are no Spotify suggestions here: the suggestions come from YouTube Music and from what you play.", "Spotify öneri hizmetini yeni uygulamalara kapattı, bu yüzden burada Spotify önerisi yok: öneriler YouTube Music'ten ve çaldıklarından gelir."), color = T.sub, fontSize = 12.sp) }
         }
-        SpotifyAuth.error?.let { Text(it, color = T.sub, fontSize = 13.sp) }
-        Text(SpotifyAuth.REDIRECT, color = T.sub, fontSize = 12.sp)
     }
 }
 
@@ -117,6 +152,7 @@ private fun Main(onClose: () -> Unit) {
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { SpotifyAuth.logout(ctx) }) { PIcon("power", T.sub, 22.dp) }
         }
+        if (SpotifyApi.lastError.isNotEmpty()) Text(SpotifyApi.lastError, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
                 Tab.Now -> NowPlaying(api) { video = it }
