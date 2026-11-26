@@ -35,7 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -53,32 +55,39 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Two-finger pinch: [onZoom] gets the zoom factor of each step; one-finger scrolling is left alone. */
-fun Modifier.ofPinch(onZoom: (Float) -> Unit): Modifier = pointerInput(Unit) {
+fun Modifier.ofPinch(onZoom: (Float) -> Unit): Modifier = composed {
+    // the handler is read at each step: pointerInput(Unit) keeps the first lambda for good, whose zoom value was stale after the first pinch (zoom then jumped back)
+    val cur by androidx.compose.runtime.rememberUpdatedState(onZoom)
+    pointerInput(Unit) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         do {
             val e = awaitPointerEvent(PointerEventPass.Initial)
             if (e.changes.size > 1) {
                 val z = e.calculateZoom()
-                if (z != 1f) onZoom(z)
+                if (z != 1f) cur(z)
                 e.changes.forEach { it.consume() }
             }
         } while (e.changes.any { it.pressed })
     }
+    }
 }
 
 /** Two-finger pinch with the point between the fingers: [onZoom] gets the zoom factor of each step and where the fingers are (in this box), so the page can grow around them. */
-fun Modifier.ofPinchAt(onZoom: (Float, Offset) -> Unit): Modifier = pointerInput(Unit) {
+fun Modifier.ofPinchAt(onZoom: (Float, Offset) -> Unit): Modifier = composed {
+    val cur by androidx.compose.runtime.rememberUpdatedState(onZoom)
+    pointerInput(Unit) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         do {
             val e = awaitPointerEvent(PointerEventPass.Initial)
             if (e.changes.size > 1) {
                 val z = e.calculateZoom()
-                if (z != 1f) onZoom(z, e.calculateCentroid(useCurrent = true))
+                if (z != 1f) cur(z, e.calculateCentroid(useCurrent = true))
                 e.changes.forEach { it.consume() }
             }
         } while (e.changes.any { it.pressed })
+    }
     }
 }
 
