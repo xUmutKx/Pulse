@@ -671,6 +671,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (f.extension.lowercase() == "lrc" && f.length() <= 2_000_000L) { recents = exAddRecent(ctx, f); lrcView = f; return }
         // a code file: the code editor (colours by language, folding, search); other text goes to the text editor as before
         if (f.extension.lowercase() in com.umutk.pulse.extras.code.PulseCode.tapExts && f.extension.lowercase() != "md" && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); codeView = f; return }
+        // .torrent and other small text-like files with no viewer of their own show in the text viewer first (never the system "open with" list)
+        if (f.extension.lowercase() in setOf("torrent", "magnet", "nfo", "diz", "srt", "vtt", "ass", "sub") && f.length() <= 6_000_000L) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
         // plain text of any name or extension (.md, .log, .conf, .env ...): opens in Files' own text viewer as it did (the code editor is in the file's menu and "Open as")
         if (f.isFile && f.length() in 1..6_000_000L && exLooksText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
