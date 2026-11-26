@@ -1165,7 +1165,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); enter(); return true }
         }
         val asciiDevice = e.getUnicodeChar(0) in 1..127
-        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed) else null
+        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn) else null
         val ch = tr ?: e.getUnicodeChar(e.metaState).takeIf { it >= 32 }?.let { String(Character.toChars(it)) } ?: return false
         turkishDown.add(keyCode)
         type(ch)
@@ -1195,7 +1195,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
         val device = e.getUnicodeChar(0)
         if (device !in 1..127) return super.onKeyDown(keyCode, event)
-        val ch = turkishQ(keyCode, e.isShiftPressed) ?: return super.onKeyDown(keyCode, event)
+        val ch = turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn) ?: return super.onKeyDown(keyCode, event)
         val c = currentInputConnection ?: return super.onKeyDown(keyCode, event)
         turkishDown.add(keyCode)
         c.commitText(ch, 1)
