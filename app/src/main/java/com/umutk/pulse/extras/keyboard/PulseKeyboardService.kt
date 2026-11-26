@@ -3011,11 +3011,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (typed.isEmpty()) {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
             if (tb.isEmpty() || tb.trimEnd(' ').let { it.isEmpty() || it.last() in ".!?\n" }) {
-                val starts = (if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet", "Bir", "Ve") else listOf("I", "The", "Hello", "A", "And")).filter { !KeyboardDictionary.isBanned(it) }.take(3).let { s -> s + List(3 - s.size) { "" } }
+                val starts = (if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet", "Bir", "Ve") else listOf("I", "The", "Hello", "A", "And")).filter { !KeyboardDictionary.isBanned(it) }.let { all -> all.take(3).let { s -> s + List(3 - s.size) { "" } } to all.drop(3).take(slotCount() - 3) }.let { (s, more) -> startsMore = more; s }
                 // an empty box of any kind: the left slot holds the address used most (a tap writes it, a long press shows the others), the middle and right the sentence words
                 val mail = if (tb.isEmpty() && !st.plain) getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').firstOrNull { it.isNotBlank() && '@' in it && !KeyboardDictionary.isBanned(it) } else null
                 if (mail != null) { slotWords = arrayOf(mail, starts[0], starts[1]); st.slots = listOf(mail, starts[0], starts[1]); target = null; showClipSlot(); return }
-                slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
+                slotWords = (starts + startsMore).toTypedArray(); st.slots = starts + startsMore; target = null; showClipSlot(); return
             }
         }
         // every keystroke: the older correction work stops, and the new word is looked at at once (the completions); the corrections follow only when typing pauses
@@ -3233,9 +3233,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** How many words the bar shows: three on a phone, five from 600 dp of width, six from 900 dp (a tablet, also in landscape). */
+    /** The sentence-start words beyond the first three, for a wide bar. */
+    private var startsMore: List<String> = emptyList()
+
     private fun slotCount(): Int {
         val w = resources.configuration.screenWidthDp
-        return when { w >= 900 -> 6; w >= 600 -> 5; else -> 3 }
+        // about one word per 115 dp of the bar: landscape and low-DPI screens (more dp across) show more, a portrait phone keeps three
+        return (w / 115).coerceIn(3, 7)
     }
 
     /** The first three slots stay as they are (the word, the one in the middle, the special one); more words follow them when the screen is wide. */
