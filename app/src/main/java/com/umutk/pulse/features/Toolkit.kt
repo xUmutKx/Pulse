@@ -147,6 +147,7 @@ private val tools = listOf(
     Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
     Tool("DNS and TTL", "DNS ve TTL", "globe", flow = true) { BypassTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
+    Tool("Resolution", "Çözünürlük", "fullscreen") { ResolutionTool() },
     Tool("Finder", "Bulucu", "search") { FinderTool() },
     Tool("Screen rotation", "Ekran yönü", "rotate") { RotationTool() },
     Tool("Show touches", "Dokunma noktaları", "touch") { FlagTool("show_touches", tr("Show a dot under every finger", "Her parmağın altında nokta göster")) },
