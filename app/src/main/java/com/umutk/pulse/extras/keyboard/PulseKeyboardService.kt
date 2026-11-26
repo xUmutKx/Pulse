@@ -902,6 +902,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        editEpoch++
         // is a physical keyboard connected? asked before the keyboard is drawn, so a field opens as the suggestion bar at once (not the full keys first and the bar a moment later);
         // the full keys come only when the keyboard button of the bar is pressed, and every new field starts as the bar again
         if (!restarting) { st.hardware = hardwareAttached(); st.hwOpen = false }
@@ -1060,6 +1061,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onFinishInput() {
+        editEpoch++
         runCatching { commitNumber() }
         runCatching { trackLogin() }
         super.onFinishInput()
@@ -1132,7 +1134,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // (the same as a Turkish Q keyboard). Only when Turkish is the keyboard's language and the device layout is plain ASCII.
     private val turkishDown = HashSet<Int>()
 
-    private fun turkishQ(keyCode: Int, shift: Boolean): String? = when (keyCode) {
+    /** [shift] is Shift xor Caps Lock (the letters); [real] is the Shift key alone (punctuation does not follow Caps Lock). */
+    private fun turkishQ(keyCode: Int, shift: Boolean, real: Boolean = shift): String? = when (keyCode) {
+        // a Turkish Q keyboard under an English layout: the key right of ç is "." and ":", the one beside the Enter key "," and ";", and Shift+7 is "/"
+        KeyEvent.KEYCODE_SLASH -> if (real) ":" else "."
+        KeyEvent.KEYCODE_BACKSLASH -> if (real) ";" else ","
+        KeyEvent.KEYCODE_7 -> if (real) "/" else null
         KeyEvent.KEYCODE_LEFT_BRACKET -> if (shift) "Ğ" else "ğ"
         KeyEvent.KEYCODE_RIGHT_BRACKET -> if (shift) "Ü" else "ü"
         KeyEvent.KEYCODE_SEMICOLON -> if (shift) "Ş" else "ş"
@@ -1165,7 +1172,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); enter(); return true }
         }
         val asciiDevice = e.getUnicodeChar(0) in 1..127
-        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn) else null
+        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn, e.isShiftPressed) else null
         val ch = tr ?: e.getUnicodeChar(e.metaState).takeIf { it >= 32 }?.let { String(Character.toChars(it)) } ?: return false
         turkishDown.add(keyCode)
         type(ch)
@@ -1195,7 +1202,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
         val device = e.getUnicodeChar(0)
         if (device !in 1..127) return super.onKeyDown(keyCode, event)
-        val ch = turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn) ?: return super.onKeyDown(keyCode, event)
+        val ch = turkishQ(keyCode, e.isShiftPressed != e.isCapsLockOn, e.isShiftPressed) ?: return super.onKeyDown(keyCode, event)
         val c = currentInputConnection ?: return super.onKeyDown(keyCode, event)
         turkishDown.add(keyCode)
         c.commitText(ch, 1)
@@ -1544,13 +1551,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Works the correction out for a word that was left uncorrected (typing fast) and puts it in its place, only when the text before the cursor still ends with it and no word is open. */
+    /** Counts the fields and the sends: a late correction belongs to the field and the moment it was started in, never to a later one (a sent message, a new field). */
+    private var editEpoch = 0
+
     private fun lateFix(typed: String, sep: String, tail: String, code: String, loc: Locale, pw: String?, pw2: String?, up: Boolean, ctx: String = lmCtx, pending: java.util.concurrent.Future<String?>? = null) {
         if (!KeyboardPrefs.autocorrect || !KeyboardPrefs.suggestions) return
+        val epoch = editEpoch
         scope.launch {
             // the work that was already running goes on (nothing is started again); a new run only when there was none
             val fix = withContext(Dispatchers.Default) {
                 runCatching { if (pending != null) pending.get(3, java.util.concurrent.TimeUnit.SECONDS) else KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
             } ?: return@launch
+            if (epoch != editEpoch) return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
             if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.rejectedAtLeast(lo, KeyboardPrefs.undoToKeep)) return@launch
             val key = typed + tail
@@ -1558,6 +1570,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // as the open word), or when the next word is closed. Only when something else is going on (a selection, another edit) does it wait a moment.
             var tries = 0
             while (tries++ < 30) {
+                // a send or a new field since the word was typed: the fix is dropped, the text stays as it was sent
+                if (epoch != editEpoch) return@launch
                 val c = currentInputConnection ?: return@launch
                 if (st.plain) return@launch
                 val before = c.getTextBeforeCursor(160, 0)?.toString() ?: return@launch
@@ -1708,7 +1722,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.trans) { transOp("apply"); return }
         captureEmail(c); commitNumber()
         runCatching { trackLogin() }
-        // Enter (send) ends the word as it stands: only the space key mends a word
+        // Enter (send) ends the word as it stands: only the space key mends a word; a correction still being worked out for an earlier word is dropped
+        editEpoch++
         finishWord("\n", false)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
