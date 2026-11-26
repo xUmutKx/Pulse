@@ -50,7 +50,7 @@ object CtPrefs {
     var sortBy by mutableStateOf("first")
     var fade by mutableStateOf(true)
     // extra name fields: shown in the editor / shown in names (an existing value always shows in the editor)
-    var showPrefix by mutableStateOf(false); var showMiddle by mutableStateOf(false); var showSuffix by mutableStateOf(false); var showNick by mutableStateOf(false)
+    var showPrefix by mutableStateOf(false); var showMiddle by mutableStateOf(false); var showSuffix by mutableStateOf(true); var showNick by mutableStateOf(false)
     var dispPrefix by mutableStateOf(false); var dispMiddle by mutableStateOf(false); var dispSuffix by mutableStateOf(false)
     val looks = listOf("material", "oneui", "coloros", "win11", "win10", "win7", "xp", "win95")
 
@@ -60,7 +60,7 @@ object CtPrefs {
         look = p.getString("look", "material") ?: "material"; dynamic = p.getBoolean("dynamic", true); accent = p.getInt("accent", -1)
         amoled = p.getBoolean("amoled", false); lang = p.getString("lang", "en") ?: "en"
         firstFirst = p.getBoolean("firstFirst", true); sortBy = p.getString("sortBy", "first") ?: "first"; fade = p.getBoolean("fade", true)
-        showPrefix = p.getBoolean("showPrefix", false); showMiddle = p.getBoolean("showMiddle", false); showSuffix = p.getBoolean("showSuffix", false); showNick = p.getBoolean("showNick", false)
+        showPrefix = p.getBoolean("showPrefix", false); showMiddle = p.getBoolean("showMiddle", false); showSuffix = p.getBoolean("showSuffix", true); showNick = p.getBoolean("showNick", false)
         dispPrefix = p.getBoolean("dispPrefix", false); dispMiddle = p.getBoolean("dispMiddle", false); dispSuffix = p.getBoolean("dispSuffix", false)
     }
     fun save(c: Context) {

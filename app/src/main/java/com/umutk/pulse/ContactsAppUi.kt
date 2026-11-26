@@ -653,12 +653,14 @@ private fun CtList(contacts: List<CtContact>, onOpen: (Long) -> Unit, letters: B
                             Row(Modifier.fillMaxWidth().graphicsLayer { translationX = off.value }.background(T.bg).then(if (r.c.id in ctSel) Modifier.background(ctAcc.copy(alpha = .18f)) else Modifier)
                                 .pointerInput(r.c.id) { detectTapGestures(onLongPress = { ctToggle(r.c.id) }, onTap = { if (ctSel.isNotEmpty()) ctToggle(r.c.id) else onOpen(r.c.id) }) }
                                 .pointerInput(r.c.id) {
+                                    // a full swipe: more than half of the row, so a small slide of the finger never calls or writes
+                                    val need = size.width * .55f
                                     detectHorizontalDragGestures(onDragEnd = {
                                         val d = off.value
                                         scope.launch { off.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .7f, stiffness = 300f)) }
-                                        if (num.isNotEmpty() && d > 160f) call(num)
-                                        else if (num.isNotEmpty() && d < -160f) runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(num))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                                    }, onDragCancel = { scope.launch { off.animateTo(0f) } }) { change, d -> change.consume(); scope.launch { off.snapTo((off.value + d * .85f).coerceIn(-260f, 260f)) } }
+                                        if (num.isNotEmpty() && d > need) call(num)
+                                        else if (num.isNotEmpty() && d < -need) runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(num))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                                    }, onDragCancel = { scope.launch { off.animateTo(0f) } }) { change, d -> change.consume(); scope.launch { off.snapTo((off.value + d * .85f).coerceIn(-size.width * .7f, size.width * .7f)) } }
                                 }.padding(start = if (small) 8.dp else 16.dp, end = if (letters) 28.dp else 16.dp, top = if (small) 2.dp else 8.dp, bottom = if (small) 2.dp else 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 CtAvatar(r.c.photo, r.c.display, if (small) 20.dp else 44.dp)
                                 Spacer(Modifier.width(if (small) 8.dp else 16.dp))

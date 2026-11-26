@@ -67,7 +67,7 @@ object KeyboardLayouts {
     val symbolAlts = mapOf(
         '-' to listOf("–", "—", "•"), '\'' to listOf("‘", "’"), '"' to listOf("“", "”", "«", "»"), '?' to listOf("¿"), '!' to listOf("¡"),
         '$' to listOf("€", "£", "¥"), '€' to listOf("$", "£", "¥"), '0' to listOf("°", "⁰", ")"), '(' to listOf("[", "{", "<"), ')' to listOf("]", "}", ">"),
-        '1' to listOf("¹", "!", "½"), '2' to listOf("²", "@", "⅔"), '3' to listOf("³", "#", "¾"), '4' to listOf("⁴", "$", "¼"), '5' to listOf("⁵", "%"), '6' to listOf("⁶", "^"), '7' to listOf("⁷", "&"), '8' to listOf("⁸", "*"), '9' to listOf("⁹", "("),
+        '1' to listOf("¹", "!", "½"), '2' to listOf("²", "@", "⅔"), '3' to listOf("³", "#", "¾"), '4' to listOf(",", "⁴", "$", "¼"), '5' to listOf(".", "⁵", "%"), '6' to listOf(",", ".", "⁶", "^"), '7' to listOf("⁷", "&"), '8' to listOf("⁸", "*"), '9' to listOf("⁹", "("),
         '&' to listOf("§"), '%' to listOf("‰", "€", "$", "£", "¥"), '=' to listOf("≠", "≈"), '+' to listOf("±"), '/' to listOf("\\"), '*' to listOf("†", "‡"),
     )
 

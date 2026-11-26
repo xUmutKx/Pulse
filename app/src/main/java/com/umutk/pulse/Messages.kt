@@ -60,6 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.matchParentSize
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -629,8 +632,23 @@ private fun MessagesAvatar(label: String) {
 @Composable
 private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onMute: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit, selected: Boolean = false, onPick: () -> Unit = {}) {
     val label = th.name ?: th.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
+    // a full slide of the row to the right archives the thread, to the left blocks it (more than half of the width, so a small slide does nothing)
+    val off = remember(th.id) { androidx.compose.animation.core.Animatable(0f) }
+    val swipeScope = androidx.compose.runtime.rememberCoroutineScope()
     Box(Modifier.fillMaxWidth()) {
-    Row(Modifier.fillMaxWidth().background(if (selected) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent).combinedClickable(onClick = onOpen, onLongClick = onPick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    if (off.value != 0f) Box(Modifier.matchParentSize().background(if (off.value > 0) androidx.compose.ui.graphics.Color(0xFF6D7B8D) else androidx.compose.ui.graphics.Color(0xFFD64545)).padding(horizontal = 24.dp), contentAlignment = if (off.value > 0) Alignment.CenterStart else Alignment.CenterEnd) {
+        PIcon(if (off.value > 0) "archive" else "block", androidx.compose.ui.graphics.Color.White, 24.dp)
+    }
+    Row(Modifier.fillMaxWidth().graphicsLayer { translationX = off.value }.background(if (selected) T.accent.copy(alpha = .18f) else T.bg)
+        .pointerInput(th.id) {
+            val need = size.width * .55f
+            androidx.compose.foundation.gestures.detectHorizontalDragGestures(onDragEnd = {
+                val d = off.value
+                swipeScope.launch { off.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 300f)) }
+                if (d > need) onArchive() else if (d < -need) onBlock()
+            }, onDragCancel = { swipeScope.launch { off.animateTo(0f) } }) { change, dx -> change.consume(); swipeScope.launch { off.snapTo((off.value + dx * .85f).coerceIn(-size.width * .7f, size.width * .7f)) } }
+        }
+        .combinedClickable(onClick = onOpen, onLongClick = onPick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         MessagesAvatar(label)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
