@@ -2168,9 +2168,8 @@ internal fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCat
     val i = if (share) Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri) else Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
     i.clipData = ClipData.newRawUri("", uri)
     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    // Open with is the system's own "Just once / Always" picker (no chooser wrapper); Share keeps the chooser
-    if (share) ctx.startActivity(Intent.createChooser(i, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    else ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // both go through the chooser: a bare view intent opens at once in the app that was once picked "Always" (Pulse itself, after one tap), and Open with must ask again
+    ctx.startActivity(Intent.createChooser(i, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }.isSuccess
 
 /** Shares several files at once (folders are left out: they have no single file to send). False when none could be handed over. */
