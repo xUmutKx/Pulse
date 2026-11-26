@@ -27,11 +27,12 @@ What Pulse's music player did before: it played the picked song, then added the 
 ## What was taken (2.0.23)
 
 - Steps 1, 2 and 3 above (`ytx/MusicRadio.kt`), and step 5 in a simpler form: when fewer than four songs are left the queue is filled again from the radio of the last queued song (`OnlineMusic.startRadio`). It stops by itself when a song of the phone starts.
+- From Flow's `MusicRadioPlanner` (`player/MusicRadioPlanner.kt`, 149 lines, no Hilt): **no artist more than twice** in the queue, and a refill starts from the **anchors** (the seed and the songs YouTube placed closest to it, eight of them) and not from the newest song, which drifts away from the seed's genre after a few hops.
 - A history of the online songs played in the music player (`OnlineHistory`, newest first, 400 kept on the phone), used by a **For you** list in the browse page: the radio of the latest played songs and of the liked songs, mixed, without what was played already.
 
 ## What was not taken, and why
 
-- **Ranking and ordering of the radio** (`musicBrain`) and the **continuation** pages: they depend on Flow's learning engine and its Room database; the simple form above does not need them. Next, if the For you list proves good.
+- **Ranking of the radio by taste** (`musicBrain.rankTracks`) and the **continuation** pages: they depend on Flow's learning engine and its Room database. The anchors and the artist limit above stand in for them.
 - **The learning engine itself** (`Neuro*`, 12,100 lines): the part that matters for a radio is the ranking; a port of the whole is a project of its own, with the Snowball stemmers and 672 KB of language data. It was not started.
 - **Flow's player, downloads, sync, comments, shorts and profiles**: no gain for what was asked, and each rests on Room and Hilt.
 - **Replacing the YouTube access (InnerTube) with Flow's**: not done. The slowness YTXTube shows was not traced to it; a replacement would need the same proof-of-origin token handling and would change every call. A profile of the home page and the player on the phone has to come first.

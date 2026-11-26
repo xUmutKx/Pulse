@@ -63,11 +63,23 @@ object OnlineMusic {
 
     private fun hitOf(v: com.umutk.pulse.extras.ytx.VideoItem) = Hit(v.title, v.channel.replace(" - Topic", "", true).trim(), v.thumbnail, "yt", v.id)
 
-    /** Adds the next songs of YouTube Music's radio for [seed] to the queue, none that was played lately or is queued already. */
+    /** The songs the station refills from: the seed and what YouTube placed closest to it (Flow's MusicRadioPlanner, GPL-3.0: refilling from the newest tail instead drifts away from the seed's genre). */
+    private var radioAnchors: List<String> = emptyList()
+    private val usedAnchors = HashSet<String>()
+    private const val MAX_PER_ARTIST = 2
+
+    private fun artistKey(a: String) = a.lowercase().substringBefore(",").substringBefore("&").substringBefore(" feat").trim()
+
+    /** Adds the next songs of YouTube Music's radio for [seed] to the queue: none that was played lately or is queued, and no artist more than twice (as Flow's stations). */
     private suspend fun addRadio(ctx: Context, engine: MusicPlayerEngine, seed: String, artistHint: String) {
         val played = OnlineHistory.all(ctx).take(60).map { it.id }.toSet()
-        val queued = engine.state.value.queue.mapNotNull { byUrl[it.path]?.second }.toSet()
-        var next = com.umutk.pulse.extras.ytx.MusicRadio.after(seed).filter { it.id !in played && it.id !in queued }.take(8).map { hitOf(it) }
+        val queue = engine.state.value.queue
+        val queued = queue.mapNotNull { byUrl[it.path]?.second }.toSet()
+        val counts = HashMap<String, Int>()
+        queue.forEach { t -> byUrl[t.path]?.first?.artist?.let { counts.merge(artistKey(it), 1, Int::plus) } }
+        val all = com.umutk.pulse.extras.ytx.MusicRadio.after(seed).filter { it.id !in played && it.id !in queued }
+        if (radioAnchors.isEmpty() && all.isNotEmpty()) { radioAnchors = (listOf(seed) + all.map { it.id }).distinct().take(8); usedAnchors.clear(); usedAnchors.add(seed) }
+        var next = all.map { hitOf(it) }.filter { h -> val k = artistKey(h.artist); val c = counts.getOrDefault(k, 0); if (c >= MAX_PER_ARTIST) false else { counts[k] = c + 1; true } }.take(8)
         // the radio gave nothing (no mix for this song): songs of the same artist, as before
         if (next.isEmpty() && artistHint.isNotBlank()) next = runCatching { youtube(ctx, "$artistHint songs") }.getOrDefault(emptyList()).filter { it.ytId != null && it.ytId !in played && it.ytId !in queued }.take(8)
         for (n in next) {
@@ -83,6 +95,7 @@ object OnlineMusic {
      */
     private fun startRadio(ctx: Context, engine: MusicPlayerEngine, seedId: String) {
         radioJob?.cancel()
+        radioAnchors = emptyList(); usedAnchors.clear()
         radioJob = kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
             var fetching = false
             engine.state.takeWhile { st -> st.current == null || byUrl.containsKey(st.current.path) }.collect { st ->
@@ -92,7 +105,9 @@ object OnlineMusic {
                     fetching = true
                     try {
                         val last = st.queue.lastOrNull()?.path?.let { byUrl[it] }
-                        addRadio(ctx, engine, last?.second ?: seedId, last?.first?.artist.orEmpty())
+                        // the next anchor not used yet; with none left (or none known yet) the last queued song
+                        val anchor = (if (radioAnchors.isEmpty()) null else radioAnchors.firstOrNull { it !in usedAnchors }?.also { usedAnchors.add(it) }) ?: last?.second ?: seedId
+                        addRadio(ctx, engine, anchor, last?.first?.artist.orEmpty())
                     } finally { fetching = false }
                 }
             }
