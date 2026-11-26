@@ -1997,8 +1997,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (n > 0) {
                 if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lcb.original, lcb.corrected)
                 if (!st.incognito) KbStats.add(this, "undone"); hybridCount(false)
-                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lcb.original, 1); c.endBatchEdit()
-                word.append(lcb.original); target = null
+                // the word as it was typed goes back for good and a space follows it (the tap ends the word, like any other pick); it was rejected above, so it is not mended again
+                val sep = lcb.sep.ifEmpty { " " }
+                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.commitText(lcb.original + sep, 1); c.endBatchEdit()
+                word.clear(); target = null; prevWord = lcb.original; lastWasSpace = sep.endsWith(" ")
             }
             updateSuggestions(); return
         }
