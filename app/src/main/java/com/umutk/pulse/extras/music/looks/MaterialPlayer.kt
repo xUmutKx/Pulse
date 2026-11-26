@@ -308,6 +308,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     DisposableEffect(showNow) { onNowPlaying(showNow); onDispose { onNowPlaying(false) } }
 
     Box(modifier.fillMaxSize().background(pbg).onSizeChanged { rootH = it.height.toFloat() }) {
+        // the cover's blurred picture is behind the library too while the player sheet is up or on its way (a half pull down shows the library over it, not over black)
+        if (artBackground && sheetOn) Crossfade(art, animationSpec = tween(600), label = "libBg") { a -> if (a != null) Image(a, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop) }
         Column(Modifier.fillMaxSize()) {
             // search
             Row(Modifier.fillMaxWidth().padding(12.dp, 8.dp).clip(RoundedCornerShape(28.dp)).background(PANEL).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
