@@ -7,12 +7,11 @@
 <meta name="description" content="Pulse is a Windows desktop launcher, task manager, music and video players with real skins, keyboard, files, screen cover and toolkit for Android. Windows 95 to 11, Material and AMOLED looks. Free, open source, no ads.">
 <meta property="og:title" content="Pulse: one phone, every tool">
 <meta property="og:description" content="A Windows desktop with real windows, a task manager, Winamp and Poweramp players, a keyboard, files, a screen cover and a toolkit. Free and open source.">
-<meta property="og:image" content="media/cover-wide.jpg">
+<meta property="og:image" content="media/site/og.jpg">
 <meta name="theme-color" content="#070a12">
 <style>
-:root{--bg:#f4f6fb;--bg2:#ffffff;--card:#ffffff;--fg:#10141d;--sub:#586178;--line:#dfe4ee;--accent:#0a6cd8;--accent2:#d6336c;--green:#0f9d74;--glow:rgba(10,108,216,.22);--shadow:0 22px 60px rgba(16,28,60,.18)}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#070a12;--bg2:#0d121d;--card:#111826;--fg:#eef1f8;--sub:#9aa6bb;--line:#1d2638;--accent:#4aa8ff;--accent2:#ff6aa2;--green:#3ee0ae;--glow:rgba(74,168,255,.28);--shadow:0 22px 70px rgba(0,0,0,.6);color-scheme:dark}}
-:root[data-theme=dark]{--bg:#070a12;--bg2:#0d121d;--card:#111826;--fg:#eef1f8;--sub:#9aa6bb;--line:#1d2638;--accent:#4aa8ff;--accent2:#ff6aa2;--green:#3ee0ae;--glow:rgba(74,168,255,.28);--shadow:0 22px 70px rgba(0,0,0,.6);color-scheme:dark}
+:root{--bg:#070a12;--bg2:#0d121d;--card:#111826;--fg:#eef1f8;--sub:#9aa6bb;--line:#1d2638;--accent:#4aa8ff;--accent2:#ff6aa2;--green:#3ee0ae;--glow:rgba(74,168,255,.28);--shadow:0 22px 70px rgba(0,0,0,.6);color-scheme:dark}
+:root[data-theme=light]{--bg:#f4f6fb;--bg2:#ffffff;--card:#ffffff;--fg:#10141d;--sub:#586178;--line:#dfe4ee;--accent:#0a6cd8;--accent2:#d6336c;--green:#0f9d74;--glow:rgba(10,108,216,.22);--shadow:0 22px 60px rgba(16,28,60,.18);color-scheme:light}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:70px}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.6 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:clip}
@@ -66,6 +65,21 @@ section p.intro{color:var(--sub);font-size:19px;max-width:700px;margin:0 0 32px}
 .win .bar b{margin-left:6px;font-weight:600;color:var(--fg)}
 .win video{width:100%;aspect-ratio:16/9;background:#000}
 .tourline{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;align-items:center;color:var(--sub);font-size:14px}
+/* marquee */
+.marquee{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg2) 60%,transparent);padding:14px 0;margin-top:24px}
+.marquee .track{display:flex;gap:44px;width:max-content;animation:slide 46s linear infinite}
+.marquee:hover .track{animation-play-state:paused}
+.marquee span{font-size:15px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--sub);white-space:nowrap}
+.marquee span:after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:44px;vertical-align:middle}
+@keyframes slide{to{transform:translateX(-50%)}}
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.bento a{display:block;position:relative;border-radius:26px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--card);transition:transform .25s}
+.bento a:hover{transform:translateY(-4px)}
+.bento img{width:100%;height:auto;display:block}
+.bento .s7,.bento .s5{grid-column:span 6}.bento .s12{grid-column:span 12}
+.bento .cap{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 18px;font-size:14px;color:var(--sub);border-top:1px solid var(--line)}
+.bento .cap b{font-weight:700;color:var(--fg);font-size:15px}
 /* looks */
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
 .tabs button{border:1px solid var(--line);background:var(--bg2);color:var(--fg);padding:9px 16px;border-radius:999px;cursor:pointer;font:inherit;font-size:15px}
@@ -111,6 +125,7 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
 .rv{opacity:0;transform:translateY(22px);transition:opacity .7s,transform .7s}
 .rv.in,.nojs .rv{opacity:1;transform:none}
 @media (max-width:860px){
+  .bento .s7,.bento .s5{grid-column:span 12}
   .hero .grid,.row,.row.rev{grid-template-columns:1fr}
   .row.rev .txt{order:0}
   nav .links{display:none}
@@ -120,7 +135,7 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
   section{padding:56px 0}
   .stage{order:-1}
 }
-@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.marquee .track{animation:none}.rv{opacity:1;transform:none;transition:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body class="nojs">
@@ -161,6 +176,19 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
     <img class="float b" src="screenshots/xp-desktop.jpg" alt="Windows XP desktop" loading="lazy">
   </div>
 </div></header>
+<div class="marquee" aria-hidden="true"><div class="track"><span>Windows 11</span><span>Windows 10</span><span>Windows 7</span><span>Windows XP</span><span>Windows 95</span><span>Windows Phone</span><span>Material</span><span>AMOLED</span><span>Task manager</span><span>Winamp</span><span>Poweramp</span><span>Media Player</span><span>Keyboard</span><span>Files</span><span>Screen cover</span><span>Toolkit</span><span>Health</span><span>Game Hub</span><span>Buds</span><span>Wear OS</span><span>Windows 11</span><span>Windows 10</span><span>Windows 7</span><span>Windows XP</span><span>Windows 95</span><span>Windows Phone</span><span>Material</span><span>AMOLED</span><span>Task manager</span><span>Winamp</span><span>Poweramp</span><span>Media Player</span><span>Keyboard</span><span>Files</span><span>Screen cover</span><span>Toolkit</span><span>Health</span><span>Game Hub</span><span>Buds</span><span>Wear OS</span></div></div>
+
+<section id="inside"><div class="wrap rv">
+  <span class="kicker" data-tr="Bir bakışta">At a glance</span>
+  <h2 data-tr="Hepsi tek uygulamada">All of it, in one app</h2>
+  <div class="bento">
+    <a class="s7" href="#launcher"><img src="media/site/launcher.webp" alt="A Windows desktop with real windows" loading="lazy"><div class="cap"><b>Launcher</b><span data-tr="Gerçek pencereler">Real windows</span></div></a>
+    <a class="s5" href="#monitor"><img src="media/site/monitor.webp" alt="Your phone, measured live" loading="lazy"><div class="cap"><b data-tr="Monitör">Monitor</b><span data-tr="Canlı ölçüm">Live numbers</span></div></a>
+    <a class="s5" href="#music"><img src="media/site/music.webp" alt="Winamp, Poweramp and Windows Media Player skins" loading="lazy"><div class="cap"><b data-tr="Müzik">Music</b><span>Winamp · Poweramp · WMP</span></div></a>
+    <a class="s7" href="#tools"><img src="media/site/tools.webp" alt="A whole toolkit" loading="lazy"><div class="cap"><b data-tr="Araçlar">Tools</b><span data-tr="40'tan fazla küçük araç">40+ small tools</span></div></a>
+    <a class="s12" href="#looks"><img src="media/site/looks.webp" alt="One app, every look" loading="lazy"><div class="cap"><b data-tr="Görünümler">Looks</b><span data-tr="Sekiz görünüm">Eight looks</span></div></a>
+  </div>
+</div></section>
 
 <section id="tour"><div class="wrap rv">
   <span class="kicker" data-tr="Hareketli gör">See it move</span>
@@ -179,7 +207,6 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
   <p class="intro" data-tr="Her ekran, pencere, menü, anahtar ve ikon her görünüm için ayrı çizilir. Birini seç:">Every screen, dialog, menu, switch and icon is drawn for each look. Pick one:</p>
   <div class="tabs" id="tabs" role="tablist"></div>
   <div class="rail" id="rail"></div>
-  <img class="st" style="margin-top:30px;border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--line);width:100%" src="media/banner-looks.jpg" alt="Task Manager in Windows 95, XP, 7 and AMOLED" loading="lazy">
 </div></section>
 
 <section id="launcher"><div class="wrap row rv">
@@ -340,8 +367,8 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
   document.body.classList.remove('nojs');
   var root=document.documentElement,ls=function(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}};
   /* theme */
-  var th=ls('theme');if(th)root.setAttribute('data-theme',th);
-  document.getElementById('theme').onclick=function(){var d=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var n=d==='dark'?'light':'dark';root.setAttribute('data-theme',n);ls('theme',n)};
+  var th=ls('theme')||'dark';root.setAttribute('data-theme',th);
+  document.getElementById('theme').onclick=function(){var n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);ls('theme',n)};
   /* language: English text is in the page, data-tr holds the Turkish */
   var nodes=[].slice.call(document.querySelectorAll('[data-tr]'));
   nodes.forEach(function(n){n._en=n.hasAttribute('data-html')?n.innerHTML:n.textContent});
@@ -350,7 +377,7 @@ footer{padding:42px 0 70px;color:var(--sub);font-size:14px;border-top:1px solid 
     root.lang=l;document.getElementById('lang').textContent=l==='tr'?'EN':'TR';ls('lang',l);
     document.title=l==='tr'?'Pulse: tek telefon, her araç':'Pulse: one phone, every tool';
   }
-  var lang=ls('lang')||((navigator.language||'').toLowerCase().indexOf('tr')===0?'tr':'en');
+  var lang=ls('lang')||'en';
   document.getElementById('lang').onclick=function(){setLang(root.lang==='tr'?'en':'tr')};
   if(lang==='tr')setLang('tr');
   /* looks */
