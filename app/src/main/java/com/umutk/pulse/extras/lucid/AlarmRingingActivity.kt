@@ -209,6 +209,36 @@ class AlarmRingingActivity : ComponentActivity() {
         }
     }
 
+    /** The volume keys and the power key (the screen going off) silence the ringing alarm, as on a phone's own clock. */
+    private fun dismissByKey() {
+        val stopIntent = Intent(this, AlarmAudioService::class.java).apply {
+            action = AlarmAudioService.ACTION_STOP_ALARM
+            putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarmId)
+            putExtra(AlarmReceiver.EXTRA_IS_AWAKE_CHECK_ACTIVE, isAwakeCheckActive)
+        }
+        runCatching { startService(stopIntent) }.onFailure { runCatching { ContextCompat.startForegroundService(this, stopIntent) } }
+        finishAndRemoveTask()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_MUTE) { dismissByKey(); return true }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) { if (intent?.action == Intent.ACTION_SCREEN_OFF) dismissByKey() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        runCatching { ContextCompat.registerReceiver(this, screenOffReceiver, android.content.IntentFilter(Intent.ACTION_SCREEN_OFF), ContextCompat.RECEIVER_NOT_EXPORTED) }
+    }
+
+    override fun onStop() {
+        runCatching { unregisterReceiver(screenOffReceiver) }
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
