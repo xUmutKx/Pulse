@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Image
@@ -125,6 +126,14 @@ internal fun TrackSheet(
                 Line()
                 SheetRow(Icons.Rounded.Delete, tr("Delete", "Sil")) { pane = "delete" }
                 SheetRow(Icons.Rounded.Add, tr("Add to Playlist", "Çalma listesine ekle")) { pane = "playlist" }
+                // an online song: one tap sends its stream to the Download Manager (it keeps going and resumes there); the title is the file name
+                if (com.umutk.pulse.extras.music.OnlineArt.isOnline(track.path)) SheetRow(Icons.Rounded.Download, tr("Download", "İndir")) {
+                    val ext = if (track.path.contains("mime=audio%2Fwebm") || track.path.contains("mime=audio/webm")) "webm" else "m4a"
+                    val name = listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, track.title?.takeIf { it.isNotBlank() }).joinToString(" - ").ifBlank { "song" }.replace(Regex("[\\\\/:*?\"<>|]"), "_") + "." + ext
+                    com.umutk.pulse.features.Downloads.add(ctx, track.path, name)
+                    Toast.makeText(ctx, tr("Added to Downloads", "İndirilenlere eklendi"), Toast.LENGTH_SHORT).show()
+                    close()
+                }
                 if (onFindArt != null) SheetRow(Icons.Rounded.Image, tr("Album Art", "Albüm kapağı")) { close(); onFindArt() }
                 Line()
                 Row(Modifier.fillMaxWidth()) {
