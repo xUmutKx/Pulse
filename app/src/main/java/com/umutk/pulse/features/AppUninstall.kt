@@ -20,6 +20,10 @@ object AppUninstall {
             if (mode == Privilege.Mode.None) mode = runCatching { Privilege.detect() }.getOrDefault(Privilege.Mode.None)
             var ok = false
             if (mode != Privilege.Mode.None) {
+                // an app Game Hub hid (pm hide) is not found by the package manager until it is shown again: it is shown first, and leaves Game Hub's hidden list
+                val gh = app.getSharedPreferences("gamehub", Context.MODE_PRIVATE)
+                val hid = gh.getStringSet("hidden", emptySet()).orEmpty()
+                if (pkg in hid) { Privilege.run("pm unhide $pkg"); gh.edit().putStringSet("hidden", hid - pkg).apply() }
                 val out = Privilege.run("pm uninstall $pkg").text
                 ok = out.contains("Success", true) || !installed(app, pkg)
                 // a system app has no full removal: it is taken off the user's profile instead
