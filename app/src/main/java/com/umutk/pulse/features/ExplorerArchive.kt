@@ -486,7 +486,6 @@ private fun shortName(f: File): String = baseName(f).let { if (it.length > 14) i
 
 internal fun archiveMenu(f: File): List<Triple<String, String, String>> = listOf(
     Triple(tr("Open archive", "Arşivi aç"), "zip", "open"),
-    Triple(tr("Extract here", "Buraya çıkar"), "extract", "here"),
     Triple(tr("Extract to ${shortName(f)}/", "${shortName(f)}/ içine çıkar"), "folder", "named"),
     Triple(tr("Extract to…", "Şuraya çıkar…"), "openWith", "pick"),
     Triple(tr("Add to archive…", "Arşive ekle…"), "zip", "add"),
@@ -883,6 +882,8 @@ object FilesPrefs {
     var fileDate by mutableStateOf(true)
     var infoCount by mutableStateOf(true)    // the number of items inside a folder row
     var foldersFirst by mutableStateOf(true)
+    /** Move to Secure Folder in the ⋮ menu: off until asked for (it needs root or Shizuku). */
+    var secure by mutableStateOf(false)
     var openAsk by mutableStateOf(false)     // files open through the system chooser instead of Pulse's viewers
     var storageInfo by mutableStateOf(true)  // drawer: storage bar and free space
     var cards by mutableStateOf(true)        // standalone app: each row is its own card
@@ -908,7 +909,7 @@ object FilesPrefs {
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
         stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); folderSize = p.getBoolean("ex_fold_size", true); folderDate = p.getBoolean("ex_fold_date", true); fileSize = p.getBoolean("ex_file_size", true); fileDate = p.getBoolean("ex_file_date", true); infoCount = p.getBoolean("ex_info_count", true)
-        foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
+        foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); secure = p.getBoolean("ex_secure", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
         analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false); glass = p.getBoolean("ex_glass", true); glassAmt = p.getInt("ex_glass_amt", -1)
         libHidden = p.getStringSet("ex_lib_off", emptySet())?.toSet() ?: emptySet()
@@ -917,7 +918,7 @@ object FilesPrefs {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).putInt("ex_glass_amt", glassAmt).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putBoolean("ex_columns", columns).putBoolean("ex_selicons", selIcons).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
-            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
+            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_secure", secure).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
 }
 
@@ -1070,6 +1071,7 @@ fun FilesSettings() {
             Chips(tr("Size units", "Boyut birimi"), "sizes", listOf("KB · MB", "KiB · MiB"), if (fp.binary) 1 else 0) { fp.binary = it == 1 }
             Chips(tr("Date format", "Tarih biçimi"), "history", listOf(tr("Smart", "Akıllı"), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2), exDate(1_700_000_000_000L, 3)), fp.dateFmt) { fp.dateFmt = it }
             Chips(tr("Start page", "Açılış sayfası"), "folder", listOf(tr("Home", "Ana ekran"), tr("Recent", "Son")), if (fp.openRecent) 1 else 0) { fp.openRecent = it == 1 }
+            SwRow(tr("Move to Secure Folder", "Güvenli Klasöre taşı"), "lock", fp.secure) { fp.secure = it }
             Chips(tr("Open files", "Dosyaları aç"), "openFolder", listOf(tr("Pulse viewers", "Pulse görüntüleyiciler"), tr("Ask", "Sor")), if (fp.openAsk) 1 else 0) { fp.openAsk = it == 1 }
         }
         Sec(tr("Swipe on files", "Dosyada kaydırma"), "move") {
@@ -1213,4 +1215,12 @@ internal fun arcPick(picked: List<File>): File? {
     if (stems.size != 1) return null
     val first = File(picked[0].parentFile, stems.first() + ".001")
     return first.takeIf { isFirstPart(it) && isArchiveFile(it) }
+}
+
+
+/** Several archives picked: each goes into a folder of its own name next to it (nothing is spread into the folder they are in). */
+internal fun archiveExtractEach(files: List<File>): String {
+    var n = 0
+    files.filter { isArchiveFile(it) }.forEach { f -> runCatching { archiveExtract(f, uniqueFile(f.parentFile ?: f, baseName(f)), null); n++ } }
+    return tr("Extracted $n archives, each into its own folder", "$n arşiv, her biri kendi klasörüne çıkarıldı")
 }

@@ -892,7 +892,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     runCatching { ctx.startActivity(i) }; sel = emptySet()
                 }, big = true) { ExGlyph(Icons.Outlined.Android, "installer", Look.accent, 24.dp) }
                 DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }
-                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true) { ExIcon("copy", T.text, 24.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true, onLong = { exCopy(ctx, picked.joinToString("\n") { it.path }); note = tr("Path copied", "Yol kopyalandı") }) { ExIcon("copy", T.text, 24.dp) }
                 if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
                 // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
                 if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
@@ -902,6 +902,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     DenseSelSquare(T.text, { zipAsk = picked }) { ExGlyph(Icons.Outlined.FolderZip, "zip", T.text, 24.dp) }
                     picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { name = f.name; dialog = "rename" to f }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) } }
                     picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { propsOf = f }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
+                    if (picked.size > 1 && picked.all { isArchiveFile(it) }) DenseSelSquare(T.text, { scope.launch { note = withContext(Dispatchers.IO) { archiveExtractEach(picked) }; sel = emptySet(); refresh++ } }) { ExIcon("extract", T.text, 24.dp) }
                     arcPick(picked)?.let { f -> archiveMenu(f).forEach { (_, k, kind) ->
                         DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
                     } }
@@ -1157,9 +1158,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         buildList<Triple<String, String, () -> Unit>> {
                             add(Triple("Share", "share", { shareSheet = listOf(f) }))
                             if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
-                            add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                             // Samsung's Secure Folder (the user 150): the file goes to the same folder there, as Samsung's own Files does (root or Shizuku)
-                            if (f.path.startsWith("/storage/emulated/0/")) add(Triple("Move to Secure Folder", "lock", {
+                            if (FilesPrefs.secure && f.path.startsWith("/storage/emulated/0/")) add(Triple("Move to Secure Folder", "lock", {
                                 val rel = f.path.removePrefix("/storage/emulated/0/")
                                 note = "Moving to Secure Folder…"
                                 Thread {
@@ -1224,7 +1224,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
                         iconRow(row2)
                         // what is left (the code editor, Save as, Copy path, Secure Folder) stays as a short list under the icons; Open and Open with are the icons above and a tap on the file
-                        val rest = groups.flatten().filter { it.first in setOf("Code editor", "Save as", "Copy path") }
+                        val rest = groups.flatten().filter { it.first in setOf("Code editor", "Save as") }
                         if (rest.isNotEmpty()) {
                             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(st.sub.copy(alpha = .25f)))
                             rest.forEach { (label, key, act) -> ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, st.sub, 18.dp) }) }
@@ -1838,9 +1838,9 @@ private fun SelSquare(tint: Color, onClick: () -> Unit, content: @Composable () 
 
 /** Selection bar button: a little smaller than [SelSquare] and with no gap between neighbours. */
 @Composable
-private fun DenseSelSquare(tint: Color, onClick: () -> Unit, big: Boolean = false, content: @Composable () -> Unit) {
+private fun DenseSelSquare(tint: Color, onClick: () -> Unit, big: Boolean = false, onLong: (() -> Unit)? = null, content: @Composable () -> Unit) {
     // every button of the selection bar is the same size: 80% of the first cut / copy / paste size
-    Box(Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
+    Box(Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(T.panel).combinedClickable(onLongClick = onLong, onClick = onClick), contentAlignment = Alignment.Center) { content() }
 }
 
 /** Header glyph: Fluent on Windows 11 (the app's own icon set), the Material vector everywhere else. */
