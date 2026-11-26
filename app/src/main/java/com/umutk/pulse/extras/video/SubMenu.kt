@@ -99,10 +99,12 @@ internal fun SubMenu(
                             }
                         }
                         1 -> {
-                            label(tr("Size", "Boyut"))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(28, 34, 38, 44, 52).forEach { s -> chip("$s", prefs.subSize == s) { prefs.subSize = s; bump() } } }
+                            label(tr("Size, upright", "Boyut, dikey"))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 24, 28, 34, 38, 44).forEach { s -> chip("$s", prefs.subSizePort == s) { prefs.subSizePort = s; bump() } } }
+                            label(tr("Size, sideways", "Boyut, yatay"))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 28, 34, 38, 44, 52).forEach { s -> chip("$s", prefs.subSize == s) { prefs.subSize = s; bump() } } }
                             label(tr("Size in the small window", "Küçük pencerede boyut"))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(14, 16, 18, 20, 24).forEach { s -> chip("$s", prefs.subSizePip == s) { prefs.subSizePip = s; bump() } } }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 20, 22, 24, 28).forEach { s -> chip("$s", prefs.subSizePip == s) { prefs.subSizePip = s; bump() } } }
                             label(tr("Colour", "Renk"))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 subColors.forEachIndexed { i, c ->

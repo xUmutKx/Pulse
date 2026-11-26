@@ -23,7 +23,23 @@ private fun untilTag(tokens: List<String>): List<String> {
     return out
 }
 
-fun smartName(file: String): String {
+/** A name whose UTF-8 bytes were read as Latin-1 ("BÃ¶lÃ¼m" for "Bölüm"): put right when that gives a clean text. */
+private fun unmoji(s: String): String {
+    if (s.none { it == 'Ã' || it == 'Â' }) return s
+    val back = runCatching { String(s.toByteArray(Charsets.ISO_8859_1), Charsets.UTF_8) }.getOrNull() ?: return s
+    return if ('\uFFFD' !in back && back.count { it == 'Ã' } < s.count { it == 'Ã' }) back else s
+}
+
+/** "Dizi Sezon 6 Bölüm 2 1080p Dual" (the word between is whatever the damaged text left of "Bölüm"): S06E02. */
+private val trEpisodeRe = Regex("(?i)^(.*?)[ ._-]+(?:sezon|season)[ ._-]*(\\d{1,2})[ ._-]+b\\S*(?:\\s\\S*)?m[ ._-]*(\\d{1,3})(.*)$")
+
+fun smartName(file0: String): String {
+    val file = unmoji(file0)
+    trEpisodeRe.find(file.substringBeforeLast('.', file))?.let { t ->
+        val series = words(t.groupValues[1]).joinToString(" ")
+        if (series.isNotBlank()) return "$series S%02dE%02d".format(t.groupValues[2].toInt(), t.groupValues[3].toInt()) +
+            untilTag(words(t.groupValues[4].trimStart('.', ' ', '_', '-'))).joinToString(" ").let { if (it.isBlank()) "" else " · $it" }
+    }
     // the site a release came from ("[ OxTorrent.com ] ", "[TorrentCouch.com]. ", "www.site.org - ") is not part of the title
     val base = file.substringBeforeLast('.', file).trim().replace(Regex("^(?:\\s*[\\[(][^\\])]*[\\])][ ._-]*|www\\.[^ ]+? - )+"), "").trim().ifEmpty { file.substringBeforeLast('.', file).trim() }
     if (base.isEmpty()) return file

@@ -387,6 +387,8 @@ class VideoPrefs(ctx: Context) {
     /** subtitle size in sp: one for the full screen, a smaller one for the picture-in-picture window; fixed for every video and speed */
     var subSize by int(g, "sub_size_sp", 38)
     var subSizePip by int(g, "sub_size_pip", 18)
+    /** The text size held upright (the landscape size is [subSize], the small window has its own); 18 is the smallest. */
+    var subSizePort by int(g, "sub_size_port", 38)
     var subBg by bool(g, "sub_bg", false)
     var subBold by bool(g, "sub_bold", false)
     var subEdge by bool(g, "sub_edge", true)
