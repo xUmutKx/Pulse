@@ -1839,6 +1839,7 @@ private fun SelSquare(tint: Color, onClick: () -> Unit, content: @Composable () 
 }
 
 /** Selection bar button: a little smaller than [SelSquare] and with no gap between neighbours. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DenseSelSquare(tint: Color, onClick: () -> Unit, big: Boolean = false, onLong: (() -> Unit)? = null, content: @Composable () -> Unit) {
     // every button of the selection bar is the same size: 80% of the first cut / copy / paste size
