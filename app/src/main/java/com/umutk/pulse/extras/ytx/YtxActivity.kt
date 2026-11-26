@@ -645,6 +645,9 @@ fun YtxTubeApp() {
             }
         }
         SideEffect { morph.geometry = geometry }
+        // the picture goes through a SurfaceView only while the player rests fully open (see StageMorph)
+        val surfaceSettled by remember { derivedStateOf { morph.progress.value >= 0.999f && !morph.progress.isRunning && !morph.dragging } }
+        SideEffect { StageMorph.settled = surfaceSettled }
 
 
 

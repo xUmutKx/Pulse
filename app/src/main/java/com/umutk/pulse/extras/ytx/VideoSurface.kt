@@ -77,9 +77,15 @@ private fun SurfaceVideo(player: Player?, modifier: Modifier) {
     }
 }
 
+/**
+ * Whether the player is fully open (not minimised, not being dragged). A SurfaceView ignores the scale and offset that the open / close morph puts on its parents,
+ * so it showed the top left quarter of the picture, big, in the mini player; only while the player rests open is it used, any other time the TextureView path draws.
+ */
+object StageMorph { var settled by androidx.compose.runtime.mutableStateOf(true) }
+
 @Composable
 fun VideoSurface(player: Player?, modifier: Modifier = Modifier) {
-    if (YtxPerf.surfaceView && player != null) { SurfaceVideo(player, modifier); return }
+    if (YtxPerf.surfaceView && StageMorph.settled && player != null) { SurfaceVideo(player, modifier); return }
     AndroidView(
         modifier = modifier,
         factory = { context ->

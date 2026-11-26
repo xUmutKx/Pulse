@@ -554,7 +554,9 @@ fun VideoContent(
             return@Box
         }
 
-        val enabled = controlsVisible && interactive && state.sheet == null
+        // the comments panel starts under the picture, so the video and its controls stay usable beside it; any other sheet (speed, quality ...) covers them
+        val sheetBlocks = state.sheet != null && state.sheet != PlayerSheet.Comments
+        val enabled = controlsVisible && interactive && !sheetBlocks
 
         if (!scrubbing && !controlsVisible && (state.isBuffering || (state.loading && state.details == null))) {
             CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp, modifier = Modifier.align(Alignment.Center).size(36.dp))
@@ -571,7 +573,7 @@ fun VideoContent(
             }
         }
         // a sheet at the side or the bottom is open: the player's own controls go away behind it (they showed through the glass)
-        val chromeAlpha = if (scrubbing || state.sheet != null) 0f else visibleAlpha * controlsAlpha()
+        val chromeAlpha = if (scrubbing || sheetBlocks) 0f else visibleAlpha * controlsAlpha()
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = chromeAlpha }) {
             Box(
                 Modifier.fillMaxSize().background(
