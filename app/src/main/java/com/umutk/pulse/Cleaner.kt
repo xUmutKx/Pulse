@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.Storage
@@ -52,6 +53,13 @@ object Cleaner {
         .mapNotNull { pkg -> File(pkg, "cache").takeIf { it.isDirectory } }
         .map { c -> Junk(c, c.walkTopDown().filter { it.isFile }.sumOf { it.length() }, "app cache") }
         .filter { it.size > 0 }.sortedByDescending { it.size }
+
+    /** Root or Shizuku: asks the system itself to drop the caches of every app (the call a system cleaner makes, `pm trim-caches`), also where the folders cannot be read. True when it ran. */
+    fun trimAll(): Boolean {
+        if (!viaShell) return false
+        val out = Shell.run("pm trim-caches 999999999999 2>&1; echo rc=\$?")
+        return out.contains("rc=0")
+    }
 
     /** One shell pass lists the caches and sizes them with du. /data/user needs root; Shizuku's shell reads only the shared storage folders. */
     private fun shellCaches(): List<Junk> {
@@ -120,6 +128,9 @@ fun CleanerCard() {
             IconAction(Icons.Filled.FolderOff, "Empty") { scan("Empty folders") { Cleaner.emptyDirs() } }
             IconAction(Icons.Filled.CleaningServices, "Caches") { scan("App caches") { Cleaner.caches() } }
             IconAction(Icons.Filled.Storage, "Large") { scan("Large files") { Cleaner.large() } }
+            IconAction(Icons.Filled.DeleteSweep, "Trim all") {
+                scope.launch { val ok = withContext(Dispatchers.IO) { runCatching { Cleaner.trimAll() }.getOrDefault(false) }; msg = if (ok) "App caches trimmed by the system" else "Needs root or Shizuku" }
+            }
         }
         if (busy.isNotEmpty()) Text("Scanning ${busy}…", color = T.sub, fontSize = 12.sp)
         groups.forEach { (name, items) ->
