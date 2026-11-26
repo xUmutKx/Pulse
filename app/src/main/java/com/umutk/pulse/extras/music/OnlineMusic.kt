@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.umutk.pulse.extras.music.poweramp.displayName
 
@@ -53,7 +55,66 @@ object OnlineMusic {
     /** The YouTube Music id of [h]: its own, or (a Spotify song) the best match of its title and artist. */
     private suspend fun idOf(ctx: Context, h: Hit): String? = h.ytId ?: youtube(ctx, "${h.artist} ${h.title}").firstOrNull()?.ytId
 
-    private fun track(h: Hit, url: String): Track { OnlineArt.put(url, h.thumb); return Track(path = url, title = h.title, artist = h.artist) }
+    /** What each online stream address in the queue is: its song and YouTube id (the radio and the history need them). */
+    private val byUrl = java.util.concurrent.ConcurrentHashMap<String, Pair<Hit, String>>()
+    private var radioJob: kotlinx.coroutines.Job? = null
+
+    private fun track(h: Hit, url: String, id: String): Track { OnlineArt.put(url, h.thumb); byUrl[url] = h to id; return Track(path = url, title = h.title, artist = h.artist) }
+
+    private fun hitOf(v: com.umutk.pulse.extras.ytx.VideoItem) = Hit(v.title, v.channel.replace(" - Topic", "", true).trim(), v.thumbnail, "yt", v.id)
+
+    /** Adds the next songs of YouTube Music's radio for [seed] to the queue, none that was played lately or is queued already. */
+    private suspend fun addRadio(ctx: Context, engine: MusicPlayerEngine, seed: String, artistHint: String) {
+        val played = OnlineHistory.all(ctx).take(60).map { it.id }.toSet()
+        val queued = engine.state.value.queue.mapNotNull { byUrl[it.path]?.second }.toSet()
+        var next = com.umutk.pulse.extras.ytx.MusicRadio.after(seed).filter { it.id !in played && it.id !in queued }.take(8).map { hitOf(it) }
+        // the radio gave nothing (no mix for this song): songs of the same artist, as before
+        if (next.isEmpty() && artistHint.isNotBlank()) next = runCatching { youtube(ctx, "$artistHint songs") }.getOrDefault(emptyList()).filter { it.ytId != null && it.ytId !in played && it.ytId !in queued }.take(8)
+        for (n in next) {
+            val id = n.ytId ?: continue
+            val u = withContext(Dispatchers.IO) { streamUrl(id) } ?: continue
+            withContext(Dispatchers.Main) { engine.addToQueue(track(n, u, id)) }
+        }
+    }
+
+    /**
+     * Keeps the queue going while online songs play: every song that starts is written to the history, and when fewer than four are left the queue is filled from
+     * YouTube Music's radio of the last one. It stops by itself when a song of the phone starts.
+     */
+    private fun startRadio(ctx: Context, engine: MusicPlayerEngine, seedId: String) {
+        radioJob?.cancel()
+        radioJob = kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
+            var fetching = false
+            engine.state.takeWhile { st -> st.current == null || byUrl.containsKey(st.current.path) }.collect { st ->
+                st.current?.path?.let { byUrl[it] }?.let { (hit, id) -> OnlineHistory.record(ctx, id, hit.title, hit.artist, hit.thumb) }
+                val left = st.queue.size - st.index - 1
+                if (!fetching && st.queue.isNotEmpty() && left < 4) {
+                    fetching = true
+                    try {
+                        val last = st.queue.lastOrNull()?.path?.let { byUrl[it] }
+                        addRadio(ctx, engine, last?.second ?: seedId, last?.first?.artist.orEmpty())
+                    } finally { fetching = false }
+                }
+            }
+        }
+    }
+
+    /** "For you": the radio of what was played lately (and of the liked songs when signed in), mixed, without what was played already. */
+    suspend fun forYou(ctx: Context): List<Hit> {
+        ytInit(ctx)
+        val hist = OnlineHistory.all(ctx)
+        val seeds = (hist.take(3).map { it.id } + (if (ytSignedIn(ctx)) ytLiked(ctx).take(2).mapNotNull { it.ytId } else emptyList())).distinct()
+        if (seeds.isEmpty()) return youtube(ctx, "top hits this week")
+        val played = hist.take(80).map { it.id }.toSet()
+        val lists = seeds.map { s -> com.umutk.pulse.extras.ytx.MusicRadio.after(s).filter { it.id !in played }.map { hitOf(it) } }
+        val out = LinkedHashMap<String, Hit>()
+        var i = 0
+        while (out.size < 40 && lists.any { i < it.size }) { lists.forEach { l -> l.getOrNull(i)?.let { h -> h.ytId?.let { id -> out.putIfAbsent(id, h) } } }; i++ }
+        return out.values.toList().ifEmpty { youtube(ctx, "top hits this week") }
+    }
+
+    /** The online songs played lately (newest first). */
+    fun history(ctx: Context): List<Hit> = OnlineHistory.all(ctx).map { Hit(it.title, it.artist, it.thumb, "yt", it.id) }
 
     /**
      * Plays [list] from [index] in the music player itself (its engine, its queue, its notification, whichever look is on): nothing else opens.
@@ -62,23 +123,18 @@ object OnlineMusic {
     suspend fun playHere(ctx: Context, list: List<Hit>, index: Int): Boolean {
         val h = list.getOrNull(index) ?: return false
         ytInit(ctx)
-        val first = withContext(Dispatchers.IO) { idOf(ctx, h)?.let { streamUrl(it) } } ?: return false
+        radioJob?.cancel()
+        val seedId = withContext(Dispatchers.IO) { idOf(ctx, h) } ?: return false
+        val first = withContext(Dispatchers.IO) { streamUrl(seedId) } ?: return false
         val engine = MusicPlayerEngine.get(ctx)
-        withContext(Dispatchers.Main) { engine.playQueue(listOf(track(h, first)), 0) }
+        withContext(Dispatchers.Main) { engine.playQueue(listOf(track(h, first, seedId)), 0) }
+        // the radio runs from the first song on (it fills the queue behind the rest of the list and goes on for as long as online songs play)
+        startRadio(ctx, engine, seedId)
         val rest = list.drop(index + 1).take(15)
         for (n in rest) {
-            val u = withContext(Dispatchers.IO) { idOf(ctx, n)?.let { streamUrl(it) } } ?: continue
-            withContext(Dispatchers.Main) { engine.addToQueue(track(n, u)) }
-        }
-        // the list runs out soon: the queue goes on with songs like the one that was picked (a mix of its artist, as YouTube Music's radio), none twice
-        if (rest.size < 8) {
-            val seen = (list.map { it.title.lowercase() }).toMutableSet()
-            val more = runCatching { youtube(ctx, "${h.artist} ${h.title} radio mix") + youtube(ctx, "${h.artist} songs") }.getOrDefault(emptyList())
-                .filter { seen.add(it.title.lowercase()) }.take(12)
-            for (n in more) {
-                val u = withContext(Dispatchers.IO) { idOf(ctx, n)?.let { streamUrl(it) } } ?: continue
-                withContext(Dispatchers.Main) { engine.addToQueue(track(n, u)) }
-            }
+            val id = withContext(Dispatchers.IO) { idOf(ctx, n) } ?: continue
+            val u = withContext(Dispatchers.IO) { streamUrl(id) } ?: continue
+            withContext(Dispatchers.Main) { engine.addToQueue(track(n, u, id)) }
         }
         return true
     }
