@@ -574,6 +574,11 @@ object KeyboardDictionary {
         "ız", "iz", "uz", "üz", "lık", "lik", "luk", "lük", "cı", "ci", "cu", "cü", "çı", "çi", "çu", "çü", "la", "le", "ca", "ce", "ça", "çe", "dır", "dir", "dur", "dür",
         "tır", "tir", "tur", "tür", "sın", "sin", "sun", "sün", "sı", "si", "su", "sü", "nı", "ni", "nu", "nü", "na", "ne", "nda", "nde", "ndan", "nden", "mız", "miz", "muz", "müz",
         "ları", "leri", "larım", "lerim", "ımız", "imiz", "dım", "dim", "tım", "tim", "dık", "dik", "tık", "tik", "sa", "se", "mı", "mi", "mu", "mü", "bil", "ebil", "abil", "madı", "medi",
+        // more of the ordinary endings: the person and the copula (-yım, -sınız, -ydı, -ymış, -ysa), the tenses, the participles and the links between clauses
+        "yım", "yim", "yum", "yüm", "yız", "yiz", "yuz", "yüz", "sınız", "siniz", "sunuz", "sünüz", "ydı", "ydi", "ydu", "ydü", "ymış", "ymiş", "ymuş", "ymüş", "ysa", "yse",
+        "ır", "ir", "ur", "ür", "ar", "er", "maz", "mez", "ınca", "ince", "unca", "ünce", "arak", "erek", "ıp", "ip", "up", "üp", "dığı", "diği", "duğu", "düğü", "tığı", "tiği",
+        "acağ", "eceğ", "ayım", "eyim", "alım", "elim", "daki", "deki", "taki", "teki", "mıştı", "mişti", "muştu", "müştü", "mıştır", "miştir", "ıyordu", "iyordu", "uyordu", "üyordu",
+        "dığım", "diğim", "ası", "esi", "ışı", "işi", "uşu", "üşü", "ıcı", "ici", "ucu", "ücü", "gın", "gin", "gun", "gün", "ğı", "ği", "ğu", "ğü",
         // the spoken forms of everyday writing: yapıyom, geliyon, gidiyoz, yapıcam, gitçem, görüşmicem
         "yom", "yon", "yoz", "ıyom", "iyom", "uyom", "üyom", "ıyon", "iyon", "uyon", "üyon", "ıyoz", "iyoz", "uyoz", "üyoz", "cam", "cem", "caz", "cez", "çam", "çem", "çaz", "çez",
         "ıcam", "icem", "ucam", "ücem", "ıcaz", "icez", "mıcam", "micem", "mıcaz", "micez", "mıyom", "miyom", "muyom", "müyom", "mıyon", "miyon",
