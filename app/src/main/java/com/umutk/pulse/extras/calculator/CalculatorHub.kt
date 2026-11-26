@@ -186,9 +186,15 @@ fun CalculatorHub(back: () -> Unit) {
             return@Column
         }
         if (showHistory) {
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-                if (history.isEmpty()) Text(tr("No calculations yet", "Henüz işlem yok"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
-                history.forEach { h -> Text(h, color = T.text, fontSize = 18.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().clickable { e = h.substringAfter("= "); done = true; showHistory = false }.padding(12.dp)) }
+            // the history floats over the calculator: a rounded sheet with the calculator still showing below it (a tap there closes it)
+            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
+                Column(Modifier.weight(.82f).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(T.panel).verticalScroll(rememberScrollState())) {
+                    if (history.isEmpty()) Text(tr("No calculations yet", "Henüz işlem yok"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
+                    history.forEach { h -> Text(h, color = T.text, fontSize = 18.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().clickable { e = h.substringAfter("= "); done = true; showHistory = false }.padding(12.dp)) }
+                }
+                Box(Modifier.weight(.18f).fillMaxWidth().clickable { showHistory = false }, contentAlignment = Alignment.CenterEnd) {
+                    Text(grouped(shown), color = T.text.copy(alpha = .6f), fontSize = 28.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 14.dp))
+                }
             }
             return@Column
         }
