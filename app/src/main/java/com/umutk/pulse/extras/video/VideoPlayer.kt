@@ -681,13 +681,23 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         Box(
             Modifier.fillMaxSize()
                 .pointerInput(locked, rev) {
+                    // several double taps in a row: the label counts the whole jump (+10s, +20s, +30s ...), not the last one only
+                    var burstAt = 0L; var burstSum = 0; var burstFwd = true
                     val onDt: (Offset) -> Unit = { o ->
                         if (!locked) {
                             val f = o.x / size.width
                             val seekOk = prefs.dtap == 1 || prefs.dtap == 3
                             when {
-                                f < .33f && seekOk -> { player.seekTo((player.currentPosition - step).coerceAtLeast(0)); say("back", "-${prefs.dtapSec}s") }
-                                f > .66f && seekOk -> { player.seekTo(player.currentPosition + step); say("play", "+${prefs.dtapSec}s") }
+                                f < .33f && seekOk -> {
+                                    player.seekTo((player.currentPosition - step).coerceAtLeast(0))
+                                    val now = android.os.SystemClock.uptimeMillis(); burstSum = if (now - burstAt < 1200 && !burstFwd) burstSum + prefs.dtapSec else prefs.dtapSec; burstAt = now; burstFwd = false
+                                    say("back", "-${burstSum}s")
+                                }
+                                f > .66f && seekOk -> {
+                                    player.seekTo(player.currentPosition + step)
+                                    val now = android.os.SystemClock.uptimeMillis(); burstSum = if (now - burstAt < 1200 && burstFwd) burstSum + prefs.dtapSec else prefs.dtapSec; burstAt = now; burstFwd = true
+                                    say("play", "+${burstSum}s")
+                                }
                                 prefs.dtap >= 2 -> if (player.isPlaying) player.pause() else player.play()
                             }
                         }
