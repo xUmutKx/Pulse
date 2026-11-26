@@ -474,6 +474,15 @@ object KeyboardDictionary {
         return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l)) || l in abbrWords
     }
 
+    /** A word the keyboard learned from the person that no word list of the language holds (and no ending explains): it may be a slip that was kept, so the bar marks it. */
+    fun suspect(code: String, w: String): Boolean {
+        val l = w.trim('"').lowercase(Locale.ROOT)
+        if (l.length < 3 || (user[l] ?: 0) <= 0) return false
+        val lang = d(code)
+        if (lexes[lang]?.index?.containsKey(l) == true || l in abbrWords || l in properNouns || l in commonNames) return false
+        return !(lang == "tr" && trKnown(l))
+    }
+
     private fun score(code: String, w: String): Float {
         val lang = d(code)
         val lx = lexes[lang]
