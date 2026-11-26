@@ -69,3 +69,6 @@ The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from 
 
 ## Game Hub
 - **KMP Odd Scroll, CD Rack** by mejdi14 (https://github.com/mejdi14/KMPOddScroll), GPL-3.0. The CD shelf look of Game Hub (`app/src/main/java/com/umutk/pulse/extras/gamehub/cdshelf`) is that composable, moved into Pulse (the Kotlin Multiplatform expect/actual of its shader made one Android file). Its shaders are after Ann Nguyen's WebGL jewel case, as its own notes say. Game pictures on the cases are the games' own covers; none of the demo's disc labels or manuals is included.
+
+## Flow (YouTube Music radio)
+The steps of the music radio in `extras/ytx/MusicRadio.kt` (the automix playlist `RDAMVM<id>`, then the playlist the answer names, then the song alone) follow what Flow's `Media3MusicService.startRadio` does. Flow: https://github.com/Flow-Tube/Flow, GPL-3.0, read on 26 November 2026. The code is written for Pulse; the idea and the order of the steps are Flow's.
