@@ -206,11 +206,28 @@ class VideoPlaybackService : MediaService() {
         if (key == thumbKey) return
         thumbKey = key; thumb = null
         Thread {
-            val bmp = runCatching {
-                val uri = android.net.Uri.parse(key)
-                if (android.os.Build.VERSION.SDK_INT >= 29) contentResolver.loadThumbnail(uri, android.util.Size(512, 512), null)
-                else android.media.MediaMetadataRetriever().let { r -> try { r.setDataSource(this, uri); r.getFrameAtTime(1_000_000) } finally { r.release() } }
+            // the picture of the video, by the ways in turn: the artwork the player knows, the system's own thumbnail, a frame of the file (a path or a link as well as a content address)
+            val uri = if (key.startsWith("/")) android.net.Uri.fromFile(java.io.File(key)) else android.net.Uri.parse(key)
+            fun art(): android.graphics.Bitmap? = runCatching {
+                val md = bound?.currentMediaItem?.mediaMetadata ?: return@runCatching null
+                md.artworkData?.let { android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size) }
+                    ?: md.artworkUri?.let { u -> if (u.scheme == "http" || u.scheme == "https") java.net.URL(u.toString()).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } else contentResolver.openInputStream(u)?.use { android.graphics.BitmapFactory.decodeStream(it) } }
             }.getOrNull()
+            fun system(): android.graphics.Bitmap? = runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= 29 && uri.scheme == "content") contentResolver.loadThumbnail(uri, android.util.Size(1024, 1024), null) else null
+            }.getOrNull()
+            fun frame(): android.graphics.Bitmap? = runCatching {
+                android.media.MediaMetadataRetriever().let { r ->
+                    try {
+                        if (uri.scheme == "http" || uri.scheme == "https") r.setDataSource(uri.toString(), HashMap()) else r.setDataSource(this, uri)
+                        // a frame a tenth into the video (the first second is often black), at most 1024 px
+                        val dur = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+                        val f = r.getFrameAtTime((dur * 100).coerceAtLeast(1_000_000L), android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: r.getFrameAtTime(1_000_000)
+                        f?.let { b -> val m = maxOf(b.width, b.height); if (m > 1024) android.graphics.Bitmap.createScaledBitmap(b, b.width * 1024 / m, b.height * 1024 / m, true) else b }
+                    } finally { r.release() }
+                }
+            }.getOrNull()
+            val bmp = art() ?: system() ?: frame()
             if (bmp != null && key == thumbKey) { thumb = bmp; android.os.Handler(Looper.getMainLooper()).post { refreshNotification() } }
         }.start()
     }
@@ -218,7 +235,10 @@ class VideoPlaybackService : MediaService() {
     override fun notification(): Notification {
         val p = com.umutk.pulse.extras.video.VideoSessionService.player
         val item = p?.currentMediaItem
-        val name = item?.mediaMetadata?.title?.toString() ?: p?.mediaMetadata?.title?.toString() ?: title
+        // the title the player knows, else the clean name of the file (the notification said only "Playing video")
+        val name = (item?.mediaMetadata?.title?.toString() ?: p?.mediaMetadata?.title?.toString())?.takeIf { it.isNotBlank() }
+            ?: item?.mediaId?.substringBefore('?')?.substringAfterLast('/')?.takeIf { it.isNotBlank() }?.let { runCatching { com.umutk.pulse.extras.video.smartName(android.net.Uri.decode(it)) }.getOrDefault(it) }
+            ?: title
         item?.mediaId?.takeIf { it.isNotBlank() }?.let { loadThumb(it) }
         val open = PendingIntent.getActivity(this, 0, openIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         fun act(code: Int, action: String) = PendingIntent.getService(this, code, Intent(this, VideoPlaybackService::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
