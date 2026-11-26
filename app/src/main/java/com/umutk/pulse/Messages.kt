@@ -59,8 +59,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.layout.matchParentSize
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -642,7 +642,7 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<Strin
     Row(Modifier.fillMaxWidth().graphicsLayer { translationX = off.value }.background(if (selected) T.accent.copy(alpha = .18f) else T.bg)
         .pointerInput(th.id) {
             val need = size.width * .55f
-            androidx.compose.foundation.gestures.detectHorizontalDragGestures(onDragEnd = {
+            detectHorizontalDragGestures(onDragEnd = {
                 val d = off.value
                 swipeScope.launch { off.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 300f)) }
                 if (d > need) onArchive() else if (d < -need) onBlock()
