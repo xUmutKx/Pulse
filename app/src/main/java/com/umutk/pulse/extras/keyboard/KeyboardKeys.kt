@@ -36,6 +36,7 @@ object ExtraKeys {
     val hold = listOf(
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito", "gif" to "GIF",
+        "notes" to "Notes", "calc" to "Calculator", "dict" to "Dictionary", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "glide" to "Swipe typing", "onehand" to "One-handed", "numbers" to "Numbers row",
     )
     const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,dict,notes"
     const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
