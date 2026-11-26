@@ -90,6 +90,7 @@
     <application
         android:name=".PulseApp"
         android:hardwareAccelerated="true"
+        android:largeHeap="true"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_pulse_logo"

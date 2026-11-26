@@ -581,11 +581,14 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     // rack (one bad file used to stop the reading and the page stayed on "Loading the covers" for good)
     val loadedState = remember(list) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList()) }
     val loaded = loadedState.value
+    // how many of the games have been looked at so far (the covers are read in the background): shown as a bar and a ratio, so a long read never looks like a hang
+    val looked = remember(list) { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(list.map { it.pkg }, ver) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
             loadedState.value = shown()
             val todo = list.filter { !CdArt.cache.containsKey(it.pkg) || it.pkg in CdArt.fallback }
+            looked.intValue = list.size - todo.size
             val gate = kotlinx.coroutines.sync.Semaphore(6)
             todo.chunked(12).forEach { chunk ->
                 kotlinx.coroutines.coroutineScope {
@@ -600,8 +603,10 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
                         }
                     }.forEach { it.await() }
                 }
+                looked.intValue = (looked.intValue + chunk.size).coerceAtMost(list.size)
                 loadedState.value = shown()
             }
+            looked.intValue = list.size
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
@@ -615,6 +620,10 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
                 inspectLabel = tr("Inspect", "İncele"), backLabel = tr("Back", "Geri"), openLabel = tr("Open", "Aç"), nextLabel = tr("Next", "Sonraki"), exitLabel = tr("Exit", "Çık"),
                 state = state,
             )
+            if (looked.intValue < list.size) Column(Modifier.align(Alignment.TopCenter).padding(top = 8.dp, start = 24.dp, end = 24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                androidx.compose.material3.LinearProgressIndicator(progress = { looked.intValue / list.size.coerceAtLeast(1).toFloat() }, modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)), color = Color(0xFFEDEDF2), trackColor = Color(0x33FFFFFF))
+                Text("${looked.intValue} / ${list.size}", color = pal.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+            }
             val cur = loaded.getOrNull(state.slotted.coerceIn(0, loaded.lastIndex))?.first
             if (cur != null) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("Play", "Oyna"), color = Color.Black, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onPlay(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
