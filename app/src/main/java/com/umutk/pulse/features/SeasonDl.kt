@@ -946,6 +946,18 @@ object SeasonDl {
                                 if (sn != null) {
                                     val list = eps.filter { it.season == sn }
                                     val chosen = list
+                                    // Watch now for a series too: the first episode of the season starts at once (the play arrow of each row does the same for that episode)
+                                    list.firstOrNull()?.let { first ->
+                                        PButton(tr("Watch now  ·  E%02d".format(first.episode), "Hemen izle  ·  E%02d".format(first.episode)), Modifier.fillMaxWidth()) {
+                                            if (busy) return@PButton
+                                            if (addon.isBlank()) { note = tr("Put the add-on link first", "Önce eklenti bağlantısını yaz"); return@PButton }
+                                            busy = true; note = tr("Finding the stream…", "Yayın aranıyor…")
+                                            scope.launch {
+                                                val all = runCatching { streams(addon, first) }.onFailure { e -> why = said(e) }.getOrNull().orEmpty()
+                                                try { note = playBest(ctx, all, limit()) { note = it } } catch (e: Throwable) { if (e is kotlinx.coroutines.CancellationException) throw e; note = e.message.orEmpty() } finally { busy = false }
+                                            }
+                                        }
+                                    }
                                     // the whole season (or the ticked episodes) in one press
                                     PButton(tr("Download season $sn  ·  ${chosen.size} of ${list.size} episodes", "Sezon $sn indir  ·  ${list.size} bölümden ${chosen.size}"), Modifier.fillMaxWidth()) { grab(chosen) }
                                     // the episodes: a tap opens the streams of that episode (who shares it, its size) to choose from, the arrow downloads the best one at once
