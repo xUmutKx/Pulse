@@ -408,6 +408,10 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 val damaged = code in 3000..3999 || code in 4000..4999 || (onPhone(player.currentMediaItemIndex) && code in 2000..2999 && code != androidx.media3.common.PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND)
                 if (damaged) jumpPast(true)
             }
+            override fun onPlaybackStateChanged(state: Int) {
+                // the last video played to its end: a sign that it is over (the picture used to stand still on the last frame with no word)
+                if (state == Player.STATE_ENDED && !player.hasNextMediaItem()) android.widget.Toast.makeText(ctx, tr("Finished", "Bitti"), android.widget.Toast.LENGTH_SHORT).show()
+            }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
                 // a video takes over: the music player must not keep playing underneath it
