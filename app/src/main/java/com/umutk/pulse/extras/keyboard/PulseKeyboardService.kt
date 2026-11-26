@@ -1433,7 +1433,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // English grammar on the word just ended: a lone "i" and its contractions, and the common contractions typed without the apostrophe
         if (lang.code == "en" && out == typed) EN_GRAMMAR[typed.lowercase(Locale.ENGLISH)]?.let { out = it }
         // an English first name or place typed in lower case is written with its capital (wendy -> Wendy, london -> London)
-        if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn)
+        if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn && typed.lowercase(Locale.ENGLISH) !in KeyboardDictionary.commonNames)
             out = typed.replaceFirstChar { it.titlecase(Locale.ENGLISH) }
         // a brand, an app or a creator: written its own way (starbucks -> Starbucks, mcdonalds -> McDonald's, youtube -> YouTube, a letter off too);
         // in Turkish an ending after it takes its apostrophe (starbucksta -> Starbucks'ta)

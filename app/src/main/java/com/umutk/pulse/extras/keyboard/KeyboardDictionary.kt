@@ -67,7 +67,11 @@ object KeyboardDictionary {
     val properNamesEn = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     /** Names that are also ordinary words (Güzel = beautiful, İpek = silk): never capitalised or given an apostrophe by the keyboard. */
-    val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek")
+    val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek",
+        // ordinary words that only start a sentence now and then: they never become "names" written with a capital
+        "bir", "iyi", "bu", "şu", "o", "ben", "sen", "biz", "siz", "ve", "ama", "fakat", "çok", "az", "evet", "hayır", "tamam", "ne", "neden", "nasıl", "hani", "belki",
+        "yeni", "eski", "büyük", "küçük", "hep", "her", "hiç", "şimdi", "sonra", "önce", "bugün", "yarın", "dün", "lütfen", "teşekkürler", "merhaba", "selam", "günaydın",
+        "the", "and", "but", "you", "yes", "no", "good", "new", "old", "now", "then", "this", "that", "what", "why", "how", "well", "ok", "okay", "please", "thanks", "hello", "hi")
 
     /** Brands, apps and creators written their own way (kbd/brands.txt): the plain key ("mcdonalds") -> the written form ("McDonald's"). */
     val brands = ConcurrentHashMap<String, String>()
