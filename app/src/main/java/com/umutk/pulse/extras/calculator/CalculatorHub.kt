@@ -237,8 +237,10 @@ private fun RoundPad(rows: List<List<String>>, onLong: (String) -> Unit = {}, on
         val cols = rows[0].size
         // never taller than 60% of the room: the display above keeps the rest and the rows do not climb over it
         val side = minOf((maxWidth - gap * (cols - 1)) / cols, 84.dp, ((maxHeight - gap * (rows.size - 1)) / rows.size) * .6f)
+        // wider than tall (landscape): the keys stretch across the width as pills instead of small squares in the middle
+        val keyW = if (maxWidth > maxHeight) minOf((maxWidth - gap * (cols - 1)) / cols, 170.dp) else side
         Column(Modifier.align(Alignment.BottomCenter), verticalArrangement = Arrangement.spacedBy(gap)) {
-            rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(side), false, { onLong(k) }) { onKey(k) } } } }
+            rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(keyW, side), false, { onLong(k) }) { onKey(k) } } } }
         }
     }
 }
@@ -254,7 +256,7 @@ internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modif
             val n = rows.size
             val fit = if (constraints.hasBoundedHeight) (maxHeight - gap * (n - 1)) / n else 48.dp
             val rowH = minOf(fit, 58.dp).coerceAtLeast(30.dp)
-            Column(Modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
+            Column(Modifier.fillMaxWidth().widthIn(max = if (maxWidth > maxHeight) 900.dp else 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
                 rows.forEach { row ->
                     Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(gap)) {
                         row.forEach { k -> CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic, { onLong(k) }) { onKey(k) } }
