@@ -116,9 +116,9 @@ class LockService : AccessibilityService() {
         override fun onReceive(c: Context, i: Intent) {
             // Screen off relocks everything; the next window change of a locked app asks again.
             // Keyguard gone: look again at the app that was open (it was ignored while the keyguard showed).
-            if (i.action == Intent.ACTION_USER_PRESENT) { lastPolled = null; current?.let { onForeground(it) }; main.postDelayed({ recheck() }, 300); main.postDelayed({ recheck() }, 1200); return }
+            if (i.action == Intent.ACTION_USER_PRESENT) { wake(); lastPolled = null; current?.let { onForeground(it) }; main.postDelayed({ recheck() }, 300); main.postDelayed({ recheck() }, 1200); return }
             // Phone without a keyguard: waking shows the app at once, so a locked one is covered right away.
-            if (i.action == Intent.ACTION_SCREEN_ON) { if (!kgUp()) current?.let { if (it in AppLock.locked) onForeground(it) }; return }
+            if (i.action == Intent.ACTION_SCREEN_ON) { wake(); if (!kgUp()) current?.let { if (it in AppLock.locked) onForeground(it) }; return }
             // Screen off relocks everything. Nothing is shown now: the keyguard comes up and our window must not sit on it. Covered again on unlock / screen on.
             val c = current
             AppLock.relockAll()
@@ -153,12 +153,23 @@ class LockService : AccessibilityService() {
     private val transient = setOf("com.google.android.permissioncontroller", "com.android.permissioncontroller", "android")
     private val poll = object : Runnable {
         private var missing = false
-        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); if (shown && !authing && kgUp()) hideCard(); if (tick % 3 == 0) scanWindows(); missing = prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, if (missing) 40L else 200L) }
+        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); if (shown && !authing && kgUp()) hideCard(); if (tick % 3 == 0) scanWindows(); missing = prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, if (missing) 40L else pollDelay(200L)) }
     }
     // the usage-stats query is a binder call: it runs on its own thread so it never holds up an accessibility event on the main thread
     private val bg by lazy { Handler(android.os.HandlerThread("applock-poll").apply { start() }.looper) }
     private val bgPoll = object : Runnable {
-        override fun run() { runCatching { pollOnce(); closedCheck() }.onFailure { Log.e("AppLock", "poll failed", it) }; bg.postDelayed(this, 120) }
+        override fun run() { runCatching { pollOnce(); closedCheck() }.onFailure { Log.e("AppLock", "poll failed", it) }; bg.postDelayed(this, pollDelay(120L)) }
+    }
+
+    /**
+     * The polling loops wake the processor every 120 and 200 ms for as long as the service lives, which is 4% of the processor at rest in the performance log. With no locked app or with the
+     * screen off there is nothing to look at, so they sleep a second and a half; the screen coming on wakes them at once ([wake]).
+     */
+    private fun pollDelay(busy: Long): Long = if (AppLock.locked.isEmpty() || !getSystemService(PowerManager::class.java).isInteractive) 1500L else busy
+
+    private fun wake() {
+        main.removeCallbacks(poll); main.post(poll)
+        bg.removeCallbacks(bgPoll); bg.post(bgPoll)
     }
 
     private val ready = HashMap<String, FrameLayout>()   // lock screens built ahead, one per locked app
