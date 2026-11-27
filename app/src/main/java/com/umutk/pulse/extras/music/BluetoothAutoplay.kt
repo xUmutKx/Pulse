@@ -49,11 +49,14 @@ class BluetoothAutoplayReceiver : BroadcastReceiver() {
         val now = System.currentTimeMillis()
         if (now - sp.getLong("bt_last_start", 0L) < 60_000L) return
         sp.edit().putLong("bt_last_start", now).apply()
-        // the playback service is started first; the media volume at zero: nothing starts (it would play to nobody, or burst out when the volume is raised)
-        runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, Intent(ctx, MusicPlaybackService::class.java)) }
+        // the media volume at zero: nothing starts (it would play to nobody, or burst out when the volume is raised)
         if (am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) return
         val engine = MusicPlayerEngine.get(ctx)
-        Playlists.restore(ctx, engine) // empty queue: nothing to play, the restore only fills it when a last queue exists
+        Playlists.restore(ctx, engine) // only fills the queue when a last queue exists
+        // nothing to play: the service is not started at all (a foreground service that never gets its card is stopped by the system with a crash:
+        // "startForegroundService() did not then call startForeground()")
+        if (engine.player.mediaItemCount == 0) return
+        runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, Intent(ctx, MusicPlaybackService::class.java)) }
         engine.play()
     }
 

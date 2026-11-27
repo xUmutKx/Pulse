@@ -165,7 +165,11 @@ class MusicPlaybackService : MediaSessionService() {
             "pulse.winamp.next" -> engine.next()
             "pulse.winamp.play" -> if (engine.player.isPlaying) engine.pause() else engine.play()
         }
-        return super.onStartCommand(intent, flags, startId)
+        val r = super.onStartCommand(intent, flags, startId)
+        // started as a foreground service but nothing plays (no card is posted, so the system's "startForeground within seconds" is never met and it ends the app with a crash):
+        // the service stops itself in time
+        if (intent?.action == null) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!everPlayed && !engine.player.playWhenReady) stopSelf() }, 3500L)
+        return r
     }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)

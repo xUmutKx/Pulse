@@ -53,6 +53,7 @@ class FilesActivity : MainActivity() {
 
     // opaque theme (manifest) by default: a translucent launch window can open "behind" on some launchers; only the glass looks switch to the see-through one
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        alive++
         FilesLook.load(this)
         if (FilesLook.theme == "win11") setTheme(R.style.Theme_Pulse_Files_Glass)
         super.onCreate(savedInstanceState)
@@ -93,5 +94,13 @@ class FilesActivity : MainActivity() {
     // the look is process-wide: give Pulse its own back as soon as Files is not on screen
     private fun restorePulse() { Cfg.load(this); Opt.load(this) }
     override fun onStop() { super.onStop(); restorePulse() }
-    override fun onDestroy() { super.onDestroy(); restorePulse() }
+    override fun onDestroy() {
+        super.onDestroy(); restorePulse()
+        // Files has a process of its own (:files) and nothing else runs in it: once the last window is closed the process is ended (it stayed in the background, with its
+        // memory and a little work, after Files was closed). A new window opened within a moment keeps it.
+        alive--
+        if (isFinishing && !isChangingConfigurations) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (alive <= 0) android.os.Process.killProcess(android.os.Process.myPid()) }, 1500L)
+    }
+
+    companion object { @Volatile private var alive = 0 }
 }
