@@ -112,7 +112,7 @@ internal val THEMES = listOf("shelf", "shelfc", "amoled", "material", "glass", "
 internal fun themeName(k: String): String = when (k) {
     "material" -> "Material"
     "glass" -> tr("Material, transparent", "Material, şeffaf")
-    "shelf" -> tr("Boxshelf (default)", "Boxshelf (varsayılan)")
+    "shelf" -> tr("Shelf, dark (default)", "Raf, koyu (varsayılan)")
     "shelfc" -> tr("Shelf, light", "Raf, hafif")
     "win95" -> "Windows 95"
     "winxp" -> "Windows XP"
@@ -767,8 +767,9 @@ internal fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed
 
 /** A row with a label and a switch. */
 @Composable
-internal fun SettingRow(pal: Pal, label: String, on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SettingRow(pal: Pal, label: String, on: Boolean, enabled: Boolean, icon: String? = null, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) { com.umutk.pulse.PIcon(icon, pal.sub, 20.dp); Spacer(Modifier.width(14.dp)) }
         Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
         PSwitch(on, onChange, enabled = enabled)
     }
@@ -1107,7 +1108,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
                     } } else if (ghLook == "cdrack") CdShelf(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
-                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g }, query = libQuery,
+                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g }, query = libQuery, onSelect = { selectOpen = true },
                     ) else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
@@ -1169,70 +1170,42 @@ fun GameHubHub(onBack: () -> Unit) {
                     ) { FluentIcon("add", pal.bg, 24.dp) }
                 }
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+                    // every setting is a row with its icon, its name and its value; a list of choices opens as a dialog of radio rows (no rows of pills)
                     SectionTitle(pal, tr("Look", "Görünüm"))
-                    ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
-                    // the look of the cases on Boxshelf's shelf: one of its own case styles
+                    ChoiceRow(pal, "view", tr("Shelf", "Raf"), listOf("cdrack" to tr("CD shelf (default)", "CD rafı (varsayılan)"), "boxshelf" to tr("Boxshelf 3D", "Boxshelf 3B"), "classic" to tr("Classic grid", "Klasik ızgara")), ghLook) { k ->
+                        ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump()
+                    }
+                    IconRow(pal, "palette", tr("Colours", "Renkler"), themeName(theme)) { themeOpen = true }
+                    ChoiceRow(pal, "archive", tr("Case style", "Kutu stili"), listOf("pc" to "PC / Steam", "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch"), caseStyle) { k ->
+                        caseStyle = k; prefs(ctx).edit().putString("caseStyle", k).apply()
+                    }
                     // SteamGridDB, the cover source Boxshelf uses besides Steam: the person's own free key (steamgriddb.com > Preferences > API)
                     var sgKey by remember { mutableStateOf(sgdbKey(ctx)) }
-                    Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.umutk.pulse.PIcon("download", pal.sub, 20.dp)
+                        Text(tr("SteamGridDB key (more covers)", "SteamGridDB anahtarı (daha çok kapak)"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(start = 14.dp))
+                    }
                     // the key is typed in memory and saved when the typing is done (or the page is left): no write on every key
                     DisposableEffect(Unit) { onDispose { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() } }
                     PField(sgKey, { sgKey = it }, "API key", Modifier.fillMaxWidth().padding(bottom = 8.dp), onDone = { prefs(ctx).edit().putString("sgdbKey", sgKey.trim()).apply() })
-                    Text(tr("Look", "Görünüm"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("boxshelf" to tr("Boxshelf 3D", "Boxshelf 3B"), "cdrack" to tr("CD shelf (default)", "CD rafı (varsayılan)"), "classic" to tr("Classic grid", "Klasik ızgara")).forEach { (k, label) ->
-                            Chip(pal, if (ghLook == k) "● $label" else label) { ghLook = k; prefs(ctx).edit().putString("ghLook", k).apply(); ShelfSync.bump() }
-                        }
-                    }
-                    Text(tr("Case style", "Kutu stili"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("pc" to tr("PC / Steam", "PC / Steam"), "custom" to tr("Custom", "Özel"), "ps5" to "PS5", "ps4" to "PS4", "x360" to "Xbox 360", "sw" to "Switch").forEach { (k, label) ->
-                            Chip(pal, if (caseStyle == k) "● $label" else label) { caseStyle = k; prefs(ctx).edit().putString("caseStyle", k).apply() }
-                        }
-                    }
-                    SectionTitle(pal, tr("Setup", "Kurulum"))
-                    Chip(pal, tr("Open the setup", "Kurulumu aç")) { setupOpen = true }
+                    IconRow(pal, "tune", tr("Open the setup", "Kurulumu aç"), null) { setupOpen = true }
                     SectionTitle(pal, tr("Library", "Kütüphane"))
-                    Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")).forEach { (k, label) ->
-                            Chip(pal, if (tileSize == k) "● $label" else label) { tileSize = k; prefs(ctx).edit().putInt("grid", k).apply() }
-                        }
-                    }
-                    Text(tr("View", "Görünüm biçimi"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to tr("Tiles", "Kartlar"), 1 to tr("Banners", "Bannerlar")).forEach { (k, label) ->
-                            Chip(pal, if (viewMode == k) "● $label" else label) { viewMode = k; prefs(ctx).edit().putInt("view", k).apply() }
-                        }
-                    }
-                    SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true) { on ->
+                    // the games kept on the shelf: the phone's games, the hidden ones, every other app
+                    IconRow(pal, "filetypes", tr("Select games", "Oyunları seç"), tr("${hidden.size} hidden", "${hidden.size} gizli")) { selectOpen = true }
+                    ChoiceRow(pal, "height", tr("Tile size", "Kart boyutu"), listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")), tileSize) { k -> tileSize = k; prefs(ctx).edit().putInt("grid", k).apply() }
+                    ChoiceRow(pal, "table", tr("View", "Görünüm biçimi"), listOf(0 to tr("Tiles", "Kartlar"), 1 to tr("Banners", "Bannerlar")), viewMode) { k -> viewMode = k; prefs(ctx).edit().putInt("view", k).apply() }
+                    SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true, icon = "block") { on ->
                         showHidden = on; prefs(ctx).edit().putBoolean("showHidden", on).apply()
                     }
                     // the shelf drawn natively by the Rust renderer (wgpu) instead of the web page; the web one stays the default until this is chosen
-                    if (NativeShelf.AVAILABLE) SettingRow(pal, tr("Native shelf (wgpu, preview)", "Yerel raf (wgpu, önizleme)"), nativeShelf, true) { on ->
+                    if (NativeShelf.AVAILABLE) SettingRow(pal, tr("Native shelf (wgpu, preview)", "Yerel raf (wgpu, önizleme)"), nativeShelf, true, icon = "speed") { on ->
                         nativeShelf = on; prefs(ctx).edit().putBoolean("nativeShelf", on).apply(); ShelfSync.bump()
                     }
-                    // the games kept on the shelf: the phone's games, the hidden ones, every other app
-                    Row(Modifier.fillMaxWidth().clickable { selectOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Select games", "Oyunları seç"), color = pal.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        // what the number is: the apps hidden from the phone (the tick of the list hides an app with root or Shizuku)
-                        Text(tr("${hidden.size} hidden", "${hidden.size} gizli"), color = pal.sub, fontSize = 13.sp)
-                    }
-                    SectionTitle(pal, tr("Icons", "Simgeler"))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to tr("Cover, else APK icon", "Kapak, yoksa APK simgesi"), 1 to tr("APK icon only", "Yalnız APK simgesi")).forEach { (k, label) ->
-                            Chip(pal, if (prefs(ctx).getInt("iconMode", 0) == k) "● $label" else label) { prefs(ctx).edit().putInt("iconMode", k).apply(); page = page }
-                        }
-                    }
-                    SectionTitle(pal, tr("Start page", "Açılış sayfası"))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to tr("Home", "Ana sayfa"), 1 to tr("Library", "Kütüphane")).forEach { (k, label) ->
-                            Chip(pal, if (prefs(ctx).getInt("start", 1) == k) "● $label" else label) { prefs(ctx).edit().putInt("start", k).apply(); page = page }
-                        }
-                    }
+                    ChoiceRow(pal, "photos", tr("Icons", "Simgeler"), listOf(0 to tr("Cover, else APK icon", "Kapak, yoksa APK simgesi"), 1 to tr("APK icon only", "Yalnız APK simgesi")), prefs(ctx).getInt("iconMode", 0)) { k -> prefs(ctx).edit().putInt("iconMode", k).apply(); page = page }
+                    ChoiceRow(pal, "home", tr("Start page", "Açılış sayfası"), listOf(0 to tr("Home", "Ana sayfa"), 1 to tr("Library", "Kütüphane")), prefs(ctx).getInt("start", 1)) { k -> prefs(ctx).edit().putInt("start", k).apply(); page = page }
                     SectionTitle(pal, tr("In-game menu", "Oyun içi menü"))
                     var menuOn by remember { mutableStateOf(GameMenuService.enabled(ctx)) }
-                    SettingRow(pal, tr("Show the menu over a game", "Oyunun üstünde menüyü göster"), menuOn, true) { on ->
+                    SettingRow(pal, tr("Show the menu over a game", "Oyunun üstünde menüyü göster"), menuOn, true, icon = "more") { on ->
                         if (on && !Compat.canOverlay(ctx)) {
                             runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                         } else if (on && !usageAllowed(ctx)) {
@@ -1256,7 +1229,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     }
                     SectionTitle(pal, tr("Covers", "Kapaklar"))
                     var playCov by remember { mutableStateOf(prefs(ctx).getBoolean("playCovers", false)) }
-                    SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true) { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
+                    SettingRow(pal, tr("Fetch covers from Google Play", "Kapakları Google Play'den getir"), playCov, true, icon = "download") { on -> playCov = on; prefs(ctx).edit().putBoolean("playCovers", on).apply() }
                     Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
                     // the box style: the Steam cover (the default), or the game's picture in a console's case (the frame and its logo come with it)
                     var boxStyle by remember { mutableStateOf(CaseCover.style(ctx)) }
@@ -2036,4 +2009,39 @@ internal fun hiddenAppsAll(c: Context): List<GameRow> {
         }
     }
     return out.filterKeys { it !in NEVER_HIDE }.map { (k, v) -> GameRow(k, v) }.sortedBy { it.name.lowercase() }
+}
+
+
+/** A setting row: its icon, its name and (when there is one) its value, full width; a tap opens it. */
+@Composable
+private fun IconRow(pal: Pal, icon: String, label: String, value: String?, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        com.umutk.pulse.PIcon(icon, pal.sub, 20.dp)
+        Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 14.dp))
+        if (value != null) Text(value, color = pal.sub, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+        Spacer(Modifier.width(6.dp))
+        FluentIcon("right", pal.sub, 14.dp)
+    }
+}
+
+/** A setting with a few choices: a row with the choice made, and a tap opens the choices as radio rows. */
+@Composable
+private fun <K> ChoiceRow(pal: Pal, icon: String, label: String, options: List<Pair<K, String>>, current: K, onPick: (K) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    IconRow(pal, icon, label, options.firstOrNull { it.first == current }?.second) { open = true }
+    if (open) com.umutk.pulse.WinAlert(
+        onDismissRequest = { open = false },
+        title = { Text(label) },
+        text = {
+            Column {
+                options.forEach { (k, name) ->
+                    Row(Modifier.fillMaxWidth().clickable { onPick(k); open = false }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.umutk.pulse.PRadio(k == current, { onPick(k); open = false })
+                        Text(name, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat"), onClick = { open = false }) },
+    )
 }

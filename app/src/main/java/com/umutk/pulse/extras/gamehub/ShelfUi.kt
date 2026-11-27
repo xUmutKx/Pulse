@@ -573,8 +573,18 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
  * turn it; the case in the slot has Play and a details button under it.
  */
 @Composable
-internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit, query: String = "") {
+internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit, query: String = "", onSelect: (() -> Unit)? = null) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    // "Add an HTML game", as in Boxshelf: a .html or a .zip is chosen, copied into Pulse and put on the shelf
+    val pickHtml = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
+        if (uri != null) Thread {
+            val ok = HtmlGames.import(ctx, uri)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(ctx, if (ok) tr("Game added", "Oyun eklendi") else tr("This file is not a web game (an .html, or a .zip with an index.html)", "Bu dosya bir web oyunu değil (.html ya da içinde index.html olan .zip)"), android.widget.Toast.LENGTH_LONG).show()
+                if (ok) ShelfSync.bump()
+            }
+        }.start()
+    }
     // while the covers are being looked for in the background the pictures are not read again at each one found (that rebuilt the whole rack each time); they are read once when the search ends
     val searching by CoverJob.running.collectAsState()
     val ver = if (searching) -1 else GameArt.version.intValue
@@ -668,6 +678,11 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
             if (looked.intValue < list.size) Column(Modifier.align(Alignment.TopCenter).padding(top = 8.dp, start = 24.dp, end = 24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 androidx.compose.material3.LinearProgressIndicator(progress = { looked.intValue / list.size.coerceAtLeast(1).toFloat() }, modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)), color = Color(0xFFEDEDF2), trackColor = Color(0x33FFFFFF))
                 Text("${looked.intValue} / ${list.size}", color = pal.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+            }
+            // the buttons Boxshelf has on its shelf: the list of the games kept on the shelf, and an HTML game added from a file
+            if (!state.inspecting) Row(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (onSelect != null) Box(Modifier.size(42.dp).clip(RoundedCornerShape(21.dp)).background(Color(0x22FFFFFF)).clickable { onSelect() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("filetypes", Color.White, 20.dp) }
+                Box(Modifier.size(42.dp).clip(RoundedCornerShape(21.dp)).background(Color(0x22FFFFFF)).clickable { pickHtml.launch(arrayOf("text/html", "application/zip", "application/x-zip-compressed", "*/*")) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("language", Color.White, 20.dp) }
             }
             val cur = loaded.getOrNull(com.umutk.pulse.extras.gamehub.cdshelf.wrapCase(state.slotted, loaded.size))?.first
             if (cur != null) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
