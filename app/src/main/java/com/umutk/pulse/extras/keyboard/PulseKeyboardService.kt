@@ -1031,7 +1031,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the touch area is asked again at once: a hidden keyboard takes no touches
         runCatching { window.window?.decorView?.requestLayout() }
     }
+    /** With the setting on, the keyboard's window is secure: a screen capture (and so Circle to Search, started by a long press on the home bar) cannot read the screen while the keyboard is up. */
+    private fun applyCtsBlock() {
+        runCatching {
+            val w = window.window ?: return
+            if (KeyboardPrefs.blockCts) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     override fun onWindowShown() {
+        applyCtsBlock()
         startShotWatch()
         kbOpenAt = SystemClock.uptimeMillis()
         // a picture still waiting is looked at again from the moment the keyboard is up
