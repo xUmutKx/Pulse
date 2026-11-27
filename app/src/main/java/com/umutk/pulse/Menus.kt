@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.AutoAwesome

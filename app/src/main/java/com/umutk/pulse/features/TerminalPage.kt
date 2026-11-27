@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.text.font.FontFamily
@@ -206,7 +207,7 @@ fun TerminalPage(windows: Boolean = false) {
             sugg.forEach { sg ->
                 Text((if (sg in favs) "\u2605 " else "") + sg, color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1,
                     modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0x33FFFFFF))
-                        .pointerInput(sg) { androidx.compose.foundation.gestures.detectTapGestures(onLongPress = { if (sg in favs) { favs.remove(sg); saveFavs() } }, onTap = { cmd = sg }) }
+                        .pointerInput(sg) { detectTapGestures(onLongPress = { if (sg in favs) { favs.remove(sg); saveFavs() } }, onTap = { cmd = sg }) }
                         .padding(horizontal = 10.dp, vertical = 5.dp))
             }
         }
