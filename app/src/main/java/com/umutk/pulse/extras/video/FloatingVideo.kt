@@ -91,7 +91,7 @@ object FloatingVideo {
     fun owns(p: Player): Boolean = held === p
 
     /** Opens the mini window for [p]. False when it is open already or the "display over other apps" permission is missing (the settings open then). */
-    fun show(ctx: Context, p: Player, size: VideoSize?, cues: List<SubCue>? = null, cueDelay: Long = 0L): Boolean {
+    internal fun show(ctx: Context, p: Player, size: VideoSize?, cues: List<SubCue>? = null, cueDelay: Long = 0L): Boolean {
         val app = ctx.applicationContext
         if (view != null) return false
         if (!com.umutk.pulse.Compat.canOverlay(app)) {

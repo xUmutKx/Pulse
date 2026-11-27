@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.playTileArt
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.shadow
 import android.accessibilityservice.AccessibilityService
@@ -315,7 +316,7 @@ class AutoClickTile : TileService() {
     override fun onClick() {
         // with the service off the accessibility settings open at once (an activity is started from the tap itself)
         if (AutoClickService.instance == null) { act(); return }
-        com.umutk.pulse.playTileArt("pointer") { act() }
+        playTileArt("pointer") { act() }
     }
 
     private fun act() {

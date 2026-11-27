@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.playTileArt
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
@@ -20,7 +21,7 @@ class FloatingTimerTile : TileService() {
     override fun onClick() {
         // the permission page opens at once (an activity is started from the tap itself)
         if (!FloatingTimer.showing && !com.umutk.pulse.Compat.canOverlay(this)) { act(); return }
-        com.umutk.pulse.playTileArt("hourglass") { act() }
+        playTileArt("hourglass") { act() }
     }
 
     private fun act() {
