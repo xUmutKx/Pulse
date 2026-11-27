@@ -294,7 +294,7 @@ fun StartupPage() {
         if (accessMissing()) AccessNeededCard(tr("Startup apps", "Başlangıç uygulamaları"), tr("The list is complete. Switching apps on and off needs root or Shizuku.", "Liste eksiksiz. Uygulamaları açıp kapatmak için root veya Shizuku gerekir."), Modifier.padding(bottom = 6.dp))
         else Text(tr("Apps that start themselves when the phone boots. Switch one off and it stays quiet at boot.", "Telefon açılırken kendiliğinden başlayan uygulamalar. Birini kapatırsan açılışta sessiz kalır."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
         LazyColumn(Modifier.fillMaxSize()) {
-            items(list, key = { it.pkg + it.receiver }) { b ->
+            items(list.distinctBy { it.pkg + it.receiver }, key = { it.pkg + it.receiver }) { b ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(b.pkg, 30.dp); Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -390,7 +390,8 @@ fun ServicesPage() {
         if (tab == "run" && !can) AccessNeededCard(tr("Running services", "Çalışan hizmetler"), tr("Showing this app's own running services only. Other apps' services need root or Shizuku. The other two tabs show everything.", "Yalnızca bu uygulamanın çalışan hizmetleri gösteriliyor. Diğer uygulamaların hizmetleri için root veya Shizuku gerekir. Diğer iki sekme her şeyi gösterir."), Modifier.padding(bottom = 6.dp))
         if (list.isEmpty()) Center(tr("Nothing here yet", "Burada henüz bir şey yok"))
         else LazyColumn(Modifier.fillMaxSize()) {
-            items(list.take(400), key = { it.pkg + "/" + it.cls }) { v ->
+            // the same service can be listed more than once (one per process): one row each, or the list crashes on a repeated key
+            items(list.distinctBy { it.pkg + "/" + it.cls }.take(400), key = { it.pkg + "/" + it.cls }) { v ->
                 val live = (v.pkg + "/" + v.cls) in runKeys || (v.cls.startsWith(".") && (v.pkg + "/" + v.pkg + v.cls) in runKeys) || tab == "run"
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(v.pkg, 28.dp); Spacer(Modifier.width(10.dp))

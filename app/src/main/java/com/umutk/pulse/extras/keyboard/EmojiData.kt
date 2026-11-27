@@ -68,28 +68,30 @@ object EmojiData {
 
     /** Chemistry words (Turkish and English) -> the sign or formula written for them: the benzene ring, formulas, the elements' symbols. Offered on the bar like an emoji. */
     private val chem: Map<String, String> = buildMap {
-        fun put(sym: String, vararg names: String) { names.forEach { put(it, sym) } }
-        put("\u232C", "benzen", "benzene", "benzol")
-        put("\u2B21", "heksagon", "hexagon", "altıgen")
-        put("H\u2082O", "su", "water", "h2o")
-        put("CO\u2082", "karbondioksit", "carbondioxide", "karbon dioksit", "carbon dioxide", "co2")
-        put("O\u2082", "oksijen", "oxygen")
-        put("H\u2082", "hidrojen", "hydrogen")
-        put("N\u2082", "azot", "nitrogen")
-        put("NaCl", "tuz", "salt", "sodyum klorür")
-        put("CH\u2084", "metan", "methane")
-        put("C\u2082H\u2085OH", "etanol", "ethanol", "alkol")
-        put("C\u2086H\u2081\u2082O\u2086", "glikoz", "glucose", "glukoz")
-        put("NH\u2083", "amonyak", "ammonia")
-        put("H\u2082SO\u2084", "sülfürik asit", "sulfuric acid", "sülfürik")
-        put("HCl", "hidroklorik asit", "hydrochloric acid", "tuz ruhu")
-        put("NaOH", "sodyum hidroksit", "sodium hydroxide", "kostik")
-        put("O\u2083", "ozon", "ozone")
-        put("\u2697", "kimya", "chemistry", "simya", "alchemy")
-        put("Fe", "demir", "iron"); put("Au", "altın", "gold"); put("Ag", "gümüş", "silver"); put("Cu", "bakır", "copper")
-        put("Na", "sodyum", "sodium"); put("K", "potasyum", "potassium"); put("Ca", "kalsiyum", "calcium"); put("Mg", "magnezyum", "magnesium")
-        put("Hg", "cıva", "mercury"); put("Pb", "kurşun"); put("Zn", "çinko", "zinc"); put("Al", "alüminyum", "aluminium", "aluminum")
-        put("Cl", "klor", "chlorine"); put("He", "helyum", "helium"); put("Si", "silisyum", "silicon"); put("U", "uranyum", "uranium")
+        // (a local function named put called itself: the map's own put is reached through the receiver)
+        val m = this
+        fun add(sym: String, vararg names: String) { names.forEach { m.put(it, sym) } }
+        add("\u232C", "benzen", "benzene", "benzol")
+        add("\u2B21", "heksagon", "hexagon", "altıgen")
+        add("H\u2082O", "su", "water", "h2o")
+        add("CO\u2082", "karbondioksit", "carbondioxide", "karbon dioksit", "carbon dioxide", "co2")
+        add("O\u2082", "oksijen", "oxygen")
+        add("H\u2082", "hidrojen", "hydrogen")
+        add("N\u2082", "azot", "nitrogen")
+        add("NaCl", "tuz", "salt", "sodyum klorür")
+        add("CH\u2084", "metan", "methane")
+        add("C\u2082H\u2085OH", "etanol", "ethanol", "alkol")
+        add("C\u2086H\u2081\u2082O\u2086", "glikoz", "glucose", "glukoz")
+        add("NH\u2083", "amonyak", "ammonia")
+        add("H\u2082SO\u2084", "sülfürik asit", "sulfuric acid", "sülfürik")
+        add("HCl", "hidroklorik asit", "hydrochloric acid", "tuz ruhu")
+        add("NaOH", "sodyum hidroksit", "sodium hydroxide", "kostik")
+        add("O\u2083", "ozon", "ozone")
+        add("\u2697", "kimya", "chemistry", "simya", "alchemy")
+        add("Fe", "demir", "iron"); add("Au", "altın", "gold"); add("Ag", "gümüş", "silver"); add("Cu", "bakır", "copper")
+        add("Na", "sodyum", "sodium"); add("K", "potasyum", "potassium"); add("Ca", "kalsiyum", "calcium"); add("Mg", "magnezyum", "magnesium")
+        add("Hg", "cıva", "mercury"); add("Pb", "kurşun"); add("Zn", "çinko", "zinc"); add("Al", "alüminyum", "aluminium", "aluminum")
+        add("Cl", "klor", "chlorine"); add("He", "helyum", "helium"); add("Si", "silisyum", "silicon"); add("U", "uranyum", "uranium")
     }
 
     /** The items whose words contain every word of [query]. */

@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -110,7 +113,8 @@ fun UpdateDialog(r: Updates.Release, onDone: () -> Unit) {
         onDismissRequest = { close() },
         title = { Text(tr("New update available", "Yeni güncelleme var"), color = w.text) },
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // the notes can be long: the window scrolls (it did not, and the buttons went off the screen)
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(rememberLauncherLogo(), null, Modifier.size(64.dp))
                 Text("Pulse ${r.version}", color = w.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
                 r.notes.forEach { Text("•  $it", color = w.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
