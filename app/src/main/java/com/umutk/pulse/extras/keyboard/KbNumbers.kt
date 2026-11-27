@@ -10,6 +10,8 @@ import java.io.File
  */
 internal object KbNumbers {
     private const val FILE = "kb-numbers.bin"
+    /** A number counts as kept (offered, listed in the settings) once it was typed this many times; until then only its count is stored, sealed. */
+    const val KEEP_AT = 3
     @Volatile private var cache: Map<String, Int>? = null
     private fun file(c: Context) = File(c.noBackupFilesDir, FILE)
 

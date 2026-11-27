@@ -3302,17 +3302,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         numPending = null
         if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || cardLike(n) || KeyboardDictionary.isBanned(n)) return
         val all = numbersKept().toMutableMap()
-        all[n] = (all[n] ?: 0) + 1
+        // a number is kept once it was typed three times; the shorter and the longer form of one number are not two entries: a shorter one typed after the full number counts for the full one,
+        // and the full number typed after its shorter drafts takes their count over (the last, complete form is the one that stays)
+        val longer = all.keys.firstOrNull { it.length > n.length && it.startsWith(n) }
+        if (longer != null) all[longer] = (all[longer] ?: 0) + 1
+        else {
+            var count = 1
+            all.keys.filter { it.length < n.length && n.startsWith(it) }.forEach { count += all.remove(it) ?: 0 }
+            all[n] = (all[n] ?: 0) + count
+        }
         // 20 numbers at most: the least used go
         KbNumbers.save(this, all.byValueDesc().take(20).associate { it.key to it.value })
     }
 
-    /** The saved numbers that continue the digits typed: typed twice at least (or added by hand in the settings), the most used first. */
+    /** The saved numbers that continue the digits typed: typed three times at least (or added by hand in the settings), the most used first. */
     private fun numberOffers(): List<String> {
         if (!KeyboardPrefs.rememberNumbers || st.incognito || passwordField || emailField) return emptyList()
         val d = digitsBefore(currentInputConnection ?: return emptyList())
         if (d.length < 3) return emptyList()
-        return numbersKept().filter { it.value >= 2 && it.key.startsWith(d) && it.key.length > d.length && !KeyboardDictionary.isBanned(it.key) }
+        return numbersKept().filter { it.value >= KbNumbers.KEEP_AT && it.key.startsWith(d) && it.key.length > d.length && !KeyboardDictionary.isBanned(it.key) }
             .byValueDesc().take(3).map { it.key }
     }
 

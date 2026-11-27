@@ -15,6 +15,9 @@ class KbTheme(
     /** The Samsung look: its own bottom row (!#1, comma, the space bar with the language, period, the action key in the accent colour), the number row, round toolbar buttons. */
     val samsung: Boolean get() = id == "samsung"
 
+    /** The see-through form: keys, function keys and board take an alpha and the keys a pale edge (a frosted pane; the window itself is not blurred). */
+    fun glassed(): KbTheme = KbTheme(id, bg.copy(alpha = .62f), key.copy(alpha = .5f), text, special.copy(alpha = .42f), specialText, accent, onAccent, menu.copy(alpha = .62f), popup, sub, radius, bevel, Color.White.copy(alpha = .16f), icons)
+
     /** The user's own key corners and icon family over the theme's (both off by default: the theme stays as it is). */
     fun tuned(): KbTheme {
         val r = KeyboardPrefs.keyRadius; val ic = KeyboardPrefs.keyIcons
@@ -35,7 +38,31 @@ object KeyboardThemes {
     private fun c(v: Long) = Color(v)
 
     /** The theme for [id]; [dark] is the phone's dark mode (Material, Windows 10 and Windows 11 follow it). */
-    fun of(id: String, dark: Boolean): KbTheme = when (id) {
+    fun of(id: String, dark: Boolean): KbTheme = base(id, dark).let { if (id == "gboard" && KeyboardPrefs.gbGlass) it.glassed() else it }
+
+    private fun base(id: String, dark: Boolean): KbTheme = when (id) {
+        // an old phone's keypad: silver grey keys with a raised edge on a grey body, dark ink, an olive highlight (its small screen)
+        "retro" -> KbTheme(id, c(0xFF8D9193), c(0xFFC9CCCE), c(0xFF1C1F21), c(0xFFA9ADB0), c(0xFF1C1F21), c(0xFFB5BE7A), c(0xFF1C1F21), c(0xFF8D9193), c(0xFFDADDDF), c(0xFF3A3F42), 18, bevel = true, border = c(0xFF5E6264), icons = "outlined")
+        // new looks (the default stays as it was)
+        "midnight" -> KbTheme(id, c(0xFF0B1226), c(0xFF18223F), c(0xFFE8EEFF), c(0xFF121B33), c(0xFFE8EEFF), c(0xFF7AA2FF), c(0xFF0B1226), c(0xFF0B1226), c(0xFF243257), c(0xFF8FA0CC), 12, icons = "rounded")
+        "forest" -> KbTheme(id, c(0xFF0E1A14), c(0xFF1B2D23), c(0xFFE6F2EA), c(0xFF14241B), c(0xFFE6F2EA), c(0xFF6FCF97), c(0xFF0E1A14), c(0xFF0E1A14), c(0xFF27402F), c(0xFF8FB39C), 12, icons = "rounded")
+        "rose" -> KbTheme(id, c(0xFFFBEFF1), c(0xFFFFFFFF), c(0xFF3A1F27), c(0xFFF3D9DE), c(0xFF3A1F27), c(0xFFD6456B), c(0xFFFFFFFF), c(0xFFFBEFF1), c(0xFFFFFFFF), c(0xFF8A5F6A), 14, icons = "rounded")
+        "sunset" -> KbTheme(id, c(0xFF2A1420), c(0xFF40202E), c(0xFFFFE9DE), c(0xFF341A28), c(0xFFFFE9DE), c(0xFFFF8A4C), c(0xFF2A1420), c(0xFF2A1420), c(0xFF55303F), c(0xFFD1A39A), 14, icons = "rounded")
+        // pure black and white with a thick yellow accent: the strongest contrast
+        "contrast" -> KbTheme(id, c(0xFF000000), c(0xFF000000), c(0xFFFFFFFF), c(0xFF000000), c(0xFFFFFF00), c(0xFFFFFF00), c(0xFF000000), c(0xFF000000), c(0xFF202020), c(0xFFFFFFFF), 6, border = c(0xFFFFFFFF), icons = "filled")
+        // for red-green colour blindness: blue and orange only (never red against green), light and dark parts clearly apart
+        "cvd" -> KbTheme(id, c(0xFF101820), c(0xFF22303F), c(0xFFFFFFFF), c(0xFF182430), c(0xFFFFFFFF), c(0xFFFFB000), c(0xFF101820), c(0xFF101820), c(0xFF2E4156), c(0xFFB5C6D8), 10, border = c(0xFF648FFF), icons = "outlined")
+        // Google Keyboard: rounded keys, a calm blue-grey board with the lighter letter keys and a mint action key; four tones (the first is the look of the picture) and key borders that can be switched off
+        "amoled" -> "SwiftKey"; "gboard" -> "Google Keyboard"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
+        "xp" -> "Windows XP"; "win95" -> "Windows 95"; "retro" -> "Old phone"; "midnight" -> "Midnight"; "forest" -> "Forest"; "rose" -> "Rosé"; "sunset" -> "Sunset"; "contrast" -> "High contrast"; "cvd" -> "Colour-blind safe"; else -> "Custom"
+    }
+
+    private fun c(v: Long) = Color(v)
+
+    /** The theme for [id]; [dark] is the phone's dark mode (Material, Windows 10 and Windows 11 follow it). */
+    fun of(id: String, dark: Boolean): KbTheme = base(id, dark).let { if (id == "gboard" && KeyboardPrefs.gbGlass) it.glassed() else it }
+
+    private fun base(id: String, dark: Boolean): KbTheme = when (id) {
         // an old phone's keypad: silver grey keys with a raised edge on a grey body, dark ink, an olive highlight (its small screen)
         "retro" -> KbTheme(id, c(0xFF8D9193), c(0xFFC9CCCE), c(0xFF1C1F21), c(0xFFA9ADB0), c(0xFF1C1F21), c(0xFFB5BE7A), c(0xFF1C1F21), c(0xFF8D9193), c(0xFFDADDDF), c(0xFF3A3F42), 18, bevel = true, border = c(0xFF5E6264), icons = "outlined")
         // new looks (the default stays as it was)

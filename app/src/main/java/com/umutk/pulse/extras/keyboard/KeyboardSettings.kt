@@ -179,6 +179,7 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PChip(KeyboardPrefs.gbBorders, tr("Key borders", "Tuş kenarları")) { KeyboardPrefs.gbBorders = !KeyboardPrefs.gbBorders; save() }
+                    PChip(KeyboardPrefs.gbGlass, tr("See-through", "Şeffaf")) { KeyboardPrefs.gbGlass = !KeyboardPrefs.gbGlass; save() }
                 }
             }
             // key shape and icon family over the theme (the theme's own by default)
@@ -767,10 +768,10 @@ fun KeyboardSettings(back: () -> Unit) {
             if (mails.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
             // numbers typed again and again (a phone number, an ID number): kept on the phone only and offered from their first digits (typed twice before, or added here)
             Text(tr("Numbers I type often", "Sık yazdığım sayılar"), color = T.sub, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
-            var nums by remember { mutableStateOf(KbNumbers.all(ctx).map { it.key to it.value }.sortedByDescending { it.second }) }
+            var nums by remember { mutableStateOf(KbNumbers.all(ctx).filter { it.value >= KbNumbers.KEEP_AT }.map { it.key to it.value }.sortedByDescending { it.second }) }
             var addN by remember { mutableStateOf("") }
             var on by remember { mutableStateOf(KeyboardPrefs.rememberNumbers) }
-            fun reload() { nums = KbNumbers.all(ctx).map { it.key to it.value }.sortedByDescending { it.second } }
+            fun reload() { nums = KbNumbers.all(ctx).filter { it.value >= KbNumbers.KEEP_AT }.map { it.key to it.value }.sortedByDescending { it.second } }
             Row(Modifier.fillMaxWidth().clickable { on = !on; KeyboardPrefs.rememberNumbers = on; save() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Remember numbers", "Sayıları hatırla"), color = T.text, fontSize = 15.sp)
