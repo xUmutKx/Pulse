@@ -1211,7 +1211,8 @@ fun GameHubHub(onBack: () -> Unit) {
                     // the games kept on the shelf: the phone's games, the hidden ones, every other app
                     Row(Modifier.fillMaxWidth().clickable { selectOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr("Select games", "Oyunları seç"), color = pal.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        Text("${hidden.size}", color = pal.sub, fontSize = 13.sp)
+                        // what the number is: the apps hidden from the phone (the tick of the list hides an app with root or Shizuku)
+                        Text(tr("${hidden.size} hidden", "${hidden.size} gizli"), color = pal.sub, fontSize = 13.sp)
                     }
                     SectionTitle(pal, tr("Icons", "Simgeler"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
