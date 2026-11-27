@@ -588,6 +588,35 @@ fun AllSubscriptionsScreen(
     }
 }
 
+/** The whole history as a page of its own, with a search box (the title or the channel): the row on the Library page shows only the first ones. */
+@Composable
+fun HistoryScreen(lib: LibraryData, contentPadding: PaddingValues, onBack: () -> Unit, onOpen: (VideoItem) -> Unit) {
+    val c = MaterialTheme.colorScheme
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { lib.history.ensureLoaded() }
+    val all = lib.history.videos
+    val shown = remember(all.size, query) { if (query.isBlank()) all else all.filter { it.title.contains(query.trim(), true) || it.channel.contains(query.trim(), true) } }
+    Box(Modifier.fillMaxSize().background(c.surface)) {
+        Column(Modifier.fillMaxSize()) {
+            BackScreenHeader(onBack = onBack) {
+                Text(I18n.t("history", "History"), modifier = Modifier.weight(1f), fontFamily = RoundedHeavy, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, letterSpacing = (-0.8).sp, maxLines = 1)
+            }
+            BasicTextField(
+                query, { query = it }, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = c.onSurface, fontSize = 16.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(c.primary),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(22.dp)).background(c.surfaceVariant.copy(alpha = .6f)).padding(horizontal = 16.dp, vertical = 12.dp),
+                decorationBox = { inner -> if (query.isEmpty()) Text(I18n.t("search", "Search"), color = c.onSurfaceVariant, fontSize = 16.sp); inner() },
+            )
+            LazyColumn(contentPadding = contentPadding) {
+                items(shown, key = { it.id }) { v -> VideoRow(v, onClick = { onOpen(v) }) }
+                // the account's history comes in pages: the end of the list asks for the next one (while a word is searched too)
+                if (lib.history.hasMore) item(key = "more") { LaunchedEffect(shown.size) { lib.history.loadMore() }; Spacer(Modifier.height(48.dp)) }
+            }
+        }
+    }
+}
+
 @Composable
 fun LibraryScreen(
     lib: LibraryData,
@@ -596,6 +625,7 @@ fun LibraryScreen(
     onOpenPlaylist: (PlaylistRef) -> Unit,
     onOpenChannel: (String) -> Unit = {},
     onOpenAllSubscriptions: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
     onSearch: () -> Unit,
     onSignIn: () -> Unit,
     onAccount: () -> Unit,
@@ -625,7 +655,13 @@ fun LibraryScreen(
         LazyColumn(state = rememberScrollToTop(scrollToTop), contentPadding = contentPadding.withTop(top)) {
             if (!signedIn) {
                 if (lib.history.videos.isNotEmpty()) {
-                    item(key = "historyTitleLocal") { SectionTitle(I18n.t("history", "History")) }
+                    item(key = "historyTitleLocal") {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            SectionTitle(I18n.t("history", "History"), modifier = Modifier.padding(0.dp))
+                            Text("All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onOpenHistory() }.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
+                    }
                     item(key = "historyLocal") {
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(lib.history.videos.take(20), key = { "h-" + it.id }) { video -> HistoryCard(video) { onOpen(video) } }
@@ -642,7 +678,13 @@ fun LibraryScreen(
                 }
                 return@LazyColumn
             }
-            item(key = "historyTitle") { SectionTitle(I18n.t("history", "History")) }
+            item(key = "historyTitle") {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    SectionTitle(I18n.t("history", "History"), modifier = Modifier.padding(0.dp))
+                    Text("All", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onOpenHistory() }.padding(horizontal = 8.dp, vertical = 4.dp))
+                }
+            }
             item(key = "history") {
                 val history = lib.history.videos
                 when {

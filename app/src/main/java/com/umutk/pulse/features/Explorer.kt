@@ -564,6 +564,16 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         prevHere[0] = here
         value = withContext(Dispatchers.Default) { exSortList((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes) }
     }
+    // a file that came into the folder from another app (a download, a picture taken) shows without leaving the page: the folder's own time is looked at every two seconds (one cheap stat)
+    LaunchedEffect(here, arcFile) {
+        if (arcFile != null) return@LaunchedEffect
+        var last = withContext(Dispatchers.IO) { dir.lastModified() }
+        while (true) {
+            delay(2000)
+            val now = withContext(Dispatchers.IO) { dir.lastModified() }
+            if (now != last) { last = now; refresh++ }
+        }
+    }
     var resultsFor by remember { mutableStateOf<String?>(null) }
     // the search looks under this folder; the button beside the field widens it to the whole storage
     var searchAll by remember { mutableStateOf(false) }

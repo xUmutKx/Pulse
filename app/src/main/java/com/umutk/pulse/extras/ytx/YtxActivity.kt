@@ -326,6 +326,7 @@ fun YtxTubeApp() {
     var openChannel by remember { mutableStateOf<String?>(null) }
     var shortsEntry by remember { mutableStateOf<VideoItem?>(null) }
     var openAllSubscriptions by remember { mutableStateOf(false) }
+    var openHistory by remember { mutableStateOf(false) }
     var openSearch by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(Tab.Home) }
     LaunchedEffect(YtxEntry.backHome) {
@@ -543,6 +544,7 @@ fun YtxTubeApp() {
     BackHandler(enabled = !showFullscreen && player.expanded) { player.expanded = false }
     BackHandler(enabled = !player.expanded && openSettings) { openSettings = false }
     BackHandler(enabled = !player.expanded && openAllSubscriptions && openChannel == null) { openAllSubscriptions = false }
+    BackHandler(enabled = !player.expanded && openHistory && openChannel == null) { openHistory = false }
     BackHandler(enabled = !player.expanded && tab != Tab.Home && openPlaylist == null && openChannel == null && !openAllSubscriptions) {
         if (tab == Tab.Shorts && isShortsPlaying && pip.supported) {
             val entered = pip.enter(9f / 16f)
@@ -564,7 +566,7 @@ fun YtxTubeApp() {
     }
     BackHandler(enabled = updateState.visible) { updateState.dismiss() }
 
-    val canHandleRootBack = !player.expanded && !openSettings && !openAllSubscriptions &&
+    val canHandleRootBack = !player.expanded && !openSettings && !openAllSubscriptions && !openHistory &&
         tab == Tab.Home && openPlaylist == null && openChannel == null &&
         !openSearch && !signingIn && !showFullscreen && shortsEntry == null && !updateState.visible
     BackHandler(enabled = canHandleRootBack) {
@@ -727,6 +729,7 @@ fun YtxTubeApp() {
                         openChannel = url
                     },
                     onOpenAllSubscriptions = { openAllSubscriptions = true },
+                    onOpenHistory = { openHistory = true },
                     onSearch = { openSearch = true },
                     onSignIn = { requestSignIn() }, onAccount = { openSettings = true },
                     scrollToTop = scrollToTop[Tab.Library] ?: 0,
@@ -768,6 +771,15 @@ fun YtxTubeApp() {
                 contentPadding = contentPadding,
                 onBack = { openAllSubscriptions = false },
             )
+        }
+
+
+        AnimatedVisibility(
+            visible = openHistory,
+            enter = if (reduced) fadeIn(snap()) else slideInHorizontally(tween(340, easing = Motion.Emphasized)) { it } + fadeIn(tween(120)),
+            exit = if (reduced) fadeOut(snap()) else slideOutHorizontally(tween(300, easing = Motion.Emphasized)) { it } + fadeOut(tween(220)),
+        ) {
+            HistoryScreen(lib, contentPadding, onBack = { openHistory = false }, onOpen = { openHistory = false; player.open(it) })
         }
 
 

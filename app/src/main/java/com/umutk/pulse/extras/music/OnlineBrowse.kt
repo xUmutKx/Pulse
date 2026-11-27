@@ -87,8 +87,8 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
                 @Composable fun chip(t: String, on: () -> Unit) = Text(t, color = T.text, fontSize = 13.sp, maxLines = 1, softWrap = false, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).clickable { on() }.padding(horizontal = 12.dp, vertical = 7.dp))
                 if (ytIn) { chip(tr("Liked", "Beğenilen")) { show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } }; chip(tr("Recent", "Son çalınan")) { show(tr("Played lately", "Son çalınanlar")) { OnlineMusic.ytHistory(ctx) } } }
                 chip(tr("For you", "Senin için")) { show(tr("For you", "Senin için")) { OnlineMusic.forYou(ctx) } }
-                chip(tr("History", "Geçmiş")) { show(tr("Played here", "Burada çalınanlar")) { OnlineMusic.history(ctx) } }
-                chip(tr("Played", "Dinlenenler")) { played = true; title = tr("Everything you played", "Dinlediğin her şey") }
+                // History is the whole page of everything played (online and on the phone), searched with the box above and filtered All / Online / On the phone
+                chip(tr("History", "Geçmiş")) { played = true; title = tr("Everything you played", "Dinlediğin her şey") }
                 chip(tr("Popular", "Popüler")) { show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") } }
             }
             if (!ytIn) Text(tr("Sign in to YouTube in YTXTube to see your own songs here.", "Kendi şarkıların burada görünsün diye YTXTube'da YouTube'a giriş yap."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
