@@ -171,13 +171,14 @@ fun TerminalPage(windows: Boolean = false) {
     }
     // Windows 11: the terminal window is see-through (the desktop shows behind the text), as Settings is
     val deskWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current
-    val glass = deskWin != null && com.umutk.pulse.T.id == "win11"
+    // (also as its own app and inside Pulse, not only in a desktop window: the Windows 11 look is the see-through one)
+    val glass = com.umutk.pulse.T.id == "win11"
     androidx.compose.runtime.DisposableEffect(deskWin, glass) { if (glass) deskWin?.glass = true; onDispose { if (glass) deskWin?.glass = false } }
     var size by remember { mutableStateOf(12) }
     // the page lifts itself above the keyboard (once): the page host does not do it too, which had left an empty band as tall as the keyboard under the input line
     androidx.compose.runtime.DisposableEffect(Unit) { com.umutk.pulse.ImeFree.on = true; onDispose { com.umutk.pulse.ImeFree.on = false } }
     val cm = remember { ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager }
-    Column(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (glass) .5f else .62f)).imePadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (glass) .36f else .62f)).imePadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
         // the window's title line and its few buttons
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("pulse@phone" + if (TermSession.asRoot) " (root)" else "", color = green, fontSize = 12.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(1f), maxLines = 1)

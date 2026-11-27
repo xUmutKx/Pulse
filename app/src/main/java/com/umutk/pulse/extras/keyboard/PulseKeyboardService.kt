@@ -499,11 +499,28 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.clipItems = ClipStore.load(this)
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.addPrimaryClipChangedListener(clipListener)
+        // (the file observers are not set here: they are on only while the keyboard is on the screen, see startShotWatch)
+    }
+
+    /**
+     * The observers of new pictures, videos, downloads and files (a screenshot, a camera photo or a file just made waits in the bar). They are on only while the keyboard is shown:
+     * the keyboard service lives as long as it is the chosen keyboard, and an observer of every file of the phone woke it all day and all night (each change started a set of four looks).
+     * When the keyboard opens, what is new is looked at once (onStartInputView), so nothing is missed.
+     */
+    private var shotWatching = false
+    private fun startShotWatch() {
+        if (shotWatching) return
+        shotWatching = true
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
         if (android.os.Build.VERSION.SDK_INT >= 29) runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, true, shotObserver) }
         // every other file made anywhere (a zip made in a folder of its own, a document) is looked at the same way
         runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Files.getContentUri("external"), true, shotObserver) }
+    }
+    private fun stopShotWatch() {
+        if (!shotWatching) return
+        shotWatching = false
+        runCatching { contentResolver.unregisterContentObserver(shotObserver) }
     }
 
     // ---- a screenshot or a camera photo just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
@@ -736,7 +753,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onDestroy() {
         runCatching { recognizer?.destroy() }; recognizer = null
         clipboard?.removePrimaryClipChangedListener(clipListener)
-        runCatching { contentResolver.unregisterContentObserver(shotObserver) }
+        stopShotWatch()
         KeyboardDictionary.saveUser(this)
         runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).unregisterInputDeviceListener(deviceListener) }
         owner?.stop(); scope.cancel()
@@ -1006,14 +1023,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.ctrl = 0; st.alt = 0; st.win = 0; st.shiftMod = 0; st.fnOpen = false
         heldMods.clear(); heldPrev.clear(); heldUsed.clear()
     }
-    override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
+    override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys(); stopShotWatch() }
     override fun onWindowHidden() {
+        stopShotWatch()
         super.onWindowHidden(); backToKeys(); st.floatArmed = false
         mirrorPrefs()
         // the touch area is asked again at once: a hidden keyboard takes no touches
         runCatching { window.window?.decorView?.requestLayout() }
     }
     override fun onWindowShown() {
+        startShotWatch()
         kbOpenAt = SystemClock.uptimeMillis()
         // a picture still waiting is looked at again from the moment the keyboard is up
         if ((shotItem != null || shotVideo != null) && !shotPinned) { shotExpiry.removeCallbacks(shotExpire); shotExpiry.postDelayed(shotExpire, 15_000L) }

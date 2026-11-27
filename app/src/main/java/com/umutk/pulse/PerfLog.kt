@@ -231,6 +231,21 @@ fun PerfLogPage() {
             }
             PButton(tr("Clear", "Temizle"), danger = true) { PerfLog.clear(ctx.applicationContext); rev++ }
         }
+        // the background report: what runs when nobody is looking (read it, or share it with the developer)
+        var bg by remember { mutableStateOf("") }
+        var bgBusy by remember { mutableStateOf(false) }
+        LaunchedEffect(bgBusy) { if (bgBusy) { bg = withContext(Dispatchers.IO) { runCatching { com.umutk.pulse.features.BackgroundReport.build(ctx.applicationContext) }.getOrElse { "could not build the report: ${it.message}" } }; bgBusy = false } }
+        PCard(Modifier.fillMaxWidth()) {
+            Text(tr("Background report", "Arka plan raporu"), color = T.text, fontSize = 15.sp)
+            Text(tr("What Pulse runs when nobody is looking: services, jobs, wake locks, the keyboard, the time as a notification service and the battery. Make it after a night, then share it.", "Kimse bakmazken Pulse'un ne çalıştırdığı: servisler, işler, uyanık tutma kilitleri, klavye, bildirimli çalışma süresi ve pil. Bir gecenin sonunda oluştur, sonra paylaş."), color = T.sub, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                PButton(if (bgBusy) tr("Reading…", "Okunuyor…") else tr("Make the report", "Raporu oluştur")) { if (!bgBusy) bgBusy = true }
+                if (bg.isNotEmpty()) PButton(tr("Share", "Paylaş")) {
+                    runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, bg.take(90_000)), "Pulse background report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }
+            }
+            if (bg.isNotEmpty()) androidx.compose.foundation.text.selection.SelectionContainer { Text(bg, color = T.sub, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 8.dp)) }
+        }
         if (lines.isEmpty()) Text(if (on) tr("Nothing yet: use the app for a while, then refresh", "Henüz yok: bir süre kullan, sonra yenile") else tr("The log is off", "Kayıt kapalı"), color = T.sub, fontSize = 13.sp)
         else PCard(Modifier.fillMaxWidth()) {
             Text(lines.joinToString("\n"), color = T.sub, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
