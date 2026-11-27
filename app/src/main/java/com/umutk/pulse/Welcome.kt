@@ -271,14 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "video" to (tr("Video: predictive Back that shrinks into the mini player, a mini player you can throw (momentum) with seek and subtitles, black menus with icons, speed presets, a live update with the picture and the time.",
-        "Video: mini oynatıcıya küçülen tahmini Geri, fırlatılabilen (momentumlu) mini oynatıcı, ileri-geri ve altyazı, ikonlu siyah menüler, hazır hızlar, resimli ve süreli canlı güncelleme.")),
-    "game" to (tr("Game Hub: the disc and the booklet use the game's own art, settings as rows with icons, Select games and HTML games on the CD shelf, the search steps aside while a case is out.",
-        "Oyun Merkezi: disk ve kitapçık oyunun kendi görsellerini kullanır, ikonlu ayar satırları, CD rafında oyun seçme ve HTML oyun, kutu açıkken arama gizlenir.")),
-    "tools" to (tr("Tiles: Auto clicker and Floating timer centred and animated. Books: loading bars. Search fields: an × to clear.",
-        "Kutucuklar: Otomatik tıklayıcı ve Yüzen sayaç ortalı ve animasyonlu. Kitaplar: yükleme çubukları. Arama kutuları: silmek için ×.")),
-    "store" to (tr("Google Play build: it installs again (a broken launcher icon made the package invalid).",
-        "Google Play sürümü: yine kurulur (bozuk bir başlatıcı simgesi paketi geçersiz yapıyordu).")),
+    "lock" to (tr("The lite app is now the safe one: no root, Shizuku, SMS, accessibility services, APK installs or call log. The full app keeps every tool.",
+        "Lite artık güvenli sürüm: root, Shizuku, SMS, erişilebilirlik servisleri, APK kurma ve arama kaydı yok. Tam sürüm tüm araçları korur.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
