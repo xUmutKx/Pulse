@@ -1,7 +1,7 @@
 # Pulse Watch: the plan
 
 The watch app today is stand-alone: small apps for a round screen, about 1 MB. This plan turns it into a companion of the phone app.
-Written (not built or tested yet): part 0 (the Bluetooth link, phone side `features/watch/WatchLink.kt`), part 1 in part (browse the phone and copy a file to the watch, resumable), part 4 (now playing of any phone app, controls, crown = volume), part 5 in part (find my phone, torch, ringer, battery / storage). Each part ships on its own, in the order below, and each one ends with round-screen PNGs, a test of the
+Written (not built or tested yet): part 0 (the Bluetooth link, phone side `features/watch/WatchLink.kt`), part 1 in part (browse the phone and copy a file to the watch, resumable), part 4 (now playing of any phone app, controls, crown = volume), part 5 in part (find my phone, torch, ringer, battery / storage), part 2 (music on the watch, Media3 session), part 3 (video on the watch), part 6 (YouTube / YouTube Music search through the phone, play on the phone, save the audio to the watch), a Toolkit page; Music, Video, YouTube, Toolkit and Phone are launcher icons of their own (activity-aliases). Each part ships on its own, in the order below, and each one ends with round-screen PNGs, a test of the
 message format on the build machine and one check on a real watch.
 
 ## 0. The link (needed by everything below)

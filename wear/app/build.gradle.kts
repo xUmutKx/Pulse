@@ -59,4 +59,7 @@ dependencies {
     implementation("androidx.wear.compose:compose-navigation:1.7.1")
     // the watch's own text input (keyboard, voice, handwriting) for the notes
     implementation("androidx.wear:wear-input:1.2.0")
+    // music and video on the watch: the player, and the media session (plays with the screen off, earbuds' buttons)
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
 }

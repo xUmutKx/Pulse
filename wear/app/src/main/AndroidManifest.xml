@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- music on the watch plays on with the screen off -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- heart rate and steps: asked for when those pages open -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
@@ -33,5 +37,50 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity-alias android:name=".MusicApp" android:targetActivity=".MainActivity" android:exported="true"
+            android:label="Music" android:icon="@drawable/ic_music" android:taskAffinity="com.umutk.pulse.watch.music">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="route" android:value="music" />
+        </activity-alias>
+        <activity-alias android:name=".VideoApp" android:targetActivity=".MainActivity" android:exported="true"
+            android:label="Video" android:icon="@drawable/ic_video" android:taskAffinity="com.umutk.pulse.watch.video">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="route" android:value="video" />
+        </activity-alias>
+        <activity-alias android:name=".YouTubeApp" android:targetActivity=".MainActivity" android:exported="true"
+            android:label="YouTube" android:icon="@drawable/ic_youtube" android:taskAffinity="com.umutk.pulse.watch.youtube">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="route" android:value="youtube" />
+        </activity-alias>
+        <activity-alias android:name=".ToolkitApp" android:targetActivity=".MainActivity" android:exported="true"
+            android:label="Toolkit" android:icon="@drawable/ic_toolkit" android:taskAffinity="com.umutk.pulse.watch.toolkit">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="route" android:value="toolkit" />
+        </activity-alias>
+        <activity-alias android:name=".PhoneApp" android:targetActivity=".MainActivity" android:exported="true"
+            android:label="Phone" android:icon="@drawable/ic_phone" android:taskAffinity="com.umutk.pulse.watch.phone">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="route" android:value="phone" />
+        </activity-alias>
+
+        <service android:name=".apps.WatchPlayService" android:exported="true" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
+        </service>
     </application>
 </manifest>

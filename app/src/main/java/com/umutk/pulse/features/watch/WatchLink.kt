@@ -69,6 +69,9 @@ object WatchLink {
         "ringer" -> { runCatching { (c.getSystemService(Context.AUDIO_SERVICE) as AudioManager).ringerMode = b.optInt("m", AudioManager.RINGER_MODE_NORMAL) }; status(c) }
         "list" -> list(b.optString("p"))
         "get" -> piece(b.optString("p"), b.optLong("off"))
+        "yt_search" -> WatchYt.search(c, b.optString("q"), b.optBoolean("music"))
+        "yt_play" -> WatchYt.playOnPhone(c, b.optString("id"))
+        "yt_save" -> WatchYt.saveAudio(c, b.optString("id"), b.optString("title"))
         else -> JSONObject().put("err", "unknown")
     }
 
@@ -210,6 +213,7 @@ class WatchLinkService : Service() {
     @Volatile private var server: BluetoothServerSocket? = null
     @Volatile private var alive = true
     private val clients = java.util.concurrent.CopyOnWriteArrayList<BluetoothSocket>()
+    private val pool = java.util.concurrent.Executors.newFixedThreadPool(3)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -251,9 +255,11 @@ class WatchLinkService : Service() {
                     val line = r.readLine() ?: break
                     val q = runCatching { JSONObject(line) }.getOrNull() ?: continue
                     val id = q.optInt("id")
-                    val body = runCatching { WatchLink.answer(this, q.optString("t"), q.optJSONObject("b") ?: JSONObject()) }.getOrElse { JSONObject().put("err", it.message ?: "error") }
-                    val reply = JSONObject().put("t", "ok").put("id", id).put("b", body).toString() + "\n"
-                    synchronized(out) { out.write(reply.toByteArray(Charsets.UTF_8)); out.flush() }
+                    pool.execute {
+                        val body = runCatching { WatchLink.answer(this, q.optString("t"), q.optJSONObject("b") ?: JSONObject()) }.getOrElse { JSONObject().put("err", it.message ?: "error") }
+                        val reply = JSONObject().put("t", "ok").put("id", id).put("b", body).toString() + "\n"
+                        runCatching { synchronized(out) { out.write(reply.toByteArray(Charsets.UTF_8)); out.flush() } }
+                    }
                 }
             }
         }
@@ -265,6 +271,7 @@ class WatchLinkService : Service() {
         runCatching { server?.close() }
         clients.forEach { runCatching { it.close() } }
         WatchLink.Finder.stop(this)
+        pool.shutdownNow()
         super.onDestroy()
     }
 }

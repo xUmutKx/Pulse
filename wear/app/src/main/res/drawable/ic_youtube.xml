@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse Watch YouTube: a play sign in a rounded box -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FFFF3D3D" android:pathData="M24,2a22,22 0,1 1,0 44a22,22 0,1 1,0 -44z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,18a5,5 0,0 1,5 -5h14a5,5 0,0 1,5 5v12a5,5 0,0 1,-5 5h-14a5,5 0,0 1,-5 -5z" /><path android:fillColor="#FFFF3D3D" android:pathData="M21,18.5v11l9,-5.5z" />
+</vector>

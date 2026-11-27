@@ -15,15 +15,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Prefs.load(this)
-        setContent { WatchApp() }
+        // the extra apps (Music, Video, YouTube, Toolkit, Phone) are launcher icons of their own: an alias of this activity names the page to open
+        val start = runCatching { packageManager.getActivityInfo(componentName, android.content.pm.PackageManager.GET_META_DATA).metaData?.getString("route") }.getOrNull() ?: "home"
+        setContent { WatchApp(start) }
     }
 }
 
 @Composable
-private fun WatchApp() {
+private fun WatchApp(start: String) {
     val nav = rememberSwipeDismissableNavController()
     Apps.open = { route -> nav.navigate(route) }
-    SwipeDismissableNavHost(navController = nav, startDestination = "home") {
+    SwipeDismissableNavHost(navController = nav, startDestination = start) {
         composable("home") { HomeScreen(onOpen = { route -> nav.navigate(route) }) }
         Apps.all.forEach { app -> composable(app.route) { app.screen() } }
     }
