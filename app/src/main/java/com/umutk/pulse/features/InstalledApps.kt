@@ -115,6 +115,7 @@ fun InstalledAppsScreen(onBack: () -> Unit) {
     var picked by remember { mutableStateOf(setOf<String>()) }
     var ask by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
     // without root or Shizuku: the apps wait here and the system's own question is asked for each, one after the other
     var queue by remember { mutableStateOf(listOf<String>()) }
     val apps by produceState<List<AppEntry>?>(null, reload) { value = withContext(Dispatchers.IO) { measureApps(ctx).sortedByDescending { it.bytes } } }
@@ -134,6 +135,14 @@ fun InstalledAppsScreen(onBack: () -> Unit) {
                 Box(Modifier.size(44.dp).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
                 val total = apps.orEmpty().filter { it.pkg in picked }.sumOf { it.bytes }
                 Text("${picked.size} · " + humanSize(total), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                // the caches of the picked apps (like SD Maid's app cleaner): with root the cache folders are emptied, with Shizuku or root the system trims them; the apps and their data stay
+                Box(Modifier.size(44.dp).clickable {
+                    val chosen = picked.toList()
+                    scope.launch {
+                        note = withContext(Dispatchers.IO) { clearAppCaches(chosen) }
+                        reload++
+                    }
+                }, contentAlignment = Alignment.Center) { PIcon("clean", T.text, 24.dp) }
                 Box(Modifier.size(44.dp).clickable { ask = true }, contentAlignment = Alignment.Center) { PIcon("delete", T.text, 24.dp) }
             } else {
                 Box(Modifier.size(44.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
@@ -142,7 +151,9 @@ fun InstalledAppsScreen(onBack: () -> Unit) {
             }
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
-        val list = apps
+        // search: the name or the package
+        com.umutk.pulse.PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(horizontal = pageGutter, vertical = 4.dp))
+        val list = apps?.filter { query.isBlank() || it.name.contains(query.trim(), true) || it.pkg.contains(query.trim(), true) }
         if (list == null) com.umutk.pulse.Center(tr("Measuring…", "Ölçülüyor…"))
         else LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = pageGutter, vertical = 4.dp)) {
             items(list, key = { it.pkg }) { a ->
@@ -208,4 +219,21 @@ private fun humanSize(b: Long): String = when {
     b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0)
     b >= 1L shl 20 -> "%.0f MB".format(b / 1048576.0)
     else -> "%d KB".format(b / 1024)
+}
+
+
+/** Empties the caches of [pkgs]: with root their cache folders (internal, device-protected, code cache and the one under Android/data) are deleted; else Shizuku's shell trims the caches of the system. Returns what to say. */
+internal fun clearAppCaches(pkgs: List<String>): String {
+    if (pkgs.isEmpty()) return ""
+    if (com.umutk.pulse.Shell.root == true) {
+        pkgs.forEach { p ->
+            com.umutk.pulse.Shell.runRoot("rm -rf /data/data/$p/cache/* /data/data/$p/code_cache/* /data/user_de/0/$p/cache/* /data/user_de/0/$p/code_cache/* /sdcard/Android/data/$p/cache/* /storage/emulated/0/Android/data/$p/cache/* 2>/dev/null")
+        }
+        return com.umutk.pulse.tr("Caches emptied for ${pkgs.size} apps", "${pkgs.size} uygulamanın önbelleği boşaltıldı")
+    }
+    if (com.umutk.pulse.Shell.shizukuOk()) {
+        runCatching { com.umutk.pulse.Shell.run("pm trim-caches 9999999999999") }
+        return com.umutk.pulse.tr("The system trimmed the app caches", "Sistem uygulama önbelleklerini temizledi")
+    }
+    return com.umutk.pulse.tr("Needs root or Shizuku", "Root ya da Shizuku gerekli")
 }

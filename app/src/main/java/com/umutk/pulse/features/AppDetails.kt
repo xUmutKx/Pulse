@@ -286,7 +286,16 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                 "receiver" -> tr("Sent to ${name.substringAfterLast('.')} (it may ignore it)", "${name.substringAfterLast('.')} alıcısına gönderildi (yoksayabilir)")
                 else -> tr("Started ${name.substringAfterLast('.')}", "${name.substringAfterLast('.')} başlatıldı")
             }
-        }.getOrElse { tr("Could not start it: ", "Başlatılamadı: ") + (it.message ?: it.javaClass.simpleName) }
+        }.getOrElse { err ->
+            // a component the app keeps private (not exported) is refused to another app: with root or Shizuku the shell starts it (am), as the system's own tools do
+            if ((com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizukuOk()) && (err is SecurityException || (err.message ?: "").contains("not exported"))) {
+                val flag = if (action != null) " -a $action" else ""
+                val cmd = when (kind) { "service" -> "am startservice$flag -n $pkg/$name"; "receiver" -> "am broadcast$flag -n $pkg/$name"; else -> "am start$flag -n $pkg/$name" }
+                val out = runCatching { com.umutk.pulse.Shell.run(cmd).trim() }.getOrDefault("")
+                if (out.contains("Error", true) || out.contains("Exception", true)) tr("Could not start it: ", "Başlatılamadı: ") + out.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
+                else tr("Started ${name.substringAfterLast('.')} (through the shell)", "${name.substringAfterLast('.')} başlatıldı (kabuk üzerinden)")
+            } else tr("Could not start it: ", "Başlatılamadı: ") + (err.message ?: err.javaClass.simpleName)
+        }
     }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
