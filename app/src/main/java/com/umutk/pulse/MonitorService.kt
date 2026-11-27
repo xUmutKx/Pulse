@@ -645,7 +645,7 @@ class PointerTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class MotionCueTile : ToolkitTile() {
-    override val motion: String get() = "motion"
+    override val motion: String get() = "pulse" // its own round icon, pulsing (the drawing of a phone with dots is gone)
     override val start: String get() = "toolkit:motion"
     override val trName: String get() = "Hareket noktaları"
     override fun active(): Boolean = MotionCueService.running
