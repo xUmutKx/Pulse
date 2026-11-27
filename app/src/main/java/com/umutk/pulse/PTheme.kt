@@ -275,7 +275,7 @@ fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = nu
             }
         })
         AlertDialog(onDismissRequest, title = barTitle, text = body,
-            icon = if (!w.material || noDim) null else ({ androidx.compose.material3.Icon(if (warn) androidx.compose.material.icons.Icons.Outlined.Warning else androidx.compose.material.icons.Icons.Outlined.Info, null, Modifier.size(24.dp), tint = if (warn) Color(0xFFE5A100) else w.text) }),
+            icon = if (!w.material || noDim || !warn) null else ({ androidx.compose.material3.Icon(if (warn) androidx.compose.material.icons.Icons.Outlined.Warning else androidx.compose.material.icons.Icons.Outlined.Info, null, Modifier.size(24.dp), tint = if (warn) Color(0xFFE5A100) else w.text) }),
             confirmButton = { androidx.compose.runtime.CompositionLocalProvider(InMatDialogBtn provides w.material) { WinButton(w, primary = true, content = confirmButton) } },
             dismissButton = if (dismissButton == null) null else ({ androidx.compose.runtime.CompositionLocalProvider(InMatDialogBtn provides w.material) { WinButton(w, primary = false, content = dismissButton) } }),
             // the look's glass amount makes the box see-through (mica / acrylic); the accent is only a 1 px edge

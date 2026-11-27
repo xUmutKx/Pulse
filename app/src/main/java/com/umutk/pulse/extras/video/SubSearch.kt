@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.video
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Language
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.clickable
@@ -294,12 +298,13 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
     }
 
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = Color.Black,
         title = { Text(tr("Search subtitles", "Altyazı ara"), color = w.text) },
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 PField(query, { query = it }, tr("Title", "Ad"), Modifier.fillMaxWidth(), onDone = { search() })
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Language, null, Modifier.padding(end = 10.dp).size(18.dp), tint = w.sub)
                     listOf("English" to tr("English", "İngilizce"), "Turkish" to tr("Turkish", "Türkçe")).forEach { (name, label) ->
                         Text(
                             label,
@@ -321,7 +326,7 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
                 }
             }
         },
-        confirmButton = { PButton(tr("Search", "Ara"), onClick = { search() }) },
-        dismissButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("Search", "Ara"), icon = androidx.compose.material.icons.Icons.Outlined.Search, onClick = { search() }) },
+        dismissButton = { PButton(tr("Close", "Kapat"), icon = androidx.compose.material.icons.Icons.Outlined.Close, onClick = onDismiss) },
     )
 }

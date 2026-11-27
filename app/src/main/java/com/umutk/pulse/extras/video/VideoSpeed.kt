@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.video
 
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +68,6 @@ internal fun VideoSpeedDialog(current: Float, min: Float, max: Float, remember: 
                 }
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = androidx.compose.material.icons.Icons.Outlined.Check, onClick = onDismiss) },
     )
 }

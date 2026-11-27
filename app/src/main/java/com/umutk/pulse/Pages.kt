@@ -84,6 +84,9 @@ fun labelOf(ctx: android.content.Context, name: String): String {
     return try { ctx.packageManager.getApplicationInfo(pkg, 0).loadLabel(ctx.packageManager).toString() + name.substringAfter(':', "").let { if (it.isEmpty()) "" else " ($it)" } } catch (e: Exception) { name }
 }
 
+/** True where the controls lie on pure black (the video player): buttons and fields get a thin edge on black instead of a grey fill. */
+val LocalBlackControls = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
 fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, compact: Boolean = false, onClick: () -> Unit) {
     val t = T
@@ -138,15 +141,21 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
         // inside a Windows dialog button the colour is the one that reads on that button (white on the accent fill)
         val fg = InWinBtnText.current ?: if (danger) Color(0xFFC42B1C) else t.text
         if (t.material && InMatDialogBtn.current) {
-            // a Material 3 dialog action: a text button, no frame
-            Box(modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-                Text(text, color = if (danger) fg else MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            // a Material 3 dialog action: a text button, no frame (its icon before the word, as the other buttons)
+            val c = if (danger) fg else MaterialTheme.colorScheme.primary
+            Row(modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                if (icon != null) { Icon(icon, null, Modifier.size(18.dp), tint = c); Spacer(Modifier.width(6.dp)) }
+                Text(text, color = c, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             }
             return
         }
         if (t.material) {
-            // a tonal button: a soft fill instead of a heavy outline
-            Box(modifier.clip(CircleShape).background(fg.copy(alpha = if (danger) .12f else .09f)).clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 24.dp, vertical = if (compact) 6.dp else 10.dp), contentAlignment = Alignment.Center) {
+            // a tonal button: a soft fill instead of a heavy outline; on a black screen (LocalBlackControls) a thin edge on black, no grey fill
+            val black = LocalBlackControls.current
+            Row(modifier.clip(CircleShape).then(if (black) Modifier.border(1.dp, fg.copy(alpha = .28f), CircleShape) else Modifier.background(fg.copy(alpha = if (danger) .12f else .09f)))
+                .clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 24.dp, vertical = if (compact) 6.dp else 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                // the icon was given but never drawn here
+                if (icon != null) { Icon(icon, null, Modifier.size(if (compact) 16.dp else 18.dp), tint = fg); Spacer(Modifier.width(8.dp)) }
                 Text(text, color = fg, fontSize = if (compact) 12.sp else 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             }
             return

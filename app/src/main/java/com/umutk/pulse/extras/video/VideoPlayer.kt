@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.video
 
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Check
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -21,6 +23,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -198,6 +201,12 @@ internal val speeds = listOf(.25f, .5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 
 /** Plays [queue] (or just [uri]) from [index]. Gestures, tracks, subtitles, PiP, resume, background audio: see the controls. */
 @Composable
 fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emptyList(), index: Int = 0) {
+    // the player is drawn on pure black: its menus' buttons and fields too (a thin edge, no grey fill)
+    androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.LocalBlackControls provides true) { VideoPlayerBody(uri, onBack, queue, index) }
+}
+
+@Composable
+private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>, index: Int) {
     val ctx = LocalContext.current
     val act = remember(ctx) { ctx.findActivity() }
     val view = LocalView.current
@@ -1056,7 +1065,7 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
         }
     }
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = androidx.compose.ui.graphics.Color.Black,
         title = { Text(tr("Subtitles", "Altyazı"), color = w.text) },
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
@@ -1070,7 +1079,7 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
                 }
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = androidx.compose.material.icons.Icons.Outlined.Check, onClick = onDismiss) },
     )
 }
 
@@ -1104,7 +1113,7 @@ private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, b
     val dx = with(d) { (if (bottomLeft) 12 else -12).dp.roundToPx() }
     val dy = with(d) { (if (bottomLeft) -96 else 52).dp.roundToPx() }
     Popup(alignment = if (bottomLeft) Alignment.BottomStart else Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
-        Column(Modifier.width(230.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
+        Column(Modifier.width(230.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black).border(1.dp, Color.White.copy(alpha = .16f), RoundedCornerShape(14.dp)).padding(6.dp)) {
             items.forEach { item ->
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -1127,7 +1136,7 @@ private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean)
     var m by remember { mutableFloatStateOf(minutes.toFloat()) }
     var end by remember { mutableStateOf(endOfVideo) }
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = androidx.compose.ui.graphics.Color.Black,
         title = { Text(tr("Sleep timer", "Uyku zamanlayıcı"), color = w.text) },
         text = {
             Column(Modifier.fillMaxWidth()) {
@@ -1144,8 +1153,8 @@ private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean)
                 }
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam")) { onSet(m.roundToInt(), end) } },
-        dismissButton = { PButton(tr("Cancel", "İptal"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = androidx.compose.material.icons.Icons.Outlined.Check) { onSet(m.roundToInt(), end) } },
+        dismissButton = { PButton(tr("Cancel", "İptal"), icon = androidx.compose.material.icons.Icons.Outlined.Close, onClick = onDismiss) },
     )
 }
 
@@ -1153,7 +1162,7 @@ private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean)
 internal fun PickDialog(title: String, rows: List<Pair<String, Boolean>>, onDismiss: () -> Unit, extra: (@Composable () -> Unit)? = null, onPick: (Int) -> Unit) {
     val w = LocalWindowLook.current
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = androidx.compose.ui.graphics.Color.Black,
         title = { Text(title, color = w.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
@@ -1167,7 +1176,7 @@ internal fun PickDialog(title: String, rows: List<Pair<String, Boolean>>, onDism
                 extra?.invoke()
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = androidx.compose.material.icons.Icons.Outlined.Check, onClick = onDismiss) },
     )
 }
 
@@ -1191,7 +1200,7 @@ private fun EqDialog(prefs: VideoPrefs, eq: Equalizer?, sk: VSkin, apply: () -> 
         androidx.compose.runtime.mutableStateListOf<Int>().also { l -> info?.first?.indices?.forEach { l += saved.getOrNull(it) ?: 0 } }
     }
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = androidx.compose.ui.graphics.Color.Black,
         title = { Text(tr("Equalizer", "Ekolayzır"), color = w.text) },
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
@@ -1210,7 +1219,7 @@ private fun EqDialog(prefs: VideoPrefs, eq: Equalizer?, sk: VSkin, apply: () -> 
                 }
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = androidx.compose.material.icons.Icons.Outlined.Check, onClick = onDismiss) },
     )
 }
 

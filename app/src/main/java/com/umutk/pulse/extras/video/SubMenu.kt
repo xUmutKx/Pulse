@@ -19,6 +19,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.FormatColorFill
+import androidx.compose.material.icons.outlined.BorderStyle
+import androidx.compose.material.icons.outlined.FormatBold
+import androidx.compose.material.icons.outlined.PictureInPicture
+import androidx.compose.material.icons.outlined.StayCurrentLandscape
+import androidx.compose.material.icons.outlined.StayCurrentPortrait
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,11 +70,14 @@ internal fun SubMenu(
     var rev by remember { mutableIntStateOf(0) }
     rev.let { }
     val bump = { rev++; onStyle() }
-    @Composable fun chip(label: String, on: Boolean, click: () -> Unit) {
-        Text(
-            label, color = if (on) com.umutk.pulse.onAccent(Look.accent) else w.text, fontSize = 13.sp, maxLines = 1, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (on) Look.accent else w.sub.copy(alpha = .18f)).clickable(onClick = click).padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+    // a chip: its icon and word; off it is a thin edge on black (no grey fill: the player is AMOLED black)
+    @Composable fun chip(label: String, on: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, click: () -> Unit) {
+        val fg = if (on) com.umutk.pulse.onAccent(Look.accent) else w.text
+        Row(Modifier.clip(RoundedCornerShape(16.dp)).then(if (on) Modifier.background(Look.accent) else Modifier.border(1.dp, w.text.copy(alpha = .28f), RoundedCornerShape(16.dp)))
+            .clickable(onClick = click).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) { androidx.compose.material3.Icon(icon, null, Modifier.size(16.dp), tint = fg); Spacer(Modifier.width(5.dp)) }
+            Text(label, color = fg, fontSize = 13.sp, maxLines = 1, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+        }
     }
     @Composable fun label(t: String) = Text(t, color = w.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
     @Composable fun stepper(l: String, value: String, minus: () -> Unit, plus: () -> Unit) {
@@ -85,7 +99,7 @@ internal fun SubMenu(
         text = {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(tr("Source", "Kaynak"), tr("Look", "Görünüm"), tr("Timing", "Zamanlama")).forEachIndexed { i, n -> chip(n, tab == i) { tab = i } }
+                    listOf(tr("Source", "Kaynak") to Icons.Outlined.Subtitles, tr("Look", "Görünüm") to Icons.Outlined.Palette, tr("Timing", "Zamanlama") to Icons.Outlined.Timer).forEachIndexed { i, (n, ic) -> chip(n, tab == i, ic) { tab = i } }
                 }
                 Column(Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState()).padding(top = 6.dp)) {
                     when (tab) {
@@ -103,7 +117,7 @@ internal fun SubMenu(
                             var where by remember { mutableIntStateOf(1) }
                             label(tr("Size", "Boyut"))
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                listOf(tr("Upright", "Dikey"), tr("Sideways", "Yatay"), tr("Small window", "Küçük pencere")).forEachIndexed { i, n -> chip(n, where == i) { where = i } }
+                                listOf(tr("Upright", "Dikey") to Icons.Outlined.StayCurrentPortrait, tr("Sideways", "Yatay") to Icons.Outlined.StayCurrentLandscape, tr("Small window", "Küçük pencere") to Icons.Outlined.PictureInPicture).forEachIndexed { i, (n, ic) -> chip(n, where == i, ic) { where = i } }
                             }
                             val now = when (where) { 0 -> prefs.subSizePort; 1 -> prefs.subSize; else -> prefs.subSizePip }.coerceIn(18, 56)
                             Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -123,16 +137,16 @@ internal fun SubMenu(
                             }
                             label(tr("Style", "Biçim"))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                chip(tr("Bold", "Kalın"), prefs.subBold) { prefs.subBold = !prefs.subBold; bump() }
-                                chip(tr("Outline", "Kenar"), prefs.subEdge) { prefs.subEdge = !prefs.subEdge; bump() }
-                                chip(tr("Background", "Arka plan"), prefs.subBg) { prefs.subBg = !prefs.subBg; bump() }
+                                chip(tr("Bold", "Kalın"), prefs.subBold, Icons.Outlined.FormatBold) { prefs.subBold = !prefs.subBold; bump() }
+                                chip(tr("Outline", "Kenar"), prefs.subEdge, Icons.Outlined.BorderStyle) { prefs.subEdge = !prefs.subEdge; bump() }
+                                chip(tr("Background", "Arka plan"), prefs.subBg, Icons.Outlined.FormatColorFill) { prefs.subBg = !prefs.subBg; bump() }
                             }
                             stepper(tr("Height", "Yükseklik"), "${prefs.subPos}%", { prefs.subPos = (prefs.subPos - 2).coerceAtLeast(0); bump() }, { prefs.subPos = (prefs.subPos + 2).coerceAtMost(40); bump() })
                         }
                         else -> {
                             stepper(tr("Delay", "Gecikme"), "%+.1f s".format(delayMs / 1000f), { onDelay(delayMs - 100); rev++ }, { onDelay(delayMs + 100); rev++ })
                             stepper(tr("Delay (big)", "Gecikme (büyük)"), "%+d s".format(delayMs / 1000), { onDelay(delayMs - 1000); rev++ }, { onDelay(delayMs + 1000); rev++ })
-                            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) { PButton(tr("Reset delay", "Gecikmeyi sıfırla"), compact = true) { onDelay(0L); rev++ } }
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) { PButton(tr("Reset delay", "Gecikmeyi sıfırla"), icon = Icons.Outlined.Refresh, compact = true) { onDelay(0L); rev++ } }
                             Row(Modifier.fillMaxWidth().clickable(onClick = onEnc).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(tr("Encoding", "Kodlama"), Modifier.weight(1f), color = w.text, fontSize = 14.sp); Text(prefs.subEnc, color = w.sub, fontSize = 13.sp)
                             }
@@ -141,6 +155,6 @@ internal fun SubMenu(
                 }
             }
         },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
+        confirmButton = { PButton(tr("OK", "Tamam"), icon = Icons.Outlined.Check, onClick = onDismiss) },
     )
 }

@@ -239,9 +239,10 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
         return
     }
     val shape = if (t.material) CircleShape else if (xpAuthentic) RoundedCornerShape(0.dp) else RoundedCornerShape(t.radius.coerceAtMost(8.dp)) // M3 search / text field: full pill
-    val fill = if (t.material) t.line.copy(alpha = .35f) else if (t.dark) Color.White.copy(alpha = .06f) else Color.White
+    val black = LocalBlackControls.current
+    val fill = if (black) Color.Black else if (t.material) t.line.copy(alpha = .35f) else if (t.dark) Color.White.copy(alpha = .06f) else Color.White
     // win7 authentic: the Aero text box's grey-blue edge
-    val edge = if (t.material) Modifier else if (t.bevel) Modifier.bevel(false) else if (win7Authentic) Modifier.border(1.dp, Color(0xFFABADB3), shape) else Modifier.border(1.dp, t.line, shape)
+    val edge = if (black) Modifier.border(1.dp, t.text.copy(alpha = .28f), shape) else if (t.material) Modifier else if (t.bevel) Modifier.bevel(false) else if (win7Authentic) Modifier.border(1.dp, Color(0xFFABADB3), shape) else Modifier.border(1.dp, t.line, shape)
     BasicTextField(value, onChange, modifier.background(fill, shape).then(edge),
         singleLine = true, keyboardOptions = KeyboardOptions(imeAction = if (onDone != null) ImeAction.Send else ImeAction.Default), keyboardActions = KeyboardActions(onSend = { onDone?.invoke() }), textStyle = TextStyle(color = if (t.material || t.dark) t.text else Color.Black, fontSize = if (t.material) 16.sp else 14.sp), cursorBrush = SolidColor(Look.accent),
         decorationBox = { inner -> Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
