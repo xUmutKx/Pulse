@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -108,6 +110,11 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     // a long press picks files; the bin at the top right deletes all the picked ones at once
     var sel by remember { mutableStateOf(setOf<String>()) }
     var askBulk by remember { mutableStateOf(false) }
+    // the order of a list: size (biggest first), name, date (newest first) or the folder it lies in
+    var sortBy by remember { mutableStateOf(0) }
+    val listState = rememberLazyListState()
+    // a long press then a slide over the rows picks every row the finger passes
+    fun rowAt(y: Float): String? = listState.layoutInfo.visibleItemsInfo.firstOrNull { y >= it.offset && y < it.offset + it.size }?.key as? String
     // what a swipe to the left and to the right does to a file (delete, open, pick or nothing)
     val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("pulse_types", 0)
     var swL by remember { mutableStateOf(prefs.getString("swL", "delete") ?: "delete") }
@@ -150,7 +157,15 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
         val totalCount = data.sumOf { it.count }
         val open = selected
 
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { pos -> rowAt(pos.y)?.let { k -> sel = sel + k } },
+                    onDrag = { change, _ -> change.consume(); rowAt(change.position.y)?.let { k -> if (k !in sel) sel = sel + k } },
+                )
+            },
+            state = listState, contentPadding = PaddingValues(bottom = 24.dp),
+        ) {
             if (note.isNotEmpty()) item { Text(note, color = Color(0xFFC42B1C), fontSize = 12.sp) }
             if (open == null) item {
                 DonutChart(
@@ -190,17 +205,22 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             if (open != null) {
                 val s = data.first { it.kind == open }
                 item {
-                    Text(
-                        "${kindLabel(open)}: " + com.umutk.pulse.tr("largest first", "en büyük önce"),
-                        color = T.sub,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-                    )
+                    Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(top = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(com.umutk.pulse.tr("Size", "Boyut"), com.umutk.pulse.tr("Name", "Ad"), com.umutk.pulse.tr("Date", "Tarih"), com.umutk.pulse.tr("Path", "Yol")).forEachIndexed { i, n ->
+                            com.umutk.pulse.PChip(sortBy == i, n) { sortBy = i }
+                        }
+                    }
                 }
                 if (s.largest.isEmpty()) {
                     item { Text(com.umutk.pulse.tr("No files of this type", "Bu türde dosya yok"), color = T.sub, fontSize = 13.sp) }
                 }
-                items(s.largest, key = { it.file.path }) { f ->
+                val ordered = when (sortBy) {
+                    1 -> s.largest.sortedBy { it.file.name.lowercase() }
+                    2 -> s.largest.sortedByDescending { it.modified }
+                    3 -> s.largest.sortedBy { it.file.path.lowercase() }
+                    else -> s.largest.sortedByDescending { it.size }
+                }
+                items(ordered, key = { it.file.path }) { f ->
                     // a tap opens the file in the viewer or app that handles it
                     val ctx = androidx.compose.ui.platform.LocalContext.current
                     val picked = f.file.path in sel
@@ -209,7 +229,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                     var boxW by remember { mutableStateOf(1f) }
                     fun doAct(a: String) {
                         when (a) {
-                            "delete" -> note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
+                            "delete" -> note = if (tbDelete(f.file)) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
                             "open" -> tbOpen(ctx, f.file)
                             "pick" -> sel = sel + f.file.path
                         }
@@ -250,7 +270,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                             Column(Modifier.weight(1f)) {
                                 Text(f.file.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    tbFormatBytes(f.size) + " · " + f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
+                                    tbFormatBytes(f.size) + " · " + java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT).format(java.util.Date(f.modified)) + " · " + f.file.parent.orEmpty(),
                                     color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -270,7 +290,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 TextButton(onClick = {
                     askBulk = false
                     var failed = 0
-                    files.forEach { f -> if (f.file.delete()) StorageScan.forget(f.file, f.size) else failed++ }
+                    files.forEach { f -> if (tbDelete(f.file)) StorageScan.forget(f.file, f.size) else failed++ }
                     note = if (failed > 0) com.umutk.pulse.tr("$failed could not be deleted", "$failed dosya silinemedi") else ""
                     sel = emptySet()
                 }) { Text(com.umutk.pulse.tr("Delete", "Sil")) }
@@ -286,7 +306,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     pending = null
-                    note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
+                    note = if (tbDelete(f.file)) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
                 }) { Text(com.umutk.pulse.tr("Delete", "Sil")) }
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text(com.umutk.pulse.tr("Cancel", "Vazgeç")) } },
@@ -350,4 +370,15 @@ internal fun kindLabel(k: FileKind): String = when (k) {
     FileKind.IMAGES -> com.umutk.pulse.tr("Images", "Resimler"); FileKind.VIDEO -> com.umutk.pulse.tr("Video", "Videolar"); FileKind.AUDIO -> com.umutk.pulse.tr("Audio", "Ses")
     FileKind.DOCUMENTS -> com.umutk.pulse.tr("Documents", "Belgeler"); FileKind.ARCHIVES -> com.umutk.pulse.tr("Archives", "Arşivler"); FileKind.APPS -> "APK"
     FileKind.OTHER -> com.umutk.pulse.tr("Other", "Diğer")
+}
+
+
+/** Deletes a file; when the system refuses (a file another app made, a protected folder) root or Shizuku's shell removes it. */
+private fun tbDelete(f: File): Boolean {
+    if (f.delete() || !f.exists()) return true
+    if (com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizukuOk()) {
+        runCatching { com.umutk.pulse.Shell.run("rm -f '" + f.path.replace("'", "'\\''") + "'") }
+        return !f.exists()
+    }
+    return false
 }
