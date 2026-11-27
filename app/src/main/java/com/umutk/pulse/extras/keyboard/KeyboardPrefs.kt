@@ -15,6 +15,8 @@ object KeyboardPrefs {
     /** Google Keyboard: its colour tone (teal, black, smoke, material) and whether the keys have their own background. */
     var gbTone by mutableStateOf("teal")
     var gbBorders by mutableStateOf(true)
+    /** A small grey dot on a typed word that looks like a kept slip (off by default). */
+    var slipMark by mutableStateOf(false)
     /** Custom theme colours (ARGB): background, key, key text, special key, accent, toolbar menu. */
     var cBg by mutableStateOf(0xFF000000.toInt())
     var cKey by mutableStateOf(0xFF1F1F1F.toInt())
@@ -275,7 +277,7 @@ object KeyboardPrefs {
         // once: the extra keys (arrows, Ctrl, ...) sit under the space row from now on
         if (p.getInt("ver", 0) < 2) p.edit().putBoolean("proRow", true).putBoolean("proBottom", true).putInt("ver", 2).apply()
         theme = p.getString("theme", theme) ?: theme
-        gbTone = p.getString("gbTone", "teal") ?: "teal"; gbBorders = p.getBoolean("gbBorders", true)
+        gbTone = p.getString("gbTone", "teal") ?: "teal"; gbBorders = p.getBoolean("gbBorders", true); slipMark = p.getBoolean("slipMark", false)
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
         heightPct = p.getInt("heightPct", heightPct); landHeightPct = p.getInt("landHeightPct", landHeightPct); landProRow = p.getBoolean("landProRow", landProRow); samProRow = p.getBoolean("samProRow", samProRow); landNumberRow = p.getBoolean("landNumberRow", landNumberRow); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
@@ -431,7 +433,7 @@ object KeyboardPrefs {
 
     fun save(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
-            .putString("theme", theme).putString("gbTone", gbTone).putBoolean("gbBorders", gbBorders)
+            .putString("theme", theme).putString("gbTone", gbTone).putBoolean("gbBorders", gbBorders).putBoolean("slipMark", slipMark)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("landHeightPct", landHeightPct).putBoolean("landProRow", landProRow).putBoolean("samProRow", samProRow).putBoolean("landNumberRow", landNumberRow).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putBoolean("compact", compact).putInt("compactPct", compactPct).putBoolean("emojiRight", emojiRight).putBoolean("emojiFull", emojiFull).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
             .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)

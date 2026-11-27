@@ -157,6 +157,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Learn from what I type", "Yazdıklarımdan öğren"), tr("New words and names are kept on the phone", "Yeni kelimeler ve isimler telefonda tutulur"), KeyboardPrefs.learn) { KeyboardPrefs.learn = it; save() }
             Switch(tr("Capital at the start of a sentence", "Cümle başında büyük harf"), "", KeyboardPrefs.autoCap) { KeyboardPrefs.autoCap = it; save() }
             Switch(tr("Emoji suggestions", "Emoji önerileri"), tr("A word can offer its emoji", "Kelime kendi emojisini önerebilir"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
+            Switch(tr("Mark a possible slip", "Olası yazım hatasını işaretle"), tr("A small grey dot on a word you typed that looks like a kept mistake", "Yazdığın kelime kalmış bir hataya benziyorsa küçük gri nokta"), KeyboardPrefs.slipMark) { KeyboardPrefs.slipMark = it; save() }
             Switch(tr("Swipe typing", "Kaydırarak yazma"), "", KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
             Switch(tr("Symbols on long press", "Basılı tutunca semboller"), "", KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }

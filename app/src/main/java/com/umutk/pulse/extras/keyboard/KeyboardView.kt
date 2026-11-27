@@ -707,9 +707,12 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                             // with a hardware keyboard: the function key that picks this word is written small in front of it
                             if (st.hardware && s.isNotEmpty()) Text("F${i + 1}", color = th.sub.copy(alpha = .55f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
                             Text(s, color = if (i == 1) th.text else th.sub, fontSize = 20.sp, fontWeight = if (i == 1) FontWeight.Medium else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                            // a typed word that looks like a kept slip: a small see-through white dot (hold the word to take it out of the learned words)
-                            val sus = remember(s, st.lang) { s.length in 5..26 && s[0] == '"' && KeyboardDictionary.suspect(st.lang, s) }   // only the word as it was typed (quoted), not every suggestion
-                            if (sus) Box(Modifier.padding(start = 3.dp, bottom = 8.dp).size(5.dp).background(Color.White.copy(alpha = .6f), CircleShape))   // a small see-through white dot
+                        }
+                        // a typed word that looks like a kept slip (the setting "Mark a possible slip", off by default): a small grey, half see-through dot in the corner of the slot,
+                        // so a long word cannot push it out of the slot
+                        if (KeyboardPrefs.slipMark && s.length in 5..26 && s[0] == '"') {
+                            val sus = remember(s, st.lang) { KeyboardDictionary.suspect(st.lang, s) }
+                            if (sus) Box(Modifier.align(Alignment.TopEnd).padding(top = 7.dp, end = 9.dp).size(5.dp).background(Color.Gray.copy(alpha = .55f), CircleShape))
                         }
                     }
                 }
