@@ -199,6 +199,7 @@ object AppPlace {
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
         App("CodeLauncher", "Code", "Kod", "code", Icons.Outlined.Code) { c, _ -> launchExtra(c, TOOL, "code") },
+        App("TerminalLauncher", "Terminal", "Terminal", "terminal", Icons.Outlined.Terminal) { c, _ -> launchExtra(c, TOOL, "terminal") },
         App("ClockLauncher", "Clock", "Saat", "clock", Icons.Outlined.AccessTime) { c, _ -> launchExtra(c, TOOL, "clock") },
         App("EbookLauncher", "Books", "Kitaplar", "book", Icons.Outlined.MenuBook) { c, _ -> launchExtra(c, TOOL, "ebook") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },

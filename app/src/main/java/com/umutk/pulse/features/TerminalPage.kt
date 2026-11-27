@@ -13,6 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,7 +29,11 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.Shell
 import com.umutk.pulse.T
 
-/** The last 20 commands, newest first. Kept in memory: survives moving between pages, not a restart. */
+/** Commands offered while typing, after the favourites and the history (a short list of what is used on a phone shell). */
+private val TERM_COMMON = listOf("ls", "ls -la", "cd ", "pwd", "cat ", "cp ", "mv ", "rm ", "mkdir ", "echo ", "grep ", "find ", "chmod ", "df -h", "du -sh *", "ps -A", "top -n 1", "ping -c 4 ", "curl -I ",
+    "getprop ", "pm list packages", "dumpsys battery", "dumpsys deviceidle", "dumpsys batterystats", "logcat -d", "settings get ", "am start ", "cmd package ", "wm size", "wm density", "uname -a", "date", "id", "whoami", "neofetch")
+
+/** The last 50 commands, newest first: kept in memory and on the phone (the terminal reads them back after a restart). */
 private val termHistory = mutableStateListOf<String>()
 
 /** Persistent shell child process owned by Pulse (no Termux). Output is live; the working directory is read back after every command. */
@@ -36,6 +43,8 @@ private object TermSession {
     var asRoot by mutableStateOf(false)
     private var proc: Process? = null
     private var pid = -1L
+    /** When the shell was last used (a command sent or output received): a session left alone is ended, so its wake lock never runs all night. */
+    @Volatile var lastActive = android.os.SystemClock.elapsedRealtime()
     private val mark = Regex("\u0001([^\u0001]*)\u0001\n?")
 
     @Synchronized fun start(home: String, root: Boolean) {
@@ -54,6 +63,7 @@ private object TermSession {
     }
 
     private fun append(s: String) {
+        lastActive = android.os.SystemClock.elapsedRealtime()
         var t = text + s
         while (true) { val m = mark.find(t) ?: break; cwd = m.groupValues[1]; t = t.removeRange(m.range) }
         if (t.length > 60000) t = t.takeLast(40000)
@@ -63,6 +73,7 @@ private object TermSession {
     val shown get() = text.substringBefore('\u0001')
 
     @Synchronized fun send(c: String, echo: Boolean = true) {
+        lastActive = android.os.SystemClock.elapsedRealtime()
         val p = proc ?: return
         if (echo) text += "$ $c\n"
         Thread { runCatching { p.outputStream.apply { write("$c\nprintf '\\001%s\\001\\n' \"\$PWD\"\n".toByteArray()); flush() } } }.start()
@@ -141,11 +152,17 @@ fun TerminalPage(windows: Boolean = false) {
     LaunchedEffect(TermSession.text.length) { scroll.animateScrollTo(scroll.maxValue) }
     val fg = Color(0xFFE6E6E6); val green = Color(0xFF3DDC84)
     var hi by remember { mutableStateOf(-1) }
+    // favourites (a star keeps the command in the line) and a history that survives a restart; both are kept on the phone
+    val tp = remember { ctx.getSharedPreferences("terminal", android.content.Context.MODE_PRIVATE) }
+    val favs = remember { mutableStateListOf<String>().also { l -> l.addAll(tp.getString("favs", "").orEmpty().split('\n').filter { it.isNotBlank() }) } }
+    LaunchedEffect(Unit) { if (termHistory.isEmpty()) termHistory.addAll(tp.getString("hist", "").orEmpty().split('\n').filter { it.isNotBlank() }.take(50)) }
+    fun saveFavs() { tp.edit().putString("favs", favs.joinToString("\n")).apply() }
     fun go() {
         val c = cmd.trim()
         if (c.isEmpty()) return
         termHistory.remove(c); termHistory.add(0, c); hi = -1
-        while (termHistory.size > 20) termHistory.removeAt(termHistory.lastIndex)
+        while (termHistory.size > 50) termHistory.removeAt(termHistory.lastIndex)
+        tp.edit().putString("hist", termHistory.joinToString("\n")).apply()
         if (!TermSession.alive) TermSession.start(TermSession.cwd.ifEmpty { home }, TermSession.asRoot)
         // neofetch is part of the terminal, as if it were installed
         if (c == "neofetch" || c.startsWith("neofetch ")) { TermSession.text += "$ $c\n" + neofetchOut(ctx, if (windows) com.umutk.pulse.T.id else null); cmd = ""; return }
@@ -182,12 +199,25 @@ fun TerminalPage(windows: Boolean = false) {
             }
         }
         Text(TermSession.cwd, color = Color(0xFF729FCF), fontSize = 11.sp, fontFamily = FontFamily.Monospace, maxLines = 1)
+        // with nothing typed the favourites are on offer; typing offers the favourites, the history and the usual commands that start the same (a tap puts it in the line; hold a favourite to drop it)
+        val sugg = if (cmd.isBlank()) favs.toList() else (favs + termHistory + TERM_COMMON).distinct().filter { it.startsWith(cmd, true) && !it.equals(cmd, true) }.take(8)
+        if (sugg.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            sugg.forEach { sg ->
+                Text((if (sg in favs) "\u2605 " else "") + sg, color = fg, fontSize = 12.sp, fontFamily = FontFamily.Monospace, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0x33FFFFFF))
+                        .pointerInput(sg) { androidx.compose.foundation.gestures.detectTapGestures(onLongPress = { if (sg in favs) { favs.remove(sg); saveFavs() } }, onTap = { cmd = sg }) }
+                        .padding(horizontal = 10.dp, vertical = 5.dp))
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("$ ", color = green, fontSize = 14.sp, fontFamily = FontFamily.Monospace)
             androidx.compose.foundation.text.BasicTextField(cmd, { cmd = it }, singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(color = fg, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = androidx.compose.ui.graphics.SolidColor(green),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Go, autoCorrect = false),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { go() }), modifier = Modifier.weight(1f))
+            // the star keeps this command as a favourite (or takes it away)
+            Text(if (cmd.trim().isNotEmpty() && cmd.trim() in favs) "\u2605" else "\u2606", color = if (cmd.trim().isNotEmpty() && cmd.trim() in favs) Color(0xFFFFD54F) else fg, fontSize = 18.sp,
+                modifier = Modifier.clickable { val c = cmd.trim(); if (c.isNotEmpty()) { if (c in favs) favs.remove(c) else favs.add(0, c); saveFavs() } }.padding(horizontal = 8.dp, vertical = 4.dp))
             // the last commands, one press back each
             Text("\u2191", color = fg, fontSize = 18.sp, modifier = Modifier.clickable { if (termHistory.isNotEmpty()) { hi = (hi + 1).coerceAtMost(termHistory.lastIndex); cmd = termHistory[hi] } }.padding(8.dp))
         }
@@ -201,7 +231,17 @@ fun TerminalPage(windows: Boolean = false) {
 class TermService : android.app.Service() {
     private var wl: android.os.PowerManager.WakeLock? = null
     private val h = android.os.Handler(android.os.Looper.getMainLooper())
-    private val check: Runnable = object : Runnable { override fun run() { if (!TermSession.alive) stopSelf() else h.postDelayed(this, 5000) } }
+    private val check: Runnable = object : Runnable {
+        override fun run() {
+            when {
+                !TermSession.alive -> stopSelf()
+                // ten minutes with nothing typed and no output: the session is ended (the service, its notification and the wake lock go with it)
+                android.os.SystemClock.elapsedRealtime() - TermSession.lastActive > IDLE_MS -> { TermSession.stop(); stopSelf() }
+                else -> { runCatching { wl?.acquire(LOCK_MS) }; h.postDelayed(this, 5000) }
+            }
+        }
+    }
+    private companion object { const val IDLE_MS = 10 * 60 * 1000L; const val LOCK_MS = 60 * 1000L }
     override fun onBind(i: android.content.Intent?): android.os.IBinder? = null
     override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
         if (i?.action == "stop") { TermSession.stop(); stopSelf(); return START_NOT_STICKY }
@@ -213,7 +253,7 @@ class TermService : android.app.Service() {
             .setOngoing(true).addAction(0, com.umutk.pulse.tr("Stop", "Durdur"), stop).build()
         if (android.os.Build.VERSION.SDK_INT >= 34) androidx.core.app.ServiceCompat.startForeground(this, 7301, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(7301, n)
-        if (wl == null) wl = (getSystemService(POWER_SERVICE) as android.os.PowerManager).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "pulse:terminal").apply { setReferenceCounted(false); acquire() }
+        if (wl == null) wl = (getSystemService(POWER_SERVICE) as android.os.PowerManager).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "pulse:terminal").apply { setReferenceCounted(false); acquire(LOCK_MS) }   // a minute at a time, renewed while the session is in use (it used to be held for ever)
         h.removeCallbacks(check); h.postDelayed(check, 5000)
         return START_NOT_STICKY
     }

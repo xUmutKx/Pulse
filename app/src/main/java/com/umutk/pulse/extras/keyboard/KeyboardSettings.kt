@@ -150,6 +150,20 @@ fun KeyboardSettings(back: () -> Unit) {
         // themes
         // search the settings: the sections open and only the matching switches show
         PField(KbFind.q, { KbFind.q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
+        // the features that matter most, all in one place: pick what you want (each one is also in its own section below)
+        KbSection("tune", tr("Pick your features", "Özelliklerini seç")) {
+            Switch(tr("Suggestions", "Öneriler"), tr("The bar above the keys offers words", "Tuşların üstündeki çubuk kelime önerir"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
+            Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
+            Switch(tr("Learn from what I type", "Yazdıklarımdan öğren"), tr("New words and names are kept on the phone", "Yeni kelimeler ve isimler telefonda tutulur"), KeyboardPrefs.learn) { KeyboardPrefs.learn = it; save() }
+            Switch(tr("Capital at the start of a sentence", "Cümle başında büyük harf"), "", KeyboardPrefs.autoCap) { KeyboardPrefs.autoCap = it; save() }
+            Switch(tr("Emoji suggestions", "Emoji önerileri"), tr("A word can offer its emoji", "Kelime kendi emojisini önerebilir"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
+            Switch(tr("Swipe typing", "Kaydırarak yazma"), "", KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
+            Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
+            Switch(tr("Symbols on long press", "Basılı tutunca semboller"), "", KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }
+            Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
+            Switch(tr("Vibration", "Titreşim"), "", KeyboardPrefs.haptic) { KeyboardPrefs.haptic = it; save() }
+            Switch(tr("Key sound", "Tuş sesi"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
+        }
         KbSection("palette", tr("Theme", "Tema")) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyboardThemes.ids.forEach { id -> ThemeTile(id, dark, KeyboardPrefs.theme == id) { KeyboardPrefs.theme = id; save() } }

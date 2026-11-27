@@ -2437,6 +2437,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".TerminalLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_terminal" android:roundIcon="@drawable/launch_terminal" android:label="Terminal">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_calc" android:roundIcon="@drawable/launch_calc" android:label="Calculator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
