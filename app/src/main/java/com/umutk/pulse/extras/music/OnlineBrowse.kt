@@ -45,7 +45,10 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
     var ytIn by remember { mutableStateOf(false) }
     var ytLists by remember { mutableStateOf<List<com.umutk.pulse.extras.ytx.PlaylistRef>>(emptyList()) }
     var spLists by remember { mutableStateOf<List<com.umutk.pulse.extras.spotify.SpPlaylist>>(emptyList()) }
-    fun show(t: String, load: suspend () -> List<OnlineMusic.Hit>) { title = t; busy = true; scope.launch { list = runCatching { load() }.getOrDefault(emptyList()); busy = false } }
+    // "Played": everything that was listened to in the player (online and on the phone), searched and filtered here
+    var played by remember { mutableStateOf(false) }
+    var playedKind by remember { mutableIntStateOf(0) }   // 0 all, 1 online, 2 on the phone
+    fun show(t: String, load: suspend () -> List<OnlineMusic.Hit>) { played = false; title = t; busy = true; scope.launch { list = runCatching { load() }.getOrDefault(emptyList()); busy = false } }
     LaunchedEffect(tab) {
         list = emptyList()
         if (tab == 0) {
@@ -61,8 +64,8 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
             show(tr("Liked songs", "Beğenilen şarkılar")) { com.umutk.pulse.extras.spotify.SpotifyApi(ctx).liked().map { OnlineMusic.Hit(it.title, it.artist, it.image, "sp", null) } }
         }
     }
-    LaunchedEffect(query, tab) {
-        if (query.trim().length < 2) return@LaunchedEffect
+    LaunchedEffect(query, tab, played) {
+        if (played || query.trim().length < 2) return@LaunchedEffect
         delay(600)
         show("“$query”") { if (tab == 0) OnlineMusic.youtube(ctx, query) else OnlineMusic.spotify(ctx, query) }
     }
@@ -84,6 +87,7 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
                 if (ytIn) { chip(tr("Liked", "Beğenilen")) { show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } }; chip(tr("Recent", "Son çalınan")) { show(tr("Played lately", "Son çalınanlar")) { OnlineMusic.ytHistory(ctx) } } }
                 chip(tr("For you", "Senin için")) { show(tr("For you", "Senin için")) { OnlineMusic.forYou(ctx) } }
                 chip(tr("History", "Geçmiş")) { show(tr("Played here", "Burada çalınanlar")) { OnlineMusic.history(ctx) } }
+                chip(tr("Played", "Dinlenenler")) { played = true; title = tr("Everything you played", "Dinlediğin her şey") }
                 chip(tr("Popular", "Popüler")) { show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") } }
             }
             if (!ytIn) Text(tr("Sign in to YouTube in YTXTube to see your own songs here.", "Kendi şarkıların burada görünsün diye YTXTube'da YouTube'a giriş yap."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
@@ -108,7 +112,7 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
         Text(if (busy) tr("Loading…", "Yükleniyor…") else title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }
-        LazyColumn(Modifier.weight(1f)) {
+        if (played) Box(Modifier.weight(1f)) { PlayedList(query, playedKind) { playedKind = it } } else LazyColumn(Modifier.weight(1f)) {
             items(shown.size) { i ->
                 val h = shown[i]
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { if (!OnlineMusic.playHere(ctx, shown, i)) OnlineMusic.play(ctx, h) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -118,6 +122,49 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
                         Text(h.artist, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     PIcon("play", T.sub, 22.dp)
+                }
+            }
+        }
+    }
+}
+
+
+/** Everything played in the music player, newest first (the listening log): a filter for online songs or songs of the phone, and the search box above filters it as you type. */
+@Composable
+private fun PlayedList(query: String, kind: Int, onKind: (Int) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val all = remember { ListenLog.all(ctx) }
+    val thumbs = remember { OnlineHistory.all(ctx).associate { it.id to it.thumb } }
+    val q = query.trim()
+    val shown = remember(all, q, kind) { all.filter { e -> (kind == 0 || (kind == 1) == e.online) && (q.isEmpty() || e.title.contains(q, true) || e.artist.contains(q, true)) } }
+    val fmt = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT) }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0 to tr("All", "Hepsi"), 1 to tr("Online", "Çevrimiçi"), 2 to tr("On the phone", "Telefonda")).forEach { (k, n) ->
+                Text(n, color = if (kind == k) T.bg else T.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (kind == k) Look.accent else T.panel).clickable { onKind(k) }.padding(horizontal = 14.dp, vertical = 7.dp))
+            }
+        }
+        if (shown.isEmpty()) Text(tr("Nothing here yet: what you play is saved by itself", "Henüz yok: çaldıkların kendiliğinden kaydedilir"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        LazyColumn(Modifier.weight(1f)) {
+            items(shown.size) { i ->
+                val e = shown[i]
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable {
+                    if (e.online) {
+                        val hits = shown.filter { it.online }.map { OnlineMusic.Hit(it.title, it.artist, thumbs[it.key], "yt", it.key) }
+                        val at = hits.indexOfFirst { it.ytId == e.key }.coerceAtLeast(0)
+                        scope.launch { if (!OnlineMusic.playHere(ctx, hits, at)) hits.getOrNull(at)?.let { OnlineMusic.play(ctx, it) } }
+                    } else {
+                        val local = shown.filter { !it.online }
+                        MusicPlayerEngine.get(ctx).playQueue(local.map { Track(path = it.key, title = it.title, artist = it.artist) }, local.indexOfFirst { it.key == e.key }.coerceAtLeast(0))
+                    }
+                }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (e.online) coil.compose.AsyncImage(thumbs[e.key], null, Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                    else Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(T.panel), contentAlignment = Alignment.Center) { PIcon("play", T.sub, 22.dp) }
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(e.title, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(listOf(e.artist, fmt.format(java.util.Date(e.at))).filter { it.isNotBlank() }.joinToString(" · "), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }
