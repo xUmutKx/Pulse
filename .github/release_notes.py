@@ -5,7 +5,7 @@ import sys
 # YAPILACAKLAR.md is the author's own work log (Turkish) and never goes into a release.
 cur_s, prev_s = sys.argv[1], sys.argv[2]
 cur = tuple(int(x) for x in cur_s.split('.'))
-prev = tuple(int(x) for x in prev_s.split('.')) if prev_s else (0, 0, 0)
+prev = tuple(int(x) for x in prev_s.split('.')) if prev_s and all(x.isdigit() for x in prev_s.split('.')) else (0, 0, 0)
 entries = []
 def _ver(n):
     # a file that is not <version>.md (e.g. play-whatsnew-1.0.400.md) sorts first and is skipped below

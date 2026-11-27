@@ -197,7 +197,7 @@ jobs:
             gh release create "watch-v$WV-$GITHUB_RUN_NUMBER" files/PulseWatch.apk --target "$GITHUB_SHA" --title "Pulse Watch $WV" --notes "Pulse Watch (Wear OS)."
             exit 0
           fi
-          PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
+          PREV=$(gh release list --limit 20 --exclude-drafts --json tagName -q '[.[] | select(.tagName | test("^v[0-9]"))][0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
           # the full APK first (an older app's updater takes the first one it finds), then the lite one
           ASSETS=("files/Pulse-$VER.apk" "files/Pulse-$VER-lite.apk")
