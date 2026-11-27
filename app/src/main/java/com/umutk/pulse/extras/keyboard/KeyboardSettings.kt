@@ -154,6 +154,18 @@ fun KeyboardSettings(back: () -> Unit) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyboardThemes.ids.forEach { id -> ThemeTile(id, dark, KeyboardPrefs.theme == id) { KeyboardPrefs.theme = id; save() } }
             }
+            // Google Keyboard: its tone and the key borders
+            if (KeyboardPrefs.theme == "gboard") {
+                Text(tr("Tone", "Ton"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("teal" to tr("Teal grey", "Yeşilimsi gri"), "smoke" to tr("Smoke", "Duman"), "black" to tr("Black", "Siyah"), "material" to "Material").forEach { (k, n) ->
+                        PChip(KeyboardPrefs.gbTone == k, n) { KeyboardPrefs.gbTone = k; save() }
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(KeyboardPrefs.gbBorders, tr("Key borders", "Tuş kenarları")) { KeyboardPrefs.gbBorders = !KeyboardPrefs.gbBorders; save() }
+                }
+            }
             // key shape and icon family over the theme (the theme's own by default)
             Text(tr("Key corners", "Tuş köşeleri") + ": " + (if (KeyboardPrefs.keyRadius < 0) tr("Theme", "Tema") else "${KeyboardPrefs.keyRadius}"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

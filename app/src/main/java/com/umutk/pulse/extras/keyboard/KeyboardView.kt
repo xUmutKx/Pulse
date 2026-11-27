@@ -2258,7 +2258,7 @@ private fun emojiTh(th: KbTheme): KbTheme {
     val id = KeyboardPrefs.emojiTheme
     if (id == "same" || id == th.id) return th
     val dark = androidx.compose.foundation.isSystemInDarkTheme()
-    return remember(id, dark, KeyboardPrefs.keyRadius, KeyboardPrefs.keyIcons) { KeyboardThemes.of(id, dark).tuned() }
+    return remember(id, dark, KeyboardPrefs.keyRadius, KeyboardPrefs.keyIcons, KeyboardPrefs.gbTone, KeyboardPrefs.gbBorders) { KeyboardThemes.of(id, dark).tuned() }
 }
 
 

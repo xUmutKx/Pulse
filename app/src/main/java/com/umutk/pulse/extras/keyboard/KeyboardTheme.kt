@@ -25,10 +25,10 @@ class KbTheme(
 
 object KeyboardThemes {
     /** The picker's order. */
-    val ids = listOf("samsung", "amoled", "material", "win11", "win10", "win7", "xp", "win95", "retro", "midnight", "forest", "rose", "sunset", "contrast", "cvd", "custom")
+    val ids = listOf("samsung", "amoled", "gboard", "material", "win11", "win10", "win7", "xp", "win95", "retro", "midnight", "forest", "rose", "sunset", "contrast", "cvd", "custom")
 
     fun name(id: String) = when (id) {
-        "amoled" -> "SwiftKey"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
+        "amoled" -> "SwiftKey"; "gboard" -> "Google Keyboard"; "material" -> "Material"; "samsung" -> "Samsung"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"
         "xp" -> "Windows XP"; "win95" -> "Windows 95"; "retro" -> "Old phone"; "midnight" -> "Midnight"; "forest" -> "Forest"; "rose" -> "Rosé"; "sunset" -> "Sunset"; "contrast" -> "High contrast"; "cvd" -> "Colour-blind safe"; else -> "Custom"
     }
 
@@ -47,6 +47,19 @@ object KeyboardThemes {
         "contrast" -> KbTheme(id, c(0xFF000000), c(0xFF000000), c(0xFFFFFFFF), c(0xFF000000), c(0xFFFFFF00), c(0xFFFFFF00), c(0xFF000000), c(0xFF000000), c(0xFF202020), c(0xFFFFFFFF), 6, border = c(0xFFFFFFFF), icons = "filled")
         // for red-green colour blindness: blue and orange only (never red against green), light and dark parts clearly apart
         "cvd" -> KbTheme(id, c(0xFF101820), c(0xFF22303F), c(0xFFFFFFFF), c(0xFF182430), c(0xFFFFFFFF), c(0xFFFFB000), c(0xFF101820), c(0xFF101820), c(0xFF2E4156), c(0xFFB5C6D8), 10, border = c(0xFF648FFF), icons = "outlined")
+        // Google Keyboard: rounded keys, a calm blue-grey board with the lighter letter keys and a mint action key; four tones (the first is the look of the picture) and key borders that can be switched off
+        "gboard" -> {
+            val flat = !KeyboardPrefs.gbBorders
+            if (!dark) {
+                val bg = c(0xFFE8EDF0)
+                KbTheme(id, bg, if (flat) bg else c(0xFFFFFFFF), c(0xFF1F2933), if (flat) bg else c(0xFFD3DADF), c(0xFF1F2933), c(0xFF1A73E8), c(0xFFFFFFFF), bg, c(0xFFFFFFFF), c(0xFF5B6770), 10, icons = "rounded")
+            } else when (KeyboardPrefs.gbTone) {
+                "black" -> { val bg = c(0xFF000000); KbTheme(id, bg, if (flat) bg else c(0xFF202124), c(0xFFE8EAED), if (flat) bg else c(0xFF171717), c(0xFFE8EAED), c(0xFF8AB4F8), c(0xFF0B1A33), bg, c(0xFF3C4043), c(0xFF9AA0A6), 10, icons = "rounded") }
+                "smoke" -> { val bg = c(0xFF2B2B2E); KbTheme(id, bg, if (flat) bg else c(0xFF48484C), c(0xFFEDEDF0), if (flat) bg else c(0xFF38383B), c(0xFFEDEDF0), c(0xFFA8C7FA), c(0xFF062E6F), bg, c(0xFF5A5A5F), c(0xFFB0B0B6), 10, icons = "rounded") }
+                "material" -> { val bg = c(0xFF1C1B1F); KbTheme(id, bg, if (flat) bg else c(0xFF36343B), c(0xFFE6E1E5), if (flat) bg else c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), bg, c(0xFF49454F), c(0xFFCAC4D0), 10, icons = "rounded") }
+                else -> { val bg = c(0xFF28343A); KbTheme(id, bg, if (flat) bg else c(0xFF424D54), c(0xFFE3E8EB), if (flat) bg else c(0xFF313C42), c(0xFFE3E8EB), c(0xFF6DB1A8), c(0xFF0B2B27), bg, c(0xFF4F5B62), c(0xFFAAB6BD), 10, icons = "rounded") }
+            }
+        }
         "amoled" -> KbTheme(id, c(0xFF000000), c(0xFF1F1F1F), c(0xFFFFFFFF), c(0xFF141414), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF000000), c(0xFF000000), c(0xFF2B2B2B), c(0xFF9A9A9A), 10, icons = "outlined")
         "material" -> if (dark) KbTheme(id, c(0xFF1C1B1F), c(0xFF36343B), c(0xFFE6E1E5), c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), c(0xFF2B2930), c(0xFF49454F), c(0xFFCAC4D0), 12, icons = "rounded")
         else KbTheme(id, c(0xFFFEF7FF), c(0xFFFFFFFF), c(0xFF1D1B20), c(0xFFE7E0EC), c(0xFF1D1B20), c(0xFF6750A4), c(0xFFFFFFFF), c(0xFFF3EDF7), c(0xFFE6E0E9), c(0xFF49454F), 12, icons = "rounded")
