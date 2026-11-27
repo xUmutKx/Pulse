@@ -94,7 +94,7 @@ fun CodeHome(back: () -> Unit) {
     val f = file
     val d = doc
     if (f != null) { CodeEditorDialog(f) { file = null }; return }
-    if (d != null) { CodeEditorHost(d, false, null, null) { doc = null }; return }
+    if (d != null) { CodeEditorHost(d, false, null, null, onClose = { doc = null }); return }
     BackHandler { back() }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {

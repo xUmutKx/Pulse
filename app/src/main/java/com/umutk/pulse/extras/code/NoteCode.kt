@@ -64,5 +64,5 @@ fun NoteCodeBody(noteId: String, body: String, onBody: (String) -> Unit, modifie
     }
     // made once for each opening (a new one every recomposition would restart the editor)
     val src = remember(full) { CodeSource(tr("Note", "Not"), { body }, { onBody(it); true }) }
-    if (full) CodeEditorHost(src, true, lang, { l -> scope = l.scope; NoteCodePrefs.set(ctx, noteId, l.scope) }) { full = false; rev++ }
+    if (full) CodeEditorHost(src, true, lang, { l -> scope = l.scope; NoteCodePrefs.set(ctx, noteId, l.scope) }, onClose = { full = false; rev++ })
 }
