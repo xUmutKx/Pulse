@@ -271,12 +271,16 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "weather" to (tr("Weather: each day shows its humidity (a blue drop), and a tap on a day brings its hours to the left of the hours row.",
-        "Hava durumu: her günde nem görünür (mavi damla), bir güne basınca o günün saatleri saat satırının soluna gelir.")),
-    "kbd18" to (tr("Keyboard: 'Save this login?' is a bar on the keys instead of a notification, Notes open inside the keyboard, the ⋮ menu has a password generator, change case and line start / end, a number is kept after three times, and a space comes only when it is sure. The Google Keyboard look has pill keys and a See-through option (off).",
-        "Klavye: 'Giriş kaydedilsin mi?' bildirim yerine tuşların üstünde bir çubuk, Notlar klavyenin içinde açılır, ⋮ menüsünde şifre üretici, harf büyüklüğü değiştirme ve satır başı / sonu var, bir sayı üç kez yazılınca kaydedilir ve boşluk yalnızca emin olunca gelir. Google Keyboard görünümünde hap tuşlar ve Şeffaf seçeneği (kapalı) var.")),
-    "game" to (tr("Game Hub CD shelf: Back puts the open case back instead of leaving the app, and the search slides the rack to the game (it no longer empties the shelf).",
-        "Game Hub CD rafı: Geri açık kutuyu yerine koyar, uygulamadan çıkmaz; arama rafı oyuna kaydırır (artık rafı boşaltmaz).")),
+    "search" to (tr("Files: a search page of its own (round button at the bottom right) that searches the whole phone fast with a Rust walk and keeps your searches; rename several files at once; the file-type lists (APK and others) sort, show the full path and pick by sliding; Files opens on Browse.",
+        "Dosyalar: tüm telefonu Rust ile hızlı arayan ve aramalarını saklayan ayrı bir arama sayfası (sağ altta yuvarlak düğme); birden çok dosyayı birden yeniden adlandırma; tür listeleri (APK vb.) sıralanır, tam yolu gösterir ve kaydırarak seçilir; Dosyalar Gözat'ta açılır.")),
+    "kbd18" to (tr("Keyboard: 'Save this login?' is a bar on the keys, Notes open inside the keyboard, a password generator, change case and line start / end in the ⋮ menu, hold 4 and 5 on the number pad for a full stop and a comma, a Google Keyboard look with pill keys and a See-through option.",
+        "Klavye: 'Giriş kaydedilsin mi?' tuşların üstünde bir çubuk, Notlar klavyenin içinde, ⋮ menüsünde şifre üretici, harf büyüklüğü ve satır başı / sonu, sayı panelinde 4 ve 5'e basılı tutunca nokta ve virgül, hap tuşlu ve Şeffaf seçenekli Google Keyboard görünümü.")),
+    "video" to (tr("Video: the small window has previous, back 10 s, play and forward 10 s, next; a Next episode pill at the end of an episode.",
+        "Video: küçük pencerede önceki, 10 sn geri, oynat ve 10 sn ileri, sonraki düğmeleri; bölüm sonunda Sonraki bölüm düğmesi.")),
+    "weather" to (tr("Weather: each day shows its humidity, and a tap on a day brings its hours to the front.",
+        "Hava durumu: her günün nemi görünür, bir güne basınca o günün saatleri öne gelir.")),
+    "game" to (tr("Fixes: Bluetooth auto play no longer ends the app, the App lock no longer freezes the keyboard, ArtCraft and the Store no longer download by themselves, no more icon badges on the extra apps, the CD shelf does not search for covers again at every opening.",
+        "Düzeltmeler: Bluetooth otomatik çalma uygulamayı kapatmıyor, Uygulama kilidi klavyeyi dondurmuyor, ArtCraft ve Mağaza kendiliğinden indirmiyor, ekstra uygulamalarda simge rozeti yok, CD rafı her açılışta kapak aramıyor.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
