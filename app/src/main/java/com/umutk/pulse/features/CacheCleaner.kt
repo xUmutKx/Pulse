@@ -64,6 +64,13 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
         scope.launch {
             data = listOf(null, null, null)
             selected = emptySet()
+            result = ""
+            // the scan reads the data folders of the apps through root (as SD Maid's AppCleaner does): root is asked first and waited for, the scan used to start before the check had
+            // answered, took the phone for one without root and found nothing (0 MB)
+            withContext(Dispatchers.IO) { if (Shell.root == null) runCatching { Shell.detectRoot() } }
+            // without root the sizes come from the system (StorageStats, as SD Maid does), which needs usage access
+            if (Shell.root != true && !Shell.shizukuOk() && !AppLock.usageGranted(ctx))
+                result = com.umutk.pulse.tr("No root or Shizuku and no usage access: Pulse cannot see the caches of other apps. Allow usage access (Settings > Permissions) or root.", "Root ya da Shizuku ve kullanım erişimi yok: Pulse diğer uygulamaların önbelleğini göremez. Kullanım erişimine (Ayarlar > İzinler) ya da root'a izin ver.")
             for (i in 0..2) {
                 val r = withContext(Dispatchers.IO) {
                     runCatching { when (i) { 0 -> CleanerRules.appJunk(ctx); 1 -> CleanerRules.corpses(ctx); else -> CleanerRules.system(ctx) } }.getOrDefault(emptyList())
