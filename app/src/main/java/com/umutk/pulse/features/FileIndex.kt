@@ -16,19 +16,25 @@ object FileIndex {
 
     /** Walks [root] and keeps what it finds. Android's own folder (app data, mostly unreadable) is left out. */
     fun build(root: File) {
-        val out = ArrayList<File>()
-        val stack = ArrayDeque<File>()
-        stack.add(root)
-        while (stack.isNotEmpty() && out.size < MAX_FILES) {
-            val dir = stack.removeLast()
-            val kids = dir.listFiles() ?: continue
-            for (f in kids) {
-                out += f
-                if (f.isDirectory && !(dir == root && f.name == "Android")) stack.add(f)
+        // the crawl of the whole phone runs at background priority (the performance log showed it taking a core for a minute while the pages waited)
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.myTid(), android.os.Process.THREAD_PRIORITY_BACKGROUND) }
+        try {
+            val out = ArrayList<File>()
+            val stack = ArrayDeque<File>()
+            stack.add(root)
+            while (stack.isNotEmpty() && out.size < MAX_FILES) {
+                val dir = stack.removeLast()
+                val kids = dir.listFiles() ?: continue
+                for (f in kids) {
+                    out += f
+                    if (f.isDirectory && !(dir == root && f.name == "Android")) stack.add(f)
+                }
             }
+            files = out
+            builtAt = System.currentTimeMillis()
+        } finally {
+            runCatching { android.os.Process.setThreadPriority(android.os.Process.myTid(), android.os.Process.THREAD_PRIORITY_DEFAULT) }
         }
-        files = out
-        builtAt = System.currentTimeMillis()
     }
 
     /** The first [limit] names that contain [q] (case-insensitive); hidden names only when [hidden] is on. */

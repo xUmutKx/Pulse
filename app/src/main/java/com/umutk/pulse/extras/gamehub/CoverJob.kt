@@ -34,14 +34,24 @@ object CoverJob {
     private var job: Job? = null
 
     /** Looks for the covers of the games that have none. Does nothing while a search is running. */
-    internal fun start(c: Context, games: List<GameRow>) {
+    // a game looked for and not found is not looked for again for a week (the shelf used to start the search, and its notification, at every opening for the games that have no cover anywhere);
+    // the "Look for covers" button of the settings asks again at once ([force])
+    private const val RETRY_MS = 7L * 24 * 3600_000L
+    private fun tried(c: Context) = c.getSharedPreferences("cover_tried", Context.MODE_PRIVATE)
+
+    internal fun start(c: Context, games: List<GameRow>, force: Boolean = false) {
         if (running.value) return
         val app = c.applicationContext
+        val seen = tried(app)
+        val nowMs = System.currentTimeMillis()
         val todo = games.filter {
             !coverFile(app, it.pkg).isFile &&
                 !steamCoverFile(app, it.pkg).isFile &&
-                !playCoverFile(app, it.pkg).isFile
+                !playCoverFile(app, it.pkg).isFile &&
+                (force || nowMs - seen.getLong(it.pkg, 0L) > RETRY_MS)
         }
+        // nothing new to look for: no search, no service, no notification
+        if (todo.isEmpty()) return
         running.value = true; done.value = 0; total.value = todo.size; found.value = 0
         runCatching { ContextCompat.startForegroundService(app, Intent(app, CoverService::class.java)) }
         job = CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
@@ -50,6 +60,7 @@ object CoverJob {
                     // a cover the person chose or Steam's art is kept
                     if (!coverFile(app, g.pkg).isFile && !steamCoverFile(app, g.pkg).isFile && !playCoverFile(app, g.pkg).isFile) {
                         if (fetchBestCover(app, g)) { found.value = found.value + 1; withContext(Dispatchers.Main) { GameArt.version.intValue++ } }
+                        else seen.edit().putLong(g.pkg, System.currentTimeMillis()).apply()
                     }
                     done.value = done.value + 1
                     delay(600)

@@ -1288,7 +1288,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         else if (sgdbKey(ctx).isEmpty()) lookMsg = tr("Enter the SteamGridDB key first (it adds more covers)", "Önce SteamGridDB anahtarını gir (daha çok kapak için)")
                         else {
                             lookMsg = ""
-                            CoverJob.start(ctx, games)
+                            CoverJob.start(ctx, games, force = true)
                         }
                     }
                     if (lookRunning) {

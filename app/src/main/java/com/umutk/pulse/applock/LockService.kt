@@ -324,16 +324,30 @@ class LockService : AccessibilityService() {
         val now = SystemClock.uptimeMillis()
         if (now - lastScan < 120) { main.removeCallbacks(rescan); main.postDelayed(rescan, 130); return }   // a throttled event is retried, not lost
         lastScan = now
-        runCatching {
-            val ws = windows
+        if (scanBusy) { scanAgain = true; return }
+        scanBusy = true
+        // each window's root is a binder call that waits for the other app (up to a second when that app is busy). It was asked on the main thread, which Pulse shares with the keyboard
+        // and every screen: they froze for that long (the performance log shows the main thread stuck here, many times). It is asked on the poll thread now, the answer is applied on the main one.
+        bg.post {
             var allKnown = true
             val seen = HashSet<String>()
-            for (w in ws) {
-                if (w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD || w.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue
-                val p = w.root?.packageName?.toString()
-                if (p == null) { if (w.type == AccessibilityWindowInfo.TYPE_APPLICATION) allKnown = false; continue }
-                seen += p
-            }
+            runCatching {
+                for (w in windows) {
+                    if (w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD || w.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue
+                    val p = w.root?.packageName?.toString()
+                    if (p == null) { if (w.type == AccessibilityWindowInfo.TYPE_APPLICATION) allKnown = false; continue }
+                    seen += p
+                }
+            }.onFailure { allKnown = false; Log.e("AppLock", "window scan failed", it) }
+            main.post { scanBusy = false; applyScan(seen, allKnown); if (scanAgain) { scanAgain = false; scanWindows() } }
+        }
+    }
+
+    private var scanBusy = false
+    private var scanAgain = false
+
+    private fun applyScan(seen: Set<String>, allKnown: Boolean) {
+        runCatching {
             // an unlocked app whose last window (bubble) is gone has now been left: its grace time starts
             if (allKnown) for (p in AppLock.locked) if (p !in seen && (p != current || SystemClock.uptimeMillis() - cardAt > 1500)) AppLock.leave(p)
             val hit = seen.firstOrNull { it in AppLock.locked && it !in never && it !in transient && it != packageName && AppLock.needsAsk(it, System.currentTimeMillis()) && (AppLock.lockBubbles || !floating(it)) }
