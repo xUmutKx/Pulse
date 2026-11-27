@@ -258,7 +258,8 @@ object KeyboardDictionary {
         userLoaded = false; loadUser(c)
     }
 
-    fun learnedCount() = user.size
+    /** The words that count as learned: typed three times or more (or added by hand); a word seen once or twice is only a candidate and is not counted (the count used to be every word ever typed, up to the 8000 kept). */
+    fun learnedCount() = user.count { it.value >= LEARNED_AT }
 
     /** Words taken from another keyboard: each becomes a known word (counted three times, so it is not "corrected" away). */
     fun importUser(c: Context, words: List<String>) {
@@ -301,7 +302,7 @@ object KeyboardDictionary {
     }
 
     /** The words kept for the person, the most used first (the "Learned words" list of the settings). */
-    fun userWords(): List<Pair<String, Int>> = user.entries.map { it.key to it.value }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+    fun userWords(): List<Pair<String, Int>> = user.entries.filter { it.value >= LEARNED_AT }.map { it.key to it.value }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
 
     /** One learned word forgotten (and the pairs that lead to it). */
     fun removeUser(c: Context, w: String) {

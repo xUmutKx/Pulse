@@ -127,6 +127,56 @@ fn worker(sh: &Shared, needle: &str, hidden: bool, limit: usize, root: &PathBuf)
     }
 }
 
+/// One folder read in one pass: (name, is folder, size, modified in ms). A link counts as what it points to (as the Java File does). Hidden names only when [hidden] is on.
+pub fn list(dir: &str, hidden: bool) -> Vec<(String, bool, u64, i64)> {
+    let mut out = Vec::new();
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.flatten() {
+            let name = match e.file_name().into_string() {
+                Ok(n) => n,
+                Err(_) => continue,
+            };
+            if !hidden && name.starts_with('.') {
+                continue;
+            }
+            let ft = match e.file_type() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            let md = if ft.is_symlink() { fs::metadata(e.path()).ok() } else { e.metadata().ok() };
+            match md {
+                Some(m) => {
+                    let ms = m.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_millis() as i64).unwrap_or(0);
+                    out.push((name, m.is_dir(), m.len(), ms));
+                }
+                None => out.push((name, false, 0, 0)),
+            }
+        }
+    }
+    out
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_umutk_pulse_features_FileSearchNative_list(
+    mut env: JNIEnv,
+    _class: JClass,
+    dir: JString,
+    hidden: jboolean,
+) -> jobjectArray {
+    let dir: String = env.get_string(&dir).map(|s| s.into()).unwrap_or_default();
+    let found = list(&dir, hidden != 0);
+    let string_class = env.find_class("java/lang/String").expect("String class");
+    let empty = env.new_string("").expect("empty string");
+    let arr = env.new_object_array(found.len() as jint, string_class, empty).expect("array");
+    for (i, (n, d, sz, ms)) in found.iter().enumerate() {
+        let row = format!("{}\u{1}{}\u{1}{}\u{1}{}", n, if *d { 1 } else { 0 }, sz, ms);
+        if let Ok(js) = env.new_string(row) {
+            let _ = env.set_object_array_element(&arr, i as jint, js);
+        }
+    }
+    arr.into_raw()
+}
+
 #[no_mangle]
 pub extern "system" fn Java_com_umutk_pulse_features_FileSearchNative_search(
     mut env: JNIEnv,
@@ -174,6 +224,23 @@ mod tests {
         assert_eq!(r2.len(), 2);
         let r3 = search(base.to_str().unwrap(), "zzz", true, 50, 4);
         assert!(r3.is_empty());
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn lists_a_folder_in_one_pass() {
+        let base = std::env::temp_dir().join(format!("pulse_list_test_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(base.join("sub")).unwrap();
+        fs::write(base.join("a.txt"), b"12345").unwrap();
+        fs::write(base.join(".h"), b"x").unwrap();
+        let mut v = list(base.to_str().unwrap(), false);
+        v.sort();
+        assert_eq!(v.len(), 2);
+        assert_eq!(v[0].0, "a.txt");
+        assert!(!v[0].1 && v[0].2 == 5);
+        assert!(v[1].1);
+        assert_eq!(list(base.to_str().unwrap(), true).len(), 3);
         let _ = fs::remove_dir_all(&base);
     }
 

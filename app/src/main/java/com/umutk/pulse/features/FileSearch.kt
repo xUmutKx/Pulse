@@ -20,6 +20,20 @@ object FileSearch {
         return raw.sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
     }
 
+    /** A folder's entry with what the sort needs, read once. */
+    class Entry(val file: File, val dir: Boolean, val size: Long, val modified: Long)
+
+    /** The entries of [dir] read in one native pass (no stat for each file from Kotlin); null when the library is not in the APK, then the caller reads the folder itself. */
+    fun list(dir: File, hidden: Boolean): List<Entry>? {
+        if (!FileSearchNative.AVAILABLE) return null
+        return runCatching {
+            FileSearchNative.list(dir.path, hidden).mapNotNull { row ->
+                val p = row.split('\u0001')
+                if (p.size < 4) null else Entry(File(dir, p[0]), p[1] == "1", p[2].toLongOrNull() ?: 0L, p[3].toLongOrNull() ?: 0L)
+            }
+        }.getOrNull()
+    }
+
     private fun fold(s: String): String = buildString { for (c in s) append(when (c) { 'İ', 'ı', 'I' -> 'i'; else -> c.lowercaseChar() }) }
 
     /** The Kotlin walk: four threads take folders from a shared queue. */

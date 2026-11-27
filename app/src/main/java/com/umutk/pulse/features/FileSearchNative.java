@@ -15,4 +15,7 @@ final class FileSearchNative {
 
     /** The paths whose last name contains [query] (case and the Turkish i ignored), at most [limit]. */
     static native String[] search(String root, String query, boolean hidden, int limit);
+
+    /** One folder in one pass: "name\u0001kind(0 file, 1 folder)\u0001size\u0001modified ms" for each entry. */
+    static native String[] list(String dir, boolean hidden);
 }

@@ -571,7 +571,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val listing by produceState<ExListing?>(null, here, refresh, showHidden, sort, viaRoot, if (sort / 2 == 1) dirSizes else null) {
         if (prevHere[0] != here) value = null
         prevHere[0] = here
-        value = withContext(Dispatchers.Default) { exSortList((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes) }
+        value = withContext(Dispatchers.Default) {
+            // the folder is read in one native pass (Rust) when the library is there: kind, size and time come with the names, no stat for each file
+            val fast = if (viaRoot == null) FileSearch.list(dir, showHidden) else null
+            if (fast != null) exSortEntries(fast, sort, dirSizes)
+            else exSortList((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes)
+        }
     }
     // a file that came into the folder from another app (a download, a picture taken) shows without leaving the page: the folder's own time is looked at every two seconds (one cheap stat)
     LaunchedEffect(here, arcFile) {
@@ -2073,6 +2078,17 @@ private fun exSortList(list: List<File>, mode: Int, dirSizes: Map<String, Long> 
     val by = if (mode % 2 == 1) key.reversed() else key
     val sorted = ks.sortedWith(if (FilesPrefs.foldersFirst) compareBy<K> { !it.dir }.then(by) else by)
     return ExListing(sorted.map { it.f }, BooleanArray(sorted.size) { sorted[it].dir })
+}
+
+/** The same order as [exSortList] from entries whose kind, size and time are already known (read by the native listing). */
+internal fun exSortEntries(list: List<FileSearch.Entry>, mode: Int, dirSizes: Map<String, Long> = emptyMap()): ExListing {
+    val kind = mode / 2
+    class K(val e: FileSearch.Entry, val name: String, val num: Long)
+    val ks = list.map { e -> K(e, if (kind == 0) e.file.name.lowercase() else "", when (kind) { 1 -> if (e.dir) dirSizes[e.file.path] ?: -1L else e.size; 2 -> e.modified; else -> 0L }) }
+    val key: Comparator<K> = if (kind == 0) compareBy { it.name } else compareBy { it.num }
+    val by = if (mode % 2 == 1) key.reversed() else key
+    val sorted = ks.sortedWith(if (FilesPrefs.foldersFirst) compareBy<K> { !it.e.dir }.then(by) else by)
+    return ExListing(sorted.map { it.e.file }, BooleanArray(sorted.size) { sorted[it].e.dir })
 }
 
 /** Folders first, then the order picked by the sort icon: name, size or date, each ascending then descending. */
