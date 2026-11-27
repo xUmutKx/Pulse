@@ -184,11 +184,8 @@ fun PowerampApp(
         // blended page pulled down: the screen it came from lies UNDER the sheet (it was drawn over the cover before, so the rows ran across the cover),
         // blurred and dim while the sheet still covers most of it, clearing as the sheet is pulled further
         val blendedPull = PowerampPrefs.blended(ctx) && cover != null && tab == null && pullShown > 0f
-        // the page under the sheet keeps its own blurred cover (the one it shows at rest) while the sheet is pulled: it was plain black there
-        if (blendedPull) {
-            val under = (lastTab ?: PowerampTab.LIBRARY).name.lowercase()
-            if (artBg && PowerampPrefs.artPage(ctx, under)) cover?.let { Image(it, null, Modifier.fillMaxSize().graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }.blur(40.dp), contentScale = ContentScale.Crop) }
-        }
+        // the page under the sheet has the blurred cover of the lists behind it (the same picture it shows at rest, no sharp cover on top); it was plain black while the sheet was pulled
+        if (blendedPull) cover?.let { cv -> Box(Modifier.fillMaxSize().graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }) { BlendedCover(cv, PowerampPrefs.blendBlur(ctx), sharp = false) } }
         if (blendedPull) Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).graphicsLayer { alpha = (pullShown / 36f).coerceIn(0f, 1f) }
             .blur(((1f - pullShown / 600f).coerceIn(0f, 1f) * 16f).dp)) {
             Box(Modifier.weight(1f)) { tabBody(lastTab ?: PowerampTab.LIBRARY) }

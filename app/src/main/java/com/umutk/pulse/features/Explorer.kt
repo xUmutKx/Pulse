@@ -783,6 +783,53 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             else -> false
         }
     }
+    // the buttons of the picked files: drawn in the top row of the page (see the Box below), next to the menu button
+    val selBar: @Composable () -> Unit = {
+            // the buttons spread over the whole width of the card (no empty strip on the right); more of them than fit: the row scrolls
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val barW = maxWidth
+            Row(Modifier.then(if (FilesPrefs.selIcons) Modifier.horizontalScroll(rememberScrollState()).widthIn(min = barW) else Modifier.fillMaxWidth()), horizontalArrangement = if (FilesPrefs.selIcons) Arrangement.SpaceBetween else Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
+                DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
+                Text("${sel.size}", (if (FilesPrefs.selIcons) Modifier.padding(start = 4.dp, end = 8.dp) else Modifier.weight(1f).padding(start = 4.dp)), color = T.text, fontSize = 11.sp, maxLines = 1)
+                DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
+                // several APKs picked: one button (left of cut) installs them all in one go, in the installer
+                if (picked.size >= 2 && picked.all { it.isFile && it.extension.lowercase() in setOf("apk", "xapk", "apks", "apkm") }) DenseSelSquare(Look.accent, {
+                    val i = Intent().setClassName(ctx, "com.umutk.pulse.features.InstallActivity").putStringArrayListExtra("apks", ArrayList(picked.map { it.path })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { ctx.startActivity(i) }; sel = emptySet()
+                }, big = true) { ExGlyph(Icons.Outlined.Android, "installer", Look.accent, 24.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true, onLong = { exCopy(ctx, picked.joinToString("\n") { it.path }); note = tr("Path copied", "Yol kopyalandı") }) { ExIcon("copy", T.text, 24.dp) }
+                if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
+                // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
+                if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
+                if (!FilesPrefs.selIcons) DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
+                // every other action is an icon of its own (the setting in the top ⋮ menu puts them back in a menu of words). The row has the same places for one file and for several:
+                // Rename and Properties stay (dimmed when more than one is picked) and Delete is always the second from the right, so the buttons never move under a finger
+                if (FilesPrefs.selIcons) {
+                    DenseSelSquare(T.text, { zipAsk = picked }) { ExGlyph(Icons.Outlined.FolderZip, "zip", T.text, 24.dp) }
+                    if (picked.size > 1 && picked.all { isArchiveFile(it) }) DenseSelSquare(T.text, { scope.launch { note = withContext(Dispatchers.IO) { archiveExtractEach(picked) }; sel = emptySet(); refresh++ } }) { ExIcon("extract", T.text, 24.dp) }
+                    arcPick(picked)?.let { f -> archiveMenu(f).forEach { (_, k, kind) ->
+                        DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
+                    } }
+                    val one = picked.singleOrNull()
+                    DenseSelSquare(T.text, { if (one != null) { name = one.name; dialog = "rename" to one } else if (picked.size > 1) { bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulkRen = picked } }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) }
+                    DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
+                    Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> propsOf = f } }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
+                } else Box {
+                    DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
+                    ThemedMenu(selMore, { selMore = false }) {
+                        ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)
+                        // Share is in this menu too, for one file or for several (folders in the pick are left out)
+                        if (picked.any { it.isFile }) ThemedMenuItem(tr("Share", "Paylaş"), { selMore = false; shareSheet = picked }, icon = Icons.Outlined.Share)
+                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
+                        if (picked.size > 1) ThemedMenuItem(tr("Rename all", "Hepsini yeniden adlandır"), { selMore = false; bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulkRen = picked }, icon = Icons.Outlined.DriveFileRenameOutline)
+                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
+                        arcPick(picked)?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
+                    }
+                }
+            }
+            }
+        }
     Box(Modifier.fillMaxSize().onPreviewKeyEvent(onKey).focusRequester(rootFr).focusable()) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // the header stays on screen while the list scrolls under it
@@ -907,52 +954,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
-        val selBar: @Composable () -> Unit = {
-            // the buttons spread over the whole width of the card (no empty strip on the right); more of them than fit: the row scrolls
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val barW = maxWidth
-            Row(Modifier.then(if (FilesPrefs.selIcons) Modifier.horizontalScroll(rememberScrollState()).widthIn(min = barW) else Modifier.fillMaxWidth()), horizontalArrangement = if (FilesPrefs.selIcons) Arrangement.SpaceBetween else Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
-                DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
-                Text("${sel.size}", (if (FilesPrefs.selIcons) Modifier.padding(start = 4.dp, end = 8.dp) else Modifier.weight(1f).padding(start = 4.dp)), color = T.text, fontSize = 11.sp, maxLines = 1)
-                DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
-                // several APKs picked: one button (left of cut) installs them all in one go, in the installer
-                if (picked.size >= 2 && picked.all { it.isFile && it.extension.lowercase() in setOf("apk", "xapk", "apks", "apkm") }) DenseSelSquare(Look.accent, {
-                    val i = Intent().setClassName(ctx, "com.umutk.pulse.features.InstallActivity").putStringArrayListExtra("apks", ArrayList(picked.map { it.path })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    runCatching { ctx.startActivity(i) }; sel = emptySet()
-                }, big = true) { ExGlyph(Icons.Outlined.Android, "installer", Look.accent, 24.dp) }
-                DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }
-                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true, onLong = { exCopy(ctx, picked.joinToString("\n") { it.path }); note = tr("Path copied", "Yol kopyalandı") }) { ExIcon("copy", T.text, 24.dp) }
-                if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
-                // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
-                if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
-                if (!FilesPrefs.selIcons) DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
-                // every other action is an icon of its own (the setting in the top ⋮ menu puts them back in a menu of words). The row has the same places for one file and for several:
-                // Rename and Properties stay (dimmed when more than one is picked) and Delete is always the second from the right, so the buttons never move under a finger
-                if (FilesPrefs.selIcons) {
-                    DenseSelSquare(T.text, { zipAsk = picked }) { ExGlyph(Icons.Outlined.FolderZip, "zip", T.text, 24.dp) }
-                    if (picked.size > 1 && picked.all { isArchiveFile(it) }) DenseSelSquare(T.text, { scope.launch { note = withContext(Dispatchers.IO) { archiveExtractEach(picked) }; sel = emptySet(); refresh++ } }) { ExIcon("extract", T.text, 24.dp) }
-                    arcPick(picked)?.let { f -> archiveMenu(f).forEach { (_, k, kind) ->
-                        DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
-                    } }
-                    val one = picked.singleOrNull()
-                    DenseSelSquare(T.text, { if (one != null) { name = one.name; dialog = "rename" to one } else if (picked.size > 1) { bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulkRen = picked } }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) }
-                    DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
-                    Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> propsOf = f } }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
-                } else Box {
-                    DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
-                    ThemedMenu(selMore, { selMore = false }) {
-                        ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)
-                        // Share is in this menu too, for one file or for several (folders in the pick are left out)
-                        if (picked.any { it.isFile }) ThemedMenuItem(tr("Share", "Paylaş"), { selMore = false; shareSheet = picked }, icon = Icons.Outlined.Share)
-                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
-                        if (picked.size > 1) ThemedMenuItem(tr("Rename all", "Hepsini yeniden adlandır"), { selMore = false; bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulkRen = picked }, icon = Icons.Outlined.DriveFileRenameOutline)
-                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
-                        arcPick(picked)?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
-                    }
-                }
-            }
-            }
-        }
         // hold anywhere on the card and slide: a loading-style bar along its bottom sets the item size (left = smaller, right = larger);
         // the path and the buttons stay on screen while it runs
         var sizing by remember { mutableStateOf(false) }
@@ -1068,8 +1069,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 SelSquare(T.text, { arcDelete() }) { ExIcon("delete", T.text, 24.dp) }
             }
         }
-        PCard(Modifier.then(if (sel.isNotEmpty() || arcSel.isNotEmpty()) Modifier.zIndex(1f).graphicsLayer { translationY = exScroll.value.toFloat() } else Modifier).sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
-            if (arcFile != null && arcSel.isNotEmpty()) arcBar() else if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        PCard(Modifier.then(if ((sel.isNotEmpty() && !standalone) || arcSel.isNotEmpty()) Modifier.zIndex(1f).graphicsLayer { translationY = exScroll.value.toFloat() } else Modifier).sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
+            if (arcFile != null && arcSel.isNotEmpty()) arcBar() else if (sel.isNotEmpty() && !standalone) selBar() else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (dir != top || arcFile != null) Box(Modifier.clickable { if (arcFile != null) { if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" } } else go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
                 val cur = buildList<Triple<String, String, () -> Unit>> {
                     val inTop = dir.path == top.path || dir.path.startsWith(top.path + "/")
@@ -1563,6 +1564,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (com.umutk.pulse.ads.PulseAds.ENABLED) com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
+        // the buttons of the picked files stand in the top row, to the right of the menu button (the path bar stays where it is, under them)
+        if (sel.isNotEmpty() && arcFile == null && standalone) Row(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(start = 56.dp, end = 4.dp).height(44.dp).background(T.bg), verticalAlignment = Alignment.CenterVertically) { selBar() }
     }
 
     if (about) WinAlert(onDismissRequest = { about = false }, title = { Text("Pulse Files") },
