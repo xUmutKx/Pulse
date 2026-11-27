@@ -44,7 +44,29 @@ fun DeviceManagerScreen(back: () -> Unit) {
         }
         Box(Modifier.fillMaxSize()) {
             if (tab == 0) BudsScreen(back, embedded = true)
-            else Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) { com.umutk.pulse.features.WatchManagerTool() }
+            else Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) { WatchLinkRow(); com.umutk.pulse.features.WatchManagerTool() }
         }
+    }
+}
+
+/** Pulse Watch link: the Bluetooth server the Pulse Watch app talks to (now playing, find my phone, the phone's files). */
+@Composable
+private fun WatchLinkRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var on by remember { androidx.compose.runtime.mutableStateOf(com.umutk.pulse.features.watch.WatchLink.enabled(ctx)) }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) { on = true; com.umutk.pulse.features.watch.WatchLink.setEnabled(ctx, true) }
+    }
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon("phone", T.text, 22.dp) }
+        Column(Modifier.weight(1f).padding(start = 8.dp)) {
+            Text(tr("Pulse Watch link", "Pulse Watch bağlantısı"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(tr("Music, find phone, files on the watch", "Saatte müzik, telefonu bul, dosyalar"), color = T.sub, fontSize = 12.sp)
+        }
+        com.umutk.pulse.PSwitch(on, { v ->
+            if (v && android.os.Build.VERSION.SDK_INT >= 31 && androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                ask.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+            else { on = v; com.umutk.pulse.features.watch.WatchLink.setEnabled(ctx, v) }
+        })
     }
 }

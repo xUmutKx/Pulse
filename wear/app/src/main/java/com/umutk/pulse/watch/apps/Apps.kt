@@ -10,7 +10,12 @@ import com.umutk.pulse.watch.ui.W
 class WatchApp(val route: String, val name: String, val icon: String, val about: String, val screen: @Composable () -> Unit)
 
 object Apps {
+    /** Opens another app page from inside a page (set by the navigation host). */
+    var open: (String) -> Unit = {}
     val all = listOf(
+        WatchApp("phone", "Phone", "📱", "Find it, its music and files") { PhoneScreen(onOpen = { Apps.open(it) }) },
+        WatchApp("nowplaying", "Now playing", "🎵", "The phone's music") { NowPlayingScreen() },
+        WatchApp("phonefiles", "Phone files", "📂", "Copy from the phone") { PhoneFilesScreen() },
         WatchApp("stopwatch", "Stopwatch", "⏱", "Laps, to the hundredth") { StopwatchScreen() },
         WatchApp("timer", "Timer", "⏲", "Turn the crown to set it") { TimerScreen() },
         WatchApp("world", "World clock", "🌍", "Cities and their time") { WorldClockScreen() },

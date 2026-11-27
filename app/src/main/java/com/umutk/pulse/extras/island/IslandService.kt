@@ -56,6 +56,7 @@ class IslandBoot : BroadcastReceiver() {
         if (i.action != Intent.ACTION_BOOT_COMPLETED) return
         IslandPrefs.load(c)
         if (IslandPrefs.on && Compat.canOverlay(c)) IslandService.start(c)
+        if (com.umutk.pulse.features.watch.WatchLink.enabled(c)) com.umutk.pulse.features.watch.WatchLink.setEnabled(c, true)
     }
 }
 

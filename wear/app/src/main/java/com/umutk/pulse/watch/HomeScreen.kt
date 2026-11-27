@@ -128,8 +128,8 @@ private fun QuickPage(onOpen: (String) -> Unit) {
                 RoundButton("⏲", size = 54.dp) { onOpen("timer") }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RoundButton("❤", size = 54.dp) { onOpen("heart") }
-                RoundButton("🌬", size = 54.dp) { onOpen("breathe") }
+                RoundButton("📱", size = 54.dp) { onOpen("phone") }
+                RoundButton("🎵", size = 54.dp) { onOpen("nowplaying") }
                 RoundButton("⚙", size = 54.dp) { onOpen("settings") }
             }
         }

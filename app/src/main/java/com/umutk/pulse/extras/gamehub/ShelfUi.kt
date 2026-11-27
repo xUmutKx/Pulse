@@ -326,10 +326,18 @@ private fun Manual(g: GameRow, modifier: Modifier) {
 /** The back of the case: the name and what the phone calls the game. */
 @Composable
 private fun CaseBack(g: GameRow, pal: Pal, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(6.dp)).background(pal.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(g.name, color = pal.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-        Text(g.pkg, color = pal.sub, fontSize = 11.sp, maxLines = 2)
-        repeat(7) { i -> Box(Modifier.fillMaxWidth(if (i % 3 == 2) 0.5f else 1f).height(5.dp).background(pal.sub.copy(alpha = .25f), RoundedCornerShape(3.dp))) }
+    // the back of the box: a dark card with a spine strip, the name, a screenshot band and the fine print lines (it was a plain card)
+    Row(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFF0B0D10))) {
+        Column(Modifier.weight(1f).fillMaxHeight().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(g.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().height(54.dp)) {
+                repeat(3) { Box(Modifier.weight(1f).fillMaxHeight().background(Color.White.copy(alpha = .09f), RoundedCornerShape(4.dp))) }
+            }
+            repeat(6) { i -> Box(Modifier.fillMaxWidth(if (i % 3 == 2) 0.5f else 1f).height(5.dp).background(Color.White.copy(alpha = .16f), RoundedCornerShape(3.dp))) }
+            Spacer(Modifier.weight(1f))
+            Text(g.pkg, color = Color.White.copy(alpha = .55f), fontSize = 10.sp, maxLines = 2)
+        }
+        Box(Modifier.fillMaxHeight().width(13.dp).background(Brush.horizontalGradient(listOf(Color(0xFF2A3038), Color(0xFF07090B)))))
     }
 }
 
@@ -641,12 +649,12 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         }
     }
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
-    Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (loaded.isEmpty()) Text(if (list.isEmpty()) tr("No games on the shelf", "Rafta oyun yok") else tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
         else {
             com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
                 items = loaded.map { (g, art) -> com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = art, title = g.name, artist = "", cover = art) },
-                modifier = Modifier.fillMaxSize(), background = Color(0xFF0F1014), contentColor = Color(0xFFEDEDF2),
+                modifier = Modifier.fillMaxSize(), background = Color.Black, contentColor = Color(0xFFEDEDF2),
                 inspectLabel = tr("Inspect", "İncele"), backLabel = tr("Back", "Geri"), openLabel = tr("Open", "Aç"), nextLabel = tr("Next", "Sonraki"), exitLabel = tr("Exit", "Çık"),
                 state = state,
             )

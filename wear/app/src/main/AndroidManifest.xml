@@ -4,6 +4,9 @@
     <uses-feature android:name="android.hardware.type.watch" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- the link to Pulse on the phone (a Bluetooth socket to the paired phone) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- heart rate and steps: asked for when those pages open -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />

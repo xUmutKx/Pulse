@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun WatchApp() {
     val nav = rememberSwipeDismissableNavController()
+    Apps.open = { route -> nav.navigate(route) }
     SwipeDismissableNavHost(navController = nav, startDestination = "home") {
         composable("home") { HomeScreen(onOpen = { route -> nav.navigate(route) }) }
         Apps.all.forEach { app -> composable(app.route) { app.screen() } }

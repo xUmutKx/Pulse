@@ -1255,6 +1255,10 @@
         <service android:name="com.umutk.pulse.extras.gamehub.GameRehideService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="hides a game again after it closes" />
         </service>
+        <!-- Pulse Watch: the Bluetooth link the watch app connects to (wear/PLAN.md part 0); runs only while Settings > Watch link is on -->
+        <service android:name="com.umutk.pulse.features.watch.WatchLinkService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="keeps the Bluetooth link to the Pulse Watch app open" />
+        </service>
         <service android:name="com.umutk.pulse.extras.island.IslandService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a pill over the camera that shows what is going on" />
         </service>
