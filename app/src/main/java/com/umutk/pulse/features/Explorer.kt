@@ -269,7 +269,7 @@ private fun FilesPageInner() {
             when (pos) {
                 0 -> tab = "home"
                 1 -> tab = "files"
-                2 -> { com.umutk.pulse.files.home.FilesHomeNav.openSearch = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = true; tab = "files" }
+                2 -> { com.umutk.pulse.files.home.FilesHomeNav.openFsPage = true; tab = "files" }
                 else -> tab = "more"
             }
         }
@@ -510,6 +510,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent && filePick == null) }
     // the search page of its own (the whole phone, searched by the Rust walk, with the searches typed before)
     var fsPage by rememberSaveable { mutableStateOf(false) }
+    // the Search tab of the bottom bar opens the page
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openFsPage) { if (com.umutk.pulse.files.home.FilesHomeNav.openFsPage) { fsPage = true; com.umutk.pulse.files.home.FilesHomeNav.openFsPage = false } }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
     var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT).filter { java.io.File(it).exists() }) }
     var undo by remember { mutableStateOf<ExUndo?>(null) }
@@ -1486,9 +1488,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     if (recentView) RecentScreen({ openFile(it) }, { recentView = false }, { f -> f.parentFile?.let { d -> com.umutk.pulse.files.home.FilesHomeNav.pendingDir = d.path; com.umutk.pulse.files.home.FilesHomeNav.pendingSelect = f.path; recentView = false } })
     ExMiniPlayer()
     if (fsPage) FilesSearchPage(top, showHidden, onOpen = { f -> fsPage = false; if (f.isDirectory) go(f.path) else { f.parentFile?.let { go(it.path) }; openFile(f) } }, onClose = { fsPage = false })
-    else if (sel.isEmpty() && arcFile == null && filePick == null && !searchOpen && !recentView) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-        Box(Modifier.padding(end = 18.dp, bottom = 92.dp).size(46.dp).clip(RoundedCornerShape(23.dp)).background(Look.accent).clickable { fsPage = true }, contentAlignment = Alignment.Center) { ExIcon("search", Color.White, 22.dp) }
-    }
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
     binView?.let { b -> ExBinViewer(b) { binView = null } }
     codeView?.let { c -> com.umutk.pulse.extras.code.CodeEditorDialog(c) { codeView = null } }
