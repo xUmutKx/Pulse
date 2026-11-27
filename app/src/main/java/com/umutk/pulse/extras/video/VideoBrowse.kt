@@ -347,7 +347,7 @@ fun VideoHub(onBack: () -> Unit) {
 
     confirmDelete?.let { vs ->
         com.umutk.pulse.WinAlert(
-            onDismissRequest = { confirmDelete = null },
+            onDismissRequest = { confirmDelete = null }, containerColor = androidx.compose.ui.graphics.Color.Black,
             title = { Text(tr("Delete?", "Silinsin mi?"), color = com.umutk.pulse.T.text) },
             text = { Text(if (vs.size == 1) vs[0].name else tr("${vs.size} videos", "${vs.size} video"), color = com.umutk.pulse.T.text) },
             confirmButton = { com.umutk.pulse.PButton(tr("Delete", "Sil"), compact = true) { val l = vs; confirmDelete = null; doDelete(l) } },

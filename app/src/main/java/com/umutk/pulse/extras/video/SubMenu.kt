@@ -61,7 +61,7 @@ internal fun SubMenu(
     val bump = { rev++; onStyle() }
     @Composable fun chip(label: String, on: Boolean, click: () -> Unit) {
         Text(
-            label, color = if (on) Color.White else w.text, fontSize = 13.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+            label, color = if (on) com.umutk.pulse.onAccent(Look.accent) else w.text, fontSize = 13.sp, maxLines = 1, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (on) Look.accent else w.sub.copy(alpha = .18f)).clickable(onClick = click).padding(horizontal = 12.dp, vertical = 6.dp),
         )
     }
@@ -80,7 +80,7 @@ internal fun SubMenu(
         }
     }
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = Color.Black,
         title = { Text(tr("Subtitles", "Altyazı"), color = w.text) },
         text = {
             Column(Modifier.fillMaxWidth()) {
@@ -99,12 +99,21 @@ internal fun SubMenu(
                             }
                         }
                         1 -> {
-                            label(tr("Size, upright", "Boyut, dikey"))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 24, 28, 34, 38, 44).forEach { s -> chip("$s", prefs.subSizePort == s) { prefs.subSizePort = s; bump() } } }
-                            label(tr("Size, sideways", "Boyut, yatay"))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 28, 34, 38, 44, 52).forEach { s -> chip("$s", prefs.subSize == s) { prefs.subSize = s; bump() } } }
-                            label(tr("Size in the small window", "Küçük pencerede boyut"))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(18, 20, 22, 24, 28).forEach { s -> chip("$s", prefs.subSizePip == s) { prefs.subSizePip = s; bump() } } }
+                            // the size: pick where it is for (upright, sideways, small window), then one slider from 18 to 56
+                            var where by remember { mutableIntStateOf(1) }
+                            label(tr("Size", "Boyut"))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf(tr("Upright", "Dikey"), tr("Sideways", "Yatay"), tr("Small window", "Küçük pencere")).forEachIndexed { i, n -> chip(n, where == i) { where = i } }
+                            }
+                            val now = when (where) { 0 -> prefs.subSizePort; 1 -> prefs.subSize; else -> prefs.subSizePip }.coerceIn(18, 56)
+                            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.Slider(
+                                    value = now.toFloat(), valueRange = 18f..56f, steps = 37, modifier = Modifier.weight(1f),
+                                    onValueChange = { v -> val n = v.toInt(); when (where) { 0 -> prefs.subSizePort = n; 1 -> prefs.subSize = n; else -> prefs.subSizePip = n }; bump() },
+                                    colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = w.sub.copy(alpha = .3f)),
+                                )
+                                Text("$now", Modifier.width(40.dp), color = w.text, fontSize = 15.sp, textAlign = TextAlign.End)
+                            }
                             label(tr("Colour", "Renk"))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 subColors.forEachIndexed { i, c ->

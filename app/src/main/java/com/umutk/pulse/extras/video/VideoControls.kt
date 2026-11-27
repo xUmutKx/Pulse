@@ -40,10 +40,11 @@ import com.umutk.pulse.tr
 internal val CONTROL_IDS = listOf("cc", "audio", "rotate", "repeat", "scale", "speed", "sleep", "pip", "lock", "settings")
 
 /** The bar at the start: subtitles, rotation and picture in picture. */
-internal const val DEFAULT_BAR = "cc,rotate,pip"
+internal const val DEFAULT_BAR = "cc,rotate,speed,pip"
 
 /** The chosen buttons in their fixed order (unknown names are dropped). */
-internal fun barList(s: String): List<String> = s.split(',').map { it.trim() }.filter { it in CONTROL_IDS }.distinct()
+// (the bar that was saved as the old default gets the speed button too: it stands at the bottom left with the subtitles, the rotation and the small window)
+internal fun barList(s: String): List<String> = (if (s == "cc,rotate,pip") DEFAULT_BAR else s).split(',').map { it.trim() }.filter { it in CONTROL_IDS }.distinct()
 
 internal fun controlName(id: String): String = when (id) {
     "cc" -> tr("Subtitles", "Altyazı")

@@ -45,7 +45,7 @@ internal fun VideoSpeedDialog(current: Float, min: Float, max: Float, remember: 
     var keep by remember { mutableStateOf(remember) }
     fun set(v: Float) { value = snapSpeed(v, min, max); onChange(value) }
     WinAlert(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss, containerColor = androidx.compose.ui.graphics.Color.Black,
         title = { Text(tr("Speed", "Hız") + "  %.2fx".format(value), color = w.text, maxLines = 1, fontSize = 18.sp) },
         text = {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
