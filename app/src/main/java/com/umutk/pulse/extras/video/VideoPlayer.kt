@@ -208,6 +208,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 @Composable
 private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>, index: Int) {
     val ctx = LocalContext.current
+    // one video at a time: a video opened while another plays in the mini window closes that one
+    androidx.compose.runtime.LaunchedEffect(Unit) { FloatingVideo.hide(ctx) }
     val act = remember(ctx) { ctx.findActivity() }
     val view = LocalView.current
     val prefs = remember { VideoPrefs(ctx) }
@@ -687,7 +689,7 @@ private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>
      *  "display over other apps" permission its settings page opens, and leaving the app for it used to start picture in picture instead. */
     fun toMini(): Boolean {
         if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { act?.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build()) }
-        if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return true }
+        if (FloatingVideo.show(ctx, player, vsize, extCues, subDelay)) { onBack(); return true }
         return false
     }
     BackHandler(enabled = !settings) {

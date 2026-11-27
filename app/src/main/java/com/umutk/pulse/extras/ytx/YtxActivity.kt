@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.ytx
 
+import androidx.compose.animation.core.animateDecay
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -918,17 +919,34 @@ fun YtxTubeApp() {
                             val minX = -(screenW - cardWidthPx - 32.dp.toPx()); val maxX = 0f
                             val minY = -(screenH - 240.dp.toPx()); val maxY = 80.dp.toPx()
                             fun rub(v: Float, lo: Float, hi: Float): Float = if (v < lo) lo + (v - lo) * .35f else if (v > hi) hi + (v - hi) * .35f else v
+                            // thrown, it goes on with the finger's speed and slows down by friction (momentum), then comes back inside the screen if it went past an edge
+                            val vt = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                            var sum = androidx.compose.ui.geometry.Offset.Zero
                             detectDragGestures(
+                                onDragStart = { vt.resetTracking(); sum = androidx.compose.ui.geometry.Offset.Zero },
                                 onDragEnd = {
+                                    val vel = vt.calculateVelocity()
                                     scope.launch {
-                                        val tx = if (miniOffsetX < (minX + maxX) / 2f) minX else maxX
-                                        val ty = miniOffsetY.coerceIn(minY, 0f)
-                                        launch { androidx.compose.animation.core.animate(miniOffsetX, tx, animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetX = v } }
-                                        launch { androidx.compose.animation.core.animate(miniOffsetY, ty, animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetY = v } }
+                                        val decay = androidx.compose.animation.core.exponentialDecay<Float>(frictionMultiplier = 1.6f)
+                                        val jx = launch {
+                                            androidx.compose.animation.core.AnimationState(miniOffsetX, vel.x.coerceIn(-8000f, 8000f)).animateDecay(decay) {
+                                                miniOffsetX = value.coerceIn(minX, maxX); if (value < minX || value > maxX) cancelAnimation()
+                                            }
+                                        }
+                                        val jy = launch {
+                                            androidx.compose.animation.core.AnimationState(miniOffsetY, vel.y.coerceIn(-8000f, 8000f)).animateDecay(decay) {
+                                                miniOffsetY = value.coerceIn(minY, 0f); if (value < minY || value > 0f) cancelAnimation()
+                                            }
+                                        }
+                                        jx.join(); jy.join()
+                                        launch { androidx.compose.animation.core.animate(miniOffsetX, miniOffsetX.coerceIn(minX, maxX), animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetX = v } }
+                                        launch { androidx.compose.animation.core.animate(miniOffsetY, miniOffsetY.coerceIn(minY, 0f), animationSpec = androidx.compose.animation.core.spring(.62f, androidx.compose.animation.core.Spring.StiffnessMediumLow)) { v, _ -> miniOffsetY = v } }
                                     }
                                 },
                             ) { change, dragAmount ->
                                 change.consume()
+                                sum += dragAmount
+                                vt.addPosition(change.uptimeMillis, sum)
                                 // past an edge only part of the finger's move counts, so the window stretches away from it
                                 val dx = if ((miniOffsetX <= minX && dragAmount.x < 0) || (miniOffsetX >= maxX && dragAmount.x > 0)) dragAmount.x * .35f else dragAmount.x
                                 val dy = if ((miniOffsetY <= minY && dragAmount.y < 0) || (miniOffsetY >= maxY && dragAmount.y > 0)) dragAmount.y * .35f else dragAmount.y

@@ -88,7 +88,7 @@ object FloatingVideo {
     fun owns(p: Player): Boolean = held === p
 
     /** Opens the mini window for [p]. False when it is open already or the "display over other apps" permission is missing (the settings open then). */
-    fun show(ctx: Context, p: Player, size: VideoSize?): Boolean {
+    fun show(ctx: Context, p: Player, size: VideoSize?, cues: List<SubCue>? = null, cueDelay: Long = 0L): Boolean {
         val app = ctx.applicationContext
         if (view != null) return false
         if (!com.umutk.pulse.Compat.canOverlay(app)) {
@@ -110,15 +110,15 @@ object FloatingVideo {
         val o = MiniOwner().also { it.start() }
         // the close target: a round button at the bottom middle of the screen, shown only while the window is dragged
         val dismissLp = WindowManager.LayoutParams(
-            (72 * d.density).toInt(), (72 * d.density).toInt(), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            (48 * d.density).toInt(), (48 * d.density).toInt(), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = (48 * d.density).toInt() }
         val dismiss = ComposeView(app).apply {
             setViewTreeLifecycleOwner(o)
             setViewTreeSavedStateRegistryOwner(o)
             setContent {
-                Box(Modifier.size(72.dp).clip(RoundedCornerShape(36.dp)).background(Color(0xCC000000)), contentAlignment = Alignment.Center) {
-                    PIcon("close", Color.White, 26.dp)
+                Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xCC000000)), contentAlignment = Alignment.Center) {
+                    PIcon("close", Color.White, 20.dp)
                 }
             }
         }
@@ -153,12 +153,8 @@ object FloatingVideo {
                             val cy = lp.y + lp.height
                             // dropped on the close target at the bottom middle: the window closes
                             val onTarget = abs(cx - screenW / 2) < 90 * d.density && cy > screenH - 170 * d.density
-                            if (onTarget || (vy > 2200f && lp.y > screenH / 2)) hide(app)
-                            else {
-                                lp.x = if (lp.x + lp.width / 2 < screenW / 2) margin else screenW - lp.width - margin
-                                lp.y = min(max(lp.y, margin), screenH - lp.height - margin)
-                                runCatching { wm.updateViewLayout(this, lp) }
-                            }
+                            if (onTarget) hide(app)
+                            else fling(this, lp, wm, vx, vy, screenW, screenH, margin)
                         },
                         onPinchEnd = { animateSize(app, lp, this, wm, winSize, minW, maxW, d.widthPixels, d.heightPixels, ratio, margin) },
                         onZoom = { z ->
@@ -170,6 +166,7 @@ object FloatingVideo {
                             runCatching { wm.updateViewLayout(this, lp) }
                         },
                         onClose = { hide(app) },
+                        cues = cues, cueDelay = cueDelay,
                     )
                 }
             }
@@ -188,6 +185,34 @@ object FloatingVideo {
         held?.release(); held = null
         runCatching { app.stopService(Intent(app, com.umutk.pulse.extras.video.VideoSessionService::class.java)) }
     }
+}
+
+/**
+ * The window thrown: it goes on with the speed of the finger and slows down by friction (as a thing with mass sliding), bouncing softly off the edges of the
+ * screen, and stays where it stops.
+ */
+private fun fling(v: View, lp: WindowManager.LayoutParams, wm: WindowManager, vx0: Float, vy0: Float, screenW: Int, screenH: Int, margin: Int) {
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    var vx = vx0.coerceIn(-9000f, 9000f); var vy = vy0.coerceIn(-9000f, 9000f)
+    var x = lp.x.toFloat(); var y = lp.y.toFloat()
+    val step = object : Runnable {
+        override fun run() {
+            if (v.parent == null) return
+            val dt = 1f / 60f
+            x += vx * dt; y += vy * dt
+            // friction: the speed falls by about 6 % each frame
+            vx *= 0.94f; vy *= 0.94f
+            val maxX = (screenW - lp.width - margin).toFloat(); val maxY = (screenH - lp.height - margin).toFloat()
+            if (x < margin) { x = margin.toFloat(); vx = -vx * .35f }
+            if (x > maxX) { x = maxX; vx = -vx * .35f }
+            if (y < margin) { y = margin.toFloat(); vy = -vy * .35f }
+            if (y > maxY) { y = maxY; vy = -vy * .35f }
+            lp.x = x.toInt(); lp.y = y.toInt()
+            runCatching { wm.updateViewLayout(v, lp) }
+            if (kotlin.math.hypot(vx, vy) > 40f) handler.postDelayed(this, 16L)
+        }
+    }
+    handler.post(step)
 }
 
 /** Animates the window to the nearest allowed size (between [minW] and [maxW]) and keeps it on the screen; about 0.2 s, eased. */
@@ -218,8 +243,20 @@ private fun animateSize(
 @Composable
 private fun MiniBody(
     p: Player, w: Dp, h: Dp, onDragStart: () -> Unit, onDrag: (Float, Float) -> Unit, onEnd: (Float, Float) -> Unit,
-    onZoom: (Float) -> Unit, onPinchEnd: () -> Unit, onClose: () -> Unit,
+    onZoom: (Float) -> Unit, onPinchEnd: () -> Unit, onClose: () -> Unit, cues: List<SubCue>? = null, cueDelay: Long = 0L,
 ) {
+    // the subtitle file picked in the player goes on in the small window: its line for the moment, ten times a second
+    var subView by remember { mutableStateOf<androidx.media3.ui.SubtitleView?>(null) }
+    LaunchedEffect(cues, subView) {
+        val list = cues ?: return@LaunchedEffect
+        val sv = subView ?: return@LaunchedEffect
+        var last = "\u0000"
+        while (true) {
+            val text = cueAt(list, p.currentPosition - cueDelay)
+            if (text != last) { last = text; sv.setCues(if (text.isEmpty()) emptyList() else listOf(androidx.media3.common.text.Cue.Builder().setText(text).build())) }
+            delay(100)
+        }
+    }
     val density = LocalDensity.current
     val wPx = with(density) { w.toPx() }
     var playing by remember { mutableStateOf(p.isPlaying) }
@@ -270,11 +307,14 @@ private fun MiniBody(
             }
             .pointerInput(Unit) {
                 val vt = VelocityTracker()
+                // the window moves with the finger, so the finger's place inside it hardly changes: the speed is measured on the sum of the moves
+                var sum = androidx.compose.ui.geometry.Offset.Zero
                 detectDragGestures(
-                    onDragStart = { vt.resetTracking(); onDragStart() },
+                    onDragStart = { vt.resetTracking(); sum = androidx.compose.ui.geometry.Offset.Zero; onDragStart() },
                     onDrag = { change, drag ->
                         change.consume()
-                        vt.addPosition(change.uptimeMillis, change.position)
+                        sum += drag
+                        vt.addPosition(change.uptimeMillis, sum)
                         onDrag(drag.x, drag.y)
                     },
                     onDragEnd = { val v = vt.calculateVelocity(); onEnd(v.x, v.y) },
@@ -288,6 +328,7 @@ private fun MiniBody(
                     setShutterBackgroundColor(android.graphics.Color.BLACK)
                     player = p
                     subtitleView?.applySubPrefs(VideoPrefs(c), pip = true)
+                    subView = subtitleView
                 }
             },
             modifier = Modifier.fillMaxSize(),
