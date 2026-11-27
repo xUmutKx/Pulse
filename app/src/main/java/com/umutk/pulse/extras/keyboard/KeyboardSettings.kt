@@ -737,6 +737,12 @@ fun KeyboardSettings(back: () -> Unit) {
                     (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("words", KeyboardDictionary.exportUser()))
                     lnote = tr("${all.size} words copied", "${all.size} kelime kopyalandı")
                 }
+                // a dictionary file of another keyboard (Gboard's zip, a word list of HeliBoard, FUTO or SwiftKey, a CSV)
+                val pickDict = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+                    if (u != null) { val r = KbDictImport.import(ctx, u); learned = KeyboardDictionary.learnedCount(); rev++
+                        lnote = if (r == null) tr("This file could not be read", "Bu dosya okunamadı") else tr("${r.words} words and ${r.shortcuts} shortcuts taken", "${r.words} kelime ve ${r.shortcuts} kısayol alındı") }
+                }
+                PButton(tr("Import a file", "Dosyadan al"), compact = true) { runCatching { pickDict.launch(arrayOf("*/*")) } }
                 PButton(tr("Paste a list", "Liste yapıştır"), compact = true) {
                     val t = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
                     val n = KeyboardDictionary.importText(ctx, t); learned = KeyboardDictionary.learnedCount(); rev++
