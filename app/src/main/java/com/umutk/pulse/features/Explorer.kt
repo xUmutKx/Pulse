@@ -708,12 +708,15 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     // the last row picked: a long press on a row further down picks everything between the two (as in the Samsung gallery)
     var lastPick by remember { mutableStateOf<String?>(null) }
-    fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p; lastPick = p }
+    // a second long press only picks the rows between when it follows the last pick within two seconds; after a longer pause it is a new start (that row alone)
+    var lastPickAt by remember { mutableStateOf(0L) }
+    fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p; lastPick = p; lastPickAt = android.os.SystemClock.uptimeMillis() }
     fun longPick(p: String) {
         val a = lastPick?.let { x -> shownNow.indexOfFirst { it.path == x } } ?: -1
         val b = shownNow.indexOfFirst { it.path == p }
-        sel = if (sel.isNotEmpty() && a >= 0 && b >= 0) sel + (minOf(a, b)..maxOf(a, b)).map { shownNow[it].path } else sel + p
-        lastPick = p
+        val quick = android.os.SystemClock.uptimeMillis() - lastPickAt < 2000L
+        sel = if (sel.isNotEmpty() && quick && a >= 0 && b >= 0) sel + (minOf(a, b)..maxOf(a, b)).map { shownNow[it].path } else sel + p
+        lastPick = p; lastPickAt = android.os.SystemClock.uptimeMillis()
     }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
     // paste = into the folder on screen; cut moves (and the clipboard empties), copy copies (the clipboard stays); name clashes get a "1-" prefix (see paste)
