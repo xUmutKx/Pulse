@@ -271,14 +271,12 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "video" to (tr("Pulse Watch: music and video on the watch, YouTube through the phone, now playing remote, Find my phone, the phone's files (Device manager > Watch > Pulse Watch link).",
-        "Pulse Watch: saatte müzik ve video, telefon üzerinden YouTube, çalan müzik kumandası, Telefonumu bul, telefon dosyaları (Cihaz yöneticisi > Saat > Pulse Watch bağlantısı).")),
-    "tools" to (tr("Toolkit tiles: each one has its own tap animation (network bars, battery filling, timer hand, bell …).",
-        "Araç kutucukları: her birinin kendine özel dokunma animasyonu var (ağ çubukları, dolan pil, zamanlayıcı ibresi, zil …).")),
-    "clean" to (tr("Cache cleaner without root: app by app with an accessibility service, like SD Maid.",
-        "Rootsuz önbellek temizleme: SD Maid gibi erişilebilirlik servisiyle uygulama uygulama.")),
-    "game" to (tr("Fixes: the next video no longer turns the screen upright and back; the CD shelf is black and its box has a real back.",
-        "Düzeltmeler: sonraki videoya geçince ekran dikeye dönüp geri gelmiyor; CD rafı siyah, kutunun gerçek bir arka yüzü var.")),
+    "video" to (tr("Video: brightness left, volume right, a pull down in the middle (or Back) goes to the mini player over the app; Next episode comes in the last 20 seconds; subtitles follow the turn of the screen.",
+        "Video: solda parlaklık, sağda ses, ortadan aşağı çekince (ya da Geri) uygulama içi mini oynatıcı; Sonraki bölüm son 20 saniyede; altyazı ekranın dönüşüne uyar.")),
+    "search" to (tr("Music: YouTube covers load whole, the count follows the YouTube mix, artists in the search with their albums and Play artist.",
+        "Müzik: YouTube kapakları tam yüklenir, sayaç YouTube miksini sayar, aramada sanatçılar, albümleri ve Sanatçıyı çal.")),
+    "terminal" to (tr("Code: black ground, a project from a folder or a zip, the tree beside the editor sideways, tabs, and Pulse AI edits your code.",
+        "Kod: siyah zemin, klasörden ya da zipten proje, yatayda yanda duran ağaç, sekmeler ve kodunu düzenleyen Pulse AI.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
