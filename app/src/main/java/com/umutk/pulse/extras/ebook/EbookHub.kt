@@ -1300,10 +1300,8 @@ private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
             OutlinedField(query, th, tr("Title or author", "Başlık veya yazar"), Modifier.weight(1f), { search() }) { query = it }
             Box(Modifier.size(40.dp).clickable { search() }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
         }
-        Text(tr("Only books whose copyright has ended, from Project Gutenberg. Turkish first.",
-            "Yalnızca telif süresi dolmuş kitaplar, Project Gutenberg'den. Önce Türkçe."), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
         if (showingClassics && query.isBlank() && !results.isNullOrEmpty()) Text(tr("Free classics", "Ücretsiz klasikler"), color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
-        if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
+        BusyLine(th, busy)
         if (results != null && results.isNullOrEmpty() && busy.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = th.sub, fontSize = 13.sp)
         LazyVerticalGrid(columns = GridCells.Adaptive(104.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
             itemsIndexed(results.orEmpty()) { _, f ->
@@ -1753,7 +1751,7 @@ private fun ColumnScope.CollectionsPage(
             Column {
                 Text(tr("Categories of free books (Project Gutenberg) can be fetched from the internet, each with its first covers.", "Ücretsiz kitap kategorileri (Project Gutenberg) internetten getirilebilir, her biri ilk kapaklarıyla."), color = th.sub, fontSize = 14.sp)
                 Spacer(Modifier.height(10.dp))
-                PButton(if (busy) tr("Loading...", "Yükleniyor...") else tr("Get categories", "Kategorileri getir"), compact = true) { if (!busy) onLoadOnline() }
+                if (busy) BusyLine(th, "...") else PButton(tr("Get categories", "Kategorileri getir"), compact = true) { onLoadOnline() }
             }
         } else {
             if (online.isEmpty()) item { Text(tr("No connection", "Bağlantı yok"), color = th.sub, fontSize = 14.sp) }
@@ -1782,7 +1780,7 @@ private fun ColumnScope.CategoryBooks(th: Theme, ctx: Context, topic: String, on
     }
     LaunchedEffect(topic) { if (page == 0) more() }
     Text(topicName(topic), color = th.ink, fontSize = 42.sp, fontWeight = FontWeight.Light, modifier = Modifier.padding(top = 6.dp))
-    if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
+    BusyLine(th, busy)
     androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid(
         columns = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells.Fixed(3),
         verticalItemSpacing = 14.dp, horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1876,4 +1874,13 @@ private fun RenameDialog(th: Theme, initial: String, onOk: (String) -> Unit, onD
             }
         }
     }
+}
+
+/** While something loads (searching, the classics, the categories, a download) a moving bar instead of a word; a message (no connection …) stays as text. */
+@Composable
+private fun BusyLine(th: Theme, busy: String) {
+    if (busy.isEmpty()) return
+    if (busy.endsWith("...")) androidx.compose.material3.LinearProgressIndicator(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(3.dp).clip(RoundedCornerShape(2.dp)), color = th.ink, trackColor = th.sub.copy(alpha = .2f))
+    else Text(busy, color = th.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
 }
