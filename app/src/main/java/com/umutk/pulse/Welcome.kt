@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "lock" to (tr("A new mini APK, the safe one: no root, Shizuku, SMS, accessibility services, APK installs or call log. Full and lite keep every tool.",
-        "Yeni mini APK, güvenli sürüm: root, Shizuku, SMS, erişilebilirlik servisleri, APK kurma ve arama kaydı yok. Tam ve lite tüm araçları korur.")),
+    "store" to (tr("Every app of Pulse is also an app of its own (Files, Calculator, Music, Video, Keyboard, the Launcher and the others): they are on the release page beside Pulse.",
+        "Pulse'un her uygulaması artık ayrı bir uygulama olarak da var (Dosyalar, Hesap makinesi, Müzik, Video, Klavye, Başlatıcı ve diğerleri): sürüm sayfasında Pulse'un yanında.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable

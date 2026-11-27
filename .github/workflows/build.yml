@@ -39,6 +39,11 @@ jobs:
         run: |
           V='["full"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","mini","32bit","play"]'; fi
+          # a release holds everything in one: Pulse (full, lite, mini, 32-bit), each app on its own, and the watch app (the Play bundle is built but kept out of the release)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.release }}" = "true" ]; then
+            APPS=$(grep -v '^#' scripts/standalone_apps.txt | cut -d'|' -f1 | grep . | sed 's/^/"app-/;s/$/"/' | paste -sd, -)
+            V='["full","lite","mini","32bit","play",'"$APPS"',"watch"]'
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.watch }}" = "true" ]; then V='["watch"]'; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apps }}" = "true" ]; then V=$(grep -v '^#' scripts/standalone_apps.txt | cut -d'|' -f1 | grep . | sed 's/^/"app-/;s/$/"/' | paste -sd, - | sed 's/^/[/;s/$/,"watch"]/'); fi  # every app of scripts/standalone_apps.txt, and the watch app
           echo "variants=$V" >> "$GITHUB_OUTPUT"
@@ -48,7 +53,8 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     # the Google Play bundle never holds the release back: when it fails the two APKs are still published
-    continue-on-error: ${{ matrix.variant == 'play' || matrix.variant == 'watch' }}
+    # the Play bundle, the watch app and the standalone apps never hold the release back: the ones that fail are left out of it
+    continue-on-error: ${{ matrix.variant == 'play' || matrix.variant == 'watch' || startsWith(matrix.variant, 'app-') }}
     strategy:
       fail-fast: false
       matrix:
@@ -236,6 +242,9 @@ jobs:
           [ -f "files/Pulse-$VER-mini.apk" ] && ASSETS+=("files/Pulse-$VER-mini.apk")
           [ -f "files/Pulse-$VER-nosms.apk" ] && ASSETS+=("files/Pulse-$VER-nosms.apk")
           [ -f "files/Pulse-$VER-32bit.apk" ] && ASSETS+=("files/Pulse-$VER-32bit.apk")
-          [ -f "files/Pulse-$VER-play.aab" ] && ASSETS+=("files/Pulse-$VER-play.aab")
+          # each app on its own (Pulse-<app>-<version>.apk) and the watch app; the Play bundle stays out (it is in the run's files, for the Play Console)
+          for f in files/Pulse-*-"$VER".apk; do [ -f "$f" ] && ASSETS+=("$f"); done
           [ -f "files/PulseWatch.apk" ] && ASSETS+=("files/PulseWatch.apk")
           gh release create "v$VER" "${ASSETS[@]}" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          # and each app to its own repository too (when APPS_TOKEN is set and the repository exists)
+          if [ -n "$APPS_TOKEN" ]; then GH_TOKEN="$APPS_TOKEN" bash scripts/publish_standalone.sh "$VER"; else echo "::warning::APPS_TOKEN is not set: the apps were not sent to their own repositories"; fi
