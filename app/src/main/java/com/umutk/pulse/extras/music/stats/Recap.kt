@@ -417,7 +417,7 @@ fun RecapScreen(back: () -> Unit) {
                         }
                         else -> RecapSummary(r, days, label, since, cover, saved) {
                             scope.launch {
-                                val bytes = withContext(Dispatchers.Default) { ByteArrayOutputStream().also { cardBitmap(r, label).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray() }
+                                val bytes = withContext(Dispatchers.Default) { ByteArrayOutputStream().also { receiptBitmap(r, label, days).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray() }   // the detailed receipt, as on its own page (the plain card was the old output)
                                 val n = "pulse-recap-" + System.currentTimeMillis() / 1000 + ".png"
                                 saved = runCatching { withContext(Dispatchers.IO) { com.umutk.pulse.docScanSave(ctx, n, "image/png") { it.write(bytes) } }; tr("Saved $n in Download/Pulse", "$n kaydedildi, Download/Pulse içinde") }.getOrElse { tr("Could not save", "Kaydedilemedi") }
                             }
