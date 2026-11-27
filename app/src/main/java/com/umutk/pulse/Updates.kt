@@ -73,7 +73,9 @@ object Updates {
                         // older releases held two builds: Android 12+ and the "android5" one; each phone gets its own
                         ?: apks.firstOrNull { (android.os.Build.VERSION.SDK_INT >= 31) != it.optString("name").contains("android5") })?.optString("browser_download_url")
                 }
-                val notes = j.optString("body").lines().map { it.trim().trimStart('#', '-', '*', ' ') }.filter { it.isNotEmpty() }.take(6)
+                // only this release's own notes: the lines under its heading up to the "Which file" part (the file list is not a note)
+                val notes = j.optString("body").lines().let { l -> l.takeWhile { !it.trimStart().startsWith("### ") } }.filter { !it.trimStart().startsWith("## ") }
+                    .map { it.trim().trimStart('-', '*', ' ') }.filter { it.isNotEmpty() }.take(12)
                 Release(tag.trimStart('v', 'V'), notes, if (apk.isNullOrEmpty()) j.optString("html_url") else apk)
             } finally { c.disconnect() }
         }.getOrNull()
