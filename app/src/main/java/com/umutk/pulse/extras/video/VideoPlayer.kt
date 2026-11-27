@@ -861,14 +861,16 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 )
             }
         }
-        // the end of an episode (the last 90 seconds: the credits): a pill, as for the intro and the recap, takes the next one at once
-        if (!inPip && items.size > 1 && cur < items.size - 1 && dur > 0L && dur - pos in 1_000L..90_000L && (-1L - cur) !in skipGone) {
+        // the very end of an episode (its last 20 seconds; 90 came up while the episode was still going): a pill takes the next one at once, and it stays
+        // up until the end (20 s) instead of going after 5
+        if (!inPip && items.size > 1 && cur < items.size - 1 && dur > 0L && dur - pos in 500L..20_000L && (-1L - cur) !in skipGone) {
             SkipPill(
                 text = tr("Next episode", "Sonraki bölüm"),
                 startKey = -1L - cur,
                 onTap = { player.seekToNextMediaItem() },
                 onTimeout = { skipGone = skipGone + (-1L - cur) },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
+                durationMs = 20_000,
             )
         }
         hud?.let { (icon, text) ->
