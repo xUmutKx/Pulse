@@ -133,6 +133,7 @@ private val tools = listOf(
     Tool("Watch", "Saat", "clock", wide = true) { WatchManagerTool() },
     Tool("Auto clicker", "Otomatik tıklayıcı", "touch") { AutoClickerTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
+    Tool("Spin the bottle", "Şişe çevirme", "bottle") { SpinBottle() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
     Tool("Sensors off", "Sensörler kapalı", "sensors") { SensorsOffTool() },
@@ -569,6 +570,40 @@ private fun CoinFlip() {
                 heads = result
                 prefs(ctx).edit().putString("coin_last", if (result) "Heads" else "Tails").apply()
                 flipping = false
+            }
+        }
+    }
+}
+
+/** Spin the bottle: the bottle turns several times and stops pointing at a direction (the angle is shown); the last one is shared with the Quick Settings tile. */
+@Composable
+private fun SpinBottle() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var spinning by remember { mutableStateOf(false) }
+    val startAngle = prefs(ctx).getInt("bottle_last", 0).toFloat()
+    val turn = remember { Animatable(startAngle) }
+    val ink = Look.accent
+    PCard {
+        androidx.compose.foundation.Canvas(Modifier.align(Alignment.CenterHorizontally).padding(8.dp).size(200.dp)) {
+            val c = center
+            val h = size.minDimension * .46f
+            // the bottle lies along its axis, the neck toward the angle it points at (0 degrees is up)
+            rotate(turn.value, c) {
+                val body = androidx.compose.ui.geometry.Size(h * .62f, h * 1.05f)
+                drawRoundRect(ink, androidx.compose.ui.geometry.Offset(c.x - body.width / 2, c.y - body.height * .15f), body, androidx.compose.ui.geometry.CornerRadius(h * .16f))
+                drawRoundRect(ink, androidx.compose.ui.geometry.Offset(c.x - h * .13f, c.y - h * .95f), androidx.compose.ui.geometry.Size(h * .26f, h * .9f), androidx.compose.ui.geometry.CornerRadius(h * .08f))
+                drawRect(Color.White.copy(alpha = .55f), androidx.compose.ui.geometry.Offset(c.x - h * .13f, c.y - h * .95f), androidx.compose.ui.geometry.Size(h * .26f, h * .1f))
+            }
+        }
+        ToolNote(if (spinning) "…" else "${(((turn.value % 360f) + 360f) % 360f).toInt()}°", T.text)
+        PButton(tr("Spin", "Çevir"), Modifier.fillMaxWidth()) {
+            if (!spinning) scope.launch {
+                spinning = true
+                val target = turn.value + 360f * Random.nextInt(4, 9) + Random.nextInt(0, 360)
+                turn.animateTo(target, tween(2600, easing = LinearOutSlowInEasing))
+                prefs(ctx).edit().putInt("bottle_last", (((target % 360f) + 360f) % 360f).toInt()).apply()
+                spinning = false
             }
         }
     }
