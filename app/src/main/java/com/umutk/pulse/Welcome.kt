@@ -271,8 +271,8 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "lock" to (tr("The lite app is now the safe one: no root, Shizuku, SMS, accessibility services, APK installs or call log. The full app keeps every tool.",
-        "Lite artık güvenli sürüm: root, Shizuku, SMS, erişilebilirlik servisleri, APK kurma ve arama kaydı yok. Tam sürüm tüm araçları korur.")),
+    "lock" to (tr("A new mini APK, the safe one: no root, Shizuku, SMS, accessibility services, APK installs or call log. Full and lite keep every tool.",
+        "Yeni mini APK, güvenli sürüm: root, Shizuku, SMS, erişilebilirlik servisleri, APK kurma ve arama kaydı yok. Tam ve lite tüm araçları korur.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable

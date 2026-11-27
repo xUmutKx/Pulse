@@ -37,12 +37,15 @@ android {
         create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false"); buildConfigField("boolean", "YT_SIGNIN", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
         // ai: "full" has Pulse AI inside (llama.cpp chat, whisper.cpp speech to text: native code, about 8 MB more, a longer build); "lite" has neither (the same app, the AI pages say it is not in this build; src/lite has the empty stand-ins)
         create("full") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "true"); buildConfigField("boolean", "SAFE", "false") }
-        // SAFE: the lite app is also the "safe" one: no root or Shizuku, no SMS, no accessibility services, no APK installs, no call log (src/lite/AndroidManifest.xml);
-        // app scanners took the full set of rights for a banking trojan
-        create("lite") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false"); buildConfigField("boolean", "SAFE", "true") }
+        create("lite") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false"); buildConfigField("boolean", "SAFE", "false") }
+        // mini: the safe app: lite (no Pulse AI) and also no root or Shizuku, no SMS, no accessibility services, no APK installs, no call log (src/mini/AndroidManifest.xml);
+        // app scanners take the full set of rights for a banking trojan. Its code is lite's (the AI stand-ins of src/lite)
+        create("mini") { dimension = "ai"; buildConfigField("boolean", "LOCAL_AI", "false"); buildConfigField("boolean", "SAFE", "true") }
     }
     // -PnoSms: the lite app without any SMS/MMS permission or receiver (src/nosms overlays the lite manifest)
-    // (-PnoSms is no longer needed: the lite app has no SMS at all, see src/lite/AndroidManifest.xml)
+    if (project.hasProperty("noSms")) sourceSets.getByName("lite").manifest.srcFile("src/nosms/AndroidManifest.xml")
+    // the mini app runs on lite's code (the AI stand-ins), with a manifest of its own
+    sourceSets.getByName("mini").java.srcDir("src/lite/java")
     buildTypes {
         release {
             ndk { debugSymbolLevel = "SYMBOL_TABLE" } // native symbols in the bundle: no "missing symbols" warning in Play
