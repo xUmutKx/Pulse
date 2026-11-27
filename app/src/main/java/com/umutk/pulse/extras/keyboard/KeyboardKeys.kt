@@ -26,7 +26,7 @@ object ExtraKeys {
         "auth" to "Quick auth", "vault" to "Passwords", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "emoji" to "Emoji", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
         "aifix" to "AI fix", "dict" to "Dictionary", "notes" to "Notes", "calc" to "Calculator", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "media" to "Play / pause", "mediaNext" to "Next track", "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
         "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
-        "apps" to "Open an app", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
+        "apps" to "Open an app", "emojimix" to "Emoji mix", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
@@ -34,7 +34,7 @@ object ExtraKeys {
         "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers",
         "glide" to "Swipe typing", "lang" to "Language", "layout" to "Key layout", "aifix" to "AI fix", "dict" to "Dictionary", "notes" to "Notes", "calc" to "Calculator", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "media" to "Play / pause", "mediaNext" to "Next track",
         "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
-        "apps" to "Open an app", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
+        "apps" to "Open an app", "emojimix" to "Emoji mix", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
     )
     /** What a long press on the comma, the period or the key beside ?123 can do (Settings > Keyboard): id and name; "none" keeps the key's own pop-up characters. */
     val hold = listOf(
@@ -42,7 +42,7 @@ object ExtraKeys {
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito", "gif" to "GIF",
         "notes" to "Notes", "calc" to "Calculator", "dict" to "Dictionary", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "glide" to "Swipe typing", "onehand" to "One-handed", "numbers" to "Numbers row",
         "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
-        "apps" to "Open an app", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
+        "apps" to "Open an app", "emojimix" to "Emoji mix", "torch" to "Flashlight", "websearch" to "Search the web", "alarm" to "Set an alarm",
     )
     const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,dict,notes"
     const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"

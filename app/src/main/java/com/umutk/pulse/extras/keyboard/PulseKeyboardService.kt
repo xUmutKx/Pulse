@@ -2351,6 +2351,19 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 st.panel = if (st.panel == "apps") "keys" else "apps"
             }
             "torch" -> { st.panel = "keys"; KbPhone.torch(this) }
+            // emoji mix (WM Keyboard's idea): the two emoji before the cursor become one picture (Google's Emoji Kitchen, through emojik.vercel.app)
+            "emojimix" -> {
+                st.panel = "keys"
+                val before = currentInputConnection?.getTextBeforeCursor(40, 0)?.toString().orEmpty()
+                val pair = KbEmojiMix.lastTwo(before)
+                if (pair == null) { android.widget.Toast.makeText(this, tr("Type two emoji first", "Önce iki emoji yaz"), android.widget.Toast.LENGTH_SHORT).show(); return }
+                scope.launch {
+                    val f = withContext(Dispatchers.IO) { KbEmojiMix.fetch(this@PulseKeyboardService, pair.first, pair.second) }
+                    if (f == null) { android.widget.Toast.makeText(this@PulseKeyboardService, tr("No mix for these two", "Bu ikisinin karışımı yok"), android.widget.Toast.LENGTH_SHORT).show(); return@launch }
+                    currentInputConnection?.deleteSurroundingText(pair.first.length + pair.second.length + pair.third, 0)
+                    pasteVideo(f, "image/png")
+                }
+            }
             "websearch" -> {
                 st.panel = "keys"
                 val c = currentInputConnection

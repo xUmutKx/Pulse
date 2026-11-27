@@ -849,7 +849,7 @@ internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "layout" -> kbIcon(th, "Dashboard")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
     "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture"); "aifix" -> androidx.compose.material.icons.Icons.Rounded.AutoAwesome
-    "passgen" -> Icons.Rounded.Key; "case" -> Icons.Rounded.Spellcheck; "lineStart" -> Icons.Rounded.ChevronLeft; "lineEnd" -> Icons.Rounded.ChevronRight; "apps" -> Icons.Rounded.Apps; "torch" -> Icons.Rounded.FlashlightOn; "websearch" -> Icons.Rounded.Search; "alarm" -> Icons.Rounded.Alarm; "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
+    "passgen" -> Icons.Rounded.Key; "case" -> Icons.Rounded.Spellcheck; "lineStart" -> Icons.Rounded.ChevronLeft; "lineEnd" -> Icons.Rounded.ChevronRight; "apps" -> Icons.Rounded.Apps; "emojimix" -> kbIcon(th, "EmojiEmotions"); "torch" -> Icons.Rounded.FlashlightOn; "websearch" -> Icons.Rounded.Search; "alarm" -> Icons.Rounded.Alarm; "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
 }
 
 /** What a long press on this kind of key does, from Settings > Keyboard. */
