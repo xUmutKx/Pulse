@@ -86,7 +86,7 @@ class TaskAlarmReceiver : BroadcastReceiver() {
         val id = i.getIntExtra("id", -1)
         val t = TaskSched.load(c).firstOrNull { it.id == id && it.on } ?: return
         val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(NotificationChannel("pulse_tasks", "Scheduled tasks", NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_tasks", "Scheduled tasks", NotificationManager.IMPORTANCE_HIGH))
         val launch = c.packageManager.getLaunchIntentForPackage(t.pkg) ?: Intent(c, LauncherActivity::class.java)
         val pi = PendingIntent.getActivity(c, 8000 + id, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         runCatching {

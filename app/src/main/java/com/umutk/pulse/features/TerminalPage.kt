@@ -248,7 +248,7 @@ class TermService : android.app.Service() {
     override fun onStartCommand(i: android.content.Intent?, f: Int, id: Int): Int {
         if (i?.action == "stop") { TermSession.stop(); stopSelf(); return START_NOT_STICKY }
         val nm = getSystemService(android.app.NotificationManager::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("terminal", "Terminal", android.app.NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("terminal", "Terminal", android.app.NotificationManager.IMPORTANCE_LOW))
         val stop = android.app.PendingIntent.getService(this, 0, android.content.Intent(this, TermService::class.java).setAction("stop"), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         val n = androidx.core.app.NotificationCompat.Builder(this, "terminal").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_terminal)
             .setContentTitle(com.umutk.pulse.tr("Terminal session open", "Terminal oturumu açık")).setContentText(com.umutk.pulse.tr("The shell keeps running in the background", "Kabuk arka planda çalışmaya devam ediyor"))

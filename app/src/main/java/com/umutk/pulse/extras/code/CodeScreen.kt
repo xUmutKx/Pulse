@@ -169,7 +169,6 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     var size by remember { mutableStateOf(prefs.getFloat("size", 13f)) }
     // the tools are always in view (no ⋮ to open them); the ground is AMOLED black by default, the look's colour on request
     val tools = true
-    var amoled by remember { mutableStateOf(prefs.getBoolean("amoled", true)) }
     var runHtml by remember { mutableStateOf<String?>(null) }
     var find by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -208,7 +207,8 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     val inWin = com.umutk.pulse.extras.launcher.LocalDesktopWin.current != null
     var langMenu by remember { mutableStateOf(false) }
     val body: @Composable () -> Unit = {
-        val ground = if (amoled) androidx.compose.ui.graphics.Color.Black else T.bg
+        // black, always (no switch for it); in the Windows 11 look the page is see-through like the Terminal
+        val ground = if (T.id == "win11") androidx.compose.ui.graphics.Color.Black.copy(alpha = .36f) else androidx.compose.ui.graphics.Color.Black
         Column(Modifier.fillMaxSize().background(ground).then(if (inWin) Modifier else Modifier.statusBarsPadding().navigationBarsPadding().imePadding())) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
@@ -249,7 +249,6 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
             }
             if (tools) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PChip(wrap, tr("Wrap", "Satır kaydır")) { wrap = !wrap; prefs.edit().putBoolean("wrap", wrap).apply() }
-                PChip(amoled, tr("AMOLED black", "AMOLED siyah")) { amoled = !amoled; prefs.edit().putBoolean("amoled", amoled).apply() }
                 if (!editing) {
                     PChip(false, tr("Fold block", "Bloğu kapat")) { h.ed?.let { ed -> h.quiet { if (!PulseCode.foldAtCursor(ed, h.folds)) note = tr("No block here", "Burada blok yok") } } }
                     PChip(false, tr("Fold all", "Hepsini kapat")) { h.ed?.let { ed -> h.quiet { PulseCode.foldAll(ed, h.folds) } } }

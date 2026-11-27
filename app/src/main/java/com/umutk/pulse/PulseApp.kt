@@ -41,6 +41,18 @@ class PulseApp : Application(), androidx.work.Configuration.Provider, coil.Image
         }
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
         CrashSaver.install(this)
+        // once for each version, in the main process: the notification channels an older version made with the icon badge on are removed, and made again (without it) by the code that posts to them:
+        // Android does not let an app turn the badge off of a channel that exists, and every extra app of Pulse wore the dot. (Alarm channels and a channel that holds a running
+        // foreground service are left alone.)
+        if (android.os.Build.VERSION.SDK_INT >= 26 && Application.getProcessName() == packageName) runCatching {
+            val sp = getSharedPreferences("p", MODE_PRIVATE)
+            if (sp.getInt("badge_sweep", 0) < BuildConfig.VERSION_CODE) {
+                val nm = getSystemService(android.app.NotificationManager::class.java)
+                nm.notificationChannels.filter { it.canShowBadge() && listOf("alarm", "lucid", "awake", "snooze", "timer", "ring", "nowbar", "miscellaneous").none { k -> it.id.contains(k, true) } }
+                    .forEach { runCatching { nm.deleteNotificationChannel(it.id) } }
+                sp.edit().putInt("badge_sweep", BuildConfig.VERSION_CODE).apply()
+            }
+        }
         // the performance record (a setting, see PerfLog): in every process
         PerfLog.init(this)
         // an own Private DNS for Wi-Fi and for mobile data (a setting): watched in the main process only

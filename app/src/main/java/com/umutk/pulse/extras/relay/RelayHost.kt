@@ -141,7 +141,7 @@ class RelayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("relay", "Relay", NotificationManager.IMPORTANCE_LOW))
-        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(android.app.NotificationChannel("relay_offer", "Relay offers", NotificationManager.IMPORTANCE_DEFAULT))
+        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("relay_offer", "Relay offers", NotificationManager.IMPORTANCE_DEFAULT))
         val open = PendingIntent.getActivity(this, 5201, Intent().setClassName(this, "com.umutk.pulse.ToolOpenActivity").putExtra("route", "relay").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n: Notification = NotificationCompat.Builder(this, "relay").setSmallIcon(android.R.drawable.stat_sys_data_bluetooth).setContentTitle("Relay").setContentText(com.umutk.pulse.tr("Available to nearby devices", "Yakındaki cihazlara açık"))
             .setOngoing(true).setContentIntent(open).build()

@@ -62,7 +62,7 @@ object LocalSendBubble {
         val app = ctx.applicationContext
         val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null)
-            nm.createNotificationChannel(android.app.NotificationChannel(CHANNEL, tr("File transfer", "Dosya aktarımı"), android.app.NotificationManager.IMPORTANCE_LOW))
+            nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CHANNEL, tr("File transfer", "Dosya aktarımı"), android.app.NotificationManager.IMPORTANCE_LOW))
         job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             var quiet = 0
             while (true) {

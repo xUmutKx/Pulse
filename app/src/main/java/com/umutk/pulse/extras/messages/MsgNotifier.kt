@@ -39,7 +39,7 @@ object MsgNotifier {
         if (Build.VERSION.SDK_INT >= 26) {
             val nm = c.getSystemService(NotificationManager::class.java)
             if (nm.getNotificationChannel(id) == null) {
-                val ch = NotificationChannel(id, tr("Messages", "Mesajlar"),
+                val ch = com.umutk.pulse.QuietChannel(id, tr("Messages", "Mesajlar"),
                     if (MsgPrefs.sound(c) || MsgPrefs.vibrate(c)) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_LOW)
                 if (!MsgPrefs.sound(c)) ch.setSound(null, null)
                 // all the extra apps are one package: a badge for a message showed on every one of their icons, so the messages have none (the notification itself stays)
