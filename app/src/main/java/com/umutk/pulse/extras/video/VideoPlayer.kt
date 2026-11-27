@@ -796,9 +796,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                                 tx += d.x; ty += d.y
                                 if (mode == 0 && hypot(tx, ty) > slop) {
                                     mode = if (abs(tx) > abs(ty)) (if (prefs.gestSeek) 1 else -1)
-                                    // a pull down that starts at the top edge sends the video to the small window (as Back does), where it goes on playing
+                                    // the middle fifth of the screen has no brightness or volume: a pull down there (or from the top edge) sends the video to the small window, where it goes on playing
+                                    else if (down.position.x in w * .4f..w * .6f) (if (ty > 0f) 5 else -1)
                                     else if (down.position.y < h * .14f && ty > 0f && prefs.backMini) 5
-                                    else if (down.position.x < w / 2) (if (prefs.gestBright) 2 else -1)
+                                    // brightness on the left side, volume on the right
+                                    else if (down.position.x < w * .4f) (if (prefs.gestBright) 2 else -1)
                                     else (if (prefs.gestVol) 3 else -1)
                                 }
                                 when (mode) {
