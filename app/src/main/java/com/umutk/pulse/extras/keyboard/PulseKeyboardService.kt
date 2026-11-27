@@ -2268,6 +2268,35 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (fixed == src) android.widget.Toast.makeText(this, tr("No problems found", "Sorun bulunamadı"), android.widget.Toast.LENGTH_SHORT).show()
                 else { if (sel.isEmpty()) c.deleteSurroundingText(src.length, 0); c.commitText(fixed, 1); android.widget.Toast.makeText(this, tr("Fixed", "Düzeltildi"), android.widget.Toast.LENGTH_SHORT).show() }
             }
+            // one-tap text tools (offline): a random password, the case of the selection or last word, the start / end of the line
+            "passgen" -> {
+                st.panel = "keys"
+                finishWord("", false)
+                val r = java.security.SecureRandom()
+                val sets = listOf("abcdefghijkmnopqrstuvwxyz", "ABCDEFGHJKLMNPQRSTUVWXYZ", "23456789", "!@#$%*-_?")
+                val all = sets.joinToString("")
+                val chars = (sets.map { it[r.nextInt(it.length)] } + (1..12).map { all[r.nextInt(all.length)] }).shuffled(r)
+                currentInputConnection?.commitText(chars.joinToString(""), 1)
+            }
+            "case" -> {
+                st.panel = "keys"
+                val c = currentInputConnection ?: return
+                finishWord("", false)
+                val sel = c.getSelectedText(0)?.toString().orEmpty()
+                val src = sel.ifEmpty { c.getTextBeforeCursor(60, 0)?.toString().orEmpty().takeLastWhile { !it.isWhitespace() } }
+                if (src.isEmpty()) return
+                val tr = KeyboardPrefs.langList().firstOrNull() == "tr"
+                val loc = if (tr) java.util.Locale("tr") else java.util.Locale.ROOT
+                val out = when {
+                    src == src.lowercase(loc) -> src.uppercase(loc)
+                    src == src.uppercase(loc) -> src.lowercase(loc).replaceFirstChar { it.titlecase(loc) }
+                    else -> src.lowercase(loc)
+                }
+                if (sel.isEmpty()) c.deleteSurroundingText(src.length, 0)
+                c.commitText(out, 1)
+            }
+            "lineStart" -> { st.panel = "keys"; arrow(android.view.KeyEvent.KEYCODE_MOVE_HOME) }
+            "lineEnd" -> { st.panel = "keys"; arrow(android.view.KeyEvent.KEYCODE_MOVE_END) }
             "dictInsert" -> { currentInputConnection?.commitText(st.dictText.lineSequence().firstOrNull { it.trimStart().startsWith("1.") }?.trim()?.removePrefix("1.")?.trim() ?: st.dictText.lineSequence().drop(1).firstOrNull().orEmpty(), 1); st.panel = "keys" }
             // the calculator and the converter: the selected expression, or the one right before the cursor; the answer goes in after it ("12*5" -> "12*5 = 60")
             "calc", "convert" -> {

@@ -25,18 +25,21 @@ object ExtraKeys {
     val toolbar = listOf(
         "auth" to "Quick auth", "vault" to "Passwords", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "emoji" to "Emoji", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
         "aifix" to "AI fix", "dict" to "Dictionary", "notes" to "Notes", "calc" to "Calculator", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "media" to "Play / pause", "mediaNext" to "Next track", "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
+        "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
         "auth" to "Quick auth", "vault" to "Passwords", "clip" to "Clipboard", "gamepad" to "Gamepad", "translate" to "Translate", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
         "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers",
         "glide" to "Swipe typing", "lang" to "Language", "layout" to "Key layout", "aifix" to "AI fix", "dict" to "Dictionary", "notes" to "Notes", "calc" to "Calculator", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "media" to "Play / pause", "mediaNext" to "Next track",
+        "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
     )
     /** What a long press on the comma, the period or the key beside ?123 can do (Settings > Keyboard): id and name; "none" keeps the key's own pop-up characters. */
     val hold = listOf(
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito", "gif" to "GIF",
         "notes" to "Notes", "calc" to "Calculator", "dict" to "Dictionary", "convert" to "Convert", "stickers" to "Stickers", "grammar" to "Grammar", "scan" to "Scan text", "glide" to "Swipe typing", "onehand" to "One-handed", "numbers" to "Numbers row",
+        "passgen" to "Password generator", "case" to "Change case", "lineStart" to "Line start", "lineEnd" to "Line end",
     )
     const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,dict,notes"
     const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
