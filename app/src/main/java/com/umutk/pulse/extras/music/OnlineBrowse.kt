@@ -46,6 +46,14 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
     var ytIn by remember { mutableStateOf(false) }
     var ytLists by remember { mutableStateOf<List<com.umutk.pulse.extras.ytx.PlaylistRef>>(emptyList()) }
     var spLists by remember { mutableStateOf<List<com.umutk.pulse.extras.spotify.SpPlaylist>>(emptyList()) }
+    // YouTube Music's home under the chips: a speed dial (what was played last) and suggestions (what the taste log and the radio offer)
+    var dial by remember { mutableStateOf<List<OnlineMusic.Hit>>(emptyList()) }
+    var suggest by remember { mutableStateOf<List<OnlineMusic.Hit>>(emptyList()) }
+    LaunchedEffect(tab) {
+        if (tab != 0) return@LaunchedEffect
+        dial = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { OnlineMusic.history(ctx).take(10) }.getOrDefault(emptyList()) }
+        suggest = runCatching { OnlineMusic.forYou(ctx) }.getOrDefault(emptyList()).take(14)
+    }
     // "Played": everything that was listened to in the player (online and on the phone), searched and filtered here
     var played by remember { mutableStateOf(false) }
     var playedKind by remember { mutableIntStateOf(0) }   // 0 all, 1 online, 2 on the phone
@@ -114,6 +122,39 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }
         if (played) Box(Modifier.weight(1f)) { PlayedList(query, playedKind) { playedKind = it } } else LazyColumn(Modifier.weight(1f)) {
+            if (tab == 0 && query.isBlank()) {
+                // a row of covers that plays from the one tapped; the title under each is one line
+                if (dial.isNotEmpty()) item(key = "dial") {
+                    Column {
+                        Text(tr("Speed dial", "Hızlı erişim"), color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(dial.size) { i ->
+                                val h = dial[i]
+                                Column(Modifier.width(88.dp).clickable { scope.launch { if (!OnlineMusic.playHere(ctx, dial, i)) OnlineMusic.play(ctx, h) } }) {
+                                    coil.compose.AsyncImage(h.thumb, h.title, Modifier.size(88.dp).clip(RoundedCornerShape(14.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                                    Text(h.title, color = T.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+                if (suggest.isNotEmpty()) item(key = "suggest") {
+                    Column {
+                        Text(tr("Suggestions", "Öneriler"), color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp))
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(suggest.size) { i ->
+                                val h = suggest[i]
+                                Column(Modifier.width(110.dp).clickable { scope.launch { if (!OnlineMusic.playHere(ctx, suggest, i)) OnlineMusic.play(ctx, h) } }) {
+                                    coil.compose.AsyncImage(h.thumb, h.title, Modifier.size(110.dp).clip(RoundedCornerShape(16.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                                    Text(h.title, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                                    Text(h.artist, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.size(10.dp))
+                    }
+                }
+            }
             items(shown.size) { i ->
                 val h = shown[i]
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { scope.launch { if (!OnlineMusic.playHere(ctx, shown, i)) OnlineMusic.play(ctx, h) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
