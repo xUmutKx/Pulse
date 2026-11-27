@@ -271,12 +271,14 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "video" to (tr("Video: brightness left, volume right, a pull down in the middle (or Back) goes to the mini player over the app; Next episode comes in the last 20 seconds; subtitles follow the turn of the screen.",
-        "Video: solda parlaklık, sağda ses, ortadan aşağı çekince (ya da Geri) uygulama içi mini oynatıcı; Sonraki bölüm son 20 saniyede; altyazı ekranın dönüşüne uyar.")),
-    "search" to (tr("Music: YouTube covers load whole, the count follows the YouTube mix, artists in the search with their albums and Play artist.",
-        "Müzik: YouTube kapakları tam yüklenir, sayaç YouTube miksini sayar, aramada sanatçılar, albümleri ve Sanatçıyı çal.")),
-    "terminal" to (tr("Code: black ground, a project from a folder or a zip, the tree beside the editor sideways, tabs, and Pulse AI edits your code.",
-        "Kod: siyah zemin, klasörden ya da zipten proje, yatayda yanda duran ağaç, sekmeler ve kodunu düzenleyen Pulse AI.")),
+    "video" to (tr("Video: predictive Back that shrinks into the mini player, a mini player you can throw (momentum) with seek and subtitles, black menus with icons, speed presets, a live update with the picture and the time.",
+        "Video: mini oynatıcıya küçülen tahmini Geri, fırlatılabilen (momentumlu) mini oynatıcı, ileri-geri ve altyazı, ikonlu siyah menüler, hazır hızlar, resimli ve süreli canlı güncelleme.")),
+    "game" to (tr("Game Hub: the disc and the booklet use the game's own art, settings as rows with icons, Select games and HTML games on the CD shelf, the search steps aside while a case is out.",
+        "Oyun Merkezi: disk ve kitapçık oyunun kendi görsellerini kullanır, ikonlu ayar satırları, CD rafında oyun seçme ve HTML oyun, kutu açıkken arama gizlenir.")),
+    "tools" to (tr("Tiles: Auto clicker and Floating timer centred and animated. Books: loading bars. Search fields: an × to clear.",
+        "Kutucuklar: Otomatik tıklayıcı ve Yüzen sayaç ortalı ve animasyonlu. Kitaplar: yükleme çubukları. Arama kutuları: silmek için ×.")),
+    "store" to (tr("Google Play build: it installs again (a broken launcher icon made the package invalid).",
+        "Google Play sürümü: yine kurulur (bozuk bir başlatıcı simgesi paketi geçersiz yapıyordu).")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
