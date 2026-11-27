@@ -2344,6 +2344,24 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             "lineStart" -> { st.panel = "keys"; arrow(android.view.KeyEvent.KEYCODE_MOVE_HOME) }
             "lineEnd" -> { st.panel = "keys"; arrow(android.view.KeyEvent.KEYCODE_MOVE_END) }
+            // from WM Keyboard (MIT): open an app, the flashlight, a web search of the selection or the word, an alarm from a time typed
+            "apps" -> {
+                val before = currentInputConnection?.getTextBeforeCursor(30, 0)?.toString().orEmpty()
+                st.appsQuery = before.takeLastWhile { it.isLetterOrDigit() }
+                st.panel = if (st.panel == "apps") "keys" else "apps"
+            }
+            "torch" -> { st.panel = "keys"; KbPhone.torch(this) }
+            "websearch" -> {
+                st.panel = "keys"
+                val c = currentInputConnection
+                val q = c?.getSelectedText(0)?.toString()?.trim().orEmpty().ifEmpty { c?.getTextBeforeCursor(200, 0)?.toString()?.substringAfterLast('\n')?.trim().orEmpty() }
+                KbPhone.search(this, q)
+            }
+            "alarm" -> {
+                st.panel = "keys"
+                val before = currentInputConnection?.getTextBeforeCursor(80, 0)?.toString().orEmpty()
+                KbPhone.alarm(this, before)
+            }
             "dictInsert" -> { currentInputConnection?.commitText(st.dictText.lineSequence().firstOrNull { it.trimStart().startsWith("1.") }?.trim()?.removePrefix("1.")?.trim() ?: st.dictText.lineSequence().drop(1).firstOrNull().orEmpty(), 1); st.panel = "keys" }
             // the calculator and the converter: the selected expression, or the one right before the cursor; the answer goes in after it ("12*5" -> "12*5 = 60")
             "calc", "convert" -> {

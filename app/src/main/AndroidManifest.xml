@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Pulse Contacts -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- the keyboard sets an alarm from a time typed (the clock app keeps it) -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.READ_SMS" />

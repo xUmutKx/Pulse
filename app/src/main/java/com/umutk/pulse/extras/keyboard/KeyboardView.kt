@@ -3,6 +3,9 @@ package com.umutk.pulse.extras.keyboard
 import androidx.compose.foundation.layout.Spacer
 
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.AlternateEmail
@@ -77,6 +80,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import com.umutk.pulse.tr
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -438,6 +442,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "dict" -> DictPanel(th, st, act, keyH)
             "stickers" -> StickerPanel(th, st, act, keyH)
             "notes" -> NotesPanel(th, st, act, keyH)
+            "apps" -> AppsPanel(th, st, keyH)
             "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
@@ -844,7 +849,7 @@ internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "layout" -> kbIcon(th, "Dashboard")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
     "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture"); "aifix" -> androidx.compose.material.icons.Icons.Rounded.AutoAwesome
-    "passgen" -> Icons.Rounded.Key; "case" -> Icons.Rounded.Spellcheck; "lineStart" -> Icons.Rounded.ChevronLeft; "lineEnd" -> Icons.Rounded.ChevronRight; "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
+    "passgen" -> Icons.Rounded.Key; "case" -> Icons.Rounded.Spellcheck; "lineStart" -> Icons.Rounded.ChevronLeft; "lineEnd" -> Icons.Rounded.ChevronRight; "apps" -> Icons.Rounded.Apps; "torch" -> Icons.Rounded.FlashlightOn; "websearch" -> Icons.Rounded.Search; "alarm" -> Icons.Rounded.Alarm; "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
 }
 
 /** What a long press on this kind of key does, from Settings > Keyboard. */
@@ -2383,6 +2388,41 @@ private fun SlotPreview(st: KbState, th: KbTheme) {
                         }
                         Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = .25f))) { Box(Modifier.fillMaxWidth(k).height(3.dp).background(th.accent)) }
                     }
+                }
+            }
+        }
+    }
+}
+
+
+/** The apps of the phone in the keyboard (from WM Keyboard's idea, MIT): a tap opens one; the letters typed before the cursor filter the list. */
+@Composable
+private fun AppsPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val apps = remember {
+        val pm = ctx.packageManager
+        runCatching { pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0) }.getOrDefault(emptyList())
+            .map { it.loadLabel(pm).toString() to it.activityInfo }.distinctBy { it.second.packageName + "/" + it.second.name }.sortedBy { it.first.lowercase() }
+    }
+    val q = st.appsQuery.trim()
+    val shown = if (q.isEmpty()) apps else apps.filter { it.first.contains(q, true) }
+    Column(Modifier.fillMaxWidth().background(th.menu)) {
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Apps, null, tint = th.accent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (q.isEmpty()) tr("Apps", "Uygulamalar") else "“$q”", color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(tr("Close", "Kapat"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { st.panel = "keys" }.padding(8.dp))
+        }
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Adaptive(72.dp), Modifier.fillMaxWidth().height(keyH * 3.2f)) {
+            items(shown.size) { i ->
+                val (label, info) = shown[i]
+                val icon = remember(info.packageName, info.name) { runCatching { info.loadIcon(ctx.packageManager).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+                Column(Modifier.clickable {
+                    st.panel = "keys"
+                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setClassName(info.packageName, info.name).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (icon != null) androidx.compose.foundation.Image(icon, null, Modifier.size(40.dp))
+                    Text(label, color = th.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

@@ -72,3 +72,7 @@ The two-photo exercise loops of the gym (Extra store pack "gym-anim") come from 
 
 ## Flow (YouTube Music radio)
 The steps of the music radio in `extras/ytx/MusicRadio.kt` (the automix playlist `RDAMVM<id>`, then the playlist the answer names, then the song alone) follow what Flow's `Media3MusicService.startRadio` does. Flow: https://github.com/Flow-Tube/Flow, GPL-3.0, read on 26 November 2026. The code is written for Pulse; the idea and the order of the steps are Flow's.
+
+## WM Keyboard
+- Source: https://github.com/wasi-master/wmkeyboard (MIT License, Copyright (c) 2026 Wasi Master)
+- Used for: ideas and logic of the keyboard's tools (link trackers, open an app, flashlight, web search, alarm), ported to Pulse's keyboard.
