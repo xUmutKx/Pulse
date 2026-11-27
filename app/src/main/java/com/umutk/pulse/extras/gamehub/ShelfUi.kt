@@ -571,7 +571,11 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     val searching by CoverJob.running.collectAsState()
     val ver = if (searching) -1 else GameArt.version.intValue
     // a rack of more than 120 cases is slow to draw: the first 120 (the favourites come first)
-    val list = remember(games, hidden) { games.filter { it.pkg !in hidden }.take(120) }
+    // the list is keyed by what is in it (the packages), not by the list objects: the caller can hand over a new list each time the screen is drawn, and everything below
+    // that was remembered on the old one began again each time (the covers came in, the screen redrew, the rack was emptied again: it stayed on "Loading" for good with many games)
+    val shownGames = games.filter { it.pkg !in hidden }.take(120)
+    val listKey = shownGames.map { it.pkg }
+    val list = remember(listKey) { shownGames }
     // the games with no cover are looked for in the background, once
     androidx.compose.runtime.LaunchedEffect(list.size) { if (list.any { !coverFile(ctx, it.pkg).isFile }) CoverJob.start(ctx, list) }
     // each game's picture, small: its cover, else its wide picture, else its icon; read off the main thread, six at a time. The rack shows after the first 18 are read (the others stand as
@@ -579,10 +583,11 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     // the rack shows at once: every case starts with what is already known (a picture read before, kept for the whole session, else a coloured cover
     // with the name) and the real pictures come in twelve at a time, six read together. A picture that cannot be read is skipped, never the whole
     // rack (one bad file used to stop the reading and the page stayed on "Loading the covers" for good)
-    val loadedState = remember(list) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(emptyList()) }
+    // it starts with the covers already known (kept for the whole session), so a shelf opened again is full at once
+    val loadedState = remember(listKey) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(list.mapNotNull { g -> CdArt.cache[g.pkg]?.let { g to it } }) }
     val loaded = loadedState.value
     // how many of the games have been looked at so far (the covers are read in the background): shown as a bar and a ratio, so a long read never looks like a hang
-    val looked = remember(list) { androidx.compose.runtime.mutableIntStateOf(0) }
+    val looked = remember(listKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(list.map { it.pkg }, ver) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
@@ -612,7 +617,7 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
-        if (loaded.isEmpty()) Text(tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
+        if (loaded.isEmpty()) Text(if (list.isEmpty()) tr("No games on the shelf", "Rafta oyun yok") else tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
         else {
             com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
                 items = loaded.map { (g, art) -> com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = art, title = g.name, artist = "", cover = art) },
