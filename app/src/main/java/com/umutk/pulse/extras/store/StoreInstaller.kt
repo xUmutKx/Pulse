@@ -119,8 +119,7 @@ object StoreInstaller {
 
     /** Starts updates for extras whose switch is on. Only unzipped data modules go by themselves: an apk still needs the system installer tap. */
     fun autoUpdate(c: Context, modules: List<ExtraModule>) {
-        if (!autoAll(c)) return
-        updates(c, modules).filter { !it.module.isApk && autoOne(c, it.id) }.forEach { download(c, it.module) }
+        // nothing is downloaded by itself: an update waits for the person to press it (the switch is kept in the settings but starts nothing)
     }
 
     /** Wipes one data module's files (kept installed record removed); apks are removed by the system. */

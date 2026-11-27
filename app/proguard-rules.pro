@@ -82,6 +82,7 @@
 
 # the native shelf (Rust, wgpu): JNI functions are found by the class and method names
 -keep class com.umutk.pulse.extras.gamehub.NativeShelf { native <methods>; }
+-keep class com.umutk.pulse.features.FileSearchNative { native <methods>; }
 
 # the code editor (Sora Editor and its TextMate engine): grammars are read by name and tm4e / joni use reflection
 -keep class io.github.rosemoe.sora.** { *; }

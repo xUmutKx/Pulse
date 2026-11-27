@@ -95,8 +95,14 @@ jobs:
           cd ../shelf3d
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$BIN/aarch64-linux-android26-clang" cargo build --release --target aarch64-linux-android
           CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$BIN/armv7a-linux-androideabi26-clang" cargo build --release --target armv7-linux-androideabi
+          # the file search of Files (native/filesearch): the folders of the whole phone are walked by several threads (Kotlin falls back to its own walk when the library is missing)
+          cd ../filesearch
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$BIN/aarch64-linux-android24-clang" cargo build --release --target aarch64-linux-android || true
+          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$BIN/armv7a-linux-androideabi24-clang" cargo build --release --target armv7-linux-androideabi || true
           cd ../kbdlm
           mkdir -p ../../app/src/main/jniLibs/arm64-v8a ../../app/src/main/jniLibs/armeabi-v7a
+          cp ../filesearch/target/aarch64-linux-android/release/libpulse_search.so ../../app/src/main/jniLibs/arm64-v8a/ || true
+          cp ../filesearch/target/armv7-linux-androideabi/release/libpulse_search.so ../../app/src/main/jniLibs/armeabi-v7a/ || true
           cp ../shelf3d/target/aarch64-linux-android/release/libpulse_shelf.so ../../app/src/main/jniLibs/arm64-v8a/
           cp ../shelf3d/target/armv7-linux-androideabi/release/libpulse_shelf.so ../../app/src/main/jniLibs/armeabi-v7a/
           cp target/aarch64-linux-android/release/libpulse_lm.so ../../app/src/main/jniLibs/arm64-v8a/

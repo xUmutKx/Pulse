@@ -504,6 +504,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // the plain list shows names only: sizes and dates belong to the Detailed list (the menu switch below turns them on in the plain list too)
     var showSizes by rememberSaveable { mutableStateOf(false) }
     var recentView by rememberSaveable { mutableStateOf(FilesPrefs.openRecent && filePick == null) }
+    // the search page of its own (the whole phone, searched by the Rust walk, with the searches typed before)
+    var fsPage by rememberSaveable { mutableStateOf(false) }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
     var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT).filter { java.io.File(it).exists() }) }
     var undo by remember { mutableStateOf<ExUndo?>(null) }
@@ -914,16 +916,19 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
                 // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
                 if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
-                DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
-                // every other action is an icon of its own (the setting in the top ⋮ menu puts them back in a menu of words)
+                if (!FilesPrefs.selIcons) DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
+                // every other action is an icon of its own (the setting in the top ⋮ menu puts them back in a menu of words). The row has the same places for one file and for several:
+                // Rename and Properties stay (dimmed when more than one is picked) and Delete is always the second from the right, so the buttons never move under a finger
                 if (FilesPrefs.selIcons) {
                     DenseSelSquare(T.text, { zipAsk = picked }) { ExGlyph(Icons.Outlined.FolderZip, "zip", T.text, 24.dp) }
-                    picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { name = f.name; dialog = "rename" to f }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) } }
-                    picked.singleOrNull()?.let { f -> DenseSelSquare(T.text, { propsOf = f }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
                     if (picked.size > 1 && picked.all { isArchiveFile(it) }) DenseSelSquare(T.text, { scope.launch { note = withContext(Dispatchers.IO) { archiveExtractEach(picked) }; sel = emptySet(); refresh++ } }) { ExIcon("extract", T.text, 24.dp) }
                     arcPick(picked)?.let { f -> archiveMenu(f).forEach { (_, k, kind) ->
                         DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
                     } }
+                    val one = picked.singleOrNull()
+                    Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> name = f.name; dialog = "rename" to f } }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) } }
+                    DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
+                    Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> propsOf = f } }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
                 } else Box {
                     DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
                     ThemedMenu(selMore, { selMore = false }) {
@@ -1472,6 +1477,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     if (arcFile == null) ExSearchBar(standalone, searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = ""; resultsFor = null; searchAll = false }, searchAll) { searchAll = !searchAll; if (query.trim().length >= 2) resultsFor = query.trim() }
     if (recentView) RecentScreen({ openFile(it) }, { recentView = false }, { f -> f.parentFile?.let { d -> com.umutk.pulse.files.home.FilesHomeNav.pendingDir = d.path; com.umutk.pulse.files.home.FilesHomeNav.pendingSelect = f.path; recentView = false } })
     ExMiniPlayer()
+    if (fsPage) FilesSearchPage(top, showHidden, onOpen = { f -> fsPage = false; if (f.isDirectory) go(f.path) else { f.parentFile?.let { go(it.path) }; openFile(f) } }, onClose = { fsPage = false })
+    else if (sel.isEmpty() && arcFile == null && filePick == null && !searchOpen && !recentView) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        Box(Modifier.padding(end = 18.dp, bottom = 92.dp).size(46.dp).clip(RoundedCornerShape(23.dp)).background(Look.accent).clickable { fsPage = true }, contentAlignment = Alignment.Center) { ExIcon("search", Color.White, 22.dp) }
+    }
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
     binView?.let { b -> ExBinViewer(b) { binView = null } }
     codeView?.let { c -> com.umutk.pulse.extras.code.CodeEditorDialog(c) { codeView = null } }

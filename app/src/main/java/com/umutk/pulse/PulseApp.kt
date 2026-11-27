@@ -41,6 +41,17 @@ class PulseApp : Application(), androidx.work.Configuration.Provider, coil.Image
         }
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
         CrashSaver.install(this)
+        // the APKs of Pulse's own updates that stayed in Download/Pulse/Updates and are not newer than this version are deleted (an old one was left there); nothing is downloaded by itself
+        if (Application.getProcessName() == packageName) Thread {
+            runCatching {
+                val cur = BuildConfig.VERSION_NAME.split('.').mapNotNull { it.toIntOrNull() }
+                PulseDirs.updates().listFiles()?.filter { it.isFile && it.name.endsWith(".apk", true) }?.forEach { f ->
+                    val v = Regex("\\d+(\\.\\d+)+").find(f.name)?.value?.split('.')?.mapNotNull { it.toIntOrNull() } ?: return@forEach
+                    val older = v.zip(cur).firstOrNull { it.first != it.second }?.let { it.first < it.second } ?: (v.size <= cur.size)
+                    if (older) f.delete()
+                }
+            }
+        }.start()
         // once for each version, in the main process: the notification channels an older version made with the icon badge on are removed, and made again (without it) by the code that posts to them:
         // Android does not let an app turn the badge off of a channel that exists, and every extra app of Pulse wore the dot. (Alarm channels and a channel that holds a running
         // foreground service are left alone.)

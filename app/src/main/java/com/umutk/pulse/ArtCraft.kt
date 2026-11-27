@@ -97,6 +97,14 @@ object ArtCraft {
     fun refresh(c: Context) {
         Thread {
             try {
+                // once: the APKs that an older version downloaded on its own (for the icons) and kept are deleted; an APK is only downloaded when its Download button is pressed
+                runCatching {
+                    val sp = c.getSharedPreferences("artcraft", Context.MODE_PRIVATE)
+                    if (!sp.getBoolean("clean_silent_apks", false)) {
+                        listOf(shared(), dir(c)).forEach { d -> d.listFiles()?.filter { it.isFile && it.name.endsWith(".apk", true) }?.forEach { it.delete() } }
+                        sp.edit().putBoolean("clean_silent_apks", true).apply()
+                    }
+                }
                 // the API first; when it fails (404 or a rate limit, it happens without a token) the release page itself is read
                 val rel: JSONObject = runCatching {
                     val arr = JSONArray(getText(API))
@@ -173,18 +181,8 @@ object ArtCraft {
 
     // ---- icon without downloading the APK: the zip directory and one PNG are read with HTTP range requests ----
 
-    /** Downloads the whole APK (once) and reads its icon the way the system does, which covers the icons the quick reads cannot find. */
-    private fun fullIcon(c: Context, item: Item) {
-        try {
-            val f = fileFor(c, item)
-            if (!f.exists() || f.length() == 0L) {
-                f.parentFile?.mkdirs()
-                (java.net.URL(item.url).openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 60000; instanceFollowRedirects = true }
-                    .inputStream.use { ins -> f.outputStream().use { ins.copyTo(it) } }
-            }
-            readIcon(c, f, item.app)
-        } catch (e: Exception) { }
-    }
+    /** No APK is ever downloaded for an icon (it used to, for the apps whose icon the quick reads could not find: the whole APK of each came onto the phone without being asked). */
+    private fun fullIcon(c: Context, item: Item) { }
 
     private fun ranged(url: String, from: Long, to: Long): ByteArray {
         val con = URL(url).openConnection() as HttpURLConnection
