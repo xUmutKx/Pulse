@@ -2507,6 +2507,14 @@ private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
             androidx.compose.ui.viewinterop.AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
                 android.webkit.WebView(c).apply {
                     settings.javaScriptEnabled = true; settings.allowFileAccess = true; settings.allowContentAccess = false
+                    // pages made for a phone (the output of an AI tool, a saved page): the viewport the page asks for, its stored data and https scripts and styles beside a local file
+                    settings.domStorageEnabled = true
+                    settings.useWideViewPort = true; settings.loadWithOverviewMode = true
+                    settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
+                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    webChromeClient = android.webkit.WebChromeClient()
+                    webViewClient = android.webkit.WebViewClient()
                     setBackgroundColor(android.graphics.Color.WHITE)
                     // the page is loaded as the file itself: the WebView reads the MIME type from it (MHTML too), and its pictures and styles beside it load
                     loadUrl("file://" + f.absolutePath)

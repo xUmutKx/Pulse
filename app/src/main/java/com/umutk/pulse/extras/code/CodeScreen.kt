@@ -293,6 +293,12 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                     android.webkit.WebView(c).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        // the viewport the page asks for, zoom, https parts of a page, scripts that alert or log: the page shows whole
+                        settings.useWideViewPort = true; settings.loadWithOverviewMode = true
+                        settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
+                        settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        webChromeClient = android.webkit.WebChromeClient()
                         webViewClient = android.webkit.WebViewClient()
                         loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null)
                     }
