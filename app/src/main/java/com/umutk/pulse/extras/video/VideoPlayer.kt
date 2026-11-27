@@ -674,13 +674,18 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         if (u != null) adopt(u, displayName(ctx, u))
     }
 
+    /** The video goes to the mini player over the app (the library shows under it). The system's picture in picture is held back first: without the
+     *  "display over other apps" permission its settings page opens, and leaving the app for it used to start picture in picture instead. */
+    fun toMini(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { act?.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build()) }
+        if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return true }
+        return false
+    }
     BackHandler(enabled = !settings) {
         if (locked) return@BackHandler
         // a video that plays goes on in the mini player over the app (the library shows under it) instead of stopping when Back is pressed;
         // the system's picture in picture is only for leaving the app
-        if (prefs.backMini && playing && !inPip) {
-            if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
-        }
+        if (prefs.backMini && playing && !inPip && toMini()) return@BackHandler
         onBack()
     }
     // the system's media card (notification, lock screen) shows the picture of the video: the cover goes into the item that plays
@@ -827,9 +832,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         if (mode == 1 && abs(target - start) >= 3000) player.seekTo(target)
                         if (mode == 2 && prefs.rememberBright) prefs.bright = bright
                         // the mini player over the app, not the system's picture in picture: the library stays in sight under it
-                        if (mode == 5 && ty > h * .15f && !inPip) {
-                            if (FloatingVideo.show(ctx, player, vsize)) onBack()
-                        }
+                        if (mode == 5 && ty > h * .15f && !inPip) toMini()
                     }
                 },
         )
@@ -1009,11 +1012,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 dlg = null
                 when (key) {
                     // the video goes to the mini window above other apps and this screen closes; the window keeps playing
-                    "mini" -> {
-                        val pp = pipParams()
-                        if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) Unit
-                        else if (FloatingVideo.show(ctx, player, vsize)) onBack()
-                    }
+                    "mini" -> toMini()
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
                     "bg" -> { bg = !bg; prefs.bg = bg }
                     "eq" -> dlg = "eq"
