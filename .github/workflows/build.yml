@@ -11,6 +11,10 @@ on:
         description: "Also build the lite APK (without Pulse AI), without publishing"
         type: boolean
         default: false
+      watch:
+        description: "Build only Pulse Watch (Wear OS); with release it gets a release of its own (tag watch-v...)"
+        type: boolean
+        default: false
 permissions:
   contents: write
 env:
@@ -27,6 +31,7 @@ jobs:
         run: |
           V='["full"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","32bit","play"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.watch }}" = "true" ]; then V='["watch"]'; fi
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
@@ -186,6 +191,12 @@ jobs:
         run: |
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           ls -l files
+          # a watch-only run: a release of its own, the phone app's release is left alone
+          if [ ! -f "files/Pulse-$VER.apk" ] && [ -f files/PulseWatch.apk ]; then
+            WV=$(grep -oP 'versionName = "\K[^"]+' wear/app/build.gradle.kts)
+            gh release create "watch-v$WV-$GITHUB_RUN_NUMBER" files/PulseWatch.apk --target "$GITHUB_SHA" --title "Pulse Watch $WV" --notes "Pulse Watch (Wear OS)."
+            exit 0
+          fi
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
           # the full APK first (an older app's updater takes the first one it finds), then the lite one
