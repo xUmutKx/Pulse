@@ -700,14 +700,22 @@ private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>
         onBack()
     }
     // the system's media card (notification, lock screen) shows the picture of the video: the cover goes into the item that plays
-    LaunchedEffect(cur, player) {
+    // (a video with no cover of its own gets a frame of itself, and the card is told the length, so its bar runs: it had no picture and no time)
+    LaunchedEffect(cur, player, dur > 0L) {
         val v = items.getOrNull(cur) ?: return@LaunchedEffect
         val now = player.currentMediaItem ?: return@LaunchedEffect
-        if (now.mediaId != v.key || now.mediaMetadata.artworkData != null) return@LaunchedEffect
-        val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { coverBytes(ctx, v) } ?: return@LaunchedEffect
+        if (now.mediaId != v.key) return@LaunchedEffect
+        val needArt = now.mediaMetadata.artworkData == null
+        val needDur = dur > 0L && now.mediaMetadata.durationMs == null
+        if (!needArt && !needDur) return@LaunchedEffect
+        val bytes = if (!needArt) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { coverBytes(ctx, v) ?: frameBytes(ctx, v.uri) }
         val i = player.currentMediaItemIndex
         val cur2 = player.currentMediaItem ?: return@LaunchedEffect
-        if (cur2.mediaId == v.key) player.replaceMediaItem(i, cur2.buildUpon().setMediaMetadata(cur2.mediaMetadata.buildUpon().setArtworkData(bytes, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER).build()).build())
+        if (cur2.mediaId != v.key) return@LaunchedEffect
+        val md = cur2.mediaMetadata.buildUpon()
+        if (bytes != null) md.setArtworkData(bytes, androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+        if (needDur) md.setDurationMs(dur)
+        if (bytes != null || needDur) player.replaceMediaItem(i, cur2.buildUpon().setMediaMetadata(md.build()).build())
     }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -1231,4 +1239,16 @@ internal fun coverBytes(ctx: Context, v: VideoItem): ByteArray? = runCatching {
         if (v.local && android.os.Build.VERSION.SDK_INT >= 29) ctx.contentResolver.loadThumbnail(v.uri, android.util.Size(512, 512), null)
         else MediaMetadataRetriever().let { r -> try { r.setDataSource(ctx, v.uri); r.getFrameAtTime(1_000_000) } finally { r.release() } }
     bmp?.let { b -> java.io.ByteArrayOutputStream().also { o -> b.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, o) }.toByteArray() }
+}.getOrNull()
+
+
+/** A frame a tenth into the video as a JPEG (at most 640 px), for the media card of a video that has no cover. */
+internal fun frameBytes(ctx: android.content.Context, uri: Uri): ByteArray? = runCatching {
+    val r = android.media.MediaMetadataRetriever()
+    try {
+        if (uri.scheme == "http" || uri.scheme == "https") r.setDataSource(uri.toString(), HashMap()) else r.setDataSource(ctx, uri)
+        val d = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        val f = (if (android.os.Build.VERSION.SDK_INT >= 27) r.getScaledFrameAtTime((d * 100).coerceAtLeast(1_000_000L), android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 640, 640) else r.getFrameAtTime((d * 100).coerceAtLeast(1_000_000L))) ?: return@runCatching null
+        java.io.ByteArrayOutputStream().also { f.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, it) }.toByteArray()
+    } finally { r.release() }
 }.getOrNull()

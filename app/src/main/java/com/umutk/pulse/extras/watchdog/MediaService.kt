@@ -173,7 +173,7 @@ class VideoPlaybackService : MediaService() {
 
     // the notification follows the video: another video, play or pause, new title
     private val listener = object : androidx.media3.common.Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) = refreshNotification()
+        override fun onIsPlayingChanged(isPlaying: Boolean) { refreshNotification(); ticker.removeCallbacks(tick); if (isPlaying) ticker.postDelayed(tick, 15_000L) }
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) = refreshNotification()
         override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) = refreshNotification()
     }
@@ -198,8 +198,14 @@ class VideoPlaybackService : MediaService() {
 
     override fun onDestroy() {
         bound?.removeListener(listener); bound = null
+        ticker.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
+
+    // the time in the notification moves on every 15 seconds while the video plays
+    private val ticker = android.os.Handler(Looper.getMainLooper())
+    private val tick = object : Runnable { override fun run() { if (bound?.isPlaying == true) { refreshNotification(); ticker.postDelayed(this, 15_000L) } } }
+    private fun clockOf(ms: Long): String { val t = ms / 1000; val h = t / 3600; val m = t % 3600 / 60; val s = t % 60; return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s) }
 
     /** The cover of the video that is playing: the picture the system keeps for it, loaded once per video. */
     private fun loadThumb(key: String) {
@@ -246,7 +252,8 @@ class VideoPlaybackService : MediaService() {
         val b = NotificationCompat.Builder(this, CH)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(name)
-            .setContentText(if (playing) tr("Playing", "Oynatılıyor") else tr("Paused", "Duraklatıldı"))
+            // where the video is and how long it is (the card's own bar comes from the session; this line is for every phone)
+            .setContentText((if (playing) tr("Playing", "Oynatılıyor") else tr("Paused", "Duraklatıldı")) + (p?.duration?.takeIf { it > 0L }?.let { d -> "  ·  " + clockOf(p.currentPosition) + " / " + clockOf(d) } ?: ""))
             .setOngoing(playing)
             .setOnlyAlertOnce(true)
             .setContentIntent(open)

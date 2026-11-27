@@ -2,6 +2,12 @@ package com.umutk.pulse.extras.video
 
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,12 +65,20 @@ internal fun VideoSpeedDialog(current: Float, min: Float, max: Float, remember: 
                         PIcon("chevron", w.text, 20.dp, Modifier.graphicsLayer { rotationZ = -90f })
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).clickable { keep = !keep; onRemember(keep) }, verticalAlignment = Alignment.CenterVertically) {
-                        PCheck(keep, { keep = it; onRemember(it) })
-                        Text(tr("Keep for the next videos", "Sonraki videolarda da kalsın"), color = w.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp), maxLines = 2)
+                // the usual speeds in one row of their own, the one in use lit
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(.5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f).filter { it in min..max }.forEach { sp ->
+                        val on = kotlin.math.abs(value - sp) < .005f
+                        val label = (if (sp % 1f == 0f) "${sp.toInt()}" else "$sp") + "x"
+                        Text(label, color = if (on) com.umutk.pulse.onAccent(com.umutk.pulse.Look.accent) else w.text, fontSize = 13.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.clip(RoundedCornerShape(16.dp)).then(if (on) Modifier.background(com.umutk.pulse.Look.accent) else Modifier.border(1.dp, w.text.copy(alpha = .28f), RoundedCornerShape(16.dp)))
+                                .clickable { set(sp) }.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
-                    PButton("1x", compact = true) { set(1f) }
+                }
+                // keeping the speed for the next videos: a row under the speeds (it lay over them)
+                Row(Modifier.fillMaxWidth().clickable { keep = !keep; onRemember(keep) }.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PCheck(keep, { keep = it; onRemember(it) })
+                    Text(tr("Keep for the next videos", "Sonraki videolarda da kalsın"), color = w.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp), maxLines = 2)
                 }
             }
         },
