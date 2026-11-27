@@ -676,10 +676,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     BackHandler(enabled = !settings) {
         if (locked) return@BackHandler
-        // a video that plays goes on in a small window (the system's picture in picture, else the floating one) instead of stopping when Back is pressed
+        // a video that plays goes on in the mini player over the app (the library shows under it) instead of stopping when Back is pressed;
+        // the system's picture in picture is only for leaving the app
         if (prefs.backMini && playing && !inPip) {
-            val pp = pipParams()
-            if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) return@BackHandler
             if (FloatingVideo.show(ctx, player, vsize)) { onBack(); return@BackHandler }
         }
         onBack()
@@ -827,10 +826,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         // a swipe shorter than 3 seconds is a slip of the finger: the video goes on from where it was
                         if (mode == 1 && abs(target - start) >= 3000) player.seekTo(target)
                         if (mode == 2 && prefs.rememberBright) prefs.bright = bright
+                        // the mini player over the app, not the system's picture in picture: the library stays in sight under it
                         if (mode == 5 && ty > h * .15f && !inPip) {
-                            val pp = pipParams()
-                            if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) Unit
-                            else if (FloatingVideo.show(ctx, player, vsize)) onBack()
+                            if (FloatingVideo.show(ctx, player, vsize)) onBack()
                         }
                     }
                 },
