@@ -234,40 +234,6 @@ fun SettingsScreen(
                     )
                 }
 
-                SettingsSectionHeader(I18n.t("about", "About"))
-                SettingsCard {
-                    SettingsRow(
-                        icon = Icons.Rounded.Info,
-                        title = I18n.t("version", "Version"),
-                        subtitle = "YTXTube ${YTX_VERSION} · GPL-3.0",
-                        trailing = {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF132818))
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF2ECC71))
-                                    )
-                                    Spacer(Modifier.width(5.dp))
-                                    Text(
-                                        text = I18n.t("up_to_date", "Up to date"),
-                                        color = Color(0xFF2ECC71),
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp,
-                                    )
-                                }
-                            }
-                        }
-                    )
-                    // the source and its licence (GPL-3.0) are named in Pulse's licences page (THIRD_PARTY.md); the app is updated with Pulse
-                }
             }
         }
 

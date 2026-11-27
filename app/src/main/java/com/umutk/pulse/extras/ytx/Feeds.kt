@@ -226,7 +226,8 @@ fun FeedList(
     val c = MaterialTheme.colorScheme
     // "not interested": the video (or its channel) leaves the list at once
     LaunchedEffect(Taste.rev) { if (Taste.rev > 0) feed.dropHidden() }
-    val listVideos = (videos ?: feed.videos).let { l -> if (videos != null) l.filter(Taste::ok) else l }
+    // the filter of what the person gave up runs when the list or the choices change, not on every redraw of the screen
+    val listVideos = remember(videos, feed.videos, Taste.rev) { (videos ?: feed.videos).let { l -> if (videos != null) l.filter(Taste::ok) else l } }
     val scope = rememberCoroutineScope()
     LaunchedEffect(listVideos, channelAvatarSeed) {
         ChannelAvatars.resolve(scope, listVideos, channelAvatarSeed)

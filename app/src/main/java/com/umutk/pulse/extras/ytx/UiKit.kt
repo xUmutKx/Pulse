@@ -252,8 +252,14 @@ fun Thumbnail(url: String?, modifier: Modifier = Modifier, radius: Int = 22, vid
         val id = videoId ?: url?.let(::ytVideoIdFromThumbUrl)
         if (id != null) sharpenFeedThumbnail(url, id) else url
     }
+    // the full-width feed pictures are decoded at 960 x 540 at most (they came at 1280 x 720 and were decoded at the layout size), and they appear without a fade (each fade is a repaint of the
+    // row while the list scrolls); the other pictures keep the layout's own size
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val request = remember(model, radius) {
+        coil.request.ImageRequest.Builder(ctx).data(model).crossfade(false).apply { if (radius == 0) size(coil.size.Size(960, 540)) }.build()
+    }
     AsyncImage(
-        model = model,
+        model = request,
         contentDescription = null,
         contentScale = ContentScale.Crop,
         // no clip at all for the square-cornered feed pictures (a clip on every row costs a layer while scrolling)
