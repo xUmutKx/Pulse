@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The mini (safe) app: its launcher names say Pulse, so no entry reads as a copy of a system app (scanners flag that as a "FakeApp"). -->
+<resources>
+    <string name="photos_name">Pulse Photos</string>
+    <string name="files_name">Pulse Files</string>
+    <string name="contacts_name">Pulse Contacts</string>
+</resources>

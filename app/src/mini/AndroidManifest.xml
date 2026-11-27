@@ -34,5 +34,303 @@
         <activity-alias android:name="com.umutk.pulse.GlassAmberArtCraftLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyArtCraftLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassSkyArtCraftLauncher" tools:node="remove" />
+        <!-- BEGIN mini labels (scripts/gen_mini_labels.py) -->
+        <activity android:name="com.umutk.pulse.OfficeViewActivity" android:label="Docs" tools:replace="android:label" />
+        <activity android:name="com.umutk.pulse.extras.ytx.YtxActivity" android:label="Pulse Tube" tools:replace="android:label" />
+        <activity android:name="com.umutk.pulse.YtxSeriesActivity" android:label="Pulse Tube" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.CalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.YtxLauncher" android:label="Pulse Tube" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.IslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.MusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.VideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.WhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.VoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.NotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.PaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurplePaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.BrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.OfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.CodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberCodeLauncher" android:label="Pulse Code" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.TerminalLauncher" android:label="Pulse Terminal" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.CalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.ClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.EbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.TempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.KeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.WeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.MessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.ScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.NotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.ExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.LocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.PaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurplePaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.HealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberHealthLauncher" android:label="Pulse Health" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.BlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyCalendarLauncher" android:label="Pulse Calendar" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyIslandLauncher" android:label="Pulse Island" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyMusicLauncher" android:label="Pulse Music Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyVideoLauncher" android:label="Pulse Video Player" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyWhiteNoiseLauncher" android:label="Pulse White Noise" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyVoiceLauncher" android:label="Pulse Voice Recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyNotesLauncher" android:label="Pulse Notes" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyPaintLauncher" android:label="Pulse Paint" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyBrowserLauncher" android:label="Pulse Browser" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyOfficeLauncher" android:label="Pulse Docs" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyCalculatorLauncher" android:label="Pulse Calculator" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyClockLauncher" android:label="Pulse Clock" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyEbookLauncher" android:label="Pulse Books" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyTempMailLauncher" android:label="Pulse TempMail" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyKeyboardLauncher" android:label="Pulse Keyboard" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyWeatherLauncher" android:label="Pulse Weather" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyMessagesLauncher" android:label="Pulse Messages" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyScreenRecLauncher" android:label="Pulse Screen recorder" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyNotifHistLauncher" android:label="Pulse Notification history" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyExtraStoreLauncher" android:label="Pulse Store" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyLocalSendLauncher" android:label="Pulse LocalSend" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyPaletteLauncher" android:label="Pulse Palette" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyGameHubLauncher" android:label="Pulse Game Hub" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyBlackOutLauncher" android:label="Pulse BlackOut" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock1Widget" android:label="Aero · Clock Traditional" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock2Widget" android:label="Aero · Clock System" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock3Widget" android:label="Aero · Clock Chronometer" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock4Widget" android:label="Aero · Clock Diner" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock5Widget" android:label="Aero · Clock Flower" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock6Widget" android:label="Aero · Clock Modern" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock7Widget" android:label="Aero · Clock Square" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock8Widget" android:label="Aero · Clock Novelty" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock9Widget" android:label="Aero · Clock Monitor" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosClockWidget" android:label="Rounded · Clock" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosDayWidget" android:label="Rounded · Day" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosCalendarWidget" android:label="Rounded · Calendar" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosBatteryWidget" android:label="Rounded · Battery" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosSunTimeWidget" android:label="Rounded · Sun and time" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.Win11FrostClockWidget" android:label="Fluent · Frosted clock" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W7CpuWidget" android:label="Aero · CPU Meter" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W7CalendarWidget" android:label="Aero · Calendar" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W7BatteryWidget" android:label="Aero · Battery" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W7DriveWidget" android:label="Aero · Drive" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11ClockWidget" android:label="Fluent · Clock" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11DateWidget" android:label="Fluent · Date" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11CpuWidget" android:label="Fluent · CPU" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11MemoryWidget" android:label="Fluent · Memory" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11BatteryWidget" android:label="Fluent · Battery" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11StorageWidget" android:label="Fluent · Storage" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11CalendarWidget" android:label="Fluent · Calendar" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W11TimeWidget" android:label="Fluent · Time" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.XpClockWidget" android:label="Luna · Clock" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.XpCpuWidget" android:label="Luna · CPU Usage" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.XpBatteryWidget" android:label="Luna · Power Meter" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.XpDiskWidget" android:label="Luna · Local Disk" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W95TimeWidget" android:label="Classic · Time" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W95CpuWidget" android:label="Classic · CPU" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W95BatteryWidget" android:label="Classic · Battery" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W95MemoryWidget" android:label="Classic · Memory" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.W95DateWidget" android:label="Classic · Date" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosClockDateWidget" android:label="Rounded · Clock and date" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosRingsWidget" android:label="Rounded · Battery rings" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosStorageWidget" android:label="Rounded · Storage" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosMemoryWidget" android:label="Rounded · Memory" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosUpNextWidget" android:label="Rounded · Up next" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.IosWorldWidget" android:label="Rounded · World clock" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidget" android:label="Classic player" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidgetCompact" android:label="Classic player 4x1" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsBlobWidget" android:label="Media skin · Blob" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsWin7Widget" android:label="Media skin · Aero" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsCandyWidget" android:label="Media skin · Candy" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsSilverWidget" android:label="Media skin · Silver" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsLunaWidget" android:label="Media skin · Luna" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsBubbleWidget" android:label="Media skin · Bubble" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsAeroWidget" android:label="Media skin · Aero" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsNexusWidget" android:label="Media skin · Nexus" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsSymphoraWidget" android:label="Media skin · Symphora" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsCdWidget" android:label="Media skin · CD Player" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.widgets.PowerampWidget" android:label="Player" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget" android:label="Media player" tools:replace="android:label" />
+        <receiver android:name="com.umutk.pulse.extras.music.widgets.WinampVisWidget" android:label="Classic player visualizer" tools:replace="android:label" />
+        <!-- END mini labels -->
     </application>
 </manifest>
