@@ -520,15 +520,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     LaunchedEffect(player) {
         var n = 0
-        var lastPlay = player.isPlaying
         while (true) {
             if (!seeking) pos = player.currentPosition
             if (sleepAt > 0 && SystemClock.elapsedRealtime() >= sleepAt) { player.pause(); sleepAt = 0L }
             dur = player.duration.coerceAtLeast(0L)
             inPip = (android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)
             if (inPip) pipWas[0] = true
-            // the window's play / pause button follows the video (a pause made elsewhere changes its icon)
-            if (player.isPlaying != lastPlay) { lastPlay = player.isPlaying; if (inPip) pipParams()?.let { runCatching { act?.setPictureInPictureParams(it) } } }
             if (++n % 8 == 0 && player.isPlaying) saveResume()
             delay(250)
         }
@@ -617,6 +614,14 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         val f = android.content.IntentFilter("com.umutk.pulse.PIP_CTL")
         if (android.os.Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(rc, f, Context.RECEIVER_NOT_EXPORTED) else ctx.registerReceiver(rc, f)
         onDispose { runCatching { ctx.unregisterReceiver(rc) } }
+    }
+    // the window's play / pause button follows the video (a pause made elsewhere changes its icon)
+    LaunchedEffect(player) {
+        var last = player.isPlaying
+        while (true) {
+            delay(400)
+            if (player.isPlaying != last) { last = player.isPlaying; if (inPip) pipParams()?.let { runCatching { act?.setPictureInPictureParams(it) } } }
+        }
     }
 
     // what each button does (the bar and the ⋮ menu both call it)
