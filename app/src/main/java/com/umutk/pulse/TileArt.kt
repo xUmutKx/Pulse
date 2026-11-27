@@ -168,6 +168,16 @@ object TileArt {
                 cv.drawArc(RectF(4f, 5f, 20f, 21f), -60f, 300f * ease(seg(t, 0f, 0.7f)), false, st)
                 cv.drawLine(12f, 12f, 12f, 12f - 9f * seg(t, 0.5f, 1f), st)
             }
+            // floating timer: the hourglass turns over and its sand runs down
+            "hourglass" -> {
+                val turn = 180f * ease(seg(t, 0f, 0.4f))
+                cv.save(); cv.rotate(turn, 12f, 12f)
+                cv.drawPath(Path().apply { moveTo(6f, 3f); lineTo(18f, 3f); lineTo(18f, 6f); lineTo(14f, 12f); lineTo(18f, 18f); lineTo(18f, 21f); lineTo(6f, 21f); lineTo(6f, 18f); lineTo(10f, 12f); lineTo(6f, 6f); close() }, st)
+                cv.restore()
+                val sand = seg(t, 0.4f, 1f)
+                cv.drawPath(Path().apply { moveTo(8f, 5f + 5f * sand); lineTo(16f, 5f + 5f * sand); lineTo(12f, 11f); close() }, fill)
+                if (sand > 0f) { cv.drawLine(12f, 12f, 12f, 17f, Paint(st).apply { strokeWidth = 1f }); cv.drawPath(Path().apply { moveTo(12f, 19.5f - 3f * sand); lineTo(16f, 19.5f); lineTo(8f, 19.5f); close() }, fill) }
+            }
             // the toolkit: four tiles pop in one after the other
             "toolkit" -> for (i in 0 until 4) {
                 val p = ease(seg(t, i * 0.15f, i * 0.15f + 0.45f)); val x = 4f + (i % 2) * 9f; val y = 4f + (i / 2) * 9f; val h = 3.5f * p
@@ -178,4 +188,26 @@ object TileArt {
         cv.restore()
         return ok
     }
+}
+
+
+/** Plays [kind] of [TileArt] on the tile of any quick tile service (not only the Toolkit's), then [then]. */
+fun android.service.quicksettings.TileService.playTileArt(kind: String, then: () -> Unit) {
+    val main = android.os.Handler(android.os.Looper.getMainLooper())
+    val size = 128; val frames = 16
+    var i = 0
+    val step = object : Runnable {
+        override fun run() {
+            val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            if (!TileArt.draw(kind, android.graphics.Canvas(bmp), size, i / frames.toFloat())) { then(); return }
+            qsTile?.apply { state = android.service.quicksettings.Tile.STATE_ACTIVE; icon = android.graphics.drawable.Icon.createWithBitmap(bmp); updateTile() }
+            if (i < frames) { i++; main.postDelayed(this, 45L) }
+            else {
+                // the tile's own icon again, then its job
+                qsTile?.apply { icon = android.graphics.drawable.Icon.createWithResource(this@playTileArt, runCatching { packageManager.getServiceInfo(android.content.ComponentName(this@playTileArt, this@playTileArt.javaClass), 0).icon }.getOrDefault(0)); updateTile() }
+                then()
+            }
+        }
+    }
+    main.post(step)
 }

@@ -1,3 +1,6 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M5,2.5 L5,19.2 L9.2,15.4 L12,21.5 L14.9,20.2 L12.2,14.2 L17.8,14 Z" />
+    <!-- the arrow in the middle of the tile (it stood to the left) -->
+    <group android:translateX="0.7">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M5,2.5 L5,19.2 L9.2,15.4 L12,21.5 L14.9,20.2 L12.2,14.2 L17.8,14 Z" />
+    </group>
 </vector>

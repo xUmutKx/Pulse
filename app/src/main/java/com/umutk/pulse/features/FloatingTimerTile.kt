@@ -16,7 +16,14 @@ import com.umutk.pulse.tr
 class FloatingTimerTile : TileService() {
     override fun onStartListening() = paint()
 
+    // the hourglass turns over on the tile first, then the window opens or closes
     override fun onClick() {
+        // the permission page opens at once (an activity is started from the tap itself)
+        if (!FloatingTimer.showing && !com.umutk.pulse.Compat.canOverlay(this)) { act(); return }
+        com.umutk.pulse.playTileArt("hourglass") { act() }
+    }
+
+    private fun act() {
         if (FloatingTimer.showing) FloatingTimer.hide(this)
         else if (!FloatingTimer.show(this)) {
             val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

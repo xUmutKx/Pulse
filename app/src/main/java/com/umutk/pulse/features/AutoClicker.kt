@@ -311,7 +311,14 @@ class AutoClickTile : TileService() {
             updateTile()
         }
     }
+    // the arrow moves in and clicks on the tile first, then the clicker starts or stops
     override fun onClick() {
+        // with the service off the accessibility settings open at once (an activity is started from the tap itself)
+        if (AutoClickService.instance == null) { act(); return }
+        com.umutk.pulse.playTileArt("pointer") { act() }
+    }
+
+    private fun act() {
         var s = AutoClickService.instance
         // listed but "Not working": put it back at once (when Pulse can write the setting), so the tap works the first time
         if (s == null && Thread { runCatching { A11yRepair.run(this) } }.also { it.start() }.let { it.join(2500); true }) { Thread.sleep(600); s = AutoClickService.instance }
