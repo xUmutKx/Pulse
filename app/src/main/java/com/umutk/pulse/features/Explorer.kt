@@ -884,7 +884,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
         val selBar: @Composable () -> Unit = {
-            Row(Modifier.then(if (FilesPrefs.selIcons) Modifier.horizontalScroll(rememberScrollState()) else Modifier), verticalAlignment = Alignment.CenterVertically) {
+            // the buttons spread over the whole width of the card (no empty strip on the right); more of them than fit: the row scrolls
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val barW = maxWidth
+            Row(Modifier.then(if (FilesPrefs.selIcons) Modifier.horizontalScroll(rememberScrollState()).widthIn(min = barW) else Modifier.fillMaxWidth()), horizontalArrangement = if (FilesPrefs.selIcons) Arrangement.SpaceBetween else Arrangement.Start, verticalAlignment = Alignment.CenterVertically) {
                 DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
                 Text("${sel.size}", (if (FilesPrefs.selIcons) Modifier.padding(start = 4.dp, end = 8.dp) else Modifier.weight(1f).padding(start = 4.dp)), color = T.text, fontSize = 11.sp, maxLines = 1)
                 DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
@@ -919,6 +922,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         arcPick(picked)?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
                     }
                 }
+            }
             }
         }
         // hold anywhere on the card and slide: a loading-style bar along its bottom sets the item size (left = smaller, right = larger);
