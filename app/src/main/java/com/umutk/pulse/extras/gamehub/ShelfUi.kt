@@ -646,6 +646,9 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
+    // while a case is out (inspected) the page's search and buttons step aside
+    androidx.compose.runtime.LaunchedEffect(state.inspecting) { CdShelfUi.inspecting.value = state.inspecting }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CdShelfUi.inspecting.value = false } }
     // Back puts the case that is out back in the rack (a step at a time: its cover, then the case) instead of leaving the whole screen
     androidx.activity.compose.BackHandler(enabled = state.inspecting) { state.leave() }
     // the search does not take games off the shelf (a rack of one case repeated itself and every rebuild made the cases vanish): the rack slides to the first game that matches
@@ -694,6 +697,9 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
 }
 
 /** The pictures of the CD shelf kept for the whole session, so the shelf opens at once the next time; [fallback] marks icon covers that a cover found later replaces. */
+/** What the CD shelf tells the page around it: a case is out, so the search field and the round buttons are hidden. */
+internal object CdShelfUi { val inspecting = androidx.compose.runtime.mutableStateOf(false) }
+
 internal object CdArt {
     val cache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
     /** The picture printed on the disc: the game's wide art or a screenshot, not its cover again (the inside of the case looked like the outside). */

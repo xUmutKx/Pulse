@@ -1152,9 +1152,10 @@ fun GameHubHub(onBack: () -> Unit) {
                         Chip(pal, if (viewMode == 0) tr("Banners", "Bannerlar") else tr("Tiles", "Kartlar")) { viewMode = 1 - viewMode; prefs(ctx).edit().putInt("view", viewMode).apply() }
                     }
                     // the search: a round button on the right; the field opens under the sort row
-                    if (libSearch && !webShelf) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
+                    val caseOut = ghLook == "cdrack" && CdShelfUi.inspecting.value
+                    if (libSearch && !webShelf && !caseOut) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
                         Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 56.dp).focusRequester(libFocus))
-                    if (!webShelf) FloatingActionButton(
+                    if (!webShelf && !caseOut) FloatingActionButton(
                         onClick = { libSearch = !libSearch; if (!libSearch) libQuery = "" },
                         containerColor = pal.card,
                         contentColor = pal.text,
@@ -1162,7 +1163,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     ) { FluentIcon("search", pal.text, 22.dp) }
                     // the + waits for Boxshelf's opening animation to end (it is not drawn over the animation)
                     // (the shelf has no button of Pulse's over it: "Add a game" is in the shelf's own settings and asks for the same list)
-                    if (!webShelf) FloatingActionButton(
+                    if (!webShelf && !caseOut) FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
                         contentColor = pal.bg,
