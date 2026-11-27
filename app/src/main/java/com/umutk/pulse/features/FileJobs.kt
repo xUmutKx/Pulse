@@ -150,6 +150,6 @@ class FileOpService : Service() {
         val cancel = PendingIntent.getService(this, job.id, Intent(this, FileOpService::class.java).setAction(FJ_ACT_CANCEL), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val pause = PendingIntent.getService(this, job.id + 5000, Intent(this, FileOpService::class.java).setAction(FJ_ACT_PAUSE), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return b.setContentTitle(job.title).setContentText((if (job.paused) tr("Paused", "Duraklatıldı") + " · " else "") + "$pct%" + (if (more > 0) " · +$more" else ""))
-            .setProgress(100, pct, false).addAction(0, if (job.paused) tr("Resume", "Devam") else tr("Pause", "Duraklat"), pause).addAction(0, tr("Cancel", "İptal"), cancel).build()
+            .setProgress(100, pct, false).setOngoing(true).addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing", true); putCharSequence("android.shortCriticalText", "$pct%") }).addAction(0, if (job.paused) tr("Resume", "Devam") else tr("Pause", "Duraklat"), pause).addAction(0, tr("Cancel", "İptal"), cancel).build()
     }
 }

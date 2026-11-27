@@ -341,6 +341,27 @@ class BottleTile : ToolkitTile() {
     // a tap spins in the panel: the tile shows the angle the bottle stops at (0 is up)
     override fun subtitleFor(values: FloatArray?): String? = prefs.getInt("bottle_last", -1).takeIf { it >= 0 }?.let { "$it°" }
     override fun act(): Boolean { prefs.edit().putInt("bottle_last", (0..359).random()).apply(); return true }
+    // the bottle turns on the tile itself: three turns that slow down (fast at first, then slower and slower) and stop at the angle that came up
+    override fun onClick() {
+        val target = (0..359).random()
+        prefs.edit().putInt("bottle_last", target).apply()
+        val d = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_qs_bottle) ?: run { paint(); return }
+        val size = 128; val frames = 36; val total = 360f * 3 + target
+        var i = 0
+        val step = object : Runnable {
+            override fun run() {
+                val t = i / frames.toFloat()
+                val eased = 1f - (1f - t) * (1f - t) * (1f - t)
+                val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+                val cv = android.graphics.Canvas(bmp)
+                cv.rotate(total * eased, size / 2f, size / 2f)
+                d.setBounds(0, 0, size, size); d.setTint(android.graphics.Color.WHITE); d.draw(cv)
+                qsTile?.apply { state = Tile.STATE_ACTIVE; icon = Icon.createWithBitmap(bmp); subtitleCompat = if (i >= frames) "$target°" else null; updateTile() }
+                if (i < frames) { i++; main.postDelayed(this, 50L + i * 2L) }
+            }
+        }
+        main.removeCallbacksAndMessages(null); main.post(step)
+    }
 }
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
 private val DICE_SPIN = intArrayOf(R.drawable.ic_dice_spin_0, R.drawable.ic_dice_spin_1, R.drawable.ic_dice_spin_2, R.drawable.ic_dice_spin_3,

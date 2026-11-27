@@ -591,10 +591,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             fun ra(id: String, icon: Int, title: String, req: Int) = android.app.RemoteAction(
                 android.graphics.drawable.Icon.createWithResource(ctx, icon), title, title,
                 android.app.PendingIntent.getBroadcast(ctx, req, android.content.Intent("com.umutk.pulse.PIP_CTL").setPackage(ctx.packageName).putExtra("c", id), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
+            // a series (a list of episodes): the window's previous and next buttons change the episode itself; one video: back and forward 10 seconds
+            val many = items.size > 1
             b.setActions(listOf(
-                ra("back", android.R.drawable.ic_media_rew, "-10", 1),
+                if (many) ra("prev", android.R.drawable.ic_media_previous, "Previous", 5) else ra("back", android.R.drawable.ic_media_rew, "-10", 1),
                 if (player.isPlaying) ra("pause", android.R.drawable.ic_media_pause, "Pause", 2) else ra("play", android.R.drawable.ic_media_play, "Play", 3),
-                ra("fwd", android.R.drawable.ic_media_ff, "+10", 4),
+                if (many) ra("next", android.R.drawable.ic_media_next, "Next", 6) else ra("fwd", android.R.drawable.ic_media_ff, "+10", 4),
             ))
         }
         return b.build()
@@ -607,6 +609,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     "pause" -> player.pause()
                     "back" -> player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
                     "fwd" -> player.seekTo(player.currentPosition + 10_000L)
+                    "prev" -> player.seekToPreviousMediaItem()
+                    "next" -> player.seekToNextMediaItem()
                 }
                 pipParams()?.let { runCatching { act?.setPictureInPictureParams(it) } }
             }
@@ -841,6 +845,16 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
                 )
             }
+        }
+        // the end of an episode (the last 90 seconds: the credits): a pill, as for the intro and the recap, takes the next one at once
+        if (!inPip && items.size > 1 && cur < items.size - 1 && dur > 0L && dur - pos in 1_000L..90_000L && (-1L - cur) !in skipGone) {
+            SkipPill(
+                text = tr("Next episode", "Sonraki bölüm"),
+                startKey = -1L - cur,
+                onTap = { player.seekToNextMediaItem() },
+                onTimeout = { skipGone = skipGone + (-1L - cur) },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
+            )
         }
         hud?.let { (icon, text) ->
             Row(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

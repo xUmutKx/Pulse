@@ -322,7 +322,9 @@ class ZipService : Service() {
         val cancel = PendingIntent.getService(this, job.id, Intent(this, ZipService::class.java).setAction(ZC_ACT_CANCEL).putExtra("id", job.id), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return b.setContentTitle(tr("Compressing ${job.name}", "${job.name} sıkıştırılıyor"))
             .setContentText("$pct%" + (if (more > 0) " · +$more" else ""))
-            .setProgress(100, pct, false)
+            .setProgress(100, pct, false).setOngoing(true)
+            // Android 16 Live Updates: the job asks to be promoted (the status bar chip shows the percent)
+            .addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing", true); putCharSequence("android.shortCriticalText", "$pct%") })
             .addAction(0, tr("Cancel", "İptal"), cancel).build()
     }
 }

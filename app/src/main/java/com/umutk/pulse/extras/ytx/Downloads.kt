@@ -413,7 +413,41 @@ object Downloads {
         }
     }
 
+    // the status bar: one notification (asks to be a live update on Android 16, the percent in the chip) while a download runs; it goes when none is left
+    private const val NOTE_ID = 4710
+    private const val NOTE_CH = "ytx_downloads"
+    private var noteJob: kotlinx.coroutines.Job? = null
+    private fun watchNote() {
+        if (noteJob?.isActive == true) return
+        noteJob = scope.launch {
+            val ctx = YTXTubeApplication.appContext
+            val nm = androidx.core.app.NotificationManagerCompat.from(ctx)
+            runCatching {
+                if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(androidx.core.app.NotificationChannelCompat.Builder(NOTE_CH, androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW).setName("Downloads").setShowBadge(false).build())
+            }
+            while (true) {
+                val act = tasks.filter { it.status == DownloadStatus.Downloading || it.status == DownloadStatus.Queued || it.status == DownloadStatus.Processing }
+                if (act.isEmpty()) { runCatching { nm.cancel(NOTE_ID) }; break }
+                val pct = (progress * 100).toInt().coerceIn(0, 100)
+                val first = act.first()
+                runCatching {
+                    val n = androidx.core.app.NotificationCompat.Builder(ctx, NOTE_CH).setSmallIcon(android.R.drawable.stat_sys_download)
+                        .setContentTitle(if (act.size > 1) "${first.title} +${act.size - 1}" else first.title)
+                        .setContentText(if (first.status == DownloadStatus.Processing) "…" else "$pct%")
+                        .setProgress(100, pct, first.total <= 0L && first.status == DownloadStatus.Downloading)
+                        .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+                        .addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing", true); putCharSequence("android.shortCriticalText", "$pct%") })
+                        .build()
+                    @Suppress("MissingPermission") nm.notify(NOTE_ID, n)
+                }
+                kotlinx.coroutines.delay(1000)
+            }
+            noteJob = null
+        }
+    }
+
     private fun pump() {
+        watchNote()
         synchronized(pumpLock) {
             while (jobs.size < MAX_ACTIVE) {
                 val next = tasks.firstOrNull { it.status == DownloadStatus.Queued } ?: return
