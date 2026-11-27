@@ -283,14 +283,14 @@ open class ToolkitTile : TileService() {
     }
     override fun onStopListening() { listening = false; listen(); main.removeCallbacks(tick) }
     /** How the tile's own icon moves after a tap when it has no pictures of its own ([flicker]): spin, wobble, shake, bounce, pulse or pop. */
-    open val motion: String get() = "pulse"
+    open val motion: String get() = "toolkit"
 
     /** The tile's icon moving for a moment on the tile itself (drawn frame by frame into a bitmap), then [then]. */
     protected fun animateIcon(kind: String, then: () -> Unit) {
         val res = picture ?: runCatching { packageManager.getServiceInfo(ComponentName(this, javaClass), 0).icon }.getOrDefault(0)
         val d = if (res != 0) androidx.core.content.ContextCompat.getDrawable(this, res)?.mutate() else null
         if (d == null) { then(); return }
-        val size = 128; val frames = 12
+        val size = 128; val frames = 16
         var i = 0
         flashing = true
         val step = object : Runnable {
@@ -300,6 +300,12 @@ open class ToolkitTile : TileService() {
                 val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
                 val cv = android.graphics.Canvas(bmp)
                 val c = size / 2f
+                // the tool's own drawing (TileArt); the moving icon is the fallback for one without
+                if (TileArt.draw(kind, cv, size, t)) {
+                    qsTile?.apply { state = Tile.STATE_ACTIVE; icon = Icon.createWithBitmap(bmp); updateTile() }
+                    if (i < frames) { i++; main.postDelayed(this, 45L) } else { flashing = false; then() }
+                    return
+                }
                 when (kind) {
                     "spin" -> cv.rotate(360f * (1f - damp * damp * damp), c, c)
                     "wobble" -> cv.rotate(18f * damp * kotlin.math.sin(t * 6f * Math.PI.toFloat()), c, c)
@@ -334,7 +340,7 @@ open class ToolkitTile : TileService() {
 
 @androidx.annotation.RequiresApi(24)
 class CompassTile : ToolkitTile() {
-    override val motion: String get() = "spin"
+    override val motion: String get() = "compass"
     override val start: String get() = "toolkit:compass"
     override val trName: String get() = "Pusula"
     override val sensor: Int? get() = Sensor.TYPE_ROTATION_VECTOR
@@ -348,7 +354,7 @@ class CompassTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class LevelTile : ToolkitTile() {
-    override val motion: String get() = "wobble"
+    override val motion: String get() = "level"
     override val start: String get() = "toolkit:level"
     override val trName: String get() = "Su terazisi"
     override val sensor: Int? get() = Sensor.TYPE_ACCELEROMETER
@@ -358,7 +364,7 @@ class LevelTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class LuxTile : ToolkitTile() {
-    override val motion: String get() = "pulse"
+    override val motion: String get() = "lux"
     override val start: String get() = "toolkit:light"
     override val trName: String get() = "Işık ölçer"
     override val sensor: Int? get() = Sensor.TYPE_LIGHT
@@ -423,7 +429,7 @@ class CoinTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {
-    override val motion: String get() = "pop"
+    override val motion: String get() = "shot"
     override val start: String get() = "toolkit:screenshot"
     override val trName: String get() = "Ekran görüntüsü"
     private var failed = false
@@ -437,7 +443,7 @@ class ScreenshotTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class SoundModeTile : ToolkitTile() {
-    override val motion: String get() = "shake"
+    override val motion: String get() = "sound"
     override val start: String get() = "toolkit:vibrate"
     override val trName: String get() = "Ses modu"
     override val refreshMs: Long get() = 1000L // follows the volume keys
@@ -459,7 +465,7 @@ class SoundModeTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class ClipboardTile : ToolkitTile() {
-    override val motion: String get() = "bounce"
+    override val motion: String get() = "clip"
     override val start: String get() = "toolkit:clipboard"
     override val trName: String get() = "Pano"
     private var text: String? = null
@@ -469,7 +475,7 @@ class ClipboardTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class SensorsOffTile : ToolkitTile() {
-    override val motion: String get() = "pop"
+    override val motion: String get() = "sensors"
     override val start: String get() = "toolkit:sensors"
     override val trName: String get() = "Sensörler kapalı"
     private var busy = false
@@ -485,7 +491,7 @@ class SensorsOffTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class BatteryTile : ToolkitTile() {
-    override val motion: String get() = "bounce"
+    override val motion: String get() = "battery"
     override val start: String get() = "toolkit:battery"
     override val trName: String get() = "Pil"
     override val refreshMs: Long get() = 3000L
@@ -498,7 +504,7 @@ class BatteryTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class MemoryTile : ToolkitTile() {
-    override val motion: String get() = "pulse"
+    override val motion: String get() = "memory"
     override val start: String get() = "toolkit:memory"
     override val trName: String get() = "Bellek"
     override val refreshMs: Long get() = 3000L
@@ -510,7 +516,7 @@ class MemoryTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class TemperatureTile : ToolkitTile() {
-    override val motion: String get() = "wobble"
+    override val motion: String get() = "thermal"
     override val start: String get() = "toolkit:thermal"
     override val trName: String get() = "Sıcaklık"
     override val refreshMs: Long get() = 3000L
@@ -519,7 +525,7 @@ class TemperatureTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class VolumeTile : ToolkitTile() {
-    override val motion: String get() = "shake"
+    override val motion: String get() = "volume"
     override val start: String get() = "toolkit:volume"
     override val trName: String get() = "Ses düzeyi"
     override val refreshMs: Long get() = 1000L // follows the volume panel and keys
@@ -532,7 +538,7 @@ class VolumeTile : ToolkitTile() {
 /** Timer tile: while a timer runs, its remaining time is the subtitle and the icon turns to an hourglass. The Toolkit timer writes its end time (ms) to prefs "timer", key "end". A tap opens the timer. */
 @androidx.annotation.RequiresApi(24)
 class TimerTile : ToolkitTile() {
-    override val motion: String get() = "spin"
+    override val motion: String get() = "timer"
     override val start: String get() = "toolkit:timer"
     override val trName: String get() = "Zamanlayıcı"
     override val refreshMs: Long get() = 1000L
@@ -545,11 +551,11 @@ class TimerTile : ToolkitTile() {
     }
 }
 @androidx.annotation.RequiresApi(24)
-class CalculatorTile : ToolkitTile() { override val motion: String get() = "bounce"; override val start: String get() = "calculator"; override val trName: String get() = "Hesap makinesi" }
+class CalculatorTile : ToolkitTile() { override val motion: String get() = "calc"; override val start: String get() = "calculator"; override val trName: String get() = "Hesap makinesi" }
 /** Network type tile (5G only, LTE only ...): a tap switches to the next mode picked in the Toolkit, as root; without root it opens the screen. */
 @androidx.annotation.RequiresApi(24)
 class NetModeTile : ToolkitTile() {
-    override val motion: String get() = "spin"
+    override val motion: String get() = "net"
     override val start: String get() = "toolkit:globe"
     override val trName: String get() = "Ağ türü"
     override val refreshMs: Long get() = 3000L
@@ -565,12 +571,12 @@ class NetModeTile : ToolkitTile() {
     }
 }
 @androidx.annotation.RequiresApi(24)
-class FinderTile : ToolkitTile() { override val motion: String get() = "wobble"; override val start: String get() = "toolkit:search"; override val trName: String get() = "Bulucu" }
+class FinderTile : ToolkitTile() { override val motion: String get() = "find"; override val start: String get() = "toolkit:search"; override val trName: String get() = "Bulucu" }
 @androidx.annotation.RequiresApi(24)
-class DinkTile : ToolkitTile() { override val motion: String get() = "bounce"; override val start: String get() = "toolkit:dink"; override val trName: String get() = "Dink" }
+class DinkTile : ToolkitTile() { override val motion: String get() = "dink"; override val start: String get() = "toolkit:dink"; override val trName: String get() = "Dink" }
 @androidx.annotation.RequiresApi(24)
 class ScaleTile : ToolkitTile() {
-    override val motion: String get() = "pulse"
+    override val motion: String get() = "scale"
     override val start: String get() = "toolkit:scale"
     override val trName: String get() = "Ekran ölçeği"
     override fun subtitleFor(values: FloatArray?): String? = tr("Text ", "Yazı ") + TileActions.scaleLabel(this)
@@ -584,7 +590,7 @@ class ScaleTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class RotationTile : ToolkitTile() {
-    override val motion: String get() = "spin"
+    override val motion: String get() = "rotate"
     override val start: String get() = "toolkit:rotate"
     override val trName: String get() = "Ekran yönü"
     private var steps = 0
@@ -617,7 +623,7 @@ class RotationTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class TouchesTile : ToolkitTile() {
-    override val motion: String get() = "pulse"
+    override val motion: String get() = "touch"
     override val start: String get() = "toolkit:touch"
     override val trName: String get() = "Dokunma noktaları"
     override fun active(): Boolean = TileActions.flagOn(this, "show_touches")
@@ -628,7 +634,7 @@ class TouchesTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class PointerTile : ToolkitTile() {
-    override val motion: String get() = "bounce"
+    override val motion: String get() = "pointer"
     override val start: String get() = "toolkit:pointer"
     override val trName: String get() = "Dokunma çizgileri"
     override fun active(): Boolean = TileActions.flagOn(this, "pointer_location")
@@ -639,7 +645,7 @@ class PointerTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class MotionCueTile : ToolkitTile() {
-    override val motion: String get() = "shake"
+    override val motion: String get() = "motion"
     override val start: String get() = "toolkit:motion"
     override val trName: String get() = "Hareket noktaları"
     override fun active(): Boolean = MotionCueService.running
@@ -647,7 +653,7 @@ class MotionCueTile : ToolkitTile() {
 }
 @androidx.annotation.RequiresApi(24)
 class PowerMenuTile : ToolkitTile() {
-    override val motion: String get() = "pop"
+    override val motion: String get() = "power"
     override val start: String get() = "toolkit:power"
     override val trName: String get() = "Güç menüsü"
     override fun act(): Boolean { if (!TileActions.powerMenu()) openPulse(start); return false }

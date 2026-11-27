@@ -271,14 +271,14 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "search" to (tr("Files: opens on Home again, the Search tab opens a fast whole-phone search page, folders load faster (Rust), the buttons of picked files sit in the top row.",
-        "Dosyalar: yine Ana sayfada açılır, Arama sekmesi tüm telefonu hızlı arayan sayfayı açar, klasörler daha hızlı yüklenir (Rust), seçilen dosyaların düğmeleri üst satırda.")),
-    "clean" to (tr("Cache cleaner: finds the caches without root (usage access), frees them through the system, or app by app with an accessibility service like SD Maid.",
-        "Önbellek temizleyici: rootsuz önbellekleri bulur (kullanım erişimi), sistem üzerinden ya da SD Maid gibi erişilebilirlik servisiyle uygulama uygulama temizler.")),
-    "video" to (tr("YouTube (YTX): the last feed shows at once at start and scrolls smoother. Music: History online only, Suggestions by your taste, blurred cover under the pulled sheet.",
-        "YouTube (YTX): son akış açılışta hemen görünür, kaydırma daha akıcı. Müzik: Geçmiş yalnız çevrimiçi, Öneriler zevkine göre, çekilen sayfanın altında bulanık kapak.")),
-    "kbd18" to (tr("Keyboard: Learned words counts only words typed 3 times or more. App lock uses far less processor at rest.",
-        "Klavye: Öğrenilen kelimeler yalnız 3 kez yazılanları sayar. Uygulama kilidi beklerken çok daha az işlemci kullanır.")),
+    "video" to (tr("Pulse Watch: music and video on the watch, YouTube through the phone, now playing remote, Find my phone, the phone's files (Device manager > Watch > Pulse Watch link).",
+        "Pulse Watch: saatte müzik ve video, telefon üzerinden YouTube, çalan müzik kumandası, Telefonumu bul, telefon dosyaları (Cihaz yöneticisi > Saat > Pulse Watch bağlantısı).")),
+    "tools" to (tr("Toolkit tiles: each one has its own tap animation (network bars, battery filling, timer hand, bell …).",
+        "Araç kutucukları: her birinin kendine özel dokunma animasyonu var (ağ çubukları, dolan pil, zamanlayıcı ibresi, zil …).")),
+    "clean" to (tr("Cache cleaner without root: app by app with an accessibility service, like SD Maid.",
+        "Rootsuz önbellek temizleme: SD Maid gibi erişilebilirlik servisiyle uygulama uygulama.")),
+    "game" to (tr("Fixes: the next video no longer turns the screen upright and back; the CD shelf is black and its box has a real back.",
+        "Düzeltmeler: sonraki videoya geçince ekran dikeye dönüp geri gelmiyor; CD rafı siyah, kutunun gerçek bir arka yüzü var.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable

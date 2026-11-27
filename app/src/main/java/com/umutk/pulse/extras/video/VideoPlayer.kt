@@ -568,6 +568,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     LaunchedEffect(shown, playing, poke, dlg, rev) { if (shown && playing && dlg == null && prefs.ctrlTimeout > 0) { delay(prefs.ctrlTimeout.toLong()); shown = false } }
     LaunchedEffect(hudStamp) { delay(900); hud = null }
     LaunchedEffect(orient, vsize) {
+        // between two videos the size is 0 for a moment (the next one is loading): the screen keeps the way it is turned, it used to turn upright and back
+        if (orient == 3 && (vsize.width == 0 || vsize.height == 0)) return@LaunchedEffect
         act?.requestedOrientation = when (orient) {
             1 -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             2 -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
