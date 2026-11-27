@@ -44,6 +44,15 @@ android {
     }
     // -PnoSms: the lite app without any SMS/MMS permission or receiver (src/nosms overlays the lite manifest)
     if (project.hasProperty("noSms")) sourceSets.getByName("lite").manifest.srcFile("src/nosms/AndroidManifest.xml")
+    // -PpulseApp=<id>: one of Pulse's apps on its own (keyboard, music, video, ytx, code, books, gamehub, clock, office; see scripts/standalone_apps.txt): the lite build with
+    // its own package name (com.umutk.pulse.<id>), its own name, and only that app's icon in the launcher (src/standalone/<id>)
+    val pulseApp = (project.findProperty("pulseApp") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+    defaultConfig.buildConfigField("String", "STANDALONE", "\"" + (pulseApp ?: "") + "\"")
+    if (pulseApp != null) {
+        defaultConfig.applicationIdSuffix = ".$pulseApp"
+        sourceSets.getByName("lite").manifest.srcFile("src/standalone/$pulseApp/AndroidManifest.xml")
+        sourceSets.getByName("lite").res.srcDir("src/standalone/$pulseApp/res")
+    }
     // the mini app runs on lite's code (the AI stand-ins), with a manifest of its own
     sourceSets.getByName("mini").java.srcDir("src/lite/java")
     buildTypes {

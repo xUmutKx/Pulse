@@ -11,6 +11,10 @@ on:
         description: "Also build the lite APK (without Pulse AI), without publishing"
         type: boolean
         default: false
+      apps:
+        description: "Build the standalone apps (Keyboard, Music, Video, YTXTube, Code, Books, Game Hub, Clock, Office) and publish each to its own repository"
+        type: boolean
+        default: false
       watch:
         description: "Build only Pulse Watch (Wear OS); with release it gets a release of its own (tag watch-v...)"
         type: boolean
@@ -32,6 +36,7 @@ jobs:
           V='["full"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","mini","32bit","play"]'; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.watch }}" = "true" ]; then V='["watch"]'; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apps }}" = "true" ]; then V='["app-keyboard","app-music","app-video","app-ytx","app-code","app-books","app-gamehub","app-clock","app-office","app-core"]'; fi  # the ids of scripts/standalone_apps.txt
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
@@ -135,6 +140,11 @@ jobs:
               # the same app without Pulse AI: no native code to build, so it is the quick one
               G assembleFossLiteRelease -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
               cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$VER-lite.apk" ;;
+            app-*)
+              # one of Pulse's apps on its own (scripts/standalone_apps.txt): the lite build with its own package and only its icon
+              ID="${{ matrix.variant }}"; ID="${ID#app-}"
+              G assembleFossLiteRelease -PpulseApp=$ID -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
+              cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk" ;;
             mini)
               # the safe app: lite without root or Shizuku, SMS, accessibility services, APK installs or call log (what app scanners flag)
               G assembleFossMiniRelease -x lintVitalAnalyzeFossMiniRelease -x lintVitalReportFossMiniRelease -x lintVitalFossMiniRelease
@@ -195,9 +205,16 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          APPS_TOKEN: ${{ secrets.APPS_TOKEN }}
         run: |
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           ls -l files
+          # a run of the standalone apps: each goes to its own repository (with APPS_TOKEN), and all of them to one release here as well
+          if [ ! -f "files/Pulse-$VER.apk" ] && ls files/Pulse-*-"$VER".apk >/dev/null 2>&1 && [ ! -f files/PulseWatch.apk ]; then
+            gh release create "apps-v$VER-$GITHUB_RUN_NUMBER" files/Pulse-*-"$VER".apk --target "$GITHUB_SHA" --title "Pulse apps $VER" --notes "Pulse's apps as apps of their own (each installs beside Pulse): Keyboard, Music, Video, YTXTube, Code, Books, Game Hub, Clock, Office."
+            if [ -n "$APPS_TOKEN" ]; then GH_TOKEN="$APPS_TOKEN" bash scripts/publish_standalone.sh "$VER"; else echo "::warning::APPS_TOKEN is not set: the apps were not sent to their own repositories"; fi
+            exit 0
+          fi
           # a watch-only run: a release of its own, the phone app's release is left alone
           if [ ! -f "files/Pulse-$VER.apk" ] && [ -f files/PulseWatch.apk ]; then
             WV=$(grep -oP 'versionName = "\K[^"]+' wear/app/build.gradle.kts)

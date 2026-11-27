@@ -223,7 +223,7 @@ object AppPlace {
         App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { c, _ -> launchExtra(c, TOOL, "gamehub") },
         App("HealthLauncher", "Health", "Sağlık", "heart", Icons.Outlined.Favorite) { c, _ -> launchExtra(c, TOOL, "health") },
         App("YtxLauncher", "YTXTube", "YTXTube", "video", Icons.Outlined.PlayCircle) { c, _ -> launchExtra(c, "com.umutk.pulse.extras.ytx.YtxActivity") },
-    ).filter { it.alias != "ArtCraftLauncher" || (com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE) }
+    ).filter { (it.alias != "ArtCraftLauncher" || (com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE)) && !Standalone.core } // Pulse Core lists no extra apps
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it

@@ -1,0 +1,11 @@
+# id | launcher alias | name | repository (github.com/xUmutKx/<repo>) | the app's own code in Pulse (copied into its repository)
+keyboard|KeyboardLauncher|Pulse Keyboard|Pulse-Keyboard|app/src/main/java/com/umutk/pulse/extras/keyboard
+music|MusicLauncher|Pulse Music|Pulse-Music|app/src/main/java/com/umutk/pulse/extras/music
+video|VideoLauncher|Pulse Video|Pulse-Video|app/src/main/java/com/umutk/pulse/extras/video
+ytx|YtxLauncher|YTXTube|Pulse-YTXTube|app/src/main/java/com/umutk/pulse/extras/ytx
+code|CodeLauncher|Pulse Code|Pulse-Code|app/src/main/java/com/umutk/pulse/extras/code
+books|EbookLauncher|Pulse Books|Pulse-Books|app/src/main/java/com/umutk/pulse/extras/ebook
+gamehub|GameHubLauncher|Pulse Game Hub|Pulse-GameHub|app/src/main/java/com/umutk/pulse/extras/gamehub
+clock|ClockLauncher|Pulse Clock|Pulse-Clock|app/src/main/java/com/umutk/pulse/extras/lucid
+office|OfficeLauncher|Pulse Office|Pulse-Office|app/src/main/java/com/umutk/pulse/Office*.kt
+core|IconDefault|Pulse Core|Pulse-Core|app/src/main/java/com/umutk/pulse/*.kt

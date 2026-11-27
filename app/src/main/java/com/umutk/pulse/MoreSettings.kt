@@ -592,6 +592,8 @@ private val launcherIcons = listOf(
 /** Launcher icon choice: exactly one activity-alias stays enabled; the new one is enabled before the others are switched off. */
 @Composable
 internal fun AppIconChooser() {
+    // a standalone app has no Pulse icon to choose
+    if (Standalone.on) return
     val ctx = LocalContext.current
     fun on(i: LauncherIcon): Boolean {
         val st = ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + i.alias))
@@ -679,6 +681,8 @@ internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
     val pi = pm.getPackageInfo(ctx.packageName, 0)
     val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
+    // a standalone app keeps its one icon
+    if (Standalone.on) { prefs.edit().putBoolean("extraAppsOff", true).apply(); return }
     listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "EbookLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "ExtraStoreLauncher", "ClockLauncher").forEach {
         // a missing alias throws on startup, so one bad name must not stop the rest (or the app)
         runCatching { pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP) }
@@ -721,7 +725,7 @@ private fun ExtraAppsCard() {
         Triple("TerminalLauncher", R.drawable.launch_terminal, "Terminal"),
         Triple("YtxLauncher", R.drawable.ytx_ic_glass, "YTXTube"),
     // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
-    ).filter { it.first != "ArtCraftLauncher" || (BuildConfig.APK_INSTALL && !BuildConfig.SAFE) }
+    ).filter { (it.first != "ArtCraftLauncher" || (BuildConfig.APK_INSTALL && !BuildConfig.SAFE)) && !Standalone.core }
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),

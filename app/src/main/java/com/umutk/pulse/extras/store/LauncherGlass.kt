@@ -66,6 +66,8 @@ object LauncherGlass {
     }.getOrDefault(false)
 
     private fun set(c: Context, a: String, on: Boolean) {
+        // a standalone app: Pulse's icons stay off, and its own icon is never switched off
+        if (com.umutk.pulse.Standalone.on && (a.startsWith("Icon") || (!on && a == com.umutk.pulse.Standalone.ALIAS))) return
         if (enabled(c, a) == on) return
         runCatching {
             c.packageManager.setComponentEnabledSetting(

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse Core (-PpulseApp=core): Pulse's launcher, settings, toolkit and task manager, without the extra apps (they are not listed anywhere in it). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="Pulse Core" tools:replace="android:label" />
+</manifest>
