@@ -426,6 +426,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var openAsAsk by remember { mutableStateOf<File?>(null) }
     var saveAsFile by remember { mutableStateOf<File?>(null) }
     var name by remember { mutableStateOf("") }
+    // several picked: one box renames them all (a new name with numbers, and/or a word found and replaced in each name)
+    var bulk by remember { mutableStateOf<List<File>?>(null) }
+    var bulkBase by remember { mutableStateOf("") }
+    var bulkFind by remember { mutableStateOf("") }
+    var bulkRepl by remember { mutableStateOf("") }
     var newExt by remember { mutableStateOf("docx") }
     val filePick = LocalFilePick.current
     val pickAny = LocalPickAny.current
@@ -926,7 +931,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         DenseSelSquare(T.text, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }) { ExIcon(k, T.text, 24.dp) }
                     } }
                     val one = picked.singleOrNull()
-                    Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> name = f.name; dialog = "rename" to f } }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) } }
+                    DenseSelSquare(T.text, { if (one != null) { name = one.name; dialog = "rename" to one } else if (picked.size > 1) { bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulk = picked } }) { ExGlyph(Icons.Outlined.DriveFileRenameOutline, "rename", T.text, 24.dp) }
                     DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
                     Box(Modifier.alpha(if (one != null) 1f else .3f)) { DenseSelSquare(T.text, { one?.let { f -> propsOf = f } }) { ExGlyph(Icons.Outlined.Info, "info", T.text, 24.dp) } }
                 } else Box {
@@ -936,6 +941,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         // Share is in this menu too, for one file or for several (folders in the pick are left out)
                         if (picked.any { it.isFile }) ThemedMenuItem(tr("Share", "Paylaş"), { selMore = false; shareSheet = picked }, icon = Icons.Outlined.Share)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
+                        if (picked.size > 1) ThemedMenuItem(tr("Rename all", "Hepsini yeniden adlandır"), { selMore = false; bulkBase = ""; bulkFind = ""; bulkRepl = ""; bulk = picked }, icon = Icons.Outlined.DriveFileRenameOutline)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
                         arcPick(picked)?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
                     }
@@ -1692,6 +1698,35 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             dismissButton = { TextButton({ saveAsFile = null }) { Text(tr("Cancel", "İptal")) } })
     }
     apkAsk?.let { a -> ApkInfo(a, { apkAsk = null }) { arcFile = a; arcCwd = ""; apkAsk = null } }
+    bulk?.let { files ->
+        // the new name of each file: the typed name with a number (01, 02 ... as wide as the count needs), then the word replaced; the extension stays
+        fun newNameOf(f: File, i: Int): String {
+            var base = f.nameWithoutExtension
+            if (bulkBase.isNotBlank()) base = bulkBase.trim() + " " + (i + 1).toString().padStart(files.size.toString().length, '0')
+            if (bulkFind.isNotEmpty()) base = base.replace(bulkFind, bulkRepl, ignoreCase = true)
+            return base + (if (f.extension.isEmpty()) "" else "." + f.extension)
+        }
+        WinAlert(onDismissRequest = { bulk = null },
+            title = { Text(tr("Rename ${files.size} items", "${files.size} öğeyi yeniden adlandır")) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PField(bulkBase, { bulkBase = it }, tr("New name (numbers are added)", "Yeni ad (numara eklenir)"), Modifier.fillMaxWidth())
+                PField(bulkFind, { bulkFind = it }, tr("Find in the names", "Adlarda bul"), Modifier.fillMaxWidth())
+                PField(bulkRepl, { bulkRepl = it }, tr("Replace with", "Şununla değiştir"), Modifier.fillMaxWidth())
+                files.take(3).forEachIndexed { i, f -> Text(f.name + "  →  " + newNameOf(f, i), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            } },
+            confirmButton = { TextButton({
+                var ok = 0; var bad = 0
+                files.forEachIndexed { i, f ->
+                    val n = newNameOf(f, i)
+                    val t = File(f.parentFile, n)
+                    if (n == f.name) return@forEachIndexed
+                    if (n.isBlank() || t.exists() || !runCatching { f.renameTo(t) }.getOrDefault(false)) bad++ else ok++
+                }
+                note = tr("Renamed $ok", "$ok öğe yeniden adlandırıldı") + if (bad > 0) tr(", $bad not renamed", ", $bad adlandırılamadı") else ""
+                bulk = null; sel = emptySet(); refresh++
+            }) { Text("OK") } },
+            dismissButton = { TextButton({ bulk = null }) { Text("Cancel") } })
+    }
     dialog?.let { (kind, f) ->
         WinAlert(onDismissRequest = { dialog = null },
             title = { Text(if (kind == "rename") "Rename" else if (kind == "newfile") tr("New file", "Yeni dosya") + " (." + newFileSplit(name, newExt).second + ")" else "New folder") },

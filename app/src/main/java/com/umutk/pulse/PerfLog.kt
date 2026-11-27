@@ -135,6 +135,7 @@ object PerfLog {
         var prevAt = SystemClock.elapsedRealtime()
         val am = app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val pm = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+        var lastHotDump = 0L
         while (running) {
             // the main thread's heartbeat: a message to it that should come back in a moment
             val ack = AtomicBoolean(false)
@@ -171,6 +172,19 @@ object PerfLog {
                     "  |  threads ${cur.size}  heap ${(rt.totalMemory() - rt.freeMemory()) shr 20}/${rt.maxMemory() shr 20} MB  native ${Debug.getNativeHeapAllocatedSize() shr 20} MB  gc $gc" +
                     "  |  free ${mi.availMem shr 20} MB${if (mi.lowMemory) " LOW" else ""}  thermal $thermal" +
                     "  |  frames $frames slow $slow worst ${worst} ms" + (if (dl >= 0) "  |  downloads running $dl" else ""))
+                // a thread that takes more than 60% of a core for the window: the code it is running (the stacks of the running threads of that name) goes to the log too, so a hot loop
+                // in the background (a process at 100% with the screen idle) shows where it is, at most every 30 seconds
+                val hot = byName.firstOrNull()
+                if (hot != null && hot.value / dt >= 60 && now - lastHotDump > 30_000L) {
+                    lastHotDump = now
+                    val sb = StringBuilder()
+                    runCatching {
+                        Thread.getAllStackTraces().entries.filter { (t, _) -> t.name.startsWith(hot.key.take(15)) && t.state == Thread.State.RUNNABLE }.take(3).forEach { (t, st) ->
+                            sb.append("    ").append(t.name).append(":\n"); st.take(18).forEach { sb.append("        at ").append(it).append('\n') }
+                        }
+                    }
+                    if (sb.isNotEmpty()) write(app, "${stamp()}  [$proc] BUSY THREAD ${hot.key} ${(hot.value / dt).toInt()}%:\n$sb")
+                }
                 slow = 0; worst = 0L; frames = 0
                 prev = cur; prevAt = now
             }

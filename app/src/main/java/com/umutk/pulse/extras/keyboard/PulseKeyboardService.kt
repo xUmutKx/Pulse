@@ -632,7 +632,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val same = batchPaths.filter { kind(it) == kind(hit.third) }.map { java.io.File(it) }.filter { it.isFile && it.length() > 0 }
         // many pictures at once that are not from the camera or a screenshot (a zip opened, a folder copied) are not a thing to paste: nothing shows in the bar
         if (kind(hit.third) == 2 && same.size > 5) return
-        shotGroup = (same + shotGroup.filter { f -> f.isFile && kind(f.path) == kind(hit.third) && same.none { it.path == f.path } }).take(12)
+        // only a stack made in the last ten seconds is added to; an older one (already pasted, or left behind) is not carried into the new picture's stack
+        val older = if (SystemClock.uptimeMillis() - shotAt < 10_000L) shotGroup else emptyList()
+        shotGroup = (same + older.filter { f -> f.isFile && kind(f.path) == kind(hit.third) && same.none { it.path == f.path } }).take(12)
         st.shotCount = shotGroup.size
         val mime = when (file.extension.lowercase()) { "png" -> "image/png"; "webp" -> "image/webp"; "gif" -> "image/gif"; "heic", "heif" -> "image/heic"; else -> "image/jpeg" }
         // the newest copy wins the slot: a screenshot takes it from a copied text
@@ -2009,7 +2011,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 }
                 shotGroup = emptyList(); st.shotCount = 0
             } else if (v != null) pasteVideo(v, shotVideoMime) else shotItem?.let { pasteClip(it) }
-            if (!shotPinned) { shotItem = null; shotVideo = null; shotGroup = emptyList(); st.shotCount = 0; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
+            // what was pasted is not offered again: the stack is emptied also when the chip was held (pinned), or the next picture would carry it along
+            shotGroup = emptyList(); st.shotCount = 0
+            if (!shotPinned) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null }; updateSuggestions(); return
         }
         // the one-time code of a notification: typed as it is (no space after it), then gone
         if (i == 2 && st.slots.getOrNull(2)?.startsWith("\u0001🔑") == true) {
