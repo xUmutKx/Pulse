@@ -632,7 +632,13 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         if (query.isBlank() || state.inspecting) return@LaunchedEffect
         kotlinx.coroutines.delay(250)
         val at = loaded.indexOfFirst { it.first.name.contains(query.trim(), true) }
-        if (at >= 0) state.scrollTo(at)
+        if (at >= 0) {
+            // the rack is endless (its position counts on past the last case): the game is reached by the shorter way round, so the rack slides a few cases, not back through the whole shelf
+            val n = loaded.size
+            val base = state.slotted
+            val d = ((at - base) % n + n) % n
+            state.scrollTo(base + if (d > n / 2) d - n else d)
+        }
     }
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
@@ -648,7 +654,7 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
                 androidx.compose.material3.LinearProgressIndicator(progress = { looked.intValue / list.size.coerceAtLeast(1).toFloat() }, modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)), color = Color(0xFFEDEDF2), trackColor = Color(0x33FFFFFF))
                 Text("${looked.intValue} / ${list.size}", color = pal.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
             }
-            val cur = loaded.getOrNull(state.slotted.coerceIn(0, loaded.lastIndex))?.first
+            val cur = loaded.getOrNull(com.umutk.pulse.extras.gamehub.cdshelf.wrapCase(state.slotted, loaded.size))?.first
             if (cur != null) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("Play", "Oyna"), color = Color.Black, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { onPlay(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
                 Text(tr("Details", "Ayrıntılar"), color = Color.White, fontSize = 15.sp, modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0x44FFFFFF)).clickable { onDetails(cur) }.padding(horizontal = 22.dp, vertical = 10.dp))
