@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -170,6 +171,17 @@ fun CalculatorHub(back: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
         }
         if (menu) CalcMenu(mode, { mode = it; showHistory = false; menu = false }) { menu = false }
+        // the history floats over the calculator in a window of its own: the display and the keys stay where they are and show below it (a tap outside closes it)
+        if (showHistory && mode == "standard") {
+            val dens = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.ui.window.Popup(alignment = Alignment.TopCenter, offset = androidx.compose.ui.unit.IntOffset(0, with(dens) { 56.dp.roundToPx() }),
+                onDismissRequest = { showHistory = false }, properties = androidx.compose.ui.window.PopupProperties(focusable = true)) {
+                Column(Modifier.padding(horizontal = 10.dp).fillMaxWidth().heightIn(max = (cfg.screenHeightDp * .52f).dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(T.panel).verticalScroll(rememberScrollState())) {
+                    if (history.isEmpty()) Text(tr("No calculations yet", "Henüz işlem yok"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
+                    history.forEach { h -> Text(h, color = T.text, fontSize = 18.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().clickable { e = h.substringAfter("= "); done = true; showHistory = false }.padding(12.dp)) }
+                }
+            }
+        }
         if (mode != "standard") {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 // Back leaves the pane for the plain calculator first, never the whole app
@@ -181,19 +193,6 @@ fun CalculatorHub(back: () -> Unit) {
                         Box(Modifier.weight(.45f).fillMaxSize()) { GraphPane() }
                     } else SciPane(classic)
                     "graph" -> GraphPane(); "convert" -> ConvertPane(); else -> ProgrammerPane(classic)
-                }
-            }
-            return@Column
-        }
-        if (showHistory) {
-            // the history floats over the calculator: a rounded sheet with the calculator still showing below it (a tap there closes it)
-            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
-                Column(Modifier.weight(.82f).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(T.panel).verticalScroll(rememberScrollState())) {
-                    if (history.isEmpty()) Text(tr("No calculations yet", "Henüz işlem yok"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
-                    history.forEach { h -> Text(h, color = T.text, fontSize = 18.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().clickable { e = h.substringAfter("= "); done = true; showHistory = false }.padding(12.dp)) }
-                }
-                Box(Modifier.weight(.18f).fillMaxWidth().clickable { showHistory = false }, contentAlignment = Alignment.CenterEnd) {
-                    Text(grouped(shown), color = T.text.copy(alpha = .6f), fontSize = 28.sp, maxLines = 1, modifier = Modifier.padding(horizontal = 14.dp))
                 }
             }
             return@Column
