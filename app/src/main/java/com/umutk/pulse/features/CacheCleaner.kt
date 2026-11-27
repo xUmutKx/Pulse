@@ -85,7 +85,7 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
     // Selection keys carry the tab so a row id never clashes between categories.
     fun key(t: Int, r: CleanRow) = "$t/${r.id}"
     val chosen = list.filter { key(tab, it) in selected }
-    val chosenBytes = chosen.sumOf { it.size }
+    val chosenBytes = chosen.sumOf { it.shownSize }
 
     fun deleteChosen() {
         val targets = chosen.flatMap { it.items }
@@ -113,11 +113,11 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             tabs.forEachIndexed { i, name ->
                 val rows = data[i]
-                com.umutk.pulse.PChip(tab == i, if (rows == null) name else "$name ${Guard.gb(rows.sumOf { it.size })}") { tab = i }
+                com.umutk.pulse.PChip(tab == i, if (rows == null) name else "$name ${Guard.gb(rows.sumOf { it.shownSize })}") { tab = i }
             }
         }
         Text(
-            "Reclaimable: ${Guard.gb(list.sumOf { it.size })} in ${list.size} items",
+            "Reclaimable: ${Guard.gb(list.sumOf { it.shownSize })} in ${list.size} items",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 8.dp),
         )
@@ -143,6 +143,20 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
                 onClick = { confirm = true },
                 enabled = chosen.isNotEmpty() && progress == null,
             ) { Text("Clean selected") }
+        }
+
+        // without root or Shizuku: the sizes come from the system (it needs usage access), and the caches are emptied by asking the system for room (it clears the caches of the apps to make it)
+        if (tab == 0 && Shell.root != true && !Shell.shizukuOk()) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!AppLock.usageGranted(ctx)) Button(onClick = {
+                runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }) { Text("Allow usage access") }
+            val total = list.sumOf { it.shownSize }
+            if (total > 0L && progress == null) Button(onClick = {
+                scope.launch {
+                    result = withContext(Dispatchers.IO) { CleanerRules.clearViaSystem(ctx, total) }
+                    scan()
+                }
+            }) { Text("Free ${Guard.gb(total)} (system)") }
         }
 
         progress?.let { (done, total) ->

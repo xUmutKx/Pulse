@@ -153,6 +153,24 @@ object CleanerRules {
             .sortedByDescending { it.info }.toList()
     }
 
+    /**
+     * Empties the caches of the apps without root: the system is asked for room it does not have ([android.os.storage.StorageManager.allocateBytes]) and deletes the cached
+     * files of the apps to make it (the way a "cache cleaner" without root works). Nothing is written. [wanted] is the cache the scan reported. Returns what to say.
+     */
+    fun clearViaSystem(ctx: Context, wanted: Long): String {
+        if (android.os.Build.VERSION.SDK_INT < 26) return com.umutk.pulse.tr("Needs Android 8 or newer", "Android 8 ya da yenisi gerekli")
+        val sm = ctx.getSystemService(android.os.storage.StorageManager::class.java) ?: return ""
+        val uuid = android.os.storage.StorageManager.UUID_DEFAULT
+        return runCatching {
+            val free = ctx.filesDir.usableSpace
+            val room = sm.getAllocatableBytes(uuid)                     // the free space plus what the system may clear
+            val ask = minOf(room, free + wanted)
+            sm.allocateBytes(uuid, ask)
+            val after = ctx.filesDir.usableSpace
+            com.umutk.pulse.tr("The system cleared ${mb((after - free).coerceAtLeast(0L))} of caches", "Sistem ${mb((after - free).coerceAtLeast(0L))} önbellek temizledi")
+        }.getOrElse { com.umutk.pulse.tr("The system refused: ", "Sistem reddetti: ") + (it.message ?: it.javaClass.simpleName) }
+    }
+
     private fun mb(b: Long) = if (b >= 1073741824L) "%.1f GB".format(b / 1073741824.0) else "%.1f MB".format(b / 1048576.0)
 
     /** Path is one of the known junk folders of an app, in an allowed root: under Android/media exactly "cache", under
