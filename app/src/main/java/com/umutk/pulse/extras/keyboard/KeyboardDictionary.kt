@@ -480,10 +480,15 @@ object KeyboardDictionary {
     /** A word the keyboard learned from the person that no word list of the language holds (and no ending explains): it may be a slip that was kept, so the bar marks it. */
     fun suspect(code: String, w: String): Boolean {
         val l = w.trim('"').lowercase(Locale.ROOT)
-        if (l.length < 3 || (user[l] ?: 0) <= 0) return false
+        // a word of four letters or more that the person has typed, that no list knows (a listed word, an ending explains it, a name, an abbreviation)...
+        if (l.length < 4 || (user[l] ?: 0) <= 0) return false
         val lang = d(code)
+        // (a list that is not read yet says nothing: nothing is marked then)
+        if (lexes[lang]?.index == null) return false
         if (lexes[lang]?.index?.containsKey(l) == true || l in abbrWords || l in properNouns || l in commonNames) return false
-        return !(lang == "tr" && trKnown(l))
+        if (lang == "tr" && trKnown(l)) return false
+        // ...and that is one slip away from a listed word: that is what a kept mistake looks like (a word that is only unlisted, a name, a new word, gets no mark)
+        return correct(code, l, 1.05f).any { it.word != l && it.cost <= 1.05f }
     }
 
     private fun score(code: String, w: String): Float {
