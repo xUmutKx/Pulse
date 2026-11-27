@@ -373,11 +373,13 @@ fun WeatherHub(onBack: () -> Unit) {
                     WeatherGlyph(d.code, 28.dp)
                     Spacer(Modifier.width(10.dp))
                     Text(if (d.rain >= 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                    // the humidity stands in the middle of the free space of the row: a blue drop and the percent
                     Spacer(Modifier.weight(1f))
                     if (d.hum >= 0) {
-                        Icon(Icons.Outlined.WaterDrop, null, tint = sub, modifier = Modifier.size(14.dp))
-                        Text("${d.hum}%", color = sub, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp, end = 12.dp))
+                        Icon(Icons.Outlined.WaterDrop, null, tint = Color(0xFF4FA3FF), modifier = Modifier.size(15.dp))
+                        Text("${d.hum}%", color = sub, fontSize = 13.sp, modifier = Modifier.padding(start = 3.dp))
                     }
+                    Spacer(Modifier.weight(1f))
                     Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
                 }
             }
