@@ -57,6 +57,8 @@ class FeedState(
 
 
     private val freshOnRefresh: Boolean = false,
+    /** When set, the last feed is kept on the phone and shown at once at the next start, while the new one loads (as Flow's home feed cache). */
+    private val cacheKey: String? = null,
     private val loader: suspend (next: String?) -> FeedPage,
 ) {
     var videos by mutableStateOf<List<VideoItem>>(emptyList())
@@ -80,7 +82,15 @@ class FeedState(
     /** Takes out what was just marked "not interested" (or its channel) without loading again. */
     fun dropHidden() { videos = videos.filter(Taste::ok) }
 
-    fun ensureLoaded() { if (!loaded && !loading) refresh() }
+    fun ensureLoaded() {
+        if (loaded || loading) return
+        // the feed of the last time shows at once (read off the main thread); the new one replaces it when it is in
+        if (cacheKey != null && videos.isEmpty()) scope.launch {
+            val cached = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { FeedCache.read(cacheKey) }.filter(Taste::ok)
+            if (videos.isEmpty() && cached.size >= 6) { videos = cached; generation++ }
+        }
+        refresh()
+    }
 
     fun refresh() {
         loaded = true
@@ -91,12 +101,15 @@ class FeedState(
         job = scope.launch {
             runCatching { if (freshOnRefresh && shown.isNotEmpty()) loadFresh() else loader(null) }
                 .onSuccess {
-                    videos = if (freshOnRefresh) Taste.rank(it.videos) else it.videos.filter(Taste::ok)
+                    // the ranking by taste is work for the processor: done off the main thread, so the list does not stutter while the page arrives
+                    val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { if (freshOnRefresh) Taste.rank(it.videos) else it.videos.filter(Taste::ok) }
+                    videos = list
                     next = it.next
                     generation++
                     if (freshOnRefresh) it.videos.forEach { v -> shown += v.id }
+                    cacheKey?.let { k -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { FeedCache.write(k, list.take(40)) } }
                 }
-                .onFailure { error = friendly(it) }
+                .onFailure { error = if (videos.isEmpty()) friendly(it) else null }
             loading = false
             refreshing = false
         }
@@ -110,7 +123,7 @@ class FeedState(
             runCatching { loader(token) }
                 .onSuccess { page ->
                     val seen = videos.mapTo(HashSet()) { it.id }
-                    val added = page.videos.filter { seen.add(it.id) && Taste.ok(it) }
+                    val added = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { page.videos.filter { seen.add(it.id) && Taste.ok(it) } }
                     videos = videos + added
                     if (freshOnRefresh) added.forEach { v -> shown += v.id }
                     next = page.next
@@ -161,7 +174,7 @@ class FeedState(
 @Stable
 class LibraryData(scope: CoroutineScope) {
 
-    val home = FeedState(scope, freshOnRefresh = true) { InnerTube.homeFeed(it) }
+    val home = FeedState(scope, freshOnRefresh = true, cacheKey = "home") { InnerTube.homeFeed(it) }
     val subscriptions = FeedState(scope) { InnerTube.subscriptionsFeed(it) }
     val history = FeedState(scope) { if (Account.signedIn) InnerTube.history(it) else FeedPage(WatchedLog.all(), null) }
     var channels by mutableStateOf<List<ChannelRef>>(emptyList())
@@ -296,4 +309,31 @@ fun PullToRefresh(enabled: Boolean, refreshing: Boolean, onRefresh: () -> Unit, 
             )
         },
     ) { content() }
+}
+
+
+/** The last feed of a page kept on the phone (a small JSON file): shown at once at the next start while the new one loads. */
+internal object FeedCache {
+    private fun file(key: String) = java.io.File(YTXTubeApplication.appContext.filesDir, "ytx_feed_$key.json")
+
+    fun read(key: String): List<VideoItem> = runCatching {
+        val a = org.json.JSONArray(file(key).readText())
+        (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            val id = o.optString("id"); if (id.isBlank()) return@mapNotNull null
+            VideoItem(id, o.optString("t"), o.optString("c"), o.optString("cu").ifBlank { null }, o.optString("th").ifBlank { null }, o.optString("av").ifBlank { null },
+                o.optLong("d"), o.optLong("v", -1), o.optString("u").ifBlank { null }, isLive = o.optBoolean("l"))
+        }
+    }.getOrDefault(emptyList())
+
+    fun write(key: String, list: List<VideoItem>) {
+        runCatching {
+            val a = org.json.JSONArray()
+            list.filter { it.localUri == null }.forEach { v ->
+                a.put(org.json.JSONObject().put("id", v.id).put("t", v.title).put("c", v.channel).put("cu", v.channelUrl ?: "").put("th", v.thumbnail ?: "").put("av", v.avatar ?: "")
+                    .put("d", v.durationSec).put("v", v.views).put("u", v.uploaded ?: "").put("l", v.isLive))
+            }
+            val f = file(key); val tmp = java.io.File(f.path + ".tmp"); tmp.writeText(a.toString()); tmp.renameTo(f)
+        }
+    }
 }
