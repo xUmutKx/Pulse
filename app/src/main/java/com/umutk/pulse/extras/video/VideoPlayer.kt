@@ -687,17 +687,28 @@ private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>
 
     /** The video goes to the mini player over the app (the library shows under it). The system's picture in picture is held back first: without the
      *  "display over other apps" permission its settings page opens, and leaving the app for it used to start picture in picture instead. */
+    var backProg by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val toCorner = prefs.backMini && playing && !inPip
     fun toMini(): Boolean {
         if (android.os.Build.VERSION.SDK_INT >= 31) runCatching { act?.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build()) }
         if (FloatingVideo.show(ctx, player, vsize, extCues, subDelay)) { onBack(); return true }
         return false
     }
-    BackHandler(enabled = !settings) {
-        if (locked) return@BackHandler
-        // a video that plays goes on in the mini player over the app (the library shows under it) instead of stopping when Back is pressed;
-        // the system's picture in picture is only for leaving the app
-        if (prefs.backMini && playing && !inPip && toMini()) return@BackHandler
-        onBack()
+    // Back is predictive: while the back gesture is held the video shrinks toward the corner where the mini player opens (or, with no mini player, toward the
+    // middle), and lets go back to full size when the gesture is called off
+    androidx.activity.compose.PredictiveBackHandler(enabled = !settings) { events ->
+        try {
+            events.collect { e -> if (!locked) backProg = e.progress }
+            if (locked) { backProg = 0f; return@PredictiveBackHandler }
+            // a video that plays goes on in the mini player over the app (the library shows under it) instead of stopping when Back is pressed;
+            // the system's picture in picture is only for leaving the app
+            if (prefs.backMini && playing && !inPip && toMini()) { backProg = 0f; return@PredictiveBackHandler }
+            backProg = 0f
+            onBack()
+        } catch (c: kotlin.coroutines.cancellation.CancellationException) {
+            backProg = 0f
+            throw c
+        }
     }
     // the system's media card (notification, lock screen) shows the picture of the video: the cover goes into the item that plays
     // (a video with no cover of its own gets a frame of itself, and the card is told the length, so its bar runs: it had no picture and no time)
@@ -722,7 +733,16 @@ private fun VideoPlayerBody(uri: Uri, onBack: () -> Unit, queue: List<VideoItem>
     val step = prefs.dtapSec * 1000L
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black).focusRequester(focus).focusable().onPreviewKeyEvent { e ->
+        Modifier.fillMaxSize().graphicsLayer {
+            // the back gesture's shrink (see PredictiveBackHandler above)
+            val p = backProg
+            if (p > 0f) {
+                val k = 1f - (if (toCorner) .62f else .12f) * p
+                scaleX = k; scaleY = k
+                transformOrigin = if (toCorner) androidx.compose.ui.graphics.TransformOrigin(.94f, .38f) else androidx.compose.ui.graphics.TransformOrigin.Center
+                shape = RoundedCornerShape((28 * p).dp); clip = true
+            }
+        }.background(Color.Black).focusRequester(focus).focusable().onPreviewKeyEvent { e ->
             if (e.type != KeyEventType.KeyDown) false
             else when (e.key) {
                 Key.Spacebar, Key.MediaPlayPause, Key.DirectionCenter, Key.Enter -> { if (player.isPlaying) player.pause() else player.play(); shown = true; poke++; true }
