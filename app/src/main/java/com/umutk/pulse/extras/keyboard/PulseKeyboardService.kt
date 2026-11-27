@@ -471,6 +471,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onCreate() {
         super.onCreate()
+        // the person's own touch sound and key font, read once
+        runCatching { KeyboardEffects.loadOwn(this); KbFont.load(this) }
         live = this
         mirrorPrefs()
         // started before the unlock: at the unlock the learned words and the normal settings are read again

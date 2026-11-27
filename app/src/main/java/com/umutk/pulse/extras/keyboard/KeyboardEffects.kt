@@ -183,7 +183,17 @@ object KeyboardEffects {
         }
     }
 
-    val soundNames = listOf("System" to "Sistem", "Retro" to "Retro", "Calm" to "Sakin", "Fun" to "Eğlenceli", "Pink" to "Pembe", "Space" to "Uzay")
+    val soundNames = listOf("System" to "Sistem", "Retro" to "Retro", "Calm" to "Sakin", "Fun" to "Eğlenceli", "Pink" to "Pembe", "Space" to "Uzay", "Own file" to "Kendi dosyam")
+    /** The touch sound of the person's own file ("Own file"): kb_sound in the keyboard's files, played by a SoundPool. */
+    const val OWN_SOUND = 6
+    private var pool: android.media.SoundPool? = null
+    private var poolId = 0
+    fun loadOwn(c: android.content.Context) {
+        runCatching { pool?.release() }; pool = null; poolId = 0
+        val f = java.io.File(c.filesDir, "kb_sound"); if (!f.isFile) return
+        pool = android.media.SoundPool.Builder().setMaxStreams(4).setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build()
+        poolId = pool!!.load(f.path, 1)
+    }
 
     private val boards = listOf(
         listOf(0xFF9C8CFF to Offset(.12f, .25f), 0xFFFF9A6B to Offset(.9f, .85f)),
@@ -240,6 +250,7 @@ object KeyboardEffects {
 
     fun play(kind: Int) {
         if (kind <= 0) return
+        if (kind == OWN_SOUND) { pool?.takeIf { poolId != 0 }?.play(poolId, 1f, 1f, 1, 0, 1f); return }
         runCatching {
             val t = tracks.getOrPut(kind) {
                 val data = wave(kind)

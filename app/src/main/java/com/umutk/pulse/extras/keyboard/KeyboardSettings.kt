@@ -640,6 +640,19 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Text("${tr("Effect length", "Efekt süresi")}: ${KeyboardPrefs.fxSpeed}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.fxSpeed - 40) / 260f, { KeyboardPrefs.fxSpeed = 40 + (it * 260).roundToInt() }, 0f..1f, onDone = { save() })
+            // the person's own touch sound (a short .ogg, .mp3 or .wav) and font for the key labels
+            val pickSound = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+                if (u != null) runCatching { ctx.contentResolver.openInputStream(u)!!.use { i -> java.io.File(ctx.filesDir, "kb_sound").outputStream().use { o -> i.copyTo(o) } }
+                    KeyboardEffects.loadOwn(ctx); KeyboardPrefs.soundKind = KeyboardEffects.OWN_SOUND; KeyboardPrefs.sound = true; save() }
+            }
+            val pickFont = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+                if (u != null) { KbFont.pick(ctx, u); KeyboardPrefs.fontRev++; save() }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                PButton(tr("Touch sound from a file", "Dosyadan dokunma sesi"), compact = true) { runCatching { pickSound.launch(arrayOf("audio/*")) } }
+                PButton(tr("Key font from a file", "Dosyadan tuş yazı tipi"), compact = true) { runCatching { pickFont.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream", "*/*")) } }
+                if (KbFont.family != null) PButton(tr("Default font", "Varsayılan yazı tipi"), compact = true) { KbFont.clear(ctx); KeyboardPrefs.fontRev++; save() }
+            }
             chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind, { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }) { _ ->
                 Box(Modifier.size(width = 52.dp, height = 46.dp).clip(RoundedCornerShape(8.dp)).background(keyFill), contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
             }

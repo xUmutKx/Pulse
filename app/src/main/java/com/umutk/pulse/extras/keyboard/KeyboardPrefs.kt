@@ -156,6 +156,8 @@ object KeyboardPrefs {
     var otpOn by mutableStateOf(false)
     /** Copied links lose their trackers (utm_…, fbclid …). On by default. */
     var cleanLinks by mutableStateOf(true)
+    /** Bumped when the person picks or clears a font, so the keyboard reads it again. */
+    var fontRev by mutableStateOf(0)
     fun otpCodes(c: Context): Boolean = c.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("otpCodes", false)
     /** The digit set the digit keys type (latin by default). */
     var numerals by mutableStateOf("latin")

@@ -239,7 +239,11 @@ val LocalOverlayKb = androidx.compose.runtime.compositionLocalOf { false }
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark).tuned()
     val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgbNow > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween((14000 * 100 / KeyboardPrefs.rgbSpeed.coerceIn(25, 300)), easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
-    androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue) { KeyboardViewBody(th, st, act, modifier) }
+    // the person's own font for the labels (Settings > Keyboard > Look), when one was picked
+    val ctx0 = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(KeyboardPrefs.fontRev) { KbFont.load(ctx0) }
+    val fam = KbFont.family.takeIf { KeyboardPrefs.fontRev >= 0 }
+    androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue, androidx.compose.material3.LocalTextStyle provides androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = fam ?: androidx.compose.material3.LocalTextStyle.current.fontFamily)) { KeyboardViewBody(th, st, act, modifier) }
 }
 
 @Composable
