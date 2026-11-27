@@ -21,6 +21,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -344,14 +347,42 @@ private fun MiniBody(
                     Text(speedLabel(p.playbackParameters.speed), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Box(Modifier.align(Alignment.Center).size(48.dp).clip(RoundedCornerShape(24.dp)).background(Color(0x99000000)).clickable {
-                if (p.isPlaying) p.pause() else p.play()
-                shown = true
-            }, contentAlignment = Alignment.Center) {
-                PIcon(if (playing) "pause" else "play", Color.White, 26.dp)
+            // back 10 s, play / pause, forward 10 s in the middle; the time and a bar to seek with at the foot
+            Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(Color(0x99000000)).clickable { p.seekTo(max(0L, p.currentPosition - 10_000L)); shown = true }, contentAlignment = Alignment.Center) {
+                    Text("-10", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(Color(0x99000000)).clickable {
+                    if (p.isPlaying) p.pause() else p.play()
+                    shown = true
+                }, contentAlignment = Alignment.Center) {
+                    PIcon(if (playing) "pause" else "play", Color.White, 26.dp)
+                }
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(Color(0x99000000)).clickable { p.seekTo(p.currentPosition + 10_000L); shown = true }, contentAlignment = Alignment.Center) {
+                    Text("+10", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            var pos by remember { androidx.compose.runtime.mutableLongStateOf(p.currentPosition) }
+            val dur = p.duration.coerceAtLeast(0L)
+            LaunchedEffect(Unit) { while (true) { pos = p.currentPosition; delay(500) } }
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xAA000000)))).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                Text(miniClock(pos) + " / " + miniClock(dur), color = Color.White, fontSize = 10.sp)
+                // a thin bar: a tap or a drag along it seeks
+                Box(Modifier.fillMaxWidth().height(18.dp).pointerInput(dur) {
+                    fun seek(x: Float) { if (dur > 0L) { val t = (x / size.width).coerceIn(0f, 1f); pos = (dur * t).toLong(); p.seekTo(pos); shown = true } }
+                    awaitEachGesture {
+                        val d = awaitFirstDown(); d.consume(); seek(d.position.x)
+                        while (true) { val ev = awaitPointerEvent(); val c = ev.changes.firstOrNull() ?: break; if (!c.pressed) break; c.consume(); seek(c.position.x) }
+                    }
+                }, contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x55FFFFFF)))
+                    Box(Modifier.fillMaxWidth(if (dur > 0L) (pos.toFloat() / dur).coerceIn(0f, 1f) else 0f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+                }
             }
         }
     }
 }
 
 private fun speedLabel(s: Float): String = (if (s % 1f == 0f) "${s.toInt()}" else "$s") + "x"
+
+private fun miniClock(ms: Long): String { val t = ms / 1000; val h = t / 3600; val m = t % 3600 / 60; val sec = t % 60; return if (h > 0) "%d:%02d:%02d".format(h, m, sec) else "%d:%02d".format(m, sec) }
