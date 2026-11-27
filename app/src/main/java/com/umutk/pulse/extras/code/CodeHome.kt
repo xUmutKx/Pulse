@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -128,29 +130,20 @@ fun CodeHome(back: () -> Unit) {
             }
         }
     }
-    // the menu of the three lines: open, new, and the projects (the files of Documents/Pulse/Code)
-    if (menu) {
-        Box(Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { menu = false })
-        Column(Modifier.statusBarsPadding().padding(top = 56.dp, start = 12.dp).width(300.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF1A1A1A)).padding(vertical = 8.dp)) {
+    // the menu of the three lines: the whole left side (as an editor on a computer): open, new, and the project as a tree (a folder or a zip opened as the project)
+    androidx.compose.animation.AnimatedVisibility(menu, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { menu = false })
+    }
+    if (menu) BackHandler { menu = false }
+    androidx.compose.animation.AnimatedVisibility(menu, enter = androidx.compose.animation.slideInHorizontally { -it }, exit = androidx.compose.animation.slideOutHorizontally { -it }) {
+        var root by remember { mutableStateOf(CodeProject.get(ctx) ?: prefs.getString("root", null)?.let { File(it) }?.takeIf { it.isDirectory } ?: File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").also { it.mkdirs() }) }
+        Column(Modifier.fillMaxHeight().fillMaxWidth(.84f).background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
             listOf(Triple<String, String, () -> Unit>("open", tr("Open a file", "Dosya aç"), { menu = false; pick.launch(arrayOf("*/*")) }), Triple<String, String, () -> Unit>("add", tr("New file", "Yeni dosya"), { menu = false; newFile() })).forEach { (ic, name, act) ->
                 Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon(ic, Color.White, 20.dp); Text(name, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
                 }
             }
-            // the folder tree: the folder you picked (Documents/Pulse/Code at first), folders open and close, a file opens in the editor
-            var root by remember { mutableStateOf(prefs.getString("root", null)?.let { File(it) }?.takeIf { it.isDirectory } ?: File(android.os.Environment.getExternalStorageDirectory(), "Documents/Pulse/Code").also { it.mkdirs() }) }
-            val pickRoot = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
-                val id = u?.let { runCatching { android.provider.DocumentsContract.getTreeDocumentId(it) }.getOrNull() }
-                val path = id?.let { if (it.startsWith("primary:")) android.os.Environment.getExternalStorageDirectory().path + "/" + it.removePrefix("primary:") else "/storage/" + it.replace(":", "/") }
-                if (path != null && File(path).isDirectory) { root = File(path); prefs.edit().putString("root", path).apply() }
-            }
-            Row(Modifier.fillMaxWidth().clickable { pickRoot.launch(null) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon("folder", Color(0xFF8AB4F8), 18.dp); Text(root.name.ifBlank { root.path }, color = Color(0xFF8AB4F8), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
-                PIcon("chevron", Color(0xFF9AA0A6), 16.dp)
-            }
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                CodeTree(root, 0) { f -> menu = false; keep(f); file = f }
-            }
+            ProjectTree(root, "", { f -> menu = false; CodeProject.set(ctx, root); keep(f); file = f }, { r -> root = r; CodeProject.set(ctx, r); prefs.edit().putString("root", r.path).apply() }, null, Modifier.weight(1f).fillMaxWidth())
         }
     }
     }

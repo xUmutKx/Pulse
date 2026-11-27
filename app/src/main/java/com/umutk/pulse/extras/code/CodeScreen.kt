@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -165,12 +167,32 @@ class CodeSource(val name: String, val read: suspend () -> String?, val write: s
 /** The code editor of Files for [file] (a tap on a code file, or "Code editor" in a file's menu). */
 @Composable
 fun CodeEditorDialog(file0: File, startEditing: Boolean = false, onClose: () -> Unit) {
-    // the file on screen: the project panel opens another one in its place
+    val ctx = LocalContext.current
+    // the file on screen and the open files as tabs (as an editor on a computer); the project panel opens another one in its place
     var file by remember(file0) { mutableStateOf(file0) }
+    val open = remember(file0) { androidx.compose.runtime.mutableStateListOf(file0) }
+    var project by remember { mutableStateOf(CodeProject.get(ctx)?.takeIf { file0.path.startsWith(it.path) }) }
     val src = remember(file) {
         CodeSource(file.name, { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }, { runCatching { file.writeText(it) }.isSuccess }, file.parent.orEmpty())
     }
-    androidx.compose.runtime.key(file.path) { CodeEditorHost(src, startEditing, null, null, onClose, onOpen = { file = it }) }
+    val tabs: @Composable () -> Unit = {
+        if (open.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            open.toList().forEach { f ->
+                val on = f.path == file.path
+                Row(Modifier.background(if (on) T.panel else androidx.compose.ui.graphics.Color.Transparent).clickable { file = f }.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(f.name, color = if (on) Look.accent else T.text, fontSize = 13.sp, maxLines = 1)
+                    Box(Modifier.size(26.dp).clickable {
+                        val i = open.indexOfFirst { it.path == f.path }; open.removeAt(i)
+                        if (on) file = open.getOrNull(i.coerceAtMost(open.lastIndex)) ?: run { onClose(); f }
+                    }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 14.dp) }
+                }
+            }
+        }
+    }
+    androidx.compose.runtime.key(file.path) {
+        CodeEditorHost(src, startEditing, null, null, onClose, onOpen = { f -> if (open.none { it.path == f.path }) open.add(f); file = f },
+            projectRoot = project, onProjectRoot = { r -> project = r; CodeProject.set(ctx, r) }, tabs = tabs)
+    }
 }
 
 /**
@@ -179,7 +201,7 @@ fun CodeEditorDialog(file0: File, startEditing: Boolean = false, onClose: () -> 
  * (a note's), [onLang] hears a change of it.
  */
 @Composable
-fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lang?, onLang: ((PulseCode.Lang) -> Unit)?, onClose: () -> Unit, onOpen: ((File) -> Unit)? = null) {
+fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lang?, onLang: ((PulseCode.Lang) -> Unit)?, onClose: () -> Unit, onOpen: ((File) -> Unit)? = null, projectRoot: File? = null, onProjectRoot: ((File) -> Unit)? = null, tabs: (@Composable () -> Unit)? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { ctx.getSharedPreferences("pulse_code", 0) }
@@ -234,11 +256,20 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     val body: @Composable () -> Unit = {
         // black, always (no switch for it); in the Windows 11 look the page is see-through like the Terminal
         val ground = if (T.id == "win11") androidx.compose.ui.graphics.Color.Black.copy(alpha = .36f) else androidx.compose.ui.graphics.Color.Black
+        val conf = androidx.compose.ui.platform.LocalConfiguration.current
+        // sideways the project tree stays beside the editor (as on a computer); upright it slides over the whole left side
+        val docked = onOpen != null && conf.screenWidthDp > conf.screenHeightDp
+        val here = File(src.path, src.name).path
+        val root = projectRoot ?: src.path.takeIf { it.isNotEmpty() }?.let { File(it) }
+        LaunchedEffect(docked) { if (docked && root != null) project = true }
+        fun pick(f: File) { project = false; if (f.path != here) { if (h.dirty) save { onOpen?.invoke(f) } else onOpen?.invoke(f) } }
         Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().background(ground).then(if (inWin) Modifier else Modifier.statusBarsPadding().navigationBarsPadding().imePadding())) {
+        Row(Modifier.fillMaxSize().background(ground).then(if (inWin) Modifier else Modifier.statusBarsPadding().navigationBarsPadding().imePadding())) {
+        if (docked && project) ProjectTree(root, here, { pick(it) }, { r -> onProjectRoot?.invoke(r) }, null, Modifier.fillMaxHeight().width((conf.screenWidthDp * .3f).dp))
+        Column(Modifier.weight(1f).fillMaxHeight()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
-                if (onOpen != null && src.path.isNotEmpty()) TopIcon("menu") { project = true }
+                if (onOpen != null) TopIcon("menu", accent = project) { project = !project }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                     Text(src.name, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     // the project (the folder) and the path of the file, then the type found from the name and the first lines
@@ -268,6 +299,7 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 // a page (html, svg, markdown shown as html) runs: it opens in a window as a browser shows it
                 if ((lang?.label ?: "").lowercase().let { it.contains("html") || it.contains("svg") } || src.name.substringAfterLast('.').lowercase() in setOf("html", "htm", "svg")) TopIcon("play") { runHtml = h.ed?.text?.toString() ?: text }
             }
+            tabs?.invoke()
             if (confirm) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Save the changes?", "Değişiklikler kaydedilsin mi?"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 PButton(tr("Save", "Kaydet"), compact = true) { confirm = false; save { onClose() } }
@@ -307,11 +339,9 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
             if (ai) CodeAiBar(h, lang?.label) { ai = false }
             if (editing) SymbolBar(h)
         }
-        // the project panel over the editor; a file picked there opens in the editor (unsaved changes are saved first)
-        if (onOpen != null) ProjectPanel(project, src.path.takeIf { it.isNotEmpty() }?.let { File(it) }, File(src.path, src.name).path, { f ->
-            project = false
-            if (f.path != File(src.path, src.name).path) { if (h.dirty) save { onOpen(f) } else onOpen(f) }
-        }) { project = false }
+        }
+        // upright: the project panel over the editor; a file picked there opens in the editor (unsaved changes are saved first)
+        if (onOpen != null && !docked) ProjectPanel(project, root, here, { pick(it) }, { r -> onProjectRoot?.invoke(r) }) { project = false }
         }
     }
     if (inWin) body() else Dialog(onDismissRequest = { close() }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)) { body() }
