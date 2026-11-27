@@ -72,6 +72,8 @@ object MusicStats {
         val m = ratings(c).toMutableMap()
         if (stars in 1..5) m[path] = stars else m.remove(path)
         sp(c).edit().putString("ratings", m.entries.joinToString("\n") { "${it.value}\t${it.key}" }).apply()
+        // the taste learns from the stars (an online song is known by its YouTube id, a song of the phone by its path)
+        runCatching { com.umutk.pulse.extras.music.ListenLog.rate(c, com.umutk.pulse.extras.music.OnlineMusic.ofUrl(path)?.second ?: path, stars) }
     }
 
     /** Pulse's own backup of the favourites and the stars (the song paths are the phone's own). */

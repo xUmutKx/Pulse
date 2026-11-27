@@ -57,6 +57,8 @@ object OnlineMusic {
 
     /** What each online stream address in the queue is: its song and YouTube id (the radio and the history need them). */
     private val byUrl = java.util.concurrent.ConcurrentHashMap<String, Pair<Hit, String>>()
+    /** The song and the YouTube id of an online stream address of the queue, or null for a song of the phone. */
+    fun ofUrl(path: String): Pair<Hit, String>? = byUrl[path]
     private var radioJob: kotlinx.coroutines.Job? = null
 
     private fun track(h: Hit, url: String, id: String): Track { OnlineArt.put(url, h.thumb); byUrl[url] = h to id; return Track(path = url, title = h.title, artist = h.artist) }
@@ -77,7 +79,7 @@ object OnlineMusic {
         val queued = queue.mapNotNull { byUrl[it.path]?.second }.toSet()
         val counts = HashMap<String, Int>()
         queue.forEach { t -> byUrl[t.path]?.first?.artist?.let { counts.merge(artistKey(it), 1, Int::plus) } }
-        val all = com.umutk.pulse.extras.ytx.MusicRadio.after(seed).filter { it.id !in played && it.id !in queued }
+        val all = com.umutk.pulse.extras.ytx.MusicRadio.after(seed).filter { it.id !in played && it.id !in queued && !ListenLog.disliked(ctx, it.id, it.channel) }
         if (radioAnchors.isEmpty() && all.isNotEmpty()) { radioAnchors = (listOf(seed) + all.map { it.id }).distinct().take(8); usedAnchors.clear(); usedAnchors.add(seed) }
         var next = all.map { hitOf(it) }.filter { h -> val k = artistKey(h.artist); val c = counts.getOrDefault(k, 0); if (c >= MAX_PER_ARTIST) false else { counts[k] = c + 1; true } }.take(8)
         // the radio gave nothing (no mix for this song): songs of the same artist, as before
@@ -121,7 +123,8 @@ object OnlineMusic {
         val seeds = (hist.take(3).map { it.id } + (if (ytSignedIn(ctx)) ytLiked(ctx).take(2).mapNotNull { it.ytId } else emptyList())).distinct()
         if (seeds.isEmpty()) return youtube(ctx, "top hits this week")
         val played = hist.take(80).map { it.id }.toSet()
-        val lists = seeds.map { s -> com.umutk.pulse.extras.ytx.MusicRadio.after(s).filter { it.id !in played }.map { hitOf(it) } }
+        // what the person gave up (stars, skips) is not offered again
+        val lists = seeds.map { s -> com.umutk.pulse.extras.ytx.MusicRadio.after(s).filter { it.id !in played && !ListenLog.disliked(ctx, it.id, it.channel) }.map { hitOf(it) } }
         val out = LinkedHashMap<String, Hit>()
         var i = 0
         while (out.size < 40 && lists.any { i < it.size }) { lists.forEach { l -> l.getOrNull(i)?.let { h -> h.ytId?.let { id -> out.putIfAbsent(id, h) } } }; i++ }

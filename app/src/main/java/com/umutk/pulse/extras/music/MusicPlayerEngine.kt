@@ -243,6 +243,28 @@ class MusicPlayerEngine private constructor(context: Context) {
             }
         })
         if (MusicSettings.countStats(app)) player.addListener(com.umutk.pulse.extras.music.stats.StatsListener(app, player))
+        // the listening log: every song that starts is saved (online or on the phone) and how the last one ended teaches the taste (ListenLog)
+        player.addListener(object : Player.Listener {
+            private var prevKey: String? = null
+            private var prevArtist = ""
+            private var startedAt = 0L
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                prevKey?.let { k -> if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) runCatching { ListenLog.finished(app, k, prevArtist, now - startedAt, reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) } }
+                val t = mediaItem?.toTrack()
+                if (t == null) { prevKey = null; return }
+                val online = OnlineMusic.ofUrl(t.path)
+                val key = online?.second ?: t.path
+                val artist = t.artist ?: online?.first?.artist.orEmpty()
+                val title = t.title?.takeIf { it.isNotBlank() } ?: online?.first?.title ?: t.path.substringAfterLast('/').substringBeforeLast('.')
+                runCatching {
+                    ListenLog.record(app, key, title, artist, online != null)
+                    // an online song also goes to the online history with its picture (the "History" and "For you" of the browse page start from it)
+                    online?.let { (hit, id) -> OnlineHistory.record(app, id, hit.title, hit.artist, hit.thumb) }
+                }
+                prevKey = key; prevArtist = artist; startedAt = now
+            }
+        })
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) equalizer.attach(player.audioSessionId)
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { publish(); if (!isPlaying) saveResume(); watch(isPlaying) }
