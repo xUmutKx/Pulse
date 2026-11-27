@@ -142,7 +142,7 @@ object OnlineMusic {
      * Plays [list] from [index] in the music player itself (its engine, its queue, its notification, whichever look is on): nothing else opens.
      * The tapped song starts first; the next ones are found in the background and join the queue as they are ready.
      */
-    suspend fun playHere(ctx: Context, list: List<Hit>, index: Int): Boolean {
+    suspend fun playHere(ctx: Context, list: List<Hit>, index: Int, max: Int = 15): Boolean {
         val h = list.getOrNull(index) ?: return false
         ytInit(ctx)
         radioJob?.cancel()
@@ -152,7 +152,7 @@ object OnlineMusic {
         withContext(Dispatchers.Main) { engine.playQueue(listOf(track(h, first, seedId)), 0) }
         // the radio runs from the first song on (it fills the queue behind the rest of the list and goes on for as long as online songs play)
         startRadio(ctx, engine, seedId)
-        val rest = list.drop(index + 1).take(15)
+        val rest = list.drop(index + 1).take(max)
         for (n in rest) {
             val id = withContext(Dispatchers.IO) { idOf(ctx, n) } ?: continue
             val u = withContext(Dispatchers.IO) { streamUrl(id) } ?: continue

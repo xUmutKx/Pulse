@@ -35,7 +35,6 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Unit) {
-    BackHandler { onBack() }
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var tab by remember { mutableIntStateOf(startTab) }           // 0 YouTube Music, 1 Spotify
@@ -55,7 +54,13 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
         suggest = runCatching { OnlineMusic.forYou(ctx) }.getOrDefault(emptyList()).take(14)
     }
     // "Played": everything that was listened to in the player (online and on the phone), searched and filtered here
+    // artists that fit the search, and the artist page (their albums, Play artist)
+    var artists by remember { mutableStateOf<List<OnlineArtists.Artist>>(emptyList()) }
+    var artist by remember { mutableStateOf<OnlineArtists.Artist?>(null) }
+    var albums by remember { mutableStateOf<List<OnlineArtists.Album>>(emptyList()) }
+    LaunchedEffect(artist) { albums = emptyList(); artist?.let { a -> albums = OnlineArtists.albums(ctx, a.name) } }
     var played by remember { mutableStateOf(false) }
+    BackHandler { if (artist != null) artist = null else onBack() }
     var playedKind by remember { mutableIntStateOf(0) }   // 0 all, 1 online, 2 on the phone
     fun show(t: String, load: suspend () -> List<OnlineMusic.Hit>) { played = false; title = t; busy = true; scope.launch { list = runCatching { load() }.getOrDefault(emptyList()); busy = false } }
     LaunchedEffect(tab) {
@@ -76,7 +81,9 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
     LaunchedEffect(query, tab, played) {
         if (played || query.trim().length < 2) return@LaunchedEffect
         delay(600)
+        artist = null
         show("“$query”") { if (tab == 0) OnlineMusic.youtube(ctx, query) else OnlineMusic.spotify(ctx, query) }
+        artists = if (tab == 0) OnlineArtists.artists(ctx, query.trim()) else emptyList()
     }
     // Spotify needs its sign-in first: the login page itself opens here (not a note pointing at the settings)
     LaunchedEffect(Unit) { com.umutk.pulse.extras.spotify.SpotifyAuth.restore(ctx) }
@@ -119,6 +126,35 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
             }
         }
         if (tab == 1 && spLists.isEmpty() && list.isEmpty() && !busy) Text(com.umutk.pulse.extras.spotify.SpotifyApi.lastError.ifEmpty { tr("Nothing came back from Spotify. Open the log-in screen (the power icon in Spotify) and use Test the connection.", "Spotify’dan bir şey gelmedi. Giriş ekranını aç (Spotify’daki güç simgesi) ve Bağlantıyı dene’yi kullan.") }, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        val ar = artist
+        if (tab == 0 && ar != null) {
+            // the artist's page: their picture and name, Play artist (every song of theirs), and their albums
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                coil.compose.AsyncImage(ar.thumb, null, Modifier.size(64.dp).clip(RoundedCornerShape(32.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                Text(ar.name, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).background(Look.accent).clickable {
+                    scope.launch { busy = true; title = ar.name; val all = OnlineArtists.artistSongs(ctx, ar.name); list = all; busy = false; if (all.isNotEmpty() && !OnlineMusic.playHere(ctx, all, 0, max = 200)) OnlineMusic.play(ctx, all[0]) }
+                }, contentAlignment = Alignment.Center) { PIcon("play", androidx.compose.ui.graphics.Color.White, 22.dp) }
+            }
+            if (albums.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(albums) { al ->
+                    Column(Modifier.width(110.dp).clickable { show(al.title) { OnlineArtists.albumSongs(ctx, al) } }) {
+                        coil.compose.AsyncImage(al.thumb, al.title, Modifier.size(110.dp).clip(RoundedCornerShape(14.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                        Text(al.title, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+        } else if (tab == 0 && artists.isNotEmpty() && query.isNotBlank()) {
+            // the artists that fit the search, as round pictures: a tap opens the artist
+            androidx.compose.foundation.lazy.LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(artists) { a0 ->
+                    Column(Modifier.width(84.dp).clickable { artist = a0; show(a0.name) { OnlineArtists.artistSongs(ctx, a0.name) } }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        coil.compose.AsyncImage(a0.thumb, a0.name, Modifier.size(72.dp).clip(RoundedCornerShape(36.dp)).background(T.panel), contentScale = ContentScale.Crop)
+                        Text(a0.name, color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+        }
         Text(if (busy) tr("Loading…", "Yükleniyor…") else title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }

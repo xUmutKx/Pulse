@@ -223,8 +223,9 @@ fun PowerampApp(
                     when (t) {
                         null -> NowPlayingScreen(
                             track = track,
-                            index = st.index,
-                            total = st.queue.size,
+                            // a song from YouTube counts among the online songs of the queue (its mix), not among the songs of the phone
+                            index = if (track != null && com.umutk.pulse.extras.music.OnlineArt.isOnline(track.path)) st.queue.take(st.index).count { com.umutk.pulse.extras.music.OnlineArt.isOnline(it.path) } else st.index,
+                            total = if (track != null && com.umutk.pulse.extras.music.OnlineArt.isOnline(track.path)) st.queue.count { com.umutk.pulse.extras.music.OnlineArt.isOnline(it.path) } else st.queue.size,
                             art = cover,
                             artPrev = artPrev,
                             artNext = artNext,
