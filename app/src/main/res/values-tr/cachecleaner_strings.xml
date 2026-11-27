@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cachecleaner_service_desc">Yalnızca Pulse önbellek temizleyicisi çalışırken kullanılır: her uygulamanın ayar sayfasını açar ve Önbelleği temizle düğmesine basar. Yalnızca sistem ayarları uygulamalarını dinler.</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cache cleaner without root (applock/CacheCleanService.kt): while it runs, it opens each app's settings page and presses Storage > Clear cache, as SD Maid's app cleaner does.
+     It only listens to the settings apps of the phone, and only does anything while the cleaner is running. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:packageNames="com.android.settings,com.samsung.android.settings,com.miui.securitycenter,com.coloros.phonemanager,com.oplus.phonemanager,com.huawei.systemmanager,com.vivo.abe"
+    android:notificationTimeout="150"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/cachecleaner_service_desc" />

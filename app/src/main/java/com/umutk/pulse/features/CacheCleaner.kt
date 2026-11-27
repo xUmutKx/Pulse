@@ -157,8 +157,18 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
                     scan()
                 }
             }) { Text("Free ${Guard.gb(total)} (system)") }
+            // app by app through the accessibility service (opens each app's settings and presses Clear cache), the way SD Maid does it without root
+            val pk = list.filter { it.pkg != null && it.shownSize > 0L }.sortedByDescending { it.shownSize }.mapNotNull { it.pkg }
+            if (pk.isNotEmpty() && !com.umutk.pulse.applock.CacheCleanService.running) Button(onClick = {
+                if (!com.umutk.pulse.applock.CacheCleanService.start(pk)) {
+                    result = com.umutk.pulse.tr("Switch on \"Pulse · Cache cleaner\" in Accessibility settings, then press again.", "Erişilebilirlik ayarlarında \"Pulse · Cache cleaner\" servisini aç, sonra tekrar bas.")
+                    runCatching { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }
+            }) { Text(com.umutk.pulse.tr("Clean app by app", "Uygulama uygulama temizle")) }
+            if (com.umutk.pulse.applock.CacheCleanService.running) Button(onClick = { com.umutk.pulse.applock.CacheCleanService.stop() }) { Text(com.umutk.pulse.tr("Stop", "Durdur")) }
         }
 
+        if (com.umutk.pulse.applock.CacheCleanService.running || com.umutk.pulse.applock.CacheCleanService.status.isNotEmpty()) Text(com.umutk.pulse.applock.CacheCleanService.status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
         progress?.let { (done, total) ->
             Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
                 com.umutk.pulse.Busy(if (total == 0) 0f else done.toFloat() / total)

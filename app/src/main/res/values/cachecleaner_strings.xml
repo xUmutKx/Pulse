@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cachecleaner_service_desc">Used only while the Pulse cache cleaner runs: opens the settings page of each app and presses Clear cache. Listens to the settings apps only.</string>
+</resources>
