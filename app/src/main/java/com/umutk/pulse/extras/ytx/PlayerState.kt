@@ -388,7 +388,7 @@ class PlayerState(private val scope: CoroutineScope) {
             fadeInNext = true
         }
         current = item
-        if (isMusicMode) RecentMusic.record(item)
+        if (isMusicMode) RecentMusic.record(item) else WatchedLog.record(item)
         details = null
         error = null
         firstFrameRendered = false

@@ -163,7 +163,7 @@ class LibraryData(scope: CoroutineScope) {
 
     val home = FeedState(scope, freshOnRefresh = true) { InnerTube.homeFeed(it) }
     val subscriptions = FeedState(scope) { InnerTube.subscriptionsFeed(it) }
-    val history = FeedState(scope) { InnerTube.history(it) }
+    val history = FeedState(scope) { if (Account.signedIn) InnerTube.history(it) else FeedPage(WatchedLog.all(), null) }
     var channels by mutableStateOf<List<ChannelRef>>(emptyList())
         private set
     var playlists by mutableStateOf<List<PlaylistRef>>(emptyList())
