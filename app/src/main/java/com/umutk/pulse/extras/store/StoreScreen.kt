@@ -411,7 +411,7 @@ private fun builtinRows(): List<BuiltinRow> {
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health", route = "health") { openTool("health") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer", route = "installer") { openTool("installer") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock", route = "goodlock") { openTool("goodlock") },
-    ).filter { it.place != "app:ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL }
+    ).filter { it.place != "app:ArtCraftLauncher" || (com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE) }
 }
 
 /** The extra apps as rows of the icon page (Extra apps > ⚙). */

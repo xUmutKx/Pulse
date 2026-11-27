@@ -30,7 +30,7 @@ class FastWatch(private val onResumed: (pkg: String, cls: String) -> Unit) {
     private fun open(): Process? {
         val cmd = "exec logcat -b events -T 1 -v brief -s wm_set_resumed_activity wm_resume_activity am_set_resumed_activity 2>&1"
         return if (Shell.shizukuOk()) Shizuku.newProcess(arrayOf("sh", "-c", cmd), null, null)
-        else if (Shell.root == true) ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+        else if (Shell.root == true && !com.umutk.pulse.BuildConfig.SAFE) ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
         else null
     }
 

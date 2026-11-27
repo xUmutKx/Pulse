@@ -9,7 +9,7 @@ internal object TroubleShell {
     fun run(cmd: String): String {
         if (!allowed(cmd)) return tx("Blocked by the safety filter", "Güvenlik filtresi engelledi")
         return try {
-            val p = ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start()
+            val p = ProcessBuilder(if (com.umutk.pulse.BuildConfig.SAFE) listOf("sh", "-c", cmd) else listOf("su", "-c", cmd)).redirectErrorStream(true).start()
             // Read on a side thread: reading here first would block forever on a hung command, so the timeout never fired.
             var out = ""
             val reader = Thread { out = p.inputStream.bufferedReader().readText() }

@@ -65,7 +65,7 @@ object Shell {
      * Always as root, never Shizuku (shell uid cannot read other apps' data). [mode] 0 plain su, 1 su --mount-master (global mount view),
      * 2 nsenter into PID 1's mount namespace. Output includes stderr.
      */
-    fun runRoot(cmd: String, mode: Int = 0): String = exec {
+    fun runRoot(cmd: String, mode: Int = 0): String = if (BuildConfig.SAFE) "" else exec {
         ProcessBuilder(when (mode) {
             1 -> listOf("su", "--mount-master", "-c", cmd)
             2 -> listOf("su", "-c", "nsenter -t 1 -m -- sh -c " + q(cmd))
@@ -127,7 +127,7 @@ object Shell {
         runCatching { ctx.packageManager.getPackageInfo(it, 0); true }.getOrDefault(false)
     }
 
-    fun shizukuOk(): Boolean = runCatching {
+    fun shizukuOk(): Boolean = !BuildConfig.SAFE && runCatching {
         Shizuku.pingBinder() && !Shizuku.isPreV11() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
@@ -182,6 +182,8 @@ object Shell {
     @Volatile private var detecting = false
 
     fun detectRoot(): Boolean {
+        // the safe (lite) build never asks for root
+        if (BuildConfig.SAFE) { root = false; return false }
         if (detecting) return root == true
         detecting = true
         try { return detectRootNow() } finally { detecting = false }

@@ -33,6 +33,7 @@ object Privilege {
 
     /** Looks at what is available now (Shizuku or root) and remembers it. [prefer] forces one of them. */
     fun detect(prefer: String = "auto"): Mode {
+        if (com.umutk.pulse.BuildConfig.SAFE) { mode = Mode.None; detail = ""; return mode }
         Shell.refreshShizuku()
         if (prefer != "root" && Shell.shizukuOk()) { mode = Mode.Shizuku; detail = "Shizuku"; return mode }
         if (prefer != "shizuku" && tryRoot()) return mode

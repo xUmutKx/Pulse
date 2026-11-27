@@ -639,7 +639,7 @@ object SeasonDl {
     @Composable
     fun Card(page: Boolean = false, shelf: Boolean = false) {
         // the free-software builds only: the Google Play build has neither this card nor the torrent engine
-        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return
+        if (!(com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE)) return
         val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
         val open = page

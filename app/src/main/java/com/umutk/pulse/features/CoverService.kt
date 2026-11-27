@@ -209,7 +209,7 @@ class CoverService : Service() {
     private fun openQuickPanel() {
         stopSelf()
         // shortcut: root shell call, no check for the panel actually opening; the cover closes either way, upgrade to StatusBarManager when the platform grants it
-        main.postDelayed({ Thread { runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-settings")).waitFor() } }.start() }, 300L)
+        main.postDelayed({ Thread { runCatching { if (!com.umutk.pulse.BuildConfig.SAFE) Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-settings")).waitFor() } }.start() }, 300L)
     }
 
     /** Closes the cover, then opens notification history through its launcher alias (ExtraToolActivity.routeOf maps it to "notifhist"). */

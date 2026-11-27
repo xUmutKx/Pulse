@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The lite app is the "safe" one: none of the rights an app scanner reads as a banking trojan or spyware.
+     No root or Shizuku, no SMS / MMS, no accessibility services (App lock, auto clicker, cache cleaner, cover, App watch, keyboard helper), no APK installs (ArtCraft),
+     no call log, no secure settings. The pages of those tools say they are not in this build. The full app keeps all of them. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" />
+    <application>
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsDeliverReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
+        <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />
+        <provider android:name="rikka.shizuku.ShizukuProvider" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.AutoClickService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.CoverAccessibilityService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.CacheCleanService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.LockService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.blackout.AppWatch" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.keyboard.AccessKeyboardService" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.ArtCraftActivity" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.ArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyArtCraftLauncher" tools:node="remove" />
+    </application>
+</manifest>

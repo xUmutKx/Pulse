@@ -51,7 +51,7 @@ private object TermSession {
     @Synchronized fun start(home: String, root: Boolean) {
         stop(); asRoot = root; cwd = home
         // shortcut: no pty, so full-screen programs (vim, top) and Ctrl-C of the shell itself are unsupported
-        val p = try { ProcessBuilder(if (root) listOf("su") else listOf("/system/bin/sh")).directory(java.io.File(home)).redirectErrorStream(true)
+        val p = try { ProcessBuilder(if (root && !com.umutk.pulse.BuildConfig.SAFE) listOf("su") else listOf("/system/bin/sh")).directory(java.io.File(home)).redirectErrorStream(true)
             .apply { environment()["HOME"] = home }.start() } catch (e: Exception) { text += "Cannot start shell: ${e.message}\n"; return }
         proc = p
         pid = runCatching { p.javaClass.getDeclaredField("pid").apply { isAccessible = true }.getLong(p) }.getOrDefault(-1L)

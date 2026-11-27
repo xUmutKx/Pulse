@@ -167,7 +167,7 @@ class MotionCueService : Service() {
                 stopSelf()
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     com.umutk.pulse.extras.launcher.globalAction(applicationContext, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
-                    Thread { runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-settings")).waitFor() } }.start()
+                    Thread { runCatching { if (!com.umutk.pulse.BuildConfig.SAFE) Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-settings")).waitFor() } }.start()
                 }, 250L)
                 return true
             }

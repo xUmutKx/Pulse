@@ -225,7 +225,7 @@ open class MainActivity : ComponentActivity() {
             com.umutk.pulse.features.FilesLaunch.full = true; com.umutk.pulse.widgets.WidgetOpen.page = "files"; return
         }
         if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
-        if (i?.type == "application/vnd.android.package-archive" && BuildConfig.APK_INSTALL) {
+        if (i?.type == "application/vnd.android.package-archive" && (BuildConfig.APK_INSTALL && !BuildConfig.SAFE)) {
             val uri = IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
             if (uri != null) handleApk(uri)
             return
@@ -376,7 +376,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         // after a crash: the offer to send a bug report; in the lite build: the old Pulse AI models, once
         if (SplashGate.splashed && welcomed && wctx !is FilesActivity) { CrashReportPrompt(); LiteModelsPrompt() }
         // the GitHub update window only in the foss build: the play build gets its updates from Google Play
-        if (SplashGate.splashed && welcomed && wctx !is FilesActivity && BuildConfig.APK_INSTALL) UpdatePrompt()
+        if (SplashGate.splashed && welcomed && wctx !is FilesActivity && (BuildConfig.APK_INSTALL && !BuildConfig.SAFE)) UpdatePrompt()
     }
 }
 

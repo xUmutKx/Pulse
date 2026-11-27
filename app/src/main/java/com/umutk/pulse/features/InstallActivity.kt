@@ -30,7 +30,7 @@ class InstallActivity : ComponentActivity() {
         // a browser that says "octet-stream" for every download sends all of them here: only a real package installs, any other file goes to the app that opens its kind
         if (intent.getStringArrayListExtra("apks").isNullOrEmpty() && intent.data?.let { notPackage(it) } == true) { handOn(intent.data!!); finish(); return }
         // the play build does not install APK files (no REQUEST_INSTALL_PACKAGES there)
-        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) {
+        if (!(com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE)) {
             android.widget.Toast.makeText(this, com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"), android.widget.Toast.LENGTH_LONG).show()
             finish(); return
         }

@@ -721,7 +721,7 @@ private fun ExtraAppsCard() {
         Triple("TerminalLauncher", R.drawable.launch_terminal, "Terminal"),
         Triple("YtxLauncher", R.drawable.ytx_ic_glass, "YTXTube"),
     // ArtCraft installs APK files: it is not in the Play build (its launcher entry is removed from the manifest there)
-    ).filter { it.first != "ArtCraftLauncher" || BuildConfig.APK_INSTALL }
+    ).filter { it.first != "ArtCraftLauncher" || (BuildConfig.APK_INSTALL && !BuildConfig.SAFE) }
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),

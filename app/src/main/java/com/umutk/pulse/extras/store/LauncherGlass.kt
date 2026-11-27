@@ -35,7 +35,7 @@ object LauncherGlass {
         "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "PaintLauncher", "BrowserLauncher", "OfficeLauncher", "CalculatorLauncher", "ClockLauncher",
         "EbookLauncher", "TempMailLauncher", "KeyboardLauncher", "AiLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher",
         "CodeLauncher", "HealthLauncher", "NotifHistLauncher", "ExtraStoreLauncher", "LocalSendLauncher", "PaletteLauncher", "GameHubLauncher", "BlackOutLauncher",
-    ).filter { it != "ArtCraftLauncher" || com.umutk.pulse.BuildConfig.APK_INSTALL } // the Play build has no ArtCraft (its icons are not in its manifest)
+    ).filter { it != "ArtCraftLauncher" || (com.umutk.pulse.BuildConfig.APK_INSTALL && !com.umutk.pulse.BuildConfig.SAFE) } // the Play build has no ArtCraft (its icons are not in its manifest)
 
     /** Pulse's other icons (the Windows looks): they are off while a default or glass icon is applied. */
     private val MAIN_OTHERS = listOf("IconWin95", "IconXp", "IconWin7", "IconWin10", "IconWin11")
