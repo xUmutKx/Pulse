@@ -34,6 +34,8 @@ object KeyboardEffects {
         "Neon" to "Neon", "Ember" to "Kor", "Snow" to "Kar", "Matrix" to "Matrix", "Smoke" to "Duman",
         "RGB halo" to "RGB hale", "RGB edge" to "RGB şerit", "Rainbow" to "Gökkuşağı", "Pulse" to "Nabız",
         "RGB keycap" to "RGB tuş kenarı",
+        // the splashes of Keys Cafe (as WM Keyboard draws them, MIT): paint thrown over the keys, ink that spreads, confetti, hearts, bubbles
+        "Paint" to "Boya", "Ink" to "Mürekkep", "Confetti" to "Konfeti", "Hearts" to "Kalpler", "Bubbles" to "Baloncuk",
     )
     val colorNames = listOf("Theme" to "Tema", "Cyan" to "Camgöbeği", "Pink" to "Pembe", "Green" to "Yeşil", "RGB" to "RGB", "Custom" to "Özel")
     /** The colour of one press: the chosen neon, or (RGB) a hue that moves with the time of the press. */
@@ -141,6 +143,42 @@ object KeyboardEffects {
                 val x = c.x + (rnd.nextFloat() - .5f) * kw * .9f
                 val y = c.y - kh * .9f * p * (.6f + rnd.nextFloat() * .6f)
                 drawCircle(Color(0xFF9E9E9E).copy(alpha = .3f * fade), kh * (.25f + .6f * p) * (.7f + rnd.nextFloat() * .5f), Offset(x, y))
+            }
+            // paint: a splat of a bright colour (each press its own), its drops thrown out around it
+            21 -> {
+                val col = Color.hsv((seed * 47 % 360).toFloat(), .75f, 1f)
+                val grow = (p * 4f).coerceAtMost(1f)
+                drawCircle(col.copy(alpha = .75f * fade), kh * .55f * grow, c)
+                repeat(9) { i ->
+                    val a = i / 9f * 2f * PI.toFloat() + rnd.nextFloat() * .6f
+                    val d = kh * (.5f + 1.2f * p) * (.6f + rnd.nextFloat() * .6f)
+                    drawCircle(col.copy(alpha = .8f * fade), kh * (.06f + .1f * rnd.nextFloat()) * grow, Offset(c.x + cos(a) * d, c.y + sin(a) * d))
+                }
+            }
+            // ink: a dark blot that spreads slowly with a soft edge
+            22 -> { val r = kh * (.3f + 1.4f * kotlin.math.sqrt(p)); drawCircle(Brush.radialGradient(listOf(Color(0xFF1A237E).copy(alpha = .7f * fade), Color(0xFF1A237E).copy(alpha = .35f * fade), Color.Transparent), c, r), r, c) }
+            // confetti: small bright squares and strips that fly up and fall
+            23 -> repeat(14) {
+                val col = Color.hsv(rnd.nextFloat() * 360f, .8f, 1f)
+                val vx = (rnd.nextFloat() - .5f) * kw * 2.4f; val vy = -kh * (1.2f + rnd.nextFloat() * 1.4f)
+                val x = c.x + vx * p; val y = c.y + vy * p + kh * 3f * p * p
+                val s0 = kh * .09f
+                drawRect(col.copy(alpha = fade), Offset(x - s0 / 2, y - s0 / 4), Size(s0, s0 / (1f + rnd.nextFloat() * 2f)))
+            }
+            // hearts: a few rise and fade
+            24 -> repeat(4) {
+                val x = c.x + (rnd.nextFloat() - .5f) * kw * 1.2f
+                val y = c.y - kh * (.1f + 1.6f * p) * (.6f + rnd.nextFloat() * .6f)
+                val r = kh * .12f * (1f - p * .3f)
+                val col = Color(0xFFFF4D8D).copy(alpha = fade)
+                drawCircle(col, r, Offset(x - r * .55f, y)); drawCircle(col, r, Offset(x + r * .55f, y))
+                drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(x - r * 1.5f, y + r * .2f); lineTo(x + r * 1.5f, y + r * .2f); lineTo(x, y + r * 1.9f); close() }, col)
+            }
+            // bubbles: rings that float up and grow
+            25 -> repeat(6) {
+                val x = c.x + (rnd.nextFloat() - .5f) * kw * 1.3f + sin(p * 6f + it) * kh * .1f
+                val y = c.y - kh * (.2f + 1.5f * p) * (.5f + rnd.nextFloat() * .7f)
+                drawCircle(accent.copy(alpha = .7f * fade), kh * (.06f + .12f * p) * (.7f + rnd.nextFloat() * .6f), Offset(x, y), style = Stroke(1.5.dp.toPx()))
             }
         }
     }
