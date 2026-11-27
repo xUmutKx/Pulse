@@ -106,11 +106,11 @@ internal fun subStyle(prefs: VideoPrefs): CaptionStyleCompat = CaptionStyleCompa
 internal fun subTextSp(p: VideoPrefs, pip: Boolean = false): Float = if (pip) p.subSizePip.coerceAtLeast(18) * 0.6f else p.subSize.coerceAtLeast(18).toFloat()
 
 /** Applies every subtitle option to the player's subtitle view. */
-internal fun SubtitleView.applySubPrefs(p: VideoPrefs, pip: Boolean = false) {
+internal fun SubtitleView.applySubPrefs(p: VideoPrefs, pip: Boolean = false, landscape: Boolean? = null) {
     setStyle(subStyle(p))
     // the small window: the text is a share of the window's height, so it stays readable at any PiP size
     if (pip) setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * p.subSizePip.coerceAtLeast(18) / 12f)
-    else setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, if (resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT) p.subSizePort.coerceAtLeast(18).toFloat() else subTextSp(p, pip))
+    else setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, if (!(landscape ?: (resources.configuration.orientation != android.content.res.Configuration.ORIENTATION_PORTRAIT))) p.subSizePort.coerceAtLeast(18).toFloat() else subTextSp(p, pip))
     setApplyEmbeddedStyles(!p.subIgnoreStyle); setApplyEmbeddedFontSizes(false)
     setBottomPaddingFraction(p.subPos.coerceIn(0, 40) / 100f)
     val m = (p.subMargin * resources.displayMetrics.density).toInt()

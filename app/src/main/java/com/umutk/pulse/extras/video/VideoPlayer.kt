@@ -712,6 +712,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         },
     ) {
         val shape = when (aspect) { 3 -> Modifier.align(Alignment.Center).aspectRatio(16f / 9f); 4 -> Modifier.align(Alignment.Center).aspectRatio(4f / 3f); else -> Modifier.fillMaxSize() }
+        // the screen's turn (and size) as Compose sees it: when the phone turns, the subtitles take the size of that side at once (they kept the upright size until the next turn)
+        val conf = androidx.compose.ui.platform.LocalConfiguration.current
+        val landscape = conf.screenWidthDp > conf.screenHeightDp
         Box(shape.graphicsLayer { scaleX = zoom; scaleY = zoom; translationX = panX; translationY = panY }) {
             AndroidView(
                 factory = { PlayerView(it).apply { useController = false; setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER) } },
@@ -721,7 +724,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     if (subView !== it.subtitleView) subView = it.subtitleView
                     rev.let { _ ->
                         it.subtitleView?.apply {
-                            applySubPrefs(prefs, inPip)
+                            applySubPrefs(prefs, inPip, landscape)
                         }
                     }
                 },
