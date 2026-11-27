@@ -202,6 +202,14 @@ fun KeyboardSettings(back: () -> Unit) {
                     PChip(KeyboardPrefs.keyIcons == k, n) { KeyboardPrefs.keyIcons = k; save() }
                 }
             }
+            // a theme copied from a screenshot of another keyboard: its colours go into the Custom theme
+            val pickShot = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+                if (u != null) KbThemeCopy.read(ctx, u)?.let { c ->
+                    KeyboardPrefs.cBg = c.bg; KeyboardPrefs.cKey = c.key; KeyboardPrefs.cSpecial = c.special; KeyboardPrefs.cText = c.text; KeyboardPrefs.cAccent = c.accent; KeyboardPrefs.cMenu = c.bg
+                    KeyboardPrefs.theme = "custom"; save()
+                }
+            }
+            PButton(tr("Copy a theme from a screenshot", "Ekran görüntüsünden tema kopyala"), compact = true, modifier = Modifier.padding(top = 8.dp)) { runCatching { pickShot.launch(arrayOf("image/*")) } }
             if (KeyboardPrefs.theme == "custom") {
                 ColorEditor(tr("Background", "Arka plan"), KeyboardPrefs.cBg) { KeyboardPrefs.cBg = it; save() }
                 ColorEditor(tr("Keys", "Tuşlar"), KeyboardPrefs.cKey) { KeyboardPrefs.cKey = it; save() }
