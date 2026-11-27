@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.UnfoldLess
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material.icons.outlined.ZoomIn
+import androidx.compose.material.icons.outlined.AutoAwesome
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
@@ -118,6 +119,10 @@ fun CodePane(h: CodeHandle, text: String, lang: PulseCode.Lang?, editable: Boole
             ed.setColorScheme(s)
             ed.setEditorLanguage(PulseCode.language(lang?.scope))
         }
+        // the grammar's theme puts its own grey ground back when it finishes loading: the ground is set again until it holds (AMOLED black)
+        fun ground() { val cs = ed.colorScheme; if (cs.getColor(EditorColorScheme.WHOLE_BACKGROUND) != bg || cs.getColor(EditorColorScheme.LINE_NUMBER_BACKGROUND) != bg) {
+            cs.setColor(EditorColorScheme.WHOLE_BACKGROUND, bg); cs.setColor(EditorColorScheme.LINE_NUMBER_BACKGROUND, bg); ed.invalidate() } }
+        ground(); ed.post { ground() }; ed.postDelayed({ ground() }, 400L); ed.postDelayed({ ground() }, 1500L)
         if (ed.isEditable != editable) ed.setEditable(editable)
         if (ed.isWordwrap != wrap) ed.setWordwrap(wrap)
         if (h.sizeSet != textSp) { h.sizeSet = textSp; ed.setTextSize(textSp) }
@@ -159,11 +164,13 @@ class CodeSource(val name: String, val read: suspend () -> String?, val write: s
 
 /** The code editor of Files for [file] (a tap on a code file, or "Code editor" in a file's menu). */
 @Composable
-fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> Unit) {
+fun CodeEditorDialog(file0: File, startEditing: Boolean = false, onClose: () -> Unit) {
+    // the file on screen: the project panel opens another one in its place
+    var file by remember(file0) { mutableStateOf(file0) }
     val src = remember(file) {
         CodeSource(file.name, { if (file.length() > 6_000_000L) null else PulseCode.readText(file) }, { runCatching { file.writeText(it) }.isSuccess }, file.parent.orEmpty())
     }
-    CodeEditorHost(src, startEditing, null, null, onClose)
+    androidx.compose.runtime.key(file.path) { CodeEditorHost(src, startEditing, null, null, onClose, onOpen = { file = it }) }
 }
 
 /**
@@ -172,7 +179,7 @@ fun CodeEditorDialog(file: File, startEditing: Boolean = false, onClose: () -> U
  * (a note's), [onLang] hears a change of it.
  */
 @Composable
-fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lang?, onLang: ((PulseCode.Lang) -> Unit)?, onClose: () -> Unit) {
+fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lang?, onLang: ((PulseCode.Lang) -> Unit)?, onClose: () -> Unit, onOpen: ((File) -> Unit)? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { ctx.getSharedPreferences("pulse_code", 0) }
@@ -191,6 +198,9 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     var matches by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
+    // the project panel (the folder of the file, on the whole left side) and Pulse AI's bar
+    var project by remember { mutableStateOf(false) }
+    var ai by remember { mutableStateOf(false) }
 
     LaunchedEffect(src) {
         val t = withContext(Dispatchers.IO) { src.read() }
@@ -224,9 +234,11 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
     val body: @Composable () -> Unit = {
         // black, always (no switch for it); in the Windows 11 look the page is see-through like the Terminal
         val ground = if (T.id == "win11") androidx.compose.ui.graphics.Color.Black.copy(alpha = .36f) else androidx.compose.ui.graphics.Color.Black
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(ground).then(if (inWin) Modifier else Modifier.statusBarsPadding().navigationBarsPadding().imePadding())) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TopIcon("back") { close() }
+                if (onOpen != null && src.path.isNotEmpty()) TopIcon("menu") { project = true }
                 Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                     Text(src.name, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     // the project (the folder) and the path of the file, then the type found from the name and the first lines
@@ -263,6 +275,7 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 PButton(tr("Cancel", "Vazgeç"), compact = true) { confirm = false }
             }
             if (tools) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ToolIcon(androidx.compose.material.icons.Icons.Outlined.AutoAwesome, ai) { ai = !ai; if (ai && !editing) { h.ed?.let { ed -> h.quiet { PulseCode.unfoldAll(ed, h.folds) } }; editing = true } }
                 ToolIcon(Icons.Outlined.WrapText, wrap) { wrap = !wrap; prefs.edit().putBoolean("wrap", wrap).apply() }
                 if (!editing) {
                     ToolIcon(Icons.Outlined.ExpandLess) { h.ed?.let { ed -> h.quiet { if (!PulseCode.foldAtCursor(ed, h.folds)) note = tr("No block here", "Burada blok yok") } } }
@@ -291,7 +304,14 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 if (t == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, modifier = Modifier.align(Alignment.Center))
                 else CodePane(h, t, lang, editing, wrap, size, Modifier.fillMaxSize(), bgOverride = ground)
             }
+            if (ai) CodeAiBar(h, lang?.label) { ai = false }
             if (editing) SymbolBar(h)
+        }
+        // the project panel over the editor; a file picked there opens in the editor (unsaved changes are saved first)
+        if (onOpen != null) ProjectPanel(project, src.path.takeIf { it.isNotEmpty() }?.let { File(it) }, File(src.path, src.name).path, { f ->
+            project = false
+            if (f.path != File(src.path, src.name).path) { if (h.dirty) save { onOpen(f) } else onOpen(f) }
+        }) { project = false }
         }
     }
     if (inWin) body() else Dialog(onDismissRequest = { close() }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false, decorFitsSystemWindows = false)) { body() }
