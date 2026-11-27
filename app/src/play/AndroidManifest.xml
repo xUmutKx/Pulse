@@ -14,7 +14,16 @@
     <application>
         <!-- ArtCraft downloads and installs APK files of another project: not in the Play build -->
         <activity android:name="com.umutk.pulse.ArtCraftActivity" tools:node="remove" />
+        <!-- every launcher icon of ArtCraft goes with it: an alias whose activity is gone breaks the whole package ("can't install" on every phone) -->
         <activity-alias android:name="com.umutk.pulse.ArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyArtCraftLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyArtCraftLauncher" tools:node="remove" />
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />
     </application>
 </manifest>
