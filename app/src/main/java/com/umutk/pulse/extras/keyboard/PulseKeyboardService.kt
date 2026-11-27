@@ -1330,12 +1330,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // a full stop behind a word of the dictionary ends a sentence (not in addresses, passwords or numbers): the space and the capital come with the next letter
             val before = word.toString().lowercase(lang.locale)
             // the names of well-known sites are not sentence ends ("youtube." goes on as "youtube.com")
-            val dotOk = ch == '.' && before.length >= 2 && before !in siteNames && KeyboardDictionary.isKnown(before) && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace
+            val dotOk = ch == '.' && before.length >= 3 && before !in siteNames && KeyboardDictionary.isKnown(before) && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
             // a mark behind a word (, ; : ! ? or a full stop after a known word) is followed by a space at once (not in numbers, addresses, passwords or web addresses)
-            if ((ch == ',' || ch in ";:!?" || dotOk) && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
+            // a space is added only when it is certain: a ':' or ';' (emoticons, times, code) only behind a word of the dictionary
+            val sure = ch !in ";:" || KeyboardDictionary.isKnown(before)
+            if ((ch == ',' || ch in ";:!?" || dotOk) && sure && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1); commaSpace = true; punctTyped = false
             }
             lastWasSpace = false

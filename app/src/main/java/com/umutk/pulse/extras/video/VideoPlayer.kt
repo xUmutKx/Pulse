@@ -520,12 +520,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     LaunchedEffect(player) {
         var n = 0
+        var lastPlay = player.isPlaying
         while (true) {
             if (!seeking) pos = player.currentPosition
             if (sleepAt > 0 && SystemClock.elapsedRealtime() >= sleepAt) { player.pause(); sleepAt = 0L }
             dur = player.duration.coerceAtLeast(0L)
             inPip = (android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)
             if (inPip) pipWas[0] = true
+            // the window's play / pause button follows the video (a pause made elsewhere changes its icon)
+            if (player.isPlaying != lastPlay) { lastPlay = player.isPlaying; if (inPip) pipParams()?.let { runCatching { act?.setPictureInPictureParams(it) } } }
             if (++n % 8 == 0 && player.isPlaying) saveResume()
             delay(250)
         }
@@ -586,7 +589,34 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             val r = (vsize.width.toFloat() / vsize.height).coerceIn(0.42f, 2.39f)
             b.setAspectRatio(Rational((r * 1000).roundToInt(), 1000))
         }
+        // the window's own buttons act on THIS video: without them the system gave the play / pause to whatever media session was newest (the music player's song)
+        runCatching {
+            fun ra(id: String, icon: Int, title: String, req: Int) = android.app.RemoteAction(
+                android.graphics.drawable.Icon.createWithResource(ctx, icon), title, title,
+                android.app.PendingIntent.getBroadcast(ctx, req, android.content.Intent("com.umutk.pulse.PIP_CTL").setPackage(ctx.packageName).putExtra("c", id), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
+            b.setActions(listOf(
+                ra("back", android.R.drawable.ic_media_rew, "-10", 1),
+                if (player.isPlaying) ra("pause", android.R.drawable.ic_media_pause, "Pause", 2) else ra("play", android.R.drawable.ic_media_play, "Play", 3),
+                ra("fwd", android.R.drawable.ic_media_ff, "+10", 4),
+            ))
+        }
         return b.build()
+    }
+    DisposableEffect(player) {
+        val rc = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: android.content.Intent) {
+                when (i.getStringExtra("c")) {
+                    "play" -> player.play()
+                    "pause" -> player.pause()
+                    "back" -> player.seekTo((player.currentPosition - 10_000L).coerceAtLeast(0L))
+                    "fwd" -> player.seekTo(player.currentPosition + 10_000L)
+                }
+                pipParams()?.let { runCatching { act?.setPictureInPictureParams(it) } }
+            }
+        }
+        val f = android.content.IntentFilter("com.umutk.pulse.PIP_CTL")
+        if (android.os.Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(rc, f, Context.RECEIVER_NOT_EXPORTED) else ctx.registerReceiver(rc, f)
+        onDispose { runCatching { ctx.unregisterReceiver(rc) } }
     }
 
     // what each button does (the bar and the ⋮ menu both call it)
