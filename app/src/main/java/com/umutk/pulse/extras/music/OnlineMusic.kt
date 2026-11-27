@@ -120,7 +120,10 @@ object OnlineMusic {
     suspend fun forYou(ctx: Context): List<Hit> {
         ytInit(ctx)
         val hist = OnlineHistory.all(ctx)
-        val seeds = (hist.take(3).map { it.id } + (if (ytSignedIn(ctx)) ytLiked(ctx).take(2).mapNotNull { it.ytId } else emptyList())).distinct()
+        // the taste of the person comes first: for each artist the listening log scored highest, the song of theirs played last is a seed (then the last songs and the liked ones)
+        val loved = ListenLog.topArtists(ctx, 4)
+        val lovedSeeds = loved.mapNotNull { a -> hist.firstOrNull { artistKey(it.artist) == a }?.id }
+        val seeds = (lovedSeeds + hist.take(2).map { it.id } + (if (ytSignedIn(ctx)) ytLiked(ctx).take(2).mapNotNull { it.ytId } else emptyList())).distinct().take(7)
         if (seeds.isEmpty()) return youtube(ctx, "top hits this week")
         val played = hist.take(80).map { it.id }.toSet()
         // what the person gave up (stars, skips) is not offered again
@@ -128,7 +131,8 @@ object OnlineMusic {
         val out = LinkedHashMap<String, Hit>()
         var i = 0
         while (out.size < 40 && lists.any { i < it.size }) { lists.forEach { l -> l.getOrNull(i)?.let { h -> h.ytId?.let { id -> out.putIfAbsent(id, h) } } }; i++ }
-        return out.values.toList().ifEmpty { youtube(ctx, "top hits this week") }
+        // songs of the artists the person likes most go first, the rest keep their order
+        return out.values.toList().sortedBy { h -> if (artistKey(h.artist) in loved) 0 else 1 }.ifEmpty { youtube(ctx, "top hits this week") }
     }
 
     /** The online songs played lately (newest first). */

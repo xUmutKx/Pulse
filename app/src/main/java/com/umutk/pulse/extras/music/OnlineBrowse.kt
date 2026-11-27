@@ -95,8 +95,9 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
                 @Composable fun chip(t: String, on: () -> Unit) = Text(t, color = T.text, fontSize = 13.sp, maxLines = 1, softWrap = false, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).clickable { on() }.padding(horizontal = 12.dp, vertical = 7.dp))
                 if (ytIn) { chip(tr("Liked", "Beğenilen")) { show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } }; chip(tr("Recent", "Son çalınan")) { show(tr("Played lately", "Son çalınanlar")) { OnlineMusic.ytHistory(ctx) } } }
                 chip(tr("For you", "Senin için")) { show(tr("For you", "Senin için")) { OnlineMusic.forYou(ctx) } }
-                // History is the whole page of everything played (online and on the phone), searched with the box above and filtered All / Online / On the phone
-                chip(tr("History", "Geçmiş")) { played = true; title = tr("Everything you played", "Dinlediğin her şey") }
+                // History is the page of the songs played online, searched with the box above
+                // (the online songs only: what was played from the phone is not in this history)
+                chip(tr("History", "Geçmiş")) { played = true; playedKind = 1; title = tr("Played online", "Çevrimiçi dinlediklerin") }
                 chip(tr("Popular", "Popüler")) { show(tr("Popular now", "Şu an popüler")) { OnlineMusic.youtube(ctx, "top hits this week") } }
             }
             if (!ytIn) Text(tr("Sign in to YouTube in YTXTube to see your own songs here.", "Kendi şarkıların burada görünsün diye YTXTube'da YouTube'a giriş yap."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
@@ -121,7 +122,7 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
         Text(if (busy) tr("Loading…", "Yükleniyor…") else title, color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
         // filtered as you type, at once; the online search then brings the rest
         val shown = remember(list, query) { val q = query.trim(); if (q.isEmpty()) list else list.filter { it.title.contains(q, true) || it.artist.contains(q, true) }.ifEmpty { list } }
-        if (played) Box(Modifier.weight(1f)) { PlayedList(query, playedKind) { playedKind = it } } else LazyColumn(Modifier.weight(1f)) {
+        if (played) Box(Modifier.weight(1f)) { PlayedList(query, playedKind, onlyOnline = tab == 0) { playedKind = it } } else LazyColumn(Modifier.weight(1f)) {
             if (tab == 0 && query.isBlank()) {
                 // a row of covers that plays from the one tapped; the title under each is one line
                 if (dial.isNotEmpty()) item(key = "dial") {
@@ -173,7 +174,7 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
 
 /** Everything played in the music player, newest first (the listening log): a filter for online songs or songs of the phone, and the search box above filters it as you type. */
 @Composable
-private fun PlayedList(query: String, kind: Int, onKind: (Int) -> Unit) {
+private fun PlayedList(query: String, kind: Int, onlyOnline: Boolean = false, onKind: (Int) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val all = remember { ListenLog.all(ctx) }
@@ -182,7 +183,7 @@ private fun PlayedList(query: String, kind: Int, onKind: (Int) -> Unit) {
     val shown = remember(all, q, kind) { all.filter { e -> (kind == 0 || (kind == 1) == e.online) && (q.isEmpty() || e.title.contains(q, true) || e.artist.contains(q, true)) } }
     val fmt = remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT) }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!onlyOnline) Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0 to tr("All", "Hepsi"), 1 to tr("Online", "Çevrimiçi"), 2 to tr("On the phone", "Telefonda")).forEach { (k, n) ->
                 Text(n, color = if (kind == k) T.bg else T.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (kind == k) Look.accent else T.panel).clickable { onKind(k) }.padding(horizontal = 14.dp, vertical = 7.dp))
             }
