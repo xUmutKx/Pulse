@@ -32,7 +32,7 @@ object MsgNotifier {
     const val A_READ = "com.umutk.pulse.msg.READ"
     const val A_COPY = "com.umutk.pulse.msg.COPY"
 
-    private fun channelId(c: Context) = "pulse_msgs_" + (if (MsgPrefs.sound(c)) "s" else "q") + (if (MsgPrefs.vibrate(c)) "v" else "n")
+    private fun channelId(c: Context) = "pulse_msgs2_" + (if (MsgPrefs.sound(c)) "s" else "q") + (if (MsgPrefs.vibrate(c)) "v" else "n")
 
     private fun ensureChannel(c: Context): String {
         val id = channelId(c)
@@ -42,6 +42,8 @@ object MsgNotifier {
                 val ch = NotificationChannel(id, tr("Messages", "Mesajlar"),
                     if (MsgPrefs.sound(c) || MsgPrefs.vibrate(c)) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_LOW)
                 if (!MsgPrefs.sound(c)) ch.setSound(null, null)
+                // all the extra apps are one package: a badge for a message showed on every one of their icons, so the messages have none (the notification itself stays)
+                ch.setShowBadge(false)
                 ch.enableVibration(MsgPrefs.vibrate(c))
                 if (Build.VERSION.SDK_INT >= 29) ch.setAllowBubbles(true)
                 nm.createNotificationChannel(ch)

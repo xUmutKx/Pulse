@@ -466,12 +466,15 @@ object KeyboardDictionary {
         return lexes[lang]?.index?.containsKey(l) == true || (lang == "tr" && trKnown(l))
     }
 
+    /** How often a word that no list holds must be typed before it counts as a word (twice made a slip such as "napçaz" a word after two mistakes; an explicit keep or an added word is counted three or more at once). */
+    private const val LEARNED_AT = 3
+
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
         // a word the person blocked is a slip of theirs, never a word: it is corrected like any other typo
         if (l in banned) return false
-        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l)) || l in abbrWords
+        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= LEARNED_AT || (lang == "tr" && trKnown(l)) || l in abbrWords
     }
 
     /** A word the keyboard learned from the person that no word list of the language holds (and no ending explains): it may be a slip that was kept, so the bar marks it. */
@@ -621,7 +624,7 @@ object KeyboardDictionary {
         return tail.none { if (back) frontVowel(it) else backVowel(it) }
     }
 
-    private fun trBaseWord(lx: Lex, w: String): Boolean = lx.index.containsKey(w) || (user[w] ?: 0) >= 2
+    private fun trBaseWord(lx: Lex, w: String): Boolean = lx.index.containsKey(w) || (user[w] ?: 0) >= LEARNED_AT
 
     /** A base word and a chain of endings: the word is a real (inflected) Turkish word. */
     fun trKnown(w: String): Boolean {

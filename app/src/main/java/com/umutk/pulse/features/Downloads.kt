@@ -642,7 +642,10 @@ object Downloads {
             .setContentIntent(PendingIntent.getActivity(c, 0, openPage(c), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             .addAction(android.R.drawable.ic_media_pause, "Pause", action(c, t, ACT_PAUSE))
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", action(c, t, ACT_CANCEL))
-            .setGroup(GROUP).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
+            .setGroup(GROUP).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setPriority(NotificationCompat.PRIORITY_LOW)
+            // Android 16 Live Updates: the download asks to be promoted (the status bar chip shows the percent); other versions ignore the two extras
+            .addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing", true); if (total > 0) putCharSequence("android.shortCriticalText", "$pct%") })
+            .build()
     }
 
     /** A paused download: it stays in the shade with Resume and Cancel. */
