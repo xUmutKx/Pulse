@@ -739,12 +739,14 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                                     if (z != 1f) say("scale", "${(zoom * 100).roundToInt()}%")
                                     ev.changes.forEach { it.consume() }
                                 }
-                            } else if ((mode in 0..3) && !held) {
+                            } else if ((mode in 0..3 || mode == 5) && !held) {
                                 val c = ev.changes.first()
                                 val d = c.position - c.previousPosition
                                 tx += d.x; ty += d.y
                                 if (mode == 0 && hypot(tx, ty) > slop) {
                                     mode = if (abs(tx) > abs(ty)) (if (prefs.gestSeek) 1 else -1)
+                                    // a pull down that starts at the top edge sends the video to the small window (as Back does), where it goes on playing
+                                    else if (down.position.y < h * .14f && ty > 0f && prefs.backMini) 5
                                     else if (down.position.x < w / 2) (if (prefs.gestBright) 2 else -1)
                                     else (if (prefs.gestVol) 3 else -1)
                                 }
@@ -772,6 +774,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         // a swipe shorter than 3 seconds is a slip of the finger: the video goes on from where it was
                         if (mode == 1 && abs(target - start) >= 3000) player.seekTo(target)
                         if (mode == 2 && prefs.rememberBright) prefs.bright = bright
+                        if (mode == 5 && ty > h * .15f && !inPip) {
+                            val pp = pipParams()
+                            if (pp != null && runCatching { act?.enterPictureInPictureMode(pp) }.getOrNull() == true) Unit
+                            else if (FloatingVideo.show(ctx, player, vsize)) onBack()
+                        }
                     }
                 },
         )

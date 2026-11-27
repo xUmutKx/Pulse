@@ -558,7 +558,14 @@ private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
-    if (st.panel == "emoji" && st.emojiQuery == null) { val eth = emojiTh(th); Box(Modifier.background(eth.bg)) { EmojiTopBar(eth, st, act) }; return }
+    if (st.panel == "emoji" && st.emojiQuery == null) {
+        val eth = emojiTh(th)
+        // a pull down on the emoji bar closes the keyboard too, as on the bar of the keys (it did nothing here)
+        Box(Modifier.background(eth.bg).pointerInput(Unit) {
+            detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
+        }) { EmojiTopBar(eth, st, act) }
+        return
+    }
     // the Samsung look: while there is nothing to suggest the bar holds its round tool buttons (the smart fix, emoji, translate, clipboard, settings, more)
     val samBar = th.samsung && st.panel == "keys" && st.inline.isEmpty() && st.slots.none { it.isNotEmpty() }
     // a field that takes suggestions keeps its bar at full height while nothing is suggested (a word the dictionary does not know): the bar used to shrink to a thin handle and
