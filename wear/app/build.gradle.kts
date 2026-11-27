@@ -15,8 +15,8 @@ android {
         // Wear OS 3 and newer
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     // the release is signed with Pulse's own key (the workflow writes keystore.properties from the secrets); without it, the debug key
