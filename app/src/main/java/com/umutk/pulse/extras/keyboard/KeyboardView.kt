@@ -744,25 +744,6 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
     }
     return
   }
-  // the Google Keyboard look: the back arrow, "Search", and the categories as round icons, the open one in a white disc
-  if (th.id == "gboard") {
-    Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clickable { act.page(0) }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
-        Row(Modifier.clip(RoundedCornerShape(22.dp)).clickable { st.gifSearch = false; st.emojiQuery = "" }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(kbIcon(th, "Search"), null, tint = th.text, modifier = Modifier.size(22.dp))
-            Text(tr("Search", "Ara"), color = th.text, fontSize = 18.sp, modifier = Modifier.padding(start = 8.dp))
-        }
-        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-            (0..9).forEach { i ->
-                val on = i == st.emojiTab
-                Box(Modifier.padding(horizontal = 3.dp).size(40.dp).clip(CircleShape).background(if (on) th.text else Color.Transparent).clickable { st.emojiTab = i }, contentAlignment = Alignment.Center) {
-                    Icon(emojiTabIcons[i], null, tint = if (on) th.bg else th.sub, modifier = Modifier.size(22.dp))
-                }
-            }
-        }
-    }
-    return
-  }
   Column(Modifier.fillMaxWidth()) {
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
         // (the Samsung look: "ABC" leads back to the letters, and the delete key sits at the other end of the categories)
@@ -1646,11 +1627,6 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     }
                     Box(Modifier.size(34.dp).clickable { toneBase = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Close"), null, tint = th.sub, modifier = Modifier.size(18.dp)) }
                 }
-            } else if (th.id == "gboard") {
-                // the Google Keyboard look: the name of the open category, small and grey (the search is in the bar above)
-                val names = listOf(tr("Recent", "Son kullanılan"), tr("Smileys & Emotions", "Yüzler ve duygular"), tr("People", "İnsanlar"), tr("Animals & Nature", "Hayvanlar ve doğa"), tr("Food & Drink", "Yiyecek ve içecek"),
-                    tr("Travel & Places", "Seyahat ve yerler"), tr("Activities", "Etkinlikler"), tr("Objects", "Nesneler"), tr("Symbols", "Semboller"), tr("Flags", "Bayraklar"))
-                Text(names.getOrNull(tab) ?: when (tab) { 10 -> tr("Kaomoji", "Kaomoji"); 11 -> tr("Symbols and art", "Semboller ve sanat"); else -> "GIF" }, color = th.sub, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 12.dp))
             } else if (th.samsung) {
                 // the Samsung look: the search glass, a thin divider, then the categories in one row (the round tabs are in the bar above)
                 Box(Modifier.size(40.dp).clickable { st.gifSearch = false; st.emojiQuery = "" }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Search"), null, tint = th.text, modifier = Modifier.size(24.dp)) }
@@ -1702,19 +1678,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 }
             }
             // the bottom row sits a notch higher (the thumb reaches it), with a space bar between "abc" and the delete key
-            // the Google Keyboard look: ABC, the emoji pill (the open page in a white pill), GIF, the symbols page, kaomoji and the delete key
-            if (th.id == "gboard") Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).height(keyH * .85f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("ABC", color = th.text, fontSize = 20.sp, fontWeight = FontWeight.Medium) }
-                val emojiOn = tab != 10 && tab != 11 && tab != 12
-                Box(Modifier.weight(1.5f).padding(horizontal = 4.dp, vertical = 4.dp).fillMaxHeight().clip(RoundedCornerShape(26.dp)).background(if (emojiOn) th.text else Color.Transparent).clickable { st.emojiTab = 1 }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.EmojiEmotions, null, tint = if (emojiOn) th.bg else th.sub, modifier = Modifier.size(28.dp))
-                }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { st.emojiTab = 12 }, contentAlignment = Alignment.Center) { Text("GIF", color = if (tab == 12) th.text else th.sub, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold) }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.EmojiSymbols, null, tint = if (tab == 11) th.text else th.sub, modifier = Modifier.size(26.dp)) }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text(":-)", color = if (tab == 10) th.text else th.sub, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
-            }
-            if (!th.samsung && th.id != "gboard") Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).height(keyH * .8f), verticalAlignment = Alignment.CenterVertically) {
+            if (!th.samsung) Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).height(keyH * .8f), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("abc", color = th.text, fontSize = 17.sp) }
                 // the space bar is there but unseen until it is pressed; the delete key stands higher, its foot level with the top of the space bar
                 val spaceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
