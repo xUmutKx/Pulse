@@ -629,7 +629,10 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
                 if (android.os.SystemClock.elapsedRealtime() - lastHandOver > 45_000L) { loadedState.value = shown(); lastHandOver = android.os.SystemClock.elapsedRealtime(); changed = false }
             }
             looked.intValue = list.size
-            if (changed || todo.isNotEmpty()) loadedState.value = shown()
+            // the disc's own picture for each game that has one (read once a session)
+            var discs = false
+            for (g in list) if (!CdArt.disc.containsKey(g.pkg)) discArt(ctx, g.pkg)?.let { CdArt.disc[g.pkg] = it; discs = true }
+            if (changed || discs || todo.isNotEmpty()) loadedState.value = shown()
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
@@ -653,7 +656,11 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         if (loaded.isEmpty()) Text(if (list.isEmpty()) tr("No games on the shelf", "Rafta oyun yok") else tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
         else {
             com.umutk.pulse.extras.gamehub.cdshelf.CdRackScroll(
-                items = loaded.map { (g, art) -> com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = art, title = g.name, artist = "", cover = art) },
+                // the disc prints the game's wide art or a screenshot, and the booklet inside opens on its screenshots (as a real case's), the cover stays on the front
+                items = remember(loaded) { loaded.map { (g, art) ->
+                    com.umutk.pulse.extras.gamehub.cdshelf.CdRackItem(image = CdArt.disc[g.pkg] ?: art, title = g.name, artist = "", cover = art,
+                        manual = if (shotFiles(ctx, g.pkg).isEmpty()) null else ({ booklet(ctx, g.pkg) }))
+                } },
                 modifier = Modifier.fillMaxSize(), background = Color.Black, contentColor = Color(0xFFEDEDF2),
                 inspectLabel = tr("Inspect", "İncele"), backLabel = tr("Back", "Geri"), openLabel = tr("Open", "Aç"), nextLabel = tr("Next", "Sonraki"), exitLabel = tr("Exit", "Çık"),
                 state = state,
@@ -674,6 +681,8 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
 /** The pictures of the CD shelf kept for the whole session, so the shelf opens at once the next time; [fallback] marks icon covers that a cover found later replaces. */
 internal object CdArt {
     val cache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    /** The picture printed on the disc: the game's wide art or a screenshot, not its cover again (the inside of the case looked like the outside). */
+    val disc = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
     val names = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
     val fallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     /** The soft coloured blotches that stand for a cover that is not in yet (small). */
@@ -729,4 +738,25 @@ private fun iconCover(name: String, icon: androidx.compose.ui.graphics.ImageBitm
     val line = if (name.length > 22) name.take(21) + "…" else name
     c.drawText(line, size / 2f, 70f + side + 90f, p)
     return bmp.asImageBitmap()
+}
+
+
+/** A picture file read small enough for the shelf ([px] on its long side). */
+private fun readArt(f: java.io.File, px: Int): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(f.path, o)
+    val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = Integer.highestOneBit((maxOf(o.outWidth, o.outHeight) / px).coerceAtLeast(1)) }
+    android.graphics.BitmapFactory.decodeFile(f.path, opts)?.asImageBitmap()
+}.getOrNull()
+
+/** The screenshots fetched for a game (Steam, Google Play, RAWG). */
+private fun shotFiles(c: android.content.Context, pkg: String): List<java.io.File> = (0 until 4).map { steamShotFile(c, pkg, it) }.filter { it.isFile && it.length() > 0 }
+
+/** The disc's picture: the game's wide hero art, else its first screenshot; null keeps the cover. */
+private fun discArt(c: android.content.Context, pkg: String): androidx.compose.ui.graphics.ImageBitmap? =
+    steamHeroFile(c, pkg).takeIf { it.isFile }?.let { readArt(it, 420) } ?: shotFiles(c, pkg).firstOrNull()?.let { readArt(it, 420) }
+
+/** The booklet inside the case: each screenshot a spread, the hero art on its back. */
+private suspend fun booklet(c: android.content.Context, pkg: String): com.umutk.pulse.extras.gamehub.cdshelf.CdManual = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    com.umutk.pulse.extras.gamehub.cdshelf.CdManual(spreads = shotFiles(c, pkg).mapNotNull { readArt(it, 900) }, back = steamHeroFile(c, pkg).takeIf { it.isFile }?.let { readArt(it, 600) })
 }

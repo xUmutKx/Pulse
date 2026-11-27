@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -248,6 +249,8 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
         decorationBox = { inner -> Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("search", t.sub, 16.dp); Spacer(Modifier.width(8.dp))
             Box(Modifier.weight(1f)) { if (value.isEmpty()) Text(hint, color = t.sub, fontSize = 14.sp); inner() }
+            // an × empties the field
+            if (value.isNotEmpty()) Box(Modifier.padding(start = 6.dp).size(22.dp).clip(CircleShape).clickable { onChange("") }, contentAlignment = Alignment.Center) { PIcon("close", t.sub, 16.dp) }
         } })
 }
 
