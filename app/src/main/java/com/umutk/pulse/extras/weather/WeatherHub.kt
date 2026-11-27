@@ -34,6 +34,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -103,6 +106,8 @@ fun WeatherHub(onBack: () -> Unit) {
     var alerts by remember { mutableStateOf(WeatherStore.alertsOn(ctx)) }
     var showList by remember { mutableStateOf(false) }
     var allDays by remember { mutableStateOf(false) }
+    // the hours row: a tap on a day below brings that day's first hour to its left end
+    val hourState = androidx.compose.foundation.lazy.rememberLazyListState()
     var showSettings by remember { mutableStateOf(false) }
     var showMap by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
@@ -341,7 +346,7 @@ fun WeatherHub(onBack: () -> Unit) {
             // the hours: 96 of them, the row runs on to the right as it is swiped; a day name stands at each midnight
             item { Text(tr("Next hours", "Sonraki saatler"), color = if (sky) fg else sub, fontSize = 13.sp, modifier = if (sky) Modifier.background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp) else Modifier) }
             item {
-                LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), state = hourState, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     // the first one is the hour it is now: it is lit
                     itemsIndexed(fillHours(if (f.hours48.isNotEmpty()) f.hours48 else f.hours)) { hi, h ->
                         Column(Modifier.then(if (hi == 0) Modifier.background(Color.White.copy(alpha = .20f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 8.dp, vertical = 6.dp) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -357,7 +362,10 @@ fun WeatherHub(onBack: () -> Unit) {
             item { Text(tr("Next days", "Sonraki günler"), color = if (sky) fg else sub, fontSize = 13.sp, modifier = if (sky) Modifier.background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp) else Modifier) }
             // five days at first; the rest of the 16 open with one tap
             items(if (allDays) f.days else f.days.take(5), key = { it.date }) { d ->
-                Row(Modifier.fillMaxWidth().then(if (sky) Modifier.padding(vertical = 2.dp).background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 12.dp) else Modifier).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable {
+                    val at = fillHours(if (f.hours48.isNotEmpty()) f.hours48 else f.hours).indexOfFirst { it.time.startsWith(d.date) }
+                    if (at >= 0) scope.launch { hourState.animateScrollToItem(at) }
+                }.then(if (sky) Modifier.padding(vertical = 2.dp).background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 12.dp) else Modifier).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
                         color = fg, fontSize = 15.sp, modifier = Modifier.width(64.dp),
@@ -366,6 +374,10 @@ fun WeatherHub(onBack: () -> Unit) {
                     Spacer(Modifier.width(10.dp))
                     Text(if (d.rain >= 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
                     Spacer(Modifier.weight(1f))
+                    if (d.hum >= 0) {
+                        Icon(Icons.Outlined.WaterDrop, null, tint = sub, modifier = Modifier.size(14.dp))
+                        Text("${d.hum}%", color = sub, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp, end = 12.dp))
+                    }
                     Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
                 }
             }

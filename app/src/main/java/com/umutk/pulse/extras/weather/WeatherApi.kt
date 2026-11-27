@@ -19,7 +19,7 @@ import kotlin.coroutines.resume
 data class Place(val name: String, val lat: Double, val lon: Double, val device: Boolean = false)
 
 /** One day: range, rain chance, UV, sunrise and sunset ("yyyy-MM-ddTHH:mm"), sunshine in hours. */
-data class Day(val date: String, val code: Int, val max: Double, val min: Double, val rain: Int, val uv: Double, val sunrise: String, val sunset: String, val sun: Double = 0.0)
+data class Day(val date: String, val code: Int, val max: Double, val min: Double, val rain: Int, val uv: Double, val sunrise: String, val sunset: String, val sun: Double = 0.0, val hum: Int = -1)
 
 /** One hour: local time "yyyy-MM-ddTHH:00", condition, temperature (C), chance of rain (%). */
 data class Hour(val time: String, val code: Int, val temp: Double, val rain: Int)
@@ -71,14 +71,14 @@ object WeatherApi {
         val url = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lon) +
             "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation,dew_point_2m" +
             "&hourly=temperature_2m,weather_code,precipitation_probability,visibility&forecast_hours=96" +
-            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,sunshine_duration" +
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,sunshine_duration,relative_humidity_2m_mean" +
             "&forecast_days=16&timezone=auto&wind_speed_unit=kmh"
         // one more try after a pause (a busy or rate-limited service), then a smaller request without the optional readings, in case one of them is the one refused
         return runCatching { get(url) }.recoverCatching { Thread.sleep(800); get(url) }.recoverCatching {
             get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lon) +
                 "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation" +
                 "&hourly=temperature_2m,weather_code,precipitation_probability&forecast_hours=96" +
-                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&forecast_days=16&timezone=auto&wind_speed_unit=kmh")
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,relative_humidity_2m_mean&forecast_days=16&timezone=auto&wind_speed_unit=kmh")
         }.getOrThrow()
     }
 
@@ -174,10 +174,11 @@ object WeatherApi {
         val drain = d.getJSONArray("precipitation_probability_max"); val duv = d.getJSONArray("uv_index_max")
         val dsr = d.getJSONArray("sunrise"); val dss = d.getJSONArray("sunset")
         val dsun = d.optJSONArray("sunshine_duration")
+        val dhum = d.optJSONArray("relative_humidity_2m_mean")
         // a null in the lists (the service is renewing its data around midnight) must not make the whole copy unreadable: such a day or hour reads as zero, a day without a date is left out
         val days = (0 until dt.length()).filter { !dt.isNull(it) }.map {
             Day(dt.getString(it), dc.optInt(it, 0), dmax.optDouble(it, 0.0), dmin.optDouble(it, 0.0), drain.optInt(it, 0), duv.optDouble(it, 0.0),
-                dsr.optString(it), dss.optString(it), (dsun?.optDouble(it, 0.0) ?: 0.0) / 3600.0)
+                dsr.optString(it), dss.optString(it), (dsun?.optDouble(it, 0.0) ?: 0.0) / 3600.0, if (dhum != null && !dhum.isNull(it)) dhum.optInt(it, -1) else -1)
         }
         // the hourly list starts at midnight, so begin at the current hour and keep 24 hours
         val h = j.getJSONObject("hourly")
