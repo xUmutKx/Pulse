@@ -173,7 +173,7 @@ class VideoPlaybackService : MediaService() {
 
     // the notification follows the video: another video, play or pause, new title
     private val listener = object : androidx.media3.common.Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) { refreshNotification(); ticker.removeCallbacks(tick); if (isPlaying) ticker.postDelayed(tick, 15_000L) }
+        override fun onIsPlayingChanged(isPlaying: Boolean) { refreshNotification(); ticker.removeCallbacks(tick); if (isPlaying) ticker.postDelayed(tick, 5_000L) }
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) = refreshNotification()
         override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) = refreshNotification()
     }
@@ -199,12 +199,13 @@ class VideoPlaybackService : MediaService() {
     override fun onDestroy() {
         bound?.removeListener(listener); bound = null
         ticker.removeCallbacksAndMessages(null)
+        runCatching { getSystemService(NotificationManager::class.java).cancel(LIVE_ID) }
         super.onDestroy()
     }
 
-    // the time in the notification moves on every 15 seconds while the video plays
+    // the time in the notification (and the bar of the live update) moves on every 5 seconds while the video plays
     private val ticker = android.os.Handler(Looper.getMainLooper())
-    private val tick = object : Runnable { override fun run() { if (bound?.isPlaying == true) { refreshNotification(); ticker.postDelayed(this, 15_000L) } } }
+    private val tick = object : Runnable { override fun run() { if (bound?.isPlaying == true) { refreshNotification(); ticker.postDelayed(this, 5_000L) } } }
     private fun clockOf(ms: Long): String { val t = ms / 1000; val h = t / 3600; val m = t % 3600 / 60; val s = t % 60; return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s) }
 
     /** The cover of the video that is playing: the picture the system keeps for it, loaded once per video. */
@@ -262,6 +263,7 @@ class VideoPlaybackService : MediaService() {
             .addAction(if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, if (playing) tr("Pause", "Duraklat") else tr("Play", "Oynat"), act(12, ACT_TOGGLE))
             .addAction(android.R.drawable.ic_media_next, tr("Next", "Sonraki"), act(13, ACT_NEXT))
         thumb?.let { b.setLargeIcon(it) }
+        live(name, p, open, act(12, ACT_TOGGLE))
         // the media card: the system draws the cover, the title and the three buttons (also on the lock screen)
         com.umutk.pulse.extras.video.VideoSessionService.session?.let {
             b.setStyle(androidx.media3.session.MediaStyleNotificationHelper.MediaStyle(it).setShowActionsInCompactView(0, 1, 2))
@@ -269,7 +271,39 @@ class VideoPlaybackService : MediaService() {
         return b.build()
     }
 
+    /**
+     * Android 16's live update (the chip in the status bar, the card at the top of the shade and on the lock screen): the video's picture, its name, where it is
+     * and how long it is, as a bar, and the time left in the chip. A media card cannot be one, so it is a notification of its own beside it.
+     */
+    private fun live(name: String, p: androidx.media3.common.Player?, open: PendingIntent, toggle: PendingIntent) {
+        if (android.os.Build.VERSION.SDK_INT < 36) return
+        val nm = getSystemService(NotificationManager::class.java)
+        if (p == null || p.currentMediaItem == null) { runCatching { nm.cancel(LIVE_ID) }; return }
+        // a live update cannot be in a channel of the lowest importance (the playback one is): a quiet channel of its own
+        runCatching { nm.createNotificationChannel(com.umutk.pulse.QuietChannel(LIVE_CH, tr("Video, live update", "Video, canlı güncelleme"), NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(false) }) }
+        val d = p.duration.takeIf { it > 0L } ?: 0L
+        val pos = p.currentPosition.coerceAtLeast(0L)
+        val playing = p.isPlaying
+        val b = NotificationCompat.Builder(this, LIVE_CH)
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentTitle(name)
+            .setContentText(if (d > 0L) clockOf(pos) + " / " + clockOf(d) else if (playing) tr("Playing", "Oynatılıyor") else tr("Paused", "Duraklatıldı"))
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
+            .setContentIntent(open)
+            .setProgress(1000, if (d > 0L) (pos * 1000 / d).toInt() else 0, d <= 0L)
+            .addAction(if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, if (playing) tr("Pause", "Duraklat") else tr("Play", "Oynat"), toggle)
+            .addExtras(android.os.Bundle().apply {
+                putBoolean("android.requestPromotedOngoing", true)
+                // the chip: the time left while it plays, a pause sign while it waits
+                putCharSequence("android.shortCriticalText", if (!playing) "II" else if (d > 0L) "-" + clockOf(d - pos) else "▶")
+            })
+        thumb?.let { b.setLargeIcon(it) }
+        runCatching { nm.notify(LIVE_ID, b.build()) }
+    }
+
     companion object {
+        private const val LIVE_CH = "pulse_video_live"
+        private const val LIVE_ID = 9312
         const val ACT_PREV = "com.umutk.pulse.action.VIDEO_PREV"
         const val ACT_NEXT = "com.umutk.pulse.action.VIDEO_NEXT"
         const val ACT_TOGGLE = "com.umutk.pulse.action.VIDEO_TOGGLE"
