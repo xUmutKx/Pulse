@@ -328,19 +328,6 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                 }
             }
         }
-        // what other devices sent (LocalSend, Relay): its own place, one tap away
-        item {
-            val shareDir = remember { com.umutk.pulse.PulseDirs.share() }
-            val n = remember(shareDir) { runCatching { shareDir.listFiles()?.count { it.isFile } ?: 0 }.getOrDefault(0) }
-            Caption(tr("Received", "Alınanlar"))
-            Row(box(Modifier.fillMaxWidth()).clickable { onOpenDir(shareDir.path) }.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon("share", accent, 24.dp)
-                Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text(tr("Received files", "Alınan dosyalar"), color = fg, fontSize = 17.sp)
-                    Text("%,d ".format(n) + tr("files", "dosya") + " · Pulse/Share", color = sub, fontSize = 12.sp, fontFamily = mono)
-                }
-            }
-        }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
             Row(Modifier.fillMaxWidth().clickable { if (p.key == "apps") onTab("apps") else { FilesHomeNav.kind = p.key; onTab("types") } }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -375,7 +362,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
     val items = listOf(
-        Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
+        Triple("home", "home" to tr("Home", "Ana"), "home"), Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
         Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("more", "more" to tr("More", "Diğer"), "more"),
     )
     Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).navigationBarsPadding().padding(vertical = 8.dp)) {
