@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pulse Game Hub as an app of its own (-PpulseApp=gamehub): Pulse's own icon is off and this app's icon is the one in the launcher. The code is Pulse's (built from the Pulse repository). -->
+<!-- Pulse Game Hub as an app of its own (-PpulseApp=gamehub), made by scripts/gen_standalone.py: do not edit by hand. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application android:label="Pulse Game Hub" tools:replace="android:label">
         <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />

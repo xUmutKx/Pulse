@@ -37,6 +37,9 @@ print(f"""
 | `Pulse-{cur_s}-32bit.apk` | Lite for older 32-bit phones. |
 | `Pulse-{cur_s}-play.aab` | The Google Play bundle (not for installing by hand). |
 
+### Each app on its own
+Every app of Pulse (Files, Calculator, Music, Video, Keyboard, YTXTube, Code, Books, Game Hub, Clock, Office, the Launcher and the others) is also an app of its own that installs beside Pulse: see the newest **Pulse apps** release on the [Releases](https://github.com/xUmutKx/Pulse/releases) page, or each app's own repository (Pulse-Files, Pulse-Calculator, Pulse-MusicPlayer …).
+
 ### Why a scanner may flag the full and lite apps
 Pulse is an all-in-one app, so the full and lite APKs ask for rights that, taken together, look like what banking trojans ask for: it can be your **SMS app** (Messages), it has **accessibility services** (App lock, auto clicker, the cache cleaner that presses "Clear cache" in each app's settings), optional **root / Shizuku** tools, **APK installing**, the **call log** and **drawing over other apps**. A scanner sees only that list, not what the code does: Pulse sends none of your data anywhere and never touches other apps' data, and all the code is in this repository. If that worries you, use the **mini** APK: it has none of those rights.
 

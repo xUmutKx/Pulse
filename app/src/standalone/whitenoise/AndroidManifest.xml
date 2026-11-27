@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse White Noise as an app of its own (-PpulseApp=whitenoise), made by scripts/gen_standalone.py: do not edit by hand. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="Pulse White Noise" tools:replace="android:label">
+        <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
+        <activity-alias android:name="com.umutk.pulse.WhiteNoiseLauncher" android:enabled="true" tools:replace="android:enabled" />
+    </application>
+</manifest>

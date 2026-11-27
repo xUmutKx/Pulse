@@ -1,11 +1,35 @@
-# id | launcher alias | name | repository (github.com/xUmutKx/<repo>) | the app's own code in Pulse (copied into its repository)
-keyboard|KeyboardLauncher|Pulse Keyboard|Pulse-Keyboard|app/src/main/java/com/umutk/pulse/extras/keyboard
-music|MusicLauncher|Pulse Music|Pulse-Music|app/src/main/java/com/umutk/pulse/extras/music
-video|VideoLauncher|Pulse Video|Pulse-Video|app/src/main/java/com/umutk/pulse/extras/video
+# id | launcher alias | name | repository (github.com/xUmutKx/<repo>) | the app's own code in Pulse (made by scripts/gen_standalone.py)
+files|FilesLauncher|Pulse Files|Pulse-Files|app/src/main/java/com/umutk/pulse/features/Explorer*.kt,app/src/main/java/com/umutk/pulse/files
+calendar|CalendarLauncher|Pulse Calendar|Pulse-Calendar|app/src/main/java/com/umutk/pulse/calendar
+contacts|ContactsLauncher|Pulse Contacts|Pulse-Contacts|app/src/main/java/com/umutk/pulse/contacts
+photos|PhotosLauncher|Pulse Photos|Pulse-Photos|app/src/main/java/com/umutk/pulse/photos
 ytx|YtxLauncher|YTXTube|Pulse-YTXTube|app/src/main/java/com/umutk/pulse/extras/ytx
-code|CodeLauncher|Pulse Code|Pulse-Code|app/src/main/java/com/umutk/pulse/extras/code
-books|EbookLauncher|Pulse Books|Pulse-Books|app/src/main/java/com/umutk/pulse/extras/ebook
-gamehub|GameHubLauncher|Pulse Game Hub|Pulse-GameHub|app/src/main/java/com/umutk/pulse/extras/gamehub
-clock|ClockLauncher|Pulse Clock|Pulse-Clock|app/src/main/java/com/umutk/pulse/extras/lucid
+island|IslandLauncher|Pulse Island|Pulse-Island|app/src/main/java/com/umutk/pulse/extras/island
+music|MusicLauncher|Pulse Music Player|Pulse-MusicPlayer|app/src/main/java/com/umutk/pulse/extras/music
+video|VideoLauncher|Pulse Video Player|Pulse-VideoPlayer|app/src/main/java/com/umutk/pulse/extras/video
+whitenoise|WhiteNoiseLauncher|Pulse White Noise|Pulse-WhiteNoise|app/src/main/java/com/umutk/pulse/extras/whitenoise
+voice|VoiceLauncher|Pulse Voice Recorder|Pulse-VoiceRecorder|app/src/main/java/com/umutk/pulse/extras/voice
+notes|NotesLauncher|Pulse Notes|Pulse-Notes|app/src/main/java/com/umutk/pulse/extras/notes
+paint|PaintLauncher|Pulse Paint|Pulse-Paint|app/src/main/java/com/umutk/pulse/extras/paint
+browser|BrowserLauncher|Pulse Browser|Pulse-Browser|app/src/main/java/com/umutk/pulse/extras/browser
 office|OfficeLauncher|Pulse Office|Pulse-Office|app/src/main/java/com/umutk/pulse/Office*.kt
+code|CodeLauncher|Pulse Code|Pulse-Code|app/src/main/java/com/umutk/pulse/extras/code
+terminal|TerminalLauncher|Pulse Terminal|Pulse-Terminal|app/src/main/java/com/umutk/pulse/features/TerminalPage.kt
+calculator|CalculatorLauncher|Pulse Calculator|Pulse-Calculator|app/src/main/java/com/umutk/pulse/extras/calculator
+clock|ClockLauncher|Pulse Clock|Pulse-Clock|app/src/main/java/com/umutk/pulse/extras/lucid
+ebook|EbookLauncher|Pulse Books|Pulse-Books|app/src/main/java/com/umutk/pulse/extras/ebook
+tempmail|TempMailLauncher|Pulse TempMail|Pulse-TempMail|app/src/main/java/com/umutk/pulse/extras/tempmail
+keyboard|KeyboardLauncher|Pulse Keyboard|Pulse-Keyboard|app/src/main/java/com/umutk/pulse/extras/keyboard
+ai|AiLauncher|Pulse AI|Pulse-AI|app/src/main/java/com/umutk/pulse/extras/ai
+weather|WeatherLauncher|Pulse Weather|Pulse-Weather|app/src/main/java/com/umutk/pulse/extras/weather
+messages|MessagesLauncher|Pulse Messages|Pulse-Messages|app/src/main/java/com/umutk/pulse/extras/messages
+screenrec|ScreenRecLauncher|Pulse Screen recorder|Pulse-ScreenRecorder|app/src/main/java/com/umutk/pulse/extras/screenrec
+notifhist|NotifHistLauncher|Pulse Notification history|Pulse-NotificationHistory|app/src/main/java/com/umutk/pulse/extras/notifhist
+extrastore|ExtraStoreLauncher|Pulse Store|Pulse-Store|app/src/main/java/com/umutk/pulse/extras/store
+localsend|LocalSendLauncher|Pulse LocalSend|Pulse-LocalSend|app/src/main/java/com/umutk/pulse/extras/localsend
+palette|PaletteLauncher|Pulse Palette|Pulse-Palette|app/src/main/java/com/umutk/pulse/extras/palette
+gamehub|GameHubLauncher|Pulse Game Hub|Pulse-GameHub|app/src/main/java/com/umutk/pulse/extras/gamehub
+health|HealthLauncher|Pulse Health|Pulse-Health|app/src/main/java/com/umutk/pulse/health
+blackout|BlackOutLauncher|Pulse BlackOut|Pulse-BlackOut|app/src/main/java/com/umutk/pulse/extras/blackout
+launcher|PulseLauncherIcon|Pulse Launcher|Pulse-Launcher|app/src/main/java/com/umutk/pulse/extras/launcher
 core|IconDefault|Pulse Core|Pulse-Core|app/src/main/java/com/umutk/pulse/*.kt

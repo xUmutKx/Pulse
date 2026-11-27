@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- the launcher alias this app opens with (see Standalone.kt) -->
-    <string name="standalone_alias" translatable="false">ClockLauncher</string>
-</resources>

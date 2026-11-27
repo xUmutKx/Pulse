@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse Launcher as an app of its own (-PpulseApp=launcher), made by scripts/gen_standalone.py: do not edit by hand. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="Pulse Launcher" tools:replace="android:label">
+        <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
+        <activity-alias android:name="com.umutk.pulse.PulseLauncherIcon" android:targetActivity="com.umutk.pulse.extras.launcher.LauncherActivity" android:exported="true"
+            android:label="Pulse Launcher" android:icon="@mipmap/ic_ti_11" android:roundIcon="@mipmap/ic_ti_11">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+    </application>
+</manifest>

@@ -1,7 +1,7 @@
 package com.umutk.pulse
 
 /**
- * One of Pulse's apps built as an app of its own (-PpulseApp=<id>, see scripts/standalone_apps.txt): [id] is empty in Pulse itself.
+ * One of Pulse's apps built as an app of its own (-PpulseApp=<id>, see scripts/standalone_apps.txt and scripts/gen_standalone.py): [id] is empty in Pulse itself.
  * Its only launcher icon is [ALIAS]: nothing in the app may switch that icon off or switch Pulse's own icons on.
  */
 object Standalone {
@@ -10,9 +10,8 @@ object Standalone {
     val on: Boolean get() = BuildConfig.STANDALONE.isNotEmpty() && BuildConfig.STANDALONE != "core"
     /** Pulse Core: the launcher, the settings, the toolkit and the task manager, with none of the extra apps. */
     val core: Boolean get() = BuildConfig.STANDALONE == "core"
-    private val aliases = mapOf("keyboard" to "KeyboardLauncher", "music" to "MusicLauncher", "video" to "VideoLauncher", "ytx" to "YtxLauncher", "code" to "CodeLauncher",
-        "books" to "EbookLauncher", "gamehub" to "GameHubLauncher", "clock" to "ClockLauncher", "office" to "OfficeLauncher")
-    val ALIAS: String? get() = aliases[BuildConfig.STANDALONE]
+    /** The app's launcher entry (from scripts/standalone_apps.txt, through the build). */
+    val ALIAS: String? get() = BuildConfig.STANDALONE_ALIAS.takeIf { it.isNotEmpty() }
     /** False for a component a standalone app must leave as it is: its own icon, and Pulse's icons (they stay off). */
     fun mayToggle(alias: String): Boolean = !on || (alias != ALIAS && !alias.startsWith("Icon"))
 }

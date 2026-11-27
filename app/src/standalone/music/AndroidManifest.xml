@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pulse Music as an app of its own (-PpulseApp=music): Pulse's own icon is off and this app's icon is the one in the launcher. The code is Pulse's (built from the Pulse repository). -->
+<!-- Pulse Music Player as an app of its own (-PpulseApp=music), made by scripts/gen_standalone.py: do not edit by hand. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-    <application android:label="Pulse Music" tools:replace="android:label">
+    <application android:label="Pulse Music Player" tools:replace="android:label">
         <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
         <activity-alias android:name="com.umutk.pulse.MusicLauncher" android:enabled="true" tools:replace="android:enabled" />
     </application>

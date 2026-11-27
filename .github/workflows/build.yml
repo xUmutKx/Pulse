@@ -31,12 +31,16 @@ jobs:
     outputs:
       variants: ${{ steps.p.outputs.variants }}
     steps:
+      # the list of the standalone apps is read from the repository
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts
       - id: p
         run: |
           V='["full"]'
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && { [ "${{ inputs.release }}" = "true" ] || [ "${{ inputs.lite }}" = "true" ]; }; then V='["full","lite","mini","32bit","play"]'; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.watch }}" = "true" ]; then V='["watch"]'; fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apps }}" = "true" ]; then V='["app-keyboard","app-music","app-video","app-ytx","app-code","app-books","app-gamehub","app-clock","app-office","app-core"]'; fi  # the ids of scripts/standalone_apps.txt
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apps }}" = "true" ]; then V=$(grep -v '^#' scripts/standalone_apps.txt | cut -d'|' -f1 | grep . | sed 's/^/"app-/;s/$/"/' | paste -sd, - | sed 's/^/[/;s/$/,"watch"]/'); fi  # every app of scripts/standalone_apps.txt, and the watch app
           echo "variants=$V" >> "$GITHUB_OUTPUT"
 
   # the builds run side by side on their own machines
@@ -143,7 +147,9 @@ jobs:
             app-*)
               # one of Pulse's apps on its own (scripts/standalone_apps.txt): the lite build with its own package and only its icon
               ID="${{ matrix.variant }}"; ID="${ID#app-}"
-              G assembleFossLiteRelease -PpulseApp=$ID -x lintVitalAnalyzeFossLiteRelease -x lintVitalReportFossLiteRelease -x lintVitalFossLiteRelease
+              # Pulse AI needs the AI engines (the full flavour); every other app is built on lite
+              if [ "$ID" = "ai" ]; then FL=Full; else FL=Lite; fi
+              G assembleFoss${FL}Release -PpulseApp=$ID -x lintVitalAnalyzeFoss${FL}Release -x lintVitalReportFoss${FL}Release -x lintVitalFoss${FL}Release
               cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk" ;;
             mini)
               # the safe app: lite without root or Shizuku, SMS, accessibility services, APK installs or call log (what app scanners flag)
@@ -210,15 +216,16 @@ jobs:
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           ls -l files
           # a run of the standalone apps: each goes to its own repository (with APPS_TOKEN), and all of them to one release here as well
-          if [ ! -f "files/Pulse-$VER.apk" ] && ls files/Pulse-*-"$VER".apk >/dev/null 2>&1 && [ ! -f files/PulseWatch.apk ]; then
-            gh release create "apps-v$VER-$GITHUB_RUN_NUMBER" files/Pulse-*-"$VER".apk --target "$GITHUB_SHA" --title "Pulse apps $VER" --notes "Pulse's apps as apps of their own (each installs beside Pulse): Keyboard, Music, Video, YTXTube, Code, Books, Game Hub, Clock, Office."
+          if [ ! -f "files/Pulse-$VER.apk" ] && ls files/Pulse-*-"$VER".apk >/dev/null 2>&1; then
+            W=(); [ -f files/PulseWatch.apk ] && W=(files/PulseWatch.apk)
+            gh release create "apps-v$VER-$GITHUB_RUN_NUMBER" files/Pulse-*-"$VER".apk "${W[@]}" --target "$GITHUB_SHA" --latest=false --title "Pulse apps $VER" --notes-file <(python3 -I .github/apps_notes.py "$VER")
             if [ -n "$APPS_TOKEN" ]; then GH_TOKEN="$APPS_TOKEN" bash scripts/publish_standalone.sh "$VER"; else echo "::warning::APPS_TOKEN is not set: the apps were not sent to their own repositories"; fi
             exit 0
           fi
           # a watch-only run: a release of its own, the phone app's release is left alone
           if [ ! -f "files/Pulse-$VER.apk" ] && [ -f files/PulseWatch.apk ]; then
             WV=$(grep -oP 'versionName = "\K[^"]+' wear/app/build.gradle.kts)
-            gh release create "watch-v$WV-$GITHUB_RUN_NUMBER" files/PulseWatch.apk --target "$GITHUB_SHA" --title "Pulse Watch $WV" --notes "Pulse Watch (Wear OS)."
+            gh release create "watch-v$WV-$GITHUB_RUN_NUMBER" files/PulseWatch.apk --target "$GITHUB_SHA" --latest=false --title "Pulse Watch $WV" --notes "Pulse Watch (Wear OS)."
             exit 0
           fi
           PREV=$(gh release list --limit 20 --exclude-drafts --json tagName -q '[.[] | select(.tagName | test("^v[0-9]"))][0].tagName' 2>/dev/null | sed 's/^v//')

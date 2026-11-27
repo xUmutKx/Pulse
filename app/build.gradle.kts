@@ -47,11 +47,17 @@ android {
     // -PpulseApp=<id>: one of Pulse's apps on its own (keyboard, music, video, ytx, code, books, gamehub, clock, office; see scripts/standalone_apps.txt): the lite build with
     // its own package name (com.umutk.pulse.<id>), its own name, and only that app's icon in the launcher (src/standalone/<id>)
     val pulseApp = (project.findProperty("pulseApp") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+    // the app's launcher entry, from scripts/standalone_apps.txt (id|alias|name|repository|code)
+    val pulseAlias = pulseApp?.let { id -> rootProject.file("scripts/standalone_apps.txt").readLines().map { it.split("|") }.firstOrNull { it.size > 1 && it[0] == id }?.get(1) } ?: ""
     defaultConfig.buildConfigField("String", "STANDALONE", "\"" + (pulseApp ?: "") + "\"")
+    defaultConfig.buildConfigField("String", "STANDALONE_ALIAS", "\"" + pulseAlias + "\"")
     if (pulseApp != null) {
         defaultConfig.applicationIdSuffix = ".$pulseApp"
-        sourceSets.getByName("lite").manifest.srcFile("src/standalone/$pulseApp/AndroidManifest.xml")
-        sourceSets.getByName("lite").res.srcDir("src/standalone/$pulseApp/res")
+        // lite for every app; Pulse AI is built from the full flavour (it needs the AI engines)
+        for (fl in listOf("lite", "full")) {
+            sourceSets.getByName(fl).manifest.srcFile("src/standalone/$pulseApp/AndroidManifest.xml")
+            sourceSets.getByName(fl).res.srcDir("src/standalone/$pulseApp/res")
+        }
     }
     // the mini app runs on lite's code (the AI stand-ins), with a manifest of its own
     sourceSets.getByName("mini").java.srcDir("src/lite/java")
