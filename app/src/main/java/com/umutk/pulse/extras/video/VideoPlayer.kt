@@ -591,13 +591,20 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             fun ra(id: String, icon: Int, title: String, req: Int) = android.app.RemoteAction(
                 android.graphics.drawable.Icon.createWithResource(ctx, icon), title, title,
                 android.app.PendingIntent.getBroadcast(ctx, req, android.content.Intent("com.umutk.pulse.PIP_CTL").setPackage(ctx.packageName).putExtra("c", id), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
-            // a series (a list of episodes): the window's previous and next buttons change the episode itself; one video: back and forward 10 seconds
+            // the window's buttons: play / pause always; back and forward 10 seconds, and for a series (a list of episodes) previous and next episode as well, as many as the system's window takes
+            // (five where it takes five; with three, a series keeps previous / play / next and the 10 seconds go to a single video)
             val many = items.size > 1
-            b.setActions(listOf(
-                if (many) ra("prev", android.R.drawable.ic_media_previous, "Previous", 5) else ra("back", android.R.drawable.ic_media_rew, "-10", 1),
-                if (player.isPlaying) ra("pause", android.R.drawable.ic_media_pause, "Pause", 2) else ra("play", android.R.drawable.ic_media_play, "Play", 3),
-                if (many) ra("next", android.R.drawable.ic_media_next, "Next", 6) else ra("fwd", android.R.drawable.ic_media_ff, "+10", 4),
-            ))
+            val room = runCatching { act?.maxNumPictureInPictureActions ?: 3 }.getOrDefault(3)
+            val playBtn = if (player.isPlaying) ra("pause", android.R.drawable.ic_media_pause, "Pause", 2) else ra("play", android.R.drawable.ic_media_play, "Play", 3)
+            val prev = ra("prev", android.R.drawable.ic_media_previous, "Previous", 5)
+            val next = ra("next", android.R.drawable.ic_media_next, "Next", 6)
+            val back = ra("back", android.R.drawable.ic_media_rew, "-10", 1)
+            val fwd = ra("fwd", android.R.drawable.ic_media_ff, "+10", 4)
+            b.setActions(when {
+                many && room >= 5 -> listOf(prev, back, playBtn, fwd, next)
+                many -> listOf(prev, playBtn, next)
+                else -> listOf(back, playBtn, fwd)
+            })
         }
         return b.build()
     }
