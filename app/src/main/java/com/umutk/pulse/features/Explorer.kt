@@ -206,7 +206,8 @@ fun pickMatches(mime: String?, f: File): Boolean {
     if (mime.isNullOrBlank() || f.isDirectory) return true
     val types = mime.split(',').map { it.trim() }.filter { it.isNotEmpty() }
     if (types.isEmpty() || types.any { it == "*/*" }) return true
-    val m = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: return false
+    // a file whose kind the system does not know (a model file, a data file) can be picked when the asking app accepts the "any binary" type
+    val m = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: return types.any { it.equals("application/octet-stream", true) }
     return types.any { t -> if (t.endsWith("/*")) m.startsWith(t.dropLast(1)) else m.equals(t, true) }
 }
 

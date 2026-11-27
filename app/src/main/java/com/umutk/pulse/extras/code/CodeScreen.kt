@@ -40,6 +40,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.umutk.pulse.Look
 import com.umutk.pulse.PButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.WrapText
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.UnfoldLess
+import androidx.compose.material.icons.outlined.UnfoldMore
+import androidx.compose.material.icons.outlined.ZoomOut
+import androidx.compose.material.icons.outlined.ZoomIn
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
@@ -129,6 +136,14 @@ private fun SymbolBar(h: CodeHandle) {
                 Text(k, color = T.text, fontSize = 16.sp, fontFamily = FontFamily.Monospace)
             }
         }
+    }
+}
+
+/** A tool of the row under the title: an icon, lit while it is on. */
+@Composable
+private fun ToolIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean = false, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).clickable { onClick() }, contentAlignment = Alignment.Center) {
+        androidx.compose.material3.Icon(icon, null, tint = if (on) Look.accent else T.text, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -248,14 +263,14 @@ fun CodeEditorHost(src: CodeSource, startEditing: Boolean, forced: PulseCode.Lan
                 PButton(tr("Cancel", "Vazgeç"), compact = true) { confirm = false }
             }
             if (tools) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PChip(wrap, tr("Wrap", "Satır kaydır")) { wrap = !wrap; prefs.edit().putBoolean("wrap", wrap).apply() }
+                ToolIcon(Icons.Outlined.WrapText, wrap) { wrap = !wrap; prefs.edit().putBoolean("wrap", wrap).apply() }
                 if (!editing) {
-                    PChip(false, tr("Fold block", "Bloğu kapat")) { h.ed?.let { ed -> h.quiet { if (!PulseCode.foldAtCursor(ed, h.folds)) note = tr("No block here", "Burada blok yok") } } }
-                    PChip(false, tr("Fold all", "Hepsini kapat")) { h.ed?.let { ed -> h.quiet { PulseCode.foldAll(ed, h.folds) } } }
-                    PChip(false, tr("Unfold all", "Hepsini aç")) { h.ed?.let { ed -> h.quiet { PulseCode.unfoldAll(ed, h.folds) } } }
+                    ToolIcon(Icons.Outlined.ExpandLess) { h.ed?.let { ed -> h.quiet { if (!PulseCode.foldAtCursor(ed, h.folds)) note = tr("No block here", "Burada blok yok") } } }
+                    ToolIcon(Icons.Outlined.UnfoldLess) { h.ed?.let { ed -> h.quiet { PulseCode.foldAll(ed, h.folds) } } }
+                    ToolIcon(Icons.Outlined.UnfoldMore) { h.ed?.let { ed -> h.quiet { PulseCode.unfoldAll(ed, h.folds) } } }
                 }
-                PChip(false, "A−") { size = (size - 1f).coerceAtLeast(8f); prefs.edit().putFloat("size", size).apply() }
-                PChip(false, "A+") { size = (size + 1f).coerceAtMost(28f); prefs.edit().putFloat("size", size).apply() }
+                ToolIcon(Icons.Outlined.ZoomOut) { size = (size - 1f).coerceAtLeast(8f); prefs.edit().putFloat("size", size).apply() }
+                ToolIcon(Icons.Outlined.ZoomIn) { size = (size + 1f).coerceAtMost(28f); prefs.edit().putFloat("size", size).apply() }
             }
             if (find) Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
