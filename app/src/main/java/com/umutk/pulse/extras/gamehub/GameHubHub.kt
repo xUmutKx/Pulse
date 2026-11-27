@@ -9,6 +9,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.focus.focusRequester
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -940,6 +941,9 @@ fun GameHubHub(onBack: () -> Unit) {
     // the library's own search: a floating button on the right opens the field under the sort row
     var libSearch by remember { mutableStateOf(false) }
     var libQuery by remember { mutableStateOf("") }
+    val libFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    // the search opens with the keyboard up
+    LaunchedEffect(libSearch) { if (libSearch) { kotlinx.coroutines.delay(120); runCatching { libFocus.requestFocus() } } }
     val gridState = rememberLazyGridState()
     LaunchedEffect(Unit) {
         // the lists of the last visit are on the screen at once; the shell checks run once per start of the app, not on every return
@@ -1091,7 +1095,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     // a new order starts at the top, so the list does not jump to a row that moved
                     LaunchedEffect(sort, filter) { gridState.scrollToItem(0) }
                     val shown = games.filter { g ->
-                        (libQuery.isBlank() || g.name.contains(libQuery, true)) && when (filter) {
+                        (libQuery.isBlank() || ghLook == "cdrack" || g.name.contains(libQuery, true)) && when (filter) {
                             1 -> g.pkg !in hidden
                             2 -> g.pkg in hidden
                             else -> showHidden || g.pkg !in hidden
@@ -1103,7 +1107,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         Text(tr("Add a game in Boxshelf's settings", "Boxshelf ayarlarında oyun ekle"), color = pal.sub, fontSize = 13.sp)
                     } } else if (ghLook == "cdrack") CdShelf(
                         sortGames(shown, sort, usage, sizes).sortedByDescending { it.pkg in favs }, hidden, pal,
-                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g },
+                        onPlay = { g -> openGame(ctx, g.pkg) }, onDetails = { g -> profile = g }, query = libQuery,
                     ) else if (ghLook != "classic" && theme == "shelf" && nativeShelf && NativeShelf.AVAILABLE) androidx.compose.runtime.key(ShelfSync.rev.intValue, shown.size) { NativeShelfScreen(
                         shown.sortedBy { it.name.lowercase() }, Modifier.background(Color.Black),
                         onLaunch = { pkg -> com.umutk.pulse.extras.launcher.LauncherSounds.clickAlways(ctx, "win11"); openGame(ctx, pkg) },
@@ -1148,7 +1152,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     }
                     // the search: a round button on the right; the field opens under the sort row
                     if (libSearch && !webShelf) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
-                        Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 56.dp))
+                        Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 56.dp).focusRequester(libFocus))
                     if (!webShelf) FloatingActionButton(
                         onClick = { libSearch = !libSearch; if (!libSearch) libQuery = "" },
                         containerColor = pal.card,

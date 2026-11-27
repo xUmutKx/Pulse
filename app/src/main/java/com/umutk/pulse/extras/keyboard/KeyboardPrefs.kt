@@ -410,6 +410,14 @@ object KeyboardPrefs {
             menuItems = mn.joinToString(",")
             p.edit().putBoolean("scanMenu209", true).putString("menuItems", menuItems).apply()
         }
+        // once: the new text tools (password generator, change case, line start and end) join the ⋮ menu; Settings > Keyboard > menu can take them out
+        if (!p.getBoolean("textToolsMenu2028", false)) {
+            val mn = menuItems.split(',').filter { it.isNotBlank() }.toMutableList()
+            val tb = toolbarItems.split(',')
+            for (id in listOf("passgen", "case", "lineStart", "lineEnd")) if (id !in mn && id !in tb) mn.add(id)
+            menuItems = mn.joinToString(",")
+            p.edit().putBoolean("textToolsMenu2028", true).putString("menuItems", menuItems).apply()
+        }
         // once: the Calculator, Convert, Stickers and Grammar tiles leave the menu (they can be put back in the settings) and Notes joins it
         if (!p.getBoolean("trimMenu2011", false)) {
             val drop = setOf("calc", "convert", "stickers", "grammar")

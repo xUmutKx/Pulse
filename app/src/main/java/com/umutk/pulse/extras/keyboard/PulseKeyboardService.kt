@@ -2236,6 +2236,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun menu(id: String) {
+        // a note picked in the Notes panel: its text goes in at the cursor
+        if (id.startsWith("noteIn:")) {
+            val n = runCatching { com.umutk.pulse.extras.notes.NotesStore.load(this).firstOrNull { it.id == id.removePrefix("noteIn:") } }.getOrNull() ?: return
+            finishWord("", false)
+            currentInputConnection?.commitText(n.body, 1)
+            st.panel = "keys"
+            return
+        }
         when (id) {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
@@ -2256,7 +2264,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             // holding the emoji key: the GIF page of the emoji panel
             "gif" -> { finishWord("", false); st.emojiQuery = null; st.gifSearch = false; st.emojiTab = 12; st.panel = "emoji" }
-            "notes" -> runCatching { startActivity(android.content.Intent().setClassName(this, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "notes").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            // Notes opens in the keyboard itself (a list to pick from, and the text of the field saved as a note); the app is one tap away inside it
+            "notes" -> st.panel = if (st.panel == "notes") "keys" else "notes"
+            "notesApp" -> { st.panel = "keys"; runCatching { startActivity(android.content.Intent().setClassName(this, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "notes").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            "notesSave" -> {
+                val c = currentInputConnection ?: return
+                finishWord("", false)
+                val sel = c.getSelectedText(0)?.toString().orEmpty()
+                val txt = sel.ifEmpty { c.getTextBeforeCursor(3000, 0)?.toString().orEmpty() + c.getTextAfterCursor(3000, 0)?.toString().orEmpty() }.trim()
+                if (txt.isEmpty()) android.widget.Toast.makeText(this, tr("Nothing to save", "Kaydedilecek metin yok"), android.widget.Toast.LENGTH_SHORT).show()
+                else runCatching {
+                    val now = System.currentTimeMillis()
+                    val n = com.umutk.pulse.extras.notes.Note(java.util.UUID.randomUUID().toString(), txt.lineSequence().first().take(60), txt, now)
+                    com.umutk.pulse.extras.notes.NotesStore.save(this, listOf(n) + com.umutk.pulse.extras.notes.NotesStore.load(this))
+                    st.noteRev++
+                    android.widget.Toast.makeText(this, tr("Saved to Notes", "Notlara kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
             "stickers" -> st.panel = if (st.panel == "stickers") "keys" else "stickers"
             // the grammar check: the selected text, else the paragraph before the cursor, put right (spaces, repeated words, capitals, apostrophes)
             "grammar" -> {

@@ -565,7 +565,7 @@ private fun InfoRow(pal: Pal, label: String, value: String) {
  * turn it; the case in the slot has Play and a details button under it.
  */
 @Composable
-internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit) {
+internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay: (GameRow) -> Unit, onDetails: (GameRow) -> Unit, query: String = "") {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     // while the covers are being looked for in the background the pictures are not read again at each one found (that rebuilt the whole rack each time); they are read once when the search ends
     val searching by CoverJob.running.collectAsState()
@@ -625,6 +625,15 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
+    // Back puts the case that is out back in the rack (a step at a time: its cover, then the case) instead of leaving the whole screen
+    androidx.activity.compose.BackHandler(enabled = state.inspecting) { state.leave() }
+    // the search does not take games off the shelf (a rack of one case repeated itself and every rebuild made the cases vanish): the rack slides to the first game that matches
+    androidx.compose.runtime.LaunchedEffect(query, loaded.size) {
+        if (query.isBlank() || state.inspecting) return@LaunchedEffect
+        kotlinx.coroutines.delay(250)
+        val at = loaded.indexOfFirst { it.first.name.contains(query.trim(), true) }
+        if (at >= 0) state.scrollTo(at)
+    }
     // the top of the page holds the sort chips (Name, Play time, Size, Banners): the rack starts under them
     Box(Modifier.fillMaxSize().background(Color(0xFF0F1014))) {
         if (loaded.isEmpty()) Text(if (list.isEmpty()) tr("No games on the shelf", "Rafta oyun yok") else tr("Loading the covers…", "Kapaklar yükleniyor…"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))

@@ -82,6 +82,8 @@ class KbState {
     /** The Dictionary panel: the word, what was found for it, and whether the search is running. */
     var dictQuery by mutableStateOf("")
     var dictText by mutableStateOf("")
+    /** Counts up when a note is saved from the keyboard, so the Notes panel reads the list again. */
+    var noteRev by mutableIntStateOf(0)
     var dictBusy by mutableStateOf(false)
     var vaultRows by mutableStateOf(listOf<Triple<String, String, Boolean>>())
     /** The period (seconds) of each code above, in the same order. */
