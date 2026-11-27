@@ -6,6 +6,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.app.RemoteInput
 import com.umutk.pulse.features.AuthPrefs
 import com.umutk.pulse.features.VItem
@@ -14,11 +17,16 @@ import com.umutk.pulse.tr
 
 /**
  * "Save this login?" asked by the keyboard itself, with no autofill service: the user name typed before and the password just typed in an app or a web page.
- * The offer is a notification (it shows even when the page moves on and the keyboard closes); the password is kept in memory only until the answer.
+ * The offer is a bar on top of the keys (no notification): it waits ten minutes, so it is there when the keyboard comes up again after the page moved on. The password is kept in memory only until the answer.
  */
 object LoginSaver {
     private class Offer(val pkg: String, val label: String, val user: String, val pass: String, val browser: Boolean, val update: String?)
     private val offers = HashMap<Int, Offer>()
+    /** What the bar above the keys asks: shown while it is not older than ten minutes. */
+    class Pending(val id: Int, val label: String, val user: String, val update: Boolean, val at: Long = android.os.SystemClock.uptimeMillis())
+    var pending by mutableStateOf<Pending?>(null)
+        private set
+    fun live(): Pending? = pending?.takeIf { android.os.SystemClock.uptimeMillis() - it.at < 10 * 60_000L }
     private var lastUser = ""; private var lastUserPkg = ""; private var lastUserAt = 0L
     private var lastKey = ""; private var lastKeyAt = 0L
 
@@ -48,7 +56,16 @@ object LoginSaver {
         val label = runCatching { c.packageManager.getApplicationLabel(c.packageManager.getApplicationInfo(p, 0)).toString() }.getOrDefault(p)
         val id = (p + user).hashCode()
         offers[id] = Offer(p, label, user, pass, browser, old)
-        post(c, id, offers.getValue(id))
+        pending = Pending(id, label, user, old != null)
+    }
+
+    /** The bar's answer: Save puts the login in the vault (a browser's site stays unnamed, it can be set in the vault), No drops it. */
+    fun resolve(c: Context, save: Boolean) {
+        val p = pending ?: return
+        pending = null
+        val o = offers.remove(p.id) ?: return
+        if (!save) return
+        store(c, o, "")
     }
 
     private fun post(c: Context, id: Int, o: Offer) {
@@ -76,6 +93,10 @@ object LoginSaver {
         c.getSystemService(NotificationManager::class.java).cancel(id)
         if (o == null || intent.action != ACT_SAVE) return
         val site = RemoteInput.getResultsFromIntent(intent)?.getCharSequence("site")?.toString()?.trim().orEmpty()
+        store(c, o, site)
+    }
+
+    private fun store(c: Context, o: Offer, site: String) {
         val host = site.takeIf { it.isNotEmpty() }?.let { VaultStore.hostOf(it) }
         val uri = when { !o.browser -> "androidapp://${o.pkg}"; host != null -> "https://$host"; else -> "https://web-login" }
         val old = o.update?.let { oid -> VaultStore.all(c).firstOrNull { it.id == oid } }

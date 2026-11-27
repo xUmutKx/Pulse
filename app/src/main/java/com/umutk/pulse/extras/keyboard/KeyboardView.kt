@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.keyboard
 import androidx.compose.foundation.layout.Spacer
 
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -557,6 +558,9 @@ private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
+    // "save this login?" on the keys, not in a notification: the bar shows it while the answer is open (ten minutes)
+    val ask = LoginSaver.live()
+    if (ask != null && st.panel == "keys" && !st.incognito) { LoginAskBar(th, ask); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) {
         val eth = emojiTh(th)
@@ -808,6 +812,19 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
                 scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
             }
         }
+    }
+}
+
+@Composable
+private fun LoginAskBar(th: KbTheme, ask: LoginSaver.Pending) {
+    val ctx = LocalContext.current
+    Row(Modifier.fillMaxWidth().height(kbBarHeight()).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(Icons.Rounded.Lock, null, tint = th.accent, modifier = Modifier.size(20.dp))
+        Text(listOf(if (ask.update) tr("Update password", "Şifreyi güncelle") else tr("Save password", "Şifreyi kaydet"), ask.label, ask.user).filter { it.isNotBlank() }.joinToString(" · "), Modifier.weight(1f), color = th.text, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(th.accent).clickable { LoginSaver.resolve(ctx, true) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+            Text(if (ask.update) tr("Update", "Güncelle") else tr("Save", "Kaydet"), color = th.onAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Box(Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).clickable { LoginSaver.resolve(ctx, false) }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, null, tint = th.sub, modifier = Modifier.size(20.dp)) }
     }
 }
 
