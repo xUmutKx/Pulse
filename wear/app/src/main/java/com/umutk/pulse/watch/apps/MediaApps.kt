@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -300,14 +303,50 @@ fun YouTubeScreen() {
     }
 }
 
-/** The toolkit: the watch's small tools in one list (as Pulse's toolkit on the phone). */
+/** The toolkit: the watch's small tools in one list (as Pulse's toolkit on the phone); a tapped icon moves (spins, wobbles, bounces …) before its tool opens. */
 @Composable
 fun ToolkitScreen() {
-    val tools = remember { listOf("calc", "convert", "tip", "counter", "dice", "stopwatch", "timer", "world", "compass", "metronome", "light", "breathe", "reaction", "battery", "files", "apps") }
+    val tools = remember {
+        listOf("calc" to "bounce", "convert" to "spin", "tip" to "pop", "counter" to "pulse", "dice" to "spin", "stopwatch" to "wobble", "timer" to "spin", "world" to "spin",
+            "compass" to "wobble", "metronome" to "wobble", "light" to "pulse", "breathe" to "pulse", "reaction" to "shake", "battery" to "bounce", "files" to "bounce", "apps" to "pop")
+    }
     Page(showTime = false) {
         ScalingLazyColumn(Modifier.fillMaxSize()) {
             item { Header("Toolkit") }
-            items(tools.mapNotNull { r -> Apps.all.firstOrNull { it.route == r } }) { a -> Chip(a.name, a.icon, a.about) { Apps.open(a.route) } }
+            items(tools.mapNotNull { (r, m) -> Apps.all.firstOrNull { it.route == r }?.let { it to m } }) { (a, m) -> ToolRow(a, m) }
+        }
+    }
+}
+
+@Composable
+private fun ToolRow(a: WatchApp, motion: String) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val t = remember { androidx.compose.animation.core.Animatable(0f) }
+    Row(
+        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(26.dp)).background(W.card)
+            .clickable { scope.launch { tick(ctx); t.snapTo(0f); t.animateTo(1f, androidx.compose.animation.core.tween(420)); Apps.open(a.route); t.snapTo(0f) } }
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val v = t.value; val damp = 1f - v
+        val pi = Math.PI.toFloat()
+        Box(
+            Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(W.accent.copy(alpha = .22f)).graphicsLayer {
+                when (motion) {
+                    "spin" -> rotationZ = 360f * (1f - damp * damp * damp)
+                    "wobble" -> rotationZ = 20f * damp * kotlin.math.sin(v * 6f * pi)
+                    "shake" -> translationX = 6.dp.toPx() * damp * kotlin.math.sin(v * 8f * pi)
+                    "bounce" -> translationY = -8.dp.toPx() * kotlin.math.abs(kotlin.math.sin(v * 2f * pi)) * damp
+                    "pop" -> { val k = 1f - 0.3f * kotlin.math.sin(v * pi); scaleX = k; scaleY = k }
+                    else -> { val k = 1f + 0.25f * kotlin.math.sin(v * 2f * pi) * damp; scaleX = k; scaleY = k }
+                }
+            },
+            contentAlignment = Alignment.Center,
+        ) { T(a.icon, size = 16.sp) }
+        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+            T(a.name, size = 15.sp, weight = FontWeight.Medium, maxLines = 1)
+            T(a.about, color = W.sub, size = 12.sp, maxLines = 1)
         }
     }
 }
